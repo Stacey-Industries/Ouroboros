@@ -254,8 +254,11 @@ export interface AppConfig {
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata. */
   ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number } };
   /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
-  platform?: { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> };
+  platform?: PlatformConfig;
 }
+
+/** Wave 38 Phase F — named platform config slice (update channel + crash reporter). */
+export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> }
 
 export interface ContextLayerConfig {
   enabled: boolean;

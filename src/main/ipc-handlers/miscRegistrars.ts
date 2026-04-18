@@ -18,6 +18,7 @@ import {
   findSessionDetailById,
   getRecentSessionsFromEntries,
 } from '../costHistoryAggregation';
+import { getCrashReportDirPath } from '../crashReporterStorage';
 import log from '../logger';
 import { getAutoUpdater } from '../updater';
 import {
@@ -235,6 +236,15 @@ export function registerCrashLogHandlers(channels: ChannelList): void {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- crashLogDir is a module-level constant derived from app.getPath('userData')
       await fs.mkdir(crashLogDir, { recursive: true });
       await shell.openPath(crashLogDir);
+      return ok();
+    }),
+  );
+  registerChannel(channels, 'platform:openCrashReportsDir', async () =>
+    runAction(async () => {
+      const dir = getCrashReportDirPath();
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- dir rooted at os.homedir() via getCrashReportDirPath()
+      await fs.mkdir(dir, { recursive: true });
+      await shell.openPath(dir);
       return ok();
     }),
   );

@@ -25,7 +25,7 @@ import {
 export { initEditProvenance };
 import { migrateLegacyJsonl, purgeOlderThan } from './orchestration/jsonlRetention';
 import { setGithubTokenForPty } from './ptyEnv';
-import { getAutoUpdater, setUpdaterGitHubToken } from './updater';
+import { configureUpdaterChannel, getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
 import { getAllActiveWindows } from './windowManager';
 
@@ -129,9 +129,9 @@ async function seedUpdaterToken(): Promise<void> {
 
 export function configureAutoUpdater(): void {
   if (!getAutoUpdater()) return;
+  configureUpdaterChannel();
   registerAutoUpdaterEvents();
-  void seedUpdaterToken();
-  scheduleAutoUpdateCheck();
+  void seedUpdaterToken(); scheduleAutoUpdateCheck();
 }
 
 // ---------------------------------------------------------------------------

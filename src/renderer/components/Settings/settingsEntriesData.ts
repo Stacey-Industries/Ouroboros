@@ -131,3 +131,34 @@ export const AGENT_PROFILES_ENTRIES = createEntries('agentProfiles', 'Agent Prof
   ['Profile MCP Servers', 'Choose which MCP servers are active for this profile.'],
   ['System Prompt Addendum', 'Extra instructions appended to the system prompt for this profile.'],
 ]);
+
+export const PLATFORM_ENTRIES = createEntries('platform', 'Platform', [
+  [
+    'Update channel',
+    'Choose between Stable (production releases) and Beta (pre-release builds). Affects the next update check.',
+  ],
+  [
+    'Stable',
+    'Receive only production-quality releases. Recommended for most users.',
+  ],
+  [
+    'Beta',
+    'Receive pre-release builds that may include new features and fixes not yet in stable.',
+  ],
+  [
+    'Crash reports',
+    'Opt-in to uploading anonymous crash reports to a webhook you control when the IDE crashes.',
+  ],
+  [
+    'Upload crash reports',
+    'Enable automatic upload of crash reports to your configured webhook URL when a crash occurs.',
+  ],
+  [
+    'Crash report webhook URL',
+    'HTTPS endpoint that receives JSON crash report payloads. Only used when upload is enabled.',
+  ],
+  [
+    'Show crash reports folder',
+    'Open ~/.ouroboros/crash-reports/ in the system file explorer to view stored crash records.',
+  ],
+]);

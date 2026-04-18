@@ -19,6 +19,7 @@ import {
   KEYBINDING_ENTRIES,
   MCP_ENTRIES,
   MOBILE_ACCESS_ENTRIES,
+  PLATFORM_ENTRIES,
 } from './settingsEntriesData';
 
 export interface SettingsEntry {
@@ -46,7 +47,7 @@ export interface SettingsEntry {
     | 'codemode'
     | 'contextDocs'
     | 'performance'
-    | 'mobileAccess';
+    | 'mobileAccess' | 'platform';
   /** Display-friendly section name */
   sectionLabel: string;
 }
@@ -325,4 +326,5 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...AGENT_PROFILES_ENTRIES,
   ...MOBILE_ACCESS_ENTRIES,
   ...PERFORMANCE_ENTRIES,
+  ...PLATFORM_ENTRIES,
 ];

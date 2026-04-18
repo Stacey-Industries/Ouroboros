@@ -11,6 +11,7 @@ import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoll
 import { getConfigValue, setConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { closeCostHistoryDb } from './costHistory';
+import { initialiseCrashReporter } from './crashReporter';
 import { initExtensions } from './extensions';
 import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
@@ -260,10 +261,9 @@ async function initializeApplication(): Promise<void> {
   buildApplicationMenu(mainWindow);
   await startBackgroundServices(mainWindow);
 
-  try { initClaudeMdGenerator(); log.info('Generator initialized'); }
-  catch (err) { log.warn('Generator initialization failed:', err); }
+  try { initClaudeMdGenerator(); log.info('Generator initialized'); } catch (err) { log.warn('Generator initialization failed:', err); }
 
-  registerRenderProcessCrashLogging();
+  registerRenderProcessCrashLogging(); initialiseCrashReporter();
   configureAutoUpdater();
   startManagedPerfMetrics();
   startJankDetector();

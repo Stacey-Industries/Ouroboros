@@ -14,6 +14,7 @@ export interface CrashAPI {
   getCrashLogs: () => Promise<CrashLogsResult>
   clearCrashLogs: () => Promise<IpcResult>
   openCrashLogDir: () => Promise<IpcResult>
+  openCrashReportsDir: () => Promise<IpcResult>
   logError: (source: string, message: string, stack?: string) => Promise<IpcResult>
 }
 

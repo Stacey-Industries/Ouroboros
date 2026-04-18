@@ -21,6 +21,7 @@ import { HooksSection } from './HooksSection';
 import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { MobileAccessPane } from './MobileAccessPane';
+import { PlatformSection } from './PlatformSection';
 import { ProfilesSection } from './ProfilesSection';
 import { PromptDiffView } from './PromptDiffView';
 import { ProvidersSection } from './ProvidersSection';
@@ -73,6 +74,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   promptDiff: () => <PromptDiffView />,
   usageExport: () => <UsageExportPane />,
   awesomeRef: () => <AwesomeRefSettingsPane />,
+  platform: ({ draft, onChange }) => <PlatformSection draft={draft} onChange={onChange} />,
 };
 
 export function SettingsTabContent({

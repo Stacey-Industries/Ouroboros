@@ -114,6 +114,7 @@ export const supplementalApis: SupplementalApis = {
     getCrashLogs: () => ipcRenderer.invoke('app:getCrashLogs'),
     clearCrashLogs: () => ipcRenderer.invoke('app:clearCrashLogs'),
     openCrashLogDir: () => ipcRenderer.invoke('app:openCrashLogDir'),
+    openCrashReportsDir: () => ipcRenderer.invoke('platform:openCrashReportsDir'),
     logError: (source, message, stack) =>
       ipcRenderer.invoke('app:logError', source, message, stack).catch(() => {
         /* swallow if handler missing */
