@@ -12,6 +12,7 @@
  */
 
 import type { AppConfig } from '../config';
+import { getConfigValue } from '../config';
 import {
   closePinnedContextStore,
   initPinnedContextStore,
@@ -21,6 +22,8 @@ import {
   initProfileStore,
 } from '../profiles/profileStore';
 import { closeFolderStore, initFolderStore } from './folderStore';
+import { loadQueue } from './sessionDispatchQueue';
+import { startDispatchRunner, stopDispatchRunner } from './sessionDispatchRunner';
 import { runSessionGc, SEVEN_DAYS_MS } from './sessionGc';
 import { migrateWindowSessionsToSessions } from './sessionMigration';
 import { closeSessionStore, getSessionStore, initSessionStore } from './sessionStore';
@@ -64,10 +67,13 @@ export async function initSessionServices(config: ConfigAccess): Promise<void> {
   // Run GC once at startup, then weekly (interval covers both 7-day and 30-day passes).
   runAllGc();
   gcInterval = setInterval(runAllGc, SEVEN_DAYS_MS);
+  loadQueue();
+  if (getConfigValue('sessionDispatch')?.enabled) startDispatchRunner();
 }
 
 /** Mirror of closeSessionStore for use in the will-quit cleanup chain. */
 export function closeSessionServices(): void {
+  stopDispatchRunner();
   if (gcInterval) {
     clearInterval(gcInterval);
     gcInterval = null;

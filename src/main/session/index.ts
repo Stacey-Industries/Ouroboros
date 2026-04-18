@@ -12,6 +12,11 @@ export {
   updateJob,
 } from './sessionDispatchQueue';
 export {
+  getRunnerState,
+  startDispatchRunner,
+  stopDispatchRunner,
+} from './sessionDispatchRunner';
+export {
   emitSessionActivated,
   emitSessionArchived,
   emitSessionCreated,

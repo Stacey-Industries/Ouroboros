@@ -53,6 +53,21 @@ vi.mock('./softDeleteGc', () => ({
   runSoftDeleteGc: (...args: unknown[]) => runSoftDeleteGcMock(...args),
 }));
 
+// Wave 34 Phase C: sessionStartup now imports from config, sessionDispatchQueue,
+// and sessionDispatchRunner. Mock all three so electron-store is never loaded.
+vi.mock('../config', () => ({
+  getConfigValue: vi.fn(() => undefined),
+}));
+
+vi.mock('./sessionDispatchQueue', () => ({
+  loadQueue: vi.fn(),
+}));
+
+vi.mock('./sessionDispatchRunner', () => ({
+  startDispatchRunner: vi.fn(),
+  stopDispatchRunner: vi.fn(),
+}));
+
 import { closeSessionServices, initSessionServices } from './sessionStartup';
 
 describe('sessionStartup', () => {
