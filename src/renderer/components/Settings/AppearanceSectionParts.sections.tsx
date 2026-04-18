@@ -5,3 +5,4 @@ export {
   ThemeEditorSection,
   ThemeGrid,
 } from './AppearanceSectionThemeControls';
+export { AppearanceSectionVsCodeImport } from './AppearanceSectionVsCodeImport';

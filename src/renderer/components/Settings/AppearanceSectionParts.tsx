@@ -4,6 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import type { Theme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
 import {
+  AppearanceSectionVsCodeImport,
   BackgroundGradientSection,
   CustomCSSSection,
   GlassOpacitySection,
@@ -56,6 +57,7 @@ export function AppearanceSectionContent({
         onSaveAsCustom={onSaveAsCustom}
         setEditorOpen={setEditorOpen}
       />
+      <AppearanceSectionVsCodeImport />
       <CustomCSSSection draft={draft} onChange={onChange} />
     </div>
   );
