@@ -1,8 +1,8 @@
 /**
- * Wave 36 Phase C — providerBootstrap unit tests.
+ * Wave 36 Phase D — providerBootstrap unit tests (updated).
  *
- * Verifies that registerBuiltinProviders populates the registry with both the
- * Claude and Codex providers. Uses vi.resetModules() between tests to isolate
+ * Verifies that registerBuiltinProviders populates the registry with Claude,
+ * Codex, and Gemini providers. Uses vi.resetModules() between tests to isolate
  * the module-level registry map.
  */
 
@@ -28,12 +28,21 @@ vi.mock('./codexSessionProvider', () => ({
   }),
 }))
 
+vi.mock('./geminiSessionProvider', () => ({
+  GeminiSessionProvider: vi.fn(function (this: Record<string, unknown>) {
+    this.id = 'gemini'
+    this.label = 'Gemini (Google)'
+    this.binary = 'gemini'
+  }),
+}))
+
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
 import { ClaudeSessionProvider } from './claudeSessionProvider'
 import { CodexSessionProvider } from './codexSessionProvider'
+import { GeminiSessionProvider } from './geminiSessionProvider'
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -48,7 +57,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('registerBuiltinProviders', () => {
-  it('registers both Claude and Codex providers into the registry', async () => {
+  it('registers Claude, Codex, and Gemini providers into the registry', async () => {
     // Reset modules so the registry map starts empty for this test.
     vi.resetModules()
     const { registerBuiltinProviders } = await import('./providerBootstrap')
@@ -60,9 +69,10 @@ describe('registerBuiltinProviders', () => {
     const ids = providers.map((p) => p.id)
     expect(ids).toContain('claude')
     expect(ids).toContain('codex')
+    expect(ids).toContain('gemini')
   })
 
-  it('constructs exactly one ClaudeSessionProvider and one CodexSessionProvider', async () => {
+  it('constructs exactly one instance of each builtin provider', async () => {
     vi.resetModules()
     const { registerBuiltinProviders } = await import('./providerBootstrap')
 
@@ -70,6 +80,7 @@ describe('registerBuiltinProviders', () => {
 
     expect(ClaudeSessionProvider).toHaveBeenCalledOnce()
     expect(CodexSessionProvider).toHaveBeenCalledOnce()
+    expect(GeminiSessionProvider).toHaveBeenCalledOnce()
   })
 
   it('calling twice replaces providers (last-write-wins registry semantics)', async () => {
@@ -80,11 +91,12 @@ describe('registerBuiltinProviders', () => {
     registerBuiltinProviders()
     registerBuiltinProviders()
 
-    // Should still have exactly 2 providers — no duplicates.
+    // Should still have exactly 3 providers — no duplicates.
     const providers = listSessionProviders()
     const ids = providers.map((p) => p.id)
     expect(ids.filter((id) => id === 'claude')).toHaveLength(1)
     expect(ids.filter((id) => id === 'codex')).toHaveLength(1)
+    expect(ids.filter((id) => id === 'gemini')).toHaveLength(1)
   })
 
   it('registered Claude provider has the expected shape', async () => {
@@ -111,5 +123,18 @@ describe('registerBuiltinProviders', () => {
     expect(codex).not.toBeNull()
     expect(codex?.id).toBe('codex')
     expect(codex?.binary).toBe('codex')
+  })
+
+  it('registered Gemini provider has the expected shape', async () => {
+    vi.resetModules()
+    const { registerBuiltinProviders } = await import('./providerBootstrap')
+    const { getSessionProvider } = await import('./providerRegistry')
+
+    registerBuiltinProviders()
+
+    const gemini = getSessionProvider('gemini')
+    expect(gemini).not.toBeNull()
+    expect(gemini?.id).toBe('gemini')
+    expect(gemini?.binary).toBe('gemini')
   })
 })
