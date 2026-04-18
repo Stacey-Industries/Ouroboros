@@ -8,7 +8,10 @@
 
 export {
   disconnectDevice,
-} from './bridgeDisconnectStub';
+  getTrackedConnectionCount,
+  registerConnection,
+  unregisterConnection,
+} from './bridgeDisconnect';
 export {
   cleanupPairingHandlers,
   consumePairingTicket,

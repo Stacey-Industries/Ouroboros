@@ -14,6 +14,7 @@ import { Router } from 'express';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { consumePairingTicket } from '../mobileAccess/pairingHandlers';
+import { issueTicket } from '../mobileAccess/pairingTickets';
 import { isRateLimited, recordFailedAttempt } from './webAuth';
 
 // ─── Body shape ───────────────────────────────────────────────────────────────
@@ -93,14 +94,34 @@ function handlePairPost(req: Request, res: Response): void {
   });
 }
 
+// ─── Test-mode seeding ────────────────────────────────────────────────────────
+
+/**
+ * POST /api/test/seed-pairing-ticket
+ *
+ * Only mounted when NODE_ENV === 'test'. Issues a fresh pairing ticket so
+ * Playwright specs can complete the pairing flow without driving the real
+ * 60-second desktop Settings UI.
+ *
+ * Response: { code: string; expiresAt: number }
+ */
+function handleSeedTicket(_req: Request, res: Response): void {
+  const ticket = issueTicket();
+  res.json({ code: ticket.code, expiresAt: ticket.expiresAt });
+}
+
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 /**
  * Returns an Express Router that mounts POST /api/pair.
  * Mount conditionally in webServer.ts behind mobileAccess.enabled.
+ * In NODE_ENV=test, also mounts POST /api/test/seed-pairing-ticket.
  */
 export function createPairingRouter(): Router {
   const router = Router();
   router.post('/api/pair', handlePairPost);
+  if (process.env.NODE_ENV === 'test') {
+    router.post('/api/test/seed-pairing-ticket', handleSeedTicket);
+  }
   return router;
 }

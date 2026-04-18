@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- test file; paths from os.tmpdir() */
+ 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
