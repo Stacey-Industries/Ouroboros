@@ -8,7 +8,7 @@ import { useToastContext } from '../../contexts/ToastContext';
 import { REFRESH_FILE_TREE_EVENT } from '../../hooks/appEventNames';
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
 import { useGitStatusDetailed } from '../../hooks/useGitStatusDetailed';
-import { EmptyState } from '../shared';
+import { EmptyStateMessage } from '../EmptyState';
 import { FileTreeBody } from './FileTreeBody';
 import { FileTreeSearchBar } from './FileTreeSearchBar';
 import { useFileTreeStore } from './fileTreeStore';
@@ -178,13 +178,31 @@ function useRefreshFilesEvent(): void {
   }, [clearLoadedDirs]);
 }
 
+const FOLDER_ICON = (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M8 14C8 12.3431 9.34315 11 11 11H19L23 15H37C38.6569 15 40 16.3431 40 18V34C40 35.6569 38.6569 37 37 37H11C9.34315 37 8 35.6569 8 34V14Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M8 20H40" stroke="currentColor" strokeWidth="1.5" />
+  </svg>
+);
+
+function openFolderDialog(): void {
+  void window.electronAPI.files.selectFolder().then((result) => {
+    if (!result.cancelled && result.path) {
+      void window.electronAPI.config.set('defaultProjectRoot', result.path);
+    }
+  });
+}
+
 function EmptyFileTree(): React.ReactElement {
   return (
     <div style={treeContainerStyle}>
-      <EmptyState
-        icon="folder"
-        title="Open a folder to get started"
-        description="Use the project picker above or open a folder from the File menu."
+      {/* Wave 38 Phase C — i18n empty-state with persistent dismiss + open-folder action */}
+      <EmptyStateMessage
+        messageKey="emptyState.fileTree.primary"
+        icon={FOLDER_ICON}
+        dismissKey="fileTree"
+        actionLabel="emptyState.fileTree.action"
+        onAction={openFolderDialog}
       />
     </div>
   );

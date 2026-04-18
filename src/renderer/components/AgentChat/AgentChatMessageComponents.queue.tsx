@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { EmptyStateMessage } from '../EmptyState';
 import type { QueuedMessage } from './useAgentChatWorkspace';
 
 const SUGGESTED_PROMPTS = [
@@ -87,6 +88,32 @@ const SUGGESTED_PROMPTS = [
   },
 ];
 
+function SuggestedPromptGrid({
+  onSelectPrompt,
+}: {
+  onSelectPrompt?: (prompt: string) => void;
+}): React.ReactElement {
+  return (
+    <div className="grid w-full max-w-[440px] grid-cols-2 gap-2">
+      {SUGGESTED_PROMPTS.map((item) => (
+        <button
+          key={item.prompt}
+          onClick={() => onSelectPrompt?.(item.prompt)}
+          className="flex flex-col gap-1.5 rounded-lg border border-border-semantic px-3 py-2.5 text-left transition-colors duration-150 hover:bg-surface-raised"
+        >
+          <div className="flex items-center gap-1.5 text-text-semantic-muted">
+            {item.icon}
+            <span className="text-xs font-medium text-text-semantic-primary">{item.title}</span>
+          </div>
+          <span className="text-[11px] leading-snug text-text-semantic-muted">
+            {item.description}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function EmptyConversationState({
   onSelectPrompt,
 }: {
@@ -94,29 +121,15 @@ export function EmptyConversationState({
 }): React.ReactElement {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="flex flex-col items-center gap-2">
-        <div className="text-sm font-medium text-text-semantic-primary">Start a conversation</div>
-        <div className="max-w-[300px] text-xs text-text-semantic-muted">
-          Ask the agent to inspect, edit, or verify code. Your first message creates the thread.
-        </div>
+      {/* Wave 38 Phase C — i18n empty-state prompt (persistent dismiss via config key).
+          Wrapper constrains height so EmptyStateMessage doesn't collapse the prompt grid. */}
+      <div style={{ position: 'relative', width: '100%', maxWidth: '440px' }}>
+        <EmptyStateMessage
+          messageKey="emptyState.chat.primary"
+          dismissKey="chat"
+        />
       </div>
-      <div className="grid w-full max-w-[440px] grid-cols-2 gap-2">
-        {SUGGESTED_PROMPTS.map((item) => (
-          <button
-            key={item.prompt}
-            onClick={() => onSelectPrompt?.(item.prompt)}
-            className="flex flex-col gap-1.5 rounded-lg border border-border-semantic px-3 py-2.5 text-left transition-colors duration-150 hover:bg-surface-raised"
-          >
-            <div className="flex items-center gap-1.5 text-text-semantic-muted">
-              {item.icon}
-              <span className="text-xs font-medium text-text-semantic-primary">{item.title}</span>
-            </div>
-            <span className="text-[11px] leading-snug text-text-semantic-muted">
-              {item.description}
-            </span>
-          </button>
-        ))}
-      </div>
+      <SuggestedPromptGrid onSelectPrompt={onSelectPrompt} />
     </div>
   );
 }

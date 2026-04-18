@@ -253,14 +253,8 @@ export interface AppConfig {
   theming?: { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }; providers?: { multiProvider?: boolean };
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata. */
   ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number } };
-  /** Wave 38 Phase A — platform-level settings: onboarding gate, language, update channel, crash reporter, changelog gate. */
-  platform?: {
-    onboarding?: { completed?: boolean };
-    language?: 'en' | 'es';
-    updateChannel?: 'stable' | 'beta';
-    crashReports?: { enabled?: boolean; webhookUrl?: string };
-    lastSeenVersion?: string;
-  };
+  /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
+  platform?: { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> };
 }
 
 export interface ContextLayerConfig {

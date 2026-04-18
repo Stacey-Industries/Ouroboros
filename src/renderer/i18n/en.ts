@@ -32,10 +32,12 @@ export const EN_STRINGS = {
     },
     fileTree: {
       primary: 'Open a project folder to browse files',
+      action: 'Open folder',
       dismiss: 'Dismiss',
     },
     terminal: {
       primary: 'Press + to open a terminal or start a Claude session',
+      action: 'New terminal',
       dismiss: 'Dismiss',
     },
   },

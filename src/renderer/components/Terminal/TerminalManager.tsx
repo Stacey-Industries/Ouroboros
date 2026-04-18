@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 
 import { SPLIT_TERMINAL_EVENT } from '../../hooks/appEventNames';
-import { EmptyState } from '../shared';
+import { EmptyStateMessage } from '../EmptyState';
 import { ActiveTerminalContent } from './TerminalManagerContent';
 import { useTerminalManagerState } from './TerminalManagerState';
 import type { TerminalSession } from './TerminalTabs';
@@ -37,12 +37,12 @@ function TerminalManagerShell({
     >
       <div className="relative flex-1 min-h-0">
         {activeContent}
+        {/* Wave 38 Phase C — i18n empty-state with session dismiss + spawn action */}
         {isEmpty && (
-          <EmptyState
-            icon="terminal"
-            title="No terminals open"
-            description="Open a terminal to run commands in your project."
-            action={{ label: 'New Terminal', onClick: onSpawn }}
+          <EmptyStateMessage
+            messageKey="emptyState.terminal.primary"
+            actionLabel="emptyState.terminal.action"
+            onAction={onSpawn}
           />
         )}
       </div>

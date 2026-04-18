@@ -6,8 +6,9 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
-/** Wave 38 Phase A — platform-level settings: onboarding, language, update channel, crash reporter, changelog gate. */
-export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string }
+/** Wave 38 Phase A+C — platform-level settings: onboarding, language, update channel, crash reporter, changelog gate.
+ *  Phase C adds dismissedEmptyStates for persistent "don't show again" dismiss. */
+export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> }
 
 /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
 export interface ThemingConfig { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }
