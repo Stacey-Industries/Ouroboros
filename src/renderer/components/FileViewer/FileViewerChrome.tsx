@@ -1,6 +1,8 @@
 import type { Ref } from 'react';
 import React, { memo, useCallback } from 'react';
 
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
+import { useMobilePrimaryFlag } from '../Layout/layoutPresets/LayoutPresetResolver';
 import type { CodeViewProps } from './CodeView';
 import type { CodeRow } from './codeViewTypes';
 import { ContentRouter } from './ContentRouter';
@@ -158,6 +160,10 @@ interface ChromeBodyProps {
   onDirtyChange?: (dirty: boolean) => void;
   codeViewProps: Omit<CodeViewProps, 'scrollRef' | 'codeRef'>;
   s: FileViewerState;
+  /** Forwarded from useViewportBreakpoint() — gates mobile fallback */
+  viewport: ReturnType<typeof useViewportBreakpoint>;
+  /** Forwarded from useMobilePrimaryFlag() — gates mobile fallback */
+  mobilePrimaryFlag: boolean;
 }
 
 function ChromeBody({
@@ -171,10 +177,23 @@ function ChromeBody({
   onDirtyChange,
   codeViewProps,
   s,
+  viewport,
+  mobilePrimaryFlag,
 }: ChromeBodyProps): React.ReactElement {
   return (
     <div style={bodyStyle}>
-      <ContentRouter viewMode={s.viewMode} editMode={s.editMode} isClaudeMd={s.isClaudeMd} claudeMdEnhanced={s.claudeMdEnhanced} filePath={filePath} content={content} ideThemeId={s.ideThemeId} projectRoot={projectRoot} onSave={onSave} onContentChange={onContentChange} onDirtyChange={onDirtyChange} showHistory={s.showHistory} isMarkdown={s.isMarkdown} hasDiff={s.hasDiff} originalContent={originalContent} diffBaseContent={diffBaseContent} conflictBlocks={s.conflictBlocks} handleConflictResolved={s.handleConflictResolved} codeViewProps={codeViewProps} scrollRef={s.scrollRef} codeRef={s.codeRef} wordWrap={s.wordWrap} showMinimap={s.showMinimap} showBlame={s.showBlame} formatOnSave={s.formatOnSave} />
+      <ContentRouter
+        viewMode={s.viewMode} editMode={s.editMode} isClaudeMd={s.isClaudeMd}
+        claudeMdEnhanced={s.claudeMdEnhanced} filePath={filePath} content={content}
+        ideThemeId={s.ideThemeId} projectRoot={projectRoot} onSave={onSave}
+        onContentChange={onContentChange} onDirtyChange={onDirtyChange}
+        showHistory={s.showHistory} isMarkdown={s.isMarkdown} hasDiff={s.hasDiff}
+        originalContent={originalContent} diffBaseContent={diffBaseContent}
+        conflictBlocks={s.conflictBlocks} handleConflictResolved={s.handleConflictResolved}
+        codeViewProps={codeViewProps} scrollRef={s.scrollRef} codeRef={s.codeRef}
+        wordWrap={s.wordWrap} showMinimap={s.showMinimap} showBlame={s.showBlame}
+        formatOnSave={s.formatOnSave} viewport={viewport} mobilePrimaryFlag={mobilePrimaryFlag}
+      />
       <OutlinePanel s={s} />
     </div>
   );
@@ -217,6 +236,8 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   shikiLines,
   rows,
 }: FileViewerChromeProps): React.ReactElement {
+  const viewport = useViewportBreakpoint();
+  const mobilePrimaryFlag = useMobilePrimaryFlag();
   const codeViewProps = buildCodeViewProps({ s, lines, lineCount, gutterWidth, shikiLines, rows });
   // Wrap onSave so that Ctrl+S from Monaco also exits edit mode
   const { setEditMode } = s;
@@ -227,7 +248,7 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   return (
     <div ref={s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
       <ChromeHeader projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload} currentContent={content} isDirty={isDirty} onSave={onSave} onCancelEdit={onCancelEdit} s={s} />
-      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} diffBaseContent={s.diffBaseContent} onSave={handleEditorSave} onContentChange={onContentChange} onDirtyChange={undefined} codeViewProps={codeViewProps} s={s} />
+      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} diffBaseContent={s.diffBaseContent} onSave={handleEditorSave} onContentChange={onContentChange} onDirtyChange={undefined} codeViewProps={codeViewProps} s={s} viewport={viewport} mobilePrimaryFlag={mobilePrimaryFlag} />
       {filePath && <StatusFooter filePath={filePath} lineCount={lineCount} s={s} />}
     </div>
   );

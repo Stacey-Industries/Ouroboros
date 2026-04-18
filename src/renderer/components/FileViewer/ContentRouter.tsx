@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import React, { memo } from 'react';
 
+import type { ViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import { ClaudeMdEditor } from './ClaudeMdEditor';
 import type { CodeViewProps } from './CodeView';
 import { CodeView } from './CodeView';
@@ -14,6 +15,7 @@ import { MonacoDiffEditor } from './MonacoDiffEditor';
 // MonacoEditor kept as legacy fallback — see MonacoEditor.tsx
 // import { MonacoEditor } from './MonacoEditor';
 import { MonacoEditorHost } from './MonacoEditorHost';
+import { MonacoMobileFallback } from './MonacoMobileFallback';
 import { detectLanguage } from './monacoSetup';
 
 /**
@@ -63,6 +65,12 @@ export interface ContentRouterProps {
   scrollRef: RefObject<HTMLDivElement | null>;
   codeRef: RefObject<HTMLDivElement | null>;
 
+  // ── Mobile fallback props ─────────────────────────────────────────────
+  /** Current viewport tier from useViewportBreakpoint() */
+  viewport?: ViewportBreakpoint;
+  /** Whether layout.mobilePrimary is enabled in config */
+  mobilePrimaryFlag?: boolean;
+
   // ── Monaco-specific props ─────────────────────────────────────────────
   /** Callback when editor dirty state changes (content differs from saved) */
   onDirtyChange?: (dirty: boolean) => void;
@@ -98,8 +106,26 @@ function renderPanel(
   return <div style={style}>{child}</div>;
 }
 
+function isMobileFallbackActive(props: ContentRouterProps): boolean {
+  return props.viewport === 'phone' && props.mobilePrimaryFlag === true;
+}
+
+function renderMobileFallbackEditor(props: ContentRouterProps): React.ReactElement {
+  const language = props.filePath ? detectLanguage(props.filePath) : 'plaintext';
+  return renderPanel(
+    <MonacoMobileFallback
+      filePath={props.filePath!}
+      content={props.content!}
+      language={language}
+      readOnly={false}
+      onChange={props.onContentChange}
+    />,
+  );
+}
+
 function buildEditorContent(props: ContentRouterProps): React.ReactElement {
   if (props.isClaudeMd && props.claudeMdEnhanced) return renderClaudeMdEditor(props);
+  if (isMobileFallbackActive(props)) return renderMobileFallbackEditor(props);
   if (USE_MONACO) return renderMonacoEditor(props);
   return renderInlineEditor(props);
 }
@@ -229,22 +255,35 @@ function resolveContent(props: ContentRouterProps): React.ReactElement {
     }
   }
 
-  // Default: code view (read-only) — uses MonacoEditorHost for persistent instance
-  if (USE_MONACO && props.filePath && props.content != null) {
-    return renderPanel(
-      <MonacoEditorHost
-        filePath={props.filePath}
-        content={props.content}
-        readOnly={true}
-        projectRoot={props.projectRoot}
-        onSave={props.onSave}
-        onDirtyChange={props.onDirtyChange}
-        wordWrap={props.wordWrap}
-        showMinimap={props.showMinimap}
-        showBlame={props.showBlame}
-        diffLines={props.codeViewProps.diffLines}
-      />,
-    );
+  // Default: code view (read-only) — mobile fallback or MonacoEditorHost
+  if (props.filePath && props.content != null) {
+    if (isMobileFallbackActive(props)) {
+      const language = detectLanguage(props.filePath);
+      return renderPanel(
+        <MonacoMobileFallback
+          filePath={props.filePath}
+          content={props.content}
+          language={language}
+          readOnly={true}
+        />,
+      );
+    }
+    if (USE_MONACO) {
+      return renderPanel(
+        <MonacoEditorHost
+          filePath={props.filePath}
+          content={props.content}
+          readOnly={true}
+          projectRoot={props.projectRoot}
+          onSave={props.onSave}
+          onDirtyChange={props.onDirtyChange}
+          wordWrap={props.wordWrap}
+          showMinimap={props.showMinimap}
+          showBlame={props.showBlame}
+          diffLines={props.codeViewProps.diffLines}
+        />,
+      );
+    }
   }
 
   // Legacy: Shiki-based CodeView
