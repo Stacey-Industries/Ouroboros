@@ -48,11 +48,17 @@ function usePairingGenerator(): PairingGeneratorResult {
     try {
       const result: GeneratePairingCodeResult =
         await window.electronAPI.mobileAccess.generatePairingCode();
-      if (result.success && result.code && result.expiresAt && result.qrPayload && result.qrPairingUrl) {
+      if (result.success && result.code && result.expiresAt && result.qrPayload) {
+        const payload = result.qrPayload;
+        // qrPairingUrl was added in Wave 33b Phase E; fall back to constructing it
+        // from qrPayload so older IPC implementations (and test mocks) still work.
+        const qrPairingUrl =
+          result.qrPairingUrl ??
+          `ouroboros://pair?host=${encodeURIComponent(payload.host)}&port=${payload.port}&code=${payload.code}&fingerprint=${encodeURIComponent(payload.fingerprint)}`;
         setPairing({
           code: result.code,
-          qrPayload: result.qrPayload,
-          qrPairingUrl: result.qrPairingUrl,
+          qrPayload: payload,
+          qrPairingUrl,
           expiresAt: result.expiresAt,
         });
       } else {
