@@ -9,6 +9,8 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { MobileLayoutProvider } from '../../contexts/MobileLayoutContext';
+
 // ---------------------------------------------------------------------------
 // Mock heavy sub-components and hooks that need Electron / xterm / Monaco
 // ---------------------------------------------------------------------------
@@ -43,6 +45,12 @@ vi.mock('./ResizeDivider', () => ({ ResizeDivider: () => null }));
 vi.mock('./StatusBar', () => ({ StatusBar: () => null }));
 vi.mock('./AppLayout.mobile', () => ({
   MobileNavBar: () => null,
+  MOBILE_NAV_ITEMS: [
+    { id: 'files', label: 'Files' },
+    { id: 'editor', label: 'Editor' },
+    { id: 'terminal', label: 'Terminal' },
+    { id: 'chat', label: 'Chat' },
+  ],
 }));
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: React.PropsWithChildren) => <>{children}</>,
@@ -96,24 +104,32 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+function renderWithMobile(): ReturnType<typeof render> {
+  return render(
+    <MobileLayoutProvider>
+      <AppLayout {...baseProps} />
+    </MobileLayoutProvider>,
+  );
+}
+
 describe('AppLayout DnD integration', () => {
   it('renders DroppableSlot wrappers when layout.dragAndDrop is true', () => {
     mockConfig(true);
-    const { container } = render(<AppLayout {...baseProps} />);
+    const { container } = renderWithMobile();
     const slots = container.querySelectorAll('[data-droppable-slot]');
     expect(slots.length).toBeGreaterThan(0);
   });
 
   it('does not render DroppableSlot wrappers when layout.dragAndDrop is false', () => {
     mockConfig(false);
-    const { container } = render(<AppLayout {...baseProps} />);
+    const { container } = renderWithMobile();
     const slots = container.querySelectorAll('[data-droppable-slot]');
     expect(slots.length).toBe(0);
   });
 
   it('renders the correct slot names as data attributes when DnD is on', () => {
     mockConfig(true);
-    const { container } = render(<AppLayout {...baseProps} />);
+    const { container } = renderWithMobile();
     const slotNames = Array.from(container.querySelectorAll('[data-droppable-slot]'))
       .map((el) => el.getAttribute('data-droppable-slot'));
     expect(slotNames).toContain('editorContent');
