@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useDispatchJobs } from '../../hooks/useDispatchJobs';
+import { DispatchBadge } from '../AgentChat/DispatchBadge';
 import { CompactionIndicator } from './CompactionIndicator';
 import { estimateCost, formatCost, formatTokenCount } from './costCalculator';
 import type { AgentSession } from './types';
@@ -104,8 +106,9 @@ export function AgentCardMeta({
   session: AgentSession;
   childCount?: number;
 }): React.ReactElement<unknown> {
+  const { jobs } = useDispatchJobs();
   return (
-    <div className="px-6 pb-1 flex items-center gap-2">
+    <div className="px-6 pb-1 flex items-center gap-2 flex-wrap">
       <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>
         {session.id.slice(0, 12)}
       </span>
@@ -127,6 +130,7 @@ export function AgentCardMeta({
           subagent
         </span>
       )}
+      <DispatchBadge sessionId={session.id} jobs={jobs} />
       <TokenUsageSummary session={session} />
       <CompactionIndicator compactions={session.compactions} failedCompactions={session.failedCompactions} />
     </div>

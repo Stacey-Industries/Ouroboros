@@ -74,8 +74,10 @@ const mockKillSession = vi.fn(() => Promise.resolve(undefined));
 const mockSpawnAgentSession = vi.fn();
 
 vi.mock('./sessionSpawnAdapter', () => ({
-  spawnAgentSession: (...a: unknown[]) => mockSpawnAgentSession(...a),
-  killSession: (...a: unknown[]) => mockKillSession(...a),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  spawnAgentSession: (...a: any[]) => (mockSpawnAgentSession as any)(...a),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  killSession: (...a: any[]) => (mockKillSession as any)(...a),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -169,7 +171,7 @@ describe('sessionDispatchRunner', () => {
   it('transitions queued → starting → running → completed', async () => {
     const job = makeJob();
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     const ctrl = makeCompletionCtrl();
 
     runner.startDispatchRunner();
@@ -190,7 +192,7 @@ describe('sessionDispatchRunner', () => {
   it('broadcasts on every status transition', async () => {
     const job = makeJob();
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     const ctrl = makeCompletionCtrl();
 
     runner.startDispatchRunner();
@@ -259,7 +261,7 @@ describe('sessionDispatchRunner', () => {
       request: { title: 'T', prompt: 'P', projectPath: '/proj', worktreeName: 'feat-branch' },
     });
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     makeCompletionCtrl();
 
     runner.startDispatchRunner();
@@ -274,7 +276,7 @@ describe('sessionDispatchRunner', () => {
   it('does NOT call worktreeManager.add when worktreeName is absent', async () => {
     const job = makeJob();
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     makeCompletionCtrl();
 
     runner.startDispatchRunner();
@@ -292,7 +294,7 @@ describe('sessionDispatchRunner', () => {
       request: { title: 'T', prompt: 'P', projectPath: '/proj', worktreeName: 'bad' },
     });
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
 
     runner.startDispatchRunner();
     await runOneTick();
@@ -309,7 +311,7 @@ describe('sessionDispatchRunner', () => {
     mockConfig.sessionDispatch.jobTimeoutMs = 5_000;
     const job = makeJob();
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     makeCompletionCtrl();
 
     runner.startDispatchRunner();
@@ -330,7 +332,7 @@ describe('sessionDispatchRunner', () => {
   it('cancel hook kills the session', async () => {
     const job = makeJob();
     mockNextQueued.mockReturnValueOnce(job).mockReturnValue(null);
-    mockUpdateJob.mockImplementation((id, patch) => ({ ...job, ...patch }));
+    mockUpdateJob.mockImplementation((_id, patch) => ({ ...job, ...patch }));
     makeCompletionCtrl();
 
     runner.startDispatchRunner();

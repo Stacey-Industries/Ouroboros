@@ -93,4 +93,6 @@ export interface SessionsAPI {
   ) => Promise<DispatchTaskResult>;
   listDispatchJobs: () => Promise<ListDispatchJobsResult>;
   cancelDispatchJob: (jobId: string) => Promise<CancelDispatchJobResult>;
+  /** Wave 34 Phase D — live status push. Returns cleanup function. */
+  onDispatchStatus: (callback: (job: DispatchJob) => void) => () => void;
 }

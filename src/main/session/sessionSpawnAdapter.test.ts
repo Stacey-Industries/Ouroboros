@@ -20,7 +20,8 @@ vi.mock('electron', () => ({
 // ── Config mock ───────────────────────────────────────────────────────────────
 
 const mockGetConfigValue = vi.fn(() => false); // usePtyHost = false by default
-vi.mock('../config', () => ({ getConfigValue: (k: string) => mockGetConfigValue(k) }));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+vi.mock('../config', () => ({ getConfigValue: (k: string) => (mockGetConfigValue as any)(k) }));
 
 // ── Logger mock ───────────────────────────────────────────────────────────────
 
@@ -44,9 +45,12 @@ const mockEscapePowerShellArg = vi.fn((s: string) => s);
 
 vi.mock('../pty', () => ({
   get sessions() { return mockSessions; },
-  registerSession: (...a: unknown[]) => mockRegisterSession(...a),
-  cleanupSession: (...a: unknown[]) => mockCleanupSession(...a),
-  killPty: (...a: unknown[]) => mockKillPty(...a),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registerSession: (...a: any[]) => mockRegisterSession(...a),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cleanupSession: (...a: any[]) => mockCleanupSession(...a),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  killPty: (...a: any[]) => (mockKillPty as any)(...a),
   escapePowerShellArg: (s: string) => mockEscapePowerShellArg(s),
 }));
 
@@ -168,7 +172,8 @@ describe('sessionSpawnAdapter', () => {
 
   describe('spawnAgentSession — PtyHost path', () => {
     it('delegates to spawnAgentViaPtyHost when usePtyHost=true', async () => {
-      mockGetConfigValue.mockImplementation((k: string) => k === 'usePtyHost');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockGetConfigValue as any).mockImplementation((k: string) => k === 'usePtyHost');
 
       mockSpawnAgentViaPtyHost.mockResolvedValue({
         success: true,
@@ -183,7 +188,8 @@ describe('sessionSpawnAdapter', () => {
     });
 
     it('throws when PtyHost spawn fails', async () => {
-      mockGetConfigValue.mockImplementation((k: string) => k === 'usePtyHost');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockGetConfigValue as any).mockImplementation((k: string) => k === 'usePtyHost');
       mockSpawnAgentViaPtyHost.mockResolvedValue({ success: false, error: 'host down' });
 
       const { spawnAgentSession } = await import('./sessionSpawnAdapter');
