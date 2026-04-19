@@ -59,6 +59,7 @@ import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandle
 import { registerBuiltinProviders } from './providerBootstrap';
 import { killAllPtySessions } from './pty';
 import { closeCorrectionWriter, initCorrectionWriter } from './research/correctionWriter';
+import { scheduleResearchCachePurge } from './research/researchCacheScheduler';
 import { closeResearchOutcomeWriter, initResearchOutcomeWriter } from './research/researchOutcomeWriter';
 import { clearQualityTimers } from './router/qualitySignalCollector';
 import {
@@ -247,7 +248,7 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
-  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initCorrectionWriter(_ud); initEditProvenance(_ud); scheduleJsonlRetentionPurge(_ud); // Wave 18/24/25/G/H
+  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initCorrectionWriter(_ud); initEditProvenance(_ud); scheduleJsonlRetentionPurge(_ud); scheduleResearchCachePurge(_ud); // Wave 18/24/25/G/H/F
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
   registerBuiltinProviders(); await migrateSecretsIfNeeded();
@@ -324,9 +325,7 @@ app.on('web-contents-created', (_event, contents) => {
     cleanupPerfSubscriber(contents.id);
   });
 
-  contents.setWindowOpenHandler(() => {
-    return { action: 'deny' };
-  });
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   contents.on('will-navigate', (event, url) => {
     const parsedUrl = new URL(url);

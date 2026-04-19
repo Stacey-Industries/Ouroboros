@@ -22,6 +22,7 @@ import { openDatabase } from '../storage/database';
 import {
   type InvocationRow,
   type OutcomeRow,
+  purgeRetainedRows,
   redactPayload,
   TELEMETRY_SCHEMA_SQL,
   type TelemetryEvent,
@@ -35,6 +36,7 @@ import {
   queryOutcomes,
   queryTraces,
 } from './telemetryStoreQueries';
+import { drainTraceBatcher, initTraceBatcher } from './traceBatcher';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,10 +94,14 @@ interface PendingEvent {
   payload: string;
 }
 
+const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 interface StoreState {
   db: DatabaseType;
   queue: PendingEvent[];
   intervalHandle: ReturnType<typeof setInterval>;
+  purgeHandle: ReturnType<typeof setInterval>;
 }
 
 let singleton: TelemetryStore | null = null;
@@ -227,8 +233,27 @@ function writeInvocation(state: StoreState, opts: RecordInvocationOpts): void {
   }
 }
 
+function schedulePurge(state: StoreState): void {
+  const runPurge = (): void => {
+    try {
+      const deleted = purgeRetainedRows(state.db, RETENTION_MS);
+      if (deleted > 0) log.info(`[telemetry] retention purge removed ${deleted} rows`);
+    } catch (err) {
+      log.warn('[telemetry] retention purge error', err);
+    }
+  };
+  // Run once at startup without blocking
+  setImmediate(runPurge);
+  // Schedule daily thereafter
+  state.purgeHandle = setInterval(runPurge, PURGE_INTERVAL_MS);
+  if (typeof state.purgeHandle === 'object' && state.purgeHandle !== null && 'unref' in state.purgeHandle) {
+    (state.purgeHandle as NodeJS.Timeout).unref();
+  }
+}
+
 function closeStore(state: StoreState): void {
   clearInterval(state.intervalHandle);
+  clearInterval(state.purgeHandle);
   if (state.queue.length > 0) {
     const batch = state.queue.splice(0, state.queue.length);
     try {
@@ -250,9 +275,15 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
   const dbPath = path.join(userDataDir, 'telemetry', 'telemetry.db');
   const db = openDatabase(dbPath);
   db.exec(TELEMETRY_SCHEMA_SQL);
-  const state: StoreState = { db, queue: [], intervalHandle: setInterval(() => undefined, 1 << 30) };
+  const state: StoreState = {
+    db, queue: [],
+    intervalHandle: setInterval(() => undefined, 1 << 30),
+    purgeHandle: setInterval(() => undefined, 1 << 30),
+  };
   clearInterval(state.intervalHandle);
+  clearInterval(state.purgeHandle);
   startFlushInterval(state);
+  schedulePurge(state);
   return {
     record: (payload) => enqueueEvent(state, payload),
     recordOutcome: (opts) => writeOutcome(state, opts),
@@ -277,6 +308,7 @@ export function initTelemetryStore(userDataDir: string): void {
     // Config not available (e.g. test environment) — flag stays off
   }
   singleton = openTelemetryStore(userDataDir);
+  initTraceBatcher();
   log.info('[telemetry] store initialised');
 }
 
@@ -286,6 +318,7 @@ export function getTelemetryStore(): TelemetryStore | null {
 
 export function closeTelemetryStore(): void {
   if (!singleton) return;
+  drainTraceBatcher();
   singleton.close();
   singleton = null;
   log.info('[telemetry] store closed');
