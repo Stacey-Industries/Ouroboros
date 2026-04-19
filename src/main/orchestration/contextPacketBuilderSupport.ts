@@ -20,10 +20,7 @@ import type {
   RankedContextFile,
 } from './types';
 
-export const DEFAULT_MAX_FILES = 10;
 export const DEFAULT_MAX_BYTES = 48_000;
-export const DEFAULT_MAX_TOKENS = 12_000;
-export const DEFAULT_MAX_SNIPPETS_PER_FILE = 4;
 export const DEFAULT_FULL_FILE_LINE_LIMIT = 80;
 export const DEFAULT_TARGETED_SNIPPET_LINE_LIMIT = 60;
 

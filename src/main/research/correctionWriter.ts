@@ -212,7 +212,3 @@ export function closeCorrectionWriter(): Promise<void> {
   return writer.closeWriter();
 }
 
-/** @internal Test-only reset */
-export function _resetCorrectionWriterForTests(): void {
-  singleton = null;
-}

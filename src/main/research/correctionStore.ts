@@ -72,6 +72,3 @@ export function getCorrectionStore(): CorrectionStore {
   return singleton;
 }
 
-export function _resetCorrectionStoreForTests(): void {
-  singleton = null;
-}

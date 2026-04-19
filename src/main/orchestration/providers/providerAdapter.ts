@@ -88,19 +88,4 @@ export function createProviderProgressEvent(
   return { status, ...fields } as import('../types').ProviderProgressEvent
 }
 
-export interface ProviderAdapterRegistry {
-  get: (provider: OrchestrationProvider) => ProviderAdapter | undefined
-}
-
-export class StaticProviderAdapterRegistry implements ProviderAdapterRegistry {
-  private readonly adapters: Map<OrchestrationProvider, ProviderAdapter>
-
-  constructor(adapters: ProviderAdapter[]) {
-    this.adapters = new Map(adapters.map((adapter) => [adapter.provider, adapter]))
-  }
-
-  get(provider: OrchestrationProvider): ProviderAdapter | undefined {
-    return this.adapters.get(provider)
-  }
-}
 

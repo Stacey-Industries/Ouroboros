@@ -187,7 +187,7 @@ export function findKeywordMatches(
   return matches
 }
 
-export function extractImportSpecifiers(content: string | null): string[] {
+function extractImportSpecifiers(content: string | null): string[] {
   if (!content) return []
   return Array.from(
     content.matchAll(
@@ -196,7 +196,7 @@ export function extractImportSpecifiers(content: string | null): string[] {
   ).flatMap((match) => (match[1] ? [match[1]] : []))
 }
 
-export function referencesTarget(
+function referencesTarget(
   sourceFile: string,
   targetFile: string,
   imports: string[],

@@ -20,7 +20,6 @@ import path from 'node:path';
 
 import log from '../logger';
 import type { ContextDecision } from './contextTypes';
-import { buildDatedFilename } from './jsonlRetention';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -77,13 +76,6 @@ function makeProductionDeps(userDataPath: string): DecisionWriterDeps {
     },
     todayStamp: () => new Date().toISOString().slice(0, 10),
   };
-}
-
-// ─── Per-day path resolution ──────────────────────────────────────────────────
-
-function currentDayPath(deps: DecisionWriterDeps): string {
-  const dir = deps.getDir();
-  return path.join(dir, buildDatedFilename(DECISION_BASENAME, new Date()));
 }
 
 // ─── Intraday size-rotation helpers ──────────────────────────────────────────
@@ -203,16 +195,6 @@ export function closeDecisionWriter(): Promise<void> {
   singleton = null;
   log.info('[contextDecisionWriter] closing');
   return writer.closeDecisionWriter();
-}
-
-/** Helper exposed for production startup — returns the userData dir. */
-export function getDecisionWriterDir(userDataPath: string): string {
-  return userDataPath;
-}
-
-/** Returns the current day's file path (used by startup purge logging). */
-export function currentDecisionFilePath(userDataPath: string): string {
-  return currentDayPath(makeProductionDeps(userDataPath));
 }
 
 /** @internal Test-only reset */

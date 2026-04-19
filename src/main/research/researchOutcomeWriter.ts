@@ -245,7 +245,3 @@ export function closeResearchOutcomeWriter(): Promise<void> {
   return writer.closeWriter();
 }
 
-/** @internal Test-only reset */
-export function _resetResearchOutcomeWriterForTests(): void {
-  singleton = null;
-}

@@ -183,10 +183,7 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 
 ## Known Issues / Tech Debt
 
-- TerminalPane and TerminalManager both render tab bars (double header) — needs state lifting to unify
-- Settings modal in App.tsx is inline — should use the Settings components in `components/Settings/`
-- `internalMcp/` module (SSE MCP server + settings auto-inject) — fully implemented but never wired into main.ts startup sequence. No callers exist. Designed to expose IDE tools to Claude Code via MCP.
-- `streamingInlineEdit` feature flag is wired but not removed — Phase 8 spec says remove after 1 release of soak. Flag lives in `config.streamingInlineEdit`; mirrored to `window.__streamingInlineEdit__` by `useStreamingInlineEditFlag` (App.tsx).
+- `internalMcp/` module — SSE MCP server + settings auto-inject. Wired in `main.ts` via `startInternalMcpServer`, gated by `config.internalMcpEnabled` (default on). The `src/main/internalMcp/CLAUDE.md` still says "UNWIRED" — that doc is stale.
 - Background job queue concurrency cap and queue length cap (50) are hardcoded — expose as settings when the feature matures.
 - `refs/ouroboros/checkpoints/<threadId>` refs accumulate over time — GC policy (keep last 50) runs lazily on next checkpoint capture, not on a schedule.
 

@@ -17,7 +17,7 @@ import log from '../logger';
 
 /* ── Constants ────────────────────────────────────────────────────────── */
 
-export const TRAINER_TIMEOUT_MS = 120_000; // 2 minutes
+const TRAINER_TIMEOUT_MS = 120_000; // 2 minutes
 
 /* ── Python binary detection ──────────────────────────────────────────── */
 

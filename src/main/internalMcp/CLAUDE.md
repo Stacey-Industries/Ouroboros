@@ -3,20 +3,19 @@
 The two-tier tool fallback in `getActiveTools()` is worth noting: it's a resilience pattern that keeps the MCP server useful even when the graph hasn't been indexed yet. The graph tools and context-layer tools overlap in purpose but differ in accuracy — graph tools know call relationships, context-layer tools know module metadata. They're not interchangeable, just substitutable for orientation queries.
 `─────────────────────────────────────────────────`
 
-Generated `src/main/internalMcp/CLAUDE.md`. Key things captured:
+Key things captured:
 
-- **UNWIRED status** is front-and-center — this is the most important fact about the module
+- **Wired and active** — `main.ts` calls `startInternalMcpServer` at startup (line 164), gated by `internalMcpEnabled` config flag (default on)
 - The **two-tier tool fallback** logic in `getActiveTools()` (graph → context-layer)
-- The **wiring recipe** for whoever eventually enables this (what to call, where, in what order)
 - `validateModuleId`'s security role and its limits
 - Why the files are split (`max-lines: 300` lint rule, not logical separation)
 - The atomic write pattern in `internalMcpAutoInject.ts`
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->
-# `src/main/internalMcp/` — Internal MCP Server (UNWIRED)
+# `src/main/internalMcp/` — Internal MCP Server
 
-> **Status: Fully implemented, never started.** No callers exist in `main.ts` or any startup path. See `index.ts` `@deprecated` notice and the Known Issues / Tech Debt section of the root CLAUDE.md.
+> **Status: Wired and active.** `main.ts` imports and calls `startInternalMcpServer` in the startup sequence (line 164), gated by `config.internalMcpEnabled` (default `true`). The `@deprecated` notice in `index.ts` is stale — ignore it.
 
 Designed to expose IDE tools to Claude Code sessions by running a local SSE MCP server on `localhost:<random port>` and auto-injecting its URL into `.claude/settings.json` as the `'ouroboros'` MCP server entry.
 

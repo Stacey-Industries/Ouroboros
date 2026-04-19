@@ -123,6 +123,3 @@ export function getResearchCorrelationStore(): ResearchCorrelationStore {
   return singleton;
 }
 
-export function _resetResearchCorrelationStoreForTests(): void {
-  singleton = null;
-}
