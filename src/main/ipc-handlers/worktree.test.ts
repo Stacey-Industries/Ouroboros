@@ -47,6 +47,14 @@ vi.mock('../session/worktreeManager', () => ({
   }),
 }));
 
+// ─── Mock pathSecurity ────────────────────────────────────────────────────────
+
+const mockAssertPathAllowed = vi.fn();
+
+vi.mock('./pathSecurity', () => ({
+  assertPathAllowed: (...args: unknown[]) => mockAssertPathAllowed(...args),
+}));
+
 // ─── Import SUT after mocks ───────────────────────────────────────────────────
 
 import { cleanupWorktreeHandlers, registerWorktreeHandlers } from './worktree';
@@ -71,8 +79,12 @@ function disableFlag(): void {
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
+const VALID_SESSION_UUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Allow all paths by default — individual tests override when needed.
+  mockAssertPathAllowed.mockReturnValue(null);
   // Register fresh handlers before each test
   registerWorktreeHandlers();
 });
@@ -110,17 +122,20 @@ describe('git:worktreeAdd', () => {
   beforeEach(enableFlag);
 
   it('returns success and path on add', async () => {
-    mockAdd.mockResolvedValue({ path: '/repo/.ouroboros/worktrees/sess-1' });
+    mockAdd.mockResolvedValue({ path: '/repo/.ouroboros/worktrees/' + VALID_SESSION_UUID });
     const result = await invoke('git:worktreeAdd', {
       projectRoot: '/repo',
-      sessionId: 'sess-1',
+      sessionId: VALID_SESSION_UUID,
     });
-    expect(result).toEqual({ success: true, path: '/repo/.ouroboros/worktrees/sess-1' });
-    expect(mockAdd).toHaveBeenCalledWith('/repo', 'sess-1');
+    expect(result).toEqual({
+      success: true,
+      path: '/repo/.ouroboros/worktrees/' + VALID_SESSION_UUID,
+    });
+    expect(mockAdd).toHaveBeenCalledWith('/repo', VALID_SESSION_UUID);
   });
 
   it('returns failure when projectRoot missing', async () => {
-    const result = await invoke('git:worktreeAdd', { sessionId: 'sess-1' });
+    const result = await invoke('git:worktreeAdd', { sessionId: VALID_SESSION_UUID });
     expect((result as { success: boolean }).success).toBe(false);
     expect(mockAdd).not.toHaveBeenCalled();
   });
@@ -135,7 +150,7 @@ describe('git:worktreeAdd', () => {
     mockAdd.mockRejectedValue(new Error('git failed'));
     const result = await invoke('git:worktreeAdd', {
       projectRoot: '/repo',
-      sessionId: 'sess-1',
+      sessionId: VALID_SESSION_UUID,
     });
     expect(result).toEqual({ success: false, error: 'git failed' });
   });

@@ -14,6 +14,7 @@ import type { Session } from './session';
 import { getSessionStore } from './sessionStore';
 import type { TrashAdaptor } from './sessionTrash';
 import { deleteFromTrash } from './sessionTrash';
+import { getWorktreeManager } from './worktreeManager';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -32,10 +33,21 @@ function isExpired(session: Session, now: number): boolean {
   return new Date(session.archivedAt).getTime() + SEVEN_DAYS_MS < now;
 }
 
+async function removeWorktree(session: Session): Promise<void> {
+  if (!session.worktree || !session.worktreePath) return;
+  try {
+    await getWorktreeManager().remove(session.worktreePath);
+    log.info('[sessionGc] worktree removed', session.worktreePath);
+  } catch (err) {
+    log.warn('[sessionGc] worktree removal failed', { sessionId: session.id, err });
+  }
+}
+
 async function purgeOne(
   session: Session,
   trashAdaptor: TrashAdaptor | undefined,
 ): Promise<void> {
+  await removeWorktree(session);
   const store = getSessionStore();
   if (store) store.delete(session.id);
   if (trashAdaptor) {
