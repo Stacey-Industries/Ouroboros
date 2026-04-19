@@ -27,10 +27,13 @@ vi.mock('electron', () => ({
 import { getConfigValue } from './config';
 import log from './logger';
 import {
+  _resetUpdaterStateForTest,
   _setAutoUpdaterForTest,
   configureUpdaterChannel,
   getAutoUpdater,
+  getLastOfferedVersion,
   isDowngrade,
+  isVersionRejected,
 } from './updater';
 
 const mockGetConfigValue = vi.mocked(getConfigValue);
@@ -182,6 +185,7 @@ describe('downgrade guard', () => {
   beforeEach(() => {
     fake = makeFakeUpdater();
     _setAutoUpdaterForTest(fake as never);
+    _resetUpdaterStateForTest();
     vi.mocked(log.warn).mockClear();
     mockGetConfigValue.mockReturnValue({ updateChannel: 'stable' } as never);
   });
@@ -204,5 +208,37 @@ describe('downgrade guard', () => {
     configureUpdaterChannel();
     fake.emit('update-available', { version: '2.5.0' });
     expect(vi.mocked(log.warn)).not.toHaveBeenCalled();
+  });
+
+  it('marks the downgrade version as rejected in the set', () => {
+    configureUpdaterChannel();
+    fake.emit('update-available', { version: '2.4.0' });
+    expect(isVersionRejected('2.4.0')).toBe(true);
+  });
+
+  it('does not mark a legitimate upgrade as rejected', () => {
+    configureUpdaterChannel();
+    fake.emit('update-available', { version: '2.6.0' });
+    expect(isVersionRejected('2.6.0')).toBe(false);
+  });
+
+  it('records the last offered version for downgrades', () => {
+    configureUpdaterChannel();
+    fake.emit('update-available', { version: '2.4.0' });
+    expect(getLastOfferedVersion()).toBe('2.4.0');
+  });
+
+  it('records the last offered version for upgrades', () => {
+    configureUpdaterChannel();
+    fake.emit('update-available', { version: '2.6.0' });
+    expect(getLastOfferedVersion()).toBe('2.6.0');
+  });
+
+  it('_resetUpdaterStateForTest clears rejected versions and last offered', () => {
+    configureUpdaterChannel();
+    fake.emit('update-available', { version: '2.4.0' });
+    _resetUpdaterStateForTest();
+    expect(isVersionRejected('2.4.0')).toBe(false);
+    expect(getLastOfferedVersion()).toBeNull();
   });
 });

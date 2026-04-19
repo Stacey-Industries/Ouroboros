@@ -34,6 +34,9 @@ import log from './logger';
 
 let _autoUpdater: AutoUpdaterLike | null = null;
 
+const rejectedVersions = new Set<string>();
+let lastOfferedVersion: string | null = null;
+
 try {
   // electron-updater is an optional dependency; gracefully skip if absent
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -59,6 +62,25 @@ export function getAutoUpdater(): AutoUpdaterLike | null {
  */
 export function _setAutoUpdaterForTest(updater: AutoUpdaterLike | null): void {
   _autoUpdater = updater;
+}
+
+/**
+ * Reset module-level downgrade tracking state for tests.
+ * Only call from test files.
+ */
+export function _resetUpdaterStateForTest(): void {
+  rejectedVersions.clear();
+  lastOfferedVersion = null;
+}
+
+/** Returns true if the given version was rejected by the downgrade guard. */
+export function isVersionRejected(version: string): boolean {
+  return rejectedVersions.has(version);
+}
+
+/** Returns the last version offered via update-available, or null if none. */
+export function getLastOfferedVersion(): string | null {
+  return lastOfferedVersion;
 }
 
 /** Set a GitHub token on the auto-updater for private repo release access. */
@@ -107,6 +129,7 @@ function guardDowngrade(info: UpdateInfo): boolean {
     log.warn(
       `[Updater] downgrade rejected — offered ${info.version}, current ${current}`,
     );
+    rejectedVersions.add(info.version);
     return true;
   }
   return false;
@@ -125,6 +148,7 @@ export function configureUpdaterChannel(): void {
 
   _downgradeListener = (info: unknown) => {
     const updateInfo = info as UpdateInfo;
+    lastOfferedVersion = updateInfo.version;
     guardDowngrade(updateInfo);
   };
 

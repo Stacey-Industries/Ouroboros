@@ -20,7 +20,7 @@ import {
 } from '../costHistoryAggregation';
 import { getCrashReportDirPath } from '../crashReporterStorage';
 import log from '../logger';
-import { getAutoUpdater } from '../updater';
+import { getAutoUpdater, getLastOfferedVersion, isVersionRejected } from '../updater';
 import {
   getWindowTrustLevel,
   isWorkspaceTrusted,
@@ -165,11 +165,14 @@ export function registerUpdaterHandlers(channels: ChannelList): void {
     'updater:check',
     createUpdaterHandler((u) => u.checkForUpdates()),
   );
-  registerChannel(
-    channels,
-    'updater:download',
-    createUpdaterHandler((u) => u.downloadUpdate()),
-  );
+  registerChannel(channels, 'updater:download', async () => {
+    const updater = getAutoUpdater() as AutoUpdaterLike | null;
+    if (!updater) return { success: false, error: 'electron-updater not installed' };
+    if (isVersionRejected(getLastOfferedVersion() ?? '')) {
+      return { success: false, error: 'downgrade-rejected' };
+    }
+    return runAction(() => updater.downloadUpdate());
+  });
   registerChannel(
     channels,
     'updater:install',
