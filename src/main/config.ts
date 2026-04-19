@@ -7,8 +7,9 @@ import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
 /** Wave 38 Phase A+C — platform-level settings: onboarding, language, update channel, crash reporter, changelog gate.
- *  Phase C adds dismissedEmptyStates for persistent "don't show again" dismiss. */
-export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> }
+ *  Phase C adds dismissedEmptyStates for persistent "don't show again" dismiss.
+ *  Wave 41 Phase K adds crashReports.allowInsecure (default false). */
+export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string; /** Wave 41 Phase K — permit http: webhook for debug scenarios (default false). */ allowInsecure?: boolean }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> }
 
 /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
 export interface ThemingConfig { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }
@@ -430,10 +431,13 @@ export interface AppConfig {
   /** Wave 36 Phase A — gates whether profile picker surfaces non-Claude session providers. */
   providers?: { multiProvider?: boolean };
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
-   *  Wave 37 Phase D — systemPrompt from marketplace bundle install. */
-  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number }; systemPrompt?: string };
+   *  Wave 37 Phase D — systemPrompt from marketplace bundle install.
+   *  Wave 41 Phase C — rulesAndSkillsInstallEnabled feature gate. */
+  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number }; systemPrompt?: string; rulesAndSkillsInstallEnabled?: boolean };
   /** Wave 38 Phase A — platform-level settings: onboarding gate, language, update channel, crash reporter, changelog gate. */
   platform?: PlatformConfig;
+  /** Wave 41 Phase C — marketplace behaviour flags. */
+  marketplace?: { allowInstallOnRevocationFetchFailure?: boolean };
   /** Wave 30 Phase G+I — research auto-firing global defaults + threshold tuning knobs. */
   researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
 }

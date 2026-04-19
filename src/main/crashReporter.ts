@@ -32,20 +32,33 @@ export interface CrashRecord {
 // Path redaction
 // ---------------------------------------------------------------------------
 
+/** Matches Anthropic/OpenAI-style API keys: sk-<20+ chars> */
+const CRASH_SK_KEY_RE = /sk-[a-zA-Z0-9_-]{20,}/g;
+
+/** Matches compact JWT: eyJ<base64url>.<base64url>.<base64url> */
+const CRASH_JWT_RE = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
+
 /**
- * Redact absolute paths from a string (best-effort; documented limitation).
+ * Redact absolute paths and secrets from a string (best-effort; documented limitation).
  * Replaces:
  *   - os.homedir() literal → ~
- *   - Windows: C:\Users\<name>\ → ~\
+ *   - Windows: <drive>:\<any 1–3 path segments>\ → ~\  (covers \Users\, \Projects\, etc.)
  *   - Unix: /Users/<name>/ → ~/
+ *   - API key-shaped strings (sk-…) → [REDACTED]
+ *   - JWT-shaped strings → [REDACTED]
  */
 export function redactPaths(input: string): string {
   const homeDir = os.homedir();
   const escapedHome = homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   // eslint-disable-next-line security/detect-non-literal-regexp -- escapedHome is derived from os.homedir(), not user input
   let result = input.replace(new RegExp(escapedHome, 'g'), '~');
-  result = result.replace(/[A-Za-z]:\\Users\\[^\\]+\\/g, '~\\');
+  // Generalised Windows path: any drive letter + up to 3 directory segments (catches
+  // C:\Users\alice\, D:\Projects\bob\, C:\AppData\Local\Temp\, etc.)
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded {1,3} quantifier on a negated class; not subject to ReDoS
+  result = result.replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\){1,3}/g, '~\\');
   result = result.replace(/\/Users\/[^/]+\//g, '~/');
+  result = result.replace(CRASH_SK_KEY_RE, '[REDACTED]');
+  result = result.replace(CRASH_JWT_RE, '[REDACTED]');
   return result;
 }
 
@@ -71,10 +84,24 @@ function buildRecord(err: Error): CrashRecord {
 // Webhook upload (opt-in only)
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns true when `config.platform.crashReports.allowInsecure` is set to
+ * `true`. This flag is false by default, restricting webhooks to https: only.
+ * Enable for local/debug scenarios where the crash endpoint runs over http:.
+ */
+function getAllowInsecure(): boolean {
+  const platform = getConfigValue('platform') ?? {};
+  const crashCfg = platform.crashReports ?? {};
+  return crashCfg.allowInsecure === true;
+}
+
 function postToWebhook(webhookUrl: string, record: CrashRecord): void {
   try {
     const parsed = new URL(webhookUrl);
-    if (!['https:', 'http:'].includes(parsed.protocol)) return;
+    // Default: only https: is allowed to prevent crash data leaking over plain HTTP.
+    // Set config.platform.crashReports.allowInsecure = true to allow http: (debug only).
+    const allowInsecure = getAllowInsecure();
+    if (parsed.protocol !== 'https:' && !allowInsecure) return;
     const body = JSON.stringify(record);
     const options: https.RequestOptions = {
       method: 'POST',

@@ -180,6 +180,67 @@ export function rowToInvocation(row: Record<string, unknown>): InvocationRow {
   };
 }
 
+// ─── PII redaction ───────────────────────────────────────────────────────────
+
+/**
+ * Secret-key names that should never appear in telemetry payloads.
+ * Matched case-insensitively against object keys.
+ */
+const SECRET_KEY_RE =
+  /^(token|accesstoken|refreshtoken|access_token|refresh_token|apikey|api_key|password|authorization|secret)$/i;
+
+/** Matches Anthropic/OpenAI-style API keys: sk-<20+ chars> */
+const SK_KEY_RE = /^sk-[a-zA-Z0-9\-_]{20,}$/;
+
+/** Matches compact JWT: eyJ<base64url>.<base64url>.<base64url> */
+const JWT_RE = /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+/** Returns `'[REDACTED]'` when a string looks like an API key or JWT; otherwise the string unchanged. */
+function redactSecretString(s: string): string {
+  if (SK_KEY_RE.test(s) || JWT_RE.test(s)) return '[REDACTED]';
+  return s;
+}
+
+/** Rebuilds an object with secret keys and key-shaped string values redacted. */
+function redactObject(
+  obj: Record<string, unknown>,
+  depth: number,
+  seen: WeakSet<object>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SECRET_KEY_RE.test(k)) {
+      // eslint-disable-next-line security/detect-object-injection -- k comes from Object.entries, not user input
+      result[k] = '[REDACTED]';
+    } else {
+      // eslint-disable-next-line security/detect-object-injection -- k comes from Object.entries, not user input
+      result[k] = redactPayload(v, depth + 1, seen);
+    }
+  }
+  return result;
+}
+
+/**
+ * Recursively walk `value` and replace secret keys / key-shaped string values
+ * with `'[REDACTED]'`.
+ *
+ * - Object keys matching SECRET_KEY_RE → value replaced with `'[REDACTED]'`
+ * - String values matching SK_KEY_RE or JWT_RE → replaced with `'[REDACTED]'`
+ * - Arrays are mapped element-by-element.
+ * - Circular refs / depth > 10 → returned as-is (bail-out guard).
+ */
+export function redactPayload(value: unknown, _depth = 0, _seen = new WeakSet()): unknown {
+  if (_depth > 10) return value;
+  if (typeof value === 'string') return redactSecretString(value);
+  if (value === null || typeof value !== 'object') return value;
+  if (_seen.has(value as object)) return value;
+  _seen.add(value as object);
+  if (Array.isArray(value)) {
+    return value.map((item) => redactPayload(item, _depth + 1, _seen));
+  }
+  return redactObject(value as Record<string, unknown>, _depth, _seen);
+}
+
 // ─── Retention purge ─────────────────────────────────────────────────────────
 
 /**

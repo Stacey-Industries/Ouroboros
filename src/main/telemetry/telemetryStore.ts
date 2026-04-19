@@ -22,6 +22,7 @@ import { openDatabase } from '../storage/database';
 import {
   type InvocationRow,
   type OutcomeRow,
+  redactPayload,
   TELEMETRY_SCHEMA_SQL,
   type TelemetryEvent,
   type TraceRow,
@@ -161,7 +162,7 @@ function enqueueEvent(state: StoreState, payload: HookPayload): string {
     sessionId: payload.sessionId,
     correlationId,
     timestamp: payload.timestamp,
-    payload: JSON.stringify(payload),
+    payload: JSON.stringify(redactPayload(payload)),
   });
   return id;
 }
