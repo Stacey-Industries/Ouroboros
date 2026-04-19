@@ -39,9 +39,11 @@ export interface ContextFeatures {
   included: boolean;
 }
 
-// ─── Context decision record (context_decisions table) ───────────────────────
+// ─── Context decision record ──────────────────────────────────────────────────
+// Note: context_decisions SQLite table was removed in Wave 29.5 Phase I (C2).
+// Wave 31 trains over JSONL instead. These types mirror the JSONL record shape.
 
-/** One row per (traceId, fileId) considered during packet build. */
+/** One record per (traceId, fileId) considered during packet build. */
 export interface ContextDecision {
   id: string;
   /** Router trace ID that scoped this packet build. */
@@ -53,7 +55,9 @@ export interface ContextDecision {
   included: boolean;
 }
 
-// ─── Context outcome record (context_outcomes table) ─────────────────────────
+// ─── Context outcome record ───────────────────────────────────────────────────
+// Note: context_outcomes SQLite table was removed in Wave 29.5 Phase I (C2).
+// These types mirror the JSONL record shape used by Wave 31 training.
 
 export type ContextOutcomeKind =
   | 'used' // agent Read/Edited a file in the packet

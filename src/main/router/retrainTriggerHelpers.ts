@@ -2,12 +2,14 @@
  * retrainTriggerHelpers.ts — Pure helpers for the automatic retraining trigger.
  *
  * Handles sample counting, weight file validation, and Python trainer spawning.
+ * Python binary detection is delegated to the shared pythonFinder module.
  */
 
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 import log from '../logger';
+import { findPython, resetPythonCache } from '../shared/pythonFinder';
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -116,35 +118,4 @@ export function spawnTrainer(args: {
   });
 }
 
-/* ── Python binary detection ─────────────────────────────────────────── */
-
-let cachedPythonBin: string | null | undefined;
-
-function probeCandidate(bin: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(bin, ['--version'], { timeout: 5_000 }, (err) => {
-      if (err) reject(err);
-      else resolve(bin);
-    });
-  });
-}
-
-export async function findPython(): Promise<string | null> {
-  if (cachedPythonBin !== undefined) return cachedPythonBin;
-
-  const candidates =
-    process.platform === 'win32' ? ['python', 'python3', 'py'] : ['python3', 'python'];
-
-  for (const bin of candidates) {
-    try {
-      const found = await probeCandidate(bin);
-      cachedPythonBin = found;
-      return found;
-    } catch {
-      continue;
-    }
-  }
-
-  cachedPythonBin = null;
-  return null;
-}
+export { findPython, resetPythonCache };

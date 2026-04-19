@@ -170,15 +170,15 @@ function LayoutActions({
         title="Update with current layout"
         onClick={() => onUpdate(name)}
         hoverColor="var(--text-primary)"
-        hoverBg="rgba(128,128,128,0.15)"
+        hoverBg="var(--surface-hover)"
       >
         <UpdateIcon />
       </ActionButton>
       <ActionButton
         title="Delete layout"
         onClick={() => onDelete(name)}
-        hoverColor="var(--status-error, #f85149)"
-        hoverBg="rgba(248,81,73,0.1)"
+        hoverColor="var(--status-error)"
+        hoverBg="var(--status-error-subtle)"
       >
         <DeleteIcon />
       </ActionButton>

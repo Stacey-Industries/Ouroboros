@@ -64,7 +64,7 @@ describe('TELEMETRY_SCHEMA_SQL', () => {
       value: string;
     }>;
     expect(rows).toHaveLength(1);
-    expect(rows[0].value).toBe('1');
+    expect(rows[0].value).toBe('2');
   });
 });
 

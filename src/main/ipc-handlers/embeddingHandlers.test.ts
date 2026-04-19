@@ -82,19 +82,22 @@ describe('embeddingHandlers — disabled flag', () => {
       mockGetConfigValue.mockReturnValue(false);
     });
 
-    it('embedding:search returns embeddings_disabled', async () => {
-      const result = await handleSearch(null, 'query', '/root');
-      expect(result).toEqual({ success: false, error: 'embeddings_disabled' });
+    it('embedding:search returns disabled error', async () => {
+      const result = await handleSearch(null, 'query', '/root') as { success: boolean; error?: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/embedding:search-disabled/);
     });
 
-    it('embedding:status returns embeddings_disabled', () => {
-      const result = handleStatus(null, '/root');
-      expect(result).toEqual({ success: false, error: 'embeddings_disabled' });
+    it('embedding:status returns disabled error', () => {
+      const result = handleStatus(null, '/root') as { success: boolean; error?: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/embedding:status-disabled/);
     });
 
-    it('embedding:reindex returns embeddings_disabled', async () => {
-      const result = await handleReindex(null, '/root');
-      expect(result).toEqual({ success: false, error: 'embeddings_disabled' });
+    it('embedding:reindex returns disabled error', async () => {
+      const result = await handleReindex(null, '/root') as { success: boolean; error?: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/embedding:reindex-disabled/);
     });
   });
 

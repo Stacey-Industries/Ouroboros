@@ -7,9 +7,9 @@
 import { ipcMain } from 'electron';
 
 import type { AiInlineEditRequest, AiInlineEditResponse } from '../../renderer/types/electron-ai';
+import { createAnthropicClient } from '../auth/providers/anthropicAuth';
 import { getConfigValue } from '../config';
 import log from '../logger';
-import { createAnthropicClient } from '../orchestration/providers/anthropicAuth';
 
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 const INLINE_EDIT_MODEL = 'claude-sonnet-4-6';
@@ -109,7 +109,7 @@ async function handleInlineCompletion(
   _event: Electron.IpcMainInvokeEvent,
   request: CompletionRequest,
 ): Promise<CompletionResult> {
-  if (!getConfigValue('inlineCompletionsEnabled')) return { success: false, error: 'disabled' };
+  if (!getConfigValue('inlineCompletionsEnabled')) return { success: false, error: 'ai-inline-completion-disabled' };
 
   if (activeController) {
     activeController.abort();

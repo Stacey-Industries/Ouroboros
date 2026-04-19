@@ -20,8 +20,6 @@ import {
   resolveModelCutoffDate,
 } from './triggerEvaluatorSupport';
 
-export { normalizeImportToLibrary };
-
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface TriggerContext {

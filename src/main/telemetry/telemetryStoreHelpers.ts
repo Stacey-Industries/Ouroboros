@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS schema_meta (
   key   TEXT NOT NULL PRIMARY KEY,
   value TEXT NOT NULL
 ) STRICT;
-INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('schema_version', '1');
+INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('schema_version', '2');
 `;
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
@@ -253,4 +253,22 @@ export function purgeRetainedRows(db: DatabaseType, retentionDays: number): numb
     .prepare('DELETE FROM events WHERE timestamp < ?')
     .run(cutoffMs);
   return result.changes;
+}
+
+// ─── Schema version migration ─────────────────────────────────────────────────
+
+/**
+ * Run on every store open after DDL.
+ * Bumps schema_version from '1' → '2' for databases created before Wave 29.5.
+ * Wave 29.5 dropped context_decisions and context_outcomes tables; version '2'
+ * documents that this schema is the JSONL-only variant.
+ * No structural DDL changes are needed — this is a metadata-only bump.
+ */
+export function migrateSchemaVersion(db: DatabaseType): void {
+  const row = db
+    .prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'")
+    .get() as { value: string } | undefined;
+  if (row?.value === '1') {
+    db.prepare("UPDATE schema_meta SET value = '2' WHERE key = 'schema_version'").run();
+  }
 }

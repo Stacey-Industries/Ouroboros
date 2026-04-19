@@ -87,7 +87,7 @@ function recordFullFlush(): void {
   overflowCount += 1;
   if (!samplingActive && overflowCount > OVERFLOW_THRESHOLD) {
     samplingActive = true;
-    console.warn('[traceBatcher] high trace volume — stdout sampling engaged (1-in-10)');
+    log.warn('[traceBatcher] high trace volume — stdout sampling engaged (1-in-10)');
   }
 }
 

@@ -181,7 +181,7 @@ async function runSummarizationLoop(
     retriesLeft--
   }
 
-  await persistSummaryResult(moduleId, context.module, result ?? { success: false, error: 'unknown' }, ctx)
+  await persistSummaryResult(moduleId, context.module, result ?? { success: false, error: 'summarization-exhausted-retries' }, ctx)
 }
 
 async function processModule(moduleId: string, ctx: ProcessCtx, maxRetries: number): Promise<void> {

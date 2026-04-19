@@ -111,7 +111,6 @@ async function handleRevokePairedDevice(_event: unknown, deviceId: string) {
   try {
     const removed = removeDevice(deviceId);
     if (!removed) return { success: false, error: 'Device not found' };
-    // TODO(Wave 33a Phase D): Replace stub with real bridge disconnect.
     disconnectDevice(deviceId);
     return { success: true };
   } catch (err) {

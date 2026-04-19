@@ -129,7 +129,7 @@ async function handleDispatchTask(
   deviceId?: string,
 ): Promise<DispatchResult> {
   if (!validateRequest(request)) {
-    return { success: false, error: 'invalid-request' };
+    return { success: false, error: 'invalid-request: title, prompt, and projectPath are required non-empty strings' };
   }
 
   if (request.clientRequestId) {

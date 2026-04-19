@@ -1,61 +1,23 @@
 /**
  * contextRetrainTriggerHelpers.ts — Pure helpers for the context retrain trigger.
  *
- * Handles Python binary detection, JSONL row counting, trainer spawning, and
- * stdout summary-line parsing. Extracted to keep contextRetrainTrigger.ts under
- * the 300-line ESLint limit.
+ * Handles JSONL row counting, trainer spawning, and stdout summary-line parsing.
+ * Extracted to keep contextRetrainTrigger.ts under the 300-line ESLint limit.
  *
- * TODO: findPython() is duplicated from router/retrainTriggerHelpers.ts —
- * extract to a shared src/main/shared/pythonFinder.ts once both subsystems
- * are stable.
+ * Python binary detection is delegated to the shared pythonFinder module.
  */
 
-import { execFile, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 import log from '../logger';
+import { findPython, resetPythonCache } from '../shared/pythonFinder';
 
 /* ── Constants ────────────────────────────────────────────────────────── */
 
 const TRAINER_TIMEOUT_MS = 120_000; // 2 minutes
 
-/* ── Python binary detection ──────────────────────────────────────────── */
-
-let cachedPythonBin: string | null | undefined;
-
-function probeCandidate(bin: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(bin, ['--version'], { timeout: 5_000 }, (err) => {
-      if (err) reject(err);
-      else resolve(bin);
-    });
-  });
-}
-
-export async function findPython(): Promise<string | null> {
-  if (cachedPythonBin !== undefined) return cachedPythonBin;
-
-  const candidates =
-    process.platform === 'win32' ? ['python', 'python3', 'py'] : ['python3', 'python'];
-
-  for (const bin of candidates) {
-    try {
-      const found = await probeCandidate(bin);
-      cachedPythonBin = found;
-      return found;
-    } catch {
-      continue;
-    }
-  }
-
-  cachedPythonBin = null;
-  return null;
-}
-
-/** @internal Reset cache between tests. */
-export function resetPythonCache(): void {
-  cachedPythonBin = undefined;
-}
+export { findPython, resetPythonCache };
 
 /* ── Row counting ─────────────────────────────────────────────────────── */
 

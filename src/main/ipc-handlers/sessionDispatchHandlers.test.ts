@@ -210,7 +210,7 @@ describe('sessions:dispatchTask handler', () => {
     ) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe('invalid-request');
+    expect(result.error).toMatch(/^invalid-request/);
     expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
@@ -221,13 +221,13 @@ describe('sessions:dispatchTask handler', () => {
     ) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe('invalid-request');
+    expect(result.error).toMatch(/^invalid-request/);
   });
 
   it('rejects non-object request with invalid-request', async () => {
     const result = await handler(makeEvent(1), null) as { success: boolean; error?: string };
     expect(result.success).toBe(false);
-    expect(result.error).toBe('invalid-request');
+    expect(result.error).toMatch(/^invalid-request/);
   });
 
   it('rejects a projectPath outside roots with project-path-not-allowed', async () => {

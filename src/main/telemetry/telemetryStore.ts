@@ -21,6 +21,7 @@ import log from '../logger';
 import { openDatabase } from '../storage/database';
 import {
   type InvocationRow,
+  migrateSchemaVersion,
   type OutcomeRow,
   purgeRetainedRows,
   redactPayload,
@@ -229,7 +230,7 @@ function writeInvocation(state: StoreState, opts: RecordInvocationOpts): void {
       opts.timestamp ?? Date.now(),
     );
   } catch (err) {
-    console.warn('[telemetry] invocation insert failed', err);
+    log.warn('[telemetry] invocation insert failed', err);
   }
 }
 
@@ -275,6 +276,7 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
   const dbPath = path.join(userDataDir, 'telemetry', 'telemetry.db');
   const db = openDatabase(dbPath);
   db.exec(TELEMETRY_SCHEMA_SQL);
+  migrateSchemaVersion(db);
   const state: StoreState = {
     db, queue: [],
     intervalHandle: setInterval(() => undefined, 1 << 30),

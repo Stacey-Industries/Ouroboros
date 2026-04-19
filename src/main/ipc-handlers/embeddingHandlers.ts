@@ -39,7 +39,7 @@ function ensureProvider(): IEmbeddingProvider {
 
 async function handleSearch(_e: unknown, query: string, projectRoot: string, topK = 5) {
   if (getConfigValue('embeddingsEnabled') !== true) {
-    return { success: false, error: 'embeddings_disabled' };
+    return { success: false, error: 'embedding:search-disabled — enable embeddings in Settings › Embeddings' };
   }
   try {
     const s = ensureStore(projectRoot);
@@ -54,7 +54,7 @@ async function handleSearch(_e: unknown, query: string, projectRoot: string, top
 
 function handleStatus(_e: unknown, projectRoot: string) {
   if (getConfigValue('embeddingsEnabled') !== true) {
-    return { success: false, error: 'embeddings_disabled' };
+    return { success: false, error: 'embedding:status-disabled — enable embeddings in Settings › Embeddings' };
   }
   try {
     return { success: true, status: ensureStore(projectRoot).getStatus() };
@@ -65,7 +65,7 @@ function handleStatus(_e: unknown, projectRoot: string) {
 
 async function handleReindex(_e: unknown, projectRoot: string) {
   if (getConfigValue('embeddingsEnabled') !== true) {
-    return { success: false, error: 'embeddings_disabled' };
+    return { success: false, error: 'embedding:reindex-disabled — enable embeddings in Settings › Embeddings' };
   }
   try {
     const { indexProject } = await import('../embeddings');

@@ -4,7 +4,7 @@
  *
  * Vitest runs under Node (no DOM). We test the pure helper functions
  * extracted from useLocale directly, matching the pattern used by
- * useStreamingInlineEditFlag.test.ts and useLspDiagnosticsSync.test.ts.
+ * useLspDiagnosticsSync.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
