@@ -21,7 +21,35 @@ import {
 } from './webPreloadApis';
 import { buildAuthApi, buildProvidersApi } from './webPreloadApisAuth';
 import { buildClaudeMdApi } from './webPreloadApisClaudeMd';
+import {
+  buildAiApi,
+  buildAiStreamApi,
+  buildAgentChatExtApi,
+  buildAgentConflictApi,
+  buildBackgroundJobsApi,
+  buildEcosystemApi,
+  buildEmbeddingApi,
+  buildGraphApi,
+  buildMarketplaceApi,
+  buildObservabilityApi,
+  buildResearchApi,
+  buildRouterApi,
+  buildSpecApi,
+  buildSystem2Api,
+  buildTelemetryApi,
+  buildWorkspaceApi,
+} from './webPreloadApisExtended';
 import { buildRulesAndSkillsApi } from './webPreloadApisRulesSkills';
+import {
+  buildCheckpointApi,
+  buildFolderCrudApi,
+  buildLayoutApi,
+  buildPinnedContextApi,
+  buildProfileCrudApi,
+  buildSessionCrudApi,
+  buildSubagentApi,
+  buildWorkspaceReadListApi,
+} from './webPreloadApisSessionCrud';
 import {
   buildAgentChatApi,
   buildCompareProvidersApi,
@@ -125,7 +153,9 @@ const lspAPI = buildLspApi(transport);
 const { windowAPI, extensionsAPI } = buildWindowExtensionsApis(transport);
 const { mcpAPI, mcpStoreAPI } = buildMcpApis(transport);
 const { extensionStoreAPI, contextAPI, ideToolsAPI } = buildStoreContextApis(transport);
-const agentChatAPI = buildAgentChatApi(transport);
+const agentChatBase = buildAgentChatApi(transport);
+const agentChatExt = buildAgentChatExtApi(transport);
+const agentChatAPI = { ...agentChatBase, ...agentChatExt };
 const { codemodeAPI, orchestrationAPI, contextLayerAPI } = buildOrchestrationApis(transport);
 const authAPI = buildAuthApi(transport);
 const providersAPI = buildProvidersApi(transport);
@@ -133,6 +163,30 @@ const claudeMdAPI = buildClaudeMdApi(transport);
 const rulesAndSkillsAPI = buildRulesAndSkillsApi(transport);
 const mobileAccessAPI = buildMobileAccessApi(transport);
 const compareProvidersAPI = buildCompareProvidersApi(transport);
+// ── Phase I additions ──────────────────────────────────────────────────────────
+const sessionCrudAPI = buildSessionCrudApi(transport);
+const folderCrudAPI = buildFolderCrudApi(transport);
+const pinnedContextAPI = buildPinnedContextApi(transport);
+const profileCrudAPI = buildProfileCrudApi(transport);
+const layoutAPI = buildLayoutApi(transport);
+const subagentAPI = buildSubagentApi(transport);
+const checkpointAPI = buildCheckpointApi(transport);
+const workspaceReadListAPI = buildWorkspaceReadListApi(transport);
+const ecosystemAPI = buildEcosystemApi(transport);
+const marketplaceAPI = buildMarketplaceApi(transport);
+const researchAPI = buildResearchApi(transport);
+const agentConflictAPI = buildAgentConflictApi(transport);
+const system2API = buildSystem2Api(transport);
+const routerAPI = buildRouterApi(transport);
+const workspaceAPI = buildWorkspaceApi(transport);
+const backgroundJobsAPI = buildBackgroundJobsApi(transport);
+const aiAPI = buildAiApi();
+const aiStreamAPI = buildAiStreamApi();
+const embeddingAPI = buildEmbeddingApi();
+const telemetryAPI = buildTelemetryApi(transport);
+const observabilityAPI = buildObservabilityApi();
+const graphAPI = buildGraphApi();
+const specAPI = buildSpecApi();
 
 const electronAPI = {
   pty: ptyAPI,
@@ -171,6 +225,30 @@ const electronAPI = {
   rulesAndSkills: rulesAndSkillsAPI,
   mobileAccess: mobileAccessAPI,
   compareProviders: compareProvidersAPI,
+  // ── Phase I additions ────────────────────────────────────────────────────────
+  sessionCrud: sessionCrudAPI,
+  folderCrud: folderCrudAPI,
+  pinnedContext: pinnedContextAPI,
+  profileCrud: profileCrudAPI,
+  layout: layoutAPI,
+  subagent: subagentAPI,
+  checkpoint: checkpointAPI,
+  workspaceReadList: workspaceReadListAPI,
+  ecosystem: ecosystemAPI,
+  marketplace: marketplaceAPI,
+  research: researchAPI,
+  agentConflict: agentConflictAPI,
+  system2: system2API,
+  router: routerAPI,
+  workspace: workspaceAPI,
+  backgroundJobs: backgroundJobsAPI,
+  ai: aiAPI,
+  aiStream: aiStreamAPI,
+  embedding: embeddingAPI,
+  telemetry: telemetryAPI,
+  observability: observabilityAPI,
+  graph: graphAPI,
+  spec: specAPI,
 };
 
 // ─── Expose Globally ─────────────────────────────────────────────────────────

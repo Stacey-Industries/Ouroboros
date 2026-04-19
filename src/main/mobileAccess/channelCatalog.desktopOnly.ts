@@ -17,12 +17,55 @@ import type { CatalogEntry } from './channelCatalog.always';
  * auth mutations that modify stored credentials, extension installs.
  */
 export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
-  // ── AI inline (spawn-adjacent) ───────────────────────────────────────────────
+  // ── AI inline (spawn-adjacent; require desktop Monaco editor) ───────────────
   'ai:generate-commit-message':     { class: 'desktop-only', timeoutClass: 'normal' },
   'ai:inline-completion':           { class: 'desktop-only', timeoutClass: 'normal' },
   'ai:inline-edit':                 { class: 'desktop-only', timeoutClass: 'normal' },
   'ai:streamInlineEdit':            { class: 'desktop-only', timeoutClass: 'long' },
   'ai:cancelInlineEditStream':      { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── backgroundJobs:enqueue (long-running; poorly suited for mobile) ──────────
+  // list, cancel, clearCompleted remain paired-read/write. enqueue is the only
+  // method excluded from mobile because initiating heavy background work on a
+  // mobile/paired device is undesirable without local resource visibility.
+  'backgroundJobs:enqueue':         { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── checkpoint:create + checkpoint:restore (git worktree ops) ─────────────────
+  // checkpoint:list, delete, and onChange remain paired-read/write.
+  'checkpoint:create':              { class: 'desktop-only', timeoutClass: 'long' },
+  'checkpoint:restore':             { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── embedding (requires full local codebase index) ────────────────────────────
+  'embedding:reindex':              { class: 'desktop-only', timeoutClass: 'long' },
+  'embedding:search':               { class: 'desktop-only', timeoutClass: 'normal' },
+  'embedding:status':               { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── graph:* (full codebase knowledge graph; requires local index) ─────────────
+  // All graph channels are desktop-only. The index is built from the local
+  // filesystem and requires the full project to be available on disk.
+  'graph:detectChanges':            { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:getArchitecture':          { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:getBlastRadius':           { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:getCodeSnippet':           { class: 'desktop-only', timeoutClass: 'short' },
+  'graph:getGraphSchema':           { class: 'desktop-only', timeoutClass: 'short' },
+  'graph:getNeighbourhood':         { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:getStatus':                { class: 'desktop-only', timeoutClass: 'short' },
+  'graph:queryGraph':               { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:reindex':                  { class: 'desktop-only', timeoutClass: 'long' },
+  'graph:searchCode':               { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:searchGraph':              { class: 'desktop-only', timeoutClass: 'normal' },
+  'graph:traceCallPath':            { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── observability:exportTrace (writes to arbitrary path) ──────────────────────
+  'observability:exportTrace':      { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── spec:scaffold (writes new spec files to disk) ─────────────────────────────
+  'spec:scaffold':                  { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── telemetry:queryEvents (developer debug feature — direct DB access) ─────────
+  // queryOutcomes and queryTraces remain paired-read. queryEvents is excluded
+  // because it exposes the raw telemetry DB to mobile clients.
+  'telemetry:queryEvents':          { class: 'desktop-only', timeoutClass: 'normal' },
 
   // ── app lifecycle ────────────────────────────────────────────────────────────
   'app:clearCrashLogs':             { class: 'desktop-only', timeoutClass: 'normal' },

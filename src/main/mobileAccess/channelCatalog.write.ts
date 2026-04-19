@@ -56,14 +56,14 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'approval:respond':               { class: 'paired-write', timeoutClass: 'normal' },
 
   // ── backgroundJobs (write) ──────────────────────────────────────────────────
+  // backgroundJobs:enqueue reclassified desktop-only (Wave 41 Phase I).
   'backgroundJobs:cancel':          { class: 'paired-write', timeoutClass: 'normal' },
   'backgroundJobs:clearCompleted':  { class: 'paired-write', timeoutClass: 'normal' },
-  'backgroundJobs:enqueue':         { class: 'paired-write', timeoutClass: 'long' },
 
   // ── checkpoint (write) ──────────────────────────────────────────────────────
-  'checkpoint:create':              { class: 'paired-write', timeoutClass: 'long' },
+  // checkpoint:create and checkpoint:restore reclassified desktop-only (Wave 41 Phase I).
+  // checkpoint:delete remains paired-write (does not require worktree operations).
   'checkpoint:delete':              { class: 'paired-write', timeoutClass: 'normal' },
-  'checkpoint:restore':             { class: 'paired-write', timeoutClass: 'long' },
 
   // ── claudeMd (write) ────────────────────────────────────────────────────────
   'claudeMd:generate':              { class: 'paired-write', timeoutClass: 'long' },
@@ -88,8 +88,8 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'cost:addEntry':                  { class: 'paired-write', timeoutClass: 'normal' },
   'cost:clearHistory':              { class: 'paired-write', timeoutClass: 'normal' },
 
-  // ── embedding (write) ───────────────────────────────────────────────────────
-  'embedding:reindex':              { class: 'paired-write', timeoutClass: 'long' },
+  // ── embedding — reclassified desktop-only (Wave 41 Phase I; requires local index)
+  // 'embedding:reindex' moved to channelCatalog.desktopOnly.ts.
 
   // ── files (write — project-root-scoped) ─────────────────────────────────────
   // Note: pathSecurity.ts enforces project-root restriction at the handler level.
@@ -131,10 +131,8 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'git:worktreeAdd':                { class: 'paired-write', timeoutClass: 'normal' },
   'git:worktreeRemove':             { class: 'paired-write', timeoutClass: 'normal' },
 
-  // ── graph (write) ───────────────────────────────────────────────────────────
-  // graph:reindex mutates the graph index but is scoped to known project roots.
-  'graph:reindex':                  { class: 'paired-write', timeoutClass: 'long' },
-  'graph:detectChanges':            { class: 'paired-write', timeoutClass: 'normal' },
+  // ── graph — reclassified desktop-only (Wave 41 Phase I; requires local index)
+  // 'graph:reindex' and 'graph:detectChanges' moved to channelCatalog.desktopOnly.ts.
 
   // ── hooks (write) ───────────────────────────────────────────────────────────
   'hooks:addHook':                  { class: 'paired-write', timeoutClass: 'normal' },
@@ -223,8 +221,8 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'sessions:dispatchTask':          { class: 'paired-write', timeoutClass: 'long' },
   'sessions:save':                  { class: 'paired-write', timeoutClass: 'normal' },
 
-  // ── spec (write) ────────────────────────────────────────────────────────────
-  'spec:scaffold':                  { class: 'paired-write', timeoutClass: 'long' },
+  // ── spec — reclassified desktop-only (Wave 41 Phase I; writes files to disk)
+  // 'spec:scaffold' moved to channelCatalog.desktopOnly.ts.
 
   // ── subagent (write) ────────────────────────────────────────────────────────
   'subagent:cancel':                { class: 'paired-write', timeoutClass: 'normal' },

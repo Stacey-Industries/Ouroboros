@@ -76,9 +76,8 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   // ── cost ────────────────────────────────────────────────────────────────────
   'cost:getHistory':                { class: 'paired-read', timeoutClass: 'normal' },
 
-  // ── embedding (read) ────────────────────────────────────────────────────────
-  'embedding:search':               { class: 'paired-read', timeoutClass: 'normal' },
-  'embedding:status':               { class: 'paired-read', timeoutClass: 'short' },
+  // ── embedding — reclassified desktop-only (Wave 41 Phase I; requires local index)
+  // 'embedding:search' and 'embedding:status' moved to channelCatalog.desktopOnly.ts.
 
   // ── extensionStore (read) ───────────────────────────────────────────────────
   'extensionStore:getDetails':            { class: 'paired-read', timeoutClass: 'normal' },
@@ -123,17 +122,8 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   'git:statusDetailed':             { class: 'paired-read', timeoutClass: 'normal' },
   'git:worktreeList':               { class: 'paired-read', timeoutClass: 'normal' },
 
-  // ── graph (read) ────────────────────────────────────────────────────────────
-  'graph:getArchitecture':          { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:getBlastRadius':           { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:getCodeSnippet':           { class: 'paired-read', timeoutClass: 'short' },
-  'graph:getGraphSchema':           { class: 'paired-read', timeoutClass: 'short' },
-  'graph:getNeighbourhood':         { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:getStatus':                { class: 'paired-read', timeoutClass: 'short' },
-  'graph:queryGraph':               { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:searchCode':               { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:searchGraph':              { class: 'paired-read', timeoutClass: 'normal' },
-  'graph:traceCallPath':            { class: 'paired-read', timeoutClass: 'normal' },
+  // ── graph — reclassified desktop-only (Wave 41 Phase I; requires local index)
+  // All graph:* channels moved to channelCatalog.desktopOnly.ts.
 
   // ── hooks (read) ────────────────────────────────────────────────────────────
   'hooks:getConfig':                { class: 'paired-read', timeoutClass: 'short' },
@@ -163,8 +153,8 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   // ── mobileAccess (read) ─────────────────────────────────────────────────────
   'mobileAccess:listPairedDevices': { class: 'paired-read', timeoutClass: 'short' },
 
-  // ── observability (read) ────────────────────────────────────────────────────
-  'observability:exportTrace':      { class: 'paired-read', timeoutClass: 'long' },
+  // ── observability — exportTrace reclassified desktop-only (Wave 41 Phase I)
+  // 'observability:exportTrace' moved to channelCatalog.desktopOnly.ts.
 
   // ── perf (read) ─────────────────────────────────────────────────────────────
   'perf:getRuntimeMetrics':         { class: 'paired-read', timeoutClass: 'short' },
@@ -234,7 +224,7 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   'symbol:search':                  { class: 'paired-read', timeoutClass: 'normal' },
 
   // ── telemetry (read) ────────────────────────────────────────────────────────
-  'telemetry:queryEvents':          { class: 'paired-read', timeoutClass: 'normal' },
+  // telemetry:queryEvents reclassified desktop-only (Wave 41 Phase I; dev-only debug).
   'telemetry:queryOutcomes':        { class: 'paired-read', timeoutClass: 'normal' },
   'telemetry:queryTraces':          { class: 'paired-read', timeoutClass: 'normal' },
 
