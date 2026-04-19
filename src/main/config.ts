@@ -389,8 +389,6 @@ export interface AppConfig {
   useExtensionHost: boolean;
   /** Wave 3B feature flag — run internal MCP server in dedicated McpHost utility process */
   useMcpHost: boolean;
-  /** Wave 6 (#116) — token-by-token streaming for Ctrl+K inline edits */
-  streamingInlineEdit: boolean;
   /** Wave 6 (#103) — max concurrent background agent jobs (default: 2) */
   backgroundJobsMaxConcurrent: number;
   /** Wave 8 (#115) — persist PTY session descriptors to SQLite for cross-restart restore */

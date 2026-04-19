@@ -36,7 +36,6 @@ import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
 import { useNativeStatusBar } from './hooks/useNativeStatusBar';
 import { usePermalinkBridge } from './hooks/usePermalinkBridge';
 import { useProjectManagement } from './hooks/useProjectManagement';
-import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
 import { useTokenOverrides } from './hooks/useTokenOverrides';
@@ -309,7 +308,6 @@ export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
   useThemeRuntimeBootstrap(config);
   useTokenOverrides();
-  useStreamingInlineEditFlag(config);
   useVisualViewportInsets();
 
   if (configLoading || !config) return <LoadingScreen />;

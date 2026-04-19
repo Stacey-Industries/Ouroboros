@@ -15,7 +15,6 @@ vi.mock('electron', () => ({
 
 vi.mock('../config', () => ({
   getConfigValue: vi.fn((key: string) => {
-    if (key === 'streamingInlineEdit') return true;
     if (key === 'defaultProjectRoot') return '/tmp/project';
     return null;
   }),

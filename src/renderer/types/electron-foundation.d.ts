@@ -215,8 +215,6 @@ export interface AppConfig {
   authOnboardingDismissed: boolean;
   /** Create a git checkpoint commit before applying AI-generated diffs. Default: true. */
   autoCheckpoint: boolean;
-  /** Wave 6 (issue 116) — token-by-token streaming for Ctrl+K inline edits. Default: false. */
-  streamingInlineEdit: boolean;
   /** Wave 6 (issue 103) — max concurrent background agent jobs. Default: 2. */
   backgroundJobsMaxConcurrent: number;
   /** Wave 8 (issue 115) — persist PTY session descriptors to SQLite for cross-restart restore. Default: false. */

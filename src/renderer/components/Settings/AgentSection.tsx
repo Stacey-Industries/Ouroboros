@@ -275,13 +275,6 @@ function AgentFeaturesGroup({ draft, onChange }: AgentSectionProps): React.React
   return (
     <>
       <SectionLabel style={{ marginTop: '8px' }}>Inline Edit &amp; Jobs</SectionLabel>
-      <ToggleSection
-        checked={draft.streamingInlineEdit ?? false}
-        description="Stream token-by-token diffs during Ctrl+K inline edits instead of displaying results when complete."
-        label="Streaming inline edit"
-        title="Streaming Inline Edit"
-        onChange={(value) => onChange('streamingInlineEdit', value)}
-      />
       <BackgroundJobsSection draft={draft} onChange={onChange} />
     </>
   );

@@ -4,8 +4,7 @@
  * Phases: idle → input → loading → preview → idle
  * Accepts / reject / cancel return to idle.
  *
- * Feature flag: when config.streamingInlineEdit === true, submit routes
- * through useStreamingInlineEdit instead of the bulk ai:inline-edit path.
+ * Submit routes through useStreamingInlineEdit unconditionally.
  */
 import * as monaco from 'monaco-editor';
 import type { MutableRefObject } from 'react';
@@ -37,7 +36,7 @@ export interface InlineEditActions {
   accept: () => void;
   reject: () => void;
   cancel: () => void;
-  /** Present only when streamingInlineEdit flag is on. */
+  /** Streaming inline edit controls. */
   streaming?: StreamingInlineEditActions;
 }
 
@@ -49,10 +48,6 @@ export const IDLE_STATE: InlineEditState = {
   selectionRange: null,
   error: null,
 };
-
-function hasAiApi(): boolean {
-  return typeof window !== 'undefined' && !!window.electronAPI?.ai;
-}
 
 function captureSelection(
   editor: monaco.editor.IStandaloneCodeEditor,
@@ -87,54 +82,9 @@ export function applyEdit(
   editor.pushUndoStop();
 }
 
-interface SubmitDeps {
-  stateRef: MutableRefObject<InlineEditState>;
-  editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
-  filePath: string;
-  languageId: string;
-  setState: React.Dispatch<React.SetStateAction<InlineEditState>>;
-}
-
-async function runSubmit(instruction: string, deps: SubmitDeps): Promise<void> {
-  const { stateRef, editorRef, filePath, languageId, setState } = deps;
-  const current = stateRef.current;
-  if (current.phase !== 'input' || !current.selectionRange) return;
-  if (!hasAiApi()) {
-    setState((s) => ({ ...s, phase: 'input' as InlineEditPhase, error: 'AI API unavailable' }));
-    return;
-  }
-  setState((s) => ({ ...s, phase: 'loading' as InlineEditPhase, instruction, error: null }));
-  const fullFileContent = editorRef.current?.getModel()?.getValue() ?? '';
-  try {
-    const response = await window.electronAPI.ai.inlineEdit({
-      filePath, languageId,
-      selectedCode: current.originalCode,
-      fullFileContent,
-      selectionRange: current.selectionRange,
-      instruction,
-    });
-    if (!response.success || !response.editedCode) {
-      setState((s) => ({ ...s, phase: 'input' as InlineEditPhase, error: response.error ?? 'Edit generation failed' }));
-      return;
-    }
-    setState((s) => ({ ...s, phase: 'preview' as InlineEditPhase, editedCode: response.editedCode ?? null, error: null }));
-  } catch (err) {
-    setState((s) => ({ ...s, phase: 'input' as InlineEditPhase, error: err instanceof Error ? err.message : 'Unknown error' }));
-  }
-}
-
-function isStreamingEnabled(): boolean {
+function hasStreamingApi(): boolean {
   return typeof window !== 'undefined' &&
     !!(window.electronAPI?.config as unknown as Record<string, unknown> | undefined);
-}
-
-function checkStreamFlag(): boolean {
-  try {
-    // Read synchronously from config cache via a best-effort approach.
-    // The flag starts false; config loads asynchronously. We check on submit.
-    const raw = (window as unknown as Record<string, unknown>).__streamingInlineEdit__;
-    return raw === true;
-  } catch { return false; }
 }
 
 export function useInlineEdit(
@@ -157,15 +107,14 @@ export function useInlineEdit(
   }, [editorRef]);
 
   const submit = useCallback((instruction: string): Promise<void> => {
-    // Streaming branch: flag on + streaming API available
-    if (isStreamingEnabled() && checkStreamFlag() && stateRef.current.selectionRange) {
+    if (hasStreamingApi() && stateRef.current.selectionRange) {
       setState((s) => ({ ...s, phase: 'loading' as InlineEditPhase, instruction, error: null }));
       const { selectionRange, originalCode } = stateRef.current;
       return streaming.startStream(instruction, originalCode, selectionRange).then(() => {
         setState((s) => ({ ...s, phase: 'preview' as InlineEditPhase }));
       });
     }
-    return runSubmit(instruction, { stateRef, editorRef, filePath, languageId, setState });
+    return Promise.resolve();
   }, [editorRef, filePath, languageId, streaming]);
 
   const accept = useCallback((): void => {
