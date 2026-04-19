@@ -268,6 +268,16 @@ async function toggleServer(args: ToggleServerArgs): Promise<Record<string, neve
   return {};
 }
 
+/**
+ * Returns the names of all registered MCP servers (both enabled and disabled)
+ * from the global and, optionally, per-project Claude settings files.
+ * Used by sessionCrud:setMcpOverrides to validate submitted server IDs.
+ */
+export async function getRegisteredMcpServerIds(projectRoot?: string): Promise<string[]> {
+  const { servers } = await getServers(projectRoot);
+  return servers.map((s) => s.name);
+}
+
 export function registerMcpHandlers(_senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
   void _senderWindow;

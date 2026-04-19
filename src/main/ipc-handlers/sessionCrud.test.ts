@@ -73,6 +73,12 @@ vi.mock('../session/sessionTrash', () => ({
   restoreFromTrash: mockRestoreFromTrash,
 }));
 
+// ─── mcp mock — prevents ElectronStore init from pulling in ../config ─────────
+
+vi.mock('./mcp', () => ({
+  getRegisteredMcpServerIds: vi.fn().mockResolvedValue([]),
+}));
+
 // ─── Subject under test ───────────────────────────────────────────────────────
 
 import { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessionCrud';

@@ -25,6 +25,7 @@ import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
 import { restoreFromTrash, writeToTrash } from '../session/sessionTrash';
 import { createChatWindow } from '../windowManager';
+import { getRegisteredMcpServerIds } from './mcp';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
 
@@ -225,7 +226,9 @@ function handleSetToolOverrides(args: unknown): HandlerResult<object> {
   return ok({});
 }
 
-function handleSetMcpOverrides(args: unknown): HandlerResult<object> {
+async function handleSetMcpOverrides(
+  args: unknown,
+): Promise<HandlerResult<object> | { success: false; error: string; unknownIds: string[] }> {
   const { sessionId, mcpServerOverrides } = (args ?? {}) as {
     sessionId?: string;
     mcpServerOverrides?: string[];
@@ -236,6 +239,15 @@ function handleSetMcpOverrides(args: unknown): HandlerResult<object> {
   if (!store) return fail('sessionStore not initialised');
   const session = store.getById(sessionId);
   if (!session) return fail(`session not found: ${sessionId}`);
+
+  // Validate every supplied server ID against the registered MCP server list
+  const registeredIds = await getRegisteredMcpServerIds(session.projectRoot);
+  const unknownIds = mcpServerOverrides.filter((id) => !registeredIds.includes(id));
+  if (unknownIds.length > 0) {
+    log.warn('[sessionCrud] setMcpOverrides rejected unknown server IDs:', unknownIds.length);
+    return { success: false, error: 'unknown-mcp-server', unknownIds };
+  }
+
   store.upsert({ ...session, mcpServerOverrides });
   broadcastChanged();
   return ok({});

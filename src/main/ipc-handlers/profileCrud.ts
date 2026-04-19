@@ -72,11 +72,22 @@ function handleList(): HandlerResult<{ profiles: Profile[] }> {
   return ok({ profiles: store.listAll() });
 }
 
-function handleUpsert(args: unknown): HandlerResult<{ profile: Profile }> {
+function handleUpsert(
+  args: unknown,
+): HandlerResult<{ profile: Profile }> | { success: false; error: 'profile-lint-errors'; lintItems: ProfileLint[] } {
   const { profile } = (args ?? {}) as { profile?: unknown };
   if (!isValidProfile(profile)) return fail('profile is missing required fields (id, name)');
   const store = getProfileStore();
   if (!store) return fail('profileStore not initialised');
+
+  // Security boundary: reject profiles with any severity:'error' lint item.
+  // Currently gates bypass+Bash combinations; also catches any future error-level rules.
+  const lintItems = lintProfile(profile);
+  const errors = lintItems.filter((l) => l.severity === 'error');
+  if (errors.length > 0) {
+    return { success: false, error: 'profile-lint-errors', lintItems: errors };
+  }
+
   const saved = store.upsert(profile);
   broadcastChanged();
   return ok({ profile: saved });

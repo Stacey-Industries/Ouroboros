@@ -8,6 +8,7 @@
  */
 
 import { ipcMain } from 'electron';
+import fs from 'fs';
 import path from 'path';
 
 import { getConfigValue } from '../config';
@@ -59,8 +60,12 @@ function normalise(p: string): string {
 
 /**
  * Returns true if requestedPath is exactly equal to or a subdirectory of
- * one of the configured project roots. Uses path.resolve + path.relative —
- * no filesystem access (avoids security/detect-non-literal-fs-filename).
+ * one of the configured project roots.
+ *
+ * Uses fs.realpathSync to resolve symlinks before comparing, so a symlink
+ * pointing outside a configured root is rejected. If realpathSync throws
+ * (e.g. ENOENT — path doesn't exist yet for creation scenarios), falls back
+ * to path.resolve which preserves the original "will be created" behaviour.
  *
  * NEVER logs the attempted path.
  */
@@ -68,7 +73,15 @@ export function validateProjectPath(requestedPath: string, winId?: number): bool
   const roots = getAllConfiguredRoots(winId);
   if (roots.length === 0) return false;
 
-  const resolved = path.resolve(requestedPath);
+  let resolved: string;
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- requestedPath comes from IPC; realpathSync here IS the security check (resolves symlinks before root comparison)
+    resolved = fs.realpathSync(requestedPath);
+  } catch {
+    // Path doesn't exist yet (creation scenario) — fall back to path.resolve
+    resolved = path.resolve(requestedPath);
+  }
+
   const normResolved = normalise(resolved);
 
   for (const root of roots) {
