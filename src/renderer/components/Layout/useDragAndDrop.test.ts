@@ -23,6 +23,7 @@ vi.mock('@dnd-kit/core', () => ({
   DragOverlay: () => null,
   PointerSensor: class PointerSensor {},
   TouchSensor: class TouchSensor {},
+  KeyboardSensor: class KeyboardSensor {},
   useSensor: vi.fn((Cls, opts?: unknown) => ({ sensor: Cls, options: opts ?? {} })),
   useSensors: vi.fn((...sensors: unknown[]) => {
     capturedSensors.length = 0;
@@ -31,7 +32,16 @@ vi.mock('@dnd-kit/core', () => ({
   }),
 }));
 
-import { PointerSensor, TouchSensor, useSensor } from '@dnd-kit/core';
+vi.mock('@dnd-kit/sortable', () => ({
+  sortableKeyboardCoordinates: vi.fn(),
+}));
+
+vi.mock('../../hooks/useViewportBreakpoint', () => ({
+  useViewportBreakpoint: vi.fn().mockReturnValue('desktop'),
+}));
+
+import { KeyboardSensor, PointerSensor, TouchSensor, useSensor } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 import { useConfig } from '../../hooks/useConfig';
 import { useDragAndDrop, useLayoutSensors } from './useDragAndDrop';
@@ -133,5 +143,19 @@ describe('useLayoutSensors', () => {
     const touchCall = mockUseSensor.mock.calls.find((call) => call[0] === TouchSensor);
     const opts = touchCall?.[1] as { activationConstraint: { delay: number; tolerance: number } };
     expect(opts.activationConstraint.tolerance).toBe(5);
+  });
+
+  it('includes KeyboardSensor for keyboard accessibility', () => {
+    renderHook(() => useLayoutSensors());
+    const sensorClasses = mockUseSensor.mock.calls.map((call) => call[0]);
+    expect(sensorClasses).toContain(KeyboardSensor);
+  });
+
+  it('configures KeyboardSensor with sortableKeyboardCoordinates', () => {
+    renderHook(() => useLayoutSensors());
+    const kbCall = mockUseSensor.mock.calls.find((call) => call[0] === KeyboardSensor);
+    expect(kbCall).toBeDefined();
+    const opts = kbCall?.[1] as { coordinateGetter: unknown };
+    expect(opts.coordinateGetter).toBe(sortableKeyboardCoordinates);
   });
 });

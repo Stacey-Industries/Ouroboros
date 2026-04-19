@@ -26,6 +26,13 @@ export interface ReviewFile {
   oldPath?: string;
 }
 
+/** A staged git operation waiting for the user to confirm despite file staleness. */
+export interface StalePendingOp {
+  kind: 'stage' | 'revert';
+  fileIdx: number;
+  hunkIdx: number;
+}
+
 export interface DiffReviewState {
   sessionId: string;
   snapshotHash: string;
@@ -36,4 +43,15 @@ export interface DiffReviewState {
   error: string | null;
   /** Hunk IDs from the most recently user-initiated accept action. Null means no rollback available. */
   lastAcceptedBatch: string[] | null;
+  /**
+   * Paths (relative) of files that have been modified externally since the diff
+   * was loaded.  Any stage/revert against these files will surface a re-prompt
+   * before proceeding.
+   */
+  staleFiles: string[];
+  /**
+   * When the user tries to stage/revert a stale file this holds the pending op
+   * so the confirmation dialog can re-invoke it on approval.
+   */
+  stalePendingOp: StalePendingOp | null;
 }

@@ -576,7 +576,7 @@ describe('persistWindowSessions', () => {
   });
 
   it('updates sessionsData bounds for matching projectRoot', () => {
-    type SessionLike = { projectRoot: string; bounds?: Record<string, unknown> };
+    type SessionLike = { projectRoot: string; id?: string; bounds?: Record<string, unknown> };
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'sessionsData') {
         return [{ projectRoot: '/proj/real', id: 's1', bounds: undefined }] as SessionLike[];
@@ -595,7 +595,7 @@ describe('persistWindowSessions', () => {
   });
 
   it('skips destroyed windows when updating sessionsData', () => {
-    type SessionLike = { projectRoot: string; bounds?: Record<string, unknown> };
+    type SessionLike = { projectRoot: string; id?: string; bounds?: Record<string, unknown> };
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'sessionsData') {
         return [{ projectRoot: '/proj/a', id: 's1' }] as SessionLike[];

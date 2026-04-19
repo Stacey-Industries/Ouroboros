@@ -5,15 +5,19 @@ import type { DiffReviewActions } from './diffReviewState';
 import {
   diffReviewReducer,
   useBulkReviewActions,
+  useConfirmStaleOp,
   useReviewLifecycleActions,
   useRollbackAction,
   useSingleHunkActions,
+  useStaleFileWatcher,
 } from './diffReviewState';
 import type { DiffReviewState } from './types';
 
 export interface DiffReviewContextValue extends DiffReviewActions {
   state: DiffReviewState | null;
   canRollback: boolean;
+  confirmStaleOp: () => void;
+  dismissStaleOp: () => void;
 }
 
 const DiffReviewContext = createContext<DiffReviewContextValue | null>(null);
@@ -86,9 +90,15 @@ function useDiffReviewContextValue(): DiffReviewContextValue {
     checkpoint,
   );
   const { canRollback, rollback } = useRollbackAction(state, dispatch);
+  const { confirmStaleOp, dismissStaleOp } = useConfirmStaleOp(state, dispatch);
+  useStaleFileWatcher(state, dispatch);
   return useMemo<DiffReviewContextValue>(
-    () => ({ state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback }),
-    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback],
+    () => ({
+      state, openReview, closeReview,
+      acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll,
+      canRollback, rollback, confirmStaleOp, dismissStaleOp,
+    }),
+    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback, confirmStaleOp, dismissStaleOp],
   );
 }
 

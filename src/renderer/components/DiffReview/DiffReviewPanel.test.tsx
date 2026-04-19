@@ -36,6 +36,8 @@ function makeState(overrides: Partial<DiffReviewState> = {}): DiffReviewState {
     loading: false,
     error: null,
     lastAcceptedBatch: null,
+    staleFiles: [],
+    stalePendingOp: null,
     ...overrides,
   };
 }

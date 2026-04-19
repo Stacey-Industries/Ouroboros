@@ -1,4 +1,3 @@
-import log from 'electron-log/renderer';
 import type { Dispatch } from 'react';
 import { useCallback } from 'react';
 
@@ -9,9 +8,15 @@ import {
   revertPendingEntries,
   stagePendingEntries,
 } from './diffReviewState.ops';
-import type { DiffReviewState, HunkDecision, ReviewFile } from './types';
+import {
+  executeAcceptHunk,
+  executeRejectHunk,
+  isFileStale,
+} from './diffReviewState.stale';
+import type { DiffReviewState, HunkDecision, ReviewFile, StalePendingOp } from './types';
 
 export { toReviewFiles } from './diffReviewState.ops';
+export { useConfirmStaleOp, useStaleFileWatcher } from './diffReviewState.stale';
 
 export type DiffReviewAction =
   | {
@@ -28,7 +33,13 @@ export type DiffReviewAction =
   | { type: 'SET_FILE_DECISION'; fileIdx: number; decision: HunkDecision }
   | { type: 'SET_ALL_DECISION'; decision: HunkDecision }
   | { type: 'CAPTURE_BATCH'; hunkIds: string[] }
-  | { type: 'ROLLBACK_LAST_BATCH' };
+  | { type: 'ROLLBACK_LAST_BATCH' }
+  /** Mark a file as externally modified since the diff was loaded. */
+  | { type: 'MARK_STALE'; relativePath: string }
+  /** Hold a pending op that requires user confirmation due to file staleness. */
+  | { type: 'PEND_STALE_OP'; op: StalePendingOp }
+  /** Clear the pending stale op (user dismissed the prompt). */
+  | { type: 'DISMISS_STALE_OP' };
 
 export interface DiffReviewActions {
   openReview: (
@@ -59,6 +70,8 @@ function buildOpenState(action: Extract<DiffReviewAction, { type: 'OPEN' }>): Di
     loading: true,
     error: null,
     lastAcceptedBatch: null,
+    staleFiles: [],
+    stalePendingOp: null,
   };
 }
 
@@ -124,7 +137,26 @@ function rollbackBatch(state: DiffReviewState): DiffReviewState {
   return { ...state, files, lastAcceptedBatch: null };
 }
 
+const UNHANDLED = Symbol('unhandled');
+
+function applyStaleAction(
+  state: DiffReviewState,
+  action: DiffReviewAction,
+): DiffReviewState | typeof UNHANDLED {
+  switch (action.type) {
+    case 'MARK_STALE': {
+      if (state.staleFiles.includes(action.relativePath)) return state;
+      return { ...state, staleFiles: [...state.staleFiles, action.relativePath] };
+    }
+    case 'PEND_STALE_OP': return { ...state, stalePendingOp: action.op };
+    case 'DISMISS_STALE_OP': return { ...state, stalePendingOp: null };
+    default: return UNHANDLED;
+  }
+}
+
 function applyAction(state: DiffReviewState, action: DiffReviewAction): DiffReviewState | null {
+  const staleResult = applyStaleAction(state, action);
+  if (staleResult !== UNHANDLED) return staleResult;
   switch (action.type) {
     case 'LOADED': return { ...state, files: action.files, loading: false };
     case 'ERROR': return { ...state, error: action.error, loading: false };
@@ -145,16 +177,6 @@ export function diffReviewReducer(
   if (action.type === 'OPEN') return buildOpenState(action);
   if (!state) return action.type === 'CLOSE' ? null : state;
   return applyAction(state, action);
-}
-
-function getPendingHunk(
-  state: DiffReviewState | null,
-  fileIdx: number,
-  hunkIdx: number,
-): { fileIdx: number; hunkIdx: number; rawPatch: string } | null {
-  const hunk = state?.files[fileIdx]?.hunks[hunkIdx];
-  if (!hunk || hunk.decision !== 'pending') return null;
-  return { fileIdx, hunkIdx, rawPatch: hunk.rawPatch };
 }
 
 export function useReviewLifecycleActions(
@@ -181,34 +203,24 @@ export function useSingleHunkActions(
 ): Pick<DiffReviewActions, 'acceptHunk' | 'rejectHunk'> {
   const acceptHunk = useCallback(
     (fileIdx: number, hunkIdx: number) => {
-      const pendingHunk = getPendingHunk(state, fileIdx, hunkIdx);
-      if (!state || !pendingHunk) return;
-      const hunkId = state.files[fileIdx]?.hunks[hunkIdx]?.id ?? '';
-      dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'accepted' });
-      dispatch({ type: 'CAPTURE_BATCH', hunkIds: hunkId ? [hunkId] : [] });
-      void window.electronAPI.git
-        .stageHunk(state.projectRoot, pendingHunk.rawPatch)
-        .catch((error) => {
-          log.error('Failed to stage hunk:', error);
-          dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
-          dispatch({ type: 'CAPTURE_BATCH', hunkIds: [] });
-        });
+      if (!state) return;
+      if (isFileStale(state, fileIdx)) {
+        dispatch({ type: 'PEND_STALE_OP', op: { kind: 'stage', fileIdx, hunkIdx } });
+        return;
+      }
+      executeAcceptHunk(state, dispatch, fileIdx, hunkIdx);
     },
     [dispatch, state],
   );
 
   const rejectHunk = useCallback(
     (fileIdx: number, hunkIdx: number) => {
-      const pendingHunk = getPendingHunk(state, fileIdx, hunkIdx);
-      if (!state || !pendingHunk) return;
-      dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'rejected' });
-      dispatch({ type: 'CAPTURE_BATCH', hunkIds: [] });
-      void window.electronAPI.git
-        .revertHunk(state.projectRoot, pendingHunk.rawPatch)
-        .catch((error) => {
-          log.error('Failed to revert hunk:', error);
-          dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
-        });
+      if (!state) return;
+      if (isFileStale(state, fileIdx)) {
+        dispatch({ type: 'PEND_STALE_OP', op: { kind: 'revert', fileIdx, hunkIdx } });
+        return;
+      }
+      executeRejectHunk(state, dispatch, fileIdx, hunkIdx);
     },
     [dispatch, state],
   );
