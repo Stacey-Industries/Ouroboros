@@ -8,6 +8,7 @@ import fs from 'fs/promises'
 import ignore from 'ignore'
 import path from 'path'
 
+import log from '../logger'
 import { mapConcurrent } from './concurrency'
 import type { DiscoveredFile, IndexedFile } from './indexingPipelineTypes'
 import type { ExtractedDefinition } from './treeSitterTypes'
@@ -105,6 +106,59 @@ export interface WalkContext {
   files: DiscoveredFile[]
 }
 
+/**
+ * Returns true when `resolved` is inside `projectRoot`.
+ * Uses case-insensitive comparison on Windows to account for drive-letter casing.
+ */
+function isInsideProjectRoot(resolved: string, projectRoot: string): boolean {
+  const prefix = projectRoot.endsWith(path.sep) ? projectRoot : projectRoot + path.sep
+  if (process.platform === 'win32') {
+    return resolved.toLowerCase().startsWith(prefix.toLowerCase())
+  }
+  return resolved.startsWith(prefix)
+}
+
+/**
+ * Resolves a symlink entry.  Returns:
+ *   - { kind: 'dir' | 'file', resolved } when the target is inside the project root.
+ *   - null when the target is outside the root, dangling, or cannot be resolved.
+ *
+ * Logs a structured warning for symlinks that escape the project root.
+ */
+async function resolveSymlink(
+  entry: import('fs').Dirent,
+  fullPath: string,
+  projectRoot: string,
+): Promise<{ kind: 'dir' | 'file'; resolved: string } | null> {
+  let resolved: string
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fullPath derived from trusted walker path
+    resolved = await fs.realpath(fullPath)
+  } catch {
+    // Dangling symlink — skip silently.
+    return null
+  }
+
+  if (!isInsideProjectRoot(resolved, projectRoot)) {
+    log.warn('[indexer] skipped symlink outside project root', {
+      name: entry.name,
+      resolved,
+      projectRoot,
+    })
+    return null
+  }
+
+  // Determine the kind from the resolved target via lstat on the real path.
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved is a real path confirmed inside projectRoot
+    const stat = await fs.stat(resolved)
+    const kind = stat.isDirectory() ? 'dir' : 'file'
+    return { kind, resolved }
+  } catch {
+    return null
+  }
+}
+
 async function processDirectory(name: string, relPath: string, fullPath: string, ctx: WalkContext): Promise<void> {
   if (ALWAYS_IGNORE_DIRS.has(name)) return
   if (ctx.ig.ignores(relPath + '/')) return
@@ -124,6 +178,34 @@ async function processFile(name: string, relPath: string, fullPath: string, ctx:
   } catch { /* stat failed, skip */ }
 }
 
+/**
+ * Splits a raw `readdir` result into `dirs` and `fileEntries`, resolving any
+ * symlinks with a project-root containment check before classifying them.
+ */
+async function classifyEntries(
+  entries: import('fs').Dirent[],
+  dir: string,
+  projectRoot: string,
+): Promise<{ dirs: import('fs').Dirent[]; fileEntries: import('fs').Dirent[] }> {
+  const dirs: import('fs').Dirent[] = []
+  const fileEntries: import('fs').Dirent[] = []
+
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) {
+      const fullPath = path.join(dir, entry.name)
+      const target = await resolveSymlink(entry, fullPath, projectRoot)
+      if (target === null) continue
+      if (target.kind === 'dir') { dirs.push(entry) } else { fileEntries.push(entry) }
+    } else if (entry.isDirectory()) {
+      dirs.push(entry)
+    } else if (entry.isFile()) {
+      fileEntries.push(entry)
+    }
+  }
+
+  return { dirs, fileEntries }
+}
+
 async function walkDirectoryImpl(dir: string, ctx: WalkContext): Promise<void> {
   if (ctx.files.length >= ctx.maxFiles) return
 
@@ -135,8 +217,7 @@ async function walkDirectoryImpl(dir: string, ctx: WalkContext): Promise<void> {
     return
   }
 
-  const dirs = entries.filter((e) => e.isDirectory())
-  const fileEntries = entries.filter((e) => e.isFile())
+  const { dirs, fileEntries } = await classifyEntries(entries, dir, ctx.projectRoot)
 
   // Batch fs.stat for all files in this directory concurrently.
   await mapConcurrent(fileEntries, async (entry) => {
