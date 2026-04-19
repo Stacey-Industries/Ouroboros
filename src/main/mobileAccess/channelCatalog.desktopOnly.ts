@@ -77,10 +77,27 @@ export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
   'files:delete':                   { class: 'desktop-only', timeoutClass: 'normal' },
   'files:rename':                   { class: 'desktop-only', timeoutClass: 'normal' },
 
+  // ── marketplace (install writes to global config outside project-root scope) ──
+  // marketplace:install is desktop-only: it mutates ecosystem.systemPrompt and
+  // theming.customTokens at the global level — not scoped to any project root.
+  // A compromised paired device must not be able to persist prompt injections.
+  'marketplace:install':            { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── platform ────────────────────────────────────────────────────────────────
+  // platform:openCrashReportsDir opens a native folder picker — desktop-only by
+  // nature; invoking it from a mobile WS client would be a no-op or odd behaviour.
+  'platform:openCrashReportsDir':   { class: 'desktop-only', timeoutClass: 'short' },
+
   // ── PTY — shell execution (desktop-only: arbitrary code execution) ────────────
   'pty:spawn':                      { class: 'desktop-only', timeoutClass: 'normal' },
   'pty:spawnClaude':                { class: 'desktop-only', timeoutClass: 'long' },
   'pty:spawnCodex':                 { class: 'desktop-only', timeoutClass: 'long' },
+  // pty:write/resize/kill send arbitrary stdin to an existing PTY session.
+  // A paired device driving any open shell (bash, pwsh, cmd) is functional RCE.
+  // Reclassified from paired-write per CRIT-1 / Wave 41 Phase A.
+  'pty:kill':                       { class: 'desktop-only', timeoutClass: 'normal' },
+  'pty:resize':                     { class: 'desktop-only', timeoutClass: 'normal' },
+  'pty:write':                      { class: 'desktop-only', timeoutClass: 'normal' },
 
   // ── sessions (export writes arbitrary file path via dialog) ──────────────────
   'sessions:export':                { class: 'desktop-only', timeoutClass: 'normal' },

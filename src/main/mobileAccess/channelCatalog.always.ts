@@ -19,9 +19,11 @@ export type CatalogEntry = Omit<ChannelDescriptor, 'channel'>;
  * Permitted even for unauthenticated or legacy connections.
  */
 export const ALWAYS_CATALOG: Record<string, CatalogEntry> = {
+  // app:getSystemInfo is implemented entirely in the preload (preload.ts:162)
+  // with no ipcMain.handle counterpart — it is a phantom catalog entry.
+  // Removed per Wave 41 Phase A.
   'app:getVersion':                      { class: 'always', timeoutClass: 'short' },
   'app:getPlatform':                     { class: 'always', timeoutClass: 'short' },
-  'app:getSystemInfo':                   { class: 'always', timeoutClass: 'short' },
   'config:get':                          { class: 'always', timeoutClass: 'short' },
   'config:getAll':                       { class: 'always', timeoutClass: 'short' },
   'mobileAccess:getTimeoutStats':        { class: 'always', timeoutClass: 'short' },

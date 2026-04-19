@@ -20,9 +20,6 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   // ── ecosystem (read) ────────────────────────────────────────────────────────
   'ecosystem:lastExportInfo':         { class: 'paired-read', timeoutClass: 'short' },
 
-  // ── compareProviders (subscription) ────────────────────────────────────────
-  'compareProviders:event':           { class: 'paired-read', timeoutClass: 'short' },
-
   // ── agentChat (read) ────────────────────────────────────────────────────────
   'agentChat:getBufferedChunks':    { class: 'paired-read', timeoutClass: 'normal' },
   'agentChat:getGlobalCostRollup':  { class: 'paired-read', timeoutClass: 'normal' },
@@ -63,6 +60,10 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   // ── claudeSettings (read) ───────────────────────────────────────────────────
   'claudeSettings:read':            { class: 'paired-read', timeoutClass: 'short' },
   'claudeSettings:readKey':         { class: 'paired-read', timeoutClass: 'short' },
+
+  // ── codemode (read) ─────────────────────────────────────────────────────────
+  // codemode:status is a read operation — querying current mode, not mutating.
+  'codemode:status':                { class: 'paired-read', timeoutClass: 'short' },
 
   // ── codex ───────────────────────────────────────────────────────────────────
   'codex:listModels':               { class: 'paired-read', timeoutClass: 'short' },
@@ -196,6 +197,11 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   'research:getGlobalDefault':      { class: 'paired-read', timeoutClass: 'short' },
   'research:getSessionMode':        { class: 'paired-read', timeoutClass: 'short' },
   'research:getSessionOutcomes':    { class: 'paired-read', timeoutClass: 'normal' },
+
+  // ── providers (read) ────────────────────────────────────────────────────────
+  // providers:checkAllAvailability probes installed CLIs — read-only, paired-read
+  // because its error messages may surface path information.
+  'providers:checkAllAvailability': { class: 'paired-read', timeoutClass: 'short' },
 
   // ── router (read) ───────────────────────────────────────────────────────────
   'router:getStats':                { class: 'paired-read', timeoutClass: 'short' },

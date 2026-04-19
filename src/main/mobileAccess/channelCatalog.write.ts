@@ -14,9 +14,6 @@ import type { CatalogEntry } from './channelCatalog.always';
  * layout persistence, worktree operations, file writes under project roots.
  */
 export const WRITE_CATALOG: Record<string, CatalogEntry> = {
-  // ── marketplace (write) ─────────────────────────────────────────────────────
-  'marketplace:install':              { class: 'paired-write', timeoutClass: 'normal' },
-
   // ── ecosystem (write) ───────────────────────────────────────────────────────
   'ecosystem:exportUsage':            { class: 'paired-write', timeoutClass: 'long' },
 
@@ -78,7 +75,6 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   // ── codemode (write) ────────────────────────────────────────────────────────
   'codemode:disable':               { class: 'paired-write', timeoutClass: 'normal' },
   'codemode:enable':                { class: 'paired-write', timeoutClass: 'normal' },
-  'codemode:status':                { class: 'paired-write', timeoutClass: 'short' },
 
   // ── commands (write) ────────────────────────────────────────────────────────
   'commands:create':                { class: 'paired-write', timeoutClass: 'normal' },
@@ -188,16 +184,12 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'profileCrud:upsert':             { class: 'paired-write', timeoutClass: 'normal' },
 
   // ── pty (write — non-spawn) ──────────────────────────────────────────────────
-  // pty:write/resize/kill are paired-write: they affect running terminals
-  // but do not spawn new ones. pty:spawn itself is desktop-only.
+  // pty:write/resize/kill are desktop-only (see channelCatalog.desktopOnly.ts).
   'pty:discardPersistedSessions':   { class: 'paired-write', timeoutClass: 'normal' },
-  'pty:kill':                       { class: 'paired-write', timeoutClass: 'normal' },
   'pty:linkToThread':               { class: 'paired-write', timeoutClass: 'normal' },
-  'pty:resize':                     { class: 'paired-write', timeoutClass: 'normal' },
   'pty:restoreSession':             { class: 'paired-write', timeoutClass: 'normal' },
   'pty:startRecording':             { class: 'paired-write', timeoutClass: 'normal' },
   'pty:stopRecording':              { class: 'paired-write', timeoutClass: 'normal' },
-  'pty:write':                      { class: 'paired-write', timeoutClass: 'normal' },
 
   // ── research (write) ────────────────────────────────────────────────────────
   'research:invoke':                { class: 'paired-write', timeoutClass: 'long' },

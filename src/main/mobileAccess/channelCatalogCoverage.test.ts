@@ -40,7 +40,13 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'auth:stateChanged',
   'backgroundJobs:update',
   'checkpoint:change',
+  // compareProviders:event is push-only (main → renderer via webContents.send).
+  // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
+  'compareProviders:event',
   'contextLayer:progress',
+  // ecosystem:promptDiff is push-only — documented as such in ecosystemHandlers.ts.
+  // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
+  'ecosystem:promptDiff',
   'extensionStore:contributionsChanged',
   'extensionStore:installed',
   'extensionStore:uninstalled',
@@ -55,6 +61,10 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'pty:disconnected',
   'rulesAndSkills:changed',
   'sessionCrud:changed',
+  // sessionDispatch:status and sessionDispatch:notification are push-only events
+  // broadcast from the dispatch runner — never invokable by a client.
+  'sessionDispatch:status',
+  'sessionDispatch:notification',
   'subagent:updated',
   'system2:indexProgress',
   'theme:changed',
@@ -130,7 +140,6 @@ const HANDLER_REGISTRY_CHANNELS: readonly string[] = [
   'app:clearCrashLogs',
   'app:getCrashLogs',
   'app:getPlatform',
-  'app:getSystemInfo',
   'app:getVersion',
   'app:logError',
   'app:notify',
@@ -343,6 +352,7 @@ const HANDLER_REGISTRY_CHANNELS: readonly string[] = [
   'perf:ping',
   'perf:subscribe',
   'perf:unsubscribe',
+  'platform:openCrashReportsDir',
   'pinnedContext:add',
   'pinnedContext:changed',
   'pinnedContext:dismiss',
@@ -358,6 +368,7 @@ const HANDLER_REGISTRY_CHANNELS: readonly string[] = [
   'profileCrud:list',
   'profileCrud:setDefault',
   'profileCrud:upsert',
+  'providers:checkAllAvailability',
   'providers:getSlots',
   'providers:list',
   'pty:discardPersistedSessions',
@@ -499,5 +510,28 @@ describe('channel catalog coverage', () => {
     expect(CATALOG_LOOKUP.get('files:delete')?.class).toBe('desktop-only');
     expect(CATALOG_LOOKUP.get('files:rename')?.class).toBe('desktop-only');
     expect(CATALOG_LOOKUP.get('window:new')?.class).toBe('desktop-only');
+  });
+
+  // Wave 41 Phase A — CRIT-1 reclassification assertions
+  it('pty:write/resize/kill are NOT in the write catalog (CRIT-1)', () => {
+    expect(CATALOG_LOOKUP.get('pty:write')?.class).not.toBe('paired-write');
+    expect(CATALOG_LOOKUP.get('pty:resize')?.class).not.toBe('paired-write');
+    expect(CATALOG_LOOKUP.get('pty:kill')?.class).not.toBe('paired-write');
+  });
+
+  it('pty:write/resize/kill ARE desktop-only (CRIT-1)', () => {
+    expect(CATALOG_LOOKUP.get('pty:write')?.class).toBe('desktop-only');
+    expect(CATALOG_LOOKUP.get('pty:resize')?.class).toBe('desktop-only');
+    expect(CATALOG_LOOKUP.get('pty:kill')?.class).toBe('desktop-only');
+  });
+
+  it('marketplace:install is desktop-only (CRIT-2)', () => {
+    expect(CATALOG_LOOKUP.get('marketplace:install')?.class).toBe('desktop-only');
+  });
+
+  it('no phantom catalog entries (every catalog entry has a handler)', () => {
+    // app:getSystemInfo is implemented in the preload without ipcMain.handle —
+    // it must NOT be in the catalog. Verify it is absent.
+    expect(CATALOG_LOOKUP.has('app:getSystemInfo')).toBe(false);
   });
 });
