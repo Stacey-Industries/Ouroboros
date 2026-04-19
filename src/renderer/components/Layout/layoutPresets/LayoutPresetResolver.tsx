@@ -180,6 +180,7 @@ export interface ProviderState {
   slotTree: SlotNode;
   setSlotOverrides: React.Dispatch<React.SetStateAction<Partial<Record<SlotName, ComponentDescriptor>>>>;
   setSlotTree: React.Dispatch<React.SetStateAction<SlotNode>>;
+  persistence: { save: (tree: unknown) => void };
 }
 
 export function usePresetsFlag(): boolean {
@@ -223,7 +224,10 @@ export function useSplitSlotCallback(
     state.setSlotTree((prev) => {
       const sourceDesc = state.preset.slots[sourceSlot] ?? { componentKey: sourceSlot };
       const sourceLeaf: LeafSlot = { kind: 'leaf', slotName: sourceSlot, component: sourceDesc };
-      return unsplitIfOrphan(splitLeafWith({ tree: prev, targetSlot, source: sourceLeaf, direction, position }));
+      const next = unsplitIfOrphan(splitLeafWith({ tree: prev, targetSlot, source: sourceLeaf, direction, position }));
+      // Wave 41 CRIT-A fix: persist split so layout survives reload (was missing).
+      state.persistence.save(next);
+      return next;
     });
   }, [state]);
 }

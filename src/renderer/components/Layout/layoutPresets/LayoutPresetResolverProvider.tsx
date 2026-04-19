@@ -147,7 +147,7 @@ export function LayoutPresetResolverProvider({
   const { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack } =
     useProviderCore(sessionPresetId, forcePresetId, sessionId);
 
-  const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree };
+  const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree, persistence };
 
   const swapSlots = useCallback((a: import('./types').SlotName, b: import('./types').SlotName) => {
     undoStack.push(slotTree as SerializedSlotNode);

@@ -261,9 +261,7 @@ describe('KNOWN GAP — useSplitSlotCallback persistence not wired (Wave 41 CRIT
    * either via ProviderState or by wrapping in the provider where persistence
    * is available.
    */
-  it('splitSlot updates in-memory slotTree but setCustomLayout is NOT called', async () => {
-    // This test documents the bug by asserting the BROKEN behavior.
-    // When the fix is applied, update this test to assert setCustomLayout IS called.
+  it('splitSlot updates in-memory slotTree and persists via setCustomLayout (CRIT-A fix)', async () => {
     const { result } = renderHook(() => useLayoutPreset(), {
       wrapper: makeWrapper('sess-split-gap'),
     });
@@ -272,7 +270,6 @@ describe('KNOWN GAP — useSplitSlotCallback persistence not wired (Wave 41 CRIT
       expect(typeof result.current.splitSlot).toBe('function');
     });
 
-    // Capture the initial slotTree kind
     const initialKind = result.current.slotTree.kind;
     expect(initialKind).toBe('leaf');
 
@@ -280,14 +277,13 @@ describe('KNOWN GAP — useSplitSlotCallback persistence not wired (Wave 41 CRIT
       result.current.splitSlot('editorContent', 'terminalContent', 'horizontal', 'end');
     });
 
-    // Wait for the debounce window
+    // Wait for the debounce window (save is debounced by useCustomLayoutPersistence)
     await act(async () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 400));
     });
 
-    // BUG: setCustomLayout is NOT called for split operations.
-    // If/when the bug is fixed, this assertion needs to change to:
-    //   expect(mockSetCustomLayout).toHaveBeenCalledWith('sess-split-gap', expect.any(Object));
-    expect(mockSetCustomLayout).not.toHaveBeenCalled();
+    // Wave 41 CRIT-A fix: splitSlot now persists the tree via persistence.save,
+    // so setCustomLayout must be called at least once after the debounce window.
+    expect(mockSetCustomLayout).toHaveBeenCalledWith('sess-split-gap', expect.any(Object));
   });
 });
