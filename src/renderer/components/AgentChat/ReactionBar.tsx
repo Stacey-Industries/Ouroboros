@@ -4,7 +4,7 @@
  * Renders 👍 (+1) and 👎 (-1) buttons with count badges.
  * Uses optimistic state — updates locally on click, reconciles from IPC response.
  *
- * Props: messageId + the current reactions array from the message record.
+ * Wave 41 E.2 — threadId added to props to scope IPC calls by (messageId, threadId).
  */
 
 import React, { useCallback, useState } from 'react';
@@ -59,6 +59,7 @@ function ReactionBtn(props: ReactionBtnProps): React.ReactElement {
 
 function useReactionActions(
   messageId: string,
+  threadId: string,
   reactions: Reaction[],
 ): [Reaction[], (kind: string) => void] {
   const [local, setLocal] = useState<Reaction[]>(reactions);
@@ -77,14 +78,14 @@ function useReactionActions(
       setLocal(optimistic);
 
       const call = active
-        ? window.electronAPI.agentChat.removeMessageReaction(messageId, kind)
-        : window.electronAPI.agentChat.addMessageReaction(messageId, kind);
+        ? window.electronAPI.agentChat.removeMessageReaction(messageId, threadId, kind)
+        : window.electronAPI.agentChat.addMessageReaction(messageId, threadId, kind);
 
       void call.then((result) => {
         if (result.reactions) setLocal(result.reactions);
       });
     },
-    [messageId, local],
+    [messageId, threadId, local],
   );
 
   return [local, toggle];
@@ -94,11 +95,13 @@ function useReactionActions(
 
 export interface ReactionBarProps {
   messageId: string;
+  /** Wave 41 E.2 — threadId scopes reaction SQL to prevent cross-fork leakage. */
+  threadId: string;
   reactions: Reaction[];
 }
 
 export function ReactionBar(props: ReactionBarProps): React.ReactElement {
-  const [local, toggle] = useReactionActions(props.messageId, props.reactions);
+  const [local, toggle] = useReactionActions(props.messageId, props.threadId, props.reactions);
 
   const upCount = countByKind(local, KIND_THUMBS_UP);
   const downCount = countByKind(local, KIND_THUMBS_DOWN);

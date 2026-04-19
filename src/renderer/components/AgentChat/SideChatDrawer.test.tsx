@@ -9,6 +9,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SideChatDrawer } from './SideChatDrawer';
 
+// Wave 41 E.4 — AgentChatConversation requires AgentEventsProvider context; mock
+// it in unit tests for SideChatDrawer which only exercises the tab/header UI.
+vi.mock('./AgentChatConversation', () => ({
+  AgentChatConversation: () => <div data-testid="agent-chat-conversation" />,
+}));
+
 afterEach(cleanup);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -40,7 +46,7 @@ describe('SideChatDrawer', () => {
 
   it('shows empty state message when open with no side chats', () => {
     render(<SideChatDrawer {...defaultProps()} />);
-    expect(screen.getByText(/Ctrl\+;/)).toBeDefined();
+    expect(screen.getByText(/Ctrl[+];/)).toBeDefined();
   });
 
   it('renders a tab for each side chat', () => {

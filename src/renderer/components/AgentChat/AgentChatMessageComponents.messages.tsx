@@ -139,6 +139,7 @@ function UserMessageBubble(props: UserBubbleProps): React.ReactElement {
 
 interface UserFooterProps {
   messageId: string;
+  threadId: string;
   reactions: import('../../types/electron').Reaction[];
   onQuote: () => void;
 }
@@ -154,7 +155,7 @@ function UserMessageFooter(props: UserFooterProps): React.ReactElement {
       >
         Quote
       </button>
-      <ReactionBar messageId={props.messageId} reactions={props.reactions} />
+      <ReactionBar messageId={props.messageId} threadId={props.threadId} reactions={props.reactions} />
     </div>
   );
 }
@@ -192,6 +193,7 @@ export const UserMessage = React.memo(function UserMessage(
       />
       <UserMessageFooter
         messageId={props.message.id}
+        threadId={props.message.threadId}
         reactions={props.message.reactions ?? []}
         onQuote={quoteMessage}
       />

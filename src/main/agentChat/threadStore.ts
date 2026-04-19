@@ -15,7 +15,7 @@ import {
   updateThreadRecord,
 } from './threadStoreOps';
 import { branchThreadFrom, reRunFromMessageImpl } from './threadStoreRerun';
-import type { SearchOptions, SearchResult } from './threadStoreSearch';
+import type { SearchOptions, SearchResponse } from './threadStoreSearch';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
 import {
   DEFAULT_THREAD_TITLE,
@@ -87,19 +87,19 @@ export interface AgentChatThreadStore {
   /** Persist tags for a thread. JSON-encodes internally. */
   setTags: (threadId: string, tags: string[]) => Promise<void>;
   /** Full-text search across thread messages, tags, and file paths. */
-  searchThreads: (query: string, opts?: SearchOptions) => SearchResult[];
+  searchThreads: (query: string, opts?: SearchOptions) => SearchResponse;
   /** Wave 21 Phase C — toggle pinned state (persists to SQLite). */
   pinThread: (threadId: string, pinned: boolean) => Promise<void>;
   /** Wave 21 Phase C — mark thread as soft-deleted (deletedAt = now). */
   softDeleteThread: (threadId: string) => Promise<void>;
   /** Wave 21 Phase C — clear deletedAt, restoring thread from soft-delete. */
   restoreDeletedThread: (threadId: string) => Promise<void>;
-  /** Wave 22 Phase A — get reactions for a message. Returns [] if none. */
-  getMessageReactions: (messageId: string) => Promise<Reaction[]>;
-  /** Wave 22 Phase A — persist reactions for a message (replaces existing). */
-  setMessageReactions: (messageId: string, reactions: Reaction[]) => Promise<void>;
-  /** Wave 22 Phase A — set the collapsedByDefault flag for a message. */
-  setMessageCollapsed: (messageId: string, collapsed: boolean) => Promise<void>;
+  /** Wave 22 Phase A / Wave 41 E.2 — get reactions for a message (scoped by threadId). */
+  getMessageReactions: (messageId: string, threadId: string) => Promise<Reaction[]>;
+  /** Wave 22 Phase A / Wave 41 E.2 — persist reactions for a message (scoped by threadId). */
+  setMessageReactions: (messageId: string, threadId: string, reactions: Reaction[]) => Promise<void>;
+  /** Wave 22 Phase A / Wave 41 E.2 — set collapsedByDefault flag (scoped by threadId). */
+  setMessageCollapsed: (messageId: string, threadId: string, collapsed: boolean) => Promise<void>;
   /** Wave 23 Phase A — fork a thread, optionally carrying history. */
   forkThread: (params: ForkThreadParams) => Promise<AgentChatThreadRecord>;
   /** Wave 23 Phase A — set a user-visible label for a branch thread. */
@@ -220,9 +220,9 @@ function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
     pinThread: (id, pinned) => runtime.pinThread(id, pinned),
     softDeleteThread: (id) => runtime.softDeleteThread(id),
     restoreDeletedThread: (id) => runtime.restoreDeletedThread(id),
-    getMessageReactions: (mid) => runtime.getMessageReactions(mid),
-    setMessageReactions: (mid, reactions) => runtime.setMessageReactions(mid, reactions),
-    setMessageCollapsed: (mid, collapsed) => runtime.setMessageCollapsed(mid, collapsed),
+    getMessageReactions: (mid, tid) => runtime.getMessageReactions(mid, tid),
+    setMessageReactions: (mid, tid, reactions) => runtime.setMessageReactions(mid, tid, reactions),
+    setMessageCollapsed: (mid, tid, collapsed) => runtime.setMessageCollapsed(mid, tid, collapsed),
     forkThread: (params) =>
       runtime.runMutation(() =>
         forkThreadImpl({ createId, now, params, runtime }),

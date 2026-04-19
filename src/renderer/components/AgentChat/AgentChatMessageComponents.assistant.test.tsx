@@ -126,7 +126,7 @@ describe('AssistantMessage — collapse/expand', () => {
     const longContent = 'x'.repeat(4001);
     renderAssistant(makeMessage({ id: 'msg-42', content: longContent, collapsedByDefault: true }));
     fireEvent.click(screen.getByText('Show content'));
-    expect(mockSetMessageCollapsed).toHaveBeenCalledWith('msg-42', false);
+    expect(mockSetMessageCollapsed).toHaveBeenCalledWith('msg-42', expect.any(String), false);
   });
 
   it('shows collapse button only for long messages (>=4000 chars)', () => {

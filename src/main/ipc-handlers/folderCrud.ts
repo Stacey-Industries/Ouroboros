@@ -18,6 +18,7 @@ import { BrowserWindow, ipcMain } from 'electron';
 import log from '../logger';
 import type { SessionFolder } from '../session/folderStore';
 import { getFolderStore } from '../session/folderStore';
+import { getSessionStore } from '../session/sessionStore';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
 
@@ -40,6 +41,13 @@ function broadcastChanged(): void {
   const folders = getFolderStore()?.listAll() ?? [];
   BrowserWindow.getAllWindows().forEach((win) => {
     if (!win.isDestroyed()) win.webContents.send('folderCrud:changed', folders);
+  });
+}
+
+function broadcastSessionsChanged(): void {
+  const sessions = getSessionStore()?.listAll() ?? [];
+  BrowserWindow.getAllWindows().forEach((win) => {
+    if (!win.isDestroyed()) win.webContents.send('sessionCrud:changed', sessions);
   });
 }
 
@@ -93,8 +101,19 @@ function handleDelete(args: unknown): HandlerResult<object> {
   if (typeof id !== 'string' || !id) return fail('id is required');
   const store = getFolderStore();
   if (!store) return fail('folderStore not initialised');
+
+  // Capture orphaned sessionIds before deleting the folder record.
+  const folder = store.listAll().find((f) => f.id === id);
+  const orphanedSessionIds = folder?.sessionIds ?? [];
+
   store.delete(id);
   broadcastChanged();
+
+  // Notify the renderer that each orphaned session's folder association is gone.
+  if (orphanedSessionIds.length > 0) {
+    log.info('[folderCrud] broadcasting sessionCrud:changed for orphaned sessions', orphanedSessionIds);
+    broadcastSessionsChanged();
+  }
   return ok({});
 }
 

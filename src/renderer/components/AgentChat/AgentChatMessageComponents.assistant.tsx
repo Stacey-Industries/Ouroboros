@@ -176,7 +176,7 @@ function AssistantMessageHeader(props: HeaderProps): React.ReactElement | null {
         onToggleRaw={props.onToggleRaw}
         onQuote={props.onQuote}
         reactionsSlot={
-          <ReactionBar messageId={props.message.id} reactions={reactions} />
+          <ReactionBar messageId={props.message.id} threadId={props.message.threadId} reactions={reactions} />
         }
       />
     </div>
@@ -191,10 +191,10 @@ function useCollapseState(message: AgentChatMessageRecord): [boolean, () => void
   const toggle = useCallback(() => {
     setCollapsed((prev) => {
       const next = !prev;
-      void window.electronAPI.agentChat.setMessageCollapsed(message.id, next);
+      void window.electronAPI.agentChat.setMessageCollapsed(message.id, message.threadId, next);
       return next;
     });
-  }, [message.id]);
+  }, [message.id, message.threadId]);
 
   return [collapsed, toggle];
 }

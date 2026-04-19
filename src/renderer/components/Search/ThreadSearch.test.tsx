@@ -192,4 +192,47 @@ describe('ThreadSearch', () => {
       expect(screen.getByPlaceholderText('Search threads...')).toBeTruthy();
     });
   });
+
+  describe('hasMore banner', () => {
+    it('shows hasMore banner when hasMore is true', async () => {
+      mockSearchThreads.mockResolvedValue({
+        success: true,
+        results: [makeResult('t1'), makeResult('t2')],
+        hasMore: true,
+      });
+      render(<ThreadSearch />);
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'many' } });
+      await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
+      await waitFor(() => {
+        expect(screen.getByText(/narrow your search to see all/)).toBeTruthy();
+      }, { timeout: 1000 });
+    });
+
+    it('does not show hasMore banner when hasMore is false', async () => {
+      mockSearchThreads.mockResolvedValue({
+        success: true,
+        results: [makeResult('t1')],
+        hasMore: false,
+      });
+      render(<ThreadSearch />);
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'few' } });
+      await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
+      await waitFor(() => expect(screen.getByText('t1')).toBeTruthy(), { timeout: 1000 });
+      expect(screen.queryByText(/narrow your search/)).toBeNull();
+    });
+
+    it('shows result count in hasMore banner', async () => {
+      mockSearchThreads.mockResolvedValue({
+        success: true,
+        results: [makeResult('t1'), makeResult('t2'), makeResult('t3')],
+        hasMore: true,
+      });
+      render(<ThreadSearch />);
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'count' } });
+      await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
+      await waitFor(() => {
+        expect(screen.getByText(/Showing 3 results/)).toBeTruthy();
+      }, { timeout: 1000 });
+    });
+  });
 });

@@ -65,14 +65,14 @@ afterEach(() => {
 
 describe('searchThreads', () => {
   describe('basic search', () => {
-    it('returns empty array for empty query', async () => {
+    it('returns empty results for empty query', async () => {
       await runtime.writeThread(
         makeThread('t1', { messages: [makeMessage('m1', 't1', 'hello world')] }),
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        expect(searchThreads(db, '')).toEqual([]);
-        expect(searchThreads(db, '   ')).toEqual([]);
+        expect(searchThreads(db, '')).toEqual({ results: [], hasMore: false });
+        expect(searchThreads(db, '   ')).toEqual({ results: [], hasMore: false });
       } finally {
         db.close();
       }
@@ -86,7 +86,7 @@ describe('searchThreads', () => {
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'fox');
+        const { results } = searchThreads(db, 'fox');
         expect(results.length).toBeGreaterThan(0);
         expect(results[0].threadId).toBe('t1');
       } finally {
@@ -100,7 +100,7 @@ describe('searchThreads', () => {
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'zebra');
+        const { results } = searchThreads(db, 'zebra');
         expect(results).toHaveLength(0);
       } finally {
         db.close();
@@ -115,7 +115,7 @@ describe('searchThreads', () => {
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'unique_keyword');
+        const { results } = searchThreads(db, 'unique_keyword');
         expect(results.length).toBeGreaterThan(0);
         expect(results[0].snippet).toBeTruthy();
       } finally {
@@ -129,7 +129,7 @@ describe('searchThreads', () => {
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'hello');
+        const { results } = searchThreads(db, 'hello');
         expect(results.length).toBeGreaterThan(0);
         expect(typeof results[0].score).toBe('number');
       } finally {
@@ -148,7 +148,7 @@ describe('searchThreads', () => {
       );
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'elephant', { threadId: 't1' });
+        const { results } = searchThreads(db, 'elephant', { threadId: 't1' });
         expect(results.every((r) => r.threadId === 't1')).toBe(true);
       } finally {
         db.close();
@@ -167,7 +167,7 @@ describe('searchThreads', () => {
       }
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'search target', { limit: 3 });
+        const { results } = searchThreads(db, 'search target', { limit: 3 });
         expect(results.length).toBeLessThanOrEqual(3);
       } finally {
         db.close();
@@ -181,7 +181,7 @@ describe('searchThreads', () => {
       await runtime.setTags('t1', ['auto:typescript', 'frontend']);
       const db = openDatabase(path.join(tmpDir, 'threads.db'));
       try {
-        const results = searchThreads(db, 'frontend');
+        const { results } = searchThreads(db, 'frontend');
         expect(results.some((r) => r.threadId === 't1')).toBe(true);
       } finally {
         db.close();
@@ -215,7 +215,7 @@ describe('searchThreads', () => {
           'INSERT INTO messages (id, threadId, role, content, createdAt) VALUES (?,?,?,?,?)',
         ).run('bare-m1', 'bare-t1', 'user', 'fallback search content here', 1);
 
-        const results = searchThreads(db, 'fallback');
+        const { results } = searchThreads(db, 'fallback');
         expect(results.length).toBeGreaterThan(0);
         expect(results[0].threadId).toBe('bare-t1');
         expect(results[0].snippet).toContain('fallback');
@@ -235,6 +235,88 @@ describe('searchThreads', () => {
         expect(() => searchThreads(db, '"quoted" AND OR')).not.toThrow();
         expect(() => searchThreads(db, '(parentheses)')).not.toThrow();
         expect(() => searchThreads(db, 'star*')).not.toThrow();
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  describe('hasMore surfacing', () => {
+    it('sets hasMore true when results exceed limit', async () => {
+      for (let i = 0; i < 30; i++) {
+        await runtime.writeThread(
+          makeThread(`hm-t${i}`, {
+            messages: [makeMessage(`hm-m${i}`, `hm-t${i}`, `hasmore keyword content item ${i}`)],
+          }),
+        );
+      }
+      const db = openDatabase(path.join(tmpDir, 'threads.db'));
+      try {
+        const { results, hasMore } = searchThreads(db, 'hasmore keyword', { limit: 10 });
+        expect(results.length).toBeLessThanOrEqual(10);
+        expect(hasMore).toBe(true);
+      } finally {
+        db.close();
+      }
+    });
+
+    it('sets hasMore false when results fit within limit', async () => {
+      for (let i = 0; i < 3; i++) {
+        await runtime.writeThread(
+          makeThread(`sm-t${i}`, {
+            messages: [makeMessage(`sm-m${i}`, `sm-t${i}`, `fewresults unique keyword ${i}`)],
+          }),
+        );
+      }
+      const db = openDatabase(path.join(tmpDir, 'threads.db'));
+      try {
+        const { results, hasMore } = searchThreads(db, 'fewresults unique', { limit: 20 });
+        expect(results.length).toBeLessThanOrEqual(3);
+        expect(hasMore).toBe(false);
+      } finally {
+        db.close();
+      }
+    });
+
+    it('hasMore false for empty query', async () => {
+      const db = openDatabase(path.join(tmpDir, 'threads.db'));
+      try {
+        const { hasMore } = searchThreads(db, '');
+        expect(hasMore).toBe(false);
+      } finally {
+        db.close();
+      }
+    });
+
+    it('hasMore works via LIKE fallback path', () => {
+      const dbPath = path.join(tmpDir, 'fallback-hasmore.db');
+      const db = openDatabase(dbPath);
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS threads (
+            id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
+            createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+            title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle'
+          );
+          CREATE TABLE IF NOT EXISTS messages (
+            id TEXT NOT NULL, threadId TEXT NOT NULL,
+            role TEXT NOT NULL, content TEXT NOT NULL DEFAULT '',
+            createdAt INTEGER NOT NULL,
+            PRIMARY KEY (id, threadId)
+          );
+        `);
+        for (let i = 0; i < 15; i++) {
+          db.prepare(
+            'INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status) VALUES (?,?,?,?,?,?)',
+          ).run(`fb-t${i}`, '/ws', i, i, `T${i}`, 'idle');
+          db.prepare(
+            'INSERT INTO messages (id, threadId, role, content, createdAt) VALUES (?,?,?,?,?)',
+          ).run(`fb-m${i}`, `fb-t${i}`, 'user', `likehasmore keyword appears here ${i}`, i);
+        }
+
+        const { results, hasMore } = searchThreads(db, 'likehasmore', { limit: 5 });
+        expect(results.length).toBeLessThanOrEqual(5);
+        expect(hasMore).toBe(true);
       } finally {
         db.close();
       }
@@ -270,7 +352,7 @@ describe('searchThreads — perf (1000 threads × 10 messages)', () => {
 
       // Timed lap
       const start = performance.now();
-      const results = searchThreads(db, KEYWORD, { limit: 20 });
+      const { results } = searchThreads(db, KEYWORD, { limit: 20 });
       const elapsed = performance.now() - start;
 
       expect(results.length).toBeGreaterThan(0);

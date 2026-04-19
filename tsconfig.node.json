@@ -26,6 +26,7 @@
     "src/main/router/model/*.json",
     "src/preload/**/*",
     "src/shared/**/*",
-    "src/renderer/types/**/*"
+    "src/renderer/types/**/*",
+    "tools/**/*"
   ]
 }

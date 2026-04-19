@@ -82,6 +82,7 @@ function ResultCard({ result, isSelected, onSelect }: ResultCardProps): React.Re
 interface SearchState {
   query: string;
   results: AgentChatSearchResult[];
+  hasMore: boolean;
   loading: boolean;
   selectedIdx: number;
 }
@@ -92,7 +93,7 @@ function useSearchRunner(
   const reqIdRef = useRef(0);
   return useCallback((q: string) => {
     if (!q.trim()) {
-      setState((s) => ({ ...s, results: [], loading: false }));
+      setState((s) => ({ ...s, results: [], hasMore: false, loading: false }));
       return;
     }
     const id = ++reqIdRef.current;
@@ -100,11 +101,11 @@ function useSearchRunner(
     void window.electronAPI.agentChat.searchThreads({ query: q, limit: 30 })
       .then((res) => {
         if (reqIdRef.current !== id) return;
-        setState((s) => ({ ...s, results: res.results ?? [], selectedIdx: 0 }));
+        setState((s) => ({ ...s, results: res.results ?? [], hasMore: res.hasMore ?? false, selectedIdx: 0 }));
       })
       .catch(() => {
         if (reqIdRef.current !== id) return;
-        setState((s) => ({ ...s, results: [] }));
+        setState((s) => ({ ...s, results: [], hasMore: false }));
       })
       .finally(() => {
         if (reqIdRef.current === id) setState((s) => ({ ...s, loading: false }));
@@ -149,7 +150,7 @@ function useKeyHandler(
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ThreadSearch({ onClose }: ThreadSearchProps): React.ReactElement {
-  const [state, setState] = useState<SearchState>({ query: '', results: [], loading: false, selectedIdx: 0 });
+  const [state, setState] = useState<SearchState>({ query: '', results: [], hasMore: false, loading: false, selectedIdx: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -177,6 +178,11 @@ export function ThreadSearch({ onClose }: ThreadSearchProps): React.ReactElement
               isSelected={i === state.selectedIdx} onSelect={() => onSelect(i)} />
           ))}
         </div>
+      )}
+      {state.hasMore && (
+        <p className="px-1 text-xs text-text-semantic-muted">
+          Showing {state.results.length} results — narrow your search to see all
+        </p>
       )}
     </div>
   );

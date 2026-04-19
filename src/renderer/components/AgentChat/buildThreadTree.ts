@@ -16,7 +16,8 @@ export function buildThreadTree(threads: AgentChatThreadRecord[]): ThreadTreeNod
   const roots: ThreadTreeNode[] = [];
   for (const thread of threads) {
     const node = nodes.get(thread.id)!;
-    const parentId = thread.branchInfo?.parentThreadId;
+    // legacy (pre-Wave-41) — branchInfo?.parentThreadId fallback; remove in v2.8
+    const parentId = thread.parentThreadId ?? thread.branchInfo?.parentThreadId;
     if (parentId && nodes.has(parentId)) {
       nodes.get(parentId)!.children.push(node);
     } else {

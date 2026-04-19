@@ -48,8 +48,8 @@ function down(by?: string): Reaction {
   return { kind: '-1', at: 1000, ...(by ? { by } : {}) };
 }
 
-function render_(reactions: Reaction[] = [], id = 'msg-1'): ReturnType<typeof render> {
-  return render(<ReactionBar messageId={id} reactions={reactions} />);
+function render_(reactions: Reaction[] = [], id = 'msg-1', threadId = 'thread-1'): ReturnType<typeof render> {
+  return render(<ReactionBar messageId={id} threadId={threadId} reactions={reactions} />);
 }
 
 // ── Smoke: renders buttons ────────────────────────────────────────────────────
@@ -98,16 +98,16 @@ describe('ReactionBar — active state', () => {
 
 describe('ReactionBar — adding reaction', () => {
   it('calls addMessageReaction with +1 when thumbs-up clicked (no prior reaction)', () => {
-    render_([], 'msg-42');
+    render_([], 'msg-42', 'thread-42');
     fireEvent.click(screen.getByTitle('Thumbs up'));
-    expect(mockAdd).toHaveBeenCalledWith('msg-42', '+1');
+    expect(mockAdd).toHaveBeenCalledWith('msg-42', 'thread-42', '+1');
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
   it('calls addMessageReaction with -1 when thumbs-down clicked', () => {
-    render_([], 'msg-7');
+    render_([], 'msg-7', 'thread-7');
     fireEvent.click(screen.getByTitle('Thumbs down'));
-    expect(mockAdd).toHaveBeenCalledWith('msg-7', '-1');
+    expect(mockAdd).toHaveBeenCalledWith('msg-7', 'thread-7', '-1');
   });
 });
 
@@ -115,16 +115,16 @@ describe('ReactionBar — adding reaction', () => {
 
 describe('ReactionBar — removing reaction', () => {
   it('calls removeMessageReaction when already-active +1 is clicked', () => {
-    render_([up()], 'msg-5');
+    render_([up()], 'msg-5', 'thread-5');
     fireEvent.click(screen.getByTitle('Remove thumbs up'));
-    expect(mockRemove).toHaveBeenCalledWith('msg-5', '+1');
+    expect(mockRemove).toHaveBeenCalledWith('msg-5', 'thread-5', '+1');
     expect(mockAdd).not.toHaveBeenCalled();
   });
 
   it('calls removeMessageReaction when already-active -1 is clicked', () => {
-    render_([down()], 'msg-6');
+    render_([down()], 'msg-6', 'thread-6');
     fireEvent.click(screen.getByTitle('Remove thumbs down'));
-    expect(mockRemove).toHaveBeenCalledWith('msg-6', '-1');
+    expect(mockRemove).toHaveBeenCalledWith('msg-6', 'thread-6', '-1');
   });
 });
 

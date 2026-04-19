@@ -1,0 +1,37 @@
+{
+  "version": "2026-04-19T05:19:30.879540+00:00",
+  "featureOrder": [
+    "recencyScore",
+    "pagerankScore",
+    "importDistance",
+    "keywordOverlap",
+    "prevUsedCount",
+    "toolKindHint_read",
+    "toolKindHint_edit",
+    "toolKindHint_write",
+    "toolKindHint_other"
+  ],
+  "weights": [
+    0.6476982647609877,
+    0.9202248457412467,
+    0.0714350940405621,
+    -0.20595650479977332,
+    0.0,
+    0.6394495877485626,
+    0.8023599847215866,
+    0.8350752849727087,
+    -0.3447944291941869
+  ],
+  "bias": -0.8735052200046081,
+  "metrics": {
+    "samples": 20,
+    "syntheticNegatives": 6,
+    "heldOutAuc": 1.0,
+    "trainedAt": "2026-04-19T05:19:30.879540+00:00",
+    "belowMinSamples": false,
+    "classBalance": {
+      "pos": 12,
+      "neg": 8
+    }
+  }
+}

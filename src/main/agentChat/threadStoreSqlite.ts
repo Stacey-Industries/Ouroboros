@@ -266,16 +266,16 @@ export class ThreadStoreSqliteRuntime {
 
   // ── Wave 22 Phase A — reactions + collapsedByDefault ────────────────────
 
-  async getMessageReactions(messageId: string): Promise<Reaction[]> {
-    return getMessageReactionsSql(this.getDb(), messageId);
+  async getMessageReactions(messageId: string, threadId: string): Promise<Reaction[]> {
+    return getMessageReactionsSql(this.getDb(), messageId, threadId);
   }
 
-  async setMessageReactions(messageId: string, reactions: Reaction[]): Promise<void> {
-    setMessageReactionsSql(this.getDb(), messageId, reactions);
+  async setMessageReactions(id: string, tid: string, r: Reaction[]): Promise<void> {
+    setMessageReactionsSql(this.getDb(), id, tid, r);
   }
 
-  async setMessageCollapsed(messageId: string, collapsed: boolean): Promise<void> {
-    setMessageCollapsedSql(this.getDb(), messageId, collapsed);
+  async setMessageCollapsed(id: string, tid: string, c: boolean): Promise<void> {
+    setMessageCollapsedSql(this.getDb(), id, tid, c);
   }
 
   private loadMessages(db: Database, threadId: string): AgentChatMessageRecord[] {

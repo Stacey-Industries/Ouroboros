@@ -2,6 +2,9 @@
  * agentChatReactions.ts — IPC handlers for Wave 22 Phase A reaction + collapse ops.
  *
  * Registered as a sub-registrar by agentChat.ts via registerReactionHandlers().
+ *
+ * Wave 41 E.2 — handlers now accept threadId as a second arg and pass it through
+ * so SQL ops can scope reactions by (id, threadId) composite PK.
  */
 
 import { AGENT_CHAT_INVOKE_CHANNELS } from '@shared/ipc/agentChatChannels';
@@ -29,29 +32,41 @@ export interface ReactionHandlerDeps {
 // ── Individual handler builders ───────────────────────────────────────────────
 
 function makeGetHandler(svc: AgentChatService, rs: RequireStringFn) {
-  return async (messageId: unknown) => {
-    const reactions = await svc.threadStore.getMessageReactions(rs(messageId, 'messageId'));
+  return async (messageId: unknown, threadId: unknown) => {
+    const reactions = await svc.threadStore.getMessageReactions(
+      rs(messageId, 'messageId'), rs(threadId, 'threadId'),
+    );
     return { success: true, reactions };
   };
 }
 
 function makeAddHandler(svc: AgentChatService, rs: RequireStringFn) {
-  return async (messageId: unknown, kind: unknown) => {
-    const reactions = await addReaction(svc.threadStore, rs(messageId, 'messageId'), rs(kind, 'kind'));
+  return async (messageId: unknown, threadId: unknown, kind: unknown) => {
+    const reactions = await addReaction(svc.threadStore, {
+      messageId: rs(messageId, 'messageId'),
+      threadId: rs(threadId, 'threadId'),
+      kind: rs(kind, 'kind'),
+    });
     return { success: true, reactions };
   };
 }
 
 function makeRemoveHandler(svc: AgentChatService, rs: RequireStringFn) {
-  return async (messageId: unknown, kind: unknown) => {
-    const reactions = await removeReaction(svc.threadStore, rs(messageId, 'messageId'), rs(kind, 'kind'));
+  return async (messageId: unknown, threadId: unknown, kind: unknown) => {
+    const reactions = await removeReaction(svc.threadStore, {
+      messageId: rs(messageId, 'messageId'),
+      threadId: rs(threadId, 'threadId'),
+      kind: rs(kind, 'kind'),
+    });
     return { success: true, reactions };
   };
 }
 
 function makeCollapseHandler(svc: AgentChatService, rs: RequireStringFn) {
-  return async (messageId: unknown, collapsed: unknown) => {
-    await svc.threadStore.setMessageCollapsed(rs(messageId, 'messageId'), Boolean(collapsed));
+  return async (messageId: unknown, threadId: unknown, collapsed: unknown) => {
+    await svc.threadStore.setMessageCollapsed(
+      rs(messageId, 'messageId'), rs(threadId, 'threadId'), Boolean(collapsed),
+    );
     return { success: true };
   };
 }

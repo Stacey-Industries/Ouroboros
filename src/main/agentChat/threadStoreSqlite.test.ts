@@ -317,17 +317,17 @@ describe('ThreadStoreSqliteRuntime', () => {
         expect(thread!.messages[0].content).toBe('Hello from v6');
 
         // Verify new columns exist and default correctly by round-tripping through the runtime
-        const reactions = await migrated.getMessageReactions('v6-msg-1');
+        const reactions = await migrated.getMessageReactions('v6-msg-1', 'v6-thread');
         expect(reactions).toEqual([]);
 
         // Verify we can write and read reactions on the migrated message
-        await migrated.setMessageReactions('v6-msg-1', [{ kind: '+1', at: 9999 }]);
-        const updated = await migrated.getMessageReactions('v6-msg-1');
+        await migrated.setMessageReactions('v6-msg-1', 'v6-thread', [{ kind: '+1', at: 9999 }]);
+        const updated = await migrated.getMessageReactions('v6-msg-1', 'v6-thread');
         expect(updated).toHaveLength(1);
         expect(updated[0].kind).toBe('+1');
 
         // Verify collapsedByDefault round-trips
-        await migrated.setMessageCollapsed('v6-msg-1', true);
+        await migrated.setMessageCollapsed('v6-msg-1', 'v6-thread', true);
         const loaded = await migrated.readThread('v6-thread');
         expect(loaded!.messages[0].collapsedByDefault).toBe(true);
       } finally {

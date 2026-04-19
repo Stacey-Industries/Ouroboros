@@ -235,7 +235,7 @@ export interface AgentChatAPI {
   /** Full-text search across thread messages, tags, and file paths. */
   searchThreads: (
     payload: AgentChatSearchPayload,
-  ) => Promise<{ success: boolean; results?: AgentChatSearchResult[]; error?: string }>;
+  ) => Promise<{ success: boolean; results?: AgentChatSearchResult[]; hasMore?: boolean; error?: string }>;
   /** Wave 21 Phase C — toggle pinned state for a thread. */
   pinThread: (
     threadId: string,

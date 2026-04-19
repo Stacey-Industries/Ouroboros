@@ -269,8 +269,8 @@ function registerTagHandlers(channels: string[], svc: AgentChatService): void {
     const query = requireValidString(obj.query, 'query');
     const limit = typeof obj.limit === 'number' ? obj.limit : undefined;
     const threadId = typeof obj.threadId === 'string' ? obj.threadId : undefined;
-    const results = svc.threadStore.searchThreads(query, { limit, threadId });
-    return { success: true, results };
+    const response = svc.threadStore.searchThreads(query, { limit, threadId });
+    return { success: true, results: response.results, hasMore: response.hasMore };
   });
 }
 
