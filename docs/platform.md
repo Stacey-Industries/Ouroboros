@@ -58,9 +58,9 @@ Contextual prompts render in the three main panels when they have no content:
 Each panel supports two dismiss modes:
 
 - **Session dismiss** — hides the prompt until the next app launch. Stored in memory only.
-- **Persistent dismiss** — hides the prompt indefinitely. Panel ID stored in
-  `platform.dismissedEmptyStates` (an array in config). Cleared by resetting that key
-  or running `config:reset`.
+- **Persistent dismiss** — hides the prompt indefinitely. Panel ID stored as a key in
+  `platform.dismissedEmptyStates` (a `Record<string, boolean>` map in config). Cleared
+  by resetting that key or running `config:reset`.
 
 ---
 
@@ -161,8 +161,15 @@ When enabled, unhandled exceptions (`uncaughtException` + `unhandledRejection`) 
 main process are captured into a structured JSON record and written to:
 
 ```
-~/.ouroboros/crash-reports/<ISO-timestamp>.json
+~/.ouroboros/crash-reports/crash-<timestamp>.log
 ```
+
+where `<timestamp>` is the ISO 8601 UTC timestamp with `:` and `.` replaced by `-`
+(e.g. `2026-04-18T12-30-00-000Z.json`). The actual extension is `.json`; the `crash-`
+prefix and sanitised timestamp form the filename via `crashReporterStorage.ts`.
+
+Implementation: `path.join(os.homedir(), '.ouroboros', 'crash-reports')` — not
+`app.getPath('userData')`.
 
 ### Record fields
 
@@ -199,6 +206,9 @@ logged as warnings and do not affect app operation.
 
 There is no default Anthropic endpoint. Upload is disabled unless an explicit webhook URL
 is configured.
+
+By default only `https:` webhook URLs are accepted. Set `platform.crashReports.allowInsecure = true`
+to permit `http:` URLs (debug scenarios only — not for production use).
 
 ### Enabling
 

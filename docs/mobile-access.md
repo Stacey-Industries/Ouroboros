@@ -98,7 +98,7 @@ If you cannot use a reverse proxy, you can forward port 7890 from your router to
 
 ## Security model
 
-- **Short-lived pairing tickets.** The 6-digit code has a 60-second TTL and is single-use. Brute force is bounded by a rate limiter (5 wrong attempts per IP per 60-second window) plus the TTL; the worst-case brute-force window allows far fewer than 10^6 guesses.
+- **Short-lived pairing tickets.** The 6-digit code has a 60-second TTL and is single-use. Brute force is bounded by a rate limiter (10 wrong attempts per IP per 15-minute window) plus the TTL; the worst-case brute-force window allows far fewer than 10^6 guesses.
 
 - **Long-lived refresh tokens.** After pairing, the device holds a 256-bit random token (`crypto.randomBytes(32)`). The desktop stores only the SHA-256 hash (`base64url`). The raw token is never written to disk. Tokens have no expiry — revocation is the only path to invalidation.
 

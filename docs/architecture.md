@@ -420,7 +420,7 @@ FileViewer (Ctrl+K)
                                       └─ done event → commit; Escape → cancel + revert
 ```
 
-- Feature flag: `config.streamingInlineEdit`. Mirrored onto `window.__streamingInlineEdit__` by `useStreamingInlineEditFlag` (called in `App.tsx` alongside `useThemeRuntimeBootstrap`).
+- Streaming inline edit is always-on (Wave 40 Phase F removed the feature flag; the enabled code path is inlined directly).
 - Streaming transport: dedicated `ai:streamInlineEdit:<requestId>` channel (not the chat stream-json channel).
 - Single undo: `editor.pushStackElement()` between tokens; undo rolls back the whole edit.
 

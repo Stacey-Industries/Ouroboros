@@ -36,6 +36,7 @@
     "audit:prod": "npm audit --omit=dev",
     "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
     "bench:indexer": "node scripts/benchmark-indexer.mjs",
+    "docs:check": "npx tsx scripts/check-docs-schema.ts",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
     "build:changelog": "node tools/build-changelog.js",
     "build:web": "npm run build:changelog && vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",

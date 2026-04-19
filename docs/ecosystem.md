@@ -1,10 +1,10 @@
 # Ecosystem — Wave 37 Feature Reference
 
-Ouroboros ships five ecosystem features under the `ecosystem.moat` flag. Each one adds a capability that deepens the IDE's integration with Claude Code's workflow: surfacing what the model sees, tracking how it changes over versions, recording what it costs, extending it with curated bundles, and providing an in-app reference for the broader Claude Code ecosystem.
+Ouroboros ships five ecosystem features that deepen the IDE's integration with Claude Code's workflow: surfacing what the model sees, tracking how it changes over versions, recording what it costs, extending it with curated bundles, and providing an in-app reference for the broader Claude Code ecosystem.
 
 The features are largely independent and all additive. You can use any subset — none require the others.
 
-**Feature flag:** `ecosystem.moat` (default `true`).
+Ecosystem features ship as always-on code; the 'moat' label is a theme, not a config flag. The `ecosystem` config key stores persistent metadata (`lastSeenSnapshot`, `lastExport`, `systemPrompt`) — there is no top-level enable/disable gate.
 
 ---
 

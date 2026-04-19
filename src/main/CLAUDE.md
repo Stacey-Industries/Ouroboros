@@ -134,7 +134,7 @@ Node.js main process. Owns all privileged operations: window management, PTY ses
 | `codebaseGraph/` | In-process codebase knowledge graph engine |
 | `codemode/` | Cloudflare CodeMode integration layer |
 | `ipc-handlers/` | Domain-split IPC handler registrars |
-| `internalMcp/` | SSE MCP server (implemented, not yet wired into startup) |
+| `internalMcp/` | SSE MCP server (wired and active — see main.ts:22, 126, 137) |
 | `orchestration/` | Context preparation and provider coordination |
 | `router/` | Model routing and selection |
 | `rulesAndSkills/` | Rules and skills management |

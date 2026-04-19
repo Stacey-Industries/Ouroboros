@@ -118,7 +118,7 @@ Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. 
 | `src/renderer/components/` | Feature folders: Layout, Terminal, FileTree, FileViewer, AgentMonitor, CommandPalette, Settings |
 | `src/renderer/hooks/`      | Shared hooks: useConfig, useTheme, usePty, useAgentEvents, useFileWatcher                       |
 | `src/renderer/contexts/`   | React contexts: ProjectContext                                                                  |
-| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro)                                           |
+| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro, glass, light, high-contrast)             |
 | `src/renderer/types/`      | `electron.d.ts` — full IPC type contract                                                        |
 
 ## Codebase Graph (codebase-memory MCP)
@@ -185,6 +185,10 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 
 - Background job queue concurrency cap and queue length cap (50) are hardcoded — expose as settings when the feature matures.
 - `refs/ouroboros/checkpoints/<threadId>` refs accumulate over time — GC policy (keep last 50) runs lazily on next checkpoint capture, not on a schedule.
+- `ecosystem.rulesAndSkillsInstallEnabled` defaults false — the rules-and-skills install path is not yet wired end-to-end. Remove flag and default to true when wired.
+- `tokenStorage` localStorage-on-web (MED) — elevate to HIGH only when web mode is exposed beyond trusted networks.
+- Wave 19 PageRank convergence at 10k cyclic nodes — bounded and non-DoS; profile in practice before tuning `maxIterations`.
+- `AnyOverrides = Record<string, any>` in Wave 26 profile code — one-line type escape hatch; fix when the surrounding code is next refactored.
 
 ## Project Context
 

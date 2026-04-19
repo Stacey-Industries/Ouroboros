@@ -174,7 +174,7 @@ These files are the training dataset for the retrain loop (see below).
 |---|---|---|---|
 | Learned ranker | `context.learnedRanker` | `false` | `false`: additive sort + shadow-mode classifier logging. `true`: classifier score is the ranking key. |
 | Packet mode | `context.packetMode` | `'full'` | `'full'`: full snippet budget. `'lean'`: drop project_structure, cap relevant_code to 6. |
-| Reranker | `context.rerankerEnabled` | `true` (implicit) | `false`: skip Haiku reranker entirely. |
+| Reranker | `context.rerankerEnabled` | `false` | `false`: skip Haiku reranker entirely. Opt-in via config (cold-start ~1–3s). |
 
 **Soak gate for `context.learnedRanker → true`:** ≥ 2 weeks of samples since Phase D (2026-04-17), ≥ 1000 labeled outcomes in `context-outcomes.jsonl`, most-recent held-out AUC > 0.75, shadow-mode overlap ≥ 80%.
 

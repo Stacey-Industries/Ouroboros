@@ -7,6 +7,9 @@ Schema validation happens at the store level — the renderer treats it as opaqu
 
 ### AppConfig
 
+Schema source: `src/main/configSchema.ts` + `configSchemaMiddle.ts` + `configSchemaTail.ts`.
+Generated from schema at Wave 41 Phase M. Add new keys to the appropriate schema file by domain.
+
 ```typescript
 type AppTheme =
   | 'retro'
@@ -21,32 +24,45 @@ type AppTheme =
   | (string & {});
 
 interface AppConfig {
-  // Project
+  // ── Project ──────────────────────────────────────────────────────────────
   recentProjects: string[]; // MRU list, max 10 entries
   defaultProjectRoot: string; // Last-opened folder path (or '')
-  multiRoots: string[]; // All open project roots (multi-root workspace)
+  multiRoots: string[]; // @deprecated — superseded by per-window projectRoots
   bookmarks: string[]; // Absolute paths pinned to top of file tree
   fileTreeIgnorePatterns: string[]; // Extra ignore patterns merged with hardcoded list
 
-  // Appearance
+  // ── Appearance ───────────────────────────────────────────────────────────
   activeTheme: AppTheme;
+  activeFileIconTheme: string;
+  activeProductIconTheme: string;
   showBgGradient: boolean;
   customThemeColors: Record<string, string>;
   customCSS: string;
-  glassOpacity: number; // Glass theme transparency
+  glassOpacity: number; // Glass theme transparency (0–100)
   fontUI: string; // UI font family
   fontMono: string; // Monospace font family
-  fontSizeUI: number; // UI font size
+  fontSizeUI: number; // UI font size (11–18, default 13)
 
-  // Window
+  // ── Window / Layout ──────────────────────────────────────────────────────
   windowBounds: WindowBounds; // Persisted window position/size
   panelSizes: PanelSizes; // Persisted panel dimensions
   activeLayoutName: string; // Name of active workspace layout
   workspaceLayouts: WorkspaceLayout[]; // Saved panel arrangements
 
-  // Terminal
-  hooksServerPort: number; // TCP fallback port (default: 3333, range: 1024-65535)
-  terminalFontSize: number; // Terminal font size (default: 14, range: 8-32)
+  // Wave 17/20/28/32 layout preset engine
+  layout: {
+    presets: { v2: boolean };        // default true
+    chatPrimary: boolean;            // default true
+    dragAndDrop: boolean;            // default true
+    customLayoutsPerSession: Record<string, unknown>;
+    customLayoutsMru: string[];
+    globalCustomPresets: object[];
+    mobilePrimary: boolean;          // Wave 32 — enable mobile-first layout at <768px. Default false (soak gate).
+  };
+
+  // ── Terminal ─────────────────────────────────────────────────────────────
+  hooksServerPort: number; // TCP fallback port (default: 3333, range: 1024–65535)
+  terminalFontSize: number; // Terminal font size (default: 14, range: 8–32)
   terminalCursorStyle: 'block' | 'underline' | 'bar';
   commandBlocksEnabled: boolean; // Warp-style command block overlay
   promptPattern: string; // Custom regex for prompt detection
@@ -54,62 +70,194 @@ interface AppConfig {
   promptPreset: string; // 'default' | 'minimal' | 'powerline' | 'git' | 'custom'
   shell: string; // Override shell executable
   terminalSessions: TerminalSessionSnapshot[]; // Session restore data
+  persistTerminalSessions: boolean; // Wave 8 — persist PTY descriptors across restarts (default false)
 
-  // Keybindings
+  // ── Keybindings ──────────────────────────────────────────────────────────
   keybindings: Record<string, string>; // action ID → shortcut string
 
-  // Claude CLI
+  // ── Claude CLI ───────────────────────────────────────────────────────────
   claudeCliSettings: ClaudeCliSettings;
   claudeAutoLaunch: boolean; // Auto-launch Claude session on startup
   agentTemplates: AgentTemplate[]; // Pre-configured launch profiles
 
-  // Codex CLI
+  // ── Codex CLI ────────────────────────────────────────────────────────────
   codexCliSettings: CodexCliSettings;
 
-  // Agent Chat
+  // ── Agent Chat ───────────────────────────────────────────────────────────
   agentChatSettings: AgentChatSettings;
 
-  // Context Layer
+  // Wave 22/23 chat flags
+  chat: {
+    density: 'comfortable' | 'compact'; // default 'comfortable'
+    desktopNotifications: boolean;       // default true
+    sideChats: boolean;                  // default true
+    branchingPolish: boolean;            // default true
+  };
+
+  // ── Context Layer ────────────────────────────────────────────────────────
   contextLayer: ContextLayerConfig;
 
-  // CLAUDE.md generation
+  // Wave 19/24/31 context scoring flags
+  context: {
+    provenanceWeights: boolean;  // default true
+    pagerank: boolean;           // default true
+    pagerankSeeds: { pinned: number; symbol: number; user_edit: number };
+    decisionLogging: boolean;    // Wave 24 — default true
+    rerankerEnabled: boolean;    // Wave 24 — Haiku reranker. Default false (opt-in; cold-start ~1-3s).
+    packetMode: 'full' | 'lean'; // Wave 31 — 'lean' drops project_structure, caps to 6 files. Default 'full'.
+    learnedRanker: boolean;      // Wave 31 — classifier score as ranking key. Default false (shadow mode).
+  };
+
+  // ── CLAUDE.md generation ─────────────────────────────────────────────────
   claudeMdSettings: ClaudeMdSettings;
 
-  // Model providers
+  // ── Model providers ──────────────────────────────────────────────────────
   modelProviders: ModelProvider[]; // Configured Anthropic-compatible endpoints
   modelSlots: ModelSlotAssignments; // Which provider:model for each session type
 
-  // Hooks / Approval
+  // Wave 36 multi-provider support
+  providers: {
+    multiProvider: boolean; // default false — enables non-Claude session providers
+  };
+
+  // ── Hooks / Approval ─────────────────────────────────────────────────────
   autoInstallHooks: boolean; // Auto-install Claude Code hooks on startup
   approvalRequired: string[]; // Tool names requiring user approval
   approvalTimeout: number; // Auto-approve after N seconds (0 = never)
+  approvalMemory: { alwaysAllow: object[]; alwaysDeny: object[] }; // Wave 26
 
-  // Extensions
+  // ── Extensions ───────────────────────────────────────────────────────────
   extensionsEnabled: boolean;
   disabledExtensions: string[];
   installedVsxExtensions: VsxExtension[]; // VS Code extensions from Open VSX
   disabledVsxExtensions: string[];
 
-  // LSP
+  // ── LSP ──────────────────────────────────────────────────────────────────
   lspEnabled: boolean;
   lspServers: Record<string, string>; // language id → server command
 
-  // Notifications
+  // ── Notifications ────────────────────────────────────────────────────────
   notifications: NotificationSettings;
 
-  // Profiles
-  profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>;
+  // ── Profiles ─────────────────────────────────────────────────────────────
+  profiles: object[]; // Wave 26 — user profiles (built-ins merged at read time, never stored)
+  workspaceProfileDefaults: Record<string, string>; // Wave 26 — projectRoot → profileId
 
-  // Time travel
+  // ── Sessions ─────────────────────────────────────────────────────────────
+  sessionsData: object[]; // Wave 16 — persisted Session records (typed by TS interface)
+  sessionFolders: object[]; // Wave 21 — user-created session folders
+  sessions: {
+    worktreePerSession: boolean; // Wave 16 — git worktree per session. Default false.
+  };
+
+  // ── Background Jobs ──────────────────────────────────────────────────────
+  backgroundJobsMaxConcurrent: number; // Wave 6 — max concurrent jobs (1–10, default 2)
+
+  // ── Time travel / Workspace snapshots ────────────────────────────────────
   workspaceSnapshots: WorkspaceSnapshot[]; // Capped at 100
+  autoCheckpoint: boolean; // Wave — auto-capture checkpoint on each assistant turn. Default true.
 
-  // Editor
+  // ── Editor ───────────────────────────────────────────────────────────────
   formatOnSave: boolean;
-  streamingInlineEdit: boolean; // Wave 6: token-by-token inline edit streaming (feature flag)
+  provenanceTracking: boolean; // Wave 18 — edit provenance tracking. Default true.
 
-  // Web remote access
+  // ── Web remote access ────────────────────────────────────────────────────
   webAccessPort: number; // default: 7890
+  webAccessToken: string;
   webAccessPassword: string;
+
+  // ── Mobile access (Wave 33a/34) ──────────────────────────────────────────
+  mobileAccess: {
+    enabled: boolean; // default false
+    pairedDevices: PairedDevice[];
+    desktopFingerprint?: string;
+    resumeTtlSec: number; // TTL for orphaned in-flight resumable calls (30–3600s, default 300)
+  };
+
+  // ── Session dispatch (Wave 34) ───────────────────────────────────────────
+  sessionDispatch: {
+    enabled: boolean;         // default false
+    maxConcurrent: number;    // 1–3, default 1
+    jobTimeoutMs: number;     // default 1 800 000 ms (30 min)
+    queue: object[];
+    fcmServiceAccountPath: string; // Wave 34 Phase F — push delivery
+  };
+
+  // ── Theming overrides (Wave 35) ──────────────────────────────────────────
+  theming: {
+    accentOverride?: string;
+    verbOverride?: string;
+    thinkingVerbs?: string[];
+    spinnerChars?: string;
+    fonts?: { editor?: string; chat?: string; terminal?: string };
+    customTokens?: Record<string, string>;
+  };
+
+  // ── Ecosystem (Wave 37) ──────────────────────────────────────────────────
+  // Ecosystem features ship as always-on code; the 'moat' label is a theme, not a config flag.
+  ecosystem: {
+    lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string };
+    lastExport?: { path: string; at: number; rows: number };
+    systemPrompt?: string; // Installed by marketplace bundle
+    rulesAndSkillsInstallEnabled: boolean; // Wave 41 Phase C — gate for rules-and-skills install. Default false.
+  };
+
+  // ── Marketplace (Wave 41) ────────────────────────────────────────────────
+  marketplace: {
+    allowInstallOnRevocationFetchFailure: boolean; // default false (fail-closed)
+  };
+
+  // ── Platform (Wave 38) ───────────────────────────────────────────────────
+  platform: {
+    onboarding: { completed: boolean };
+    language: 'en' | 'es'; // default 'en'
+    updateChannel: 'stable' | 'beta'; // default 'stable'
+    crashReports: {
+      enabled: boolean;       // default false
+      webhookUrl: string;
+      allowInsecure: boolean; // Wave 41 Phase K — permit http: webhook URLs (debug only). Default false.
+    };
+    lastSeenVersion: string;
+    dismissedEmptyStates: Record<string, boolean>; // Wave 38 Phase C — persistent "don't show again" map
+  };
+
+  // ── Router (Wave 19/29/31) ───────────────────────────────────────────────
+  routerSettings: {
+    enabled: boolean;
+    layer1Enabled: boolean;
+    layer2Enabled: boolean;
+    layer3Enabled: boolean;
+    layer2ConfidenceThreshold: number; // default 0.6
+    paranoidMode: boolean;
+    llmJudgeSampleRate: number; // 0–1, default 0 (disabled)
+  };
+  routerLastRetrainCount: number;
+
+  // ── Research (Wave 30) ───────────────────────────────────────────────────
+  researchSettings: {
+    globalEnabled: boolean;
+    defaultMode: 'off' | 'conservative' | 'aggressive';
+    stalenessConfidenceFloor: number;
+    factClaimEnabled: boolean;
+    factClaimMinPatternConfidence: 'high' | 'medium' | 'low';
+    preEditDryRunOnly: boolean;
+    maxLatencyMs: number;
+  };
+
+  // ── Misc feature flags ───────────────────────────────────────────────────
+  internalMcpEnabled: boolean;  // SSE MCP server enable (default true)
+  usePtyHost: boolean;          // default false
+  useExtensionHost: boolean;    // default false
+  useMcpHost: boolean;          // default false
+  review: { enhanced: boolean }; // Wave 29 — diff review enhanced UX (default true)
+  agentic: { subagentUx: boolean }; // Wave 27 — subagent UX (default true)
+  codebaseGraph: { gcEnabled: boolean; gcDaysThreshold: number }; // Wave 14
+  telemetry: { structured: boolean; retentionDays: number }; // Wave 15
+  workspaceReadLists: Record<string, string[]>; // Wave 25 — project root → auto-pinned file paths
+
+  // Auth
+  authOnboardingDismissed: boolean;
+  trustedWorkspaces: string[];
 }
 
 interface PanelSizes {
@@ -234,6 +382,18 @@ interface ContextLayerConfig {
   debounceMs: number;
   autoSummarize: boolean;
   moduleDepthLimit: number;
+}
+
+interface PairedDevice {
+  id: string;
+  label: string;
+  refreshTokenHash: string; // SHA-256 base64url of raw token — raw token never stored
+  fingerprint: string;
+  capabilities: string[];
+  issuedAt: string;
+  lastSeenAt: string;
+  pushToken?: string;      // Wave 34 Phase F — server-side only, never sent to renderer
+  pushPlatform?: 'android' | 'ios';
 }
 ```
 
@@ -468,5 +628,5 @@ interface ThemeDefinition {
 }
 ```
 
-Available themes: `retro`, `modern` (default), `warp`, `cursor`, `kiro`.
+Available themes: `retro`, `modern` (default), `warp`, `cursor`, `kiro`, `glass`, `light`, `high-contrast`.
 Applied by setting CSS vars on `document.documentElement.style`.
