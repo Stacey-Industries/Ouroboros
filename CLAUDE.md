@@ -179,11 +179,10 @@ Never mix these. IPC events flow through preload. DOM events are renderer-only.
 
 ### Per-Window Project Isolation
 
-Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `windowSessions` config and restored on relaunch.
+Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `sessionsData` (SQLite) and restored on relaunch — the old `windowSessions` electron-store key was migrated away in Wave 16.
 
 ## Known Issues / Tech Debt
 
-- `internalMcp/` module — SSE MCP server + settings auto-inject. Wired in `main.ts` via `startInternalMcpServer`, gated by `config.internalMcpEnabled` (default on). The `src/main/internalMcp/CLAUDE.md` still says "UNWIRED" — that doc is stale.
 - Background job queue concurrency cap and queue length cap (50) are hardcoded — expose as settings when the feature matures.
 - `refs/ouroboros/checkpoints/<threadId>` refs accumulate over time — GC policy (keep last 50) runs lazily on next checkpoint capture, not on a schedule.
 

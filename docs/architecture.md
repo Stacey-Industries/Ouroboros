@@ -528,3 +528,71 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
 | Ctrl+\\      | Toggle agent monitor |
 | Ctrl+,       | Toggle settings      |
 | Ctrl+Shift+P | Command palette      |
+
+---
+
+## Session Primitive (Wave 16)
+
+`src/main/session/` owns the cross-restart session lifecycle. Sessions track per-window project roots, active thread, and panel state across reboots.
+
+### Key types
+
+- `SessionRecord` — persisted to SQLite (`storage/database.ts`, `sessions` table). Fields: `windowId`, `projectRoots[]`, `activeThreadId`, bounds.
+- `sessionMigration.ts` — one-time migration from the legacy `windowSessions` electron-store key to `sessionsData`. The write path in `windowManager.persistWindowSessions()` has been cut; only `sessionsData` is written now.
+- `sessionStartup.ts` — calls `migrateWindowSessionsToSessions()` on boot, then restores windows from `sessionsData`.
+
+### Per-Window Project Isolation
+
+Each `BrowserWindow` owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only.
+
+Multi-window workspaces do not share project roots — changing roots in window A has no effect on window B. Conflict detection (`agentConflict/`) scopes overlap detection per `projectRoot`.
+
+---
+
+## Layout Presets (Wave 17)
+
+Layout presets provide named configurations of panel sizes and visibility, resolved at runtime by `LayoutPresetResolver`. Three built-in presets:
+
+| Preset | Panel configuration | When active |
+|---|---|---|
+| `ide-primary` | Sidebar open (220px), terminal open (280px), right sidebar open (300px) | Default for Electron desktop |
+| `chat-primary` | Sidebar collapsed, terminal collapsed, right sidebar maximized | When chat takes focus and sidebar/terminal are closed |
+| `mobile-primary` | Single-column, no sidebar, no terminal, no right sidebar as a pane — panels via drawer | When `layout.mobilePrimary === true` AND viewport < 768px |
+
+Preset resolution is in `src/renderer/hooks/useWorkspaceLayouts.ts`. Presets can be overridden by user drag-to-resize (persisted to `electron-store` key `panelSizes`). localStorage key `agent-ide:panel-sizes` is the synchronous cold-start read source (avoids flash on mount); electron-store is the durable cross-profile persistence target. Both are live and serve different roles — this is intentional, not a fallback.
+
+Custom layout snapshots (named saves) live in SQLite via `workspaceLayoutStore.ts`. The `TimeTravelPanel` exposes the timeline of snapshots.
+
+---
+
+## Provider Abstraction (Wave 36)
+
+`src/main/providers/` contains a thin session provider abstraction over the available AI backends.
+
+### SessionProvider interface
+
+```ts
+interface SessionProvider {
+  spawn(request: SpawnRequest): Promise<SessionHandle>;
+  send(sessionId: string, text: string): Promise<void>;
+  cancel(sessionId: string): Promise<void>;
+  onEvent(sessionId: string, cb: (event: ProviderEvent) => void): () => void;
+  checkAvailability(): Promise<AvailabilityResult>;
+}
+```
+
+### Provider registry
+
+`providerRegistry.ts` maps `'claude' | 'codex' | 'gemini'` to a singleton `SessionProvider` instance. Providers are NOT the same as `ModelProvider` in the older `src/main/providers.ts` — that namespace covers model-to-spawn-config mapping; `SessionProvider` is the higher-level session lifecycle abstraction.
+
+### Available providers
+
+| Provider ID | Implementation | Notes |
+|---|---|---|
+| `'claude'` | `claudeSessionProvider.ts` — wraps `spawnAgentPty` + `ptyAgentBridge` | Full tool-use, cost metadata, interactive PTY |
+| `'codex'` | `codexSessionProvider.ts` — wraps `spawnCodexExecProcess` (NDJSON exec) | Single-turn; `send()` is a no-op |
+| `'gemini'` | `geminiSessionProvider.ts` — spawns `gemini --prompt ... --yolo` | Heuristic NDJSON; no tool-use, no cost metadata |
+
+Multi-provider mode is gated on `config.providers.multiProvider` (default `false`). `profileSpawnHelper.ts::spawnForProfile()` routes through the registry when `Profile.providerId` is set (optional, defaults to `'claude'`).
+
+Provider compare mode (`CompareProviders.tsx`) runs two providers in parallel against the same prompt and renders a per-word diff via `wordDiff.ts`. Doubles cost — a session-remembered warning is shown before the first run.
