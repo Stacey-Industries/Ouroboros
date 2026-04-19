@@ -1,48 +1,75 @@
 /**
  * channelCatalogCoverage.test.ts — guard that fails when IPC channels
- * registered in handlerRegistry are not listed in CHANNEL_CATALOG.
+ * registered in handler files are not listed in CHANNEL_CATALOG.
  *
- * Wave 33a Phase C.
+ * Wave 33a Phase C (static list); Wave 41 Phase B (runtime-derived scan).
  *
- * Source of truth: src/main/web/handlerRegistry.ts (populated at runtime by
- * installHandlerCapture). Since we cannot run the full Electron bootstrap in
- * vitest, we scan the handler source files directly via a static channel list
- * derived from the same grep that produced the catalog entries.
+ * Source of truth: tools/dump-ipc-channels.ts — scans src/main/ and
+ * src/shared/ipc/ for IPC channel string literals. Any new
+ * ipcMain.handle('x:y', ...) call is automatically reflected in the scan
+ * result, so the hand-maintained HANDLER_REGISTRY_CHANNELS list is gone.
  *
- * If a new channel appears here and is absent from the catalog, the test fails
- * with a clear list of unclassified channels. Add the channel to the
- * appropriate channelCatalog.*.ts sub-module before merging.
+ * If a new channel appears in the scan and is absent from the catalog,
+ * the test fails with a clear list of unclassified channels. Add the
+ * channel to the appropriate channelCatalog.*.ts sub-module before merging.
  */
+
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { scanIpcChannels } from '../../../tools/dump-ipc-channels';
 import { CATALOG_LOOKUP } from './channelCatalog';
 
+// Resolve the repository root.
+// This file lives at src/main/mobileAccess/ → three levels up is the repo root.
+const __filename = fileURLToPath(import.meta.url);
+const PROJECT_ROOT = path.resolve(path.dirname(__filename), '..', '..', '..');
+
 /**
- * Allowlist for channels that exist in handler files but intentionally have
- * no catalog entry. These are either event-push channels (not invokable via
- * JSON-RPC) or internal channels that never reach the WS bridge.
+ * Allowlist for channels that exist in handler / source files but
+ * intentionally have no catalog entry.
+ *
+ * Three categories:
+ *
+ * A. Push-only event channels — emitted via webContents.send or
+ *    broadcastToWebClients; never invoked by a JSON-RPC client.
+ *
+ * B. Dead channel constants — defined in shared/ipc/*.ts for
+ *    preload/renderer type safety but have no live ipcMain.handle
+ *    registration. Kept here so the scan can still flag them if a handler
+ *    is accidentally (re-)added without a catalog entry.
+ *
+ * C. Legacy/internal strings — channel-shaped strings that appear in source
+ *    for non-IPC reasons (menu events, WebSocket wire format).
  *
  * Keep this list minimal. Entries here bypass the gate entirely — any channel
  * that IS reachable from a mobile client must be in the catalog, not here.
  */
 const UNCLASSIFIED_ALLOWLIST = new Set<string>([
-  // Push-only event channels — emitted by main, never called by renderer/client
+  // ── A. Push-only event channels ───────────────────────────────────────────
+  // Emitted by main process; never invokable by a renderer/client.
   'agentChat:stream',
   'agentChat:thread',
   'agentChat:message',
   'agentChat:event',
   'agentConflict:change',
+  'app:navigateToPermalink',    // webContents.send push — notifications.ts / protocolHandler.ts
+  'app:rebuilding',
+  'app:startupWarning',          // webContents.send push — main.ts
+  'approval:memoryChanged',      // webContents.send push — approvalMemory.ts
   'approval:request',
   'approval:resolved',
-  'app:rebuilding',
   'auth:loginEvent',
   'auth:stateChanged',
   'backgroundJobs:update',
   'checkpoint:change',
+  'claudeMd:statusChange',       // webContents.send push — claudeMdGenerator.ts
   // compareProviders:event is push-only (main → renderer via webContents.send).
   // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
   'compareProviders:event',
+  'config:externalChange',       // webContents.send push — config.ts settings watcher
   'contextLayer:progress',
   // ecosystem:promptDiff is push-only — documented as such in ecosystemHandlers.ts.
   // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
@@ -50,8 +77,23 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'extensionStore:contributionsChanged',
   'extensionStore:installed',
   'extensionStore:uninstalled',
+  'extensions:notification',     // webContents.send push — extensionsApi.ts
   'files:change',
   'folderCrud:changed',
+  'hooks:event',                  // webContents.send push — hooks.ts
+  'ide:query',                    // webContents.send push — ideToolServer.ts reverse channel
+  'auth:state-changed',           // broadcast push — tokenRefreshManager.ts (hyphenated form)
+  'lsp:statusChange',             // webContents.send push — lspHandlers.ts
+  'main:uncaughtException',       // webContents.send push — main.ts error handler
+  'main:unhandledRejection',      // webContents.send push — main.ts error handler
+  'menu:command-palette',         // webContents.send push — menu.ts
+  'menu:new-terminal',            // webContents.send push — menu.ts
+  'menu:open-chat-window-no-session', // webContents.send push — menu.ts
+  'menu:open-folder',             // webContents.send push — menu.ts
+  'menu:settings',                // webContents.send push — menu.ts
+  'menu:toggle-side-chat',        // webContents.send push — menu.ts
+  'pair:result',                  // WebSocket-level push in webServer.ts pairing flow
+  'perf:indexer-completed',       // webContents.send push — perfMetrics.ts
   'perf:metrics',
   'pinnedContext:changed',
   'profileCrud:changed',
@@ -70,7 +112,28 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'theme:changed',
   'updater:event',
   'workspaceReadList:changed',
-  // Legacy/internal channels not reachable through the WS bridge
+
+  // ── B. Dead channel constants (no live ipcMain.handle registration) ────────
+  // Defined in src/shared/ipc/orchestrationChannels.ts for type safety.
+  // The full orchestration task system was removed as dead code (Wave ~35).
+  // Only orchestration:previewContext and orchestration:buildContextPacket
+  // remain wired (they ARE in the catalog).
+  'orchestration:createTask',
+  'orchestration:event',
+  'orchestration:loadLatestSession',
+  'orchestration:loadSession',
+  'orchestration:loadSessions',
+  'orchestration:pauseTask',
+  'orchestration:provider',
+  'orchestration:rerunVerification',
+  'orchestration:resumeTask',
+  'orchestration:session',
+  'orchestration:startTask',
+  'orchestration:state',
+  'orchestration:updateSession',
+  'orchestration:verification',
+
+  // ── C. Legacy/internal ────────────────────────────────────────────────────
   'activeTheme',
   'node:fs',
   'node:path',
@@ -80,410 +143,12 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'commands:read',
 ]);
 
-/**
- * Every IPC channel that can be invoked by a WebSocket client.
- * Derived statically from the handler registration grep output.
- * This list must stay in sync with what installHandlerCapture captures.
- * Add new channels to the catalog sub-modules, not to the allowlist above.
- */
-const HANDLER_REGISTRY_CHANNELS: readonly string[] = [
-  'agentChat:addMessageReaction',
-  'agentChat:branchThread',
-  'agentChat:cancelByThreadId',
-  'agentChat:cancelTask',
-  'agentChat:createMemory',
-  'agentChat:createThread',
-  'agentChat:deleteMemory',
-  'agentChat:deleteThread',
-  'agentChat:event',
-  'agentChat:exportThread',
-  'agentChat:forkThread',
-  'agentChat:getBufferedChunks',
-  'agentChat:getGlobalCostRollup',
-  'agentChat:getLinkedDetails',
-  'agentChat:getLinkedTerminal',
-  'agentChat:getLinkedTerminals',
-  'agentChat:getMessageReactions',
-  'agentChat:getThreadCostRollup',
-  'agentChat:getThreadTags',
-  'agentChat:importThread',
-  'agentChat:listBranches',
-  'agentChat:listMemories',
-  'agentChat:listThreads',
-  'agentChat:loadThread',
-  'agentChat:mergeSideChat',
-  'agentChat:message',
-  'agentChat:pinThread',
-  'agentChat:reRunFromMessage',
-  'agentChat:removeMessageReaction',
-  'agentChat:renameBranch',
-  'agentChat:restoreDeletedThread',
-  'agentChat:resumeLatestThread',
-  'agentChat:revertToSnapshot',
-  'agentChat:searchThreads',
-  'agentChat:sendMessage',
-  'agentChat:setMessageCollapsed',
-  'agentChat:setThreadTags',
-  'agentChat:softDeleteThread',
-  'agentChat:status',
-  'agentChat:stream',
-  'agentChat:thread',
-  'agentChat:updateMemory',
-  'agentConflict:change',
-  'agentConflict:dismiss',
-  'agentConflict:getReports',
-  'ai:cancelInlineEditStream',
-  'ai:generate-commit-message',
-  'ai:inline-completion',
-  'ai:inline-edit',
-  'ai:streamInlineEdit',
-  'app:clearCrashLogs',
-  'app:getCrashLogs',
-  'app:getPlatform',
-  'app:getVersion',
-  'app:logError',
-  'app:notify',
-  'app:openCrashLogDir',
-  'app:openExternal',
-  'app:open-logs-folder',
-  'app:rebuildAndRestart',
-  'app:rebuildWeb',
-  'app:rebuilding',
-  'app:showStreamCompletionNotification',
-  'approval:alwaysAllow',
-  'approval:forget',
-  'approval:listMemory',
-  'approval:remember',
-  'approval:request',
-  'approval:resolved',
-  'approval:respond',
-  'auth:cancelLogin',
-  'auth:detectCliCreds',
-  'auth:getStates',
-  'auth:importCliCreds',
-  'auth:loginEvent',
-  'auth:logout',
-  'auth:openExternal',
-  'auth:setApiKey',
-  'auth:startLogin',
-  'auth:stateChanged',
-  'backgroundJobs:cancel',
-  'backgroundJobs:clearCompleted',
-  'backgroundJobs:enqueue',
-  'backgroundJobs:list',
-  'backgroundJobs:update',
-  'checkpoint:change',
-  'checkpoint:create',
-  'checkpoint:delete',
-  'checkpoint:list',
-  'checkpoint:restore',
-  'claudeMd:generate',
-  'claudeMd:generateForDir',
-  'claudeMd:getStatus',
-  'claudeSettings:read',
-  'claudeSettings:readKey',
-  'claudeSettings:writeKey',
-  'codemode:disable',
-  'codemode:enable',
-  'codemode:status',
-  'codex:listModels',
-  'codex:resolveThreadId',
-  'commands:create',
-  'commands:delete',
-  'commands:list',
-  'commands:read',
-  'commands:update',
-  'config:export',
-  'config:get',
-  'config:getAll',
-  'config:import',
-  'config:openSettingsFile',
-  'config:set',
-  'context:generate',
-  'context:getRankerDashboard',
-  'context:scan',
-  'contextLayer:progress',
-  'cost:addEntry',
-  'cost:clearHistory',
-  'cost:getHistory',
-  'dialog:saveFile',
-  'embedding:reindex',
-  'embedding:search',
-  'embedding:status',
-  'extensionStore:contributionsChanged',
-  'extensionStore:disableContributions',
-  'extensionStore:enableContributions',
-  'extensionStore:getDetails',
-  'extensionStore:getIconThemeContributions',
-  'extensionStore:getInstalled',
-  'extensionStore:getMarketplaceDetails',
-  'extensionStore:getProductIconThemeContributions',
-  'extensionStore:getThemeContributions',
-  'extensionStore:install',
-  'extensionStore:installMarketplace',
-  'extensionStore:installed',
-  'extensionStore:search',
-  'extensionStore:searchMarketplace',
-  'extensionStore:uninstall',
-  'extensionStore:uninstalled',
-  'extensions:activate',
-  'extensions:commandExecuted',
-  'extensions:disable',
-  'extensions:enable',
-  'extensions:getLog',
-  'extensions:install',
-  'extensions:list',
-  'extensions:openFolder',
-  'extensions:uninstall',
-  'files:change',
-  'files:copyFile',
-  'files:createFile',
-  'files:delete',
-  'files:mkdir',
-  'files:openFile',
-  'files:readBinaryFile',
-  'files:readDir',
-  'files:readFile',
-  'files:rename',
-  'files:restoreDeleted',
-  'files:saveFile',
-  'files:search',
-  'files:selectFolder',
-  'files:showImageDialog',
-  'files:softDelete',
-  'files:unwatchDir',
-  'files:watchDir',
-  'files:writeFile',
-  'folderCrud:addSession',
-  'folderCrud:changed',
-  'folderCrud:create',
-  'folderCrud:delete',
-  'folderCrud:list',
-  'folderCrud:moveSession',
-  'folderCrud:removeSession',
-  'folderCrud:rename',
-  'git:applyHunk',
-  'git:blame',
-  'git:branch',
-  'git:branches',
-  'git:changedFilesBetween',
-  'git:checkout',
-  'git:checkpoint',
-  'git:commit',
-  'git:createSnapshot',
-  'git:diff',
-  'git:diffBetween',
-  'git:diffCached',
-  'git:diffRaw',
-  'git:diffReview',
-  'git:dirtyCount',
-  'git:discardFile',
-  'git:fileAtCommit',
-  'git:isRepo',
-  'git:log',
-  'git:restoreSnapshot',
-  'git:revertFile',
-  'git:revertHunk',
-  'git:show',
-  'git:snapshot',
-  'git:stage',
-  'git:stageAll',
-  'git:stageHunk',
-  'git:status',
-  'git:statusDetailed',
-  'git:unstage',
-  'git:unstageAll',
-  'git:worktreeAdd',
-  'git:worktreeList',
-  'git:worktreeRemove',
-  'graph:detectChanges',
-  'graph:getArchitecture',
-  'graph:getBlastRadius',
-  'graph:getCodeSnippet',
-  'graph:getGraphSchema',
-  'graph:getNeighbourhood',
-  'graph:getStatus',
-  'graph:queryGraph',
-  'graph:reindex',
-  'graph:searchCode',
-  'graph:searchGraph',
-  'graph:traceCallPath',
-  'hooks:addHook',
-  'hooks:getConfig',
-  'hooks:removeHook',
-  'ideTools:getAddress',
-  'ideTools:respond',
-  'layout:deleteCustomLayout',
-  'layout:getCustomLayout',
-  'layout:promoteToGlobal',
-  'layout:setCustomLayout',
-  'lsp:completion',
-  'lsp:definition',
-  'lsp:diagnostics',
-  'lsp:didChange',
-  'lsp:didClose',
-  'lsp:didOpen',
-  'lsp:getStatus',
-  'lsp:hover',
-  'lsp:start',
-  'lsp:stop',
-  'mcp:addServer',
-  'mcp:getServers',
-  'mcp:removeServer',
-  'mcp:toggleServer',
-  'mcp:updateServer',
-  'mcpStore:getDetails',
-  'mcpStore:getInstalled',
-  'mcpStore:install',
-  'mcpStore:search',
-  'mcpStore:searchNpm',
-  'mobileAccess:generatePairingCode',
-  'mobileAccess:listPairedDevices',
-  'mobileAccess:revokePairedDevice',
-  'observability:exportTrace',
-  'orchestration:buildContextPacket',
-  'orchestration:previewContext',
-  'perf:getRuntimeMetrics',
-  'perf:getStartupHistory',
-  'perf:getStartupTimings',
-  'perf:mark',
-  'perf:markFirstRender',
-  'perf:metrics',
-  'perf:ping',
-  'perf:subscribe',
-  'perf:unsubscribe',
-  'platform:openCrashReportsDir',
-  'pinnedContext:add',
-  'pinnedContext:changed',
-  'pinnedContext:dismiss',
-  'pinnedContext:list',
-  'pinnedContext:remove',
-  'profileCrud:changed',
-  'profileCrud:delete',
-  'profileCrud:estimate',
-  'profileCrud:export',
-  'profileCrud:getDefault',
-  'profileCrud:import',
-  'profileCrud:lint',
-  'profileCrud:list',
-  'profileCrud:setDefault',
-  'profileCrud:upsert',
-  'providers:checkAllAvailability',
-  'providers:getSlots',
-  'providers:list',
-  'pty:discardPersistedSessions',
-  'pty:getCwd',
-  'pty:getLinkedSessionIds',
-  'pty:getLinkedThread',
-  'pty:kill',
-  'pty:linkToThread',
-  'pty:listPersistedSessions',
-  'pty:listSessions',
-  'pty:resize',
-  'pty:restoreSession',
-  'pty:shellState',
-  'pty:spawn',
-  'pty:spawnClaude',
-  'pty:spawnCodex',
-  'pty:startRecording',
-  'pty:stopRecording',
-  'pty:write',
-  'research:getDashboardMetrics',
-  'research:getGlobalDefault',
-  'research:getSessionMode',
-  'research:getSessionOutcomes',
-  'research:invoke',
-  'research:setGlobalDefault',
-  'research:setSessionMode',
-  'router:getStats',
-  'rules:create',
-  'rules:list',
-  'rules:read',
-  'rulesAndSkills:changed',
-  'rulesAndSkills:startWatcher',
-  'rulesDir:create',
-  'rulesDir:delete',
-  'rulesDir:list',
-  'rulesDir:read',
-  'rulesDir:update',
-  'sessionCrud:activate',
-  'sessionCrud:active',
-  'sessionCrud:archive',
-  'sessionCrud:changed',
-  'sessionCrud:create',
-  'sessionCrud:delete',
-  'sessionCrud:list',
-  'sessionCrud:openChatWindow',
-  'sessionCrud:pin',
-  'sessionCrud:restore',
-  'sessionCrud:restoreDeleted',
-  'sessionCrud:setMcpOverrides',
-  'sessionCrud:setProfile',
-  'sessionCrud:setToolOverrides',
-  'sessionCrud:softDelete',
-  'sessionCrud:updateAgentMonitorSettings',
-  'sessions:cancelDispatchJob',
-  'sessions:delete',
-  'sessions:dispatchTask',
-  'sessions:export',
-  'sessions:listDispatchJobs',
-  'sessions:load',
-  'sessions:save',
-  'shell:openExtensionsFolder',
-  'shell:showItemInFolder',
-  'shellHistory:read',
-  'spec:scaffold',
-  'subagent:cancel',
-  'subagent:costRollup',
-  'subagent:get',
-  'subagent:list',
-  'subagent:liveCount',
-  'subagent:updated',
-  'symbol:search',
-  'system2:indexProgress',
-  'telemetry:queryEvents',
-  'telemetry:queryOutcomes',
-  'telemetry:queryTraces',
-  'telemetry:record',
-  'theme:changed',
-  'theme:get',
-  'theme:set',
-  'titlebar:setOverlayColors',
-  'updater:check',
-  'updater:download',
-  'updater:event',
-  'updater:install',
-  'usage:getRecentSessions',
-  'usage:getSessionDetail',
-  'usage:getSummary',
-  'usage:getUsageWindowSnapshot',
-  'usage:getWindowedUsage',
-  'window:close',
-  'window:close-self',
-  'window:focus',
-  'window:getProjectRoots',
-  'window:getSelf',
-  'window:list',
-  'window:maximize-toggle',
-  'window:minimize',
-  'window:new',
-  'window:setProjectRoot',
-  'window:setProjectRoots',
-  'window:toggle-devtools',
-  'window:toggle-fullscreen',
-  'workspace:isTrusted',
-  'workspace:trust',
-  'workspace:trustLevel',
-  'workspace:untrust',
-  'workspaceReadList:add',
-  'workspaceReadList:changed',
-  'workspaceReadList:get',
-  'workspaceReadList:remove',
-];
-
 describe('channel catalog coverage', () => {
-  it('every handler-registry channel is either catalogued or allowlisted', () => {
-    const unclassified = HANDLER_REGISTRY_CHANNELS.filter(
+  // Run the scan once for all tests in this describe block.
+  const scannedChannels = scanIpcChannels(PROJECT_ROOT);
+
+  it('every scanned channel is either catalogued or allowlisted', () => {
+    const unclassified = scannedChannels.filter(
       (ch) => !CATALOG_LOOKUP.has(ch) && !UNCLASSIFIED_ALLOWLIST.has(ch),
     );
 
@@ -499,10 +164,27 @@ describe('channel catalog coverage', () => {
   });
 
   it('no channel appears in both catalog and allowlist (allowlist stays clean)', () => {
-    const overlap = HANDLER_REGISTRY_CHANNELS.filter(
+    const overlap = scannedChannels.filter(
       (ch) => CATALOG_LOOKUP.has(ch) && UNCLASSIFIED_ALLOWLIST.has(ch),
     );
     expect(overlap, `Channels in both catalog and allowlist: ${overlap.join(', ')}`).toHaveLength(0);
+  });
+
+  it('every catalog entry appears in the scanned source (no phantom entries)', () => {
+    const scannedSet = new Set(scannedChannels);
+    const phantoms = Array.from(CATALOG_LOOKUP.keys()).filter(
+      (ch) => !scannedSet.has(ch) && !UNCLASSIFIED_ALLOWLIST.has(ch),
+    );
+
+    if (phantoms.length > 0) {
+      const list = phantoms.map((ch) => `  - ${ch}`).join('\n');
+      throw new Error(
+        `${phantoms.length} catalog entry/entries have no matching source string.\n` +
+        `These are likely phantom entries — remove them from the catalog:\n${list}`,
+      );
+    }
+
+    expect(phantoms).toHaveLength(0);
   });
 
   it('canonical security-sensitive channels are desktop-only', () => {
