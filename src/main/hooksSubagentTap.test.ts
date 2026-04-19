@@ -8,14 +8,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the subagent tracker before importing the tap
-const { mockOnTaskToolPreUse, mockRecordEnd } = vi.hoisted(() => ({
+const { mockOnTaskToolPreUse, mockRecordEnd, mockGet } = vi.hoisted(() => ({
   mockOnTaskToolPreUse: vi.fn(),
   mockRecordEnd: vi.fn(),
+  mockGet: vi.fn(),
 }));
 
 vi.mock('./agentChat/subagentTracker', () => ({
   onTaskToolPreUse: mockOnTaskToolPreUse,
   recordEnd: mockRecordEnd,
+  get: mockGet,
+}));
+
+// Mock broadcastSubagentUpdated
+const { mockBroadcast } = vi.hoisted(() => ({
+  mockBroadcast: vi.fn(),
+}));
+
+vi.mock('./ipc-handlers/subagent', () => ({
+  broadcastSubagentUpdated: mockBroadcast,
 }));
 
 // Mock electron (hooks.ts HookPayload type only — no runtime electron calls)
@@ -37,6 +48,8 @@ function makePayload(overrides: Partial<HookPayload>): HookPayload {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: get() returns a record with a parentSessionId
+  mockGet.mockReturnValue({ parentSessionId: 'parent-session-1' });
 });
 
 describe('tapSubagentTracker', () => {
@@ -84,6 +97,36 @@ describe('tapSubagentTracker', () => {
       }));
       expect(mockRecordEnd).not.toHaveBeenCalled();
     });
+
+    it('broadcasts subagent:updated on natural completion', () => {
+      mockGet.mockReturnValue({ parentSessionId: 'parent-session-42' });
+      tapSubagentTracker(makePayload({
+        type: 'post_tool_use',
+        toolName: 'Task',
+        input: { childSessionId: 'child-10' },
+      }));
+      expect(mockBroadcast).toHaveBeenCalledWith('parent-session-42');
+    });
+
+    it('does not broadcast when tracker has no record for the child', () => {
+      mockGet.mockReturnValue(undefined);
+      tapSubagentTracker(makePayload({
+        type: 'post_tool_use',
+        toolName: 'Task',
+        input: { childSessionId: 'child-11' },
+      }));
+      expect(mockBroadcast).not.toHaveBeenCalled();
+    });
+
+    it('does not broadcast when record has empty parentSessionId', () => {
+      mockGet.mockReturnValue({ parentSessionId: '' });
+      tapSubagentTracker(makePayload({
+        type: 'post_tool_use',
+        toolName: 'Task',
+        input: { childSessionId: 'child-12' },
+      }));
+      expect(mockBroadcast).not.toHaveBeenCalled();
+    });
   });
 
   describe('post_tool_use_failure + Task', () => {
@@ -94,6 +137,16 @@ describe('tapSubagentTracker', () => {
         input: { childSessionId: 'child-3' },
       }));
       expect(mockRecordEnd).toHaveBeenCalledWith('child-3', 'failed');
+    });
+
+    it('broadcasts subagent:updated on failure completion', () => {
+      mockGet.mockReturnValue({ parentSessionId: 'parent-session-99' });
+      tapSubagentTracker(makePayload({
+        type: 'post_tool_use_failure',
+        toolName: 'Task',
+        input: { childSessionId: 'child-13' },
+      }));
+      expect(mockBroadcast).toHaveBeenCalledWith('parent-session-99');
     });
   });
 

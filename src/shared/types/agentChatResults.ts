@@ -266,14 +266,15 @@ export interface AgentChatAPI {
   /** Wave 21 Phase G — return PTY session IDs linked to this thread. */
   getLinkedTerminals: (threadId: string) => Promise<AgentChatLinkedTerminalsResult>;
   /** Wave 22 Phase A — get current reactions for a message. */
-  getMessageReactions: (messageId: string) => Promise<AgentChatReactionsResult>;
+  getMessageReactions: (messageId: string, threadId: string) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — add a reaction; returns updated list. */
-  addMessageReaction: (messageId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  addMessageReaction: (messageId: string, threadId: string, kind: string) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — remove a reaction; returns updated list. */
-  removeMessageReaction: (messageId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  removeMessageReaction: (messageId: string, threadId: string, kind: string) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — set collapsedByDefault flag for a message. */
   setMessageCollapsed: (
     messageId: string,
+    threadId: string,
     collapsed: boolean,
   ) => Promise<{ success: boolean; error?: string }>;
   /**

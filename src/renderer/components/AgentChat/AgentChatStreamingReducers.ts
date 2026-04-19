@@ -1,12 +1,20 @@
 /**
  * AgentChatStreamingReducers.ts — Pure chunk reducer logic for useAgentChatStreaming.
  * Extracted to keep useAgentChatStreaming.ts under the 300-line limit.
+ *
+ * Tool-activity helpers live in AgentChatStreamingReducers.tool.ts.
+ * Dedup helpers live in AgentChatStreamingReducers.dedup.ts.
  */
 import type {
   AgentChatContentBlock,
   AgentChatStreamChunk,
-  AgentChatSubToolActivity,
 } from '../../types/electron-agent-chat';
+import { clearSeenChunkIds, isDuplicateChunk } from './AgentChatStreamingReducers.dedup';
+import {
+  applyToolActivityLegacy,
+  applyToolActivityStructured,
+  ensureBlockCapacity,
+} from './AgentChatStreamingReducers.tool';
 
 export interface AgentChatStreamingState {
   isStreaming: boolean;
@@ -16,6 +24,11 @@ export interface AgentChatStreamingState {
   activeTextContent: string;
   /** Real-time token usage during streaming */
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  /**
+   * Tracks seen chunk IDs per messageId to deduplicate replayed / re-delivered chunks.
+   * Not serialized — internal reducer state only.
+   */
+  _seenChunkIds?: Map<string, Set<string>>;
 }
 
 export const INITIAL_STATE: AgentChatStreamingState = {
@@ -25,22 +38,15 @@ export const INITIAL_STATE: AgentChatStreamingState = {
   activeTextContent: '',
 };
 
-export function generateBlockId(): string {
-  // crypto.randomUUID() is unavailable in insecure contexts (HTTP on non-localhost).
-  // Fall back to a timestamp + random suffix for web remote access over Tailscale/LAN.
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `block-${crypto.randomUUID()}`;
-  }
-  const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
-    b.toString(16).padStart(2, '0'),
-  ).join('');
-  return `block-${hex}`;
-}
+/** Re-exported for callers that need to generate a block ID without importing tool.ts directly. */
+export { generateBlockId } from './AgentChatStreamingReducers.tool';
 
-/**
- * Seal any open thinking blocks (set duration) when a non-thinking delta arrives.
- */
-function sealThinkingBlocks(blocks: AgentChatContentBlock[], now: number): AgentChatContentBlock[] {
+// ── Private helpers ───────────────────────────────────────────────────────────
+
+function sealThinkingBlocks(
+  blocks: AgentChatContentBlock[],
+  now: number,
+): AgentChatContentBlock[] {
   let changed = false;
   const next = blocks.map((b) => {
     if (b.kind === 'thinking' && b.startedAt !== undefined && b.duration === undefined) {
@@ -50,15 +56,6 @@ function sealThinkingBlocks(blocks: AgentChatContentBlock[], now: number): Agent
     return b;
   });
   return changed ? next : blocks;
-}
-
-/**
- * Ensure the blocks array is large enough for the given blockIndex.
- */
-function ensureBlockCapacity(blocks: AgentChatContentBlock[], blockIndex: number): void {
-  while (blocks.length <= blockIndex) {
-    blocks.push({ kind: 'text', content: '' });
-  }
 }
 
 function findLastTextContent(blocks: AgentChatContentBlock[]): string {
@@ -152,93 +149,6 @@ function applyThinkingChunk(
   return buildStreamingResult(prev, chunk, blocks, prev.activeTextContent);
 }
 
-function applySubToolDelta(
-  blocks: AgentChatContentBlock[],
-  blockIndex: number,
-  subTool: AgentChatSubToolActivity,
-): AgentChatContentBlock[] {
-  const next = [...blocks];
-  const parent = next[blockIndex];
-  if (!parent || parent.kind !== 'tool_use') return next;
-  const existing = parent.subTools ?? [];
-  if (subTool.status === 'running') {
-    next[blockIndex] = { ...parent, subTools: [...existing, subTool] };
-  } else {
-    const updated = existing.map((s) =>
-      s.subToolId === subTool.subToolId ? { ...s, ...subTool } : s,
-    );
-    next[blockIndex] = { ...parent, subTools: updated };
-  }
-  return next;
-}
-
-function applyToolActivityStructured(
-  sealed: AgentChatContentBlock[],
-  chunk: AgentChatStreamChunk,
-): AgentChatContentBlock[] {
-  if (chunk.toolActivity!.subTool) {
-    return applySubToolDelta(sealed, chunk.blockIndex!, chunk.toolActivity!.subTool);
-  }
-  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
-  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
-  const blocks = [...sealed];
-  ensureBlockCapacity(blocks, chunk.blockIndex!);
-  if (status === 'running') {
-    blocks[chunk.blockIndex!] = {
-      kind: 'tool_use',
-      tool: name,
-      status,
-      filePath,
-      inputSummary,
-      editSummary,
-      blockId: generateBlockId(),
-    };
-  } else {
-    const existing = blocks[chunk.blockIndex!];
-    if (existing.kind === 'tool_use') {
-      blocks[chunk.blockIndex!] = {
-        ...existing, status, filePath: filePath ?? existing.filePath,
-        output: chunk.toolActivity!.output ?? existing.output,
-      };
-    }
-  }
-  return blocks;
-}
-
-function applyToolActivityLegacy(
-  sealed: AgentChatContentBlock[],
-  chunk: AgentChatStreamChunk,
-): { blocks: AgentChatContentBlock[]; textContent: string } {
-  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
-  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
-  if (status === 'running') {
-    return {
-      blocks: [
-        ...sealed,
-        {
-          kind: 'tool_use',
-          tool: name,
-          status,
-          filePath,
-          inputSummary,
-          editSummary,
-          blockId: generateBlockId(),
-        },
-      ],
-      textContent: '',
-    };
-  }
-  const blocks = [...sealed];
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    const block = blocks[i];
-    if (block.kind === 'tool_use' && block.tool === name && block.status === 'running') {
-      blocks[i] = { ...block, status, filePath: filePath ?? block.filePath, output: chunk.toolActivity!.output };
-      break;
-    }
-  }
-  return { blocks, textContent: '' };
-}
-
 function applyToolChunk(
   prev: AgentChatStreamingState,
   chunk: AgentChatStreamChunk,
@@ -253,37 +163,72 @@ function applyToolChunk(
   return buildStreamingResult(prev, chunk, blocks, prev.activeTextContent);
 }
 
+// ── Public API helpers ────────────────────────────────────────────────────────
+
+function sealRunningBlocks(blocks: AgentChatContentBlock[]): AgentChatContentBlock[] {
+  return blocks
+    .map((b) =>
+      b.kind === 'tool_use' && b.status === 'running' ? { ...b, status: 'complete' as const } : b,
+    )
+    .map((b) =>
+      b.kind === 'tool_use' && b.subTools
+        ? {
+            ...b,
+            subTools: b.subTools.map((s) =>
+              s.status === 'running' ? { ...s, status: 'complete' as const } : s,
+            ),
+          }
+        : b,
+    );
+}
+
+function applyDeltaChunk(
+  prev: AgentChatStreamingState,
+  chunk: AgentChatStreamChunk,
+  seenIds: Map<string, Set<string>>,
+): AgentChatStreamingState | null {
+  if (chunk.timestamp !== undefined) {
+    const chunkId = `${chunk.type}:${chunk.timestamp}:${chunk.blockIndex ?? ''}`;
+    if (isDuplicateChunk(seenIds, chunk.messageId, chunkId)) {
+      return { ...prev, _seenChunkIds: seenIds };
+    }
+  }
+  if (chunk.type === 'text_delta') return { ...applyTextChunk(prev, chunk), _seenChunkIds: seenIds };
+  if (chunk.type === 'thinking_delta') return { ...applyThinkingChunk(prev, chunk), _seenChunkIds: seenIds };
+  const result = applyToolChunk(prev, chunk);
+  return result ? { ...result, _seenChunkIds: seenIds } : null;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
 /**
  * Pure state transition: apply one chunk to a thread's streaming state.
+ * Dedup key: `${type}:${timestamp}:${blockIndex}` for delta chunks.
+ * complete/error are never deduped (idempotent + must not be skipped).
  */
 export function applyChunk(
   prev: AgentChatStreamingState,
   chunk: AgentChatStreamChunk,
 ): AgentChatStreamingState | null {
+  const seenIds = prev._seenChunkIds ?? new Map<string, Set<string>>();
   switch (chunk.type) {
     case 'text_delta':
-      return applyTextChunk(prev, chunk);
     case 'thinking_delta':
-      return applyThinkingChunk(prev, chunk);
     case 'tool_activity':
-      return applyToolChunk(prev, chunk);
+      return applyDeltaChunk(prev, chunk, seenIds);
     case 'complete': {
-      const blocks = prev.blocks.map((b) =>
-        b.kind === 'tool_use' && b.status === 'running' ? { ...b, status: 'complete' as const } : b,
-      ).map((b) =>
-        b.kind === 'tool_use' && b.subTools
-          ? { ...b, subTools: b.subTools.map((s) => s.status === 'running' ? { ...s, status: 'complete' as const } : s) }
-          : b,
-      );
+      clearSeenChunkIds(seenIds, chunk.messageId);
       return {
         ...prev,
         isStreaming: false,
-        blocks,
+        blocks: sealRunningBlocks(prev.blocks),
         streamingTokenUsage: chunk.tokenUsage ?? undefined,
+        _seenChunkIds: seenIds,
       };
     }
     case 'error':
-      return { ...INITIAL_STATE, streamingTokenUsage: undefined };
+      clearSeenChunkIds(seenIds, chunk.messageId);
+      return { ...INITIAL_STATE, streamingTokenUsage: undefined, _seenChunkIds: seenIds };
     default:
       return null;
   }

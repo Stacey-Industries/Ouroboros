@@ -12,6 +12,30 @@ import type { Reaction } from '@shared/types/agentChat';
 import type { Database } from '../storage/database';
 import { parseJsonField } from './threadStoreSqliteHelpers';
 
+// ── Cap ───────────────────────────────────────────────────────────────────────
+
+/**
+ * Maximum number of reactions stored per message.
+ * When the cap is reached, the oldest reaction (lowest `at` timestamp) is
+ * evicted before the new one is appended (FIFO eviction).
+ *
+ * Wave 41 Phase N — prevents unbounded reaction growth on high-traffic messages.
+ */
+export const MAX_REACTIONS_PER_MESSAGE = 64;
+
+/**
+ * Enforce the per-message reaction cap with FIFO eviction.
+ * Returns a new array with at most MAX_REACTIONS_PER_MESSAGE entries.
+ * The incoming `next` reaction has already been appended by the caller;
+ * if the result exceeds the cap, the oldest entry (smallest `at`) is dropped.
+ */
+export function enforceReactionCap(reactions: Reaction[]): Reaction[] {
+  if (reactions.length <= MAX_REACTIONS_PER_MESSAGE) return reactions;
+  // Sort ascending by `at`, drop the first (oldest), return the rest.
+  const sorted = [...reactions].sort((a, b) => a.at - b.at);
+  return sorted.slice(sorted.length - MAX_REACTIONS_PER_MESSAGE);
+}
+
 // ── Reactions ─────────────────────────────────────────────────────────────────
 
 export function getMessageReactionsSql(

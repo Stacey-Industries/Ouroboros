@@ -17,7 +17,7 @@ import {
   runTransaction,
   setSchemaVersion,
 } from '../storage/database';
-import type { SearchOptions, SearchResult } from './threadStoreSearch';
+import type { SearchOptions, SearchResponse } from './threadStoreSearch';
 import { searchThreads } from './threadStoreSearch';
 import {
   applyFtsMigration,
@@ -194,7 +194,7 @@ export class ThreadStoreSqliteRuntime {
     }
   }
 
-  searchThreads(query: string, opts?: SearchOptions): SearchResult[] {
+  searchThreads(query: string, opts?: SearchOptions): SearchResponse {
     return searchThreads(this.getDb(), query, opts);
   }
 

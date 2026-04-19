@@ -7,6 +7,8 @@
 
 import type { Reaction } from '@shared/types/agentChat';
 
+import { enforceReactionCap } from './threadStoreSqliteReactions';
+
 // ── MessageStore adaptor ──────────────────────────────────────────────────────
 
 /**
@@ -85,8 +87,10 @@ export async function addReaction(
 ): Promise<Reaction[]> {
   const { messageId, threadId, kind, by } = target;
   const current = await store.getMessageReactions(messageId, threadId);
-  const reaction: Reaction = { kind, at: Date.now(), ...(by !== undefined ? { by } : {}) };
-  const updated = addReactionToList(current, reaction);
+  // kind is validated at the IPC boundary (agentChatReactions.ts allowlist); cast is safe.
+  const reaction: Reaction = { kind: kind as Reaction['kind'], at: Date.now(), ...(by !== undefined ? { by } : {}) };
+  const appended = addReactionToList(current, reaction);
+  const updated = enforceReactionCap(appended);
   await store.setMessageReactions(messageId, threadId, updated);
   return updated;
 }

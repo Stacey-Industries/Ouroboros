@@ -22,10 +22,10 @@ import {
 import { buildAuthApi, buildProvidersApi } from './webPreloadApisAuth';
 import { buildClaudeMdApi } from './webPreloadApisClaudeMd';
 import {
-  buildAiApi,
-  buildAiStreamApi,
   buildAgentChatExtApi,
   buildAgentConflictApi,
+  buildAiApi,
+  buildAiStreamApi,
   buildBackgroundJobsApi,
   buildEcosystemApi,
   buildEmbeddingApi,

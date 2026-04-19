@@ -5,6 +5,7 @@
  * Wave 41 E.2 — all ops now use composite (id, threadId) PK.
  */
 
+import type { Reaction } from '@shared/types/agentChat';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -13,7 +14,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Database } from '../storage/database';
 import { openDatabase, runTransaction } from '../storage/database';
 import {
+  enforceReactionCap,
   getMessageReactionsSql,
+  MAX_REACTIONS_PER_MESSAGE,
   setMessageCollapsedSql,
   setMessageReactionsSql,
 } from './threadStoreSqliteReactions';
@@ -88,10 +91,11 @@ describe('setMessageReactionsSql', () => {
 
   it('replaces existing reactions on second call', () => {
     setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: '+1', at: 1 }, { kind: '-1', at: 2 }]);
-    setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: 'heart', at: 3 }]);
+    // Cast: SQL layer is dumb storage; validation happens at the IPC boundary.
+    setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: '-1', at: 3 }]);
     const result = getMessageReactionsSql(db, 'msg-1', 't1');
     expect(result).toHaveLength(1);
-    expect(result[0].kind).toBe('heart');
+    expect(result[0].kind).toBe('-1');
   });
 
   it('stores NULL when given an empty array', () => {
@@ -108,6 +112,53 @@ describe('setMessageReactionsSql', () => {
     setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: '+1', by: 'user1', at: 42 }]);
     const result = getMessageReactionsSql(db, 'msg-1', 't1');
     expect(result[0].by).toBe('user1');
+  });
+});
+
+// ── enforceReactionCap ────────────────────────────────────────────────────────
+
+describe('enforceReactionCap', () => {
+  it('returns the same array when at or below cap', () => {
+    const reactions: Reaction[] = Array.from({ length: MAX_REACTIONS_PER_MESSAGE }, (_, i) => ({
+      kind: '+1' as const,
+      at: i,
+    }));
+    expect(enforceReactionCap(reactions)).toHaveLength(MAX_REACTIONS_PER_MESSAGE);
+  });
+
+  it('evicts the oldest reaction (lowest at) when cap is exceeded', () => {
+    const reactions: Reaction[] = Array.from({ length: MAX_REACTIONS_PER_MESSAGE + 1 }, (_, i) => ({
+      kind: '+1' as const,
+      at: i,        // at=0 is the oldest
+    }));
+    const result = enforceReactionCap(reactions);
+    expect(result).toHaveLength(MAX_REACTIONS_PER_MESSAGE);
+    // The oldest (at=0) must not be present; the newest (at=MAX) must be present.
+    expect(result.find((r) => r.at === 0)).toBeUndefined();
+    expect(result.find((r) => r.at === MAX_REACTIONS_PER_MESSAGE)).toBeDefined();
+  });
+
+  it('evicts multiple oldest reactions when far over cap', () => {
+    const reactions: Reaction[] = Array.from({ length: MAX_REACTIONS_PER_MESSAGE + 5 }, (_, i) => ({
+      kind: '-1' as const,
+      at: i,
+    }));
+    const result = enforceReactionCap(reactions);
+    expect(result).toHaveLength(MAX_REACTIONS_PER_MESSAGE);
+    // The 5 oldest (at 0..4) should all be gone.
+    for (let i = 0; i < 5; i++) {
+      expect(result.find((r) => r.at === i)).toBeUndefined();
+    }
+  });
+
+  it('does not mutate the input array', () => {
+    const reactions: Reaction[] = Array.from({ length: MAX_REACTIONS_PER_MESSAGE + 1 }, (_, i) => ({
+      kind: '+1' as const,
+      at: i,
+    }));
+    const original = [...reactions];
+    enforceReactionCap(reactions);
+    expect(reactions).toHaveLength(original.length);
   });
 });
 

@@ -24,7 +24,7 @@ export function buildSessionCrudApi(t: WebSocketTransport) {
     restore: (sessionId: string) => t.invoke('sessionCrud:restore', sessionId),
     delete: (sessionId: string) => t.invoke('sessionCrud:delete', sessionId),
     // openChatWindow opens a native BrowserWindow — desktop-only stub on web
-    openChatWindow: async (_sessionId: string) => ({
+    openChatWindow: async () => ({
       success: false as const,
       error: 'sessionCrud:openChatWindow: This feature is only available in the desktop app.',
     }),
@@ -138,11 +138,11 @@ export function buildCheckpointApi(t: WebSocketTransport) {
   return {
     list: (request: unknown) => t.invoke('checkpoint:list', request),
     // create and restore involve git worktree operations — not available in web.
-    create: async (_request: unknown) => ({
+    create: async () => ({
       success: false as const,
       error: 'checkpoint:create: This feature is only available in the desktop app.',
     }),
-    restore: async (_request: unknown) => ({
+    restore: async () => ({
       success: false as const,
       error: 'checkpoint:restore: This feature is only available in the desktop app.',
     }),

@@ -40,7 +40,7 @@ export function buildMarketplaceApi(t: WebSocketTransport) {
 export function buildResearchApi(t: WebSocketTransport) {
   return {
     // Stubbed: LLM call with cost — not available in web mode.
-    invoke: async (_input: unknown) => ({
+    invoke: async () => ({
       success: false as const,
       error: 'research:invoke: Not available in web mode.',
     }),
@@ -122,11 +122,11 @@ export function buildWorkspaceApi(t: WebSocketTransport) {
     isTrusted: (path: string) => t.invoke('workspace:isTrusted', path),
     trustLevel: (roots: string[]) => t.invoke('workspace:trustLevel', roots),
     // trust/untrust modify the global trust store — stub on mobile.
-    trust: async (_path: string) => ({
+    trust: async () => ({
       success: false as const,
       error: 'workspace:trust: This feature is only available in the desktop app.',
     }),
-    untrust: async (_path: string) => ({
+    untrust: async () => ({
       success: false as const,
       error: 'workspace:untrust: This feature is only available in the desktop app.',
     }),
@@ -166,7 +166,7 @@ export function buildAiStreamApi() {
   return {
     startInlineEdit: desktopOnlyStub('ai:streamInlineEdit'),
     cancelInlineEdit: desktopOnlyStub('ai:cancelInlineEditStream'),
-    onStream: (_requestId: string, _cb: (event: unknown) => void) => () => {},
+    onStream: () => () => {},
   };
 }
 

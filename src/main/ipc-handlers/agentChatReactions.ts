@@ -8,9 +8,18 @@
  */
 
 import { AGENT_CHAT_INVOKE_CHANNELS } from '@shared/ipc/agentChatChannels';
+import type { ReactionKind } from '@shared/types/agentChat';
 
 import type { AgentChatService } from '../agentChat';
 import { addReaction, removeReaction } from '../agentChat/messageReactions';
+
+// ── Kind allowlist ────────────────────────────────────────────────────────────
+
+const ALLOWED_REACTION_KINDS: ReadonlySet<ReactionKind> = new Set(['+1', '-1']);
+
+function isAllowedKind(kind: unknown): kind is ReactionKind {
+  return typeof kind === 'string' && ALLOWED_REACTION_KINDS.has(kind as ReactionKind);
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,10 +51,13 @@ function makeGetHandler(svc: AgentChatService, rs: RequireStringFn) {
 
 function makeAddHandler(svc: AgentChatService, rs: RequireStringFn) {
   return async (messageId: unknown, threadId: unknown, kind: unknown) => {
+    if (!isAllowedKind(kind)) {
+      return { success: false, error: 'invalid-reaction-kind' };
+    }
     const reactions = await addReaction(svc.threadStore, {
       messageId: rs(messageId, 'messageId'),
       threadId: rs(threadId, 'threadId'),
-      kind: rs(kind, 'kind'),
+      kind,
     });
     return { success: true, reactions };
   };
@@ -53,10 +65,13 @@ function makeAddHandler(svc: AgentChatService, rs: RequireStringFn) {
 
 function makeRemoveHandler(svc: AgentChatService, rs: RequireStringFn) {
   return async (messageId: unknown, threadId: unknown, kind: unknown) => {
+    if (!isAllowedKind(kind)) {
+      return { success: false, error: 'invalid-reaction-kind' };
+    }
     const reactions = await removeReaction(svc.threadStore, {
       messageId: rs(messageId, 'messageId'),
       threadId: rs(threadId, 'threadId'),
-      kind: rs(kind, 'kind'),
+      kind,
     });
     return { success: true, reactions };
   };

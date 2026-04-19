@@ -39,9 +39,16 @@ export interface ImageAttachment {
 
 // ─── Wave 22 Phase A — Reaction ──────────────────────────────────────────────
 
+/**
+ * Allowed reaction kinds. The UI only renders '+1' and '-1' (ReactionBar.tsx).
+ * Wave 41 Phase N: narrowed to a literal union so IPC handlers can validate at
+ * runtime. Extend here when new kinds are added to ReactionBar.tsx.
+ */
+export type ReactionKind = '+1' | '-1';
+
 export interface Reaction {
-  /** Reaction kind — '+1', '-1', or a custom string (e.g. emoji shortcode). */
-  kind: '+1' | '-1' | (string & {});
+  /** Reaction kind — limited to the ReactionKind allowlist. */
+  kind: ReactionKind;
   /** Identity of the reactor (optional — undefined means current user). */
   by?: string;
   /** Epoch ms when the reaction was added. */

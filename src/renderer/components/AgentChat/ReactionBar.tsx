@@ -9,7 +9,7 @@
 
 import React, { useCallback, useState } from 'react';
 
-import type { Reaction } from '../../types/electron';
+import type { Reaction, ReactionKind } from '../../types/electron';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ function useReactionActions(
   messageId: string,
   threadId: string,
   reactions: Reaction[],
-): [Reaction[], (kind: string) => void] {
+): [Reaction[], (kind: ReactionKind) => void] {
   const [local, setLocal] = useState<Reaction[]>(reactions);
 
   // Sync when parent prop changes (e.g. after thread reload)
@@ -70,7 +70,7 @@ function useReactionActions(
   }, [reactions]);
 
   const toggle = useCallback(
-    (kind: string) => {
+    (kind: ReactionKind) => {
       const active = hasKind(local, kind);
       const optimistic: Reaction[] = active
         ? local.filter((r) => r.kind !== kind)

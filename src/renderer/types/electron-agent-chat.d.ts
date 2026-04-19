@@ -56,6 +56,7 @@ export type {
   ImageAttachment,
   ImageMimeType,
   Reaction,
+  ReactionKind,
   SessionMemoryEntry,
   ThreadCostRollupRecord,
 } from '@shared/types/agentChat';
