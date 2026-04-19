@@ -15,14 +15,22 @@ vi.mock('./trustedKeys', () => ({
   REVOKED_BUNDLES_URL: 'https://example.com/revoked-bundles.json',
 }));
 
+// config is now imported by marketplaceClient for the revocation flag — mock it
+// to avoid electron-store initialisation in the test environment.
+vi.mock('../config', () => ({
+  getConfigValue: vi.fn().mockReturnValue(null),
+}));
+
 const mockFetchManifest = vi.fn();
 const mockFetchBundle = vi.fn();
 const mockFetchRevokedIds = vi.fn();
+const mockHttpsGet = vi.fn();
 
 vi.mock('./marketplaceFetch', () => ({
   fetchManifest: (...a: unknown[]) => mockFetchManifest(...a),
   fetchBundle: (...a: unknown[]) => mockFetchBundle(...a),
   fetchRevokedIds: (...a: unknown[]) => mockFetchRevokedIds(...a),
+  httpsGet: (...a: unknown[]) => mockHttpsGet(...a),
 }));
 
 const mockInstallBundle = vi.fn();
@@ -91,7 +99,11 @@ describe('getBundle', () => {
 // ── installById ───────────────────────────────────────────────────────────────
 
 describe('installById', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: revocation list is empty (no revoked bundles, fetch succeeds).
+    mockHttpsGet.mockResolvedValue(JSON.stringify({ ids: [] }));
+  });
 
   it('resolves entry, fetches, and installs on happy path', async () => {
     mockFetchManifest.mockResolvedValue({ bundles: [ENTRY] });

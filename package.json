@@ -12,6 +12,8 @@
   "scripts": {
     "clean": "rm -rf out dist coverage .vite",
     "dev": "electron-vite dev",
+    "build:verify-marketplace-key": "npx tsx scripts/check-marketplace-key.ts",
+    "prebuild": "npx tsx scripts/check-marketplace-key.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "build:unpack": "npm run build && electron-builder --dir",

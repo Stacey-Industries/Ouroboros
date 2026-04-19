@@ -11,11 +11,23 @@
 import { getConfigValue, setConfigValue } from '../config';
 import type { BundleContent } from './types';
 
+// ── Theme key allowlist ───────────────────────────────────────────────────────
+
+/**
+ * CSS custom property names accepted in a theme bundle payload.
+ * Only lower-case letters, digits, and hyphens; must start with "--" followed
+ * by at least one lower-case letter.  Rejects: uppercase, numbers at position 3,
+ * arbitrary attribute names, prototype pollution keys, etc.
+ */
+const THEME_KEY_RE = /^--[a-z][a-z0-9-]*$/;
+
 // ── Result type ───────────────────────────────────────────────────────────────
 
 export interface InstallResult {
   success: boolean;
   error?: string;
+  /** Present when error is 'theme-key-invalid' — lists the offending keys. */
+  invalidKeys?: string[];
 }
 
 // ── Per-kind install helpers ──────────────────────────────────────────────────
@@ -25,6 +37,14 @@ function installTheme(bundle: BundleContent): InstallResult {
   if (typeof payload !== 'object' || payload === null) {
     return { success: false, error: 'theme payload must be an object' };
   }
+
+  // Validate every key matches the CSS custom-property allowlist.
+  const payloadKeys = Object.keys(payload as Record<string, unknown>);
+  const invalidKeys = payloadKeys.filter((k) => !THEME_KEY_RE.test(k));
+  if (invalidKeys.length > 0) {
+    return { success: false, error: 'theme-key-invalid', invalidKeys };
+  }
+
   const existing = getConfigValue('theming') as Record<string, unknown> ?? {};
   const existingTokens =
     (typeof existing.customTokens === 'object' && existing.customTokens !== null
@@ -48,6 +68,16 @@ function installPrompt(bundle: BundleContent): InstallResult {
 
 function installRulesAndSkills(bundle: BundleContent): InstallResult {
   void bundle;
+
+  // Wave 41 Phase C — explicit feature gate.  When the flag is off (default),
+  // return a clear "disabled" error rather than the generic "not-wired" stub.
+  // Flip to `true` in config once the rulesAndSkills install path is wired.
+  const ecosystem = getConfigValue('ecosystem') as Record<string, unknown> | null;
+  const enabled = ecosystem?.rulesAndSkillsInstallEnabled === true;
+  if (!enabled) {
+    return { success: false, error: 'rules-install-disabled' };
+  }
+
   // TODO(Wave 37 follow-up): wire into the rulesAndSkills install path.
   // The rulesAndSkills module (src/main/rulesAndSkills/) writes files to
   // ~/.claude/rules/ and ~/.claude/commands/ via createRuleFile /
