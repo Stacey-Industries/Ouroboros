@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-19T14:16:59.679296+00:00",
+  "version": "2026-04-19T15:20:20.219748+00:00",
   "featureOrder": [
     "recencyScore",
     "pagerankScore",
@@ -27,7 +27,7 @@
     "samples": 20,
     "syntheticNegatives": 6,
     "heldOutAuc": 1.0,
-    "trainedAt": "2026-04-19T14:16:59.679296+00:00",
+    "trainedAt": "2026-04-19T15:20:20.219748+00:00",
     "belowMinSamples": false,
     "classBalance": {
       "pos": 12,

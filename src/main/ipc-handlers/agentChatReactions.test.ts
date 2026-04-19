@@ -125,11 +125,19 @@ describe('registerReactionHandlers', () => {
       expect(store.data).toHaveLength(1);
     });
 
-    it('rejects missing kind', async () => {
+    it('rejects missing or non-allowlisted kind', async () => {
       const { handlers } = makeStubs();
-      await expect(
-        call(handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', ''),
-      ).rejects.toThrow('Invalid kind');
+      const emptyResult = await call(
+        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', '',
+      ) as { success: boolean; error?: string };
+      expect(emptyResult.success).toBe(false);
+      expect(emptyResult.error).toBe('invalid-reaction-kind');
+
+      const unknownResult = await call(
+        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', 'heart',
+      ) as { success: boolean; error?: string };
+      expect(unknownResult.success).toBe(false);
+      expect(unknownResult.error).toBe('invalid-reaction-kind');
     });
   });
 
@@ -143,12 +151,25 @@ describe('registerReactionHandlers', () => {
       expect(result.reactions).toHaveLength(0);
     });
 
-    it('is a no-op when reaction does not exist', async () => {
+    it('is a no-op when the targeted kind does not exist on the message', async () => {
+      // Wave 41 N narrowed ReactionKind to '+1' | '-1'. Only allowlisted kinds can be
+      // removed; targeting an allowlisted kind that isn't present is a no-op that
+      // still returns success + the unchanged reactions list.
+      const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
+      const result = await call(
+        handlers, AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, 'msg-1', 'thread-1', '-1',
+      ) as { success: boolean; reactions: Reaction[] };
+      expect(result.success).toBe(true);
+      expect(result.reactions).toHaveLength(1);
+    });
+
+    it('rejects a non-allowlisted kind on remove', async () => {
       const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
       const result = await call(
         handlers, AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, 'msg-1', 'thread-1', 'heart',
-      ) as { success: boolean; reactions: Reaction[] };
-      expect(result.reactions).toHaveLength(1);
+      ) as { success: boolean; error?: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('invalid-reaction-kind');
     });
   });
 

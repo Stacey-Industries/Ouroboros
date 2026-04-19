@@ -57,10 +57,15 @@ vi.mock('@dnd-kit/core', () => ({
   DragOverlay: () => null,
   PointerSensor: class PointerSensor {},
   TouchSensor: class TouchSensor {},
+  KeyboardSensor: class KeyboardSensor {},
   useSensor: vi.fn((Cls) => ({ sensor: Cls })),
   useSensors: vi.fn((...s: unknown[]) => s),
   useDroppable: vi.fn(() => ({ setNodeRef: vi.fn(), isOver: false })),
   useDraggable: vi.fn(() => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn(), isDragging: false })),
+}));
+
+vi.mock('@dnd-kit/sortable', () => ({
+  sortableKeyboardCoordinates: vi.fn(),
 }));
 vi.mock('./layoutPresets/LayoutPresetResolver', () => ({
   useLayoutPreset: vi.fn(() => ({
