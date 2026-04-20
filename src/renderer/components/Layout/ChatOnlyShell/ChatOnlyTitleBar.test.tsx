@@ -48,7 +48,7 @@ describe('ChatOnlyTitleBar', () => {
     });
 
     render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
-    fireEvent.click(screen.getByTitle('Exit chat mode (Ctrl+Shift+I)'));
+    fireEvent.click(screen.getByTitle('Exit chat mode (Ctrl+Alt+I)'));
     expect(dispatched).toContain('agent-ide:toggle-immersive-chat');
 
     vi.restoreAllMocks();

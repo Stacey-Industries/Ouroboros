@@ -11,13 +11,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
+import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySessionDrawer } from './ChatOnlySessionDrawer';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
-
-const TOGGLE_SESSION_DRAWER_EVENT = 'agent-ide:toggle-session-drawer';
 
 export function ChatOnlyShell(): React.ReactElement {
   const { projectRoot } = useProject();

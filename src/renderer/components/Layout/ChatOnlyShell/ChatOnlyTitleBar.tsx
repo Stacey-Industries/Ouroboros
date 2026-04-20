@@ -11,8 +11,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
-
-const TOGGLE_IMMERSIVE_CHAT_EVENT = 'agent-ide:toggle-immersive-chat';
+import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
 
@@ -98,7 +97,7 @@ function TitleBarRight({ onExitChatMode }: { onExitChatMode: () => void }): Reac
         className="flex items-center gap-1 px-2 py-1 text-xs rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         onClick={onExitChatMode}
-        title="Exit chat mode (Ctrl+Shift+I)"
+        title="Exit chat mode (Ctrl+Alt+I)"
         aria-label="Exit chat mode"
       >
         Exit chat mode

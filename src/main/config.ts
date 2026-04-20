@@ -1,7 +1,7 @@
-import Store from 'electron-store';
+import type Store from 'electron-store';
 
 import type { AgentChatSettings } from './agentChat/types';
-import { schema } from './configSchema';
+import { ensureStore, lazyStore } from './configStoreLazy';
 import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
@@ -408,8 +408,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. */
-  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean };
+  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. Wave 42 — immersiveChat. */
+  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean; immersiveChat?: boolean };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
@@ -442,9 +442,7 @@ export interface AppConfig {
   researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
 }
 
-export const store = new Store<AppConfig>({
-  schema: schema as import('electron-store').Schema<AppConfig>,
-});
+export const store: Store<AppConfig> = lazyStore;
 
 // In-memory cache to avoid re-reading config.json from disk on every call.
 // electron-store's underlying conf library reads the file on every .get().
@@ -452,7 +450,7 @@ export const store = new Store<AppConfig>({
 let configCache: AppConfig | null = null;
 
 export function getConfig(): AppConfig {
-  if (!configCache) configCache = store.store;
+  if (!configCache) configCache = ensureStore().store;
   return configCache;
 }
 
@@ -462,6 +460,6 @@ export function getConfigValue<K extends keyof AppConfig>(key: K): AppConfig[K] 
 }
 
 export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void {
-  store.set(key, value);
+  ensureStore().set(key, value);
   configCache = null; // invalidate cache on write
 }

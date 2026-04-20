@@ -12,6 +12,7 @@ import {
   SHOW_ABOUT_EVENT,
   SPLIT_EDITOR_EVENT,
   SPLIT_TERMINAL_EVENT,
+  TOGGLE_IMMERSIVE_CHAT_EVENT,
 } from '../../hooks/appEventNames';
 
 export interface MenuItem {
@@ -75,12 +76,28 @@ function buildEditMenu(): MenuDefinition {
   };
 }
 
-function buildViewMenu(): MenuDefinition {
+async function openDedicatedChat(): Promise<void> {
+  const api = window.electronAPI;
+  if (!api?.sessionCrud?.openChatWindow) return;
+  const active = await api.sessionCrud.active();
+  const sessionId = active?.success ? active.sessionId : null;
+  if (!sessionId) {
+    dispatchEv('agent-ide:open-chat-window-no-session');
+    return;
+  }
+  await api.sessionCrud.openChatWindow(sessionId);
+}
+
+function buildViewMenu(isImmersiveChat: boolean): MenuDefinition {
+  const chatModeLabel = isImmersiveChat ? 'Exit Chat Mode' : 'Switch to Chat Mode';
   return {
     label: 'View',
     items: [
       { label: 'Command Palette', shortcut: 'Ctrl+Shift+P', action: () => dispatchEv('agent-ide:command-palette') },
       { label: 'File Picker', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
+      SEPARATOR,
+      { label: 'Open Dedicated Chat', shortcut: 'Ctrl+Shift+O', action: () => { void openDedicatedChat(); } },
+      { label: chatModeLabel, shortcut: 'Ctrl+Alt+I', action: () => dispatchEv(TOGGLE_IMMERSIVE_CHAT_EVENT) },
       SEPARATOR,
       { label: 'Toggle Sidebar', shortcut: 'Ctrl+B', action: () => dispatchEv('agent-ide:toggle-sidebar') },
       { label: 'Toggle Editor', action: () => dispatchEv('agent-ide:toggle-editor') },
@@ -152,6 +169,6 @@ function buildHelpMenu(): MenuDefinition {
   };
 }
 
-export function getMenuDefinitions(): MenuDefinition[] {
-  return [buildFileMenu(), buildEditMenu(), buildViewMenu(), buildGoMenu(), buildTerminalMenu(), buildHelpMenu()];
+export function getMenuDefinitions(isImmersiveChat = false): MenuDefinition[] {
+  return [buildFileMenu(), buildEditMenu(), buildViewMenu(isImmersiveChat), buildGoMenu(), buildTerminalMenu(), buildHelpMenu()];
 }

@@ -29,6 +29,22 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
           description="Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch."
         />
       </section>
+      <section>
+        <ToggleSwitch
+          checked={draft.layout?.chatPrimary === true}
+          onChange={(val) => onChange('layout', { ...(draft.layout ?? {}), chatPrimary: val })}
+          label="Start in chat mode"
+          description="Launches the IDE with the chat-primary layout preset. Equivalent to opening a dedicated chat window, but in the main window. Takes effect on next launch or reload."
+        />
+      </section>
+      <section>
+        <ToggleSwitch
+          checked={draft.layout?.immersiveChat === true}
+          onChange={(val) => onChange('layout', { ...(draft.layout ?? {}), immersiveChat: val })}
+          label="Immersive chat mode"
+          description="Replaces the IDE shell with a single-column chat interface. Same backend, same features."
+        />
+      </section>
       <NotificationsSubsection draft={draft} onChange={onChange} />
       <WebAccessSubsection draft={draft} onChange={onChange} />
       <BackupSubsection onImport={onImport} />

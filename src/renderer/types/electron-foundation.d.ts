@@ -229,8 +229,9 @@ export interface AppConfig {
   routerLastRetrainCount: number;
   /** Wave 17 — layout preset engine feature flags
    *  Wave 28 — dragAndDrop: enable drag-and-drop pane rearrangement
-   *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px */
-  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; mobilePrimary?: boolean };
+   *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px
+   *  Wave 42 — immersiveChat: single-column chat shell */
+  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
   chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */

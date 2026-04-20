@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useImmersiveChatFlag } from '../../hooks/useImmersiveChatFlag';
 import type { MenuDefinition, MenuItem } from './TitleBar.menus';
 import { getMenuDefinitions } from './TitleBar.menus';
 
@@ -182,7 +183,8 @@ export function NavbarMenus(): React.ReactElement {
   const [highlightedItem, setHighlightedItem] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const menus = getMenuDefinitions();
+  const isImmersiveChat = useImmersiveChatFlag();
+  const menus = getMenuDefinitions(isImmersiveChat);
 
   const handleMenuClick = useCallback((idx: number) => {
     setOpenMenuIndex((prev) => {

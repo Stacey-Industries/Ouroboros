@@ -7,6 +7,7 @@ import { useCallback,useEffect } from 'react';
 import type { WorkspaceLayout } from '../types/electron';
 import {
   OPEN_USAGE_PANEL_EVENT,
+  TOGGLE_IMMERSIVE_CHAT_EVENT,
   TOGGLE_LAYOUT_MODE_EVENT,
   TOGGLE_SIDE_CHAT_EVENT,
 } from './appEventNames';
@@ -88,12 +89,23 @@ function handleSideChatToggle(e: KeyboardEvent): boolean {
   return false;
 }
 
+// Ctrl+Alt+I (Ctrl+Shift+I is taken by Toggle Developer Tools in Help menu).
+function handleImmersiveChatToggle(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && e.altKey && !e.shiftKey && e.key.toUpperCase() === 'I') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent(TOGGLE_IMMERSIVE_CHAT_EVENT));
+    return true;
+  }
+  return false;
+}
+
 export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (handleUsagePanelShortcut(e)) return;
       if (handleLayoutModeToggle(e)) return;
       if (handleSideChatToggle(e)) return;
+      if (handleImmersiveChatToggle(e)) return;
       const reverseMap = buildReverseMap(deps.keybindings);
       const combo = buildComboFromEvent(e);
       const action = reverseMap.get(combo);

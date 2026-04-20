@@ -14,8 +14,7 @@
 import { useEffect, useState } from 'react';
 
 import type { AppConfig } from '../types/electron-foundation';
-
-const TOGGLE_IMMERSIVE_CHAT_EVENT = 'agent-ide:toggle-immersive-chat';
+import { TOGGLE_IMMERSIVE_CHAT_EVENT } from './appEventNames';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;

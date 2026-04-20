@@ -89,6 +89,10 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
     'Start in chat mode',
     'Launches the IDE with the chat-primary layout preset. Equivalent to opening a dedicated chat window, but in the main window. Takes effect on next launch or reload.',
   ],
+  [
+    'Immersive chat mode',
+    'Replaces the IDE shell with a single-column chat interface. Same backend, same features.',
+  ],
   ['Export Settings', 'Save all settings to a JSON file for backup or sharing.'],
   ['Import Settings', 'Load settings from a previously exported JSON file.'],
   ['Open settings.json', 'Edit settings directly as a JSON file in your system editor.'],
