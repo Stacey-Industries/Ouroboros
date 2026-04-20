@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
-import { getWebServerPort } from '../web/webServer';
+import { getWebServerPort, whenWebServerReady } from '../web/webServer';
 import { disconnectDevice } from './bridgeDisconnect';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
 import { cleanupPushTokenHandler, registerPushTokenHandler } from './pushTokenHandlers';
@@ -40,23 +40,53 @@ function getOrCreateFingerprint(): string {
 
 // ─── Host detection ──────────────────────────────────────────────────────────
 
-/** Returns the first non-internal IPv4 address, falling back to 127.0.0.1. */
-function detectLocalIp(): string {
+/**
+ * Adapter name prefixes to exclude, platform-gated.
+ *
+ * Windows: os.networkInterfaces() uses friendly names like "Ethernet",
+ * "vEthernet (WSL)", "Wi-Fi". Exclude virtual/VPN adapters so we pick
+ * a real LAN interface.
+ *
+ * macOS/Linux: short names like "en0", "wlan0", "tun0". Exclude tunnel
+ * and docker interfaces conservatively.
+ */
+function getExcludedPrefixes(): string[] {
+  if (process.platform === 'win32') {
+    return ['vEthernet', 'WSL', 'VMware', 'VirtualBox', 'ZeroTier', 'Tailscale'];
+  }
+  // macOS and Linux — short names, conservative exclusion
+  return ['tun', 'docker', 'br-', 'virbr', 'veth'];
+}
+
+function isExcludedAdapter(name: string): boolean {
+  const prefixes = getExcludedPrefixes();
+  return prefixes.some((p) => name.startsWith(p));
+}
+
+/**
+ * Returns the first non-internal, non-VPN/WSL IPv4 address.
+ * Throws a typed error when no suitable interface is found so the caller
+ * can surface a meaningful message instead of returning 127.0.0.1.
+ */
+export function detectLocalIp(): string {
   const interfaces = os.networkInterfaces();
-  for (const iface of Object.values(interfaces)) {
-    if (!iface) continue;
-    for (const entry of iface) {
+  for (const [name, addrs] of Object.entries(interfaces)) {
+    if (!addrs) continue;
+    if (isExcludedAdapter(name)) continue;
+    for (const entry of addrs) {
       if (entry.family === 'IPv4' && !entry.internal) return entry.address;
     }
   }
-  log.warn('[pairing] No external IPv4 interface found — falling back to 127.0.0.1');
-  return '127.0.0.1';
+  log.warn('[pairing] No suitable LAN interface found — check network adapters');
+  throw new Error('NO_LAN_INTERFACE');
 }
 
 // ─── generatePairingCode ─────────────────────────────────────────────────────
 
-function buildQrPayload(code: string, fingerprint: string): QrPayload {
-  const port = getWebServerPort() ?? 7890;
+async function buildQrPayload(code: string, fingerprint: string): Promise<QrPayload> {
+  await whenWebServerReady();
+  const port = getWebServerPort();
+  if (port === null) throw new Error('Web server not ready — try again in a moment');
   return { v: 1, host: detectLocalIp(), port, code, fingerprint };
 }
 
@@ -74,7 +104,7 @@ async function handleGeneratePairingCode() {
   try {
     const ticket = issueTicket();
     const fingerprint = getOrCreateFingerprint();
-    const qrPayload = buildQrPayload(ticket.code, fingerprint);
+    const qrPayload = await buildQrPayload(ticket.code, fingerprint);
     const qrPairingUrl = buildQrPairingUrl(qrPayload);
     return { success: true, code: ticket.code, expiresAt: ticket.expiresAt, qrPayload, qrPairingUrl };
   } catch (err) {

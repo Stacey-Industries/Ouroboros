@@ -118,10 +118,9 @@ function CountdownDisplay({ expiresAt, onExpired }: CountdownProps): React.React
 // ── QrBlock ──────────────────────────────────────────────────────────────────
 
 /**
- * Renders the pairing URL as a QR code.
- * Using the deep-link URL (ouroboros://pair?...) instead of raw JSON so that
- * scanning with any third-party QR app opens Ouroboros directly via the
- * registered URL scheme (Android intent-filter, Wave 33b Phase E).
+ * Renders the pairing URL as a QR code + copyable plain text.
+ * The text lets the user verify the host is a real LAN IP, not 127.0.0.1.
+ * Using the deep-link URL (ouroboros://pair?...) so any scanner opens the app.
  */
 function QrBlock({ pairingUrl }: { pairingUrl: string }): React.ReactElement {
   return (
@@ -132,9 +131,13 @@ function QrBlock({ pairingUrl }: { pairingUrl: string }): React.ReactElement {
         size={QR_SIZE}
         value={pairingUrl}
       />
-      <span aria-label="QR code pairing URL" className="sr-only">
-        {pairingUrl}
-      </span>
+      <input
+        aria-label="Pairing URL"
+        className="text-text-semantic-muted"
+        readOnly
+        style={{ fontSize: '10px', width: '100%', background: 'transparent', border: 'none', textAlign: 'center', cursor: 'text', userSelect: 'all' }}
+        value={pairingUrl}
+      />
     </div>
   );
 }
@@ -161,6 +164,29 @@ function PairingDisplay({ pairing, onExpired }: PairingDisplayProps): React.Reac
   );
 }
 
+// ── ServerNotReadyHint ────────────────────────────────────────────────────────
+
+const NOT_READY_MARKER = 'not ready';
+
+function isServerNotReady(error: string | null): boolean {
+  return error !== null && error.toLowerCase().includes(NOT_READY_MARKER);
+}
+
+interface NotReadyHintProps { onRetry: () => void }
+
+function ServerNotReadyHint({ onRetry }: NotReadyHintProps): React.ReactElement {
+  return (
+    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <p className="text-status-warning" style={{ fontSize: '12px' }}>
+        Web server not ready — it may still be starting up. Retry in a moment.
+      </p>
+      <button onClick={onRetry} style={generateBtnStyle(false)} type="button">
+        Retry
+      </button>
+    </div>
+  );
+}
+
 // ── PairingSectionBody ────────────────────────────────────────────────────────
 
 interface SectionBodyProps {
@@ -172,6 +198,24 @@ interface SectionBodyProps {
   onExpired: () => void;
 }
 
+interface ErrorAreaProps { error: string | null; onRetry: () => void }
+
+function ErrorArea({ error, onRetry }: ErrorAreaProps): React.ReactElement | null {
+  if (!error) return null;
+  if (isServerNotReady(error)) return <ServerNotReadyHint onRetry={onRetry} />;
+  return <p className="text-status-error" style={{ fontSize: '12px', marginTop: '8px' }}>{error}</p>;
+}
+
+interface PairingResultProps { pairing: PairingState | null; isExpired: boolean; onExpired: () => void }
+
+function PairingResult({ pairing, isExpired, onExpired }: PairingResultProps): React.ReactElement | null {
+  if (!pairing) return null;
+  if (isExpired) {
+    return <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '12px' }}>Expired — regenerate to create a new code.</p>;
+  }
+  return <PairingDisplay pairing={pairing} onExpired={onExpired} />;
+}
+
 function PairingSectionBody({ enabled, pairing, loading, error, onGenerate, onExpired }: SectionBodyProps): React.ReactElement {
   const isDisabled = !enabled || loading;
   const isExpired = pairing !== null && pairing.expiresAt === 0;
@@ -181,9 +225,8 @@ function PairingSectionBody({ enabled, pairing, loading, error, onGenerate, onEx
       <button disabled={isDisabled} onClick={onGenerate} style={generateBtnStyle(isDisabled)} type="button">
         {label}
       </button>
-      {error && <p className="text-status-error" style={{ fontSize: '12px', marginTop: '8px' }}>{error}</p>}
-      {pairing && !isExpired && <PairingDisplay pairing={pairing} onExpired={onExpired} />}
-      {isExpired && <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '12px' }}>Expired — regenerate to create a new code.</p>}
+      <ErrorArea error={error} onRetry={onGenerate} />
+      <PairingResult isExpired={isExpired} pairing={pairing} onExpired={onExpired} />
     </>
   );
 }

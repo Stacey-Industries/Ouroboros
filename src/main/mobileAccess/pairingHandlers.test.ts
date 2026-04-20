@@ -6,10 +6,12 @@
  *   - handleListPairedDevices   (via ipcMain mock)
  *   - handleRevokePairedDevice  (via ipcMain mock)
  *   - consumePairingTicket      (direct export)
+ *   - detectLocalIp             (direct export, Wave 43 Phase B)
  */
 
 import crypto from 'crypto';
 import { ipcMain } from 'electron';
+import os from 'os';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ vi.mock('../web/webAuth', () => ({
 
 vi.mock('../web/webServer', () => ({
   getWebServerPort: vi.fn().mockReturnValue(7890),
+  whenWebServerReady: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('./bridgeDisconnect', () => ({
@@ -63,7 +66,7 @@ vi.mock('./tokenStore', () => ({
 import { getConfigValue, setConfigValue } from '../config';
 import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
 import { disconnectDevice } from './bridgeDisconnect';
-import { consumePairingTicket, registerPairingHandlers } from './pairingHandlers';
+import { consumePairingTicket, detectLocalIp, registerPairingHandlers } from './pairingHandlers';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
 import { addDevice, listDevices, removeDevice } from './tokenStore';
 import type { PairedDevice } from './types';
@@ -99,6 +102,49 @@ function captureHandler(channel: string): ((...args: unknown[]) => Promise<unkno
   const found = calls.find((c) => c[0] === channel);
   return found ? (found[1] as (...args: unknown[]) => Promise<unknown>) : undefined;
 }
+
+// ─── detectLocalIp ────────────────────────────────────────────────────────────
+
+describe('detectLocalIp', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('throws NO_LAN_INTERFACE when only loopback interfaces exist', () => {
+    vi.spyOn(os, 'networkInterfaces').mockReturnValue({
+      lo: [{ family: 'IPv4', address: '127.0.0.1', internal: true, netmask: '255.0.0.0', mac: '00:00:00:00:00:00', cidr: '127.0.0.1/8' }],
+    });
+    expect(() => detectLocalIp()).toThrow('NO_LAN_INTERFACE');
+  });
+
+  it('skips vEthernet (WSL) adapter and picks Wi-Fi on Windows', () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    vi.spyOn(os, 'networkInterfaces').mockReturnValue({
+      'vEthernet (WSL)': [{ family: 'IPv4', address: '172.24.0.1', internal: false, netmask: '255.255.240.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '172.24.0.1/20' }],
+      'Wi-Fi': [{ family: 'IPv4', address: '192.168.1.50', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '192.168.1.50/24' }],
+    });
+    expect(detectLocalIp()).toBe('192.168.1.50');
+    if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+  });
+
+  it('picks the first non-internal interface when two real interfaces exist', () => {
+    vi.spyOn(os, 'networkInterfaces').mockReturnValue({
+      Ethernet: [{ family: 'IPv4', address: '10.0.0.5', internal: false, netmask: '255.255.255.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '10.0.0.5/24' }],
+      'Ethernet 2': [{ family: 'IPv4', address: '10.0.0.6', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '10.0.0.6/24' }],
+    });
+    expect(detectLocalIp()).toBe('10.0.0.5');
+  });
+
+  it('excludes Tailscale adapter on Windows', () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    vi.spyOn(os, 'networkInterfaces').mockReturnValue({
+      Tailscale: [{ family: 'IPv4', address: '100.64.0.1', internal: false, netmask: '255.192.0.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '100.64.0.1/10' }],
+      Ethernet: [{ family: 'IPv4', address: '192.168.0.100', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '192.168.0.100/24' }],
+    });
+    expect(detectLocalIp()).toBe('192.168.0.100');
+    if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+  });
+});
 
 // ─── generatePairingCode ──────────────────────────────────────────────────────
 
@@ -165,14 +211,34 @@ describe('generatePairingCode handler', () => {
     expect(mockedSetConfig).not.toHaveBeenCalled();
   });
 
-  it('falls back to 127.0.0.1 when getWebServerPort returns null', async () => {
+  it('waits for whenWebServerReady before building the payload', async () => {
+    const { whenWebServerReady } = await import('../web/webServer');
+    let resolveReady!: () => void;
+    vi.mocked(whenWebServerReady).mockReturnValueOnce(
+      new Promise<void>((r) => { resolveReady = r; }),
+    );
+    registerPairingHandlers();
+    const handler = captureHandler('mobileAccess:generatePairingCode');
+
+    let done = false;
+    const pending = handler?.().then(() => { done = true; });
+    // Should not be done yet — server isn't ready
+    await Promise.resolve();
+    expect(done).toBe(false);
+
+    resolveReady();
+    await pending;
+    expect(done).toBe(true);
+  });
+
+  it('returns error when getWebServerPort returns null after ready', async () => {
     const { getWebServerPort } = await import('../web/webServer');
     vi.mocked(getWebServerPort).mockReturnValueOnce(null);
     registerPairingHandlers();
     const handler = captureHandler('mobileAccess:generatePairingCode');
-    const result = (await handler?.()) as { qrPayload: { port: number } };
-    // Port falls back to 7890 (the default constant)
-    expect(result.qrPayload.port).toBe(7890);
+    const result = (await handler?.()) as { success: boolean; error: string };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/not ready/i);
   });
 });
 

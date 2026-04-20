@@ -46,6 +46,18 @@ let cachedIndexHtml: string | null = null;
 let wss: WebSocketServer | null = null;
 const wsClients = new Set<WebSocket>();
 
+/** Fires when httpServer emits 'listening'; pairing handlers await this. */
+let webServerReadyResolve: (() => void) | null = null;
+let webServerReadyReject: ((err: Error) => void) | null = null;
+let webServerReadyPromise: Promise<void> = makeReadyPromise();
+
+function makeReadyPromise(): Promise<void> {
+  return new Promise<void>((res, rej) => { webServerReadyResolve = res; webServerReadyReject = rej; });
+}
+
+/** Resolves when listening; rejects on startup failure. Await before getWebServerPort(). */
+export function whenWebServerReady(): Promise<void> { return webServerReadyPromise; }
+
 /** Per-connection mobile metadata; null = legacy desktop path. */
 const wsMeta = new Map<WebSocket, MobileAccessMeta | null>();
 
@@ -156,6 +168,28 @@ function handleWsTicketPost(_req: express.Request, res: express.Response): void 
   res.json({ ticket, expiresInMs });
 }
 
+/**
+ * Returns the pairing router with a lazy enabled-check.
+ * The router is always mounted so toggling mobileAccess.enabled after boot
+ * works without a restart. Returns 503 (not 404) when disabled.
+ */
+function createLazyPairingRouter(): express.Router {
+  const inner = createPairingRouter();
+  const router = express.Router();
+  router.use((req, res, next) => {
+    if (!getConfigValue('mobileAccess')?.enabled) {
+      if (req.path === '/api/pair') {
+        res.status(503).json({ error: 'Mobile pairing is not enabled.' });
+        return;
+      }
+      next();
+      return;
+    }
+    inner(req, res, next);
+  });
+  return router;
+}
+
 function buildExpressApp(options: WebServerOptions): express.Express {
   const app = express();
   app.get('/api/health', (_req, res) => {
@@ -171,9 +205,10 @@ function buildExpressApp(options: WebServerOptions): express.Express {
     const indexPath = path.join(options.staticDir, 'index.html');
     registerPairingGate(app, indexPath);
   }
-  if (getConfigValue('mobileAccess')?.enabled) {
-    app.use(createPairingRouter());
-  }
+  // Always mount the pairing router; it checks enabled at request time and
+  // returns 503 when disabled. This makes the route reactive to config toggles
+  // without requiring a server restart.
+  app.use(createLazyPairingRouter());
 
   app.use(authMiddleware);
   app.post('/api/ws-ticket', handleWsTicketPost);
@@ -311,10 +346,15 @@ export function startWebServer(options: WebServerOptions): Promise<void> {
     httpServer = http.createServer(app);
     wss = new WebSocketServer({ server: httpServer, path: '/ws' });
     wss.on('connection', (ws, req) => { void handleWsConnection(ws, req); });
-    httpServer.on('error', (err: Error) => { log.error('HTTP server error:', err.message); reject(err); });
+    httpServer.on('error', (err: Error) => {
+      log.error('HTTP server error:', err.message);
+      webServerReadyReject?.(err);
+      reject(err);
+    });
     httpServer.listen(options.port, () => {
       log.info(`Server listening on http://localhost:${options.port}`);
       log.info(`WebSocket endpoint: ws://localhost:${options.port}/ws`);
+      webServerReadyResolve?.();
       resolve();
     });
   });
@@ -333,6 +373,8 @@ export async function stopWebServer(): Promise<void> {
     });
     httpServer = null;
   }
+  // Reset the ready promise so a subsequent startWebServer works correctly.
+  webServerReadyPromise = makeReadyPromise();
   log.info('Server stopped');
 }
 
