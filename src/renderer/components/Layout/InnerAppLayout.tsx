@@ -11,11 +11,13 @@ import { MobileLayoutProvider } from '../../contexts/MobileLayoutContext';
 import { useChatWindowMode } from '../../hooks/useChatWindowMode';
 import { useSystemBack } from '../../hooks/useSystemBack';
 import type { WorkspaceLayout } from '../../types/electron';
+import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
 import type { Command } from '../CommandPalette/types';
 import { DiffReviewProvider } from '../DiffReview';
 import { ProjectPicker } from '../FileTree/ProjectPicker';
 import { FileViewerManager } from '../FileViewer';
 import { MultiBufferManager } from '../FileViewer/MultiBufferManager';
+import { SessionSidebar } from '../SessionSidebar/SessionSidebar';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { TerminalManager } from '../Terminal/TerminalManager';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
@@ -25,7 +27,8 @@ import { CentrePaneConnected } from './CentrePaneConnected';
 import { IdeToolBridge } from './IdeToolBridge';
 import { AgentSidebarContent } from './InnerAppLayout.agent';
 import { LayoutOverlays } from './InnerAppLayout.overlays';
-import { LayoutPresetResolverProvider } from './layoutPresets';
+import { LayoutPresetResolverProvider, useLayoutPreset } from './layoutPresets';
+import { useChatPrimaryFlag } from './layoutPresets/LayoutPresetResolver';
 import { NoDragZone } from './NoDragZone';
 import { SidebarSections } from './SidebarSections';
 
@@ -173,6 +176,13 @@ function ProjectPickerSlot({
 function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
   // Mounted inside MobileLayoutProvider — context is available.
   useSystemBack();
+  // The preset declares which component goes in each slot (e.g. chat-primary
+  // puts AgentChatWorkspace in editorContent and SessionSidebar in sidebarContent).
+  // The plain ide-primary preset keeps the file tree + editor. Route based on
+  // preset id — the preset's `slots.componentKey` values are descriptive only;
+  // actual component wiring lives here.
+  const { preset } = useLayoutPreset();
+  const chatMode = preset.id === 'chat-primary';
   return (
     <AppLayoutConnected
       terminalControl={props.terminalControl}
@@ -180,8 +190,16 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
-      editorContent={<CentrePaneConnected />}
+      sidebarContent={
+        chatMode
+          ? <ErrorBoundary label="Sessions"><SessionSidebar /></ErrorBoundary>
+          : <ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>
+      }
+      editorContent={
+        chatMode
+          ? <ErrorBoundary label="Chat"><AgentChatWorkspace projectRoot={props.projectRoot} /></ErrorBoundary>
+          : <CentrePaneConnected />
+      }
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<NoDragZone><TerminalPanelContent {...props} /></NoDragZone>}
     />
@@ -190,8 +208,12 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
 
 export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
   const { isChatWindow } = useChatWindowMode();
+  // When the user has toggled "Start in chat mode" in Settings, the main window
+  // boots into the chat-primary preset just like a dedicated chat window does.
+  const chatPrimary = useChatPrimaryFlag();
+  const forcePresetId = isChatWindow || chatPrimary ? 'chat-primary' : undefined;
   return (
-    <LayoutPresetResolverProvider forcePresetId={isChatWindow ? 'chat-primary' : undefined}>
+    <LayoutPresetResolverProvider forcePresetId={forcePresetId}>
       <LayoutProviders projectRoot={props.projectRoot}>
         <MobileLayoutProvider>
           <LayoutChrome {...props} />

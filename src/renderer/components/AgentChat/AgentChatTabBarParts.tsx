@@ -11,7 +11,7 @@ import type { LinkedSession } from './AgentChatTabBarHooks';
 export { resolveLinkedProvider, useLinkedSessionId } from './AgentChatTabBarHooks';
 export type { LinkedSession };
 export { BranchTreeButton } from './AgentChatBranchTreeButton';
-export { OpenInTerminalButton, resolveRootThread } from './AgentChatTabBarParts.extra';
+export { OpenInTerminalButton, PopOutChatButton, resolveRootThread } from './AgentChatTabBarParts.extra';
 
 // ── Tab sub-components (used by AgentChatTabBar) ──────────────────────────────
 

@@ -5,6 +5,7 @@ import {
   BranchTreeButton,
   type LinkedSession,
   OpenInTerminalButton,
+  PopOutChatButton,
   resolveRootThread,
   Tab,
   ThreadDropdown,
@@ -154,6 +155,7 @@ function TabBarActions({
         onSelect={onSelectThread}
       />
       <OpenInTerminalButton linkedSession={linkedSession} threadModel={activeThreadModel} />
+      <PopOutChatButton />
     </>
   );
 }

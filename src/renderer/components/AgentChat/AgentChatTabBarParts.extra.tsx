@@ -79,3 +79,47 @@ export function OpenInTerminalButton({
     </button>
   );
 }
+
+// ── PopOutChatButton ─────────────────────────────────────────────────────────
+
+function PopOutIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+/** Spawn the current IDE session in a dedicated chat-only BrowserWindow. */
+export function PopOutChatButton(): React.ReactElement | null {
+  const handleClick = useCallback(async () => {
+    const api = window.electronAPI;
+    const active = await api.sessionCrud.active();
+    const sessionId = active?.success ? active.sessionId : null;
+    if (!sessionId) return;
+    await api.sessionCrud.openChatWindow(sessionId);
+  }, []);
+  // `sessionCrud` is desktop-only; hide the button in web mode where it stubs out.
+  if (!window.electronAPI?.sessionCrud?.openChatWindow) return null;
+  return (
+    <button
+      onClick={handleClick}
+      className="flex shrink-0 items-center gap-1 px-2 py-1.5 text-xs text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
+      title="Open this chat in a separate window"
+    >
+      <PopOutIcon />
+      <span>Pop out</span>
+    </button>
+  );
+}
