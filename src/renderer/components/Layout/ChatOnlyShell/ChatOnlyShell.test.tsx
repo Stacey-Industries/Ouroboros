@@ -11,7 +11,7 @@
  *  - Diff overlay button is hidden when pending count is 0.
  */
 
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,11 +48,22 @@ vi.mock('./ChatOnlyDiffOverlay', () => ({
 }));
 
 vi.mock('./ChatOnlyTitleBar', () => ({
-  ChatOnlyTitleBar: ({ onToggleDrawer }: { onToggleDrawer: () => void }) => (
+  ChatOnlyTitleBar: ({ onToggleDrawer, onCycleSidebarMode }: { onToggleDrawer: () => void; onCycleSidebarMode: () => void; sidebarMode: string }) => (
     <div data-testid="chat-only-title-bar">
       <button onClick={onToggleDrawer}>Toggle Drawer</button>
+      <button onClick={onCycleSidebarMode}>Cycle Sidebar</button>
     </div>
   ),
+}));
+
+vi.mock('./ChatHistorySidebar', () => ({
+  ChatHistorySidebar: ({ mode }: { mode: string }) => (
+    <div data-testid="chat-history-sidebar" data-mode={mode} />
+  ),
+}));
+
+vi.mock('./useChatSidebarMode', () => ({
+  useChatSidebarMode: () => ({ mode: 'pinned', cycleMode: vi.fn() }),
 }));
 
 vi.mock('./ChatOnlyStatusBar', () => ({
@@ -93,15 +104,10 @@ describe('ChatOnlyShell', () => {
     }
   });
 
-  it('drawer starts closed and toggles via DOM event', () => {
+  it('session drawer is not rendered in pinned/collapsed mode (only in hidden)', () => {
+    // useChatSidebarMode is mocked to return 'pinned', so drawer should not render.
     render(<ChatOnlyShell />);
-    expect(screen.getByTestId('session-drawer').getAttribute('data-open')).toBe('false');
-
-    act(() => { window.dispatchEvent(new CustomEvent('agent-ide:toggle-session-drawer')); });
-    expect(screen.getByTestId('session-drawer').getAttribute('data-open')).toBe('true');
-
-    act(() => { window.dispatchEvent(new CustomEvent('agent-ide:toggle-session-drawer')); });
-    expect(screen.getByTestId('session-drawer').getAttribute('data-open')).toBe('false');
+    expect(screen.queryByTestId('session-drawer')).toBeNull();
   });
 
   it('diff overlay starts closed', () => {

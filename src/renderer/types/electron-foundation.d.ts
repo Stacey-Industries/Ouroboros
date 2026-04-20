@@ -231,8 +231,9 @@ export interface AppConfig {
    *  Wave 28 — dragAndDrop: enable drag-and-drop pane rearrangement
    *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px
    *  Wave 42 — immersiveChat: single-column chat shell
-   *  Wave 43 — chatPrimary retired; use immersiveChat instead */
-  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean };
+   *  Wave 43 — chatPrimary retired; use immersiveChat instead
+   *  Wave 44 — chatSidebarMode: chat history sidebar pin/collapse/hidden mode */
+  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean; chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden' };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
   chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */

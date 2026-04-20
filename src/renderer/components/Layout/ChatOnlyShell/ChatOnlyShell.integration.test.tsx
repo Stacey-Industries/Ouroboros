@@ -102,6 +102,17 @@ vi.mock('./ChatOnlyDiffOverlay', () => ({
   ),
 }));
 
+// Wave 44 Phase B — stub new sidebar components so integration test stays fast.
+vi.mock('./ChatHistorySidebar', () => ({
+  ChatHistorySidebar: ({ mode }: { mode: string }) => (
+    <div data-testid="chat-history-sidebar" data-mode={mode} />
+  ),
+}));
+
+vi.mock('./useChatSidebarMode', () => ({
+  useChatSidebarMode: () => ({ mode: 'pinned', cycleMode: vi.fn() }),
+}));
+
 // IDE shell stub — lightweight stand-in for the full InnerAppLayout.
 vi.mock('../AppLayoutConnected', () => ({
   AppLayoutConnected: () => <div data-testid="app-layout-connected">AppLayout</div>,
@@ -168,7 +179,7 @@ describe('ChatOnlyShell integration — mode-switch branch', () => {
     const html = document.body.innerHTML;
     const forbidden = [
       'TerminalPane', 'TerminalManager', 'AgentMonitorPane',
-      'AppLayout', 'IdeToolBridge', 'RightSidebarTabs', 'Sidebar',
+      'AppLayout', 'IdeToolBridge', 'RightSidebarTabs', 'SessionSidebar',
       'CentrePaneConnected',
     ];
     for (const name of forbidden) {

@@ -10,6 +10,10 @@
  * <header> element onto a dedicated flex-1 spacer div so dropdown popovers
  * rendered in portals outside the no-drag zones receive pointer events.
  *
+ * Wave 44 Phase B: drawer-toggle button replaced by sidebar-mode cycle button.
+ * Three-state cycle: pinned → collapsed → hidden → pinned. Tooltip reflects
+ * current mode. onToggleDrawer kept for hidden-mode legacy overlay compat.
+ *
  * No File/Edit/View dropdowns — immersive chat shell is minimal by design.
  * Window controls are inline to avoid duplicating TitleBar.tsx's logic.
  */
@@ -19,6 +23,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
+import type { ChatSidebarMode } from './useChatSidebarMode';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
 
@@ -50,9 +55,9 @@ function WindowControls(): React.ReactElement | null {
   );
 }
 
-// ── DrawerToggleIcon ──────────────────────────────────────────────────────────
+// ── SidebarToggleIcon ─────────────────────────────────────────────────────────
 
-function DrawerToggleIcon(): React.ReactElement {
+function SidebarPinnedIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
@@ -61,19 +66,55 @@ function DrawerToggleIcon(): React.ReactElement {
   );
 }
 
+function SidebarCollapsedIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
+      <polyline points="3,7 4.5,8.5 3,10" />
+    </svg>
+  );
+}
+
+function SidebarHiddenIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+    </svg>
+  );
+}
+
+function sidebarModeLabel(mode: ChatSidebarMode): string {
+  if (mode === 'pinned') return 'Sidebar pinned — click to collapse';
+  if (mode === 'collapsed') return 'Sidebar collapsed — click to hide';
+  return 'Sidebar hidden — click to pin';
+}
+
 // ── TitleBarLeft ──────────────────────────────────────────────────────────────
 
-function TitleBarLeft({ projectName, onToggleDrawer }: { projectName: string; onToggleDrawer: () => void }): React.ReactElement {
+interface TitleBarLeftProps {
+  projectName: string;
+  sidebarMode: ChatSidebarMode;
+  onCycleSidebarMode: () => void;
+}
+
+function TitleBarLeft({ projectName, sidebarMode, onCycleSidebarMode }: TitleBarLeftProps): React.ReactElement {
+  const icon =
+    sidebarMode === 'pinned' ? <SidebarPinnedIcon /> :
+    sidebarMode === 'collapsed' ? <SidebarCollapsedIcon /> :
+    <SidebarHiddenIcon />;
+
   return (
     <>
       <button
         className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        onClick={onToggleDrawer}
-        title="Toggle session drawer"
-        aria-label="Toggle session drawer"
+        onClick={onCycleSidebarMode}
+        title={sidebarModeLabel(sidebarMode)}
+        aria-label={sidebarModeLabel(sidebarMode)}
+        data-testid="sidebar-cycle-button"
       >
-        <DrawerToggleIcon />
+        {icon}
       </button>
       {projectName && (
         <span className="text-sm font-medium text-text-semantic-primary truncate max-w-[160px]">
@@ -128,19 +169,28 @@ function TitleBarRight(): React.ReactElement {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 export interface ChatOnlyTitleBarProps {
+  /** Legacy: used only when sidebarMode='hidden' to toggle the overlay drawer. */
   onToggleDrawer: () => void;
+  /** Cycles sidebar mode: pinned → collapsed → hidden → pinned. */
+  onCycleSidebarMode: () => void;
+  /** Current sidebar mode — controls icon and tooltip on the cycle button. */
+  sidebarMode: ChatSidebarMode;
 }
 
 // ── ChatOnlyTitleBar ──────────────────────────────────────────────────────────
 
-export function ChatOnlyTitleBar({ onToggleDrawer }: ChatOnlyTitleBarProps): React.ReactElement {
+export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
   return (
     <header
       className="flex items-center h-9 px-2 gap-2 bg-surface-chat text-text-semantic-primary select-none shrink-0"
       data-testid="chat-only-title-bar"
     >
-      <TitleBarLeft projectName={projectName} onToggleDrawer={onToggleDrawer} />
+      <TitleBarLeft
+        projectName={projectName}
+        sidebarMode={sidebarMode}
+        onCycleSidebarMode={onCycleSidebarMode}
+      />
       <ChatOnlyHeaderControls />
       {/* Drag spacer: carries the window-drag region between the chips and the
           right-side cluster. Using a dedicated div keeps pointer events on the

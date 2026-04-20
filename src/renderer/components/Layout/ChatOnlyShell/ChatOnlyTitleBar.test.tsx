@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * ChatOnlyTitleBar — smoke tests (Wave 43 Phase C / Wave 44 Phase A).
+ * ChatOnlyTitleBar — smoke tests (Wave 43 Phase C / Wave 44 Phase A+B).
  *
  * Phase C changes:
  *  - ChatModeBadge removed (was Wave 42).
@@ -12,6 +12,11 @@
  *  - "Exit chat mode" icon button restored to the right of the header controls.
  *    It dispatches TOGGLE_IMMERSIVE_CHAT_EVENT and has no text label (icon only).
  *  - WebkitAppRegion: 'drag' moved off <header> onto a flex-1 spacer div.
+ *
+ * Wave 44 Phase B changes:
+ *  - Drawer-toggle replaced by sidebar-mode cycle button (data-testid="sidebar-cycle-button").
+ *  - Props: onCycleSidebarMode, sidebarMode added; onToggleDrawer kept for hidden-mode compat.
+ *  - Tooltip text reflects current sidebar mode.
  */
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -30,31 +35,37 @@ vi.mock('./ChatOnlyHeaderControls', () => ({
 
 afterEach(() => cleanup());
 
+const defaultProps = {
+  onToggleDrawer: vi.fn(),
+  onCycleSidebarMode: vi.fn(),
+  sidebarMode: 'pinned' as const,
+};
+
 describe('ChatOnlyTitleBar', () => {
   it('renders without throwing', () => {
-    const { container } = render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    const { container } = render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(container).toBeDefined();
   });
 
-  it('calls onToggleDrawer when drawer button is clicked', () => {
-    const onToggleDrawer = vi.fn();
-    render(<ChatOnlyTitleBar onToggleDrawer={onToggleDrawer} />);
-    fireEvent.click(screen.getByTitle('Toggle session drawer'));
-    expect(onToggleDrawer).toHaveBeenCalledOnce();
+  it('calls onCycleSidebarMode when sidebar cycle button is clicked', () => {
+    const onCycleSidebarMode = vi.fn();
+    render(<ChatOnlyTitleBar {...defaultProps} onCycleSidebarMode={onCycleSidebarMode} />);
+    fireEvent.click(screen.getByTestId('sidebar-cycle-button'));
+    expect(onCycleSidebarMode).toHaveBeenCalledOnce();
   });
 
   it('shows project name', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(screen.getByText('project')).toBeDefined();
   });
 
   it('does NOT show Chat Mode badge (removed in Wave 43 Phase C)', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(screen.queryByText('Chat Mode')).toBeNull();
   });
 
   it('shows Exit chat mode icon button (restored in Wave 44 Phase A)', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(screen.getByTitle('Exit chat mode')).toBeDefined();
   });
 
@@ -65,33 +76,50 @@ describe('ChatOnlyTitleBar', () => {
       dispatched.push(evt.type);
       return origDispatch(evt);
     });
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     fireEvent.click(screen.getByTitle('Exit chat mode'));
     expect(dispatched).toContain('agent-ide:toggle-immersive-chat');
     vi.restoreAllMocks();
   });
 
   it('Exit chat mode button has no visible text label (icon-only)', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     const btn = screen.getByTitle('Exit chat mode');
     expect(btn.textContent?.trim()).toBe('');
   });
 
   it('mounts ChatOnlyHeaderControls inline', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(screen.getByTestId('header-controls-stub')).toBeDefined();
   });
 
   it('has no border-b class on the header element', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     const header = screen.getByTestId('chat-only-title-bar');
     expect(header.className).not.toContain('border-b');
   });
 
   it('header element has no WebkitAppRegion drag style (moved to spacer div)', () => {
-    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    render(<ChatOnlyTitleBar {...defaultProps} />);
     const header = screen.getByTestId('chat-only-title-bar');
-    // The drag region must be on the spacer div, not the header itself.
     expect((header as HTMLElement).style.webkitAppRegion ?? '').not.toBe('drag');
+  });
+
+  it('sidebar cycle button tooltip reflects pinned mode', () => {
+    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="pinned" />);
+    const btn = screen.getByTestId('sidebar-cycle-button');
+    expect(btn.getAttribute('title')).toContain('pinned');
+  });
+
+  it('sidebar cycle button tooltip reflects collapsed mode', () => {
+    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="collapsed" />);
+    const btn = screen.getByTestId('sidebar-cycle-button');
+    expect(btn.getAttribute('title')).toContain('collapsed');
+  });
+
+  it('sidebar cycle button tooltip reflects hidden mode', () => {
+    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="hidden" />);
+    const btn = screen.getByTestId('sidebar-cycle-button');
+    expect(btn.getAttribute('title')).toContain('hidden');
   });
 });

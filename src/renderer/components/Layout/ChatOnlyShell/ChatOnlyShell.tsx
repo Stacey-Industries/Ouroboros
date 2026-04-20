@@ -4,6 +4,10 @@
  * Replaces InnerAppLayout at the renderer layer when active. Backend is
  * unchanged — same session store, same threads, same PTY, same hooks pipe.
  *
+ * Wave 44 Phase B: introduces ChatOnlyBody horizontal flex row with
+ * ChatHistorySidebar as left rail. Mode cycles pinned → collapsed → hidden.
+ * When hidden, ChatOnlySessionDrawer overlay is kept as fallback.
+ *
  * IdeToolBridge not mounted — IDE-context tool queries return empty in
  * chat-only mode (Wave 42 design).
  */
@@ -15,10 +19,12 @@ import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
 import { AgentChatStoreContext, createAgentChatStore } from '../../AgentChat/agentChatStore';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
+import { ChatHistorySidebar } from './ChatHistorySidebar';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySessionDrawer } from './ChatOnlySessionDrawer';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
+import { useChatSidebarMode } from './useChatSidebarMode';
 
 function usePendingDiffCount(): number {
   const { state } = useDiffReview();
@@ -49,6 +55,7 @@ function useShellState(pendingDiffCount: number): ShellState {
     if (diffOverlayOpen && pendingDiffCount === 0) closeDiffOverlay();
   }, [diffOverlayOpen, pendingDiffCount, closeDiffOverlay]);
 
+  // Hidden-mode fallback: legacy drawer toggle event still works.
   useEffect(() => {
     const handler = (): void => { toggleDrawer(); };
     window.addEventListener(TOGGLE_SESSION_DRAWER_EVENT, handler);
@@ -63,6 +70,7 @@ export function ChatOnlyShell(): React.ReactElement {
   const pendingDiffCount = usePendingDiffCount();
   const { drawerOpen, diffOverlayOpen, toggleDrawer, closeDrawer, openDiffOverlay, closeDiffOverlay } =
     useShellState(pendingDiffCount);
+  const { mode, cycleMode } = useChatSidebarMode();
 
   // Wave 43 hotfix: lift the AgentChat store above the title bar so
   // ChatOnlyHeaderControls (which lives in the title bar, outside
@@ -73,16 +81,24 @@ export function ChatOnlyShell(): React.ReactElement {
   return (
     <AgentChatStoreContext.Provider value={store}>
       <div className="flex flex-col h-full w-full bg-surface-chat overflow-hidden">
-        <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} />
+        <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} onCycleSidebarMode={cycleMode} sidebarMode={mode} />
 
-        <div className="relative flex-1 flex flex-col min-h-0">
-          <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
+        {/* ChatOnlyBody: horizontal flex row — sidebar rail + main content */}
+        <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-only-body">
+          <ChatHistorySidebar mode={mode} />
 
-          <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="w-full max-w-4xl flex flex-col flex-1 min-h-0 mx-auto">
-              <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
-            </div>
-          </main>
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {/* Hidden-mode fallback: session drawer overlay */}
+            {mode === 'hidden' && (
+              <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
+            )}
+
+            <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="w-full max-w-4xl flex flex-col flex-1 min-h-0 mx-auto">
+                <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
+              </div>
+            </main>
+          </div>
         </div>
 
         <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
