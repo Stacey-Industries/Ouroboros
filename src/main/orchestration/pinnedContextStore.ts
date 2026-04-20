@@ -16,7 +16,7 @@ import type { PinnedContextItem } from '@shared/types/pinnedContext';
 
 import log from '../logger';
 import type { Session } from '../session/session';
-import type { SessionStore } from '../session/sessionStore';
+import { getSessionStore, type SessionStore } from '../session/sessionStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -163,8 +163,6 @@ let singleton: PinnedContextStore | null = null;
 
 export function initPinnedContextStore(): void {
   if (singleton) return;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getSessionStore } = require('../session/sessionStore') as typeof import('../session/sessionStore');
   singleton = buildPinnedContextStore({ getStore: getSessionStore });
   log.info('[pinnedContextStore] initialised');
 }

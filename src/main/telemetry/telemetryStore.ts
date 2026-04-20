@@ -16,6 +16,7 @@ import path from 'node:path';
 
 import type { Database as DatabaseType } from 'better-sqlite3';
 
+import { getConfigValue } from '../config';
 import type { HookPayload } from '../hooks';
 import log from '../logger';
 import { openDatabase } from '../storage/database';
@@ -304,7 +305,6 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
 export function initTelemetryStore(userDataDir: string): void {
   if (singleton) return;
   try {
-    const { getConfigValue } = require('../config') as typeof import('../config'); // eslint-disable-line @typescript-eslint/no-require-imports
     setConfigReader(() => getConfigValue('telemetry')?.structured ?? false);
   } catch {
     // Config not available (e.g. test environment) — flag stays off

@@ -46,7 +46,14 @@ interface AutoUpdaterLike {
   quitAndInstall(): void;
 }
 
-const crashLogDir = path.join(app.getPath('userData'), 'crashes');
+// Lazy — `app.getPath` is undefined in worker_threads that transitively
+// import this module via the import chain. See threadStore.ts for context.
+let _crashLogDir: string | null = null;
+function getCrashLogDir(): string {
+  if (_crashLogDir !== null) return _crashLogDir;
+  _crashLogDir = path.join(app.getPath('userData'), 'crashes');
+  return _crashLogDir;
+}
 
 function registerChannel(channels: ChannelList, channel: string, handler: IpcHandler): void {
   ipcMain.handle(channel, handler);
@@ -96,16 +103,16 @@ function createUpdaterHandler(
 
 async function getCrashLogFiles(): Promise<string[]> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- crashLogDir is a module-level constant derived from app.getPath('userData')
-  await fs.mkdir(crashLogDir, { recursive: true });
+  await fs.mkdir(getCrashLogDir(), { recursive: true });
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- crashLogDir is a module-level constant derived from app.getPath('userData')
-  const entries = await fs.readdir(crashLogDir);
+  const entries = await fs.readdir(getCrashLogDir());
   return entries.filter((entry) => entry.endsWith('.log'));
 }
 
 async function readCrashLog(
   fileName: string,
 ): Promise<{ name: string; content: string; mtime: number }> {
-  const filePath = path.join(crashLogDir, fileName);
+  const filePath = path.join(getCrashLogDir(), fileName);
   const [content, stat] = await Promise.all([
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from crashLogDir constant + sanitised filename
     fs.readFile(filePath, 'utf-8'),
@@ -134,7 +141,7 @@ async function clearCrashLogs(): Promise<void> {
   await Promise.all(
     logFiles.map((fileName) =>
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from crashLogDir constant + sanitised filename
-      fs.unlink(path.join(crashLogDir, fileName)).catch((error) => {
+      fs.unlink(path.join(getCrashLogDir(), fileName)).catch((error) => {
         log.error('Failed to delete crash log file:', fileName, error);
       }),
     ),
@@ -143,9 +150,9 @@ async function clearCrashLogs(): Promise<void> {
 
 async function writeCrashLog(source: string, message: string, stack?: string): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- crashLogDir is a module-level constant derived from app.getPath('userData')
-  await fs.mkdir(crashLogDir, { recursive: true });
+  await fs.mkdir(getCrashLogDir(), { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filePath = path.join(crashLogDir, `crash-${timestamp}.log`);
+  const filePath = path.join(getCrashLogDir(), `crash-${timestamp}.log`);
   const content = [
     `Source: ${source}`,
     `Timestamp: ${new Date().toISOString()}`,
@@ -237,8 +244,8 @@ export function registerCrashLogHandlers(channels: ChannelList): void {
   registerChannel(channels, 'app:openCrashLogDir', async () =>
     runAction(async () => {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- crashLogDir is a module-level constant derived from app.getPath('userData')
-      await fs.mkdir(crashLogDir, { recursive: true });
-      await shell.openPath(crashLogDir);
+      await fs.mkdir(getCrashLogDir(), { recursive: true });
+      await shell.openPath(getCrashLogDir());
       return ok();
     }),
   );

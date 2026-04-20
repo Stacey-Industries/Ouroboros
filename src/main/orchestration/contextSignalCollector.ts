@@ -10,7 +10,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { isMainThread } from 'node:worker_threads';
 
+import { getConfigValue } from '../config';
 import log from '../logger';
 import type { DecisionWriter } from './contextDecisionWriter';
 import { getDecisionWriter } from './contextDecisionWriter';
@@ -28,9 +30,6 @@ interface ContextConfig {
 
 function defaultFlagGetter(): boolean {
   try {
-    // Dynamic require avoids a circular-import at module load time.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- config is a trusted internal module
-    const { getConfigValue } = require('../config') as { getConfigValue: (k: string) => unknown };
     const ctx = getConfigValue('context') as ContextConfig | null | undefined;
     if (ctx && typeof ctx.decisionLogging === 'boolean') {
       return ctx.decisionLogging;
@@ -106,7 +105,14 @@ export function emitContextDecisions(
 
   const writer = resolveWriter();
   if (!writer) {
-    log.warn('[contextSignalCollector] no writer — decisions dropped');
+    // The writer singleton is only initialised in the main process. Worker
+    // threads (e.g. the proactive context warm-up worker) intentionally do not
+    // own a writer because two writers would race on the same JSONL file.
+    // Silently drop in workers; warn loudly only in main where it indicates a
+    // missing initDecisionWriter call.
+    if (isMainThread) {
+      log.warn('[contextSignalCollector] no writer — decisions dropped');
+    }
     return;
   }
 

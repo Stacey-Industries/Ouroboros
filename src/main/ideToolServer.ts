@@ -116,10 +116,18 @@ export function handleRendererQueryResponse(
 }
 
 // toolHandlers is created per-connection to support per-connection registerCancel.
+// Suppressed errors are normal disconnect races, not real failures:
+// - EPIPE / ECONNRESET: client closed the socket before we finished writing.
+// - ERR_STREAM_WRITE_AFTER_END: write was queued before .end() landed (observed
+//   from claude-usage-poller after its PTY exits — the trust-prompt teardown
+//   races the response write).
+const BENIGN_SOCKET_ERROR_CODES = new Set(['EPIPE', 'ECONNRESET', 'ERR_STREAM_WRITE_AFTER_END']);
+
 function logSocketError(connId: number, err: NodeJS.ErrnoException): void {
-  if (err.code !== 'EPIPE' && err.code !== 'ECONNRESET') {
-    log.error(`#${connId} socket error: ${err.message}`);
-  }
+  if (err.code && BENIGN_SOCKET_ERROR_CODES.has(err.code)) return;
+  // Some Node versions report write-after-end as a plain Error with no `code`.
+  if (err.message?.includes('write after end')) return;
+  log.error(`#${connId} socket error: ${err.message}`);
 }
 
 function handleSocket(socket: net.Socket, connId: number): void {

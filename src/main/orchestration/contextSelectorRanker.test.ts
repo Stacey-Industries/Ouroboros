@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../logger', () => ({
-  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('./contextClassifier', () => ({
@@ -134,7 +134,10 @@ describe('runShadowMode', () => {
     runShadowMode(additiveRanked, candidates, makeRequest());
 
     expect(log.info).toHaveBeenCalledWith(
-      '[context-ranker] shadow',
+      expect.stringMatching(/^\[context-ranker\] shadow overlap=/),
+    );
+    expect(log.debug).toHaveBeenCalledWith(
+      '[context-ranker] shadow detail',
       expect.objectContaining({
         additiveTopN: expect.any(Array),
         classifierTopN: expect.any(Array),
@@ -150,8 +153,8 @@ describe('runShadowMode', () => {
 
     runShadowMode(additiveRanked, candidates, makeRequest());
 
-    const call = vi.mocked(log.info).mock.calls.find(
-      (c: unknown[]) => c[0] === '[context-ranker] shadow',
+    const call = vi.mocked(log.debug).mock.calls.find(
+      (c: unknown[]) => c[0] === '[context-ranker] shadow detail',
     );
     expect(call).toBeDefined();
     expect((call![1] as { overlap: number }).overlap).toBeGreaterThanOrEqual(0);

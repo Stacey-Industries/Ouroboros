@@ -3,6 +3,7 @@
 import { type ClaudeCliSettings, getConfigValue } from '../../config';
 import log from '../../logger';
 import { resolveModelEnv } from '../../providers';
+import { getSessionStore } from '../../session/sessionStore';
 import { buildInitialPrompt } from './claudeCodeContextBuilder';
 import { buildEventHandler } from './claudeCodeEventHandler';
 import {
@@ -32,8 +33,6 @@ export function pickLaunchValue(...values: Array<string | undefined>): string | 
 function resolveTaskCwd(root: string, sessionId: string | undefined): string {
   if (!sessionId) return root;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getSessionStore } = require('../../session/sessionStore') as typeof import('../../session/sessionStore');
     const wt = getSessionStore()?.getById(sessionId);
     return wt?.worktree && wt.worktreePath ? wt.worktreePath : root;
   } catch { return root; }

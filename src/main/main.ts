@@ -262,7 +262,7 @@ async function initializeApplication(): Promise<void> {
   buildApplicationMenu(mainWindow);
   await startBackgroundServices(mainWindow);
 
-  try { initClaudeMdGenerator(); log.info('Generator initialized'); } catch (err) { log.warn('Generator initialization failed:', err); }
+  try { initClaudeMdGenerator(); } catch (err) { log.warn('Generator initialization failed:', err); }
 
   registerRenderProcessCrashLogging(); initialiseCrashReporter();
   configureAutoUpdater();

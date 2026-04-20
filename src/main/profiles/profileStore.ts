@@ -16,6 +16,7 @@
 
 import type { Profile } from '@shared/types/profile';
 
+import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 import { BUILT_IN_PROFILES } from './rolePresets';
 
@@ -150,9 +151,6 @@ let singleton: ProfileStore | null = null;
 
 export function initProfileStore(): void {
   if (singleton) return;
-  // Lazy-import config to avoid loading electron-store in test environments.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getConfigValue, setConfigValue } = require('../config') as typeof import('../config');
   const adaptor: ProfileStoreAdaptor = {
     readProfiles: () => {
       const stored = getConfigValue('profiles') as unknown as Profile[] | undefined;

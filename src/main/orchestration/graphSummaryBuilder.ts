@@ -70,18 +70,25 @@ export async function buildGraphSummary(): Promise<GraphSummary> {
   const ctrl = getGraphController();
   if (!ctrl) return EMPTY_SUMMARY;
 
+  const t0 = Date.now();
+  log.info('[trace:buildGraphSummary] start');
   try {
-    const [architecture, changes] = await Promise.all([
-      Promise.resolve(ctrl.getArchitecture(['hotspots'])),
-      ctrl.detectChanges().catch(() => null),
-    ]);
+    const tArch = Date.now();
+    const architecturePromise = Promise.resolve(ctrl.getArchitecture(['hotspots']));
+    log.info(`[trace:buildGraphSummary] getArchitecture returned in ${Date.now() - tArch}ms`);
+    const tChanges = Date.now();
+    const changesPromise = ctrl.detectChanges().catch(() => null);
+    const [architecture, changes] = await Promise.all([architecturePromise, changesPromise]);
+    log.info(`[trace:buildGraphSummary] detectChanges resolved in ${Date.now() - tChanges}ms`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hotspots = extractHotspots(architecture as any);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const blastRadius = changes ? extractBlastRadius(changes as any) : [];
 
-    return { hotspots, blastRadius, builtAt: Date.now() };
+    const result = { hotspots, blastRadius, builtAt: Date.now() };
+    log.info(`[trace:buildGraphSummary] done in ${Date.now() - t0}ms hotspots=${hotspots.length} blast=${blastRadius.length}`);
+    return result;
   } catch (err) {
     log.warn('Failed to build graph summary:', err);
     return EMPTY_SUMMARY;

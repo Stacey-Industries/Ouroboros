@@ -1,3 +1,4 @@
+import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -121,8 +122,6 @@ let singleton: FolderStore | null = null;
 export function initFolderStore(): void {
   if (singleton) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getConfigValue, setConfigValue } = require('../config') as typeof import('../config');
     const adaptor: FolderStoreAdaptor = {
       read: () => (getConfigValue('sessionFolders') as SessionFolder[] | undefined) ?? [],
       write: (folders) => setConfigValue('sessionFolders', folders as never),

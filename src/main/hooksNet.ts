@@ -157,9 +157,13 @@ function handleSocket(
     }, 5_000);
   });
   socket.on('error', (error: NodeJS.ErrnoException) => {
-    if (error.code !== 'EPIPE' && error.code !== 'ECONNRESET') {
-      log.error(`#${connId} socket error: ${error.message}`);
-    }
+    // Suppress benign disconnect races: client closed the socket before our
+    // last write landed (EPIPE/ECONNRESET) or our write was queued after .end()
+    // raced past us (ERR_STREAM_WRITE_AFTER_END).
+    if (error.code === 'EPIPE' || error.code === 'ECONNRESET') return;
+    if (error.code === 'ERR_STREAM_WRITE_AFTER_END') return;
+    if (error.message?.includes('write after end')) return;
+    log.error(`#${connId} socket error: ${error.message}`);
   });
   socket.on('close', () => {
     log.debug(`connection #${connId} closed`);

@@ -17,18 +17,25 @@ type IpcHandler = Parameters<typeof ipcMain.handle>[1];
 type HandlerSuccess<T extends object = Record<string, never>> = { success: true } & T;
 type HandlerFailure = { success: false; error: string };
 
-const sessionsDir = path.join(app.getPath('userData'), 'sessions');
+// Lazy — `app.getPath` is undefined in worker_threads that transitively
+// import this module (e.g. the indexing worker via gitOperations → contextLayer).
+let _sessionsDir: string | null = null;
+function getSessionsDir(): string {
+  if (_sessionsDir !== null) return _sessionsDir;
+  _sessionsDir = path.join(app.getPath('userData'), 'sessions');
+  return _sessionsDir;
+}
 const MAX_SESSION_FILES = 100;
 
 async function ensureSessionsDir(): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- sessionsDir from app.getPath('userData')
-  await fs.mkdir(sessionsDir, { recursive: true });
+  await fs.mkdir(getSessionsDir(), { recursive: true });
 }
 
 async function pruneOldSessions(): Promise<void> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- sessionsDir from app.getPath('userData')
-    const entries = await fs.readdir(sessionsDir);
+    const entries = await fs.readdir(getSessionsDir());
     const jsonFiles = entries.filter((entry) => entry.endsWith('.json'));
     if (jsonFiles.length <= MAX_SESSION_FILES) return;
 
@@ -36,7 +43,7 @@ async function pruneOldSessions(): Promise<void> {
       jsonFiles.map(async (entry) => ({
         name: entry,
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
-        mtime: (await fs.stat(path.join(sessionsDir, entry))).mtime.getTime(),
+        mtime: (await fs.stat(path.join(getSessionsDir(), entry))).mtime.getTime(),
       })),
     );
 
@@ -45,7 +52,7 @@ async function pruneOldSessions(): Promise<void> {
     await Promise.all(
       toDelete.map((entry) =>
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
-        fs.unlink(path.join(sessionsDir, entry.name)).catch((error) => {
+        fs.unlink(path.join(getSessionsDir(), entry.name)).catch((error) => {
           log.error('Failed to delete old session file:', entry.name, error);
         }),
       ),
@@ -202,13 +209,13 @@ function buildSessionFilePath(session: unknown): string {
   const record = toSessionRecord(session);
   const sessionId = getStringValue(record, 'id') ?? 'unknown';
   const timestamp = getNumberValue(record, 'startedAt') ?? Date.now();
-  return path.join(sessionsDir, `${sessionId}-${timestamp}.json`);
+  return path.join(getSessionsDir(), `${sessionId}-${timestamp}.json`);
 }
 
 async function readSessionFile(fileName: string): Promise<unknown | null> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
-    const raw = await fs.readFile(path.join(sessionsDir, fileName), 'utf-8');
+    const raw = await fs.readFile(path.join(getSessionsDir(), fileName), 'utf-8');
     return JSON.parse(raw);
   } catch {
     return null;
@@ -219,7 +226,7 @@ async function loadStoredSessions(): Promise<unknown[]> {
   await ensureSessionsDir();
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- sessionsDir from app.getPath('userData')
-  const entries = await fs.readdir(sessionsDir);
+  const entries = await fs.readdir(getSessionsDir());
   const jsonFiles = entries.filter((entry) => entry.endsWith('.json'));
   const loadedSessions = await Promise.all(jsonFiles.map((fileName) => readSessionFile(fileName)));
   return loadedSessions.reduce<unknown[]>((sessions, session) => {
@@ -232,12 +239,12 @@ async function deleteStoredSession(sessionId: string): Promise<void> {
   await ensureSessionsDir();
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- sessionsDir from app.getPath('userData')
-  const entries = await fs.readdir(sessionsDir);
+  const entries = await fs.readdir(getSessionsDir());
   const matching = entries.filter(
     (entry) => entry.startsWith(`${sessionId}-`) && entry.endsWith('.json'),
   );
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
-  await Promise.all(matching.map((entry) => fs.unlink(path.join(sessionsDir, entry))));
+  await Promise.all(matching.map((entry) => fs.unlink(path.join(getSessionsDir(), entry))));
 }
 
 function getDefaultExportName(session: SessionRecord, format: ExportFormat): string {

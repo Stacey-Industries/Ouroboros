@@ -1,3 +1,4 @@
+import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 import type { Session } from './session';
 import { emitSessionActivated, emitSessionArchived, emitSessionCreated } from './sessionLifecycle';
@@ -125,9 +126,6 @@ function buildStore(adaptor: StoreAdaptor): SessionStore {
 export function initSessionStore(): void {
   if (singleton) return;
   try {
-    // Lazy require keeps config out of test environments.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getConfigValue, setConfigValue } = require('../config') as typeof import('../config');
     const adaptor: StoreAdaptor = {
       read: () => (getConfigValue('sessionsData') as Session[] | undefined) ?? [],
       write: (sessions) => setConfigValue('sessionsData', sessions as never),

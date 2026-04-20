@@ -24,7 +24,7 @@ import type { AgentMonitorSettings, Session } from '../session/session';
 import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
 import { restoreFromTrash, writeToTrash } from '../session/sessionTrash';
-import { createChatWindow } from '../windowManager';
+import { createChatWindow, getWindow } from '../windowManager';
 import { getRegisteredMcpServerIds } from './mcp';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
@@ -71,8 +71,14 @@ function handleList(): HandlerResult<{ sessions: Session[] }> {
 
 function handleActive(event: IpcMainInvokeEvent): HandlerResult<{ sessionId: string | null }> {
   const winId = getWindowId(event);
-  const sessionId = activeSessionByWindow.get(winId) ?? null;
-  return ok({ sessionId });
+  // Fallback to the windowManager's activeSessionId — it's populated at window
+  // creation time, whereas `activeSessionByWindow` only fills in when the
+  // renderer explicitly calls `sessionCrud:activate`. Without this fallback,
+  // sessionCrud.active() returns null for freshly-opened windows that never
+  // called activate, breaking openChatWindow and other session-bound actions.
+  const explicit = activeSessionByWindow.get(winId);
+  const fromManager = winId >= 0 ? getWindow(winId)?.activeSessionId ?? null : null;
+  return ok({ sessionId: explicit ?? fromManager });
 }
 
 function handleCreate(args: unknown): HandlerResult<{ session: Session }> {

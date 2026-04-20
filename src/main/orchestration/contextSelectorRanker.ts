@@ -90,11 +90,12 @@ function computeShadowLog(
   const n = Math.min(10, additiveRanked.length);
   const additiveTopN = topNIds(additiveRanked, n);
   const classifierTopN = topNIds(classifierRanked, n);
-  log.info('[context-ranker] shadow', {
-    additiveTopN,
-    classifierTopN,
-    overlap: overlapRatio(additiveTopN, classifierTopN),
-  });
+  const overlap = overlapRatio(additiveTopN, classifierTopN);
+  // Concise summary at info — useful aggregate for ops without flooding logs
+  // with file paths on every packet build.
+  log.info(`[context-ranker] shadow overlap=${overlap.toFixed(2)} (n=${n})`);
+  // Full detail at debug — kept for offline AUC analysis when level is raised.
+  log.debug('[context-ranker] shadow detail', { additiveTopN, classifierTopN, overlap });
 }
 
 /**

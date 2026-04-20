@@ -14,6 +14,7 @@
  * which tracks PTY-exit and conflict outcomes against the telemetry DB store.
  */
 
+import { getConfigValue } from '../config';
 import log from '../logger';
 import { attributeResearchOutcome } from './contextOutcomeObserverResearch';
 import { buildOutcomeBase } from './contextOutcomeObserverSupport';
@@ -62,9 +63,6 @@ interface ContextConfig {
 
 function defaultFlagGetter(): boolean {
   try {
-    // Dynamic require avoids a circular-import at module load time.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- config is a trusted internal module
-    const { getConfigValue } = require('../config') as { getConfigValue: (k: string) => unknown };
     const ctx = getConfigValue('context') as ContextConfig | null | undefined;
     if (ctx && typeof ctx.decisionLogging === 'boolean') {
       return ctx.decisionLogging;
