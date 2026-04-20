@@ -81,10 +81,10 @@ Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. 
 
 **This project is developed from within itself.** Claude Code runs as a terminal session inside the Ouroboros — the very app being edited. This means:
 
-- **NEVER kill Electron processes or run `taskkill /IM electron.exe`** — that kills the host IDE and terminates this session.
-- **NEVER `npm run dev` expecting a fresh window** — a running instance is already open (the one you're inside). Starting a second instance is fine for testing but don't assume the current window needs restarting.
-- Hot-reload (`npm run dev` / vite HMR) updates the renderer in-place without killing the window. Prefer that over full restarts.
-- If you need the user to test a change, ask them to reload the renderer (`Ctrl+R` inside the IDE) rather than restarting the app.
+- **`npm run dev` is fine to run** — it spawns its own Electron instance separate from the host. The host IDE keeps running unless explicitly closed.
+- **Killing electron processes is permitted when needed** — e.g. cleaning up orphan dev launches or freeing the single-instance lock. The host IDE is one of those processes; the user may have to relaunch it afterwards. That's an acceptable cost when the alternative is leaving stale state to compound.
+- Hot-reload (`npm run dev` / vite HMR) updates the renderer in-place without killing the window. Main-process changes still require a relaunch.
+- If you need the user to test a change, ask them to reload the renderer (`Ctrl+R`) for renderer-only changes, or to relaunch the app for main-process changes.
 
 ## Commands
 
@@ -176,6 +176,23 @@ Only load docs relevant to your task. Saves tokens and avoids confusion.
 2. **DOM CustomEvents** — `window.dispatchEvent` / `window.addEventListener` (`agent-ide:new-terminal`, `agent-ide:set-theme`, `agent-ide:open-settings`)
 
 Never mix these. IPC events flow through preload. DOM events are renderer-only.
+
+### Chat-Only Shell
+
+Wave 42 introduced a second renderer shell — `ChatOnlyShell` — that replaces the full five-panel IDE when immersive chat mode is active. The backend is unchanged; same session store, same threads, same PTY, same hooks pipe.
+
+**Trigger condition** (computed in `InnerApp`):
+```ts
+const isImmersive = isChatWindow || immersiveFlag;
+```
+- `isChatWindow` — window opened as `?mode=chat` (pop-out chat window, Wave 20).
+- `immersiveFlag` — `config.layout.immersiveChat === true` (toggled via Settings, `Ctrl+Alt+I`, or View menu).
+
+**Shell layout:** single-column `ChatOnlyTitleBar → AgentChatWorkspace → ChatOnlyStatusBar`, with an off-canvas `ChatOnlySessionDrawer` and a `ChatOnlyDiffOverlay` modal for batched diff review.
+
+**`IdeToolBridge` is intentionally NOT mounted** in chat-only mode. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty — matching Claude desktop behaviour. Cross-window IDE-tool delegation is a Wave 43+ candidate.
+
+Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) live above the branch in `ChatOnlyShellWrapper` so they remain available in both shells without re-mounting on toggle. See `src/renderer/components/Layout/ChatOnlyShell/` for implementation details.
 
 ### Per-Window Project Isolation
 

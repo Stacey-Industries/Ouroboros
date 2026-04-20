@@ -159,6 +159,10 @@ App
 │           └── SettingsModal                     # Fixed overlay (full settings panel)
 ```
 
+### Chat-Only Shell (Wave 42)
+
+`ChatOnlyShell` is a second renderer shell that activates when `isChatWindow || immersiveFlag` is true in `InnerApp`. It replaces `InnerAppLayout` entirely at the renderer layer — the backend is unchanged (same session store, same threads, same PTY, same hooks pipe). The shell is a single-column layout: `ChatOnlyTitleBar` → `AgentChatWorkspace` (full-width, max-w-4xl centred) → `ChatOnlyStatusBar`, with an off-canvas `ChatOnlySessionDrawer` and a `ChatOnlyDiffOverlay` modal for batched diff review. Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) mount in `ChatOnlyShellWrapper`, which sits above the shell in the tree, so toggling between shells does not re-mount shared state. `IdeToolBridge` is intentionally absent — IDE-context tool queries return empty in chat-only mode, matching Claude desktop behaviour. The immersive flag is toggled via `Settings → General`, keyboard shortcut `Ctrl+Alt+I`, the View menu, or programmatically via the `agent-ide:toggle-immersive-chat` DOM event. See `src/renderer/components/Layout/ChatOnlyShell/` for the full implementation.
+
 ### Feature Folder Structure
 
 Each feature folder under `src/renderer/components/` is self-contained:

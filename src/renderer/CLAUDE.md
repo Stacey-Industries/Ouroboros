@@ -38,7 +38,7 @@ React browser process. Entry at `index.tsx`, root component in `App.tsx`. Everyt
 
    `ProjectProvider` is innermost — it depends on `AgentEventsProvider`. `ToastProvider` is outermost — toasts must work from any context.
 
-3. **`InnerApp`** — hook orchestration. Calls all top-level hooks (`useTerminalSessions`, `useWorkspaceLayouts`, `useCommandRegistry`, etc.) and wires their outputs together via `buildInnerAppLayoutProps`. No JSX logic — just hook calls and a single `<InnerAppLayout>` render.
+3. **`InnerApp`** — hook orchestration. Calls all top-level hooks (`useTerminalSessions`, `useWorkspaceLayouts`, `useCommandRegistry`, etc.) and wires their outputs together via `buildInnerAppLayoutProps`. Branches between `<ChatOnlyShellWrapper>` (when `isChatWindow || immersiveFlag`) and `<InnerAppLayout>` (IDE shell). All providers remain above the branch — toggling shells does not re-mount contexts.
 
 ## Prop Builder Functions
 
