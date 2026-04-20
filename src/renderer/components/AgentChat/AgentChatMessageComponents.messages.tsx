@@ -245,7 +245,7 @@ function renderItem(item: RenderItem, isStreaming: boolean, isLastText: boolean)
   if (item.type === 'text') {
     const content = (item.block as AgentChatContentBlock & { kind: 'text' }).content;
     return (
-      <div key={`text-${item.index}`} className="pl-7 pb-0.5">
+      <div key={`text-${item.index}`} className="pb-0.5">
         <MessageMarkdown content={content} streaming={isStreaming && isLastText} />
       </div>
     );

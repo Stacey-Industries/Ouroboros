@@ -10,7 +10,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AgentChatMessageRecord } from '../../types/electron';
-import { AssistantMessage } from './AgentChatMessageComponents.assistant';
+import { ASSISTANT_GUTTER, AssistantMessage } from './AgentChatMessageComponents.assistant';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -143,5 +143,25 @@ describe('AssistantMessage — copy actions', () => {
     renderAssistant(makeMessage());
     expect(screen.getByTitle('Copy as Markdown')).toBeTruthy();
     expect(screen.getByTitle('Copy as plain text')).toBeTruthy();
+  });
+});
+
+// ── Unified gutter ────────────────────────────────────────────────────────────
+
+describe('AssistantMessage — unified gutter (Phase E)', () => {
+  it('ASSISTANT_GUTTER constant is pl-7', () => {
+    expect(ASSISTANT_GUTTER).toBe('pl-7');
+  });
+
+  it('outer wrapper carries the gutter class so all blocks start at same column', () => {
+    const { container } = renderAssistant(makeMessage());
+    // The inner div (child of the flex outer div) should carry the gutter.
+    const outer = container.querySelector('.group.flex.justify-start');
+    expect(outer).toBeTruthy();
+    const inner = outer?.firstElementChild;
+    expect(inner?.className).toContain('pl-7');
+    // The inner div must NOT have max-w-[95%] — replaced with max-w-full.
+    expect(inner?.className).not.toContain('max-w-[95%]');
+    expect(inner?.className).toContain('max-w-full');
   });
 });

@@ -28,6 +28,7 @@ import {
 import { useAgentChatThread } from './agentChatSelectors';
 import { dispatchDiffReviewEvent } from './AgentChatStreamingHelpers';
 import { AgentConflictBanner } from './AgentConflictBanner';
+import { useDensity } from './DensityContext';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
 
@@ -167,6 +168,8 @@ function MessageCards(props: MessageListProps): React.ReactElement {
 }
 
 export function MessageList(props: MessageListProps): React.ReactElement {
+  const { density } = useDensity();
+  const gapClass = density === 'compact' ? 'space-y-2' : 'space-y-4';
   return (
     <div
       ref={props.scrollRef}
@@ -175,7 +178,7 @@ export function MessageList(props: MessageListProps): React.ReactElement {
       aria-relevant="additions"
       className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
     >
-      <div className="mt-auto space-y-4">
+      <div className={`mt-auto ${gapClass}`}>
         {props.activeThread.branchInfo && props.onSelectThread && (
           <AgentChatBranchIndicator
             branchInfo={props.activeThread.branchInfo}

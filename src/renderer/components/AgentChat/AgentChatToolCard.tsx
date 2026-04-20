@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 
 import { AgentChatSubToolList } from './AgentChatSubToolList';
 import { ToolDetails, ToolHeader } from './AgentChatToolCardSupport';
+import { useWorkspaceVariant } from './WorkspaceVariantContext';
 
 const FILE_MODIFYING_TOOLS = new Set([
   'Write',
@@ -143,13 +144,25 @@ function useToolCardState(props: AgentChatToolCardProps): ToolCardState {
   };
 }
 
-function ToolCardBody(
-  props: AgentChatToolCardProps & ReturnType<typeof useToolCardState>,
-): React.ReactElement {
+/** IDE-mode: glass card with border. Chat-only: flat tinted strip, no border. */
+function buildContainerClass(variant: 'ide' | 'chat-only', hasError: boolean): string {
+  if (variant === 'chat-only') {
+    return `my-1 rounded-md text-xs bg-surface-panel/50 px-2 py-1${hasError ? ' border border-diff-del-border' : ''}`;
+  }
+  return `my-1.5 rounded-md border text-xs glass-card bg-surface-raised${hasError ? '' : ' border-border-semantic'}`;
+}
+
+interface ToolCardBodyProps extends AgentChatToolCardProps, ReturnType<typeof useToolCardState> {
+  containerClass: string;
+  /** When true, IDE-mode error border is applied via inline style (token fallback). */
+  useInlineErrorBorder: boolean;
+}
+
+function ToolCardBody(props: ToolCardBodyProps): React.ReactElement {
   return (
     <div
-      className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${props.errorOutput ? '' : 'border-border-semantic'}`}
-      style={props.errorOutput ? { borderColor: 'var(--diff-del-border)' } : undefined}
+      className={props.containerClass}
+      style={props.useInlineErrorBorder ? { borderColor: 'var(--diff-del-border)' } : undefined}
     >
       <ToolHeader
         name={props.name}
@@ -186,5 +199,10 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard(
   props: AgentChatToolCardProps,
 ): React.ReactElement {
   const state = useToolCardState(props);
-  return <ToolCardBody {...props} {...state} />;
+  const variant = useWorkspaceVariant();
+  const hasError = Boolean(props.errorOutput);
+  const containerClass = buildContainerClass(variant, hasError);
+  // IDE mode uses an inline style for the error border (token fallback); chat-only uses a class.
+  const useInlineErrorBorder = variant === 'ide' && hasError;
+  return <ToolCardBody {...props} {...state} containerClass={containerClass} useInlineErrorBorder={useInlineErrorBorder} />;
 });

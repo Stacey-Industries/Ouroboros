@@ -27,7 +27,12 @@ import { ReactionBar } from './ReactionBar';
 import { StreamingStatusMessage } from './streamingUtils';
 import { useSelectionQuote } from './useSelectionQuote';
 
-// ── Collapse threshold ────────────────────────────────────────────────────────
+// ── Layout constants ──────────────────────────────────────────────────────────
+
+/** ~28 px left gutter — all assistant content (text, code, tool, thinking,
+ *  plan blocks) aligns on this column. Applied at the outer wrapper; do NOT
+ *  re-apply per-block. */
+export const ASSISTANT_GUTTER = 'pl-7';
 
 const COLLAPSE_THRESHOLD = 4000;
 
@@ -258,7 +263,7 @@ export const AssistantMessage = React.memo(function AssistantMessage(
   const s = useAssistantRenderState(props);
   return (
     <div className={`group flex justify-start ${s.paddingClass}`}>
-      <div className="w-full max-w-[95%]">
+      <div className={`w-full max-w-full ${ASSISTANT_GUTTER}`}>
         <AssistantMessageHeader
           message={props.message} hidden={s.streaming.hiddenHeader}
           showRaw={s.showRaw} onToggleRaw={s.onToggleRaw}

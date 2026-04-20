@@ -24,6 +24,7 @@ import {
 } from './AgentChatMessageComponents';
 import type { BranchForkEntry } from './BranchIndicator';
 import { BranchIndicator } from './BranchIndicator';
+import { useDensity } from './DensityContext';
 import { useVirtualScroll } from './useVirtualScroll';
 
 export interface VirtualizedMessageListProps {
@@ -99,12 +100,14 @@ function MessageRows({
   forksByMessageId,
   activeThreadId,
   onSelectThread,
+  rowPadding,
   props,
 }: {
   messagesWithStreaming: AgentChatMessageRecord[];
   forksByMessageId: Map<string, BranchForkEntry[]>;
   activeThreadId: string;
   onSelectThread?: (id: string) => void;
+  rowPadding: string;
   props: VirtualizedMessageListProps;
 }): React.ReactElement {
   return (
@@ -112,7 +115,7 @@ function MessageRows({
       {messagesWithStreaming.map((message) => {
         const forks = forksByMessageId.get(message.id);
         return (
-          <div key={message.id} className="pb-4">
+          <div key={message.id} className={rowPadding}>
             {renderCard(message, props)}
             {forks && onSelectThread && (
               <BranchIndicator
@@ -131,38 +134,24 @@ function MessageRows({
 function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement {
   const { scrollRef, handleScroll } = useVirtualScroll(props.messagesWithStreaming);
   const forksByMessageId = useForksByMessageId(props.activeThread.id, props.allThreads);
+  const { density } = useDensity();
+  const rowPadding = density === 'compact' ? 'pb-2' : 'pb-4';
+  const { activeThread, onSelectThread, pendingUserMessage, isSending, error } = props;
+  const branchIndicator = activeThread.branchInfo && onSelectThread
+    ? <div className="mb-4"><AgentChatBranchIndicator branchInfo={activeThread.branchInfo} onSwitchToParent={onSelectThread} /></div>
+    : null;
+  const pendingBubble = pendingUserMessage && isSending
+    ? <div className="pb-4"><PendingUserBubble text={pendingUserMessage} /></div>
+    : null;
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      aria-live="polite"
-      aria-relevant="additions"
-      className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
-    >
+    <div ref={scrollRef} onScroll={handleScroll} aria-live="polite" aria-relevant="additions" className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
       <div className="mt-auto">
-        {props.activeThread.branchInfo && props.onSelectThread && (
-          <div className="mb-4">
-            <AgentChatBranchIndicator
-              branchInfo={props.activeThread.branchInfo}
-              onSwitchToParent={props.onSelectThread}
-            />
-          </div>
-        )}
-        <MessageRows
-          messagesWithStreaming={props.messagesWithStreaming}
-          forksByMessageId={forksByMessageId}
-          activeThreadId={props.activeThread.id}
-          onSelectThread={props.onSelectThread}
-          props={props}
-        />
-        {props.pendingUserMessage && props.isSending && (
-          <div className="pb-4">
-            <PendingUserBubble text={props.pendingUserMessage} />
-          </div>
-        )}
-        <FailedBanner activeThread={props.activeThread} />
-        <InlineError error={props.error} />
+        {branchIndicator}
+        <MessageRows messagesWithStreaming={props.messagesWithStreaming} forksByMessageId={forksByMessageId} activeThreadId={activeThread.id} onSelectThread={onSelectThread} rowPadding={rowPadding} props={props} />
+        {pendingBubble}
+        <FailedBanner activeThread={activeThread} />
+        <InlineError error={error} />
       </div>
     </div>
   );
