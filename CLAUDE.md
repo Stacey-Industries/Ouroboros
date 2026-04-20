@@ -188,13 +188,15 @@ const isImmersive = isChatWindow || immersiveFlag;
 - `isChatWindow` — window opened as `?mode=chat` (pop-out chat window, Wave 20).
 - `immersiveFlag` — `config.layout.immersiveChat === true` (toggled via Settings, `Ctrl+Alt+I`, or View menu).
 
-**Shell layout:** single-column `ChatOnlyTitleBar → AgentChatWorkspace → ChatOnlyStatusBar`, with an off-canvas `ChatOnlySessionDrawer` and a `ChatOnlyDiffOverlay` modal for batched diff review.
+**Shell layout (Wave 44 parity pass):** `ChatOnlyTitleBar` + horizontal `ChatOnlyBody` (persistent `ChatHistorySidebar` + `AgentChatWorkspace` with `ChatStatusChipRow` beneath the composer) + `ChatOnlyStatusBar` + overlays (`ChatOnlyDiffOverlay`, `ChatOnlySettingsOverlay`, `KeyboardShortcutCheatSheet`, `CommandPalette`). Sidebar cycles pinned (280px) → collapsed (48px rail) → hidden (off-canvas `ChatOnlySessionDrawer` fallback); mode persists in `config.layout.chatSidebarMode`.
 
-**`IdeToolBridge` is intentionally NOT mounted** in chat-only mode. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty — matching Claude desktop behaviour. Cross-window IDE-tool delegation is a Wave 43+ candidate.
+**Chat-only keyboard shortcuts:** `Ctrl+,` Settings · `Ctrl+K` command palette · `Ctrl+/` shortcut cheat-sheet · sidebar toggle cycles mode.
 
-Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) live above the branch in `ChatOnlyShellWrapper` so they remain available in both shells without re-mounting on toggle. See `src/renderer/components/Layout/ChatOnlyShell/` for implementation details.
+**`IdeToolBridge` is intentionally NOT mounted** in chat-only mode. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty — matching Claude desktop behaviour. Cross-window IDE-tool delegation is a Wave 45+ candidate.
 
-**Chat-only polish (Wave 43):** composer is a `FloatingComposerContainer`; model + permission chips live in the title bar via `ChatOnlyHeaderControls`; streaming is rAF-batched via `useRafBatchedChunks`.
+Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) live above the branch in `ChatOnlyShellWrapper`; the `AgentChatStoreContext` store is lifted at the shell level so the sidebar + user menu (outside `AgentChatWorkspace`) share state with the workspace.
+
+**Theme:** shell root uses `h-screen w-screen`; `--surface-chat` inherits the active theme's `colors.bg` unconditionally, so glass remains transparent (Mica pass-through is the baseline for chat mode) and opaque themes stay opaque. Composer is a `FloatingComposerContainer`; model + permission chips live in `ChatStatusChipRow` below the composer (NOT the title bar — avoids drag-region / popover conflicts). Streaming is rAF-batched via `useRafBatchedChunks`.
 
 ### Per-Window Project Isolation
 

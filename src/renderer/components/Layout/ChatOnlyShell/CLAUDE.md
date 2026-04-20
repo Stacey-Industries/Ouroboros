@@ -1,28 +1,41 @@
-# ChatOnlyShell — Immersive single-column chat interface (Wave 42–43)
+# ChatOnlyShell — Immersive single-column chat interface (Wave 42–44)
 
 ## Architecture Summary
 
 A dedicated renderer shell that replaces `InnerAppLayout` when immersive chat mode is active. The backend is unchanged — same session store, same threads, same PTY, same hooks pipe. All chat features carry over automatically because they live inside `AgentChatWorkspace`.
 
-**Wave 43 polish (Phases C–F):**
-- Unified background: root and title bar both use `bg-surface-chat` — no visual seam.
-- Title bar: no `border-b` divider; `ChatModeBadge` removed; "Exit chat mode" button removed (moved to View menu). Model + permission chips now live in `ChatOnlyHeaderControls` mounted inline in the title bar.
-- Status bar: returns `null` when there is no git branch, no active streaming sessions, and no pending diffs — zero chrome at rest.
-- Composer: wrapped in `FloatingComposerContainer` (pill surface, `data-layout="floating-composer"`).
+**Wave 44 parity pass (Claude desktop / Piebald targets):**
+- Shell root uses `h-screen w-screen` (not `h-full w-full`) so it fills the viewport — `#root` / `body` have no explicit height, so `h-full` would resolve to content-height.
+- `--surface-chat` inherits the active IDE theme's `colors.bg` unconditionally. Glass theme stays transparent (Mica pass-through is the baseline for chat mode); opaque themes stay opaque. No runtime override.
+- **Persistent `ChatHistorySidebar`** replaces the old SessionSidebar overlay. Three modes: `pinned` (280px, default), `collapsed` (48px icon rail), `hidden` (falls back to `ChatOnlySessionDrawer` overlay). Mode cycles via the title-bar toggle button and persists in `config.layout.chatSidebarMode`.
+- **`ChatOnlyUserMenu`** in sidebar footer: popover with Settings (Ctrl+,), theme toggle, Keyboard shortcuts (Ctrl+/), Command palette (Ctrl+K), Exit chat mode, Log out stub.
+- **Shell-level overlays:** `ChatOnlySettingsOverlay`, `KeyboardShortcutCheatSheet`, `CommandPalette`. All reachable via keyboard shortcuts from chat-only.
+- **`ChatStatusChipRow`** (Phase D): Piebald-style thin chip strip mounted below the composer in chat-only mode. Model + permission chips live here, NOT in the title bar (avoids drag-region / portaled-popover issues).
+- **Title bar is minimal**: sidebar-pin toggle, project name, drag spacer, Exit chat mode button, window controls.
+- AgentChat store is lifted to shell level so the sidebar + menu (outside `AgentChatWorkspace`) share state with the workspace.
+
+**Wave 43 polish (baseline, still applies):**
+- Composer wrapped in `FloatingComposerContainer` (pill surface, `data-layout="floating-composer"`).
 - `AgentChatWorkspace` receives `variant="chat-only"` — suppresses `SideChatDrawer` and `BranchCompareModal`.
-- Streaming: rAF-batched via `useRafBatchedChunks` — single `setStateMap` per animation frame.
+- Streaming rAF-batched via `useRafBatchedChunks` — single `setStateMap` per animation frame.
 
 ```
-ChatOnlyShell
-  ├─ ChatOnlyTitleBar     — drag region, project name, drawer toggle, ChatOnlyHeaderControls, window controls
-  │                          (no border-b, no ChatModeBadge, no Exit button)
-  ├─ ChatOnlySessionDrawer — off-canvas left drawer (CSS transform slide-in), mounts SessionSidebar
-  │                          Backdrop uses --surface-scrim-chat token
-  ├─ AgentChatWorkspace   — full-width, centered max-w-4xl, variant="chat-only"
-  │                          (SideChatDrawer + BranchCompareModal NOT mounted)
-  │    └─ FloatingComposerContainer — pill wrapper, data-layout="floating-composer"
-  ├─ ChatOnlyStatusBar    — conditional: null when idle; shows branch/tokens/diffs when active
-  └─ ChatOnlyDiffOverlay  — full-screen modal overlay mounting DiffReviewPanel
+ChatOnlyShell (h-screen w-screen, bg-surface-chat)
+  ├─ ChatOnlyTitleBar           — sidebar-pin toggle, project, drag spacer, exit btn, window controls
+  ├─ ChatOnlyBody (horizontal row)
+  │    ├─ ChatHistorySidebar    — pinned 280px | collapsed 48px rail | hidden (drawer fallback)
+  │    │     ├─ SidebarHeader   — search input + "+ New chat"
+  │    │     ├─ ChatHistoryList — threads grouped by project, pinned section at top, status dots
+  │    │     └─ ChatOnlyUserMenu — avatar trigger + popover (Settings, theme, shortcuts, exit, logout)
+  │    └─ <main>
+  │          └─ AgentChatWorkspace (variant="chat-only")
+  │               ├─ FloatingComposerContainer (pill)
+  │               └─ ChatStatusChipRow  — model + permission chips (below composer)
+  ├─ ChatOnlyStatusBar          — conditional null at rest
+  ├─ ChatOnlyDiffOverlay        — full-screen diff review
+  ├─ ChatOnlySettingsOverlay    — modal host for SettingsModal (Ctrl+,)
+  ├─ KeyboardShortcutCheatSheet — overlay (Ctrl+/)
+  └─ CommandPalette             — shell-level (Ctrl+K)
 ```
 
 ## Mount Condition
