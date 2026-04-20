@@ -7,6 +7,7 @@ import {
   INITIAL_STATE,
   replayBufferedChunks,
 } from './AgentChatStreamingReducers';
+import { useRafBatchedChunks } from './useRafBatchedChunks';
 
 /** @deprecated Use AgentChatContentBlock directly. Kept as alias for backward compatibility. */
 export type AssistantTurnBlock = AgentChatContentBlock;
@@ -98,32 +99,87 @@ function useCleanupCompletedStreams(
   }, [activeThreadId, activeState.isStreaming, activeState.blocks.length, setStateMap]);
 }
 
+type SetStateMap = React.Dispatch<
+  React.SetStateAction<ReadonlyMap<string, AgentChatStreamingState>>
+>;
+
+function applyOneChunk(
+  prev: ReadonlyMap<string, AgentChatStreamingState>,
+  chunk: AgentChatStreamChunk,
+  updated: Map<string, AgentChatStreamingState> | null,
+): Map<string, AgentChatStreamingState> | null {
+  const tid = chunk.threadId;
+  if (!tid) return updated;
+  const threadPrev = (updated ?? prev).get(tid) ?? INITIAL_STATE;
+  const next = applyChunk(threadPrev, chunk);
+  if (next === null) return updated;
+  const map = updated ?? new Map(prev);
+  map.set(tid, next);
+  return map;
+}
+
+function applyTerminalChunk(chunk: AgentChatStreamChunk, setStateMap: SetStateMap): void {
+  setStateMap((prev) => {
+    const tid = chunk.threadId;
+    if (!tid) return prev;
+    const threadPrev = prev.get(tid) ?? INITIAL_STATE;
+    const next = applyChunk(threadPrev, chunk);
+    if (next === null) return prev;
+    const updated = new Map(prev);
+    updated.set(tid, next);
+    return updated;
+  });
+}
+
+function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStreamChunk) => void {
+  const applyBatch = useCallback(
+    (chunks: AgentChatStreamChunk[]) => {
+      setStateMap((prev) => {
+        let updated: Map<string, AgentChatStreamingState> | null = null;
+        for (const chunk of chunks) {
+          updated = applyOneChunk(prev, chunk, updated);
+        }
+        return updated ?? prev;
+      });
+    },
+    [setStateMap],
+  );
+
+  const { enqueue, flushNow, cleanup } = useRafBatchedChunks(applyBatch);
+
+  useEffect(() => cleanup, [cleanup]);
+
+  return useCallback(
+    (chunk: AgentChatStreamChunk) => {
+      if (!chunk.threadId) return;
+      if (chunk.type === 'thread_snapshot') {
+        if (chunk.thread) {
+          window.dispatchEvent(
+            new CustomEvent('agent-chat:thread-snapshot', { detail: chunk.thread }),
+          );
+        }
+        return;
+      }
+      if (chunk.type === 'complete' || chunk.type === 'error') {
+        flushNow();
+        applyTerminalChunk(chunk, setStateMap);
+        return;
+      }
+      enqueue(chunk);
+    },
+    [enqueue, flushNow, setStateMap],
+  );
+}
+
 /**
  * Tracks in-flight assistant streams per-thread in a Map.
+ * Delta chunks are rAF-batched: up to 50 chunks per frame collapse to a
+ * single setStateMap call.  Terminal chunks (complete / error) flush the
+ * pending buffer synchronously before being applied so they never lag.
  */
 export function useAgentChatStreaming(activeThreadId: string | null): AgentChatStreamingState {
   const [stateMap, setStateMap] = useState<ReadonlyMap<string, AgentChatStreamingState>>(new Map());
-
-  const handleChunk = useCallback((chunk: AgentChatStreamChunk) => {
-    const { threadId } = chunk;
-    if (!threadId) return;
-    if (chunk.type === 'thread_snapshot') {
-      if (chunk.thread) {
-        window.dispatchEvent(
-          new CustomEvent('agent-chat:thread-snapshot', { detail: chunk.thread }),
-        );
-      }
-      return;
-    }
-    setStateMap((prev) => {
-      const threadPrev = prev.get(threadId) ?? INITIAL_STATE;
-      const next = applyChunk(threadPrev, chunk);
-      if (next === null) return prev;
-      const updated = new Map(prev);
-      updated.set(threadId, next);
-      return updated;
-    });
-  }, []);
+  const handleChunk = useBatchedChunkHandler(setStateMap);
 
   useStreamChunkListener(handleChunk);
   useReplayBufferedChunks(activeThreadId, setStateMap);
