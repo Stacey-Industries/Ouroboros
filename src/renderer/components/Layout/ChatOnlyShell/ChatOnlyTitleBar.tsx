@@ -70,7 +70,7 @@ function TitleBarLeft({ projectName, onToggleDrawer }: { projectName: string; on
   return (
     <>
       <button
-        className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
+        className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         onClick={onToggleDrawer}
         title="Toggle session drawer"
