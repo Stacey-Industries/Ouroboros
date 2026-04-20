@@ -41,6 +41,8 @@
   --color-surface-hover: var(--surface-hover);
   --color-surface-scroll-thumb: var(--surface-scroll-thumb);
   --color-surface-scroll-track: var(--surface-scroll-track);
+  --color-surface-chat: var(--surface-chat);
+  --color-surface-scrim-chat: var(--surface-scrim-chat);
 
   --color-diff-add-bg: var(--diff-add-bg);
   --color-diff-del-bg: var(--diff-del-bg);

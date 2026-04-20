@@ -1,14 +1,40 @@
 /**
- * AgentChatWorkspace.compare.tsx — Wave 23 Phase E
+ * AgentChatWorkspace.compare.tsx — Wave 23 Phase E / Wave 43 Phase C
  *
- * Extracted helpers for branch comparison modal in AgentChatWorkspace:
+ * Extracted helpers for branch comparison modal and IDE-mode overlay panels:
  *   - useBranchCompare: hook that listens for OPEN_BRANCH_COMPARE_EVENT
  *   - BranchCompareModal: overlay wrapper around BranchCompareView
+ *   - IdePanels: SideChatDrawer + BranchCompareModal, mounted only in 'ide' variant
  */
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { OPEN_BRANCH_COMPARE_EVENT } from '../../hooks/appEventNames';
 import { BranchCompareView } from './BranchCompareView';
+import { SideChatDrawer } from './SideChatDrawer';
+import type { useSideChat } from './useSideChat';
+
+// ── IDE overlay panels ────────────────────────────────────────────────────────
+
+export interface IdePanelsProps {
+  sideChat: ReturnType<typeof useSideChat>;
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  compareState: BranchCompareState | null;
+  closeCompare: () => void;
+  onCloseTab: (id: string) => void;
+}
+
+export function IdePanels(p: IdePanelsProps): React.ReactElement {
+  return (
+    <>
+      <SideChatDrawer isOpen={p.isDrawerOpen} onClose={() => p.setIsDrawerOpen(false)}
+        sideChats={p.sideChat.sideChats} activeSideChatId={p.sideChat.activeSideChatId}
+        onSelect={p.sideChat.setActive} onCloseTab={p.onCloseTab}
+      />
+      {p.compareState && <BranchCompareModal compareState={p.compareState} onClose={p.closeCompare} />}
+    </>
+  );
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

@@ -19,6 +19,7 @@ import type { MentionItem } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import type { SlashCommand } from './SlashCommandMenu';
 import { SlashCommandMenu } from './SlashCommandMenu';
+import { useWorkspaceVariant } from './WorkspaceVariantContext';
 
 /* ---------- AttachmentChip ---------- */
 
@@ -263,7 +264,11 @@ export type ComposerFooterProps = {
 };
 
 export function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
+  const variant = useWorkspaceVariant();
   if (!props.chatOverrides || !props.onChatOverridesChange) return null;
+  // In chat-only mode the model + permission chips live in ChatOnlyHeaderControls.
+  // Suppress them here to avoid duplication.
+  if (variant === 'chat-only') return null;
   return (
     <div className="flex items-center">
       <div className="flex-1">

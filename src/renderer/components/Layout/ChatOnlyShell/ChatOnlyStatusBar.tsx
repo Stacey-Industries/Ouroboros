@@ -89,14 +89,21 @@ function usePendingDiffCount(): number {
   return state.files.filter((f) => f.hunks.some((h) => h.decision === 'pending')).length;
 }
 
-export function ChatOnlyStatusBar({ projectRoot, onOpenDiffOverlay }: ChatOnlyStatusBarProps): React.ReactElement {
+export function ChatOnlyStatusBar({ projectRoot, onOpenDiffOverlay }: ChatOnlyStatusBarProps): React.ReactElement | null {
   const { branch } = useGitBranch(projectRoot);
   const { currentSessions } = useAgentEventsContext();
   const pendingDiffCount = usePendingDiffCount();
 
+  const hasBranch = Boolean(branch);
+  const hasStreaming = currentSessions.some((s) => s.status === 'running');
+  const hasDiffs = pendingDiffCount > 0;
+  const hasAnyContent = hasBranch || hasStreaming || hasDiffs;
+
+  if (!hasAnyContent) return null;
+
   return (
     <footer
-      className="flex items-center h-6 px-3 gap-3 border-t border-border-semantic bg-surface-panel text-xs shrink-0"
+      className="flex items-center h-6 px-3 gap-3 bg-surface-chat text-xs shrink-0"
       data-testid="chat-only-status-bar"
     >
       <GitBranchItem branch={branch} />

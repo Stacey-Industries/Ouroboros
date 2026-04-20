@@ -1,8 +1,9 @@
 /**
- * ChatOnlyTitleBar — Minimal title bar for chat-only shell (Wave 42).
+ * ChatOnlyTitleBar — Minimal title bar for chat-only shell (Wave 43).
  *
- * Provides: drag region, project name, "Chat Mode" badge, session-drawer
- * toggle, "Exit chat mode" button, and platform-specific window controls.
+ * Phase C changes: removed ChatModeBadge, removed "Exit chat mode" button
+ * (moved to View menu only), removed border-b divider. Model + permission
+ * chips are now mounted inline via ChatOnlyHeaderControls.
  *
  * No File/Edit/View dropdowns — immersive chat shell is minimal by design.
  * Window controls are inline to avoid duplicating TitleBar.tsx's logic.
@@ -11,7 +12,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
-import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
+import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
 
@@ -54,16 +55,6 @@ function DrawerToggleIcon(): React.ReactElement {
   );
 }
 
-// ── ChatModeBadge ─────────────────────────────────────────────────────────────
-
-function ChatModeBadge(): React.ReactElement {
-  return (
-    <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-interactive-accent-subtle text-text-semantic-primary border border-border-accent select-none">
-      Chat Mode
-    </span>
-  );
-}
-
 // ── TitleBarLeft ──────────────────────────────────────────────────────────────
 
 function TitleBarLeft({ projectName, onToggleDrawer }: { projectName: string; onToggleDrawer: () => void }): React.ReactElement {
@@ -83,28 +74,14 @@ function TitleBarLeft({ projectName, onToggleDrawer }: { projectName: string; on
           {projectName}
         </span>
       )}
-      <ChatModeBadge />
     </>
   );
 }
 
 // ── TitleBarRight ─────────────────────────────────────────────────────────────
 
-function TitleBarRight({ onExitChatMode }: { onExitChatMode: () => void }): React.ReactElement {
-  return (
-    <>
-      <button
-        className="flex items-center gap-1 px-2 py-1 text-xs rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        onClick={onExitChatMode}
-        title="Exit chat mode (Ctrl+Alt+I)"
-        aria-label="Exit chat mode"
-      >
-        Exit chat mode
-      </button>
-      <WindowControls />
-    </>
-  );
+function TitleBarRight(): React.ReactElement {
+  return <WindowControls />;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -117,18 +94,16 @@ export interface ChatOnlyTitleBarProps {
 
 export function ChatOnlyTitleBar({ onToggleDrawer }: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
-  const handleExitChatMode = (): void => {
-    window.dispatchEvent(new CustomEvent(TOGGLE_IMMERSIVE_CHAT_EVENT));
-  };
   return (
     <header
-      className="flex items-center h-9 px-2 gap-2 border-b border-border-semantic bg-surface-panel text-text-semantic-primary select-none shrink-0"
+      className="flex items-center h-9 px-2 gap-2 bg-surface-chat text-text-semantic-primary select-none shrink-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       data-testid="chat-only-title-bar"
     >
       <TitleBarLeft projectName={projectName} onToggleDrawer={onToggleDrawer} />
+      <ChatOnlyHeaderControls />
       <div className="flex-1" />
-      <TitleBarRight onExitChatMode={handleExitChatMode} />
+      <TitleBarRight />
     </header>
   );
 }

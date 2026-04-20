@@ -20,8 +20,8 @@ function Backdrop({ visible, onClose }: { visible: boolean; onClose: () => void 
   if (!visible) return null;
   return (
     <div
-      className="fixed inset-0 z-40 bg-surface-overlay"
-      style={{ opacity: 0.4 }}
+      className="fixed inset-0 z-40"
+      style={{ backgroundColor: 'var(--surface-scrim-chat)' }}
       aria-hidden="true"
       onClick={onClose}
       data-testid="drawer-backdrop"
@@ -62,7 +62,7 @@ export function ChatOnlySessionDrawer({ open, onClose }: ChatOnlySessionDrawerPr
         aria-modal="true"
         aria-label="Session history"
         tabIndex={-1}
-        className={`fixed top-0 left-0 z-50 h-full w-72 flex flex-col bg-surface-panel border-r border-border-semantic shadow-lg transition-transform duration-200 ease-in-out ${translateClass}`}
+        className={`fixed top-0 left-0 z-50 h-full w-64 flex flex-col bg-surface-panel border-r border-border-semantic transition-transform duration-150 ease-out ${translateClass}`}
         data-testid="session-drawer"
         data-open={String(open)}
       >

@@ -64,7 +64,7 @@ export function ChatOnlyShell(): React.ReactElement {
     useShellState(pendingDiffCount);
 
   return (
-    <div className="flex flex-col h-full w-full bg-surface-base overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-surface-chat overflow-hidden">
       <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} />
 
       <div className="relative flex-1 flex flex-col min-h-0">
@@ -72,7 +72,7 @@ export function ChatOnlyShell(): React.ReactElement {
 
         <main className="flex-1 flex flex-col min-h-0 items-center overflow-hidden">
           <div className="w-full max-w-4xl flex flex-col h-full">
-            <AgentChatWorkspace projectRoot={projectRoot} />
+            <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
           </div>
         </main>
       </div>

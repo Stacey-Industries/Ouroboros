@@ -1,7 +1,12 @@
 /**
  * @vitest-environment jsdom
  *
- * ChatOnlyTitleBar — smoke tests.
+ * ChatOnlyTitleBar — smoke tests (Wave 43 Phase C).
+ *
+ * Phase C changes:
+ *  - ChatModeBadge removed (was Wave 42).
+ *  - "Exit chat mode" button removed (moved to View menu only).
+ *  - ChatOnlyHeaderControls mounted inline (mocked here to avoid store dependency).
  */
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -12,6 +17,10 @@ import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
 
 vi.mock('../../../contexts/ProjectContext', () => ({
   useProject: () => ({ projectRoot: '/test/project', projectName: 'project', projectRoots: ['/test/project'] }),
+}));
+
+vi.mock('./ChatOnlyHeaderControls', () => ({
+  ChatOnlyHeaderControls: () => <div data-testid="header-controls-stub" />,
 }));
 
 afterEach(() => cleanup());
@@ -34,23 +43,24 @@ describe('ChatOnlyTitleBar', () => {
     expect(screen.getByText('project')).toBeDefined();
   });
 
-  it('shows Chat Mode badge', () => {
+  it('does NOT show Chat Mode badge (removed in Wave 43 Phase C)', () => {
     render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
-    expect(screen.getByText('Chat Mode')).toBeDefined();
+    expect(screen.queryByText('Chat Mode')).toBeNull();
   });
 
-  it('dispatches toggle-immersive-chat event on exit button click', () => {
-    const dispatched: string[] = [];
-    const original = window.dispatchEvent.bind(window);
-    vi.spyOn(window, 'dispatchEvent').mockImplementation((e) => {
-      dispatched.push((e as CustomEvent).type);
-      return original(e);
-    });
-
+  it('does NOT show Exit chat mode button (moved to View menu in Wave 43 Phase C)', () => {
     render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
-    fireEvent.click(screen.getByTitle('Exit chat mode (Ctrl+Alt+I)'));
-    expect(dispatched).toContain('agent-ide:toggle-immersive-chat');
+    expect(screen.queryByTitle('Exit chat mode (Ctrl+Alt+I)')).toBeNull();
+  });
 
-    vi.restoreAllMocks();
+  it('mounts ChatOnlyHeaderControls inline', () => {
+    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    expect(screen.getByTestId('header-controls-stub')).toBeDefined();
+  });
+
+  it('has no border-b class on the header element', () => {
+    render(<ChatOnlyTitleBar onToggleDrawer={vi.fn()} />);
+    const header = screen.getByTestId('chat-only-title-bar');
+    expect(header.className).not.toContain('border-b');
   });
 });

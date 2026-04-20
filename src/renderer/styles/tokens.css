@@ -96,6 +96,10 @@
   --surface-scroll-thumb: rgba(255, 255, 255, 0.12);
   --surface-scroll-track: rgba(255, 255, 255, 0.03);
 
+  /* Chat-only shell */
+  --surface-chat:       var(--palette-bg);        /* Single unified chat background */
+  --surface-scrim-chat: rgba(0, 0, 0, 0.2);      /* Drawer backdrop — 0.2 opacity scrim */
+
   /* ─── Tier 3: Component tokens ────────────────────────────────────────────
    * Scoped to specific complex components. Optional — only add when a
    * component needs a value that doesn't map cleanly to a Tier 2 token.

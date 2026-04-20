@@ -8,21 +8,26 @@ import { useStreamCompletionNotifications } from '../../hooks/useStreamCompletio
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
-import { BranchCompareModal, useBranchCompare } from './AgentChatWorkspace.compare';
+import { IdePanels, useBranchCompare } from './AgentChatWorkspace.compare';
 import { DensityProvider } from './DensityContext';
 import { PinnedContextBar } from './PinnedContextBar';
-import { SideChatDrawer } from './SideChatDrawer';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
 import { useSideChat } from './useSideChat';
+import {
+  type WorkspaceVariant,
+  WorkspaceVariantContext,
+} from './WorkspaceVariantContext';
 
 export interface AgentChatWorkspaceProps {
   projectRoot: string | null;
   /** Wave 25 — session ID for pinned context; null hides the bar. */
   activeSessionId?: string | null;
   onModelReady?: (model: AgentChatWorkspaceModel) => void;
+  /** Wave 43 Phase C — shell variant; defaults to 'ide'. */
+  variant?: WorkspaceVariant;
 }
 
 /* ── Sync hooks: push existing hook data into zustand store ──────────────── */
@@ -293,6 +298,7 @@ export function AgentChatWorkspace({
   projectRoot,
   activeSessionId = null,
   onModelReady,
+  variant = 'ide',
 }: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
@@ -305,22 +311,25 @@ export function AgentChatWorkspace({
   useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec, activeSessionId });
 
   return (
-    <AgentChatStoreContext.Provider value={store}>
-      <DensityProvider>
-        <div data-tour-anchor="chat" className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel" style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}>
-          <PinnedContextBar activeSessionId={activeSessionId} />
-          <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
-        </div>
-        <SideChatDrawer
-          isOpen={isDrawerOpen}
-          onClose={() => setIsDrawerOpen(false)}
-          sideChats={sideChat.sideChats}
-          activeSideChatId={sideChat.activeSideChatId}
-          onSelect={sideChat.setActive}
-          onCloseTab={onCloseTab}
-        />
-        {compareState && <BranchCompareModal compareState={compareState} onClose={closeCompare} />}
-      </DensityProvider>
-    </AgentChatStoreContext.Provider>
+    <WorkspaceVariantContext.Provider value={variant}>
+      <AgentChatStoreContext.Provider value={store}>
+        <DensityProvider>
+          <div data-tour-anchor="chat" className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel" style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}>
+            <PinnedContextBar activeSessionId={activeSessionId} />
+            <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
+          </div>
+          {variant === 'ide' && (
+            <IdePanels
+              sideChat={sideChat}
+              isDrawerOpen={isDrawerOpen}
+              setIsDrawerOpen={setIsDrawerOpen}
+              compareState={compareState}
+              closeCompare={closeCompare}
+              onCloseTab={onCloseTab}
+            />
+          )}
+        </DensityProvider>
+      </AgentChatStoreContext.Provider>
+    </WorkspaceVariantContext.Provider>
   );
 }

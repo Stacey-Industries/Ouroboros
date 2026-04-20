@@ -81,6 +81,11 @@ vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   ),
 }));
 
+// ChatOnlyHeaderControls requires AgentChatStoreContext — stub it out.
+vi.mock('./ChatOnlyHeaderControls', () => ({
+  ChatOnlyHeaderControls: () => <div data-testid="header-controls-stub" />,
+}));
+
 vi.mock('../../../hooks/useGitBranch', () => ({
   useGitBranch: () => ({ branch: 'main' }),
 }));
@@ -195,9 +200,9 @@ describe('ChatOnlyShell integration — mode-switch branch', () => {
     expect(screen.getByTestId('inner-app-layout')).toBeDefined();
   });
 
-  it('ChatOnlyShell has "Chat Mode" badge text', () => {
+  it('ChatOnlyShell title bar does not contain "Chat Mode" badge (removed Wave 43 Phase C)', () => {
     render(<BranchHarness initial={true} />);
     const titleBar = screen.getByTestId('chat-only-title-bar');
-    expect(titleBar.textContent).toContain('Chat Mode');
+    expect(titleBar.textContent).not.toContain('Chat Mode');
   });
 });
