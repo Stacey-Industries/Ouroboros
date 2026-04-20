@@ -1,5 +1,5 @@
 import log from 'electron-log/renderer';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { SWITCH_SIDEBAR_VIEW_EVENT, TOGGLE_SIDE_CHAT_EVENT } from '../../hooks/appEventNames';
@@ -302,7 +302,12 @@ export function AgentChatWorkspace({
 }: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
-  const store = useRef(createAgentChatStore()).current;
+  // Wave 43 hotfix: reuse an ancestor-provided store (e.g. ChatOnlyShell lifts
+  // the store so the title bar's ChatOnlyHeaderControls can read from it).
+  // Fall back to a locally-created store when mounted standalone (IDE shell).
+  const inheritedStore = useContext(AgentChatStoreContext);
+  const localStore = useRef(createAgentChatStore()).current;
+  const store = inheritedStore ?? localStore;
   useWorkspaceNotifications();
 
   const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);

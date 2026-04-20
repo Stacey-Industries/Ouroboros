@@ -8,10 +8,11 @@
  * chat-only mode (Wave 42 design).
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
+import { AgentChatStoreContext, createAgentChatStore } from '../../AgentChat/agentChatStore';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
@@ -63,22 +64,30 @@ export function ChatOnlyShell(): React.ReactElement {
   const { drawerOpen, diffOverlayOpen, toggleDrawer, closeDrawer, openDiffOverlay, closeDiffOverlay } =
     useShellState(pendingDiffCount);
 
+  // Wave 43 hotfix: lift the AgentChat store above the title bar so
+  // ChatOnlyHeaderControls (which lives in the title bar, outside
+  // AgentChatWorkspace) can subscribe to the same model/permission state.
+  // AgentChatWorkspace reuses this store via context instead of creating its own.
+  const store = useRef(createAgentChatStore()).current;
+
   return (
-    <div className="flex flex-col h-full w-full bg-surface-chat overflow-hidden">
-      <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} />
+    <AgentChatStoreContext.Provider value={store}>
+      <div className="flex flex-col h-full w-full bg-surface-chat overflow-hidden">
+        <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} />
 
-      <div className="relative flex-1 flex flex-col min-h-0">
-        <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
 
-        <main className="flex-1 flex flex-col min-h-0 items-center overflow-hidden">
-          <div className="w-full max-w-4xl flex flex-col h-full">
-            <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
-          </div>
-        </main>
+          <main className="flex-1 flex flex-col min-h-0 items-center overflow-hidden">
+            <div className="w-full max-w-4xl flex flex-col h-full">
+              <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
+            </div>
+          </main>
+        </div>
+
+        <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
+        <ChatOnlyDiffOverlay open={diffOverlayOpen} onClose={closeDiffOverlay} />
       </div>
-
-      <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
-      <ChatOnlyDiffOverlay open={diffOverlayOpen} onClose={closeDiffOverlay} />
-    </div>
+    </AgentChatStoreContext.Provider>
   );
 }
