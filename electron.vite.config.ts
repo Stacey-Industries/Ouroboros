@@ -68,7 +68,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/main/main.ts'),
-          graphWorker: resolve(__dirname, 'src/main/codebaseGraph/graphWorker.ts'),
+          indexingWorker: resolve(__dirname, 'src/main/codebaseGraph/indexingWorker.ts'),
           contextWorker: resolve(__dirname, 'src/main/orchestration/contextWorker.ts'),
           ptyHostMain: resolve(__dirname, 'src/main/ptyHost/ptyHostMain.ts'),
           extensionHostMain: resolve(__dirname, 'src/main/extensionHost/extensionHostMain.ts'),
@@ -128,11 +128,13 @@ export default defineConfig({
       watch: { ignored: watchIgnored }
     },
     optimizeDeps: {
-      // Force Vite to re-scan deps on dev cold starts. Prevents stale hash
-      // mismatches when deps change while the dev server isn't running
-      // (npm install, branch switches, force-kills during debugging).
-      // Disabled in production builds to avoid unnecessary re-bundling.
-      force: process.env.NODE_ENV !== 'production',
+      // Vite already invalidates its dep cache when package.json or lockfile
+      // changes, so forcing on every cold start is unnecessary and adds 20-30s
+      // to dev startup (full re-bundle of Monaco + Shiki languages). Opt in via
+      // FORCE_OPTIMIZE_DEPS=1 when you specifically need a clean re-scan
+      // (e.g. after `npm install` failed mid-run or branch switches that
+      // skipped lockfile updates).
+      force: process.env.FORCE_OPTIMIZE_DEPS === '1',
     },
     css: {
       postcss: resolve(__dirname, 'postcss.config.js')
