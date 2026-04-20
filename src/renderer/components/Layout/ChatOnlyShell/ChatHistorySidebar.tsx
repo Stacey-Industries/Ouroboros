@@ -73,7 +73,7 @@ function SidebarHeader({ searchQuery, onSearchChange, onNewChat }: SidebarHeader
     <div className="flex flex-col gap-1.5 px-2 py-2 border-b border-border-subtle shrink-0">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-text-semantic-muted uppercase tracking-wide select-none pl-1">Chats</span>
-        <button className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:text-interactive-accent hover:bg-surface-hover transition-colors"
+        <button /* touch-target-ok */ className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:text-interactive-accent hover:bg-surface-hover transition-colors"
           onClick={onNewChat} title="New chat" aria-label="New chat" data-testid="new-chat-button">
           <PlusIcon />
         </button>

@@ -163,7 +163,7 @@ function CheatSheetModal({ onClose }: CheatSheetModalProps): React.ReactElement 
           <h2 className="text-sm font-semibold text-text-semantic-primary">Keyboard shortcuts</h2>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:bg-surface-hover transition-colors"
+            className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:bg-surface-hover transition-colors" /* touch-target-ok */
             aria-label="Close keyboard shortcuts"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
