@@ -18,6 +18,7 @@ import type { Command } from './components/CommandPalette/types';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
 import { WebFolderBrowser } from './components/FileBrowser';
+import { ChatOnlyShellWrapper } from './components/Layout/ChatOnlyShell';
 import type { InnerAppLayoutProps } from './components/Layout/InnerAppLayout';
 import { InnerAppLayout } from './components/Layout/InnerAppLayout';
 import { LoadingScreen } from './components/Layout/LoadingScreen';
@@ -28,9 +29,11 @@ import { ApprovalProvider } from './contexts/ApprovalContext';
 import { FocusProvider } from './contexts/FocusContext';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { useChatWindowMode } from './hooks/useChatWindowMode';
 import { useConfig } from './hooks/useConfig';
 import { useExtensionThemes } from './hooks/useExtensionThemes';
 import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
+import { useImmersiveChatFlag } from './hooks/useImmersiveChatFlag';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
 import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
 import { useNativeStatusBar } from './hooks/useNativeStatusBar';
@@ -226,6 +229,12 @@ function InnerApp({
   persistTerminalSessions,
 }: InnerAppProps): React.ReactElement {
   const hooks = useInnerAppHooks(initialRecentProjects, keybindings);
+  const { isChatWindow } = useChatWindowMode();
+  const immersiveFlag = useImmersiveChatFlag();
+  const isImmersive = isChatWindow || immersiveFlag;
+
+  // Chat-only shell preserves providers above this branch so toggling does not re-mount state.
+  if (isImmersive) return <ChatOnlyShellWrapper />;
 
   return <InnerAppLayout {...buildInnerAppLayoutProps({
     ctx: hooks.ctx,
