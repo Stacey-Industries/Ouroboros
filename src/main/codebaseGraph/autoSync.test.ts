@@ -8,6 +8,27 @@
 import path from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// Hoisted mock — AutoSyncWatcher.triggerReindex routes through the shared
+// IndexingWorkerClient singleton (not pipeline.index directly). Stub the
+// worker client so the unit test can observe reindex invocations without
+// spawning a real worker thread.
+const mockRunIndex = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    success: true,
+    filesIndexed: 1,
+    filesSkipped: 0,
+    nodesCreated: 0,
+    edgesCreated: 0,
+    errors: [],
+    durationMs: 10,
+    incremental: true,
+    projectName: 'test',
+  }),
+)
+vi.mock('./indexingWorkerClient', () => ({
+  getIndexingWorkerClient: () => ({ runIndex: mockRunIndex }),
+}))
+
 import type { AutoSyncOptions } from './autoSync'
 import { AutoSyncWatcher } from './autoSync'
 import type { GraphDatabase } from './graphDatabase'
@@ -219,17 +240,19 @@ describe('initWithLaunchDiff', () => {
       mtime_ns: 1000000,
       size: 100,
     }
+    mockRunIndex.mockClear()
     const pipeline = makePipeline()
     const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb([hash]), pipeline }))
     await watcher.initWithLaunchDiff()
-    expect(pipeline.index).toHaveBeenCalled()
+    expect(mockRunIndex).toHaveBeenCalled()
   })
 
   it('does not trigger reindex when catalog is current', async () => {
+    mockRunIndex.mockClear()
     const pipeline = makePipeline()
     // No hashes → nothing stale
     const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb([]), pipeline }))
     await watcher.initWithLaunchDiff()
-    expect(pipeline.index).not.toHaveBeenCalled()
+    expect(mockRunIndex).not.toHaveBeenCalled()
   })
 })

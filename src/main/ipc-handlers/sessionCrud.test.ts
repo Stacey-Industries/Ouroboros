@@ -62,7 +62,10 @@ vi.mock('../session/sessionLifecycle', () => ({
 // ─── windowManager mock — createChatWindow returns a fake window ──────────────
 
 const mockCreateChatWindow = vi.hoisted(() => vi.fn(() => ({ id: 42 })));
-vi.mock('../windowManager', () => ({ createChatWindow: mockCreateChatWindow }));
+vi.mock('../windowManager', () => ({
+  createChatWindow: mockCreateChatWindow,
+  getWindow: vi.fn(() => undefined),
+}));
 
 // ─── sessionTrash mock ────────────────────────────────────────────────────────
 
