@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-20
+
+Major release: dual-shell UI model. The IDE now ships with two top-level
+shells that share the same main-process backend (sessions, threads, PTY,
+hooks, config). Toggle between them via `Ctrl+Alt+I`, the View menu, or
+Settings → Immersive chat mode.
+
+### Added
+- **Chat-only shell** (Wave 42): single-column immersive chat interface modelled
+  on Claude desktop, Codex, and piebald.ai. Mounts `AgentChatWorkspace` full-width
+  with a minimal title bar, off-canvas session drawer, minimal status bar, and
+  full-screen `DiffReviewPanel` overlay. Pop-out chat windows (`?mode=chat`)
+  route to this shell automatically.
+- `layout.immersiveChat` config flag; keyboard shortcut `Ctrl+Alt+I`;
+  Settings entry; dynamic "Switch to / Exit Chat Mode" View menu item.
+- `useImmersiveChatFlag` hook; `ChatOnlyShellWrapper` provider stack;
+  hoisted `TOGGLE_IMMERSIVE_CHAT_EVENT` + `TOGGLE_SESSION_DRAWER_EVENT`
+  constants in `appEventNames.ts`.
+- Lazy config store (`configStoreLazy`) with preflight sanitization
+  (`configPreflight`) for startup reliability under worker-thread contention
+  and transient schema-mismatch states.
+
+### Changed
+- `IdeToolBridge` is intentionally not mounted in the chat-only shell.
+  IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`,
+  `getUnsavedContent`, `getTerminalOutput`) return empty — matches Claude
+  desktop's behaviour. Option for cross-window delegation is deferred.
+- `AutoSyncWatcher.triggerReindex` routes through `getIndexingWorkerClient()`
+  singleton to avoid SQLite WAL-lock contention with initial-index workers
+  that previously froze the UI for 20–30s.
+- `handleActive` IPC handler falls back to `windowManager.getWindow(id)?.
+  activeSessionId` when the renderer hasn't explicitly called `sessionCrud:
+  activate`. Fixes session-bound actions for freshly-opened windows.
+- `preload.ts` fans out `config:externalChange` through a single underlying
+  `ipcRenderer.on` listener with a subscriber set, avoiding EventEmitter's
+  default-cap warning at 11 subscribers.
+- `optimizeDeps.force` in dev is now opt-in via `FORCE_OPTIMIZE_DEPS=1`
+  (was always-on). Saves 20–30s on dev cold starts.
+- `graphWorker` entry renamed to `indexingWorker` in electron-vite config
+  to match the source module name.
+
+### Fixed
+- `EdgeDropZones` now gates pointer events on `useDndContext().active` —
+  invisible edge zones no longer swallow all clicks/hovers/keyboard-focus
+  routing when no drag is in flight.
+- Worker-thread safety: `agentChatThreadStore` and its path constants are
+  now lazy / gated by `isMainThread`, so worker threads that transitively
+  import the module no longer crash on module load.
+- `ThreadStoreSqliteRuntime.initSchema` always runs column migrations
+  (idempotent via `hasCol`). Repairs DBs that were left in a half-migrated
+  state by a prior broken migration condition.
+- `indexingPipeline.ts` and `settingsEntries.ts` split along natural
+  seams to satisfy `max-lines:300` without `eslint-disable` directives.
+
+### Removed
+- Two `eslint-disable max-lines` directives that were added as a short-term
+  workaround. Both underlying files have been properly split.
+
 ## [1.0.1] - 2026-03-23
 
 ### Fixed
