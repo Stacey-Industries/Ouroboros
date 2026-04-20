@@ -161,7 +161,7 @@ App
 
 ### Chat-Only Shell (Wave 42)
 
-`ChatOnlyShell` is a second renderer shell that activates when `isChatWindow || immersiveFlag` is true in `InnerApp`. It replaces `InnerAppLayout` entirely at the renderer layer — the backend is unchanged (same session store, same threads, same PTY, same hooks pipe). The shell is a single-column layout: `ChatOnlyTitleBar` → `AgentChatWorkspace` (full-width, max-w-4xl centred) → `ChatOnlyStatusBar`, with an off-canvas `ChatOnlySessionDrawer` and a `ChatOnlyDiffOverlay` modal for batched diff review. Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) mount in `ChatOnlyShellWrapper`, which sits above the shell in the tree, so toggling between shells does not re-mount shared state. `IdeToolBridge` is intentionally absent — IDE-context tool queries return empty in chat-only mode, matching Claude desktop behaviour. The immersive flag is toggled via `Settings → General`, keyboard shortcut `Ctrl+Alt+I`, the View menu, or programmatically via the `agent-ide:toggle-immersive-chat` DOM event. See `src/renderer/components/Layout/ChatOnlyShell/` for the full implementation.
+`ChatOnlyShell` is a second renderer shell that activates when `isChatWindow || immersiveFlag` is true in `InnerApp`. It replaces `InnerAppLayout` entirely at the renderer layer — the backend is unchanged (same session store, same threads, same PTY, same hooks pipe). The shell is a single-column layout: `ChatOnlyTitleBar` (no border-b, no `ChatModeBadge`, model + permission chips via `ChatOnlyHeaderControls`) → `AgentChatWorkspace` (full-width, max-w-4xl centred, `variant="chat-only"` suppresses `SideChatDrawer` and `BranchCompareModal`, composer wrapped in `FloatingComposerContainer`) → `ChatOnlyStatusBar` (returns `null` when idle — no branch, no streaming, no pending diffs), with an off-canvas `ChatOnlySessionDrawer` and a `ChatOnlyDiffOverlay` modal for batched diff review. Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) mount in `ChatOnlyShellWrapper`, which sits above the shell in the tree, so toggling between shells does not re-mount shared state. `IdeToolBridge` is intentionally absent — IDE-context tool queries return empty in chat-only mode, matching Claude desktop behaviour. Streaming chunk deltas are rAF-batched via `useRafBatchedChunks` so `setStateMap` fires at most once per animation frame. The immersive flag is toggled via `Settings → General`, keyboard shortcut `Ctrl+Alt+I`, the View menu, or programmatically via the `agent-ide:toggle-immersive-chat` DOM event. See `src/renderer/components/Layout/ChatOnlyShell/` for the full implementation.
 
 ### Feature Folder Structure
 
@@ -560,8 +560,9 @@ Layout presets provide named configurations of panel sizes and visibility, resol
 | Preset | Panel configuration | When active |
 |---|---|---|
 | `ide-primary` | Sidebar open (220px), terminal open (280px), right sidebar open (300px) | Default for Electron desktop |
-| `chat-primary` | Sidebar collapsed, terminal collapsed, right sidebar maximized | When chat takes focus and sidebar/terminal are closed |
 | `mobile-primary` | Single-column, no sidebar, no terminal, no right sidebar as a pane — panels via drawer | When `layout.mobilePrimary === true` AND viewport < 768px |
+
+> **Wave 43 note:** `chat-primary` preset was retired in Wave 43 Phase A. Users who had `layout.chatPrimary === true` are migrated to `layout.immersiveChat === true` on first launch; the preset ID resolves to `ide-primary` as a fallback for any stored references.
 
 Preset resolution is in `src/renderer/hooks/useWorkspaceLayouts.ts`. Presets can be overridden by user drag-to-resize (persisted to `electron-store` key `panelSizes`). localStorage key `agent-ide:panel-sizes` is the synchronous cold-start read source (avoids flash on mount); electron-store is the durable cross-profile persistence target. Both are live and serve different roles — this is intentional, not a fallback.
 

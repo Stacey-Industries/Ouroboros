@@ -194,6 +194,8 @@ const isImmersive = isChatWindow || immersiveFlag;
 
 Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) live above the branch in `ChatOnlyShellWrapper` so they remain available in both shells without re-mounting on toggle. See `src/renderer/components/Layout/ChatOnlyShell/` for implementation details.
 
+**Chat-only polish (Wave 43):** composer is a `FloatingComposerContainer`; model + permission chips live in the title bar via `ChatOnlyHeaderControls`; streaming is rAF-batched via `useRafBatchedChunks`.
+
 ### Per-Window Project Isolation
 
 Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `sessionsData` (SQLite) and restored on relaunch — the old `windowSessions` electron-store key was migrated away in Wave 16.

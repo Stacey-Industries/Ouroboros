@@ -56,6 +56,9 @@ AgentChatWorkspace          ← mounts hooks, builds model
 | `MentionChip.tsx`                 | Pill UI for selected mentions in composer.                                                                                                                                                               |
 | `SlashCommandMenu.tsx`            | `/command` autocomplete menu (clear, compact, new, etc.).                                                                                                                                                |
 | `ChatControlsBar.tsx`             | Model selector, permission mode toggle, token usage display.                                                                                                                                             |
+| `FloatingComposerContainer.tsx`   | Pill wrapper giving the composer a raised surface (rounded, shadow). Sets `data-layout="floating-composer"` for test assertions. Used in chat-only mode. |
+| `WorkspaceVariantContext.ts`      | React context + type for `'ide' \| 'chat-only'` variant. Controls whether `SideChatDrawer` and `BranchCompareModal` mount. |
+| `useRafBatchedChunks.ts`          | rAF batching hook — coalesces streaming chunk deltas so `setStateMap` fires at most once per animation frame. Also exports `makeBatcher` (pure factory, testable without React). |
 
 ## Patterns
 
@@ -65,6 +68,7 @@ AgentChatWorkspace          ← mounts hooks, builds model
 - **Thread branching**: Threads can branch from any message. `buildThreadTree` constructs parent→child hierarchy from `branchInfo.parentThreadId`.
 - **Tool grouping**: Consecutive `tool_use` blocks are auto-grouped into collapsible sections with category summaries (e.g., "Read 3 files, Edit 1 file").
 - **HMR safety**: `AgentChatStreamingMessage` guards against HMR-broken imports with `?? (() => null)` fallback. Intentional — don't remove. This app runs inside itself during development.
+- **rAF-batched streaming**: `useAgentChatStreaming` routes chunk deltas through `useRafBatchedChunks`. On a fast model, 20–50 chunks arrive per frame; without batching each triggers a separate `setStateMap` call. `complete`/`error` chunks flush synchronously (no lag). `thread_snapshot` dispatches DOM events before batching — unchanged.
 
 ## Gotchas
 

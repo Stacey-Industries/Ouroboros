@@ -22,7 +22,7 @@ InnerAppLayout (wiring layer — providers, overlays, slot resolution)
 
 | File | Role |
 |---|---|
-| `ChatOnlyShell/` | **Immersive chat-only shell (Wave 42)** — `ChatOnlyShell`, `ChatOnlyTitleBar`, `ChatOnlyStatusBar`, `ChatOnlySessionDrawer`, `ChatOnlyDiffOverlay`. Replaces `InnerAppLayout` when `isChatWindow \|\| immersiveFlag`. `TerminalPane`, `CentrePaneConnected`, `RightSidebarTabs`, `Sidebar`, and `IdeToolBridge` are NOT mounted in this shell. |
+| `ChatOnlyShell/` | **Immersive chat-only shell (Wave 42–43)** — `ChatOnlyShell`, `ChatOnlyTitleBar`, `ChatOnlyStatusBar`, `ChatOnlySessionDrawer`, `ChatOnlyDiffOverlay`, `ChatOnlyHeaderControls`. Replaces `InnerAppLayout` when `isChatWindow \|\| immersiveFlag`. `TerminalPane`, `CentrePaneConnected`, `RightSidebarTabs`, `Sidebar`, and `IdeToolBridge` are NOT mounted in this shell. Wave 43: `ChatOnlyHeaderControls` in title bar; `FloatingComposerContainer` wraps composer; status bar conditionally null; `AgentChatWorkspace` receives `variant="chat-only"`. |
 | `AppLayout.tsx` | Structural shell — assembles panels, owns `useResizable` + `usePanelCollapse` state, handles DOM panel events |
 | `InnerAppLayout.tsx` | Wiring layer — wraps with providers (FileViewerManager, MultiBufferManager, DiffReviewProvider), resolves all slots, renders overlays (CommandPalette, FilePicker, SymbolSearch) |
 | `AppLayoutConnected.tsx` | Thin bridge — reads FileViewerManager context for status bar data |
