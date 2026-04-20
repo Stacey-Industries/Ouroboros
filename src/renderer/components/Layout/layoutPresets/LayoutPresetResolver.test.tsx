@@ -9,7 +9,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LayoutPresetResolverProvider, useLayoutPreset } from './LayoutPresetResolver';
-import { chatPrimaryPreset, idePrimaryPreset } from './presets';
+import { idePrimaryPreset } from './presets';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,11 +98,11 @@ describe('LayoutPresetResolverProvider', () => {
     });
   });
 
-  it('resolves correct preset when flag is on and valid sessionPresetId provided', async () => {
+  it('falls back to ide-primary for retired chat-primary sessionPresetId', async () => {
     mockElectronAPI({ layout: { presets: { v2: true } } });
     renderWithProvider({ sessionPresetId: 'chat-primary' });
     await waitFor(() => {
-      expect(screen.getByTestId('preset-id').textContent).toBe(chatPrimaryPreset.id);
+      expect(screen.getByTestId('preset-id').textContent).toBe(idePrimaryPreset.id);
     });
   });
 
@@ -114,20 +114,20 @@ describe('LayoutPresetResolverProvider', () => {
     });
   });
 
-  it('forcePresetId bypasses the feature flag and returns the forced preset', async () => {
-    // Flag is off — normally would return ide-primary — but forcePresetId overrides.
+  it('forcePresetId bypasses the feature flag (unknown id falls back to ide-primary)', async () => {
+    // Flag is off; forcePresetId with an unknown id resolves to ide-primary.
     mockElectronAPI({ layout: { presets: { v2: false } } });
-    renderWithProvider({ forcePresetId: 'chat-primary' });
+    renderWithProvider({ forcePresetId: 'nonexistent-preset' });
     await waitFor(() => {
-      expect(screen.getByTestId('preset-id').textContent).toBe(chatPrimaryPreset.id);
+      expect(screen.getByTestId('preset-id').textContent).toBe(idePrimaryPreset.id);
     });
   });
 
   it('forcePresetId takes precedence over sessionPresetId when both set', async () => {
     mockElectronAPI({ layout: { presets: { v2: true } } });
-    renderWithProvider({ sessionPresetId: 'ide-primary', forcePresetId: 'chat-primary' });
+    renderWithProvider({ sessionPresetId: 'mobile-primary', forcePresetId: 'ide-primary' });
     await waitFor(() => {
-      expect(screen.getByTestId('preset-id').textContent).toBe(chatPrimaryPreset.id);
+      expect(screen.getByTestId('preset-id').textContent).toBe(idePrimaryPreset.id);
     });
   });
 

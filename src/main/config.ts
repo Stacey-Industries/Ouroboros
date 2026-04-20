@@ -1,6 +1,7 @@
 import type Store from 'electron-store';
 
 import type { AgentChatSettings } from './agentChat/types';
+import { migrateChatPrimary } from './configMigrations';
 import { ensureStore, lazyStore } from './configStoreLazy';
 import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
@@ -408,8 +409,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. Wave 42 — immersiveChat. */
-  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean; immersiveChat?: boolean };
+  /** Wave 17 — layout preset engine. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. Wave 42 — immersiveChat. Wave 43 — chatPrimary retired; migrated to immersiveChat on startup. */
+  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean; immersiveChat?: boolean };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
@@ -448,9 +449,17 @@ export const store: Store<AppConfig> = lazyStore;
 // electron-store's underlying conf library reads the file on every .get().
 // This cache is invalidated on every write via setConfigValue.
 let configCache: AppConfig | null = null;
+// Wave 43 Phase A — run migration exactly once per process lifetime.
+let chatPrimaryMigrationDone = false;
 
 export function getConfig(): AppConfig {
-  if (!configCache) configCache = ensureStore().store;
+  if (!configCache) {
+    if (!chatPrimaryMigrationDone) {
+      chatPrimaryMigrationDone = true;
+      migrateChatPrimary(); // sets configCache = null via store write if migration fires
+    }
+    configCache = ensureStore().store;
+  }
   return configCache;
 }
 
@@ -463,3 +472,4 @@ export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConf
   ensureStore().set(key, value);
   configCache = null; // invalidate cache on write
 }
+

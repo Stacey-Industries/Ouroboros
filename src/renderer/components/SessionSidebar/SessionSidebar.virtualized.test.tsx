@@ -65,9 +65,6 @@ const mockApi = {
   files: {
     selectFolder: vi.fn().mockResolvedValue({ success: true, path: '/projects/new' }),
   },
-  config: {
-    getAll: vi.fn().mockResolvedValue({ layout: { chatPrimary: true } }),
-  },
   folderCrud: {
     list: vi.fn().mockResolvedValue({ success: true, folders: [] }),
     onChanged: vi.fn(() => vi.fn()),
@@ -79,7 +76,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockApi.sessionCrud.list.mockResolvedValue({ success: true, sessions: TWENTY_FIVE_SESSIONS });
   mockApi.sessionCrud.active.mockResolvedValue({ success: true, sessionId: null });
-  mockApi.config.getAll.mockResolvedValue({ layout: { chatPrimary: true } });
   mockApi.sessionCrud.onChanged.mockImplementation((cb: (s: SessionRecord[]) => void) => {
     onChangedCallback = cb;
     return vi.fn();

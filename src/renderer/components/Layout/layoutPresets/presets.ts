@@ -1,12 +1,14 @@
 /**
  * Built-in Layout Presets (Wave 17)
  *
- * Three presets are registered here:
+ * Two presets are registered here:
  *   ide-primary    — fully populated; matches today's default layout
- *   chat-primary   — SCAFFOLD ONLY; Wave 20 populates slot assignments
- *   mobile-primary — SCAFFOLD ONLY; Wave 32 populates responsive rules + slots
+ *   mobile-primary — Wave 32 populates responsive rules + slots
  *
- * ComponentDescriptor keys use the component's export name so a Wave 20
+ * Wave 43 Phase A: chat-primary preset retired. Users who had layout.chatPrimary
+ * are migrated to layout.immersiveChat on first load (see src/main/config.ts).
+ *
+ * ComponentDescriptor keys use the component's export name so a future
  * registry can resolve them without importing React components at this layer.
  */
 
@@ -39,40 +41,6 @@ export const idePrimaryPreset: LayoutPreset = {
     terminal: true,
   },
   // No responsive breakpoints for the default desktop layout.
-};
-
-// ---------------------------------------------------------------------------
-// chat-primary — SCAFFOLD for Wave 20
-//
-// TODO(Wave 20): Populate slot assignments so chat occupies editorContent
-//   and AgentCards moves to a collapsible right drawer. The rightSidebar max
-//   width ceiling should be lifted (Piebald #4) for this preset.
-// TODO(Wave 20): Set panelSizes.rightSidebar to ~480 (wider chat column).
-// ---------------------------------------------------------------------------
-
-export const chatPrimaryPreset: LayoutPreset = {
-  id: 'chat-primary',
-  name: 'Chat',
-  slots: {
-    sidebarHeader: { componentKey: 'ProjectPicker' },
-    sidebarContent: { componentKey: 'SessionSidebar' },
-    editorTabBar: { componentKey: 'EditorTabBar' },
-    editorContent: { componentKey: 'AgentChatWorkspace' },
-    agentCards: { componentKey: 'AgentSidebarContent' },
-    terminalContent: { componentKey: 'TerminalManager' },
-  },
-  // Wider left sidebar for session list; wider right for chat column.
-  panelSizes: {
-    leftSidebar: 260,
-    rightSidebar: 480,
-    terminal: 200,
-  },
-  // Terminal collapsed by default — chat is the primary surface.
-  visiblePanels: {
-    leftSidebar: true,
-    rightSidebar: true,
-    terminal: false,
-  },
 };
 
 // ---------------------------------------------------------------------------
@@ -121,7 +89,6 @@ export const mobilePrimaryPreset: LayoutPreset = {
 /** All built-in presets in priority order (ide-primary is the default). */
 export const BUILT_IN_PRESETS: LayoutPreset[] = [
   idePrimaryPreset,
-  chatPrimaryPreset,
   mobilePrimaryPreset,
 ];
 

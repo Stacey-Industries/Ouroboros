@@ -6,10 +6,11 @@
  *   - SessionVirtualList handles flat-row virtualisation for > 20 sessions.
  *   - Restore button wired through onRestored → refresh.
  *
- * Gated by the `layout.chatPrimary` feature flag — renders null when off.
+ * Wave 43 Phase A: removed layout.chatPrimary self-gate. Sidebar always
+ * renders when mounted — callers control mounting.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import { SESSION_SWITCH_EVENT } from '../../hooks/appEventNames';
 import type { SessionRecord } from '../../types/electron';
@@ -22,19 +23,6 @@ import type { SessionGroup } from './SessionVirtualList';
 import { SessionVirtualList } from './SessionVirtualList';
 import { useFolders } from './useFolders';
 import { useSessions } from './useSessions';
-
-// ─── Feature-flag helper ──────────────────────────────────────────────────────
-
-async function isChatPrimaryEnabled(): Promise<boolean> {
-  if (typeof window === 'undefined' || !window.electronAPI) return false;
-  try {
-    const cfg = await window.electronAPI.config.getAll();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (cfg as any)?.layout?.chatPrimary === true;
-  } catch {
-    return false;
-  }
-}
 
 // ─── Grouping helpers ─────────────────────────────────────────────────────────
 
@@ -85,14 +73,11 @@ function SessionListArea({
 
 // ─── SessionSidebar ───────────────────────────────────────────────────────────
 
-export function SessionSidebar(): React.ReactElement | null {
+export function SessionSidebar(): React.ReactElement {
   const { sessions, activeSessionId, isLoading, refresh } = useSessions();
   const { folders } = useFolders();
-  const [flagEnabled, setFlagEnabled] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { void isChatPrimaryEnabled().then(setFlagEnabled); }, []);
 
   const handleSessionClick = useCallback((sessionId: string) => {
     window.dispatchEvent(new CustomEvent(SESSION_SWITCH_EVENT, { detail: { sessionId } }));
@@ -107,8 +92,6 @@ export function SessionSidebar(): React.ReactElement | null {
     if (e.key === 'ArrowDown') rows[Math.min(idx + 1, rows.length - 1)]?.focus();
     else rows[Math.max(idx - 1, 0)]?.focus();
   }, []);
-
-  if (!flagEnabled) return null;
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-surface-panel">

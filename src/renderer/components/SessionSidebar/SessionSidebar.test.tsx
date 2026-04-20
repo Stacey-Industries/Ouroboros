@@ -42,9 +42,6 @@ const mockApi = {
   files: {
     selectFolder: vi.fn().mockResolvedValue({ success: true, path: '/projects/new' }),
   },
-  config: {
-    getAll: vi.fn().mockResolvedValue({ layout: { chatPrimary: true } }),
-  },
   folderCrud: {
     list: vi.fn().mockResolvedValue({ success: true, folders: [] }),
     onChanged: vi.fn(() => vi.fn()),
@@ -57,7 +54,6 @@ beforeEach(() => {
 
   mockApi.sessionCrud.list.mockResolvedValue({ success: true, sessions: [] });
   mockApi.sessionCrud.active.mockResolvedValue({ success: true, sessionId: null });
-  mockApi.config.getAll.mockResolvedValue({ layout: { chatPrimary: true } });
   mockApi.sessionCrud.onChanged.mockImplementation((cb: (s: SessionRecord[]) => void) => {
     onChangedCallback = cb;
     return vi.fn();
@@ -78,14 +74,7 @@ afterEach(() => {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('SessionSidebar', () => {
-  it('renders null when layout.chatPrimary flag is off', async () => {
-    mockApi.config.getAll.mockResolvedValue({ layout: { chatPrimary: false } });
-    const { container } = render(<SessionSidebar />);
-    await waitFor(() => expect(mockApi.config.getAll).toHaveBeenCalled());
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('renders the "Sessions" heading when flag is on', async () => {
+  it('renders the "Sessions" heading', async () => {
     render(<SessionSidebar />);
     await waitFor(() => expect(screen.getByText('Sessions')).toBeTruthy());
   });

@@ -86,10 +86,6 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
     'Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Ouroboros receives live tool events.',
   ],
   [
-    'Start in chat mode',
-    'Launches the IDE with the chat-primary layout preset. Equivalent to opening a dedicated chat window, but in the main window. Takes effect on next launch or reload.',
-  ],
-  [
     'Immersive chat mode',
     'Replaces the IDE shell with a single-column chat interface. Same backend, same features.',
   ],

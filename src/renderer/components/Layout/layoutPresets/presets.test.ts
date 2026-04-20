@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BUILT_IN_PRESETS,
-  chatPrimaryPreset,
   idePrimaryPreset,
   mobilePrimaryPreset,
   resolveBuiltInPreset,
@@ -23,8 +22,8 @@ const ALL_SLOTS: SlotName[] = [
 ];
 
 describe('BUILT_IN_PRESETS', () => {
-  it('contains exactly 3 presets', () => {
-    expect(BUILT_IN_PRESETS).toHaveLength(3);
+  it('contains exactly 2 presets (chat-primary retired in Wave 43)', () => {
+    expect(BUILT_IN_PRESETS).toHaveLength(2);
   });
 
   it('ide-primary is first (the default)', () => {
@@ -72,17 +71,6 @@ describe('idePrimaryPreset', () => {
 
   it('has no responsive breakpoints (desktop-only)', () => {
     expect(idePrimaryPreset.breakpoints).toBeUndefined();
-  });
-});
-
-describe('chatPrimaryPreset', () => {
-  it('has id "chat-primary"', () => {
-    expect(chatPrimaryPreset.id).toBe('chat-primary');
-  });
-
-  it('is populated in Wave 20 — slots include chat + session sidebar', () => {
-    const slotKeys = Object.keys(chatPrimaryPreset.slots);
-    expect(slotKeys.length).toBeGreaterThan(0);
   });
 });
 
@@ -134,8 +122,8 @@ describe('resolveBuiltInPreset', () => {
     expect(resolveBuiltInPreset('ide-primary')).toBe(idePrimaryPreset);
   });
 
-  it('resolves chat-primary by id', () => {
-    expect(resolveBuiltInPreset('chat-primary')).toBe(chatPrimaryPreset);
+  it('falls back to ide-primary for retired chat-primary id', () => {
+    expect(resolveBuiltInPreset('chat-primary')).toBe(idePrimaryPreset);
   });
 
   it('resolves mobile-primary by id', () => {

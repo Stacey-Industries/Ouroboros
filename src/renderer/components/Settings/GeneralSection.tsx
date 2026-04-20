@@ -31,14 +31,6 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
       </section>
       <section>
         <ToggleSwitch
-          checked={draft.layout?.chatPrimary === true}
-          onChange={(val) => onChange('layout', { ...(draft.layout ?? {}), chatPrimary: val })}
-          label="Start in chat mode"
-          description="Launches the IDE with the chat-primary layout preset. Equivalent to opening a dedicated chat window, but in the main window. Takes effect on next launch or reload."
-        />
-      </section>
-      <section>
-        <ToggleSwitch
           checked={draft.layout?.immersiveChat === true}
           onChange={(val) => onChange('layout', { ...(draft.layout ?? {}), immersiveChat: val })}
           label="Immersive chat mode"

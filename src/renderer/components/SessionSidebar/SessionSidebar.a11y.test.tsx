@@ -38,9 +38,6 @@ const mockApi = {
   files: {
     selectFolder: vi.fn().mockResolvedValue({ success: true, path: '/projects/new' }),
   },
-  config: {
-    getAll: vi.fn().mockResolvedValue({ layout: { chatPrimary: true } }),
-  },
   folderCrud: {
     list: vi.fn().mockResolvedValue({ success: true, folders: [] }),
     onChanged: vi.fn(() => vi.fn()),
@@ -66,7 +63,7 @@ afterEach(() => {
 describe('SessionSidebar — a11y', () => {
   it('has no axe violations when empty', async () => {
     const { container } = render(<SessionSidebar />);
-    await waitFor(() => expect(mockApi.config.getAll).toHaveBeenCalled());
+    await waitFor(() => expect(mockApi.sessionCrud.list).toHaveBeenCalled());
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
