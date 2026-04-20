@@ -100,6 +100,10 @@
   --surface-chat:       var(--palette-bg);        /* Single unified chat background */
   --surface-scrim-chat: rgba(0, 0, 0, 0.2);      /* Drawer backdrop — 0.2 opacity scrim */
 
+  /* User message bubble — replaces inline color-mix() */
+  --surface-user-bubble:        rgba(129, 140, 248, 0.10);  /* Dark default: accent tint */
+  --surface-user-bubble-border: rgba(129, 140, 248, 0.18);  /* Matching subtle border */
+
   /* ─── Tier 3: Component tokens ────────────────────────────────────────────
    * Scoped to specific complex components. Optional — only add when a
    * component needs a value that doesn't map cleanly to a Tier 2 token.

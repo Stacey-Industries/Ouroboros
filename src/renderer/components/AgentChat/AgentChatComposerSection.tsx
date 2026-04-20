@@ -238,25 +238,6 @@ function useActiveProfile(profileId: string | null): Profile | null {
   return profile;
 }
 
-// ─── Toggle button style ──────────────────────────────────────────────────────
-
-const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
-  fontSize: '11px',
-  padding: '2px 8px',
-  borderRadius: '4px',
-  border: '1px solid var(--border-semantic)',
-  background: active ? 'var(--interactive-accent-subtle)' : 'transparent',
-  cursor: 'pointer',
-  marginLeft: '4px',
-});
-
-const togglePanelStyle: React.CSSProperties = {
-  border: '1px solid var(--border-subtle)',
-  borderRadius: '6px',
-  margin: '2px 8px',
-  background: 'var(--surface-inset)',
-};
-
 // ─── Toggle state + sync hook ─────────────────────────────────────────────────
 
 interface ToggleState {
@@ -299,26 +280,36 @@ function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
   const { toggle } = p;
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0', gap: '6px' }}>
+      <div className="flex items-center px-2 pt-0.5 gap-1.5">
         <ComposerProfile activeProfileId={p.profileId} onSwitch={p.setProfileId} />
         {p.sessionId && (
           <>
-            <button type="button" style={toggleBtnStyle(toggle.showTools)} className="text-text-semantic-muted"
-              onClick={() => { toggle.setShowTools((v) => !v); toggle.setShowMcp(false); }}>Tools</button>
-            <button type="button" style={toggleBtnStyle(toggle.showMcp)} className="text-text-semantic-muted"
-              onClick={() => { toggle.setShowMcp((v) => !v); toggle.setShowTools(false); }}>MCP</button>
+            <button
+              type="button"
+              className={`text-xs px-2 py-0.5 rounded border border-border-semantic text-text-semantic-muted${toggle.showTools ? ' bg-interactive-accent-subtle' : ''}`}
+              onClick={() => { toggle.setShowTools((v) => !v); toggle.setShowMcp(false); }}
+            >
+              Tools
+            </button>
+            <button
+              type="button"
+              className={`text-xs px-2 py-0.5 rounded border border-border-semantic text-text-semantic-muted${toggle.showMcp ? ' bg-interactive-accent-subtle' : ''}`}
+              onClick={() => { toggle.setShowMcp((v) => !v); toggle.setShowTools(false); }}
+            >
+              MCP
+            </button>
           </>
         )}
         <ResearchModeToggle sessionId={p.sessionId || null} />
       </div>
       {toggle.showTools && p.sessionId && (
-        <div style={togglePanelStyle}>
+        <div className="border border-border-subtle rounded-md mx-2 my-0.5 bg-surface-inset">
           <ToolToggles sessionId={p.sessionId} profile={p.profile} toolOverrides={p.toolOverrides}
             onChange={(enabled) => { if (p.onChatOverridesChange && p.chatOverrides) p.onChatOverridesChange({ ...p.chatOverrides, toolOverrides: enabled }); }} />
         </div>
       )}
       {toggle.showMcp && p.sessionId && (
-        <div style={togglePanelStyle}>
+        <div className="border border-border-subtle rounded-md mx-2 my-0.5 bg-surface-inset">
           <McpChatToggles sessionId={p.sessionId} profile={p.profile} mcpServerOverrides={p.mcpServerOverrides} onChange={() => undefined} />
         </div>
       )}

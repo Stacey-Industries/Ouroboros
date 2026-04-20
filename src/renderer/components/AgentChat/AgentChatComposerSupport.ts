@@ -37,9 +37,6 @@ export function getTextareaStyle(hasAttachmentButton: boolean): React.CSSPropert
   };
 }
 
-export function getComposerRootClassName(isDragging: boolean): string {
-  return `pb-1 pt-2${isDragging ? ' ring-2 ring-inset ring-interactive-accent' : ''}`;
-}
 
 /* ---------- Attachment file readers ---------- */
 

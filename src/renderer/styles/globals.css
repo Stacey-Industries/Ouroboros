@@ -43,6 +43,8 @@
   --color-surface-scroll-track: var(--surface-scroll-track);
   --color-surface-chat: var(--surface-chat);
   --color-surface-scrim-chat: var(--surface-scrim-chat);
+  --color-surface-user-bubble: var(--surface-user-bubble);
+  --color-surface-user-bubble-border: var(--surface-user-bubble-border);
 
   --color-diff-add-bg: var(--diff-add-bg);
   --color-diff-del-bg: var(--diff-del-bg);

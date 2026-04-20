@@ -55,7 +55,7 @@ export function SendButton(props: {
         top: '6px',
         width: '28px',
         height: '28px',
-        color: props.canSend ? 'var(--text-primary)' : 'var(--text-muted)',
+        color: props.canSend ? 'var(--text-semantic-primary)' : 'var(--text-semantic-muted)',
       }}
     >
       {props.willQueue ? <QueueIcon /> : '\u2191'}
@@ -128,7 +128,7 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         rows={1}
         autoHeight
         className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-        style={{ ...baseStyle, width: '100%', maxHeight: 120 }}
+        style={{ ...baseStyle, width: '100%', maxHeight: 'calc(40vh)' /* 40vh: expands freely before scrolling */ }}
         onFocus={(e) => {
           e.currentTarget.style.borderColor = 'var(--interactive-accent)';
           e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';

@@ -120,7 +120,9 @@ export function AutocompleteDropdown(props: {
 export function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
   const saved = textarea.scrollTop;
   textarea.style.height = 'auto';
-  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), 120)}px`;
+  // Cap at 40vh to match the RichTextarea maxHeight; 320px as a numeric fallback
+  const maxH = Math.round(window.innerHeight * 0.4);
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), maxH)}px`;
   textarea.scrollTop = saved;
 }
 
@@ -262,6 +264,35 @@ export type ComposerFooterProps = {
   /** Estimated context tokens — used to drive the EffortEstimate pill. */
   contextTokens?: number;
 };
+
+/** Build ComposerFooterProps from AgentChatComposerProps — extracted to reduce AgentChatComposer.tsx line count. */
+export function buildComposerFooterProps(p: {
+  chatOverrides?: ChatOverrides;
+  codexModels?: CodexModelOption[];
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  modelProviders?: ModelProvider[];
+  routedBy?: string;
+  settingsModel?: string;
+  onChatOverridesChange?: (overrides: ChatOverrides) => void;
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  threadModelUsage?: ModelContextUsage[];
+  isStreaming?: boolean;
+}): ComposerFooterProps {
+  return {
+    chatOverrides: p.chatOverrides,
+    codexModels: p.codexModels,
+    codexSettingsModel: p.codexSettingsModel,
+    defaultProvider: p.defaultProvider,
+    modelProviders: p.modelProviders,
+    routedBy: p.routedBy,
+    settingsModel: p.settingsModel,
+    onChatOverridesChange: p.onChatOverridesChange,
+    streamingTokenUsage: p.streamingTokenUsage,
+    threadModelUsage: p.threadModelUsage,
+    isStreaming: p.isStreaming,
+  };
+}
 
 export function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
   const variant = useWorkspaceVariant();

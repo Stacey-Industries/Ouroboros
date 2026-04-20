@@ -17,15 +17,16 @@ import {
 } from './AgentChatComposerHooks';
 import {
   AttachmentChipsBar,
+  buildComposerFooterProps,
   ComposerContextBar,
   ComposerFooter,
-  type ComposerFooterProps,
   ComposerInput,
   ComposerMenus,
 } from './AgentChatComposerParts';
-import { getComposerRootClassName, noop } from './AgentChatComposerSupport';
+import { noop } from './AgentChatComposerSupport';
 import { AgentChatContextBar } from './AgentChatContextBar';
 import type { ChatOverrides } from './ChatControlsBar';
+import { FloatingComposerContainer } from './FloatingComposerContainer';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
 import { QUOTE_EVENT_NAME, type QuoteEventDetail } from './quoteComposer';
@@ -287,22 +288,6 @@ function useQuoteListener(draft: string, onChange: (value: string) => void): voi
 
 /* ---------- AgentChatComposer ---------- */
 
-function buildFooterProps(p: AgentChatComposerProps): ComposerFooterProps {
-  return {
-    chatOverrides: p.chatOverrides,
-    codexModels: p.codexModels,
-    codexSettingsModel: p.codexSettingsModel,
-    defaultProvider: p.defaultProvider,
-    modelProviders: p.modelProviders,
-    routedBy: p.routedBy,
-    settingsModel: p.settingsModel,
-    onChatOverridesChange: p.onChatOverridesChange,
-    streamingTokenUsage: p.streamingTokenUsage,
-    threadModelUsage: p.threadModelUsage,
-    isStreaming: p.isStreaming,
-  };
-}
-
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
@@ -310,22 +295,23 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } =
     composerProps;
   return (
-    <div
-      data-layout="agent-chat-composer"
-      className={getComposerRootClassName(attachmentHandlers.isDragging)}
-      onDragOver={attachmentHandlers.handleDragOver}
-      onDragLeave={attachmentHandlers.handleDragLeave}
-      onDrop={attachmentHandlers.handleDrop}
-    >
-      <ComposerBody state={state} composerProps={composerProps} />
-      <ComposerContextBar
-        streamingTokenUsage={streamingTokenUsage}
-        threadModelUsage={threadModelUsage}
-        selectedModel={chatOverrides?.model}
-        settingsModel={settingsModel}
-        codexModels={codexModels}
-      />
-      <ComposerFooter {...buildFooterProps(composerProps)} />
+    <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
+      <FloatingComposerContainer
+        isDragging={attachmentHandlers.isDragging}
+        onDragOver={attachmentHandlers.handleDragOver}
+        onDragLeave={attachmentHandlers.handleDragLeave}
+        onDrop={attachmentHandlers.handleDrop}
+      >
+        <ComposerBody state={state} composerProps={composerProps} />
+        <ComposerContextBar
+          streamingTokenUsage={streamingTokenUsage}
+          threadModelUsage={threadModelUsage}
+          selectedModel={chatOverrides?.model}
+          settingsModel={settingsModel}
+          codexModels={codexModels}
+        />
+        <ComposerFooter {...buildComposerFooterProps(composerProps)} />
+      </FloatingComposerContainer>
     </div>
   );
 }

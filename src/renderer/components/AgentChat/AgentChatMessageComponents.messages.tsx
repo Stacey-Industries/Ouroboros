@@ -16,13 +16,16 @@ import { ReactionBar } from './ReactionBar';
 import { StreamingStatusMessage } from './streamingUtils';
 import { useSelectionQuote } from './useSelectionQuote';
 
-const USER_BUBBLE_STYLE: React.CSSProperties = {
-  backgroundColor: 'color-mix(in srgb, var(--surface-overlay) 38%, transparent)',
-  border: '1px solid color-mix(in srgb, var(--border-semantic-subtle) 70%, transparent)',
-  boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 35%, transparent)',
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
-};
+/**
+ * Token-driven class string for user message bubbles.
+ * Tokens `--surface-user-bubble` and `--surface-user-bubble-border` are defined
+ * in tokens.css and registered in globals.css @theme.
+ * `backdrop-blur-sm` provides the glass effect without inline styles.
+ */
+const USER_BUBBLE_CLASS =
+  'bg-surface-user-bubble border border-surface-user-bubble-border ' +
+  'text-text-semantic-primary px-3.5 py-2.5 rounded-xl rounded-br-sm ' +
+  'backdrop-blur-sm shadow-sm';
 
 export interface UserMessageProps {
   message: AgentChatMessageRecord;
@@ -62,10 +65,7 @@ function handleEditKeyDown(
 function UserMessageEditMode(props: EditModeProps): React.ReactElement {
   return (
     <div className="flex justify-end">
-      <div
-        className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-text-semantic-primary"
-        style={USER_BUBBLE_STYLE}
-      >
+      <div className={`max-w-[85%] ${USER_BUBBLE_CLASS}`}>
         <textarea
           autoFocus
           value={props.editDraft}
@@ -118,10 +118,7 @@ function UserMessageBubble(props: UserBubbleProps): React.ReactElement {
         onBranch={props.onBranch}
         onRerunSuccess={props.onRerunSuccess}
       />
-      <div
-        className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-text-semantic-primary"
-        style={USER_BUBBLE_STYLE}
-      >
+      <div className={`max-w-[85%] ${USER_BUBBLE_CLASS}`}>
         <div className="whitespace-pre-wrap text-sm leading-relaxed">
           {props.message.content || ' '}
         </div>

@@ -31,7 +31,7 @@ export function AgentChatContextBar({
   onRemoveFile,
   contextSummary,
 }: AgentChatContextBarProps): React.ReactElement | null {
-  if (pinnedFiles.length === 0) return null;
+  if (pinnedFiles.length === 0 && !contextSummary) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pb-1 pt-1.5">
