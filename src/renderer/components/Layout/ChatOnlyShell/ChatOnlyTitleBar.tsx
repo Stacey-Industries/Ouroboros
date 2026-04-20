@@ -22,7 +22,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
-import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
@@ -191,10 +190,9 @@ export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTi
         sidebarMode={sidebarMode}
         onCycleSidebarMode={onCycleSidebarMode}
       />
-      <ChatOnlyHeaderControls />
-      {/* Drag spacer: carries the window-drag region between the chips and the
-          right-side cluster. Using a dedicated div keeps pointer events on the
-          buttons fully functional — portaled popovers are never inside this div. */}
+      {/* Wave 44 Phase D: model + permission chips moved to ChatStatusChipRow
+          below the composer. Title bar is now minimal: left cluster, drag
+          spacer, right cluster (exit + window controls). */}
       <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
       <TitleBarRight />
     </header>

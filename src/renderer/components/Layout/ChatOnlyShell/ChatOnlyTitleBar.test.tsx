@@ -6,7 +6,8 @@
  * Phase C changes:
  *  - ChatModeBadge removed (was Wave 42).
  *  - "Exit chat mode" button removed (moved to View menu only).
- *  - ChatOnlyHeaderControls mounted inline (mocked here to avoid store dependency).
+ *  - ChatOnlyHeaderControls no longer mounted in title bar (Wave 44 Phase D).
+ *    Model + permission chips live in ChatStatusChipRow below the composer.
  *
  * Wave 44 Phase A changes:
  *  - "Exit chat mode" icon button restored to the right of the header controls.
@@ -88,9 +89,9 @@ describe('ChatOnlyTitleBar', () => {
     expect(btn.textContent?.trim()).toBe('');
   });
 
-  it('mounts ChatOnlyHeaderControls inline', () => {
+  it('does NOT mount ChatOnlyHeaderControls in title bar (Wave 44 Phase D)', () => {
     render(<ChatOnlyTitleBar {...defaultProps} />);
-    expect(screen.getByTestId('header-controls-stub')).toBeDefined();
+    expect(screen.queryByTestId('header-controls-stub')).toBeNull();
   });
 
   it('has no border-b class on the header element', () => {

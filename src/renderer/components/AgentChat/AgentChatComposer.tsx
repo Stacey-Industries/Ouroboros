@@ -7,6 +7,7 @@ import type {
   ModelProvider,
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
+import { ChatStatusChipRow } from '../Layout/ChatOnlyShell/ChatStatusChipRow';
 import {
   pickMenuFields,
   useComposerAutocompleteReset,
@@ -32,6 +33,7 @@ import { MentionChipsBar } from './MentionChip';
 import { QUOTE_EVENT_NAME, type QuoteEventDetail } from './quoteComposer';
 import { buildChatSlashCommands, type SlashCommandContext } from './SlashCommandMenu';
 import type { PinnedFile } from './useAgentChatContext';
+import { useWorkspaceVariant } from './WorkspaceVariantContext';
 
 export type AgentChatComposerProps = {
   canSend: boolean;
@@ -294,6 +296,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const { attachmentHandlers } = state;
   const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } =
     composerProps;
+  const variant = useWorkspaceVariant();
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
       <FloatingComposerContainer
@@ -312,6 +315,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
         />
         <ComposerFooter {...buildComposerFooterProps(composerProps)} />
       </FloatingComposerContainer>
+      {variant === 'chat-only' && <ChatStatusChipRow />}
     </div>
   );
 }

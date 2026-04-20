@@ -10,7 +10,7 @@
  *  - No "Exit chat mode" text button in title bar (moved to View menu).
  *  - Status bar returns null when there is no branch, no tokens, no diffs.
  *  - Composer is wrapped in `FloatingComposerContainer` (data-layout attribute).
- *  - `ChatOnlyHeaderControls` is rendered in the title bar area.
+ *  - `ChatOnlyHeaderControls` NOT rendered in title bar (Wave 44 Phase D).
  *  - Drawer backdrop uses scrim token (CSS var on backdrop element).
  *  - `SideChatDrawer` and `BranchCompareModal` are NOT in the tree
  *    when `AgentChatWorkspace` receives `variant="chat-only"`.
@@ -144,11 +144,11 @@ describe('ChatOnlyShell — Wave 43 polish integration', () => {
     expect(floatingComposer.getAttribute('data-layout')).toBe('floating-composer');
   });
 
-  it('ChatOnlyHeaderControls is rendered in the title bar', () => {
+  it('ChatOnlyHeaderControls no longer rendered in the title bar (Wave 44 Phase D)', () => {
     render(<ChatOnlyShell />);
     const titleBar = screen.getByTestId('chat-only-title-bar');
     const controls = titleBar.querySelector('[data-testid="header-controls"]');
-    expect(controls).not.toBeNull();
+    expect(controls).toBeNull();
   });
 
   it('SideChatDrawer is not in the tree (excluded by variant="chat-only")', () => {
