@@ -62,6 +62,7 @@ vi.mock('@dnd-kit/core', () => ({
   useSensors: vi.fn((...s: unknown[]) => s),
   useDroppable: vi.fn(() => ({ setNodeRef: vi.fn(), isOver: false })),
   useDraggable: vi.fn(() => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn(), isDragging: false })),
+  useDndContext: vi.fn(() => ({ active: null })),
 }));
 
 vi.mock('@dnd-kit/sortable', () => ({

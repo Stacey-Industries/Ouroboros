@@ -40,6 +40,7 @@ const mockUseDroppable = vi.fn((opts: { id: string }): UseDroppableReturn => {
 
 vi.mock('@dnd-kit/core', () => ({
   useDroppable: (opts: { id: string }) => mockUseDroppable(opts),
+  useDndContext: () => ({ active: null }),
 }));
 
 import { EdgeDropZones } from './EdgeDropZones';

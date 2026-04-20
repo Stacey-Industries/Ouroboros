@@ -12,7 +12,7 @@
  * pointer is hovering that region.
  */
 
-import { useDroppable } from '@dnd-kit/core';
+import { useDndContext, useDroppable } from '@dnd-kit/core';
 import React from 'react';
 
 import type { EdgeDirection } from './layoutPresets/splitSlot';
@@ -47,13 +47,19 @@ function EdgeZone({ slotName, edge }: EdgeZoneProps): React.ReactElement {
   // Drop ID format: "{slotName}:edge:{direction}"
   const id = `${slotName}:edge:${edge}`;
   const { setNodeRef, isOver } = useDroppable({ id });
+  // Only capture pointer events while a drag is active. Without this gate the
+  // zones sit on top of the UI at all times (z-40, 25% of each edge) and
+  // swallow every click/hover, breaking buttons, dropdowns, hovers, and
+  // keyboard focus routing. See DnD debugging notes in the Wave 41 handoff.
+  const { active } = useDndContext();
+  const pointerEvents = active ? 'pointer-events-auto' : 'pointer-events-none';
 
   return (
     <div
       ref={setNodeRef}
       data-edge-drop={id}
       aria-hidden="true"
-      className={`pointer-events-auto absolute z-40 ${EDGE_POSITION[edge]}`}
+      className={`${pointerEvents} absolute z-40 ${EDGE_POSITION[edge]}`}
     >
       {isOver && (
         <div

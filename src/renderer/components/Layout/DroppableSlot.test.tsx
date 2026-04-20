@@ -15,6 +15,7 @@ vi.mock('@dnd-kit/core', () => ({
     setNodeRef: vi.fn(),
     isOver: false,
   })),
+  useDndContext: vi.fn(() => ({ active: null })),
 }));
 
 import { useDroppable } from '@dnd-kit/core';
