@@ -97,7 +97,8 @@
   --surface-scroll-track: rgba(255, 255, 255, 0.03);
 
   /* Chat-only shell */
-  --surface-chat:       var(--palette-bg);        /* Single unified chat background */
+  --surface-chat:       var(--palette-bg);        /* Initial default — overridden per-theme at runtime by applySemanticTokens */
+                                                  /* (glass sets this to opaque #0e0e12 — --palette-bg is transparent there) */
   --surface-scrim-chat: rgba(0, 0, 0, 0.2);      /* Drawer backdrop — 0.2 opacity scrim */
 
   /* User message bubble — replaces inline color-mix() */

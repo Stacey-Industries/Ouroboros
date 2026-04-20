@@ -77,6 +77,12 @@ export function applySemanticTokens(root: HTMLElement, colors: Theme['colors']):
   root.style.setProperty('--status-warning', colors.warning);
   root.style.setProperty('--status-error', colors.error);
   root.style.setProperty('--status-info', colors.accent);
+  // --surface-chat must be opaque in every theme. In glass, --palette-bg is
+  // 'transparent' (intentional Mica pass-through for the IDE shell), which
+  // leaks through the chat-only title bar and areas outside the conversation.
+  // Override to a solid dark value for glass; other themes use their opaque bg.
+  const chatBg = colors.bg === 'transparent' ? '#0e0e12' : colors.bg; // hardcoded: glass fallback — no opaque palette token exists in glass; this is the sole injection point for a solid chat-surface
+  root.style.setProperty('--surface-chat', chatBg);
 }
 
 export function applyComponentTokens(root: HTMLElement, colors: Theme['colors']): void {

@@ -130,8 +130,10 @@ function SelectPillMenu({
   value: string; onSelect: (value: string) => void; style?: React.CSSProperties; ref?: React.Ref<HTMLDivElement>;
 }): React.ReactElement {
   return (
+    // WebkitAppRegion: 'no-drag' ensures this portaled popover receives pointer
+    // events even when it renders over a window-drag region (e.g. the title bar).
     <div ref={ref} role="listbox" className="z-[9999] max-h-[280px] overflow-x-hidden overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay py-1 shadow-xl"
-      style={{ backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)', ...style }}>
+      style={{ backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)', ...style, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}>
       {defaultOption && <SelectPillItem item={defaultOption} selected={value === defaultOption.value} onSelect={onSelect} />}
       {groups && <SelectPillGroupItems groups={groups} value={value} onSelect={onSelect} />}
       {options?.map((item) => <SelectPillItem key={item.value} item={item} selected={value === item.value} onSelect={onSelect} />)}
