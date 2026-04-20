@@ -6,9 +6,11 @@ import { useCallback,useEffect } from 'react';
 
 import type { WorkspaceLayout } from '../types/electron';
 import {
+  OPEN_SETTINGS_EVENT,
   OPEN_USAGE_PANEL_EVENT,
   TOGGLE_IMMERSIVE_CHAT_EVENT,
   TOGGLE_LAYOUT_MODE_EVENT,
+  TOGGLE_SHORTCUT_CHEATSHEET_EVENT,
   TOGGLE_SIDE_CHAT_EVENT,
 } from './appEventNames';
 
@@ -99,6 +101,38 @@ function handleImmersiveChatToggle(e: KeyboardEvent): boolean {
   return false;
 }
 
+// Ctrl+, — open Settings modal (chat-only mode; no collision with IDE bindings).
+function handleOpenSettings(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === ',') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_EVENT));
+    return true;
+  }
+  return false;
+}
+
+// Ctrl+/ — toggle keyboard cheat-sheet (chat-only; no IDE collision).
+function handleToggleCheatSheet(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '/') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent(TOGGLE_SHORTCUT_CHEATSHEET_EVENT));
+    return true;
+  }
+  return false;
+}
+
+// Ctrl+K — open command palette via existing 'agent-ide:command-palette' event.
+// Note: Ctrl+Shift+P is the primary palette shortcut (handled in useCommandPalette).
+// Ctrl+K is an additive alias for chat-only discoverability.
+function handleOpenCommandPalette(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('agent-ide:command-palette'));
+    return true;
+  }
+  return false;
+}
+
 export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -106,6 +140,9 @@ export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
       if (handleLayoutModeToggle(e)) return;
       if (handleSideChatToggle(e)) return;
       if (handleImmersiveChatToggle(e)) return;
+      if (handleOpenSettings(e)) return;
+      if (handleToggleCheatSheet(e)) return;
+      if (handleOpenCommandPalette(e)) return;
       const reverseMap = buildReverseMap(deps.keybindings);
       const combo = buildComboFromEvent(e);
       const action = reverseMap.get(combo);

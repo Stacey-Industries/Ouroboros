@@ -8,6 +8,10 @@
  * ChatHistorySidebar as left rail. Mode cycles pinned → collapsed → hidden.
  * When hidden, ChatOnlySessionDrawer overlay is kept as fallback.
  *
+ * Wave 44 Phase C: mounts ChatOnlySettingsOverlay (Ctrl+,), CommandPalette
+ * (Ctrl+K), and KeyboardShortcutCheatSheet (Ctrl+/) at shell level so they
+ * are reachable from chat-only mode.
+ *
  * IdeToolBridge not mounted — IDE-context tool queries return empty in
  * chat-only mode (Wave 42 design).
  */
@@ -18,12 +22,17 @@ import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
 import { AgentChatStoreContext, createAgentChatStore } from '../../AgentChat/agentChatStore';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
+import { CommandPalette } from '../../CommandPalette/CommandPalette';
+import { useCommandPalette } from '../../CommandPalette/useCommandPalette';
+import { useCommandRegistry } from '../../CommandPalette/useCommandRegistry';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { ChatHistorySidebar } from './ChatHistorySidebar';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySessionDrawer } from './ChatOnlySessionDrawer';
+import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
+import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
 
 function usePendingDiffCount(): number {
@@ -78,32 +87,82 @@ export function ChatOnlyShell(): React.ReactElement {
   // AgentChatWorkspace reuses this store via context instead of creating its own.
   const store = useRef(createAgentChatStore()).current;
 
+  // Wave 44 Phase C: command palette wired at shell level (Ctrl+K).
+  // useCommandPalette handles 'agent-ide:command-palette' DOM event + Ctrl+Shift+P.
+  const { isOpen: paletteOpen, close: closePalette } = useCommandPalette();
+  const { commands, recentIds, execute } = useCommandRegistry();
+
   return (
     <AgentChatStoreContext.Provider value={store}>
       <div className="flex flex-col h-full w-full bg-surface-chat overflow-hidden">
         <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} onCycleSidebarMode={cycleMode} sidebarMode={mode} />
-
-        {/* ChatOnlyBody: horizontal flex row — sidebar rail + main content */}
-        <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-only-body">
-          <ChatHistorySidebar mode={mode} />
-
-          <div className="relative flex-1 flex flex-col min-h-0">
-            {/* Hidden-mode fallback: session drawer overlay */}
-            {mode === 'hidden' && (
-              <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
-            )}
-
-            <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="w-full max-w-4xl flex flex-col flex-1 min-h-0 mx-auto">
-                <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
-              </div>
-            </main>
-          </div>
-        </div>
-
+        <ChatOnlyBody
+          mode={mode}
+          drawerOpen={drawerOpen}
+          closeDrawer={closeDrawer}
+          projectRoot={projectRoot}
+        />
         <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
         <ChatOnlyDiffOverlay open={diffOverlayOpen} onClose={closeDiffOverlay} />
+        <ChatOnlyOverlays
+          paletteOpen={paletteOpen}
+          closePalette={closePalette}
+          commands={commands}
+          recentIds={recentIds}
+          execute={execute}
+        />
       </div>
     </AgentChatStoreContext.Provider>
+  );
+}
+
+interface ChatOnlyBodyProps {
+  mode: ReturnType<typeof useChatSidebarMode>['mode'];
+  drawerOpen: boolean;
+  closeDrawer: () => void;
+  projectRoot: string | null;
+}
+
+function ChatOnlyBody({ mode, drawerOpen, closeDrawer, projectRoot }: ChatOnlyBodyProps): React.ReactElement {
+  return (
+    <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-only-body">
+      <ChatHistorySidebar mode={mode} />
+      <div className="relative flex-1 flex flex-col min-h-0">
+        {mode === 'hidden' && (
+          <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
+        )}
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="w-full max-w-4xl flex flex-col flex-1 min-h-0 mx-auto">
+            <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+interface ChatOnlyOverlaysProps {
+  paletteOpen: boolean;
+  closePalette: () => void;
+  commands: ReturnType<typeof useCommandRegistry>['commands'];
+  recentIds: ReturnType<typeof useCommandRegistry>['recentIds'];
+  execute: ReturnType<typeof useCommandRegistry>['execute'];
+}
+
+function ChatOnlyOverlays({
+  paletteOpen, closePalette, commands, recentIds, execute,
+}: ChatOnlyOverlaysProps): React.ReactElement {
+  return (
+    <>
+      <ChatOnlySettingsOverlay />
+      <KeyboardShortcutCheatSheet />
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={closePalette}
+        commands={commands}
+        recentIds={recentIds}
+        onExecute={execute}
+      />
+    </>
   );
 }

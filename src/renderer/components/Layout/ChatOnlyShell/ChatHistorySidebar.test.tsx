@@ -115,9 +115,9 @@ describe('ChatHistorySidebar', () => {
       expect(screen.getByTestId('new-chat-button')).toBeDefined();
     });
 
-    it('renders the footer placeholder for Phase C user menu', () => {
+    it('mounts ChatOnlyUserMenu in the footer slot (Phase C)', () => {
       render(<ChatHistorySidebar mode="pinned" />);
-      expect(screen.getByTestId('sidebar-footer-placeholder')).toBeDefined();
+      expect(screen.getByTestId('user-menu-trigger')).toBeDefined();
     });
 
     it('new-chat button calls onSelectThread with "new"', () => {

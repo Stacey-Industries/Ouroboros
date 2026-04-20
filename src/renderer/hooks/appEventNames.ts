@@ -45,3 +45,6 @@ export const SHOW_SYSTEM_PROMPT_EVENT = 'agent-ide:show-system-prompt';
 export const TOGGLE_IMMERSIVE_CHAT_EVENT = 'agent-ide:toggle-immersive-chat';
 export const TOGGLE_SESSION_DRAWER_EVENT = 'agent-ide:toggle-session-drawer';
 export const CYCLE_CHAT_SIDEBAR_MODE_EVENT = 'agent-ide:cycle-chat-sidebar-mode';
+// Wave 44 Phase C — chat-only modal overlays
+export const OPEN_SETTINGS_EVENT = 'agent-ide:open-settings-modal';
+export const TOGGLE_SHORTCUT_CHEATSHEET_EVENT = 'agent-ide:toggle-shortcut-cheatsheet';

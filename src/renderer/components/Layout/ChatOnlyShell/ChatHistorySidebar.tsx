@@ -20,6 +20,7 @@ import type { AgentChatThreadRecord } from '../../../types/electron';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
 import { BranchRenameDialog } from '../../AgentChat/BranchRenameDialog';
 import { ChatHistoryList } from './ChatHistoryList';
+import { ChatOnlyUserMenu } from './ChatOnlyUserMenu';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -112,8 +113,8 @@ function PinnedBody(props: PinnedBodyProps): React.ReactElement {
           onSelectThread={props.onSelectThread} onDeleteThread={props.onDeleteThread}
           onRenameThread={props.onRenameThread} />
       </div>
-      {/* Phase C: ChatOnlyUserMenu mounts here */}
-      <div className="shrink-0 border-t border-border-subtle px-3 py-2" data-testid="sidebar-footer-placeholder" />
+      {/* Wave 44 Phase C: user menu in sidebar footer */}
+      <ChatOnlyUserMenu />
     </div>
   );
 }
