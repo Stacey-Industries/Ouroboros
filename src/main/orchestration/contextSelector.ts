@@ -233,6 +233,19 @@ function buildPageRankSeeds(
   return seeds
 }
 
+function applyPageRankScores(
+  candidates: Map<string, MutableCandidate>,
+  normalized: Map<string, number>,
+): void {
+  for (const [filePath, score] of normalized) {
+    if (score <= 0) continue
+    const weight = Math.round(score * PAGERANK_SCALE)
+    const candidate = getOrCreateCandidate(candidates, filePath)
+    candidate.pagerank_score = score
+    if (weight > 0) addReason(candidate, 'pagerank', `PageRank score: ${score.toFixed(3)}`, weight)
+  }
+}
+
 function tryApplyPageRank(
   candidates: Map<string, MutableCandidate>,
   selection: NormalizedSelection,
@@ -247,15 +260,11 @@ function tryApplyPageRank(
     if (!db) return
     const seeds = buildPageRankSeeds(selection, candidates, provenanceEnabled)
     const project = workspaceRoots[0] ?? ''
+    const tPR = Date.now()
     const prResult = computePageRank(db, { project, seeds, graphVersion: String(Date.now()) })
-    const normalized = normalizePageRankScores(prResult.scores)
-    for (const [filePath, score] of normalized) {
-      if (score <= 0) continue
-      const weight = Math.round(score * PAGERANK_SCALE)
-      const candidate = getOrCreateCandidate(candidates, filePath)
-      candidate.pagerank_score = score
-      if (weight > 0) addReason(candidate, 'pagerank', `PageRank score: ${score.toFixed(3)}`, weight)
-    }
+    // eslint-disable-next-line no-console -- temporary diagnostic, remove after freeze-source confirmed
+    console.warn(`[trace:computePageRank] ${Date.now() - tPR}ms fromCache=${prResult.fromCache ?? false} iters=${prResult.iterations ?? 0} seeds=${seeds.length}`)
+    applyPageRankScores(candidates, normalizePageRankScores(prResult.scores))
   } catch {
     // PageRank is best-effort — never fail context selection
   }

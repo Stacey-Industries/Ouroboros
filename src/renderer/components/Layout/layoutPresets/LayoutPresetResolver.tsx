@@ -105,6 +105,17 @@ export async function readMobilePrimaryFlag(): Promise<boolean> {
   }
 }
 
+export async function readChatPrimaryFlag(): Promise<boolean> {
+  if (!hasElectronAPI()) return false;
+  try {
+    const cfg = await window.electronAPI.config.getAll();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (cfg as any)?.layout?.chatPrimary === true;
+  } catch {
+    return false;
+  }
+}
+
 export function resolveBasePreset(
   flagOn: boolean,
   sessionPresetId?: string,
@@ -198,6 +209,16 @@ export function useMobilePrimaryFlag(): boolean {
   useEffect(() => {
     let cancelled = false;
     void readMobilePrimaryFlag().then((v) => { if (!cancelled) setFlagOn(v); });
+    return () => { cancelled = true; };
+  }, []);
+  return flagOn;
+}
+
+export function useChatPrimaryFlag(): boolean {
+  const [flagOn, setFlagOn] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void readChatPrimaryFlag().then((v) => { if (!cancelled) setFlagOn(v); });
     return () => { cancelled = true; };
   }, []);
   return flagOn;

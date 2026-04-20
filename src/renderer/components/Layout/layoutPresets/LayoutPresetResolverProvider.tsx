@@ -147,7 +147,8 @@ export function LayoutPresetResolverProvider({
   const { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack } =
     useProviderCore(sessionPresetId, forcePresetId, sessionId);
 
-  const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree, persistence };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ProviderState.persistence uses unknown for covariant compatibility
+  const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree, persistence: persistence as any };
 
   const swapSlots = useCallback((a: import('./types').SlotName, b: import('./types').SlotName) => {
     undoStack.push(slotTree as SerializedSlotNode);

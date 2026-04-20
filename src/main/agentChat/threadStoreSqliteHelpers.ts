@@ -367,12 +367,25 @@ function migrateV8(db: Database): void {
   }
 }
 
-/** Apply stepwise ALTER TABLE migrations for all schema versions up to SCHEMA_VERSION. */
-export function applyColumnMigrations(db: Database, currentVersion: number): void {
-  if (currentVersion >= 1) migrateV1(db);
-  if (currentVersion >= 2) migrateV2(db);
-  if (currentVersion >= 3) migrateV3(db);
-  if (currentVersion >= 5) migrateV5(db);
-  if (currentVersion >= 6) migrateV6(db);
-  if (currentVersion >= 7) migrateV8(db);
+/**
+ * Apply all stepwise ALTER TABLE migrations. Version-gating is intentionally
+ * omitted — every `migrateVN` is idempotent (guarded internally by `hasCol`),
+ * and we cannot trust `currentVersion` because an earlier buggy release used
+ * inverted conditions (`currentVersion >= N`) that stamped DBs as v8 without
+ * actually applying the v5/v6/v8 ALTERs. Those DBs have `user_version = 8`
+ * but no `pinned` column, so any gating keyed off `currentVersion` leaves
+ * them broken. Running every migration every boot is cheap and self-healing.
+ *
+ * The `currentVersion` parameter is kept in the signature for call-site
+ * compatibility and for future use (e.g. data backfills that truly must only
+ * run once, which belong in a separate runner, not here).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function applyColumnMigrations(db: Database, _currentVersion: number): void {
+  migrateV1(db);
+  migrateV2(db);
+  migrateV3(db);
+  migrateV5(db);
+  migrateV6(db);
+  migrateV8(db);
 }

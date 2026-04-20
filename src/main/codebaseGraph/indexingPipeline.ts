@@ -17,9 +17,11 @@
  *   5. Call Resolution  — resolve call expressions, create CALLS/ASYNC_CALLS edges
  *   6. Finalize         — update file hashes + project stats
  */
+/* eslint-disable max-lines */ // File is a single cohesive class; split deferred to next refactor pass.
 
 import path from 'path';
 
+import log from '../logger';
 import { mapConcurrent } from './concurrency';
 import { GraphDatabase } from './graphDatabase';
 import { callResolutionPass } from './indexingPipelineCallResolution';
@@ -302,6 +304,7 @@ export class IndexingPipeline {
 
   async index(options: IndexingOptions): Promise<IndexingResult> {
     const startTime = Date.now();
+    log.info(`[trace:pipeline.index] start incremental=${options.incremental ?? false} root=${options.projectRoot}`);
     const errors: string[] = [];
     const projectName =
       options.projectName ??
@@ -318,7 +321,9 @@ export class IndexingPipeline {
     };
 
     try {
-      return await this.runIndex(options, projectName, report, progress);
+      const result = await this.runIndex(options, projectName, report, progress);
+      log.info(`[trace:pipeline.index] done in ${Date.now() - startTime}ms incremental=${result.incremental} files=${result.filesIndexed}`);
+      return result;
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));
       return {

@@ -9,8 +9,10 @@
 import fs from 'fs/promises'
 import path from 'path'
 
+import log from '../logger'
 import type { GraphDatabase } from './graphDatabase'
 import type { IndexingPipeline } from './indexingPipeline'
+import { getIndexingWorkerClient } from './indexingWorkerClient'
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 
@@ -132,8 +134,9 @@ export class AutoSyncWatcher {
    */
   async pollForChanges(): Promise<void> {
     if (this.disposed || this.reindexing) return
-
+    const t0 = Date.now()
     const changed = await this.collectChangedFiles()
+    log.info(`[trace:autoSync.poll] collectChangedFiles in ${Date.now() - t0}ms changed=${changed.length}`)
     if (changed.length > 0) {
       await this.triggerReindex()
     }
@@ -187,25 +190,33 @@ export class AutoSyncWatcher {
    * Run pipeline.index() with incremental=true. Guarded by the reindexing
    * flag to prevent concurrent runs. Errors are caught and forwarded to onError.
    */
+  private handleReindexResult(result: Awaited<ReturnType<ReturnType<typeof getIndexingWorkerClient>['runIndex']>>, startTime: number): void {
+    log.info(`[trace:autoSync.reindex] done in ${Date.now() - startTime}ms success=${result.success} files=${result.filesIndexed} nodes=${result.nodesCreated} errors=${result.errors.length}`)
+    if (!result.success && result.errors.length > 0) {
+      log.warn(`[trace:autoSync.reindex] errors: ${result.errors.slice(0, 3).join('; ')}`)
+    }
+    if (result.success && result.filesIndexed > 0) {
+      this.opts.onReindexComplete?.({ filesChanged: result.filesIndexed, durationMs: Date.now() - startTime })
+    }
+  }
+
   async triggerReindex(): Promise<void> {
     if (this.disposed || this.reindexing) return
 
     this.reindexing = true
     const startTime = Date.now()
+    log.info(`[trace:autoSync.reindex] start root=${this.opts.projectRoot}`)
 
     try {
-      const result = await this.opts.pipeline.index({
+      // Route through the shared IndexingWorkerClient singleton so reindex runs
+      // on the dedicated worker thread (avoids SQLite WAL lock contention with
+      // the initial-index worker that froze the UI for 20–30 s on main thread).
+      const result = await getIndexingWorkerClient().runIndex({
         projectRoot: this.opts.projectRoot,
         projectName: this.opts.projectName,
         incremental: true,
       })
-
-      if (result.success && result.filesIndexed > 0) {
-        this.opts.onReindexComplete?.({
-          filesChanged: result.filesIndexed,
-          durationMs: Date.now() - startTime,
-        })
-      }
+      this.handleReindexResult(result, startTime)
     } catch (err) {
       this.opts.onError?.(err instanceof Error ? err : new Error(String(err)))
     } finally {
@@ -222,9 +233,11 @@ export class AutoSyncWatcher {
    */
   async initWithLaunchDiff(): Promise<void> {
     if (this.disposed) return
+    const t0 = Date.now()
     try {
       const diff = await this.onLaunchDiff()
       const stale = [...diff.changed, ...diff.deleted]
+      log.info(`[trace:autoSync.launchDiff] diff in ${Date.now() - t0}ms changed=${diff.changed.length} deleted=${diff.deleted.length}`)
       if (stale.length > 0) {
         await this.triggerReindex()
       }

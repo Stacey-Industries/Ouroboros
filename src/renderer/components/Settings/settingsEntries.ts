@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */ // Settings entry registry grows with every new setting; split deferred.
 /**
  * settingsEntries.ts - Static metadata for all settings fields.
  *
@@ -95,6 +96,10 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
   [
     'Auto-install hook scripts',
     'Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Ouroboros receives live tool events.',
+  ],
+  [
+    'Start in chat mode',
+    'Launches the IDE with the chat-primary layout preset. Equivalent to opening a dedicated chat window, but in the main window. Takes effect on next launch or reload.',
   ],
   ['Export Settings', 'Save all settings to a JSON file for backup or sharing.'],
   ['Import Settings', 'Load settings from a previously exported JSON file.'],
