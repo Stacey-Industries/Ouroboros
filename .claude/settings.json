@@ -40,5 +40,10 @@
         ]
       }
     ]
+  },
+  "mcpServers": {
+    "ouroboros": {
+      "url": "http://127.0.0.1:62717/sse"
+    }
   }
 }
