@@ -23,6 +23,10 @@ vi.mock('../../../contexts/ProjectContext', () => ({
   useProject: () => ({ projectRoot: '/test/project', projectName: 'project', projectRoots: ['/test/project'] }),
 }));
 
+vi.mock('../../DiffReview/DiffReviewManager', () => ({
+  useDiffReview: () => ({ state: null }),
+}));
+
 vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   AgentChatWorkspace: () => <div data-testid="agent-chat-workspace">AgentChatWorkspace</div>,
 }));

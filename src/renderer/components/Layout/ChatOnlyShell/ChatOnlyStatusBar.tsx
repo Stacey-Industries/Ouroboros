@@ -10,6 +10,7 @@ import React from 'react';
 
 import { useAgentEventsContext } from '../../../contexts/AgentEventsContext';
 import { useGitBranch } from '../../../hooks/useGitBranch';
+import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 
 // ── BranchIcon ────────────────────────────────────────────────────────────────
 
@@ -82,13 +83,16 @@ export interface ChatOnlyStatusBarProps {
 
 // ── ChatOnlyStatusBar ─────────────────────────────────────────────────────────
 
+function usePendingDiffCount(): number {
+  const { state } = useDiffReview();
+  if (!state) return 0;
+  return state.files.filter((f) => f.hunks.some((h) => h.decision === 'pending')).length;
+}
+
 export function ChatOnlyStatusBar({ projectRoot, onOpenDiffOverlay }: ChatOnlyStatusBarProps): React.ReactElement {
   const { branch } = useGitBranch(projectRoot);
   const { currentSessions } = useAgentEventsContext();
-
-  // Phase A scaffold: pending diff count comes from DiffReviewProvider in Phase D.
-  // For now, expose the hook seam but default to 0.
-  const pendingDiffCount = 0;
+  const pendingDiffCount = usePendingDiffCount();
 
   return (
     <footer
