@@ -142,7 +142,9 @@ function useSidebarState(): SidebarState {
   const [searchQuery, setSearchQuery] = useState('');
   const [renameTarget, setRenameTarget] = useState<AgentChatThreadRecord | null>(null);
 
-  const handleNewChat = useCallback((): void => { onSelectThread('new'); }, [onSelectThread]);
+  // Selecting `null` signals the workspace to open a fresh draft thread
+  // (see useThreadSelectionActions.startNewChat).
+  const handleNewChat = useCallback((): void => { onSelectThread(null); }, [onSelectThread]);
   const handleDelete = useCallback(async (id: string): Promise<void> => {
     await window.electronAPI?.agentChat?.deleteThread?.(id);
   }, []);

@@ -8,7 +8,7 @@
  *  - mode='collapsed' renders the icon rail only.
  *  - mode='hidden' renders nothing.
  *  - Search input filters displayed threads.
- *  - New chat button calls onSelectThread('new').
+ *  - New chat button calls onSelectThread(null) to start a fresh draft.
  *  - Footer placeholder present in pinned mode.
  */
 
@@ -120,10 +120,10 @@ describe('ChatHistorySidebar', () => {
       expect(screen.getByTestId('user-menu-trigger')).toBeDefined();
     });
 
-    it('new-chat button calls onSelectThread with "new"', () => {
+    it('new-chat button calls onSelectThread with null (start new draft)', () => {
       render(<ChatHistorySidebar mode="pinned" />);
       fireEvent.click(screen.getByTestId('new-chat-button'));
-      expect(mockOnSelectThread).toHaveBeenCalledWith('new');
+      expect(mockOnSelectThread).toHaveBeenCalledWith(null);
     });
 
     it('search input filters threads by title', () => {
@@ -159,10 +159,10 @@ describe('ChatHistorySidebar', () => {
       expect(screen.queryByTestId('chat-history-list')).toBeNull();
     });
 
-    it('new-chat button in rail calls onSelectThread with "new"', () => {
+    it('new-chat button in rail calls onSelectThread with null (start new draft)', () => {
       render(<ChatHistorySidebar mode="collapsed" />);
       fireEvent.click(screen.getByTitle('New chat'));
-      expect(mockOnSelectThread).toHaveBeenCalledWith('new');
+      expect(mockOnSelectThread).toHaveBeenCalledWith(null);
     });
   });
 

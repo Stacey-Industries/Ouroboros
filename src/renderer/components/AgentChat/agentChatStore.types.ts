@@ -110,7 +110,7 @@ export interface AgentChatActions {
   onRemoveMention: (key: string) => void;
   onAttachmentsChange: (attachments: ImageAttachment[]) => void;
   onChatOverridesChange: (overrides: ChatOverrides) => void;
-  onSelectThread: (threadId: string) => void;
+  onSelectThread: (threadId: string | null) => void;
   onEditQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
   onSendQueuedMessageNow: (id: string) => Promise<void>;
