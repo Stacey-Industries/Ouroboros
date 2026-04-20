@@ -227,12 +227,18 @@ export class ThreadStoreSqliteRuntime {
 
   private initSchema(db: Database): void {
     const currentVersion = getSchemaVersion(db);
-    if (currentVersion >= SCHEMA_VERSION) return;
+    // Always run column migrations (they are idempotent via `hasCol`). An older
+    // version of applyColumnMigrations used inverted conditions and marked the
+    // schema as up-to-date without actually adding the v5/v6/v8 columns, so
+    // DBs created while that bug was live have `user_version = SCHEMA_VERSION`
+    // but are missing columns like `pinned`. Rerunning the migrations repairs
+    // them. Fresh DBs are unaffected — SCHEMA_SQL creates everything and the
+    // guarded ALTERs no-op.
     runTransaction(db, () => {
       db.exec(SCHEMA_SQL);
       applyColumnMigrations(db, currentVersion);
-      if (currentVersion >= 4) applyFtsMigration(db);
-      setSchemaVersion(db, SCHEMA_VERSION);
+      if (currentVersion < 4) applyFtsMigration(db);
+      if (currentVersion < SCHEMA_VERSION) setSchemaVersion(db, SCHEMA_VERSION);
     });
   }
 

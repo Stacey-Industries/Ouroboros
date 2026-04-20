@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { app } from 'electron';
 import * as path from 'path';
+import { isMainThread } from 'worker_threads';
 
 import { mergeSideChatIntoMain, type MergeSideChatParams, type MergeSideChatResult } from './mergeSideChat';
 import {
@@ -44,11 +45,17 @@ import type {
   Reaction,
 } from './types';
 
-export const DEFAULT_AGENT_CHAT_THREAD_STORE_DIR = path.join(
-  app.getPath('userData'),
-  'agent-chat',
-  'threads',
-);
+// Deferred to a getter because this module is transitively imported by the
+// indexing worker thread (via gitCoChangePass → gitOperations → contextLayer),
+// and `app` from 'electron' is undefined in worker_threads — evaluating
+// `app.getPath('userData')` at module load crashed the worker. Callers that
+// actually need the path are only ever invoked from the main process.
+let _defaultThreadStoreDir: string | null = null;
+export function getDefaultAgentChatThreadStoreDir(): string {
+  if (_defaultThreadStoreDir !== null) return _defaultThreadStoreDir;
+  _defaultThreadStoreDir = path.join(app.getPath('userData'), 'agent-chat', 'threads');
+  return _defaultThreadStoreDir;
+}
 
 const DEFAULT_MAX_AGENT_CHAT_THREADS = 100;
 
@@ -242,7 +249,7 @@ let singletonRuntime: ThreadStoreSqliteRuntime | null = null;
 export function createAgentChatThreadStore(
   options: AgentChatThreadStoreOptions = {},
 ): AgentChatThreadStore {
-  const threadsDir = options.threadsDir ?? DEFAULT_AGENT_CHAT_THREAD_STORE_DIR;
+  const threadsDir = options.threadsDir ?? getDefaultAgentChatThreadStoreDir();
   const maxThreads = options.maxThreads ?? DEFAULT_MAX_AGENT_CHAT_THREADS;
   const now = options.now ?? Date.now;
   const createId = options.createId ?? randomUUID;
@@ -252,7 +259,18 @@ export function createAgentChatThreadStore(
   return buildThreadStoreApi({ createId, now, runtime });
 }
 
-export const agentChatThreadStore = createAgentChatThreadStore();
+// Only construct the singleton in the main process. Worker threads that
+// transitively import this module (via the codebase-graph indexing worker's
+// pass dependency chain) have no `electron.app` and would crash in the
+// underlying SQLite open. Export a stub in workers — worker code never calls
+// into this anyway, it just needs the module to load cleanly.
+export const agentChatThreadStore: AgentChatThreadStore = isMainThread
+  ? createAgentChatThreadStore()
+  : (new Proxy({} as AgentChatThreadStore, {
+      get() {
+        throw new Error('agentChatThreadStore is main-process-only and was accessed from a worker thread');
+      },
+    }));
 
 /** Close the thread store's SQLite connection. Call during app shutdown. */
 export function closeThreadStore(): void {

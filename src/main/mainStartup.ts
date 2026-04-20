@@ -253,12 +253,12 @@ async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   const { TreeSitterParser } = await import('./codebaseGraph/treeSitterParser');
   const { QueryEngine } = await import('./codebaseGraph/queryEngine');
   const { CypherEngine } = await import('./codebaseGraph/cypherEngine');
-  const { IndexingWorkerClient } = await import('./codebaseGraph/indexingWorkerClient');
+  const { getIndexingWorkerClient } = await import('./codebaseGraph/indexingWorkerClient');
 
   const db = new GraphDatabase();
   setSystem2Db(db);
 
-  const workerClient = new IndexingWorkerClient();
+  const workerClient = getIndexingWorkerClient();
   initCompatRegistry({
     db,
     buildQueryEngine: (name, root) => new QueryEngine(db, name, root),
