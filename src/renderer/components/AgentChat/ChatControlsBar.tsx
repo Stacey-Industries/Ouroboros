@@ -256,12 +256,14 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
         codexModelIds={props.codexModels?.map((m) => m.id)}
       />
       <RoutedByBadge routedBy={props.routedBy} />
-      <ControlSelect
-        label="Effort"
-        value={effortValue}
-        options={effortOptions}
-        onChange={(effort) => props.onChange({ ...props.overrides, effort })}
-      />
+      {effortOptions.length > 0 && (
+        <ControlSelect
+          label="Effort"
+          value={effortValue}
+          options={effortOptions}
+          onChange={(effort) => props.onChange({ ...props.overrides, effort })}
+        />
+      )}
       <PermissionModeIndicator
         provider={activeProvider}
         value={props.overrides.permissionMode}

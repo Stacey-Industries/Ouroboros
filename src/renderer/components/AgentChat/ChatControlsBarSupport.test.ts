@@ -132,8 +132,8 @@ describe('buildModelOptions', () => {
       label: 'Anthropic',
       options: [
         { value: ANTHROPIC_AUTO_MODEL, label: 'Auto' },
-        { value: 'opus[1m]', label: 'Opus 4.6 1M' },
-        { value: 'opus', label: 'Opus 4.6' },
+        { value: 'opus[1m]', label: 'Opus 4.7 1M' },
+        { value: 'opus', label: 'Opus 4.7' },
         { value: 'sonnet', label: 'Sonnet 4.6' },
         { value: 'haiku', label: 'Haiku 4.5' },
       ],

@@ -58,8 +58,8 @@ export function extractDefaultModelName(label: string): string {
 
 export const ANTHROPIC_OPTIONS: OptionItem[] = [
   { value: ANTHROPIC_AUTO_MODEL, label: 'Auto' },
-  { value: 'opus[1m]', label: 'Opus 4.6 1M' },
-  { value: 'opus', label: 'Opus 4.6' },
+  { value: 'opus[1m]', label: 'Opus 4.7 1M' },
+  { value: 'opus', label: 'Opus 4.7' },
   { value: 'sonnet', label: 'Sonnet 4.6' },
   { value: 'haiku', label: 'Haiku 4.5' },
 ];
@@ -68,8 +68,18 @@ export function isAnthropicAutoModel(modelId: string): boolean {
   return modelId === ANTHROPIC_AUTO_MODEL;
 }
 
-/** Opus only — supports extended thinking up to Max budget. */
-export const CLAUDE_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
+/** Opus 4.7 — full effort ladder including xhigh and max. */
+export const OPUS_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'xhigh', label: 'Extra High' },
+  { value: 'max', label: 'Max' },
+];
+
+/** Sonnet — standard effort ladder with max but no xhigh. */
+export const SONNET_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
   { value: 'auto', label: 'Auto' },
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
@@ -77,13 +87,20 @@ export const CLAUDE_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
   { value: 'max', label: 'Max' },
 ];
 
-/** Sonnet, Haiku, and third-party provider models — no Max effort tier. */
+/** Third-party provider Claude-family models — Low/Medium/High only. */
 export const CLAUDE_EFFORT_OPTIONS_LIMITED: ReadonlyArray<OptionItem> = [
   { value: 'auto', label: 'Auto' },
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
 ];
+
+/**
+ * Kept as an alias of the Opus ladder for any external consumers still
+ * importing `CLAUDE_EFFORT_OPTIONS`. New code should pick the per-family
+ * constant (`OPUS_EFFORT_OPTIONS` / `SONNET_EFFORT_OPTIONS`).
+ */
+export const CLAUDE_EFFORT_OPTIONS = OPUS_EFFORT_OPTIONS;
 
 export const CODEX_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
   { value: 'low', label: 'Low' },
@@ -159,10 +176,15 @@ export function getEffortOptions(
   activeModel: string,
 ): ReadonlyArray<OptionItem> {
   if (provider === 'codex') return CODEX_EFFORT_OPTIONS;
-  // Third-party models (minimax:*, openrouter:*) don't support Max.
+  // Third-party provider Claude-family models (minimax:*, openrouter:*).
   if (activeModel.includes(':')) return CLAUDE_EFFORT_OPTIONS_LIMITED;
-  // Opus supports Max (extended thinking); Sonnet/Haiku do not.
-  if (activeModel.includes('opus')) return CLAUDE_EFFORT_OPTIONS;
+  // Haiku has no effort tiers — return empty so the UI can hide the pill.
+  if (activeModel.includes('haiku')) return [];
+  // Opus 4.7 supports the full ladder up to Extra High and Max.
+  if (activeModel.includes('opus')) return OPUS_EFFORT_OPTIONS;
+  // Sonnet supports up to Max but not Extra High.
+  if (activeModel.includes('sonnet')) return SONNET_EFFORT_OPTIONS;
+  // Unknown Claude-family model — fall back to the conservative ladder.
   return CLAUDE_EFFORT_OPTIONS_LIMITED;
 }
 
