@@ -90,8 +90,16 @@ function useCleanupCompletedStreams(
     const id = activeThreadId;
     const timer = setTimeout(() => {
       setStateMap((prev) => {
+        const existing = prev.get(id);
+        if (!existing) return prev;
+        // Preserve streamingTokenUsage so the context bar keeps showing the
+        // last known turn size until the next turn begins. Only clear blocks
+        // / isStreaming / streamingMessageId — the transient UI state.
         const updated = new Map(prev);
-        updated.delete(id);
+        updated.set(id, {
+          ...INITIAL_STATE,
+          streamingTokenUsage: existing.streamingTokenUsage,
+        });
         return updated;
       });
     }, 5000);

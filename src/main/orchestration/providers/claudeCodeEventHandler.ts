@@ -213,7 +213,13 @@ function processBlock(state: EventHandlerState, block: StreamJsonContentBlock, g
 function applyAssistantUsage(state: EventHandlerState, event: StreamJsonEvent & { type: 'assistant' }): void {
   const usage = event.message.usage
   if (!usage) return
-  const turnInput = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+  // Claude caches are counted three ways: live input, fresh-cache-creation,
+  // and cache-read (previous turns served from cache). All three occupy the
+  // same effective context window, so the bar must include all three.
+  const turnInput =
+    (usage.input_tokens ?? 0) +
+    (usage.cache_creation_input_tokens ?? 0) +
+    (usage.cache_read_input_tokens ?? 0)
   if (turnInput > 0) state.lastTurnInputTokens = turnInput
   state.cumulativeOutputTokens += usage.output_tokens ?? 0
 }
