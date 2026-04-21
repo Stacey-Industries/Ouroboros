@@ -39,7 +39,7 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
   }, [onSave]);
 
   return (
-    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts" className="bg-surface-panel border border-border-semantic" style={dropdownStyle}>
+    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts" className="bg-surface-overlay border border-border-semantic" style={dropdownStyle}>
       <LayoutHeader onToggleSave={() => setShowSaveInput((p) => !p)} />
       {showSaveInput && <LayoutSaveInput layouts={layouts} onSave={handleSaved} onCancel={() => setShowSaveInput(false)} />}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -61,6 +61,9 @@ const dropdownStyle: React.CSSProperties = {
   borderRadius: '6px', boxShadow: '0 -4px 16px rgba(0,0,0,0.4)',
   display: 'flex', flexDirection: 'column', overflow: 'hidden',
   fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+  ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
 };
 
 function LayoutHeader({ onToggleSave }: { onToggleSave: () => void }): React.ReactElement {

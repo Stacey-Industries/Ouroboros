@@ -56,7 +56,7 @@ export function MobileHamburgerMenu({ titleButtonStyle, hoverStyle }: { titleBut
         </svg>
       </button>
       {open && (
-        <div role="menu" style={{ ...dropdownStyle, maxHeight: '70vh', overflowY: 'auto', padding: '6px 0' }}>
+        <div role="menu" style={{ ...dropdownStyle, position: 'absolute', top: '100%', left: 0, maxHeight: '70vh', overflowY: 'auto', padding: '6px 0' }}>
           {menus.map((menu) => (
             <React.Fragment key={menu.label}>
               <div className="text-text-semantic-faint select-none" style={{ padding: '8px 12px 4px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -109,7 +109,7 @@ function MobileOverflowDropdown({ titleBarActions, notifications, unreadCount, o
   onRemove: (id: string) => void; onClearAll: () => void;
 }): React.ReactElement {
   return (
-    <div role="menu" style={{ ...dropdownStyle, right: 0, left: 'auto', padding: '6px 0' }}>
+    <div role="menu" style={{ ...dropdownStyle, position: 'absolute', top: '100%', right: 0, left: 'auto', padding: '6px 0' }}>
       {titleBarActions.map((action) => (
         <button key={action.eventName}
           onClick={() => { window.dispatchEvent(new CustomEvent(action.eventName)); onClose(); }}

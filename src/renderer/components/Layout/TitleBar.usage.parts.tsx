@@ -5,8 +5,6 @@ import { dropdownStyle, separatorStyle } from './TitleBar.navbar';
 
 const usageDropdownStyle: React.CSSProperties = {
   ...dropdownStyle,
-  right: 0,
-  left: 'auto',
   width: '280px',
   padding: '10px 0 8px',
 };
@@ -227,15 +225,30 @@ export function UsageDropdown({
   snapshot,
   isLoading,
   error,
+  anchorRect,
+  alignRight = false,
+  dropdownRef,
 }: {
   snapshot: UsageWindowSnapshot | null;
   isLoading: boolean;
   error: string | null;
+  anchorRect: DOMRect | null;
+  alignRight?: boolean;
+  dropdownRef?: React.Ref<HTMLDivElement>;
 }): React.ReactElement {
+  if (!anchorRect) {
+    return <></>;
+  }
   return (
     <div
-      className="titlebar-no-drag bg-surface-panel border border-border-semantic"
-      style={usageDropdownStyle}
+      ref={dropdownRef}
+      className="titlebar-no-drag bg-surface-overlay border border-border-semantic"
+      style={{
+        ...usageDropdownStyle,
+        position: 'fixed',
+        top: anchorRect.bottom,
+        left: alignRight ? Math.max(8, anchorRect.right - 280) : anchorRect.left,
+      }}
     >
       <DropdownHeader fetchedAt={snapshot?.fetchedAt ?? null} />
       {snapshot ? (

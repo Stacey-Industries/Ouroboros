@@ -4,7 +4,8 @@
  * Shows current branch name and allows switching between local branches.
  */
 
-import React, { memo, useCallback, useEffect,useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface BranchSelectorProps {
   currentBranch: string | null
@@ -15,21 +16,38 @@ export interface BranchSelectorProps {
 
 function useDropdownDismiss(
   dropdownRef: React.RefObject<HTMLDivElement | null>,
+  buttonRef: React.RefObject<HTMLButtonElement | null>,
   isOpen: boolean,
+  updatePosition: () => void,
   onClose: () => void,
 ): void {
   useEffect(() => {
     if (!isOpen) return
 
     function handleClickOutside(event: MouseEvent): void {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        onClose()
-      }
+      const target = event.target as Node
+      if (dropdownRef.current?.contains(target)) return
+      if (buttonRef.current?.contains(target)) return
+      onClose()
+    }
+    function handleKey(event: KeyboardEvent): void {
+      if (event.key === 'Escape') onClose()
+    }
+    function handleWindowChange(): void {
+      updatePosition()
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [dropdownRef, isOpen, onClose])
+    document.addEventListener('keydown', handleKey)
+    window.addEventListener('resize', handleWindowChange)
+    window.addEventListener('scroll', handleWindowChange, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKey)
+      window.removeEventListener('resize', handleWindowChange)
+      window.removeEventListener('scroll', handleWindowChange, true)
+    }
+  }, [buttonRef, dropdownRef, isOpen, onClose, updatePosition])
 }
 
 export const BranchSelector = memo(function BranchSelector({
@@ -40,8 +58,20 @@ export const BranchSelector = memo(function BranchSelector({
 }: BranchSelectorProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null)
 
-  useDropdownDismiss(dropdownRef, isOpen, () => setIsOpen(false))
+  const updateMenuPos = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setMenuPos({ left: rect.left, top: rect.bottom + 4, width: rect.width })
+  }, [])
+
+  useDropdownDismiss(dropdownRef, buttonRef, isOpen, updateMenuPos, () => setIsOpen(false))
+  useEffect(() => {
+    if (!isOpen) return
+    updateMenuPos()
+  }, [isOpen, updateMenuPos])
 
   const handleSelect = useCallback((branch: string) => {
     if (branch !== currentBranch) {
@@ -51,26 +81,41 @@ export const BranchSelector = memo(function BranchSelector({
   }, [currentBranch, onCheckout])
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <BranchSelectorTrigger currentBranch={currentBranch} isLoading={isLoading} onToggle={() => setIsOpen((prev) => !prev)} />
-      {isOpen && branches.length > 0 && (
-        <BranchDropdown branches={branches} currentBranch={currentBranch} onSelect={handleSelect} />
+    <div className="relative">
+      <BranchSelectorTrigger
+        buttonRef={buttonRef}
+        currentBranch={currentBranch}
+        isLoading={isLoading}
+        onToggle={() => setIsOpen((prev) => !prev)}
+      />
+      {isOpen && branches.length > 0 && menuPos && createPortal(
+        <BranchDropdown
+          dropdownRef={dropdownRef}
+          branches={branches}
+          currentBranch={currentBranch}
+          onSelect={handleSelect}
+          style={{ position: 'fixed', left: menuPos.left, top: menuPos.top, width: menuPos.width }}
+        />,
+        document.body,
       )}
     </div>
   )
 })
 
 function BranchSelectorTrigger({
+  buttonRef,
   currentBranch,
   isLoading,
   onToggle,
 }: {
+  buttonRef: React.RefObject<HTMLButtonElement | null>
   currentBranch: string | null
   isLoading?: boolean
   onToggle: () => void
 }): React.ReactElement {
   return (
     <button
+      ref={buttonRef}
       onClick={onToggle}
       disabled={isLoading}
       className="
@@ -94,22 +139,35 @@ function BranchSelectorTrigger({
 }
 
 function BranchDropdown({
+  dropdownRef,
   branches,
   currentBranch,
   onSelect,
+  style,
 }: {
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   branches: string[]
   currentBranch: string | null
   onSelect: (branch: string) => void
+  style: React.CSSProperties
 }): React.ReactElement {
   return (
     <div
+      ref={dropdownRef}
+      role="listbox"
+      aria-label="Git branches"
       className="
-        frosted-panel absolute z-50 left-0 right-0 mt-1
-        bg-surface-panel border border-border-semantic
+        frosted-panel z-[9999]
+        bg-surface-overlay border border-border-semantic
         rounded shadow-lg overflow-y-auto
       "
-      style={{ maxHeight: '200px' }}
+      style={{
+        maxHeight: '200px',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
+        ...style,
+      }}
     >
       {branches.map((branch) => (
         <BranchOption

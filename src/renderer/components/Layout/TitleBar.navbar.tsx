@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useImmersiveChatFlag } from '../../hooks/useImmersiveChatFlag';
 import type { MenuDefinition, MenuItem } from './TitleBar.menus';
@@ -7,7 +8,16 @@ import { getMenuDefinitions } from './TitleBar.menus';
 export const menuItemRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', width: '100%', height: '28px', padding: '0 12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-ui, sans-serif)', transition: 'background-color 80ms ease', gap: '16px', textAlign: 'left', lineHeight: '28px', whiteSpace: 'nowrap' };
 export const menuItemShortcutStyle: React.CSSProperties = { marginLeft: 'auto', fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.01em', flexShrink: 0, paddingLeft: '24px' };
 export const separatorStyle: React.CSSProperties = { height: '1px', backgroundColor: 'var(--border-semantic)', margin: '4px 8px' };
-export const dropdownStyle: React.CSSProperties = { position: 'absolute', top: '100%', left: 0, minWidth: '220px', padding: '4px 0', borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 1000 };
+export const dropdownStyle: React.CSSProperties = {
+  minWidth: '220px',
+  padding: '4px 0',
+  borderRadius: '6px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+  zIndex: 1000,
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+  ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
+};
 const menuButtonStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontFamily: 'var(--font-ui, sans-serif)', cursor: 'pointer', transition: 'color 100ms ease, background-color 100ms ease', whiteSpace: 'nowrap' };
 
 export function MenuItemRow({
@@ -48,14 +58,35 @@ function DropdownMenu({
   highlightedIndex,
   onHighlight,
   itemRefs,
+  anchorRect,
+  dropdownRef,
 }: {
   menu: MenuDefinition;
   onClose: () => void;
   highlightedIndex: number;
   onHighlight: (idx: number) => void;
   itemRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
+  anchorRect: DOMRect | null;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
 }): React.ReactElement {
-  return <div className="titlebar-no-drag bg-surface-panel border border-border-semantic" style={dropdownStyle}>{menu.items.map((item, i) => <MenuItemRow key={item.divider ? `sep-${i}` : item.label} item={item} onClose={onClose} isHighlighted={i === highlightedIndex} onMouseEnterItem={() => onHighlight(i)} itemRef={(el) => { itemRefs.current[i] = el; }} />)}</div>;
+  if (!anchorRect) {
+    return <></>;
+  }
+  return createPortal(
+    <div
+      ref={dropdownRef}
+      className="titlebar-no-drag bg-surface-overlay border border-border-semantic"
+      style={{
+        ...dropdownStyle,
+        position: 'fixed',
+        top: anchorRect.bottom,
+        left: anchorRect.left,
+      }}
+    >
+      {menu.items.map((item, i) => <MenuItemRow key={item.divider ? `sep-${i}` : item.label} item={item} onClose={onClose} isHighlighted={i === highlightedIndex} onMouseEnterItem={() => onHighlight(i)} itemRef={(el) => { itemRefs.current[i] = el; }} />)}
+    </div>,
+    document.body,
+  );
 }
 
 function NavbarMenuButton({
@@ -63,13 +94,15 @@ function NavbarMenuButton({
   isOpen,
   onClick,
   onHover,
+  buttonRef,
 }: {
   label: string;
   isOpen: boolean;
   onClick: () => void;
   onHover: () => void;
+  buttonRef?: React.Ref<HTMLButtonElement>;
 }): React.ReactElement {
-  return <button className="titlebar-no-drag" style={{ ...menuButtonStyle, background: isOpen ? 'var(--surface-raised)' : 'transparent', color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} onClick={onClick} onMouseEnter={(e) => { onHover(); if (!isOpen) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.1)'; } }} onMouseLeave={(e) => { if (!isOpen) { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = 'transparent'; } }}>{label}</button>;
+  return <button ref={buttonRef} className="titlebar-no-drag" style={{ ...menuButtonStyle, background: isOpen ? 'var(--surface-raised)' : 'transparent', color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} onClick={onClick} onMouseEnter={(e) => { onHover(); if (!isOpen) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.1)'; } }} onMouseLeave={(e) => { if (!isOpen) { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = 'transparent'; } }}>{label}</button>;
 }
 
 interface NavbarKeyboardArgs {
@@ -182,9 +215,21 @@ export function NavbarMenus(): React.ReactElement {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const [highlightedItem, setHighlightedItem] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const isImmersiveChat = useImmersiveChatFlag();
   const menus = getMenuDefinitions(isImmersiveChat);
+
+  const updateAnchorRect = useCallback(() => {
+    if (openMenuIndex === null) {
+      setAnchorRect(null);
+      return;
+    }
+    const rect = buttonRefs.current[openMenuIndex]?.getBoundingClientRect() ?? null;
+    setAnchorRect(rect);
+  }, [openMenuIndex]);
 
   const handleMenuClick = useCallback((idx: number) => {
     setOpenMenuIndex((prev) => {
@@ -209,13 +254,28 @@ export function NavbarMenus(): React.ReactElement {
   useEffect(() => {
     if (openMenuIndex === null) return;
     const handleClickOutside = (e: MouseEvent): void => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) closeMenu();
+      const target = e.target as Node;
+      const clickedButtonRow = containerRef.current?.contains(target);
+      const clickedDropdown = dropdownRef.current?.contains(target);
+      if (!clickedButtonRow && !clickedDropdown) closeMenu();
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [closeMenu, openMenuIndex]);
 
+  useEffect(() => {
+    if (openMenuIndex === null) return;
+    updateAnchorRect();
+    const handlePositionChange = (): void => updateAnchorRect();
+    window.addEventListener('resize', handlePositionChange);
+    window.addEventListener('scroll', handlePositionChange, true);
+    return () => {
+      window.removeEventListener('resize', handlePositionChange);
+      window.removeEventListener('scroll', handlePositionChange, true);
+    };
+  }, [openMenuIndex, updateAnchorRect]);
+
   useNavbarKeyboard({ openMenuIndex, highlightedItem, menus, setOpenMenuIndex, setHighlightedItem, itemRefs });
 
-  return <div ref={containerRef} className="titlebar-no-drag" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>{menus.map((menu, idx) => <div key={menu.label} style={{ position: 'relative' }}><NavbarMenuButton label={menu.label} isOpen={openMenuIndex === idx} onClick={() => handleMenuClick(idx)} onHover={() => handleMenuHover(idx)} />{openMenuIndex === idx && <DropdownMenu menu={menu} onClose={closeMenu} highlightedIndex={highlightedItem} onHighlight={setHighlightedItem} itemRefs={itemRefs} />}</div>)}</div>;
+  return <div ref={containerRef} className="titlebar-no-drag" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>{menus.map((menu, idx) => <div key={menu.label}><NavbarMenuButton label={menu.label} isOpen={openMenuIndex === idx} onClick={() => handleMenuClick(idx)} onHover={() => handleMenuHover(idx)} buttonRef={(el: HTMLButtonElement | null) => { buttonRefs.current[idx] = el; }} />{openMenuIndex === idx && <DropdownMenu menu={menu} onClose={closeMenu} highlightedIndex={highlightedItem} onHighlight={setHighlightedItem} itemRefs={itemRefs} anchorRect={anchorRect} dropdownRef={dropdownRef} />}</div>)}</div>;
 }

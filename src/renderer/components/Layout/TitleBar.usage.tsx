@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { UsageWindowSnapshot } from '../../types/electron';
 import { USAGE_REFRESH_MS } from '../UsageModal/UsagePanelShared';
@@ -63,6 +64,7 @@ function useUsageWindowSnapshot(): {
 
 function useDismissableDropdown(
   ref: React.RefObject<HTMLDivElement | null>,
+  dropdownRef: React.RefObject<HTMLDivElement | null>,
   isOpen: boolean,
   onClose: () => void,
 ): void {
@@ -70,7 +72,10 @@ function useDismissableDropdown(
     if (!isOpen) return;
 
     function handleMouseDown(event: MouseEvent): void {
-      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
+      const target = event.target as Node;
+      const insideTrigger = ref.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideTrigger && !insideDropdown) onClose();
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
@@ -83,7 +88,7 @@ function useDismissableDropdown(
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose, ref]);
+  }, [dropdownRef, isOpen, onClose, ref]);
 }
 
 function UsagePanelButton({
@@ -115,14 +120,17 @@ function UsagePanelButton({
 }
 
 function UsageWindowToggleButton({
+  buttonRef,
   handleToggle,
   hoverStyle,
   titleButtonStyle,
 }: Pick<UsageActionsProps, 'hoverStyle' | 'titleButtonStyle'> & {
   handleToggle: () => void;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
 }): React.ReactElement {
   return (
     <button
+      ref={buttonRef}
       className="titlebar-no-drag text-text-semantic-muted"
       title="Usage windows"
       aria-label="Usage windows"
@@ -158,18 +166,38 @@ export function UsageActions({
 }: UsageActionsProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const { error, isLoading, loadSnapshot, setIsLoading, snapshot } = useUsageWindowSnapshot();
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const closeDropdown = useCallback(() => setOpen(false), []);
 
-  useDismissableDropdown(containerRef, open, closeDropdown);
+  useDismissableDropdown(containerRef, dropdownRef, open, closeDropdown);
+
+  const updateAnchorRect = useCallback(() => {
+    setAnchorRect(toggleButtonRef.current?.getBoundingClientRect() ?? null);
+  }, []);
 
   const handleToggle = useCallback(() => {
     if (!open) {
       setIsLoading(snapshot === null);
       void loadSnapshot();
+      updateAnchorRect();
     }
     setOpen((current) => !current);
-  }, [loadSnapshot, open, setIsLoading, snapshot]);
+  }, [loadSnapshot, open, setIsLoading, snapshot, updateAnchorRect]);
+
+  useEffect(() => {
+    if (!open) return;
+    updateAnchorRect();
+    const handlePositionChange = (): void => updateAnchorRect();
+    window.addEventListener('resize', handlePositionChange);
+    window.addEventListener('scroll', handlePositionChange, true);
+    return () => {
+      window.removeEventListener('resize', handlePositionChange);
+      window.removeEventListener('scroll', handlePositionChange, true);
+    };
+  }, [open, updateAnchorRect]);
 
   return (
     <div
@@ -185,11 +213,15 @@ export function UsageActions({
         titleButtonStyle={titleButtonStyle}
       />
       <UsageWindowToggleButton
+        buttonRef={toggleButtonRef}
         handleToggle={handleToggle}
         hoverStyle={hoverStyle}
         titleButtonStyle={titleButtonStyle}
       />
-      {open && <UsageDropdown snapshot={snapshot} isLoading={isLoading} error={error} />}
+      {open && createPortal(
+        <UsageDropdown snapshot={snapshot} isLoading={isLoading} error={error} anchorRect={anchorRect} alignRight={true} dropdownRef={dropdownRef} />,
+        document.body,
+      )}
     </div>
   );
 }
