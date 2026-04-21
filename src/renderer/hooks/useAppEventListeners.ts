@@ -32,6 +32,7 @@ function hasElectronAPI(): boolean {
 export interface AppEventDeps {
   projectRoot: string | null;
   setTheme: (id: AppTheme) => void;
+  setMaterialVariant: (id: 'vapor' | 'prism' | 'warp') => void;
   handleProjectChange: (path: string) => Promise<void>;
   openPalette: () => void;
   spawnSession: (cwd?: string) => Promise<void>;
@@ -101,6 +102,17 @@ function createThemeHandler(setTheme: AppEventDeps['setTheme']): EventListener {
   };
 }
 
+function createMaterialVariantHandler(
+  setMaterialVariant: AppEventDeps['setMaterialVariant'],
+): EventListener {
+  return (event) => {
+    const detail = (event as CustomEvent<unknown>).detail;
+    if (detail === 'vapor' || detail === 'prism' || detail === 'warp') {
+      setMaterialVariant(detail);
+    }
+  };
+}
+
 function createFolderHandler(
   handleProjectChange: AppEventDeps['handleProjectChange'],
 ): EventListener {
@@ -144,6 +156,7 @@ function createClaudeTemplateHandler(
 function createDomEventEntries(args: {
   projectRoot: AppEventDeps['projectRoot'];
   setTheme: AppEventDeps['setTheme'];
+  setMaterialVariant: AppEventDeps['setMaterialVariant'];
   handleProjectChange: AppEventDeps['handleProjectChange'];
   spawnSession: AppEventDeps['spawnSession'];
   spawnClaudeSession: AppEventDeps['spawnClaudeSession'];
@@ -154,6 +167,7 @@ function createDomEventEntries(args: {
   const {
     projectRoot,
     setTheme,
+    setMaterialVariant,
     handleProjectChange,
     spawnSession,
     spawnClaudeSession,
@@ -164,6 +178,7 @@ function createDomEventEntries(args: {
 
   return [
     ['agent-ide:set-theme', createThemeHandler(setTheme)],
+    ['agent-ide:set-material-variant', createMaterialVariantHandler(setMaterialVariant)],
     ['agent-ide:open-usage', emitUsagePanel],
     ['agent-ide:open-folder', createFolderHandler(handleProjectChange)],
     ['agent-ide:new-terminal', createNewTerminalHandler(spawnSession)],
@@ -208,6 +223,7 @@ export function useDomEventListeners(deps: AppEventDeps): void {
   const {
     projectRoot,
     setTheme,
+    setMaterialVariant,
     handleProjectChange,
     spawnSession,
     spawnClaudeSession,
@@ -219,6 +235,7 @@ export function useDomEventListeners(deps: AppEventDeps): void {
     return registerWindowEvents(createDomEventEntries({
       projectRoot,
       setTheme,
+      setMaterialVariant,
       handleProjectChange,
       spawnSession,
       spawnClaudeSession,
@@ -226,7 +243,7 @@ export function useDomEventListeners(deps: AppEventDeps): void {
       setSymbolSearchOpen,
       toast,
     }));
-  }, [projectRoot, setTheme, handleProjectChange, spawnSession, spawnClaudeSession, setFilePickerOpen, setSymbolSearchOpen, toast]);
+  }, [projectRoot, setTheme, setMaterialVariant, handleProjectChange, spawnSession, spawnClaudeSession, setFilePickerOpen, setSymbolSearchOpen, toast]);
 
   useEffect(() => {
     if (!hasElectronAPI()) {

@@ -212,6 +212,8 @@ export interface AppConfig {
   /** @internal — do not expose in Settings UI */
   webAccessPassword: string;
   glassOpacity: number;
+  /** Wave 45 — material variant (Vapor / Prism / Warp) */
+  materialVariant: 'vapor' | 'prism' | 'warp';
   authOnboardingDismissed: boolean;
   /** Create a git checkpoint commit before applying AI-generated diffs. Default: true. */
   autoCheckpoint: boolean;

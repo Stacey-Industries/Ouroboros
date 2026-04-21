@@ -246,8 +246,15 @@ export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): Reac
   useProgressSubscriptions();
   const titleBarActions = TITLE_BAR_ACTIONS.filter((action) => action.eventName !== OPEN_USAGE_PANEL_EVENT);
   return (
-    <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center bg-surface-panel"
-      style={{ height: 'var(--titlebar-height, 36px)', borderBottom: '1px solid color-mix(in srgb, var(--border-semantic) 50%, transparent)' }}>
+    <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center"
+      style={{
+        height: 'var(--titlebar-height, 36px)',
+        background: 'var(--titlebar-bg)',
+        backdropFilter: 'blur(var(--material-blur))',
+        WebkitBackdropFilter: 'blur(var(--material-blur))',
+        boxShadow: 'var(--shadow-inset)',
+        borderBottom: '1px solid var(--stroke-inner)',
+      }}>
       <MobileHamburgerMenu titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
       <MobileFileTreeButton titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
       <img className="titlebar-no-drag select-none" src={ouroborosLogo} alt="Ouroboros"

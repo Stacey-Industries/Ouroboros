@@ -35,11 +35,17 @@ export function Sidebar({
   return (
     <div
       data-layout="sidebar"
-      className="
-        flex flex-col h-full overflow-hidden
-        bg-surface-panel border-r border-border-semantic
-      "
-      style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, ...focusStyle }}
+      className="flex flex-col h-full overflow-hidden"
+      style={{
+        width: collapsed ? 0 : width,
+        minWidth: collapsed ? 0 : width,
+        // Wave 45 — sidebar stays transparent so Mica bleeds through,
+        // matching the editor / terminal / chat panes. The right-edge
+        // stroke is the only visible chrome.
+        background: 'transparent',
+        borderRight: '1px solid var(--stroke-inner)',
+        ...focusStyle,
+      }}
       aria-label="Left sidebar"
       onClick={onFocus}
     >

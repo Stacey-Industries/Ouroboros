@@ -105,6 +105,11 @@ export const schema: Record<string, unknown> = {
     minimum: 0,
     maximum: 100,
   },
+  materialVariant: {
+    type: 'string',
+    enum: ['vapor', 'prism', 'warp'],
+    default: 'vapor',
+  },
   customThemeColors: {
     type: 'object',
     default: {},

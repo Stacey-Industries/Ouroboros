@@ -38,6 +38,8 @@ export const ACCOUNTS_ENTRIES = createEntries('accounts', 'Accounts', [
 export const APPEARANCE_ENTRIES = createEntries('appearance', 'Appearance', [
   ['Theme', 'Choose between retro, modern, warp, cursor, kiro, and custom themes.'],
   ['Background Gradient', 'Show or hide the subtle gradient overlay on the main background.'],
+  ['Material', 'Vapor, Prism, or Warp — baseline polish variant for the shell (blur, radius, stroke, wash).'],
+  ['Glass Tint', 'Darken the transparent glass background behind panels.'],
   ['Theme Editor', 'Customize individual color tokens and save as a custom theme.'],
 ]);
 

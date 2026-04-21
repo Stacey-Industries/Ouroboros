@@ -51,7 +51,9 @@ export function rowBackground(opts: {
   heatTint: string | undefined;
 }): string {
   if (opts.isDragOver) return 'rgba(var(--accent-rgb, 88, 166, 255), 0.15)';
-  if (opts.isActive) return 'var(--interactive-muted)';
+  // Wave 45 Phase C — active row uses the material variant's row-active token
+  // (accent-mixed) so density/polish swaps re-tint automatically.
+  if (opts.isActive) return 'var(--row-active)';
   if (opts.isSelected) return 'rgba(var(--accent-rgb, 88, 166, 255), 0.08)';
   if (opts.isFocused) return 'var(--surface-raised)';
   return opts.heatTint ?? 'transparent';

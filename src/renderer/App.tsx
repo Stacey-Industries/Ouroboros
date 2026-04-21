@@ -99,6 +99,7 @@ interface InnerAppLifecycleArgs {
   project: ReturnType<typeof useProjectManagement>;
   registerCommand: ReturnType<typeof useCommandRegistry>['registerCommand'];
   setTheme: ReturnType<typeof useTheme>['setTheme'];
+  setMaterialVariant: ReturnType<typeof useTheme>['setMaterialVariant'];
   terminal: ReturnType<typeof useTerminalSessions>;
   uiState: InnerAppUiState;
   keybindings: Record<string, string>;
@@ -140,6 +141,7 @@ function useInnerAppLifecycle({
   project,
   registerCommand,
   setTheme,
+  setMaterialVariant,
   terminal,
   uiState,
   keybindings,
@@ -149,6 +151,7 @@ function useInnerAppLifecycle({
     registerCommand,
     ...layouts,
     setTheme: (id) => void setTheme(id),
+    setMaterialVariant,
     handleProjectChange: project.handleProjectChange,
     openPalette: palette.open,
     spawnSession: terminal.spawnSession,
@@ -205,7 +208,7 @@ function buildInnerAppLayoutProps({
 }
 
 function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<string, string>) {
-  const { setTheme } = useTheme();
+  const { setTheme, setMaterialVariant } = useTheme();
   const ctx = useProject();
   const palette = useCommandPalette();
   const { commands, recentIds, execute, registerCommand } = useCommandRegistry();
@@ -219,7 +222,7 @@ function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<s
   useLspDiagnosticsSync();
   useFirstLaunchAuth();
   usePermalinkBridge();
-  useInnerAppLifecycle({ ctx, layouts, palette, project, registerCommand, setTheme, terminal, uiState, keybindings });
+  useInnerAppLifecycle({ ctx, layouts, palette, project, registerCommand, setTheme, setMaterialVariant, terminal, uiState, keybindings });
   return { ctx, palette, commands, recentIds, layouts, terminal, project, uiState, handleExecute };
 }
 

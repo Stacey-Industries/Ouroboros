@@ -379,6 +379,8 @@ export interface AppConfig {
   /** Password for web remote access login (alternative to token) */
   webAccessPassword: string;
   glassOpacity: number;
+  /** Wave 45 — material variant (Vapor / Prism / Warp) for the shell. */
+  materialVariant: 'vapor' | 'prism' | 'warp';
   /** Model router settings — automatic tier selection (HAIKU/SONNET/OPUS) */
   routerSettings: RouterSettings;
   /** Number of quality signal lines at last retrain — used by retrain trigger. */

@@ -32,6 +32,4 @@ export const modernTheme: Theme = {
     termCursor: '#818cf8',
     termSelection: 'rgba(129, 140, 248, 0.3)',
   },
-  backgroundGradient:
-    'linear-gradient(160deg, rgba(24,24,27,0) 0%, rgba(10,10,12,0.6) 100%)',
 };

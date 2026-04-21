@@ -32,6 +32,4 @@ export const kiroTheme: Theme = {
     termCursor: '#00d4ff',
     termSelection: 'rgba(0, 212, 255, 0.25)',
   },
-  backgroundGradient:
-    'linear-gradient(135deg, rgba(0,50,70,0.25) 0%, rgba(3,12,16,0) 60%), radial-gradient(ellipse at 80% 20%, rgba(0,100,130,0.12) 0%, transparent 50%)',
 };

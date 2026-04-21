@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import {
   customTheme,
@@ -8,7 +8,31 @@ import {
   themeList,
   themes,
 } from '../themes';
+import {
+  DEFAULT_MATERIAL_VARIANT,
+  getMaterialVariant,
+  type MaterialVariant,
+} from '../themes/material';
+
+const NONE_THEME_FONTS: Theme['fontFamily'] = {
+  mono: '"Geist Mono", "JetBrains Mono", monospace',
+  ui: '"Inter", system-ui, -apple-system, sans-serif',
+};
+
+function buildNoneTheme(materialVariant: MaterialVariant): Theme {
+  return {
+    id: 'none',
+    name: 'None (Material only)',
+    fontFamily: NONE_THEME_FONTS,
+    colors: getMaterialVariant(materialVariant).palette,
+  };
+}
+
+function resolveTheme(themeId: string, materialVariant: MaterialVariant): Theme {
+  return themeId === 'none' ? buildNoneTheme(materialVariant) : getTheme(themeId);
+}
 import type { AppConfig, AppTheme } from '../types/electron';
+import { useThemeActions } from './useTheme.actions';
 import { applyFontConfig, applyThemeToDom, loadExtensionThemesIntoRegistry, updateTitleBarOverlay } from './useTheme.tokens';
 
 export { applyFontConfig, brightenIfDark } from './useTheme.tokens';
@@ -26,6 +50,7 @@ interface ThemeRuntimeState {
   themeId: string;
   showBgGradient: boolean;
   glassOpacity: number;
+  materialVariant: MaterialVariant;
   customThemeColors: Record<string, string>;
   fontUI: string;
   fontMono: string;
@@ -38,6 +63,7 @@ type ThemeBootstrapConfig = Pick<
   | 'activeTheme'
   | 'showBgGradient'
   | 'glassOpacity'
+  | 'materialVariant'
   | 'customThemeColors'
   | 'fontUI'
   | 'fontMono'
@@ -48,6 +74,7 @@ const DEFAULT_BOOTSTRAP_CONFIG: ThemeBootstrapConfig = {
   activeTheme: defaultThemeId,
   showBgGradient: true,
   glassOpacity: 0,
+  materialVariant: DEFAULT_MATERIAL_VARIANT,
   customThemeColors: {},
   fontUI: '',
   fontMono: '',
@@ -58,6 +85,7 @@ let runtimeState: ThemeRuntimeState = {
   themeId: defaultThemeId,
   showBgGradient: true,
   glassOpacity: 0,
+  materialVariant: DEFAULT_MATERIAL_VARIANT,
   customThemeColors: {},
   fontUI: '',
   fontMono: '',
@@ -75,12 +103,19 @@ function cloneRuntimeState(): ThemeRuntimeState {
     themeId: s.themeId,
     showBgGradient: s.showBgGradient,
     glassOpacity: s.glassOpacity,
+    materialVariant: s.materialVariant,
     customThemeColors: { ...s.customThemeColors },
     fontUI: s.fontUI,
     fontMono: s.fontMono,
     fontSizeUI: s.fontSizeUI,
     hydrated: s.hydrated,
   };
+}
+
+function normalizeMaterialVariant(value: unknown): MaterialVariant {
+  return value === 'vapor' || value === 'prism' || value === 'warp'
+    ? value
+    : DEFAULT_MATERIAL_VARIANT;
 }
 
 function emitRuntimeState(): void {
@@ -91,7 +126,7 @@ function emitRuntimeState(): void {
 }
 
 function isValidThemeId(id: string): boolean {
-  return id in themes || id.startsWith('ext:');
+  return id === 'none' || id in themes || id.startsWith('ext:');
 }
 
 function resolveActiveTheme(raw: string | undefined): string {
@@ -107,6 +142,7 @@ function normalizeBootstrapConfig(
     activeTheme: resolveActiveTheme(c.activeTheme),
     showBgGradient: c.showBgGradient ?? d.showBgGradient,
     glassOpacity: c.glassOpacity ?? d.glassOpacity,
+    materialVariant: normalizeMaterialVariant(c.materialVariant ?? d.materialVariant),
     customThemeColors: c.customThemeColors ?? d.customThemeColors,
     fontUI: c.fontUI ?? d.fontUI,
     fontMono: c.fontMono ?? d.fontMono,
@@ -165,14 +201,21 @@ interface UseThemeReturn {
   setShowBgGradient: (value: boolean) => void;
   glassOpacity: number;
   setGlassOpacity: (value: number) => void;
+  materialVariant: MaterialVariant;
+  setMaterialVariant: (value: MaterialVariant) => void;
 }
 
 function applyRuntimeState(nextState: ThemeRuntimeState): void {
   runtimeState = nextState;
   if (Object.keys(nextState.customThemeColors).length > 0)
     Object.assign(customTheme.colors, nextState.customThemeColors);
-  const theme = getTheme(nextState.themeId);
-  applyThemeToDom(theme, nextState.showBgGradient, nextState.glassOpacity);
+  const theme = nextState.themeId === 'none' ? null : getTheme(nextState.themeId);
+  applyThemeToDom(
+    theme,
+    nextState.showBgGradient,
+    nextState.glassOpacity,
+    nextState.materialVariant,
+  );
   applyFontConfig(nextState.fontUI, nextState.fontMono, nextState.fontSizeUI);
   updateTitleBarOverlay(theme);
   emitRuntimeState();
@@ -208,6 +251,7 @@ async function hydrateThemeOnMount(config?: Partial<ThemeBootstrapConfig> | null
     themeId: resolved.activeTheme,
     showBgGradient: resolved.showBgGradient,
     glassOpacity: resolved.glassOpacity,
+    materialVariant: resolved.materialVariant,
     customThemeColors: resolved.customThemeColors,
     fontUI: resolved.fontUI,
     fontMono: resolved.fontMono,
@@ -248,14 +292,6 @@ export function notifyExtensionThemesChanged(): void {
   emitRuntimeState();
 }
 
-function persistBgGradient(value: boolean): void {
-  try {
-    window.electronAPI?.config?.set('showBgGradient', value);
-  } catch {
-    // ignore
-  }
-}
-
 function useThemeSnapshot(): ThemeRuntimeState {
   'use no memo';
   const [snapshot, setSnapshot] = useState<ThemeRuntimeState>(() => cloneRuntimeState());
@@ -268,38 +304,13 @@ function useThemeSnapshot(): ThemeRuntimeState {
   return snapshot;
 }
 
-function useThemeActions(): Pick<
-  UseThemeReturn,
-  'setTheme' | 'setShowBgGradient' | 'setGlassOpacity'
-> {
-  'use no memo';
-  const setTheme = useCallback(async (id: string) => {
-    const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
-    setRuntimeState({ themeId: resolved, hydrated: true });
-    await writeThemeToStore(resolved);
-  }, []);
-
-  const setShowBgGradient = useCallback((value: boolean) => {
-    setRuntimeState({ showBgGradient: value, hydrated: true });
-    persistBgGradient(value);
-  }, []);
-
-  const setGlassOpacity = useCallback((value: number) => {
-    setRuntimeState({ glassOpacity: value, hydrated: true });
-    try {
-      window.electronAPI?.config?.set('glassOpacity', value);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  return { setTheme, setShowBgGradient, setGlassOpacity };
-}
-
 export function useTheme(): UseThemeReturn {
   'use no memo';
   const snapshot = useThemeSnapshot();
-  const { setTheme, setShowBgGradient, setGlassOpacity } = useThemeActions();
+  const { setTheme, setShowBgGradient, setGlassOpacity, setMaterialVariant } = useThemeActions({
+    setRuntimeState,
+    writeThemeToStore,
+  });
 
   // Build live theme list: built-ins + any registered extension themes
   const allThemes = useMemo(() => {
@@ -312,20 +323,24 @@ export function useTheme(): UseThemeReturn {
 
   return useMemo(
     () => ({
-      theme: getTheme(snapshot.themeId),
+      theme: resolveTheme(snapshot.themeId, snapshot.materialVariant),
       setTheme,
       themes: allThemes,
       showBgGradient: snapshot.showBgGradient,
       setShowBgGradient,
       glassOpacity: snapshot.glassOpacity,
       setGlassOpacity,
+      materialVariant: snapshot.materialVariant,
+      setMaterialVariant,
     }),
     [
       allThemes,
       setGlassOpacity,
+      setMaterialVariant,
       setShowBgGradient,
       setTheme,
       snapshot.glassOpacity,
+      snapshot.materialVariant,
       snapshot.showBgGradient,
       snapshot.themeId,
     ],

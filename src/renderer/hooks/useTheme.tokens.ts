@@ -5,6 +5,11 @@
 
 import type { Theme } from '../themes';
 import { registerExtensionTheme, themes, unregisterExtensionTheme } from '../themes';
+import {
+  DEFAULT_MATERIAL_VARIANT,
+  getMaterialVariant,
+  type MaterialVariant,
+} from '../themes/material';
 
 export function applyFontConfig(fontUI: string, fontMono: string, fontSizeUI: number): void {
   const root = document.documentElement;
@@ -55,6 +60,9 @@ export function applyPaletteTokens(root: HTMLElement, colors: Theme['colors']): 
 }
 
 export function applySemanticTokens(root: HTMLElement, colors: Theme['colors']): void {
+  // Wave 45 — semantic surfaces stay transparent so Windows Mica bleeds
+  // through. Components that want an opaque/translucent panel read the
+  // material token directly (var(--material-panel) / --titlebar-bg / etc.).
   root.style.setProperty('--surface-base', 'transparent');
   root.style.setProperty('--surface-panel', 'transparent');
   root.style.setProperty('--surface-raised', 'rgba(255, 255, 255, 0.05)');
@@ -77,15 +85,18 @@ export function applySemanticTokens(root: HTMLElement, colors: Theme['colors']):
   root.style.setProperty('--status-warning', colors.warning);
   root.style.setProperty('--status-error', colors.error);
   root.style.setProperty('--status-info', colors.accent);
-  // --surface-chat mirrors the active theme's bg so chat-only inherits the
-  // IDE theming exactly — including the intentional transparency of glass
-  // (Mica pass-through). Per Wave 44 dogfood: glass is the baseline for
-  // chat mode; h-screen on the shell root prevents any layout-induced bleed.
-  root.style.setProperty('--surface-chat', colors.bg);
+  // Wave 45 Phase C — --surface-chat now follows the material variant's
+  // panel token, not the (often transparent) theme bg. This fixes the
+  // Wave 44 "bleed" bug where glass themes left the chat surface showing
+  // through to the window chrome. Material is the baseline for chat mode.
+  root.style.setProperty('--surface-chat', 'var(--material-panel)');
 }
 
 export function applyComponentTokens(root: HTMLElement, colors: Theme['colors']): void {
-  root.style.setProperty('--tab-active-bg', 'transparent');
+  // Wave 45 Phase C — active tab inherits the material variant's editor-bg so
+  // the tab visually "merges" with the editor body. Inactive tabs stay
+  // transparent (showing the title-bar / panel behind).
+  root.style.setProperty('--tab-active-bg', 'var(--editor-bg)');
   root.style.setProperty('--tab-inactive-bg', 'transparent');
   root.style.setProperty('--tab-hover-bg', 'rgba(255, 255, 255, 0.05)');
   root.style.setProperty('--tab-active-border', colors.accent);
@@ -107,36 +118,139 @@ export function applyDerivedTokens(root: HTMLElement, colors: Theme['colors']): 
   root.style.setProperty('--git-untracked', colors.textMuted);
 }
 
-export function updateTitleBarOverlay(theme: Theme): void {
+export function updateTitleBarOverlay(theme: Theme | null): void {
   try {
     const api = window.electronAPI;
-    if (api?.app?.setTitleBarOverlay) {
-      api.app.setTitleBarOverlay(theme.colors.bg, theme.colors.textMuted);
-    }
+    if (!api?.app?.setTitleBarOverlay) return;
+    const bg = theme?.colors.bg ?? 'transparent';
+    const symbol = theme?.colors.textMuted ?? '#9090a4'; // hardcoded: title-bar overlay fallback; matches SHARED_NEUTRAL_DARK.textMuted for the no-theme case.
+    api.app.setTitleBarOverlay(bg, symbol);
   } catch { /* IPC not available */ }
 }
 
-function buildBgGradient(theme: Theme, showBgGradient: boolean, glassOpacity: number): string {
-  const opacity = Math.max(0, Math.min(100, glassOpacity)) / 100;
-  const layers: string[] = [];
-  if (opacity > 0) layers.push(`linear-gradient(rgba(0, 0, 0, ${opacity}), rgba(0, 0, 0, ${opacity}))`);
-  if (showBgGradient && theme.backgroundGradient) layers.push(theme.backgroundGradient);
-  return layers.length > 0 ? layers.join(', ') : 'none';
+const FALLBACK_FONTS: Theme['fontFamily'] = {
+  mono: '"Geist Mono", "JetBrains Mono", monospace',
+  ui: '"Inter", system-ui, -apple-system, sans-serif',
+};
+
+function applyMaterialTokens(
+  root: HTMLElement,
+  variantId: MaterialVariant | string | undefined,
+): void {
+  const m = getMaterialVariant(variantId);
+  root.style.setProperty('--material-blur', m.blur);
+  root.style.setProperty('--material-panel', m.panel);
+  root.style.setProperty('--material-panel-raised', m.panelRaised);
+  root.style.setProperty('--stroke-inner', m.strokeInner);
+  root.style.setProperty('--stroke-faint', m.strokeFaint);
+  root.style.setProperty('--radius-sm', m.radiusSm);
+  root.style.setProperty('--radius-md', m.radiusMd);
+  root.style.setProperty('--radius-chip', m.radiusChip);
+  root.style.setProperty('--shadow-panel', m.shadowPanel);
+  root.style.setProperty('--shadow-panel-sm', m.shadowPanelSm);
+  root.style.setProperty('--shadow-bubble', m.shadowBubble);
+  root.style.setProperty('--shadow-inset', m.shadowInset);
+  root.style.setProperty('--shadow-accent', m.shadowAccent);
+  root.style.setProperty('--row-active', m.rowActive);
+  root.style.setProperty('--tint-accent', m.rowActive);
+  root.style.setProperty('--editor-bg', m.editorBg);
+  root.style.setProperty('--titlebar-bg', m.titlebarBg);
+  root.style.setProperty('--composer-wash', m.composerWash);
+  root.style.setProperty('--bubble-user', m.userBubble);
+  root.style.setProperty('--bg-wash', m.bgWash);
+  root.style.setProperty('--bg-glows', m.bgGlows);
+  root.dataset['material'] = (variantId as string) ?? DEFAULT_MATERIAL_VARIANT;
 }
 
-export function applyThemeToDom(theme: Theme, showBgGradient = true, glassOpacity = 0): void {
+/**
+ * Write the material variant's baseline palette into `--palette-*`. This is
+ * the "no theme" fallback — each variant carries its own accent/neutral
+ * channel. Themes overlay on top via applyPaletteTokens().
+ */
+function applyMaterialPaletteTokens(
+  root: HTMLElement,
+  variantId: MaterialVariant | string | undefined,
+): void {
+  const p = getMaterialVariant(variantId).palette;
+  root.style.setProperty('--palette-bg', p.bg);
+  root.style.setProperty('--palette-bg-secondary', p.bgSecondary);
+  root.style.setProperty('--palette-bg-tertiary', p.bgTertiary);
+  root.style.setProperty('--palette-text', p.text);
+  root.style.setProperty('--palette-text-secondary', p.textSecondary);
+  root.style.setProperty('--palette-text-muted', p.textMuted);
+  root.style.setProperty('--palette-text-faint', p.textFaint);
+  root.style.setProperty('--palette-border', p.border);
+  root.style.setProperty('--palette-border-muted', p.borderMuted);
+  root.style.setProperty('--palette-accent', p.accent);
+  root.style.setProperty('--palette-accent-hover', p.accentHover);
+  root.style.setProperty('--palette-accent-muted', p.accentMuted);
+  root.style.setProperty('--palette-success', p.success);
+  root.style.setProperty('--palette-warning', p.warning);
+  root.style.setProperty('--palette-error', p.error);
+  root.style.setProperty('--palette-purple', p.purple);
+  root.style.setProperty('--palette-purple-muted', p.purpleMuted);
+  root.style.setProperty('--palette-selection', p.selection);
+  root.style.setProperty('--palette-focus-ring', p.focusRing);
+  root.style.setProperty('--palette-term-fg', p.termFg);
+  root.style.setProperty('--palette-term-cursor', p.termCursor);
+  root.style.setProperty('--palette-term-selection', p.termSelection);
+}
+
+/**
+ * Emits the `linear-gradient` carrying the user's glassOpacity dim. The
+ * material wash and glows are stacked separately by shell roots; this layer
+ * only controls how much the user wants to darken the translucent surfaces.
+ */
+function buildGlassDim(showBgGradient: boolean, glassOpacity: number): string {
+  if (!showBgGradient) return 'none';
+  const opacity = Math.max(0, Math.min(100, glassOpacity)) / 100;
+  if (opacity <= 0) return 'none';
+  return `linear-gradient(rgba(0, 0, 0, ${opacity}), rgba(0, 0, 0, ${opacity}))`; // hardcoded: opacity-only black scrim (allowed per .claude/rules/renderer.md).
+}
+
+interface EffectiveTheme {
+  colors: Theme['colors'];
+  fontFamily: Theme['fontFamily'];
+  effects: Theme['effects'] | undefined;
+  id: string;
+}
+
+function resolveEffectiveTheme(
+  theme: Theme | null,
+  materialVariant: MaterialVariant | string,
+): EffectiveTheme {
+  return {
+    colors: theme?.colors ?? getMaterialVariant(materialVariant).palette,
+    fontFamily: theme?.fontFamily ?? FALLBACK_FONTS,
+    effects: theme?.effects,
+    id: theme?.id ?? 'none',
+  };
+}
+
+function writeThemeDataAttrs(root: HTMLElement, eff: EffectiveTheme): void {
+  root.dataset['themeId'] = eff.id;
+  root.dataset['scanlines'] = String(eff.effects?.scanlines ?? false);
+  root.dataset['glowText'] = String(eff.effects?.glowText ?? false);
+}
+
+export function applyThemeToDom(
+  theme: Theme | null,
+  showBgGradient = true,
+  glassOpacity = 0,
+  materialVariant: MaterialVariant | string = DEFAULT_MATERIAL_VARIANT,
+): void {
   const root = document.documentElement;
-  const { colors, fontFamily, effects } = theme;
-  applyPaletteTokens(root, colors);
-  applySemanticTokens(root, colors);
-  applyComponentTokens(root, colors);
-  applyDerivedTokens(root, colors);
-  root.style.setProperty('--bg-gradient', buildBgGradient(theme, showBgGradient, glassOpacity));
-  root.style.setProperty('--font-mono', fontFamily.mono);
-  root.style.setProperty('--font-ui', fontFamily.ui);
-  root.dataset['themeId'] = theme.id;
-  root.dataset['scanlines'] = String(effects?.scanlines ?? false);
-  root.dataset['glowText'] = String(effects?.glowText ?? false);
+  const eff = resolveEffectiveTheme(theme, materialVariant);
+  applyMaterialPaletteTokens(root, materialVariant);
+  if (theme) applyPaletteTokens(root, theme.colors);
+  applyMaterialTokens(root, materialVariant);
+  applySemanticTokens(root, eff.colors);
+  applyComponentTokens(root, eff.colors);
+  applyDerivedTokens(root, eff.colors);
+  root.style.setProperty('--glass-dim', buildGlassDim(showBgGradient, glassOpacity));
+  root.style.setProperty('--font-mono', eff.fontFamily.mono);
+  root.style.setProperty('--font-ui', eff.fontFamily.ui);
+  writeThemeDataAttrs(root, eff);
   window.dispatchEvent(new Event('agent-ide:theme-applied'));
 }
 

@@ -35,6 +35,4 @@ export interface Theme {
     scanlines?: boolean;  // retro theme only
     glowText?: boolean;
   };
-  /** Optional CSS gradient string applied as background-image on the root container */
-  backgroundGradient?: string;
 }

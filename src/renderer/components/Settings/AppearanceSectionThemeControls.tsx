@@ -137,6 +137,61 @@ export function GlassOpacitySection({
   );
 }
 
+const materialVariantOptions: ReadonlyArray<{
+  value: 'vapor' | 'prism' | 'warp';
+  label: string;
+  description: string;
+}> = [
+  { value: 'vapor', label: 'Vapor', description: 'Soft — diffuse blur, rounded, chromatic wash' },
+  { value: 'prism', label: 'Prism', description: 'Structured — crisp strokes, tighter radii' },
+  { value: 'warp', label: 'Warp', description: 'Phosphor — green tint, scanlines, small radii' },
+];
+
+const materialOptionButton = (active: boolean): React.CSSProperties => ({
+  flex: 1,
+  padding: '10px 12px',
+  borderRadius: 'var(--radius-chip)',
+  border: active ? '1px solid var(--interactive-accent)' : '1px solid var(--stroke-inner)',
+  background: active ? 'var(--row-active)' : 'transparent',
+  color: 'var(--text-primary)',
+  cursor: 'pointer',
+  fontSize: '12px',
+  textAlign: 'left',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+});
+
+export function MaterialVariantSection({
+  value,
+  onChange,
+}: {
+  value: 'vapor' | 'prism' | 'warp';
+  onChange: (value: 'vapor' | 'prism' | 'warp') => void;
+}): React.ReactElement {
+  return (
+    <section>
+      <SectionLabel>Material</SectionLabel>
+      <div style={panelStyle}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {materialVariantOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              style={materialOptionButton(value === opt.value)}
+              aria-pressed={value === opt.value}
+            >
+              <span style={{ fontWeight: 500 }}>{opt.label}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{opt.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ThemeEditorHeader({
   editorOpen,
   setEditorOpen,

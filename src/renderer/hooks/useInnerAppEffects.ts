@@ -39,6 +39,7 @@ export interface InnerAppEffectsDeps {
     opts?: { initialPrompt?: string; cliOverrides?: Record<string, unknown>; label?: string },
   ) => Promise<void>;
   setTheme: (id: AppTheme) => void;
+  setMaterialVariant: (id: 'vapor' | 'prism' | 'warp') => void;
   setFilePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSymbolSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setPerfOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -106,6 +107,7 @@ export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
   useDomEventListeners({
     projectRoot: deps.projectRoot,
     setTheme: deps.setTheme,
+    setMaterialVariant: deps.setMaterialVariant,
     handleProjectChange: deps.handleProjectChange,
     openPalette: deps.openPalette,
     spawnSession: deps.spawnSession,

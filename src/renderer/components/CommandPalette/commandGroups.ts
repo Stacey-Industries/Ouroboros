@@ -4,6 +4,7 @@ import {
   OPEN_THREAD_SEARCH_EVENT,
   SPLIT_EDITOR_EVENT,
 } from '../../hooks/appEventNames';
+import { materialVariantCommands, themeCommands } from './commandGroups.appearance';
 import type { Command } from './types';
 
 interface DispatchCommandConfig {
@@ -51,34 +52,6 @@ function createReloadCommand(): Command {
     shortcut: 'Ctrl+Shift+R',
     icon: 'â†º',
     action: () => window.location.reload(),
-  };
-}
-
-/** Theme submenu commands. */
-function themeCommands(): Command {
-  const themes = [
-    { id: 'retro', label: 'Retro', icon: 'ðŸŸ¢' },
-    { id: 'modern', label: 'Modern', icon: 'ðŸ”µ' },
-    { id: 'warp', label: 'Warp', icon: 'ðŸŸ£' },
-    { id: 'cursor', label: 'Cursor', icon: 'âš«' },
-    { id: 'kiro', label: 'Kiro', icon: 'ðŸŸ¡' },
-  ];
-
-  return {
-    id: 'theme',
-    label: 'Theme',
-    category: 'view',
-    icon: 'ðŸŽ¨',
-    action: () => { /* submenu */ },
-    children: themes.map((t) => ({
-      id: `theme:${t.id}`,
-      label: t.label,
-      category: 'view' as const,
-      icon: t.icon,
-      action: () => {
-        dispatchIdeEvent('agent-ide:set-theme', t.id);
-      },
-    })),
   };
 }
 
@@ -322,6 +295,7 @@ function threadCommands(): Command[] {
 export function buildBuiltinCommands(): Command[] {
   return [
     themeCommands(),
+    materialVariantCommands(),
     ...viewCommands(),
     terminalCommands(),
     ...fileCommands(),

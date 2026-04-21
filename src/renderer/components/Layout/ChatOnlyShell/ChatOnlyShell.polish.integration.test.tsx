@@ -101,10 +101,15 @@ afterEach(() => {
 });
 
 describe('ChatOnlyShell — Wave 43 polish integration', () => {
-  it('root container has bg-surface-chat class (unified background)', () => {
+  it('root container uses bg-surface-base + layered material backgrounds (parity with IDE AppLayout)', () => {
     const { container } = render(<ChatOnlyShell />);
     const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain('bg-surface-chat');
+    expect(root.className).toContain('bg-surface-base');
+    expect(root.getAttribute('data-layout')).toBe('app');
+    // Wave 45 Phase B — three stacked background layers: glass-dim → glows → wash
+    expect(root.style.backgroundImage).toContain('var(--bg-wash');
+    expect(root.style.backgroundImage).toContain('var(--bg-glows');
+    expect(root.style.backgroundImage).toContain('var(--glass-dim');
   });
 
   it('title bar has no border-b divider', () => {

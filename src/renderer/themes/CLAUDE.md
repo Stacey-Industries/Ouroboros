@@ -9,9 +9,10 @@ The CLAUDE.md already exists and is comprehensive. No changes needed — it accu
 
 | File                              | Role                                                                                                                                                        |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `types.ts`                        | `Theme` interface — colors, fonts, optional effects (`scanlines`, `glowText`), optional `backgroundGradient`                                                |
+| `types.ts`                        | `Theme` interface — colors, fonts, optional effects (`scanlines`, `glowText`). Material grammar (blur, radius, stroke, wash, glows) lives in `material.ts`, not on the theme. |
+| `material.ts`                     | Wave 45 material variants — `MATERIAL_VARIANTS = { vapor, prism, warp }`. User-selected via `config.materialVariant`; themes paint accent/text on top.       |
 | `index.ts`                        | Theme registry — exports `themes` record, `getTheme()`, `themeList`, and extension theme registration (`registerExtensionTheme`/`unregisterExtensionTheme`) |
-| `retro.ts`                        | Green-on-black CRT theme — only theme using `effects` (scanlines + glow) and a repeating-linear-gradient background                                         |
+| `retro.ts`                        | Green-on-black CRT theme — only theme using `effects` (scanlines + glow). Pairs naturally with the Warp material variant.                                   |
 | `modern.ts`                       | Default theme (`defaultThemeId = 'modern'`). Zinc palette, indigo accent. Also the base for `customTheme`.                                                  |
 | `light.ts`                        | Light mode — white bg, indigo accent                                                                                                                        |
 | `high-contrast.ts`                | Accessibility theme — pure black bg, white text, teal accent, higher contrast ratios                                                                        |

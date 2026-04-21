@@ -37,13 +37,13 @@
 
 /* ─── Dark base background for glass on web ───────────────────────────────
  * Electron provides a dark window chrome behind transparent surfaces.
- * Web mode has no OS chrome, so the html element needs a dark base
- * for the glass gradient to render against. The --bg-gradient var is
- * set per-theme by applyThemeToDom(), so the gradient matches whatever
- * theme is active. */
+ * Web mode has no OS chrome, so the html element needs a dark base for
+ * the glass to render against. Wave 45 Phase B — layers the material
+ * variant's --bg-wash and --bg-glows under the user's --glass-dim knob.
+ * Stack order (top to bottom in the background-image list): dim → glows → wash. */
 .web-mode {
   background-color: var(--surface-base) !important;
-  background-image: var(--bg-gradient, none);
+  background-image: var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none);
 }
 
 /* ─── Prevent iOS bounce scroll ──────────────────────────────────────────── */

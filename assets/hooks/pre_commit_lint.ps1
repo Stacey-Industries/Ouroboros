@@ -151,7 +151,10 @@ try {
     }
 
     # -- Check for new hardcoded colors in renderer files ----------------------
-    $rendererFiles = $fileList | Where-Object { $_ -match '^src/renderer/' -and $_ -match '\.(tsx?)$' }
+    # Exclude src/renderer/themes/** — theme files are THE token source (like
+    # tokens.css); hardcoded color values are their job. The check protects
+    # components, not the token-definition layer. See .claude/rules/renderer.md.
+    $rendererFiles = $fileList | Where-Object { $_ -match '^src/renderer/' -and $_ -match '\.(tsx?)$' -and $_ -notmatch '^src/renderer/themes/' }
     if ($rendererFiles.Count -gt 0) {
         $colorHits = @()
         foreach ($rf in $rendererFiles) {

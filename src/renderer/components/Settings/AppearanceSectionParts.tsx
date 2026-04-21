@@ -9,6 +9,7 @@ import {
   BackgroundGradientSection,
   CustomCSSSection,
   GlassOpacitySection,
+  MaterialVariantSection,
   PaneFontPickerSection,
   ThemeEditorSection,
   ThemeGrid,
@@ -51,6 +52,7 @@ export function AppearanceSectionContent({
         checked={draft.showBgGradient ?? true}
         onChange={(value) => onChange('showBgGradient', value)}
       />
+      <MaterialVariantControl draft={draft} onChange={onChange} />
       <GlassOpacitySlider draft={draft} onChange={onChange} />
       <AccentPicker />
       <ThinkingVerbPicker />
@@ -82,6 +84,24 @@ function GlassOpacitySlider({ draft, onChange }: {
   return (
     <GlassOpacitySection
       value={draft.glassOpacity ?? 0}
+      onChange={handleChange}
+    />
+  );
+}
+
+function MaterialVariantControl({ draft, onChange }: {
+  draft: AppConfig;
+  onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+}): React.ReactElement {
+  const { setMaterialVariant } = useTheme();
+  const handleChange = useCallback((value: 'vapor' | 'prism' | 'warp') => {
+    onChange('materialVariant', value);
+    setMaterialVariant(value);
+  }, [onChange, setMaterialVariant]);
+
+  return (
+    <MaterialVariantSection
+      value={draft.materialVariant ?? 'vapor'}
       onChange={handleChange}
     />
   );

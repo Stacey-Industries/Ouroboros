@@ -36,6 +36,4 @@ export const retroTheme: Theme = {
     scanlines: true,
     glowText: true,
   },
-  backgroundGradient:
-    'repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 4px)',
 };

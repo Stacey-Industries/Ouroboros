@@ -32,6 +32,4 @@ export const warpTheme: Theme = {
     termCursor: '#f97316',
     termSelection: 'rgba(249, 115, 22, 0.3)',
   },
-  backgroundGradient:
-    'radial-gradient(ellipse at 0% 0%, rgba(100,50,180,0.08) 0%, transparent 55%), radial-gradient(ellipse at 100% 100%, rgba(80,30,140,0.07) 0%, transparent 55%)',
 };

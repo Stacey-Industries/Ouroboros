@@ -94,7 +94,11 @@ export function ChatOnlyShell(): React.ReactElement {
 
   return (
     <AgentChatStoreContext.Provider value={store}>
-      <div className="flex flex-col h-screen w-screen bg-surface-chat overflow-hidden">
+      <div
+        data-layout="app"
+        className="flex flex-col h-screen w-screen bg-surface-base overflow-hidden"
+        style={{ backgroundImage: 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)' }}
+      >
         <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} onCycleSidebarMode={cycleMode} sidebarMode={mode} />
         <ChatOnlyBody
           mode={mode}

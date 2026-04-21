@@ -3,6 +3,7 @@ export { CustomCSSSection } from './AppearanceSectionCustomCSS';
 export {
   BackgroundGradientSection,
   GlassOpacitySection,
+  MaterialVariantSection,
   ThemeEditorSection,
   ThemeGrid,
 } from './AppearanceSectionThemeControls';

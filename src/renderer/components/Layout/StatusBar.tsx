@@ -69,7 +69,10 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
 
 const STATUS_BAR_STYLE: React.CSSProperties = {
   height: '24px',
-  borderTop: 'none',
+  // Wave 45 — status bar stays transparent so Mica bleeds through, matching
+  // the editor / terminal / chat. The top stroke marks the edge.
+  background: 'transparent',
+  borderTop: '1px solid var(--stroke-inner)',
   boxShadow: 'none',
   fontSize: '11px',
   fontFamily: 'var(--font-ui, system-ui)',
@@ -205,7 +208,7 @@ export function StatusBar({
   );
 
   return (
-    <div className="flex items-center justify-between flex-shrink-0 select-none bg-surface-panel" style={STATUS_BAR_STYLE}>
+    <div className="flex items-center justify-between flex-shrink-0 select-none" style={STATUS_BAR_STYLE}>
       <div className="flex items-center min-w-0 overflow-hidden">
         <GitSection gitBranch={gitBranch} projectRoot={projectRoot} />
         <FileSection

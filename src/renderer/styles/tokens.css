@@ -101,9 +101,41 @@
                                                   /* (glass sets this to opaque #0e0e12 — --palette-bg is transparent there) */
   --surface-scrim-chat: rgba(0, 0, 0, 0.2);      /* Drawer backdrop — 0.2 opacity scrim */
 
-  /* User message bubble — replaces inline color-mix() */
-  --surface-user-bubble:        rgba(129, 140, 248, 0.10);  /* Dark default: accent tint */
-  --surface-user-bubble-border: rgba(129, 140, 248, 0.18);  /* Matching subtle border */
+  /* User message bubble — Wave 45 Phase C redirects to material variant
+   * tokens so Vapor / Prism / Warp swap automatically. The original
+   * accent-tinted defaults remain as a fallback if the variant isn't
+   * applied yet. */
+  --surface-user-bubble:        var(--bubble-user, rgba(129, 140, 248, 0.10));
+  --surface-user-bubble-border: var(--stroke-inner, rgba(129, 140, 248, 0.18));
+
+  /* ─── Tier 2: Material tokens (Wave 45) ───────────────────────────────────
+   * Glass is the baseline material for the Ouroboros shell. These tokens
+   * describe HOW the material is worn — blur, radius, stroke grammar, shadow
+   * softness, ambient wash. The user-selected material variant writes these
+   * at runtime via applyMaterialTokens(). Defaults below == Vapor baseline.
+   * ──────────────────────────────────────────────────────────────────────── */
+
+  --material-blur:         24px;
+  --material-panel:        rgba(18, 20, 32, 0.35);
+  --material-panel-raised: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  --stroke-inner:          rgba(255, 255, 255, 0.06);
+  --stroke-faint:          rgba(255, 255, 255, 0.05);
+  --radius-sm:             10px;
+  --radius-md:             12px;
+  --radius-chip:           6px;
+  --shadow-panel:          0 12px 40px -12px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-panel-sm:       0 4px 16px -6px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-bubble:         inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-inset:          inset 0 1px 0 rgba(255,255,255,0.06);
+  --shadow-accent:         0 2px 12px -4px rgba(129, 140, 248, 0.6);
+  --row-active:            rgba(129, 140, 248, 0.14);
+  --tint-accent:           rgba(129, 140, 248, 0.14);
+  --editor-bg:             rgba(10, 12, 24, 0.22);
+  --titlebar-bg:           linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+  --composer-wash:         linear-gradient(180deg, rgba(10,12,18,0) 0%, rgba(10,12,18,0.25) 100%);
+  --bubble-user:           linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  --bg-wash:               linear-gradient(180deg, #07080f 0%, #05060c 100%);
+  --bg-glows:              none;
 
   /* ─── Tier 3: Component tokens ────────────────────────────────────────────
    * Scoped to specific complex components. Optional — only add when a
