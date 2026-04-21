@@ -106,7 +106,12 @@ export default defineConfig({
       react({
         babel: {
           plugins: [
-            ['babel-plugin-react-compiler', {}],
+            // Disabled: babel-plugin-react-compiler@1.0.0 produces "Should have a
+            // queue" hook-mismatch crashes on file click through Monaco's
+            // memo + nested custom-hook chain under React 19 StrictMode's
+            // double-invoke. Per-file 'use no memo' opt-outs did not clear it.
+            // Re-enable and retest when upgrading the compiler or React.
+            // ['babel-plugin-react-compiler', {}],
           ],
         },
       }),

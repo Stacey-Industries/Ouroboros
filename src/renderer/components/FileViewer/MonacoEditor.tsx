@@ -109,6 +109,7 @@ function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch
 }
 
 function useMonacoEditorMount(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): void {
+  'use no memo';
   const inputRef = useRef(input);
   inputRef.current = input;
   useEffect(() => {
@@ -123,6 +124,7 @@ function useMonacoEditorContentSync(
   isDirtyRef: MutableRefObject<boolean>,
   onDirtyChange?: (dirty: boolean) => void,
 ): void {
+  'use no memo';
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -141,6 +143,7 @@ function resolveEditorFont(): string {
 }
 
 function useMonacoEditorFontFamily(editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>): void {
+  'use no memo';
   const { config } = useConfig();
   const editorFont = config?.theming?.fonts?.editor;
   useEffect(() => {
@@ -150,6 +153,7 @@ function useMonacoEditorFontFamily(editorRef: MutableRefObject<monaco.editor.ISt
 }
 
 function useMonacoEditorOptions(input: RuntimeInput): void {
+  'use no memo';
   useEffect(() => {
     const editor = input.editorRef.current;
     if (editor) editor.updateOptions({ readOnly: input.readOnly, quickSuggestions: input.readOnly ? false : true, suggestOnTriggerCharacters: !input.readOnly, contextmenu: !input.readOnly });
@@ -166,6 +170,7 @@ function useMonacoEditorOptions(input: RuntimeInput): void {
 }
 
 function useMonacoEditorModes(input: RuntimeInput): void {
+  'use no memo';
   useEffect(() => {
     const editor = input.editorRef.current;
     if (!editor) return;
@@ -186,6 +191,7 @@ function useMonacoEditorModes(input: RuntimeInput): void {
 }
 
 function useMonacoEditorDiffs(input: RuntimeInput): void {
+  'use no memo';
   useEffect(() => {
     const editor = input.editorRef.current;
     if (!editor) return;
@@ -194,6 +200,7 @@ function useMonacoEditorDiffs(input: RuntimeInput): void {
 }
 
 function useMonacoEditorRuntime(input: RuntimeInput): { scrollMetrics: { scrollTop: number; scrollHeight: number; clientHeight: number }; isEditorHovered: boolean; setIsEditorHovered: React.Dispatch<React.SetStateAction<boolean>>; isScrolling: boolean } {
+  'use no memo';
   const [scrollMetrics, setScrollMetrics] = useState({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 });
   const [isEditorHovered, setIsEditorHovered] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -221,6 +228,7 @@ function MonacoInlineEditLayer({
   language,
   activateInlineEditRef,
 }: MonacoInlineEditLayerProps): React.ReactElement {
+  'use no memo';
   const { state, activate, submit, accept, reject, cancel, streaming } = useInlineEdit(editorRef, filePath, language);
   activateInlineEditRef.current = activate;
   return (
@@ -241,6 +249,7 @@ function MonacoHunkGutterLayer({
   editorRef,
   filePath,
 }: MonacoHunkGutterLayerProps): React.ReactElement | null {
+  'use no memo';
   const { decorations, diffReview } = useEditorHunkDecorations(editorRef, filePath);
   return (
     <EditorHunkGutterActions
@@ -254,6 +263,7 @@ function MonacoHunkGutterLayer({
 export type { MonacoEditorProps as MonacoEditorHostProps };
 
 export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement {
+  'use no memo';
   const { filePath, content, language: languageOverride, readOnly = false, projectRoot, onSave, onDirtyChange, onContentChange, keybindingMode = 'default', className, wordWrap, showMinimap, showBlame, formatOnSave = false, diffLines = [] } = props;
   const { containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, inlineEditDisposableRef, diffDecorationIdsRef } = useEditorRefs();
   const callbackRefs = useStableCallbackRefs({ onSave, onDirtyChange, onContentChange, readOnly, formatOnSave, filePath });
