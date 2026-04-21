@@ -94,6 +94,12 @@ interface OpenCloseEffectArgs {
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
 }
 
+function seedDraftFromConfig(api: SettingsDraftApi, config: AppConfig): void {
+  api.setDraft({ ...config });
+  api.originalThemeRef.current = config.activeTheme;
+  api.originalGradientRef.current = config.showBgGradient ?? true;
+}
+
 function useOpenCloseEffect({
   api,
   config,
@@ -119,12 +125,7 @@ function useOpenCloseEffect({
   useEffect(() => {
     if (isOpen) {
       setIsMounted(true);
-      const cfg = configRef.current;
-      if (cfg) {
-        apiRef.current.setDraft({ ...cfg });
-        apiRef.current.originalThemeRef.current = cfg.activeTheme;
-        apiRef.current.originalGradientRef.current = cfg.showBgGradient ?? true;
-      }
+      if (configRef.current) seedDraftFromConfig(apiRef.current, configRef.current);
       const resolved = resolveTab(initialTabRef.current);
       setActiveMainTab(resolved.mainTab);
       setActiveSubTab(resolved.subTab);
@@ -132,19 +133,14 @@ function useOpenCloseEffect({
       const raf = requestAnimationFrame(() => setIsVisible(true));
       return () => cancelAnimationFrame(raf);
     }
-
     setIsVisible(false);
     const timer = setTimeout(() => setIsMounted(false), 200);
     return () => clearTimeout(timer);
   }, [isOpen, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery]);
 
-  // Seed the draft once config loads while the modal is already open.
   useEffect(() => {
-    if (!isOpen || !config) return;
-    if (apiRef.current.draft) return;
-    apiRef.current.setDraft({ ...config });
-    apiRef.current.originalThemeRef.current = config.activeTheme;
-    apiRef.current.originalGradientRef.current = config.showBgGradient ?? true;
+    if (!isOpen || !config || apiRef.current.draft) return;
+    seedDraftFromConfig(apiRef.current, config);
   }, [isOpen, config]);
 }
 
