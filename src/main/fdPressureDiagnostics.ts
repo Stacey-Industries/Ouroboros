@@ -37,12 +37,29 @@ function summarizeByType(handles: unknown[]): string {
     .join(', ');
 }
 
+/**
+ * Best-effort PTY session count. Dynamically resolved so this module stays
+ * free of circular imports with `pty.ts`. Node's `_getActiveHandles` does NOT
+ * surface node-pty's native conpty handles on Windows, so the session count
+ * is the primary signal for PTY-related FD pressure.
+ */
+function getPtySessionCount(): number | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- avoid circular import; pty.ts imports this file's siblings
+    const mod = require('./pty') as { getActiveSessionCount?: () => number };
+    return typeof mod.getActiveSessionCount === 'function' ? mod.getActiveSessionCount() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function describeFdPressure(): string {
   const handles = getActiveHandles();
-  if (!handles) return 'active handles unavailable';
-
+  const ptyCount = getPtySessionCount();
+  const ptyPart = ptyCount !== null ? `, pty sessions=${ptyCount}` : '';
+  if (!handles) return `active handles unavailable${ptyPart}`;
   const summary = summarizeByType(handles);
   return summary
-    ? `active handles=${handles.length} (${summary})`
-    : `active handles=${handles.length}`;
+    ? `active handles=${handles.length} (${summary})${ptyPart}`
+    : `active handles=${handles.length}${ptyPart}`;
 }

@@ -122,18 +122,26 @@ function wireBridgeToProc(
 ): void {
   let earlyOutput = '';
   const captureLimit = 2000;
-  proc.onData((data: string) => {
+  const dataSub = proc.onData((data: string) => {
     if (earlyOutput.length < captureLimit) earlyOutput += data;
     bridge.feed(data);
   });
-  proc.onExit(({ exitCode }) => {
+  const exitSub = proc.onExit(({ exitCode }) => {
     if (exitCode && exitCode !== 0) {
       log.error(
         `session ${id} exited with code ${exitCode}. Early output:\n${earlyOutput.slice(0, captureLimit)}`,
       );
     }
     bridge.handleExit(exitCode);
+    try { dataSub.dispose(); exitSub.dispose(); } catch { /* already disposed */ }
   });
+  // pty.ts's attachSessionListeners already stores its own disposables on
+  // the shared sessions map. Push ours too so external cleanup (window
+  // close, killPty, EMFILE-recovery) also releases these.
+  const session = sessions.get(id);
+  if (session) {
+    session.disposables = [...(session.disposables ?? []), dataSub, exitSub];
+  }
 }
 
 interface ResolvedAgentSpawn {

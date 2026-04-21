@@ -157,12 +157,16 @@ function trySendUsage(state: PtySessionState, clean: string, term: pty.IPty): vo
   term.write('/usage\r');
 }
 
+function safeWrite(term: pty.IPty, payload: string): void {
+  try { term.write(payload); } catch { /* term already exited */ }
+}
+
 function tryDismissUsageTui(state: PtySessionState, clean: string, term: pty.IPty): void {
   if (!state.sentUsage || state.sentExit || !hasUsageData(clean)) return;
   state.sentExit = true;
   setTimeout(() => {
-    term.write('\x1B');
-    setTimeout(() => term.write('/exit\r'), 500);
+    safeWrite(term, '\x1B');
+    setTimeout(() => safeWrite(term, '/exit\r'), 500);
   }, 500);
 }
 
@@ -184,34 +188,51 @@ function spawnPty(shellArgs: { shell: string; args: string[] }): pty.IPty {
   });
 }
 
-function attachPtyHandlers(
-  term: pty.IPty,
-  state: PtySessionState,
-  lastParseRef: { value: ParsedUsage | null },
-  finish: (result: ParsedUsage | null, reason: string) => void,
-): void {
-  const timeout = setTimeout(() => {
-    log.warn(
-      '[claude-usage-poller] timeout — trust:',
-      state.confirmedTrust,
-      'usage:',
-      state.sentUsage,
-      'exit:',
-      state.sentExit,
-    );
-    term.kill();
-    const staleResult = lastParseRef.value ? { ...lastParseRef.value, stale: true } : null;
-    finish(staleResult, 'timeout');
-  }, SPAWN_TIMEOUT_MS);
-  term.onData((data: string) => handlePtyData(state, data, term));
-  term.onExit(({ exitCode }) => {
-    clearTimeout(timeout);
-    const parsed = parseUsageText(state.output);
-    log.info('[claude-usage-poller] exited code:', exitCode, 'parsed:', JSON.stringify(parsed));
-    const result = parsed.fiveHourUsed !== null ? parsed : null;
-    lastParseRef.value = result;
-    finish(result, 'exit');
-  });
+interface HandlerRefs {
+  dataSub: pty.IDisposable;
+  exitSub: pty.IDisposable;
+  timeout: ReturnType<typeof setTimeout>;
+  exited: boolean;
+}
+
+interface HandlerContext {
+  state: PtySessionState;
+  lastParseRef: { value: ParsedUsage | null };
+  finish: (result: ParsedUsage | null, reason: string) => void;
+}
+
+function handleExit(refs: HandlerRefs, exitCode: number, ctx: HandlerContext): void {
+  refs.exited = true;
+  clearTimeout(refs.timeout);
+  refs.dataSub.dispose();
+  refs.exitSub.dispose();
+  activeTerm = null;
+  const parsed = parseUsageText(ctx.state.output);
+  log.info('[claude-usage-poller] exited code:', exitCode, 'parsed:', JSON.stringify(parsed));
+  const result = parsed.fiveHourUsed !== null ? parsed : null;
+  ctx.lastParseRef.value = result;
+  ctx.finish(result, 'exit');
+}
+
+function handleTimeout(term: pty.IPty, refs: HandlerRefs, ctx: HandlerContext): void {
+  const { state, lastParseRef, finish } = ctx;
+  log.warn('[claude-usage-poller] timeout — trust:', state.confirmedTrust, 'usage:', state.sentUsage, 'exit:', state.sentExit);
+  if (!refs.exited) {
+    try { term.kill(); } catch { /* already dead */ }
+  }
+  const staleResult = lastParseRef.value ? { ...lastParseRef.value, stale: true } : null;
+  finish(staleResult, 'timeout');
+}
+
+function attachPtyHandlers(term: pty.IPty, ctx: HandlerContext): void {
+  const refs: HandlerRefs = {
+    dataSub: term.onData((data: string) => handlePtyData(ctx.state, data, term)),
+    exitSub: null as unknown as pty.IDisposable,
+    timeout: null as unknown as ReturnType<typeof setTimeout>,
+    exited: false,
+  };
+  refs.exitSub = term.onExit(({ exitCode }) => handleExit(refs, exitCode, ctx));
+  refs.timeout = setTimeout(() => handleTimeout(term, refs, ctx), SPAWN_TIMEOUT_MS);
 }
 
 function spawnUsageQuery(): Promise<ParsedUsage | null> {
@@ -224,17 +245,21 @@ function spawnUsageQuery(): Promise<ParsedUsage | null> {
     };
     const lastParseRef: { value: ParsedUsage | null } = { value: null };
     let resolved = false;
+    // finish() only resolves the outer promise. activeTerm is cleared in
+    // handleExit once the PTY has actually exited — on Windows, conpty
+    // worker + pipe handles aren't released until then, so nulling
+    // activeTerm early would let the next poll spawn a new PTY on top of
+    // a still-draining one and leak native FDs.
     const finish = (result: ParsedUsage | null, reason: string): void => {
       if (resolved) return;
       resolved = true;
-      activeTerm = null;
       const tag = reason === 'timeout' && result ? 'stale' : reason === 'timeout' ? 'null' : reason;
       log.info(`[claude-usage-poller] finish(${tag}), result:`, JSON.stringify(result));
       resolve(result);
     };
     const term = spawnPty(buildShellArgs());
     activeTerm = term;
-    attachPtyHandlers(term, state, lastParseRef, finish);
+    attachPtyHandlers(term, { state, lastParseRef, finish });
   });
 }
 
@@ -262,9 +287,19 @@ function hasUsageData(clean: string): boolean {
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let activeTerm: pty.IPty | null = null;
+let pollInFlight = false;
 const DRAIN_TIMEOUT_MS = 3_000;
 
 async function pollOnce(): Promise<void> {
+  // Skip when a previous poll's PTY is still in flight or draining. On
+  // Windows each conpty spawn holds native pipe + worker-thread handles
+  // until its child fully exits; overlapping polls leak those FDs until
+  // the process hits its per-process handle limit (→ EMFILE).
+  if (pollInFlight || activeTerm) {
+    log.info('[claude-usage-poller] previous poll still active, skipping tick');
+    return;
+  }
+  pollInFlight = true;
   try {
     const parsed = await spawnUsageQuery();
     if (parsed) {
@@ -273,6 +308,8 @@ async function pollOnce(): Promise<void> {
     }
   } catch (err) {
     log.warn('[claude-usage-poller] poll failed:', err);
+  } finally {
+    pollInFlight = false;
   }
 }
 

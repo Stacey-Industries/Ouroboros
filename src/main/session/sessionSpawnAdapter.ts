@@ -94,18 +94,21 @@ async function spawnDirect(opts: {
   registerSession({ id: opts.id, proc, cwd: opts.cwd, shell: opts.launch.shell, win: opts.win });
 
   let earlyOutput = '';
-  proc.onData((data: string) => {
+  const dataSub = proc.onData((data: string) => {
     if (earlyOutput.length < 2000) earlyOutput += data;
     bridge.feed(data);
   });
-  proc.onExit(({ exitCode }: { exitCode: number }) => {
+  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
     if (exitCode && exitCode !== 0) {
       log.error(`[dispatchSpawn] session ${opts.id} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`);
     }
     bridge.handleExit(exitCode);
-    cleanupSession(opts.id);
+    cleanupSession(opts.id); // walks session.disposables (incl. the two pushed below) then deletes
     resolve();
   });
+  // Piggyback onto pty.ts's session record so external cleanup disposes these too.
+  const session = sessions.get(opts.id);
+  if (session) session.disposables = [...(session.disposables ?? []), dataSub, exitSub];
 
   const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
   setTimeout(() => {

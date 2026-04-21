@@ -39,6 +39,8 @@ interface PtyHostSession {
   cwd: string;
   windowId: number;
   state: ShellState;
+  /** node-pty onData/onExit subs — disposed in attachListeners' exit handler and in every kill path. */
+  disposables: pty.IDisposable[];
 }
 
 const sessions = new Map<string, PtyHostSession>();
@@ -85,7 +87,7 @@ function handleSpawn(requestId: string, inst: PtySpawnInstruction): void {
     });
     const state = initShellStateForSession(inst.id, inst.cwd);
     const session: PtyHostSession = {
-      id: inst.id, proc, cwd: inst.cwd, windowId: inst.windowId, state,
+      id: inst.id, proc, cwd: inst.cwd, windowId: inst.windowId, state, disposables: [],
     };
     sessions.set(inst.id, session);
     attachListeners(session);
@@ -116,7 +118,7 @@ function initShellStateForSession(id: string, cwd: string): ShellState {
 
 function attachListeners(session: PtyHostSession): void {
   const { id, proc } = session;
-  proc.onData((data: string) => {
+  const dataSub = proc.onData((data: string) => {
     const { cleaned, state } = processShellData(data, session.state);
     if (state !== session.state) {
       session.state = state;
@@ -124,11 +126,20 @@ function attachListeners(session: PtyHostSession): void {
     }
     post({ type: 'data', id, data: cleaned });
   });
-  proc.onExit(({ exitCode, signal }) => {
+  const exitSub = proc.onExit(({ exitCode, signal }) => {
+    disposeSessionListeners(session);
     sessions.delete(id);
     removeShellState(id);
     post({ type: 'exit', id, exitCode: exitCode ?? 0, signal: signal ?? 0 });
   });
+  session.disposables.push(dataSub, exitSub);
+}
+
+function disposeSessionListeners(session: PtyHostSession): void {
+  for (const d of session.disposables) {
+    try { d.dispose(); } catch { /* already disposed */ }
+  }
+  session.disposables.length = 0;
 }
 
 function handleWrite(id: string, data: string): void {
@@ -166,6 +177,7 @@ function handleKill(requestId: string, id: string): void {
   } catch {
     // Already dead.
   }
+  disposeSessionListeners(session);
   sessions.delete(id);
   removeShellState(id);
   const persistence = getPersistence();
@@ -200,6 +212,7 @@ function handleGetShellState(requestId: string, id: string): void {
 function handleKillAll(requestId: string): void {
   for (const [id, session] of sessions) {
     try { session.proc.kill(); } catch { /* ignore */ }
+    disposeSessionListeners(session);
     removeShellState(id);
   }
   sessions.clear();
@@ -210,6 +223,7 @@ function handleKillForWindow(requestId: string, windowId: number): void {
   for (const [id, session] of sessions) {
     if (session.windowId !== windowId) continue;
     try { session.proc.kill(); } catch { /* ignore */ }
+    disposeSessionListeners(session);
     sessions.delete(id);
     removeShellState(id);
   }
@@ -236,6 +250,7 @@ export function dispatch(msg: PtyHostRequest): void {
 export function _resetForTests(): void {
   for (const [, session] of sessions) {
     try { session.proc.kill(); } catch { /* ignore */ }
+    disposeSessionListeners(session);
   }
   sessions.clear();
 }

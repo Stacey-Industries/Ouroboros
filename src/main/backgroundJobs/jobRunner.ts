@@ -124,15 +124,19 @@ async function attachDirectPtyProc(
   if (wins[0]) registerSession({ id: sessionId, proc, cwd, shell: launch.shell, win: wins[0] });
 
   let earlyOutput = '';
-  proc.onData((data: string) => { if (earlyOutput.length < 2000) earlyOutput += data; bridge.feed(data); });
-  proc.onExit(({ exitCode }: { exitCode: number }) => {
+  const dataSub = proc.onData((data: string) => { if (earlyOutput.length < 2000) earlyOutput += data; bridge.feed(data); });
+  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
     if (exitCode && exitCode !== 0) {
       log.error(`[bgJob] session ${sessionId} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`);
     }
     bridge.handleExit(exitCode);
     tracker.settle({ exitCode, resultText: null });
-    cleanupSession(sessionId);
+    cleanupSession(sessionId); // walks session.disposables (incl. the two pushed below) then deletes
   });
+  // Piggyback our local subs onto the shared session record so external
+  // cleanup (window close, killPty, force-recovery) also disposes them.
+  const ownedSession = sessions.get(sessionId);
+  if (ownedSession) ownedSession.disposables = [...(ownedSession.disposables ?? []), dataSub, exitSub];
 
   const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
   setTimeout(() => {

@@ -4,6 +4,7 @@ import * as pty from 'node-pty';
 import { getConfigValue } from './config';
 import { dispatchActivationEvent } from './extensions';
 import { resolvePtyCwd } from './ptyCwdResolver';
+import { disposeAll } from './ptyDisposables';
 import { electronBatcher } from './ptyElectronBatcher';
 import {
   buildShellEnvWithIntegration,
@@ -71,6 +72,8 @@ export interface PtySession {
   shell: string;
   /** Thread ID this terminal is linked to, if any. */
   threadId?: string;
+  /** node-pty onData/onExit subs — released in cleanupSession. Leaking these pins conpty handles on Windows. */
+  disposables?: pty.IDisposable[];
 }
 
 export interface SpawnOptions {
@@ -106,6 +109,7 @@ export interface SessionRegistration {
 }
 
 export function cleanupSession(id: string): void {
+  disposeAll(sessions.get(id)?.disposables);
   sessions.delete(id);
   sessionWindowMap.delete(id);
   electronBatcher.cleanup(id);
@@ -113,6 +117,8 @@ export function cleanupSession(id: string): void {
   ptyBatcher.removeSession(id);
   removeShellState(id);
 }
+
+export const getActiveSessionCount = (): number => sessions.size;
 
 function handleSessionExit(id: string, win: BrowserWindow, exitCode: number, signal: number): void {
   if (!sessions.has(id)) return;
@@ -131,16 +137,15 @@ function handleSessionExit(id: string, win: BrowserWindow, exitCode: number, sig
 
 function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow): void {
   electronBatcher.register(id, win);
-  proc.onData((data: string) => {
+  const dataSub = proc.onData((data: string) => {
     const cleaned = processAndUpdateState(id, data);
     electronBatcher.append(id, cleaned);
     ptyBatcher.append(id, cleaned);
     terminalOutputBuffer.append(id, cleaned);
   });
-
-  proc.onExit(({ exitCode, signal }) => {
-    handleSessionExit(id, win, exitCode ?? 0, signal ?? 0);
-  });
+  const exitSub = proc.onExit(({ exitCode, signal }) => handleSessionExit(id, win, exitCode ?? 0, signal ?? 0));
+  const session = sessions.get(id);
+  if (session) session.disposables = [dataSub, exitSub];
 }
 
 export function scheduleStartupCommand(id: string, proc: pty.IPty, command: string): void {
