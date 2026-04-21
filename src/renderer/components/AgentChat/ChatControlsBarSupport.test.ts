@@ -5,6 +5,9 @@ import {
   ANTHROPIC_AUTO_MODEL,
   buildModelOptions,
   buildThreadModelUsage,
+  getContextLimit,
+  getEffortOptions,
+  getPermissionModes,
   resolveActiveModel,
 } from './ChatControlsBarSupport';
 
@@ -116,5 +119,52 @@ describe('buildModelOptions', () => {
         codexSettingsModel: 'gpt-5.4',
       }),
     ).toBe('claude-opus-4-6');
+  });
+
+  it('resolves the active model for Codex from Codex settings when no override is selected', () => {
+    expect(
+      resolveActiveModel({
+        activeProvider: 'codex',
+        selectedModel: '',
+        settingsModel: 'claude-sonnet-4-6',
+        codexSettingsModel: 'gpt-5.4',
+      }),
+    ).toBe('gpt-5.4');
+  });
+
+  it('filters Codex effort options to the selected model capabilities', () => {
+    expect(
+      getEffortOptions('codex', 'gpt-5.1-codex-mini', [
+        {
+          id: 'gpt-5.1-codex-mini',
+          name: 'gpt-5.1-codex-mini',
+          reasoningEfforts: ['medium', 'high'],
+        },
+      ]),
+    ).toEqual([
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+    ]);
+  });
+
+  it('includes Accept Edits in Codex permission modes', () => {
+    expect(getPermissionModes('codex')).toContainEqual({
+      value: 'acceptEdits',
+      label: 'Accept Edits',
+    });
+  });
+
+  it('uses the effective Codex context window percent when available', () => {
+    expect(
+      getContextLimit('gpt-5.4', [
+        {
+          id: 'gpt-5.4',
+          name: 'gpt-5.4',
+          reasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+          contextWindow: 272000,
+          effectiveContextWindowPercent: 95,
+        },
+      ]),
+    ).toBe(258400);
   });
 });

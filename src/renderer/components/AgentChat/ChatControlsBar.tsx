@@ -140,7 +140,7 @@ function buildControlsBarState(props: ChatControlsBarProps) {
     settingsModel: props.settingsModel,
     codexSettingsModel: props.codexSettingsModel,
   });
-  const effortOptions = getEffortOptions(activeProvider, activeModel);
+  const effortOptions = getEffortOptions(activeProvider, activeModel, props.codexModels);
   const effortValue = effortOptions.some((o) => o.value === props.overrides.effort)
     ? props.overrides.effort
     : 'medium';

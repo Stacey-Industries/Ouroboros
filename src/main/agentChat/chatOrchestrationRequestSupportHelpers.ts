@@ -306,7 +306,13 @@ function resolveModelWithSlot(
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined;
   const slotDefault = slots?.agentChat || '';
   if (override) return override;
-  if (!hasExplicitProviderOverride && slotDefault) return slotDefault;
+  if (!hasExplicitProviderOverride && slotDefault) {
+    if (provider === 'codex') {
+      if (slotDefault.startsWith('gpt-')) return slotDefault;
+    } else if (!slotDefault.startsWith('gpt-')) {
+      return slotDefault;
+    }
+  }
   return resolveProviderModel(settings, provider) || 'sonnet';
 }
 

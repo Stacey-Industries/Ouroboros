@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildCodexEventHandler } from './codexEventHandler'
 
 describe('buildCodexEventHandler', () => {
-  it('uses non-cached input tokens for Codex context usage', () => {
+  it('includes cached input tokens in Codex context usage', () => {
     const emit = vi.fn()
     const { getUsage, handler } = buildCodexEventHandler({ emit }, {
       provider: 'codex',
@@ -19,6 +19,6 @@ describe('buildCodexEventHandler', () => {
       },
     })
 
-    expect(getUsage()).toEqual({ inputTokens: 18100, outputTokens: 250 })
+    expect(getUsage()).toEqual({ inputTokens: 27000, outputTokens: 250 })
   })
 })

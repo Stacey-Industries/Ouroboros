@@ -81,6 +81,24 @@ describe('resolveSendOptions', () => {
     expect(result.permissionMode).toBe('default');
   });
 
+  it('ignores a Claude-family agent chat slot when the default provider is codex', () => {
+    const slots: ModelSlotAssignments = {
+      terminal: '',
+      agentChat: 'sonnet',
+      claudeMdGeneration: '',
+      inlineCompletion: '',
+    };
+    getConfigValueMock.mockReturnValue(slots);
+
+    const result = resolveSendOptions(
+      createSettings({ defaultProvider: 'codex' }),
+      createRequest(),
+    );
+
+    expect(result.provider).toBe('codex');
+    expect(result.model).toBe('gpt-5.4');
+  });
+
   it('keeps the agent chat model slot as the highest-precedence fallback', () => {
     const slots: ModelSlotAssignments = {
       terminal: '',

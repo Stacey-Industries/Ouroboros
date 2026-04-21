@@ -106,7 +106,7 @@ export const CODEX_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
-  { value: 'extra_high', label: 'Extra High' },
+  { value: 'xhigh', label: 'Extra High' },
 ];
 
 export const CLAUDE_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
@@ -120,6 +120,7 @@ export const CLAUDE_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
 export const CODEX_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
   { value: 'default', label: 'Workspace Ask' },
   { value: 'plan', label: 'Read Only' },
+  { value: 'acceptEdits', label: 'Accept Edits' },
   { value: 'auto', label: 'Workspace Auto' },
   { value: 'bypassPermissions', label: 'Bypass' },
 ];
@@ -174,8 +175,14 @@ export function buildModelOptions(args: {
 export function getEffortOptions(
   provider: ChatControlProvider,
   activeModel: string,
+  codexModels?: CodexModelOption[],
 ): ReadonlyArray<OptionItem> {
-  if (provider === 'codex') return CODEX_EFFORT_OPTIONS;
+  if (provider === 'codex') {
+    const reasoningEfforts =
+      codexModels?.find((entry) => entry.id === activeModel)?.reasoningEfforts ?? [];
+    if (reasoningEfforts.length === 0) return CODEX_EFFORT_OPTIONS;
+    return CODEX_EFFORT_OPTIONS.filter((option) => reasoningEfforts.includes(option.value));
+  }
   // Third-party provider Claude-family models (minimax:*, openrouter:*).
   if (activeModel.includes(':')) return CLAUDE_EFFORT_OPTIONS_LIMITED;
   // Haiku has no effort tiers — return empty so the UI can hide the pill.
@@ -238,7 +245,13 @@ export function buildThreadModelUsage(
 
 export function getContextLimit(modelId: string, codexModels?: CodexModelOption[]): number {
   const codexModel = (codexModels ?? []).find((entry) => entry.id === modelId);
-  if (codexModel?.contextWindow) return codexModel.contextWindow;
+  if (codexModel?.contextWindow) {
+    const effectivePercent = codexModel.effectiveContextWindowPercent;
+    if (typeof effectivePercent === 'number' && effectivePercent > 0 && effectivePercent <= 100) {
+      return Math.round((codexModel.contextWindow * effectivePercent) / 100);
+    }
+    return codexModel.contextWindow;
+  }
   return modelId.includes('[1m]') ? 1_000_000 : 200_000;
 }
 

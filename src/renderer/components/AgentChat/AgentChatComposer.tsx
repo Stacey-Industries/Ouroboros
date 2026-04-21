@@ -313,6 +313,8 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
           threadModelUsage={threadModelUsage}
           selectedModel={chatOverrides?.model}
           settingsModel={settingsModel}
+          codexSettingsModel={composerProps.codexSettingsModel}
+          defaultProvider={composerProps.defaultProvider}
           codexModels={codexModels}
         />
         <ComposerFooter {...buildComposerFooterProps(composerProps)} />

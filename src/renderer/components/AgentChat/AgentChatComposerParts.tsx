@@ -219,14 +219,17 @@ type ComposerContextBarProps = {
   threadModelUsage?: { model: string; inputTokens: number; outputTokens: number }[];
   selectedModel?: string;
   settingsModel?: string;
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
 };
 
 export function ComposerContextBar(props: ComposerContextBarProps): React.ReactElement | null {
   const activeModel = resolveActiveModel({
-    activeProvider: 'claude-code',
+    activeProvider: props.defaultProvider ?? 'claude-code',
     selectedModel: props.selectedModel ?? '',
     settingsModel: props.settingsModel,
+    codexSettingsModel: props.codexSettingsModel,
   });
   const usage =
     props.streamingTokenUsage ??

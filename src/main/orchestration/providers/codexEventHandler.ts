@@ -119,7 +119,12 @@ export function buildCodexEventHandler(
     if (event.type === 'item.completed') return handleItemCompleted(event as CodexItemCompletedEvent, ctx)
     if (event.type === 'turn.completed') {
       const usage = (event as CodexTurnCompletedEvent).usage
-      if (usage) lastUsage = { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 }
+      if (usage) {
+        lastUsage = {
+          inputTokens: (usage.input_tokens ?? 0) + (usage.cached_input_tokens ?? 0),
+          outputTokens: usage.output_tokens ?? 0,
+        }
+      }
     }
   }
 
