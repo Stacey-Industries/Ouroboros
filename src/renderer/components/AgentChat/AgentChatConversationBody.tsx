@@ -186,7 +186,7 @@ export function MessageList(props: MessageListProps): React.ReactElement {
           />
         )}
         <MessageCards {...props} />
-        {props.pendingUserMessage && props.isSending && (
+        {props.pendingUserMessage && (
           <PendingUserBubble text={props.pendingUserMessage} />
         )}
         <FailedBanner activeThread={props.activeThread} />

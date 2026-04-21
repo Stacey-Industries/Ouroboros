@@ -87,8 +87,16 @@ export function buildSyntheticStreamingMessage(
     threadIsActive,
     onStop,
   } = args;
+  // Prefix the synthetic id so React never confuses it with the persisted
+  // assistant message (which uses the bare `streamingMessageId` as its key).
+  // Without the prefix, the persisted row and the synthetic row collide on
+  // React key and the DOM node is mutated in place — which makes a new turn
+  // visually replace the prior assistant message in the same row slot.
+  const syntheticId = streamingMessageId
+    ? `streaming-${streamingMessageId}`
+    : `streaming-${activeThread.id}-${Date.now()}`;
   return {
-    id: streamingMessageId || `streaming-${Date.now()}`,
+    id: syntheticId,
     threadId: activeThread.id,
     role: 'assistant',
     content: activeTextContent || '',

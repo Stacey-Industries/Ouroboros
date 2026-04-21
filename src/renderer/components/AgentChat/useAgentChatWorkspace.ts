@@ -1,5 +1,5 @@
 /* @refresh reset */
-import { useMemo,useState } from 'react';
+import { useEffect, useMemo,useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
@@ -102,6 +102,27 @@ function useControllerState() {
   };
 }
 
+function usePendingUserMessageClearEffect(
+  pendingUserMessage: string | null,
+  setPendingUserMessage: (next: string | null) => void,
+  activeThread: AgentChatThreadRecord | null | undefined,
+): void {
+  // Clear pendingUserMessage once the persisted turn contains a matching
+  // user message. Without this, the optimistic bubble disappears the moment
+  // isSending flips to false — which leaves the user's prompt invisible
+  // during the window before thread_snapshot lands, and makes the next
+  // assistant turn look like it rendered "above" the user's prompt.
+  useEffect(() => {
+    if (!pendingUserMessage || !activeThread) return;
+    for (let i = activeThread.messages.length - 1; i >= 0; i--) {
+      const m = activeThread.messages[i];
+      if (m.role !== 'user') continue;
+      if (m.content === pendingUserMessage) setPendingUserMessage(null);
+      return;
+    }
+  }, [activeThread, pendingUserMessage, setPendingUserMessage]);
+}
+
 function useAgentChatWorkspaceController(projectRoot: string | null) {
   const state = useControllerState();
   const threadState = useThreadState({ projectRoot });
@@ -121,6 +142,7 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
   });
 
   useAgentChatDraftPersistence(threadState.activeThreadId, state.draft, state.setDraft);
+  usePendingUserMessageClearEffect(state.pendingUserMessage, state.setPendingUserMessage, activeThread);
 
   return { activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState };
 }

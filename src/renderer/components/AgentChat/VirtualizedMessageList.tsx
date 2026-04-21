@@ -136,11 +136,15 @@ function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement
   const forksByMessageId = useForksByMessageId(props.activeThread.id, props.allThreads);
   const { density } = useDensity();
   const rowPadding = density === 'compact' ? 'pb-2' : 'pb-4';
-  const { activeThread, onSelectThread, pendingUserMessage, isSending, error } = props;
+  const { activeThread, onSelectThread, pendingUserMessage, error } = props;
   const branchIndicator = activeThread.branchInfo && onSelectThread
     ? <div className="mb-4"><AgentChatBranchIndicator branchInfo={activeThread.branchInfo} onSwitchToParent={onSelectThread} /></div>
     : null;
-  const pendingBubble = pendingUserMessage && isSending
+  // Render the optimistic user bubble whenever pendingUserMessage is set —
+  // usePendingUserMessageClearEffect clears it once the persisted turn lands.
+  // Previously gated on isSending, which flipped to false before the persisted
+  // user message arrived, creating a visible gap where the prompt disappeared.
+  const pendingBubble = pendingUserMessage
     ? <div className="pb-4"><PendingUserBubble text={pendingUserMessage} /></div>
     : null;
 
