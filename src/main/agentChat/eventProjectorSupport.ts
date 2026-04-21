@@ -1,5 +1,5 @@
 import type { TaskResult, TaskSessionRecord, VerificationSummary } from '../orchestration/types';
-import { buildAgentChatOrchestrationLink } from './chatOrchestrationBridgeSupport';
+import { buildAgentChatOrchestrationLink, buildAssistantMessageId } from './chatOrchestrationBridgeSupport';
 import {
   projectProviderFailureToAssistantMessage,
   projectProviderResultToAssistantMessage,
@@ -249,7 +249,10 @@ function buildAssistantMessage(
     return null;
   }
 
-  const messageId = buildProjectedMessageId(session.id, 'assistant');
+  // Assistant id is keyed on taskId (per-turn), not sessionId (per-thread), so
+  // successive turns don't collide on the same persisted row. See
+  // buildAssistantMessageId for details.
+  const messageId = buildAssistantMessageId(session.taskId);
   const link = buildAgentChatOrchestrationLink(session);
 
   if (session.status === 'failed' || session.status === 'cancelled') {

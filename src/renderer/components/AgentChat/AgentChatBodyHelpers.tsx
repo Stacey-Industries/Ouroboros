@@ -2,7 +2,8 @@
  * AgentChatBodyHelpers.tsx — Helper functions and components for AgentChatConversationBody.
  * Extracted to keep AgentChatConversationBody.tsx under the 300-line limit.
  */
-import React, { useMemo } from 'react';
+import log from 'electron-log/renderer';
+import React, { useMemo, useRef } from 'react';
 
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from '../../types/electron';
 import { PendingUserBubble } from './AgentChatMessageComponents';
@@ -17,6 +18,26 @@ export function findLastUserMessageId(messages: AgentChatMessageRecord[]): strin
   return null;
 }
 
+function logMessagesSignature(
+  threadId: string,
+  filtered: AgentChatMessageRecord[],
+  lastSignatureRef: React.MutableRefObject<string>,
+  meta: { synthetic: boolean; streamingAlreadyPersisted: boolean; streamingMsgId: string | null },
+): void {
+  const signature = filtered.map((m) => `${m.role}:${m.id.slice(-6)}`).join(',');
+  if (signature === lastSignatureRef.current) return;
+  lastSignatureRef.current = signature;
+  log.info(
+    '[trace:chat-order] messagesWithStreaming',
+    'thread:', threadId.slice(-6),
+    'count:', filtered.length,
+    'synthetic:', meta.synthetic,
+    'streamingAlreadyPersisted:', meta.streamingAlreadyPersisted,
+    'streamingMsgId:', meta.streamingMsgId ? meta.streamingMsgId.slice(-6) : 'null',
+    'ids:', signature,
+  );
+}
+
 export function useMessagesWithStreaming(
   activeThread: AgentChatThreadRecord | null,
   streaming: AgentChatStreamingState,
@@ -29,31 +50,25 @@ export function useMessagesWithStreaming(
     streaming.streamingMessageId &&
     activeThread?.messages.some((m) => m.id === streaming.streamingMessageId),
   );
+  const lastSignatureRef = useRef<string>('');
   return useMemo(() => {
     if (!activeThread) return [];
     const filtered = buildFilteredMessages(activeThread.messages);
+    let synthetic = false;
     if (streamingIsActive && !streamingAlreadyPersisted) {
-      filtered.push(
-        buildSyntheticStreamingMessage({
-          activeThread,
-          streamingBlocks: streaming.blocks,
-          streamingMessageId: streaming.streamingMessageId ?? undefined,
-          activeTextContent: streaming.activeTextContent,
-          isStreaming: streaming.isStreaming,
-          threadIsActive,
-          onStop,
-        }),
-      );
+      filtered.push(buildSyntheticStreamingMessage({
+        activeThread, streamingBlocks: streaming.blocks,
+        streamingMessageId: streaming.streamingMessageId ?? undefined,
+        activeTextContent: streaming.activeTextContent,
+        isStreaming: streaming.isStreaming, threadIsActive, onStop,
+      }));
+      synthetic = true;
     }
+    logMessagesSignature(activeThread.id, filtered, lastSignatureRef, {
+      synthetic, streamingAlreadyPersisted, streamingMsgId: streaming.streamingMessageId ?? null,
+    });
     return filtered;
-  }, [
-    activeThread,
-    streaming,
-    streamingIsActive,
-    streamingAlreadyPersisted,
-    threadIsActive,
-    onStop,
-  ]);
+  }, [activeThread, streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, onStop]);
 }
 
 /** Shown before the first streaming blocks arrive — just the user bubble + status spinner. */

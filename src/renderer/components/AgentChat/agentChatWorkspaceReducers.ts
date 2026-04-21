@@ -2,6 +2,8 @@
  * agentChatWorkspaceReducers.ts — Pure thread merge/sort helpers for agentChatWorkspaceSupport.
  * Extracted to keep agentChatWorkspaceSupport.ts under the 300-line limit.
  */
+import log from 'electron-log/renderer';
+
 import type {
   AgentChatMessageRecord,
   AgentChatThreadRecord,
@@ -34,17 +36,36 @@ export function mergeThreadCollection(
   // existing one (possible due to race conditions or stale snapshots),
   // merge message arrays by ID to avoid losing messages.
   let merged = nextThread;
+  let defensiveMerge = false;
   if (
     existing &&
     existing.messages.length > 0 &&
     nextThread.messages.length < existing.messages.length
   ) {
+    defensiveMerge = true;
     const messageMap = new Map<string, AgentChatMessageRecord>();
     for (const msg of existing.messages) messageMap.set(msg.id, msg);
     // Incoming messages take priority (they may have updated fields)
     for (const msg of nextThread.messages) messageMap.set(msg.id, msg);
     const mergedMessages = sortMessages(Array.from(messageMap.values()));
     merged = { ...nextThread, messages: mergedMessages };
+  }
+
+  if (existing) {
+    const existingIds = new Set(existing.messages.map((m) => m.id));
+    const droppedIds = existing.messages
+      .filter((m) => !nextThread.messages.some((n) => n.id === m.id))
+      .map((m) => `${m.role}:${m.id.slice(-6)}`);
+    log.info(
+      '[trace:chat-order] mergeThreadCollection',
+      'thread:', nextThread.id.slice(-6),
+      'existing:', existing.messages.length,
+      'incoming:', nextThread.messages.length,
+      'defensive:', defensiveMerge,
+      'incomingIds:', nextThread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
+      'droppedFromExisting:', droppedIds.length > 0 ? droppedIds.join(',') : 'none',
+      'existingIdsPresent:', existingIds.size,
+    );
   }
 
   return sortThreads([...remainingThreads, merged]);

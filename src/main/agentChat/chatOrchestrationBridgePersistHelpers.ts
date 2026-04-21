@@ -6,6 +6,7 @@
  * finally-block patterns that are common across all four persist functions.
  */
 
+import log from '../logger';
 import { recordTurnEnd } from '../orchestration/contextOutcomeObserver';
 import { emitMonitorSessionEnd, emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
@@ -62,6 +63,13 @@ export function emitSnapshotChunk(
   messageId: string,
   thread: AgentChatThreadRecord,
 ): void {
+  log.info(
+    '[trace:chat-order] emitSnapshotChunk',
+    'thread:', threadId.slice(-6),
+    'assistantMsg:', messageId.slice(-6),
+    'msgs:', thread.messages.length,
+    'ids:', thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
+  );
   emitStreamChunk(runtime.streamChunkListeners, {
     threadId,
     messageId,

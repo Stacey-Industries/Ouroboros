@@ -152,14 +152,19 @@ export function createOrchestrationFailure(message: string): AgentChatMessageRec
 }
 
 /**
- * Derive a deterministic assistant message ID from the orchestration session ID.
- * Must match the scheme in eventProjectorSupport.buildProjectedMessageId so that
- * when the session-update projector runs after the bridge has already written the
- * streaming message, upsertProjectedMessage finds it by ID and updates in-place
- * rather than appending a duplicate.
+ * Derive a deterministic assistant message ID from the orchestration taskId.
+ *
+ * Keyed on taskId — not sessionId — because a single session is reused across
+ * multiple turns within a thread, but each turn creates a fresh task. Keying on
+ * sessionId caused turn N to overwrite turn N-1's persisted assistant message.
+ *
+ * Must match the scheme in eventProjectorSupport.buildAssistantProjectionId so
+ * that when the session-update projector runs after the bridge has already
+ * written the streaming message, upsertProjectedMessage finds it by ID and
+ * updates in-place rather than appending a duplicate.
  */
-export function buildAssistantMessageId(_createId: () => string, sessionId: string): string {
-  return `agent-chat:${sessionId}:assistant`;
+export function buildAssistantMessageId(taskId: string): string {
+  return `agent-chat:task:${taskId}:assistant`;
 }
 
 export function buildThreadWithAssistantMessage(

@@ -36,6 +36,8 @@ describe('FloatingComposerContainer', () => {
     expect(el.className).toContain('bg-surface-raised');
     expect(el.className).toContain('rounded-xl');
     expect(el.className).toContain('shadow-sm');
+    expect(el.className).toContain('overflow-visible');
+    expect(el.className).not.toContain('overflow-hidden');
   });
 
   it('does not apply drag ring when isDragging is false', () => {

@@ -323,10 +323,7 @@ export async function executePendingSend(args: {
     return abortCancelledTask({ linked, pending: args.pending, threadStore: args.threadStore });
   }
 
-  const assistantMessageId = buildAssistantMessageId(
-    args.runtime.createId,
-    validCreated.session.id,
-  );
+  const assistantMessageId = buildAssistantMessageId(validCreated.taskId);
   const streamCtx = buildStreamContext({ pending: args.pending, created: validCreated, link: linked.link, assistantMessageId, sendStartedAt: et0 });
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 

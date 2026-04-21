@@ -9,6 +9,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { Profile } from '../../types/electron';
 
@@ -76,14 +77,37 @@ function DropdownItem({
   );
 }
 
-function useOutsideClick(ref: React.RefObject<HTMLDivElement | null>, onClose: () => void): void {
+function useDropdownOverlay(args: {
+  open: boolean;
+  close: () => void;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  updatePosition: () => void;
+}): void {
   useEffect(() => {
-    function handleOutside(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    if (!args.open) return;
+    function handleOutside(event: MouseEvent): void {
+      const target = event.target as Node;
+      if (args.buttonRef.current?.contains(target) || args.menuRef.current?.contains(target)) return;
+      args.close();
+    }
+    function handleKey(event: KeyboardEvent): void {
+      if (event.key === 'Escape') args.close();
+    }
+    function handleWindowChange(): void {
+      args.updatePosition();
     }
     document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [ref, onClose]);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleWindowChange);
+    window.addEventListener('scroll', handleWindowChange, true);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleWindowChange);
+      window.removeEventListener('scroll', handleWindowChange, true);
+    };
+  }, [args]);
 }
 
 function ProfileDropdown({
@@ -91,17 +115,24 @@ function ProfileDropdown({
   activeId,
   onSelect,
   onClose,
+  menuRef,
+  style,
 }: {
   profiles: Profile[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  style: React.CSSProperties;
 }): React.ReactElement {
-  const ref = useRef<HTMLDivElement>(null);
-  useOutsideClick(ref, onClose);
-
   return (
-    <div ref={ref} style={dropdownStyle} className="bg-surface-panel">
+    <div
+      ref={menuRef}
+      role="listbox"
+      aria-label="Session profiles"
+      style={{ ...dropdownStyle, ...style, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}
+      className="bg-surface-overlay"
+    >
       {profiles.length === 0 && (
         <div className="text-text-semantic-muted" style={emptyDropdownStyle}>No profiles</div>
       )}
@@ -123,9 +154,24 @@ function ProfileDropdown({
 export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfileProps): React.ReactElement {
   const profiles = useProfiles();
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? null;
   const label = activeProfile?.name ?? 'No profile';
+
+  const close = useCallback(() => setOpen(false), []);
+  const updateMenuPos = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPos({
+      left: rect.left,
+      bottom: window.innerHeight - rect.top + 4,
+      width: Math.max(rect.width, 180),
+    });
+  }, []);
+  useDropdownOverlay({ open, close, buttonRef, menuRef, updatePosition: updateMenuPos });
 
   const handleSelect = useCallback((profileId: string) => {
     if (profileId === activeProfileId) return;
@@ -137,12 +183,22 @@ export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfilePr
     onSwitch(profileId);
   }, [activeProfileId, onSwitch]);
 
+  const handleToggle = useCallback(() => {
+    if (open) {
+      close();
+      return;
+    }
+    updateMenuPos();
+    setOpen(true);
+  }, [close, open, updateMenuPos]);
+
   return (
     <div style={wrapStyle}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        style={pillStyle}
+        onClick={handleToggle}
+        style={{ ...pillStyle, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}
         aria-label="Switch active profile"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -151,13 +207,16 @@ export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfilePr
         <span className="text-text-semantic-secondary" style={labelStyle}>{label}</span>
         <span className="text-text-semantic-faint" style={chevronStyle}>▾</span>
       </button>
-      {open && (
+      {open && menuPos && createPortal(
         <ProfileDropdown
           profiles={profiles}
           activeId={activeProfileId}
           onSelect={handleSelect}
-          onClose={() => setOpen(false)}
-        />
+          onClose={close}
+          menuRef={menuRef}
+          style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }}
+        />,
+        document.body,
       )}
     </div>
   );
@@ -182,6 +241,7 @@ const pillStyle: React.CSSProperties = {
   fontSize: '11px',
   fontFamily: 'var(--font-ui)',
   whiteSpace: 'nowrap',
+  color: 'var(--text-semantic-primary)',
 };
 
 const dotStyle: React.CSSProperties = {
@@ -204,15 +264,14 @@ const chevronStyle: React.CSSProperties = {
 };
 
 const dropdownStyle: React.CSSProperties = {
-  position: 'absolute',
-  bottom: 'calc(100% + 4px)',
-  left: 0,
   minWidth: '180px',
   maxHeight: '240px',
   overflowY: 'auto',
-  border: '1px solid var(--border-default)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '8px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
   zIndex: 50,
   padding: '4px',
 };

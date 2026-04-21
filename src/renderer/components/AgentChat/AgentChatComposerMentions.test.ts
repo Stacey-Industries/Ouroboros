@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isComposerMentionHighlight } from './AgentChatComposerInput';
-import { extractMentionQuery } from './AgentChatComposerParts';
+import { extractMentionQuery, extractSlashQuery } from './AgentChatComposerParts';
 
 describe('extractMentionQuery', () => {
   it('keeps bare @ open for mention selection', () => {
@@ -24,5 +24,15 @@ describe('isComposerMentionHighlight', () => {
 
   it('still highlights actual mention text', () => {
     expect(isComposerMentionHighlight('@src/file.ts')).toBe(true);
+  });
+});
+
+describe('extractSlashQuery', () => {
+  it('keeps a bare slash open for command selection', () => {
+    expect(extractSlashQuery('/', 1)).toBe('');
+  });
+
+  it('closes slash mode after the first space', () => {
+    expect(extractSlashQuery('/remember this', 14)).toBeNull();
   });
 });

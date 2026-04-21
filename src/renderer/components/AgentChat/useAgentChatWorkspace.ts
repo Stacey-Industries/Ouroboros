@@ -1,4 +1,5 @@
 /* @refresh reset */
+import log from 'electron-log/renderer';
 import { useEffect, useMemo, useRef,useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
@@ -119,9 +120,24 @@ function usePendingUserMessageClearEffect(
     for (let i = activeThread.messages.length - 1; i >= 0; i--) {
       const m = activeThread.messages[i];
       if (m.role !== 'user') continue;
-      if (m.content === pendingUserMessage) setPendingUserMessage(null);
+      const matched = m.content === pendingUserMessage;
+      log.info(
+        '[trace:chat-order] pendingUserClearEffect',
+        'thread:', activeThread.id.slice(-6),
+        'lastUserId:', m.id.slice(-6),
+        'matched:', matched,
+        'pendingPreview:', pendingUserMessage.slice(0, 40),
+        'lastUserPreview:', m.content.slice(0, 40),
+      );
+      if (matched) setPendingUserMessage(null);
       return;
     }
+    log.info(
+      '[trace:chat-order] pendingUserClearEffect',
+      'thread:', activeThread.id.slice(-6),
+      'outcome:', 'no user message in thread yet',
+      'pendingPreview:', pendingUserMessage.slice(0, 40),
+    );
   }, [activeThread, pendingUserMessage, setPendingUserMessage]);
 }
 

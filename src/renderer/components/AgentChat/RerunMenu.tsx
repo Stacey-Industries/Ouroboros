@@ -7,7 +7,8 @@
  * Usage:
  *   <RerunMenu messageId={message.id} threadId={thread.id} />
  */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   ANTHROPIC_OPTIONS,
@@ -152,12 +153,20 @@ function useRerunState(
 
 // ── Dropdown body ─────────────────────────────────────────────────────────────
 
-function RerunDropdown(props: RerunState): React.ReactElement {
+function RerunDropdown(props: RerunState & { style: React.CSSProperties; menuRef: React.RefObject<HTMLDivElement | null> }): React.ReactElement {
   const sep = <div className="my-1 border-t" style={{ borderColor: 'var(--border-subtle)' }} />;
   return (
     <div
-      className="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border bg-surface-overlay shadow-lg"
-      style={{ borderColor: 'var(--border-semantic)' }}
+      ref={props.menuRef}
+      role="menu"
+      className="z-[9999] w-44 rounded-md border bg-surface-overlay shadow-xl"
+      style={{
+        borderColor: 'var(--border-semantic)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
+        ...props.style,
+      }}
     >
       <OverrideSection label="Model" options={ANTHROPIC_OPTIONS} value={props.model} onChange={props.setModel} />
       {sep}
@@ -184,13 +193,48 @@ function RerunDropdown(props: RerunState): React.ReactElement {
 
 export function RerunMenu({ messageId, threadId, onSuccess }: RerunMenuProps): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null);
   const close = useCallback(() => setOpen(false), []);
   const state = useRerunState(threadId, messageId, onSuccess, close);
+  const updateMenuPos = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPos({ left: rect.left, top: rect.bottom + 4 });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updateMenuPos();
+    function handleMouseDown(event: MouseEvent): void {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    }
+    function handleKey(event: KeyboardEvent): void {
+      if (event.key === 'Escape') close();
+    }
+    function handleWindowChange(): void {
+      updateMenuPos();
+    }
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleWindowChange);
+    window.addEventListener('scroll', handleWindowChange, true);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleWindowChange);
+      window.removeEventListener('scroll', handleWindowChange, true);
+    };
+  }, [close, open, updateMenuPos]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         title="Re-run with model/effort override (always branches)"
         onClick={() => setOpen((v) => !v)}
@@ -204,7 +248,14 @@ export function RerunMenu({ messageId, threadId, onSuccess }: RerunMenuProps): R
         <RerunIcon />
         <span>Re-run</span>
       </button>
-      {open && <RerunDropdown {...state} />}
+      {open && menuPos && createPortal(
+        <RerunDropdown
+          {...state}
+          menuRef={menuRef}
+          style={{ position: 'fixed', left: menuPos.left, top: menuPos.top }}
+        />,
+        document.body,
+      )}
     </div>
   );
 }

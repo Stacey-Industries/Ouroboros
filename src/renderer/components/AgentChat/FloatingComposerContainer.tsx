@@ -29,7 +29,7 @@ export interface FloatingComposerContainerProps {
 // We keep the Tailwind `rounded-xl` class as a fallback for snapshot tests
 // that still assert it; the inline style wins at render time.
 const BASE_CLASS =
-  'rounded-xl bg-surface-raised shadow-sm overflow-hidden transition-shadow duration-150';
+  'rounded-xl bg-surface-raised shadow-sm overflow-visible transition-shadow duration-150';
 
 const DRAG_CLASS =
   'ring-2 ring-inset ring-interactive-accent';

@@ -146,9 +146,9 @@ describe('projectProviderFailureToAssistantMessage', () => {
 });
 
 describe('buildAssistantMessageId', () => {
-  test('returns deterministic id from sessionId', () => {
-    const id = buildAssistantMessageId(() => 'generated-id', 'session-abc');
-    expect(id).toBe('agent-chat:session-abc:assistant');
+  test('returns deterministic id keyed on taskId (per-turn, not per-session)', () => {
+    const id = buildAssistantMessageId('task-abc');
+    expect(id).toBe('agent-chat:task:task-abc:assistant');
   });
 });
 

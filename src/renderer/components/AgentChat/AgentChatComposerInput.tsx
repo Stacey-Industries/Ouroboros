@@ -108,6 +108,7 @@ export type ComposerInputProps = {
   useMentionSystem: boolean;
   onCloseAutocomplete?: () => void;
   onCloseMentionAutocomplete?: () => void;
+  onCloseSlashMenu?: () => void;
 };
 
 /** Matches @mentions and /commands (preceded by whitespace or at start). */
@@ -144,6 +145,7 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         onPaste={props.handlePaste}
         onBlur={() => {
           setTimeout(() => {
+            props.onCloseSlashMenu?.();
             if (props.useMentionSystem) props.onCloseMentionAutocomplete?.();
             else props.onCloseAutocomplete?.();
           }, 200);
