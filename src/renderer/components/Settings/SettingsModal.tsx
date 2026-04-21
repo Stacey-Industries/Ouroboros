@@ -105,26 +105,47 @@ function useOpenCloseEffect({
   setIsVisible,
   setSearchQuery,
 }: OpenCloseEffectArgs): void {
+  // `api` is rebuilt as a fresh object every render by useSettingsDraft, and
+  // `config`/`initialTab` change identity independently. Keying the effect on
+  // them caused a setState→rerender→effect loop. Only the `isOpen` transition
+  // should run the open/close side effects; everything else is read via refs.
+  const apiRef = useRef(api);
+  apiRef.current = api;
+  const configRef = useRef(config);
+  configRef.current = config;
+  const initialTabRef = useRef(initialTab);
+  initialTabRef.current = initialTab;
+
   useEffect(() => {
     if (isOpen) {
       setIsMounted(true);
-      if (config) {
-        api.setDraft({ ...config });
-        api.originalThemeRef.current = config.activeTheme;
-        api.originalGradientRef.current = config.showBgGradient ?? true;
+      const cfg = configRef.current;
+      if (cfg) {
+        apiRef.current.setDraft({ ...cfg });
+        apiRef.current.originalThemeRef.current = cfg.activeTheme;
+        apiRef.current.originalGradientRef.current = cfg.showBgGradient ?? true;
       }
-      const resolved = resolveTab(initialTab);
+      const resolved = resolveTab(initialTabRef.current);
       setActiveMainTab(resolved.mainTab);
       setActiveSubTab(resolved.subTab);
       setSearchQuery('');
-      requestAnimationFrame(() => setIsVisible(true));
-      return;
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
     }
 
     setIsVisible(false);
     const timer = setTimeout(() => setIsMounted(false), 200);
     return () => clearTimeout(timer);
-  }, [api, config, initialTab, isOpen, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery]);
+  }, [isOpen, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery]);
+
+  // Seed the draft once config loads while the modal is already open.
+  useEffect(() => {
+    if (!isOpen || !config) return;
+    if (apiRef.current.draft) return;
+    apiRef.current.setDraft({ ...config });
+    apiRef.current.originalThemeRef.current = config.activeTheme;
+    apiRef.current.originalGradientRef.current = config.showBgGradient ?? true;
+  }, [isOpen, config]);
 }
 
 function useExternalChangeEffect({
