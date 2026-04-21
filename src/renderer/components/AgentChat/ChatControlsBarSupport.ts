@@ -213,57 +213,6 @@ export function getSelectedOptionLabel(value: string, options: ReadonlyArray<Opt
   return match?.label ?? options[0]?.label ?? value;
 }
 
-/** Extract canonical model family keyword for cross-convention comparison. */
-function modelFamilyKey(id: string): string {
-  if (isAnthropicAutoModel(id)) return 'sonnet';
-  const lower = stripProviderPrefix(id).toLowerCase().replace(/\[1m]/, '');
-  if (lower.includes('opus')) return 'opus';
-  if (lower.includes('sonnet')) return 'sonnet';
-  if (lower.includes('haiku')) return 'haiku';
-  return lower;
-}
-
-function stripProviderPrefix(id: string): string {
-  const colonIndex = id.indexOf(':');
-  return colonIndex === -1 ? id : id.slice(colonIndex + 1);
-}
-
-function modelsMatch(a: string, b: string): boolean {
-  if (a === b) return true;
-  const aUnprefixed = stripProviderPrefix(a);
-  const bUnprefixed = stripProviderPrefix(b);
-  if (aUnprefixed === bUnprefixed) return true;
-  const hasLongCtx = a.includes('[1m]') || b.includes('[1m]');
-  const aKey = modelFamilyKey(a);
-  const bKey = modelFamilyKey(b);
-  if (aKey !== bKey) return false;
-  const aLong = a.includes('[1m]');
-  const bLong = b.includes('[1m]');
-  return hasLongCtx ? aLong === bLong : true;
-}
-
-export function buildDisplayUsage(args: {
-  activeModel: string;
-  threadModelUsage?: ModelUsageEntry[];
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-}): ModelUsageEntry[] {
-  if (!args.activeModel) return [];
-  if (args.streamingTokenUsage) {
-    return [
-      {
-        model: args.activeModel,
-        inputTokens: args.streamingTokenUsage.inputTokens,
-        outputTokens: args.streamingTokenUsage.outputTokens,
-      },
-    ];
-  }
-  const persisted = (args.threadModelUsage ?? []).find(
-    (entry) => modelsMatch(entry.model, args.activeModel) || !entry.model,
-  );
-  if (persisted) return [{ ...persisted, model: persisted.model || args.activeModel }];
-  return [{ model: args.activeModel, inputTokens: 0, outputTokens: 0 }];
-}
-
 export function buildThreadModelUsage(
   messages: AgentChatMessageRecord[] | null | undefined,
 ): ModelUsageEntry[] | undefined {

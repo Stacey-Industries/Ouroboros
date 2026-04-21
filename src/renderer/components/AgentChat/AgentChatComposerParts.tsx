@@ -10,7 +10,6 @@ import React from 'react';
 import type { CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { AdvancedInferenceControls } from './AdvancedInferenceControls';
-import type { ModelContextUsage } from './AgentChatConversation';
 import { ChatControlsBar, type ChatOverrides } from './ChatControlsBar';
 import { resolveActiveModel } from './ChatControlsBarSupport';
 import { ContextUsageBar } from './ContextUsageBar';
@@ -258,9 +257,6 @@ export type ComposerFooterProps = {
   routedBy?: string;
   settingsModel?: string;
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-  threadModelUsage?: ModelContextUsage[];
-  isStreaming?: boolean;
   /** Estimated context tokens — used to drive the EffortEstimate pill. */
   contextTokens?: number;
 };
@@ -275,9 +271,6 @@ export function buildComposerFooterProps(p: {
   routedBy?: string;
   settingsModel?: string;
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-  threadModelUsage?: ModelContextUsage[];
-  isStreaming?: boolean;
 }): ComposerFooterProps {
   return {
     chatOverrides: p.chatOverrides,
@@ -288,9 +281,6 @@ export function buildComposerFooterProps(p: {
     routedBy: p.routedBy,
     settingsModel: p.settingsModel,
     onChatOverridesChange: p.onChatOverridesChange,
-    streamingTokenUsage: p.streamingTokenUsage,
-    threadModelUsage: p.threadModelUsage,
-    isStreaming: p.isStreaming,
   };
 }
 
@@ -311,9 +301,6 @@ export function ComposerFooter(props: ComposerFooterProps): React.ReactElement |
           defaultProvider={props.defaultProvider}
           providers={props.modelProviders}
           codexModels={props.codexModels}
-          threadModelUsage={props.threadModelUsage}
-          streamingTokenUsage={props.streamingTokenUsage}
-          isStreaming={props.isStreaming}
           routedBy={props.routedBy}
         />
       </div>

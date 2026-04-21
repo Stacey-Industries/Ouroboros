@@ -3,57 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { resolveChatControlProvider } from './ChatControlsBar';
 import {
   ANTHROPIC_AUTO_MODEL,
-  buildDisplayUsage,
   buildModelOptions,
   buildThreadModelUsage,
   resolveActiveModel,
 } from './ChatControlsBarSupport';
-
-describe('buildDisplayUsage', () => {
-  it('returns persisted usage when not streaming', () => {
-    const usage = buildDisplayUsage({
-      activeModel: 'openai:gpt-5.4',
-      threadModelUsage: [{ model: 'gpt-5.4', inputTokens: 1200, outputTokens: 300 }],
-    });
-
-    expect(usage).toEqual([{ model: 'gpt-5.4', inputTokens: 1200, outputTokens: 300 }]);
-  });
-
-  it('uses streaming token usage as override, not addition', () => {
-    const usage = buildDisplayUsage({
-      activeModel: 'openai:gpt-5.4',
-      threadModelUsage: [{ model: 'gpt-5.4', inputTokens: 1200, outputTokens: 300 }],
-      streamingTokenUsage: { inputTokens: 5000, outputTokens: 150 },
-    });
-
-    expect(usage).toEqual([{ model: 'openai:gpt-5.4', inputTokens: 5000, outputTokens: 150 }]);
-  });
-
-  it('returns zero-value entry when no persisted usage and not streaming', () => {
-    const usage = buildDisplayUsage({
-      activeModel: 'openai:gpt-5.4',
-    });
-
-    expect(usage).toEqual([{ model: 'openai:gpt-5.4', inputTokens: 0, outputTokens: 0 }]);
-  });
-
-  it('returns empty when activeModel is empty', () => {
-    const usage = buildDisplayUsage({
-      activeModel: '',
-    });
-
-    expect(usage).toEqual([]);
-  });
-
-  it('returns zero-value entry when threadModelUsage has no matching model', () => {
-    const usage = buildDisplayUsage({
-      activeModel: 'sonnet',
-      threadModelUsage: [{ model: 'claude-opus-4-6', inputTokens: 5000, outputTokens: 100 }],
-    });
-
-    expect(usage).toEqual([{ model: 'sonnet', inputTokens: 0, outputTokens: 0 }]);
-  });
-});
 
 describe('buildThreadModelUsage', () => {
   it('uses the highest input token value per model (high-water mark)', () => {

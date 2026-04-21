@@ -3,9 +3,7 @@ import React, { useMemo } from 'react';
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 import { getModelProviderLogo } from '../shared/ProviderLogos';
-import { ModelContextUsageIndicator } from './ChatControlsBar.rings';
 import {
-  buildDisplayUsage,
   buildModelOptions,
   type ChatControlProvider,
   getEffortOptions,
@@ -13,7 +11,6 @@ import {
   getSelectedModelLabel,
   getSelectedOptionLabel,
   isAnthropicAutoModel,
-  type ModelUsageEntry,
   type OptionGroup,
   type OptionItem,
   resolveActiveModel,
@@ -126,9 +123,6 @@ interface ChatControlsBarProps {
   settingsModel?: string;
   codexSettingsModel?: string;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  threadModelUsage?: ModelUsageEntry[];
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-  isStreaming?: boolean;
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
   routedBy?: string;
@@ -146,11 +140,6 @@ function buildControlsBarState(props: ChatControlsBarProps) {
     settingsModel: props.settingsModel,
     codexSettingsModel: props.codexSettingsModel,
   });
-  const displayUsage = buildDisplayUsage({
-    activeModel,
-    threadModelUsage: props.threadModelUsage,
-    streamingTokenUsage: props.streamingTokenUsage,
-  });
   const effortOptions = getEffortOptions(activeProvider, activeModel);
   const effortValue = effortOptions.some((o) => o.value === props.overrides.effort)
     ? props.overrides.effort
@@ -162,7 +151,7 @@ function buildControlsBarState(props: ChatControlsBarProps) {
     codexModels: props.codexModels,
     providers: props.providers,
   });
-  return { activeProvider, displayUsage, effortOptions, effortValue, ...modelOptions };
+  return { activeProvider, effortOptions, effortValue, ...modelOptions };
 }
 
 function useActiveSessionRules() {
@@ -224,26 +213,8 @@ function DensityToggle(): React.ReactElement {
   );
 }
 
-function ContextUsageSection(props: {
-  usage: ModelUsageEntry[];
-  codexModels?: CodexModelOption[];
-  isStreaming?: boolean;
-}): React.ReactElement | null {
-  if (props.usage.length === 0) return null;
-  return (
-    <>
-      <div className="mx-0.5 h-3 w-px bg-border-semantic" />
-      <ModelContextUsageIndicator
-        usage={props.usage}
-        codexModels={props.codexModels}
-        isStreaming={props.isStreaming}
-      />
-    </>
-  );
-}
-
 export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement {
-  const { activeProvider, displayUsage, effortOptions, effortValue, defaultOption, groups } =
+  const { activeProvider, effortOptions, effortValue, defaultOption, groups } =
     buildControlsBarState(props);
   const loadedRules = useActiveSessionRules();
   return (
@@ -271,11 +242,6 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
       />
       <RulesActivityBadge rules={loadedRules} />
       <DensityToggle />
-      <ContextUsageSection
-        usage={displayUsage}
-        codexModels={props.codexModels}
-        isStreaming={props.isStreaming}
-      />
     </div>
   );
 }
