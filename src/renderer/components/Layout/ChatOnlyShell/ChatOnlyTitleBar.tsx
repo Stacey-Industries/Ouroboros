@@ -1,21 +1,15 @@
 /**
- * ChatOnlyTitleBar — Minimal title bar for chat-only shell (Wave 43/44).
+ * ChatOnlyTitleBar — Minimal title bar for chat-only shell.
  *
- * Wave 43 Phase C: removed ChatModeBadge, removed "Exit chat mode" button
- * (moved to View menu only), removed border-b divider. Model + permission
- * chips mounted inline via ChatOnlyHeaderControls.
+ * Drag surface: the <header> itself carries `titlebar-drag`; interactive
+ * elements (sidebar-cycle, exit, window controls) override with
+ * `WebkitAppRegion: 'no-drag'`. This matches the IDE TitleBar pattern and
+ * gives the user a full-width drag strip. Phase D moved the model +
+ * permission chips out of this bar, so there are no portaled popovers left
+ * here that would need a dedicated no-drag zone.
  *
- * Wave 44 Phase A: restored "Exit chat mode" icon button (right of header
- * controls, left of WindowControls). Moved WebkitAppRegion: 'drag' off the
- * <header> element onto a dedicated flex-1 spacer div so dropdown popovers
- * rendered in portals outside the no-drag zones receive pointer events.
- *
- * Wave 44 Phase B: drawer-toggle button replaced by sidebar-mode cycle button.
- * Three-state cycle: pinned → collapsed → hidden → pinned. Tooltip reflects
- * current mode. onToggleDrawer kept for hidden-mode legacy overlay compat.
- *
- * No File/Edit/View dropdowns — immersive chat shell is minimal by design.
- * Window controls are inline to avoid duplicating TitleBar.tsx's logic.
+ * Sidebar-mode cycle button: pinned → collapsed → hidden → pinned. Tooltip
+ * reflects current mode. onToggleDrawer kept for hidden-mode overlay compat.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -35,14 +29,14 @@ function WindowControls(): React.ReactElement | null {
   if (platform !== 'win32') return null;
 
   const api = window.electronAPI?.app;
-  const base = 'flex items-center justify-center w-[46px] h-full transition-colors duration-100';
+  const base = 'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
   return (
-    <div className="flex items-stretch h-full ml-auto" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button className={`${base} text-text-semantic-muted hover:bg-surface-hover`}
+    <div className="flex items-stretch h-full ml-auto bg-transparent" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <button className={`${base} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`}
         onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
         <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
       </button>
-      <button className={`${base} text-text-semantic-muted hover:bg-surface-hover`}
+      <button className={`${base} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`}
         onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" /></svg>
       </button>
@@ -182,7 +176,7 @@ export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTi
   const { projectName } = useProject();
   return (
     <header
-      className="flex items-center h-9 px-2 gap-2 bg-surface-chat text-text-semantic-primary select-none shrink-0"
+      className="titlebar-drag flex items-center h-9 px-2 gap-2 bg-transparent text-text-semantic-primary select-none shrink-0"
       data-testid="chat-only-title-bar"
     >
       <TitleBarLeft
@@ -190,10 +184,7 @@ export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTi
         sidebarMode={sidebarMode}
         onCycleSidebarMode={onCycleSidebarMode}
       />
-      {/* Wave 44 Phase D: model + permission chips moved to ChatStatusChipRow
-          below the composer. Title bar is now minimal: left cluster, drag
-          spacer, right cluster (exit + window controls). */}
-      <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+      <div className="flex-1" />
       <TitleBarRight />
     </header>
   );

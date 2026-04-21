@@ -103,7 +103,7 @@ export function ChatOnlyStatusBar({ projectRoot, onOpenDiffOverlay }: ChatOnlySt
 
   return (
     <footer
-      className="flex items-center h-6 px-3 gap-3 bg-surface-chat text-xs shrink-0"
+      className="flex items-center h-6 px-3 gap-3 bg-transparent text-xs shrink-0"
       data-testid="chat-only-status-bar"
     >
       <GitBranchItem branch={branch} />

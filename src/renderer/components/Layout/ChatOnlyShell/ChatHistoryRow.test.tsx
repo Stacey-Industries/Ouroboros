@@ -83,15 +83,25 @@ describe('ChatHistoryRow', () => {
     expect(screen.getByTestId('chat-history-row').className).not.toContain('bg-interactive-selection');
   });
 
-  it('right-click opens context menu with Pin, Archive, Delete, Rename', () => {
+  it('right-click opens context menu with Pin, Rename, Delete', () => {
     renderRow();
     fireEvent.contextMenu(screen.getByTestId('chat-history-row'));
     const menu = screen.getByTestId('context-menu');
     expect(menu).toBeDefined();
     expect(menu.textContent).toContain('Pin');
-    expect(menu.textContent).toContain('Archive');
     expect(menu.textContent).toContain('Delete');
     expect(menu.textContent).toContain('Rename');
+  });
+
+  it('clicking Pin calls window.electronAPI.agentChat.pinThread', () => {
+    const pinThread = vi.fn().mockResolvedValue(undefined);
+    (window as unknown as { electronAPI: { agentChat: { pinThread: typeof pinThread } } }).electronAPI = {
+      agentChat: { pinThread },
+    };
+    renderRow();
+    fireEvent.contextMenu(screen.getByTestId('chat-history-row'));
+    fireEvent.click(screen.getByText('Pin'));
+    expect(pinThread).toHaveBeenCalledWith('thread-1', true);
   });
 
   it('clicking Delete menu item calls onDelete', async () => {

@@ -100,10 +100,10 @@ describe('ChatOnlyTitleBar', () => {
     expect(header.className).not.toContain('border-b');
   });
 
-  it('header element has no WebkitAppRegion drag style (moved to spacer div)', () => {
+  it('header element carries the titlebar-drag class (drag surface matches IDE titlebar)', () => {
     render(<ChatOnlyTitleBar {...defaultProps} />);
     const header = screen.getByTestId('chat-only-title-bar');
-    expect((header as HTMLElement).style.webkitAppRegion ?? '').not.toBe('drag');
+    expect(header.className).toContain('titlebar-drag');
   });
 
   it('sidebar cycle button tooltip reflects pinned mode', () => {

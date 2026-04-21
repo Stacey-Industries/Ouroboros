@@ -1,14 +1,21 @@
 /**
- * ChatHistoryRow — single thread row in the chat history sidebar (Wave 44 Phase B).
+ * ChatHistoryRow — single thread row in the chat history sidebar.
  *
  * Renders: status dot + title + subtitle (time-ago + message count).
- * Right-click context menu: Pin/Unpin, Archive, Delete, Rename.
+ * Right-click context menu: Pin/Unpin, Rename, Delete.
+ *  - Pin: wired to window.electronAPI.agentChat.pinThread (backend at
+ *    src/main/agentChat/threadStoreSqlite.ts:247).
+ *  - Rename: calls onRename — opens BranchRenameDialog upstream.
  *  - Delete: wired to window.electronAPI.agentChat.deleteThread.
- *  - Rename: calls onRename callback (opens rename dialog upstream).
- *  - Pin/Archive: stubbed (backend not yet supported) — logs warn + no-ops.
+ *
+ * Menu renders via createPortal to document.body so it escapes any
+ * overflow-hidden / transformed sidebar ancestor — the earlier inline
+ * `position: fixed` version got clipped when rendered inside the sidebar's
+ * overflow-y-auto scroll container in some layouts.
  */
 
 import React, { useCallback, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { AgentChatThreadRecord } from '../../../types/electron';
 import { ChatHistoryStatusDot } from './ChatHistoryStatusDot';
@@ -35,33 +42,36 @@ interface ContextMenuProps {
   onRename: () => void;
 }
 
+async function togglePinned(threadId: string, nextPinned: boolean): Promise<void> {
+  const api = window.electronAPI?.agentChat;
+  if (!api?.pinThread) return;
+  try { await api.pinThread(threadId, nextPinned); } catch (err) { console.warn('[chatHistoryRow] pinThread failed', err); }
+}
+
 function ContextMenu({ thread, position, onClose, onDelete, onRename }: ContextMenuProps): React.ReactElement {
   const handlePin = useCallback((): void => {
-    console.warn('[wave44] Pin/Unpin not yet wired to backend for thread', thread.id);
+    void togglePinned(thread.id, !thread.pinned);
     onClose();
-  }, [thread.id, onClose]);
-
-  const handleArchive = useCallback((): void => {
-    console.warn('[wave44] Archive not yet wired to backend for thread', thread.id);
-    onClose();
-  }, [thread.id, onClose]);
-
+  }, [thread.id, thread.pinned, onClose]);
   const handleDelete = useCallback((): void => { onDelete(); onClose(); }, [onDelete, onClose]);
   const handleRename = useCallback((): void => { onRename(); onClose(); }, [onRename, onClose]);
   const item = 'px-3 py-1.5 text-sm text-text-semantic-primary hover:bg-surface-hover cursor-pointer select-none';
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="fixed z-50 min-w-[160px] rounded border border-border-subtle bg-surface-overlay shadow-lg py-1"
-        style={{ top: position.y, left: position.x }} data-testid="context-menu">
+      <div className="fixed inset-0 z-[9000]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
+      <div
+        className="fixed z-[9001] min-w-[160px] rounded border border-border-subtle bg-surface-overlay shadow-lg py-1"
+        style={{ top: position.y, left: position.x }}
+        data-testid="context-menu"
+      >
         <div className={item} onClick={handlePin}>{thread.pinned ? 'Unpin' : 'Pin'}</div>
-        <div className={item} onClick={handleArchive}>Archive</div>
         <div className={item} onClick={handleRename}>Rename</div>
         <div className="my-1 border-t border-border-subtle" />
         <div className={`${item} hover:text-status-error`} onClick={handleDelete}>Delete</div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
