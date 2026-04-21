@@ -1,5 +1,5 @@
 /* @refresh reset */
-import { useEffect, useMemo,useState } from 'react';
+import { useEffect, useMemo, useRef,useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
@@ -13,7 +13,7 @@ import type {
   ImageAttachment,
   ModelProvider,
 } from '../../types/electron';
-import { buildAgentChatWorkspaceModel, useAgentChatActions } from './agentChatWorkspaceActions';
+import { buildAgentChatWorkspaceModel, flushPendingResend, type QueuedResend, useAgentChatActions } from './agentChatWorkspaceActions';
 import {
   useActiveThread,
   useAgentChatEventSubscriptions,
@@ -93,12 +93,14 @@ function useControllerState() {
   const [contextFilePaths, setContextFilePaths] = useState<string[]>([]);
   const [mentionRanges, setMentionRanges] = useState<UserSelectedFileRange[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
+  const pendingResendRef = useRef<QueuedResend | null>(null);
   return {
     draft, setDraft, isSending, setIsSending,
     pendingUserMessage, setPendingUserMessage,
     contextFilePaths, setContextFilePaths,
     mentionRanges, setMentionRanges,
     attachments, setAttachments,
+    pendingResendRef,
   };
 }
 
@@ -145,6 +147,29 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
   usePendingUserMessageClearEffect(state.pendingUserMessage, state.setPendingUserMessage, activeThread);
 
   return { activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState };
+}
+
+/**
+ * When the user tries to edit/retry while the agent is busy, the action is
+ * stashed in pendingResendRef instead of rejected. This effect flushes that
+ * queued action as soon as the thread transitions out of running/submitting,
+ * so the edit actually fires instead of being silently dropped.
+ */
+function useFlushPendingResend(
+  controller: ReturnType<typeof useAgentChatWorkspaceController>,
+  projectRoot: string | null,
+): void {
+  const status = controller.activeThread?.status;
+  const isBusy = status === 'running' || status === 'submitting';
+  const wasBusyRef = useRef(isBusy);
+  const argsRef = useRef<ReturnType<typeof buildActionArgs> | null>(null);
+  argsRef.current = buildActionArgs(controller, projectRoot);
+  useEffect(() => {
+    if (wasBusyRef.current && !isBusy && controller.pendingResendRef.current && argsRef.current) {
+      void flushPendingResend(argsRef.current);
+    }
+    wasBusyRef.current = isBusy;
+  }, [isBusy, controller.pendingResendRef]);
 }
 
 /* ---------- Public hook ---------- */
@@ -205,6 +230,7 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
   const { commands } = useRulesAndSkills(projectRoot);
   const actions = useAgentChatActions(buildActionArgs(controller, projectRoot));
   const hooks = useWorkspaceHooks(controller, actions);
+  useFlushPendingResend(controller, projectRoot);
   return useMemo(
     () => buildModel({ controller, actions, hooks, projectRoot, commands }),
     [controller, actions, hooks, projectRoot, commands],

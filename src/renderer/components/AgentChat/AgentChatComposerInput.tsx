@@ -63,6 +63,30 @@ export function SendButton(props: {
   );
 }
 
+/* ---------- StopButton ---------- */
+
+function StopButton(props: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      title="Stop the agent"
+      aria-label="Stop the agent"
+      className="absolute right-2 flex items-center justify-center rounded-md text-xs font-medium transition-all duration-100 hover:bg-surface-hover"
+      style={{
+        top: '6px',
+        width: '28px',
+        height: '28px',
+        color: 'var(--status-error, var(--text-semantic-primary))',
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="5" y="5" width="14" height="14" rx="2" />
+      </svg>
+    </button>
+  );
+}
+
 /* ---------- ComposerInput ---------- */
 
 export type ComposerInputProps = {
@@ -77,6 +101,7 @@ export type ComposerInputProps = {
   handlePaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   isSending: boolean;
   onPickImage?: () => Promise<void>;
+  onStop?: () => Promise<void>;
   onSubmit: () => Promise<void>;
   threadIsBusy: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -173,12 +198,16 @@ export function ComposerInput(props: ComposerInputProps): React.ReactElement {
           </svg>
         </button>
       )}
-      <SendButton
-        canSend={props.canSend}
-        isSending={props.isSending}
-        willQueue={props.threadIsBusy}
-        onClick={() => void props.onSubmit()}
-      />
+      {props.threadIsBusy && props.onStop ? (
+        <StopButton onClick={() => void props.onStop?.()} />
+      ) : (
+        <SendButton
+          canSend={props.canSend}
+          isSending={props.isSending}
+          willQueue={props.threadIsBusy}
+          onClick={() => void props.onSubmit()}
+        />
+      )}
     </div>
   );
 }

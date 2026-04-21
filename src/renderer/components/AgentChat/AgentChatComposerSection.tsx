@@ -44,6 +44,7 @@ export interface ComposerSectionProps {
   isSending: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => Promise<void>;
+  onStop?: () => Promise<void>;
   pinnedFiles?: PinnedFile[];
   onRemoveFile?: (path: string) => void;
   contextSummary?: string | null;
@@ -150,6 +151,7 @@ function buildComposerProps(props: ComposerInnerProps): React.ComponentProps<typ
     threadIsBusy: isThreadBusy(props.activeThread?.status),
     messages: props.activeThread?.messages,
     onChange: props.onDraftChange,
+    onStop: props.onStop,
     onSubmit: props.wrappedOnSend,
     pinnedFiles: props.pinnedFiles,
     onRemoveFile: props.onRemoveFile,

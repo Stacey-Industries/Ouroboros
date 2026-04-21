@@ -43,6 +43,7 @@ export type AgentChatComposerProps = {
   threadIsBusy?: boolean;
   messages?: AgentChatMessageRecord[];
   onChange: (value: string) => void;
+  onStop?: () => Promise<void>;
   onSubmit: () => Promise<void>;
   pinnedFiles?: PinnedFile[];
   onRemoveFile?: (path: string) => void;
@@ -222,6 +223,7 @@ function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): R
       handlePaste={attachmentHandlers.handlePaste}
       isSending={cp.isSending}
       onPickImage={attachmentHandlers.handlePickImage}
+      onStop={cp.onStop}
       onSubmit={cp.onSubmit}
       threadIsBusy={cp.threadIsBusy ?? false}
       textareaRef={state.textareaRef}

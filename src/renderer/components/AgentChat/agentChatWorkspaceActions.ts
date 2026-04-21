@@ -10,11 +10,14 @@ import { isAnthropicAutoModel } from './ChatControlsBarSupport';
 import { clearPersistedDraft, isDraftThreadId } from './useAgentChatDraftPersistence';
 import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
 
+export type QueuedResend = { message: AgentChatMessageRecord; source: 'edit' | 'retry' };
+
 export interface SendMessageArgs {
   activeThreadId: string | null; attachments?: ImageAttachment[]; setAttachments?: Dispatch<SetStateAction<ImageAttachment[]>>;
   chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[]; contextFilePaths?: string[];
   mentionRanges?: UserSelectedFileRange[];
   draft: string; isSending: boolean; pendingUserMessage: string | null; projectRoot: string | null;
+  pendingResendRef?: React.MutableRefObject<QueuedResend | null>;
   setActiveThreadId: Dispatch<SetStateAction<string | null>>; setDraft: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string | null>>; setIsSending: Dispatch<SetStateAction<boolean>>; setPendingUserMessage: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
@@ -92,7 +95,17 @@ async function sendComposerMessage(args: SendMessageArgs): Promise<void> {
     args.setIsSending(false);
   }
 }
-async function sendResentMessage(args: AgentChatActionArgs, message: AgentChatMessageRecord, source: 'edit' | 'retry'): Promise<void> { if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.'); const content = message.content.trim(); if (!content || args.isSending) return; const threadStatus = args.activeThread?.status; if (threadStatus === 'running' || threadStatus === 'submitting') return void args.setError('The agent is still working. Wait for it to finish or stop it first.'); args.setIsSending(true); args.setError(null); try { await saveAllDirtyBuffers(); const result = await sendAgentChatRequest(buildResendRequest(args, content, source), source === 'edit' ? 'Unable to send the edited message.' : 'Unable to retry the message.'); applyResendSuccess(args, result, source); } catch (sendError) { applyResendFailure(args, sendError); } finally { args.setIsSending(false); } }
+function queueOrFail(args: AgentChatActionArgs, message: AgentChatMessageRecord, source: 'edit' | 'retry'): boolean {
+  if (!args.pendingResendRef) {
+    args.setError('The agent is still working. Wait for it to finish or stop it first.');
+    return false;
+  }
+  args.pendingResendRef.current = { message, source };
+  args.setError('Queued — this will send once the agent finishes. Press Stop to run it now.');
+  return true;
+}
+
+async function sendResentMessage(args: AgentChatActionArgs, message: AgentChatMessageRecord, source: 'edit' | 'retry'): Promise<void> { if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.'); const content = message.content.trim(); if (!content || args.isSending) return; const threadStatus = args.activeThread?.status; if (threadStatus === 'running' || threadStatus === 'submitting') { queueOrFail(args, message, source); return; } args.setIsSending(true); args.setError(null); try { await saveAllDirtyBuffers(); const result = await sendAgentChatRequest(buildResendRequest(args, content, source), source === 'edit' ? 'Unable to send the edited message.' : 'Unable to retry the message.'); applyResendSuccess(args, result, source); } catch (sendError) { applyResendFailure(args, sendError); } finally { args.setIsSending(false); } }
 async function resolveLinkedSessionId(link: AgentChatOrchestrationLink): Promise<string | null> { if (link.sessionId) return link.sessionId; const result = await window.electronAPI.agentChat.getLinkedDetails(link) as AgentChatLinkedDetailsResult; if (!result.success) throw new Error(result.error ?? 'Unable to open linked orchestration details.'); return result.session?.id ?? result.link?.sessionId ?? null; }
 
 export function useSendMessageAction(args: SendMessageArgs): () => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async () => { await sendComposerMessage(argsRef.current); }, []); }
@@ -117,12 +130,24 @@ async function editAndResendOnBranch(args: AgentChatActionArgs, message: AgentCh
   const content = message.content.trim();
   if (!content || args.isSending) return;
   const threadStatus = args.activeThread?.status;
-  if (threadStatus === 'running' || threadStatus === 'submitting') return void args.setError('The agent is still working. Wait for it to finish or stop it first.');
+  if (threadStatus === 'running' || threadStatus === 'submitting') { queueOrFail(args, message, 'edit'); return; }
   args.setIsSending(true);
   args.setError(null);
   try { await forkAndSendEdit(args, message, content); }
   catch (editError) { applyResendFailure(args, editError); }
   finally { args.setIsSending(false); }
+}
+
+/**
+ * Fire any resend request that was queued while the thread was busy. Called
+ * by useFlushPendingResend when the thread transitions from busy → idle.
+ */
+export async function flushPendingResend(args: AgentChatActionArgs): Promise<void> {
+  const pending = args.pendingResendRef?.current;
+  if (!pending) return;
+  args.pendingResendRef!.current = null;
+  if (pending.source === 'edit') await editAndResendOnBranch(args, pending.message);
+  else await sendResentMessage(args, pending.message, pending.source);
 }
 export function useEditAndResendAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await editAndResendOnBranch(argsRef.current, message); }, []); }
 export function useRetryMessageAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await sendResentMessage(argsRef.current, message, 'retry'); }, []); }

@@ -95,7 +95,7 @@ function ConversationComposer({ streaming }: { streaming: ReturnType<typeof useA
   return (
     <ComposerSection
       activeThread={thread.activeThread} canSend={thread.canSend} hasProject={thread.hasProject}
-      draft={thread.draft} isSending={thread.isSending} onDraftChange={actions.onDraftChange} onSend={actions.onSend}
+      draft={thread.draft} isSending={thread.isSending} onDraftChange={actions.onDraftChange} onSend={actions.onSend} onStop={actions.onStop}
       pinnedFiles={ctx.pinnedFiles} onRemoveFile={actions.onRemoveFile} contextSummary={ctx.contextSummary}
       autocompleteResults={ctx.autocompleteResults} isAutocompleteOpen={ctx.isAutocompleteOpen}
       onAutocompleteQuery={actions.onAutocompleteQuery} onSelectFile={actions.onSelectFile}
