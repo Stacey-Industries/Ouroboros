@@ -17,6 +17,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatOnlyShell } from './ChatOnlyShell';
 
+let mockChatWorkbenchFlag = false;
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../contexts/ProjectContext', () => ({
@@ -66,6 +68,18 @@ vi.mock('./useChatSidebarMode', () => ({
   useChatSidebarMode: () => ({ mode: 'pinned', cycleMode: vi.fn() }),
 }));
 
+vi.mock('./useChatWorkbenchFlag', () => ({
+  useChatWorkbenchFlag: () => mockChatWorkbenchFlag,
+}));
+
+vi.mock('./ChatWorkbenchShell', () => ({
+  ChatWorkbenchShell: () => (
+    <div data-testid="chat-workbench-shell">
+      <div data-testid="chat-workbench-body" />
+    </div>
+  ),
+}));
+
 vi.mock('./ChatOnlyStatusBar', () => ({
   ChatOnlyStatusBar: ({ onOpenDiffOverlay }: { projectRoot: string | null; onOpenDiffOverlay: () => void }) => (
     <div data-testid="chat-only-status-bar">
@@ -79,6 +93,10 @@ vi.mock('./ChatOnlyStatusBar', () => ({
 afterEach(() => cleanup());
 
 describe('ChatOnlyShell', () => {
+  afterEach(() => {
+    mockChatWorkbenchFlag = false;
+  });
+
   it('renders without throwing', () => {
     const { container } = render(<ChatOnlyShell />);
     expect(container).toBeDefined();
@@ -114,5 +132,13 @@ describe('ChatOnlyShell', () => {
     render(<ChatOnlyShell />);
     const overlay = screen.getByTestId('diff-overlay');
     expect(overlay.getAttribute('data-open')).toBe('false');
+  });
+
+  it('renders the workbench scaffold when chatWorkbench is enabled', () => {
+    mockChatWorkbenchFlag = true;
+    render(<ChatOnlyShell />);
+    expect(screen.getByTestId('chat-workbench-shell')).toBeDefined();
+    expect(screen.getByTestId('chat-workbench-body')).toBeDefined();
+    expect(screen.queryByTestId('chat-history-sidebar')).toBeNull();
   });
 });

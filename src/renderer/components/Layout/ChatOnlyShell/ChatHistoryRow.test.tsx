@@ -47,6 +47,7 @@ function renderRow(overrides: Partial<ChatHistoryRowProps> = {}) {
     isActive: false,
     onClick: vi.fn(),
     onDelete: vi.fn().mockResolvedValue(undefined),
+    onPin: vi.fn().mockResolvedValue(undefined),
     onRename: vi.fn(),
     ...overrides,
   };
@@ -94,14 +95,11 @@ describe('ChatHistoryRow', () => {
   });
 
   it('clicking Pin calls window.electronAPI.agentChat.pinThread', () => {
-    const pinThread = vi.fn().mockResolvedValue(undefined);
-    (window as unknown as { electronAPI: { agentChat: { pinThread: typeof pinThread } } }).electronAPI = {
-      agentChat: { pinThread },
-    };
-    renderRow();
+    const onPin = vi.fn().mockResolvedValue(undefined);
+    renderRow({ onPin });
     fireEvent.contextMenu(screen.getByTestId('chat-history-row'));
     fireEvent.click(screen.getByText('Pin'));
-    expect(pinThread).toHaveBeenCalledWith('thread-1', true);
+    expect(onPin).toHaveBeenCalledWith('thread-1', true);
   });
 
   it('clicking Delete menu item calls onDelete', async () => {

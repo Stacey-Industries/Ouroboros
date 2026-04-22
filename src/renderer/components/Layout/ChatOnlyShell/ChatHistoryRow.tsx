@@ -39,20 +39,15 @@ interface ContextMenuProps {
   position: ContextMenuState;
   onClose: () => void;
   onDelete: () => void;
+  onPin: () => void;
   onRename: () => void;
 }
 
-async function togglePinned(threadId: string, nextPinned: boolean): Promise<void> {
-  const api = window.electronAPI?.agentChat;
-  if (!api?.pinThread) return;
-  try { await api.pinThread(threadId, nextPinned); } catch (err) { console.warn('[chatHistoryRow] pinThread failed', err); }
-}
-
-function ContextMenu({ thread, position, onClose, onDelete, onRename }: ContextMenuProps): React.ReactElement {
+function ContextMenu({ thread, position, onClose, onDelete, onPin, onRename }: ContextMenuProps): React.ReactElement {
   const handlePin = useCallback((): void => {
-    void togglePinned(thread.id, !thread.pinned);
+    onPin();
     onClose();
-  }, [thread.id, thread.pinned, onClose]);
+  }, [onClose, onPin]);
   const handleDelete = useCallback((): void => { onDelete(); onClose(); }, [onDelete, onClose]);
   const handleRename = useCallback((): void => { onRename(); onClose(); }, [onRename, onClose]);
   const item = 'px-3 py-1.5 text-sm text-text-semantic-primary hover:bg-surface-hover cursor-pointer select-none';
@@ -111,10 +106,11 @@ export interface ChatHistoryRowProps {
   isActive: boolean;
   onClick: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
+  onPin: (threadId: string, pinned: boolean) => Promise<void>;
   onRename: (thread: AgentChatThreadRecord) => void;
 }
 
-export function ChatHistoryRow({ thread, isActive, onClick, onDelete, onRename }: ChatHistoryRowProps): React.ReactElement {
+export function ChatHistoryRow({ thread, isActive, onClick, onDelete, onPin, onRename }: ChatHistoryRowProps): React.ReactElement {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const userMessages = thread.messages.filter((m) => m.role === 'user');
@@ -124,6 +120,7 @@ export function ChatHistoryRow({ thread, isActive, onClick, onDelete, onRename }
   const handleClick = useCallback(() => { onClick(thread.id); }, [onClick, thread.id]);
   const handleContextMenu = useCallback((e: React.MouseEvent): void => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }, []);
   const handleDelete = useCallback(async (): Promise<void> => { await onDelete(thread.id); }, [onDelete, thread.id]);
+  const handlePin = useCallback(async (): Promise<void> => { await onPin(thread.id, !thread.pinned); }, [onPin, thread.id, thread.pinned]);
   const handleRename = useCallback((): void => { onRename(thread); }, [onRename, thread]);
 
   return (
@@ -132,7 +129,7 @@ export function ChatHistoryRow({ thread, isActive, onClick, onDelete, onRename }
         threadId={thread.id} onClick={handleClick} onContextMenu={handleContextMenu} rowRef={rowRef} />
       {menu && (
         <ContextMenu thread={thread} position={menu} onClose={() => setMenu(null)}
-          onDelete={handleDelete} onRename={handleRename} />
+          onDelete={handleDelete} onPin={() => { void handlePin(); }} onRename={handleRename} />
       )}
     </>
   );

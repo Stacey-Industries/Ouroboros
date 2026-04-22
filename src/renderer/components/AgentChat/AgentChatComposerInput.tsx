@@ -111,20 +111,37 @@ export type ComposerInputProps = {
   onCloseSlashMenu?: () => void;
 };
 
-/** Matches @mentions and /commands (preceded by whitespace or at start). */
-const TOKEN_RE = /(@[^\n@]*\.\w+(?=\s|$)|@[^\n@]+(?=\s@|$)|(?<=^|\s)\/\S+)/g;
 const ACCENT = { color: '#58a6ff' };
 
+/**
+ * Returns true if `part` is a complete mention token (bare or bracketed).
+ *
+ * Bracketed form: `@[…]` — content may include spaces; matched when the part
+ * starts with `@[` and ends with `]`.
+ * Bare form: `@` followed by one or more non-whitespace, non-`@` chars.
+ */
 export function isComposerMentionHighlight(part: string): boolean {
-  return part.startsWith('@') && !/^@\s/.test(part);
+  return /^@\[[^\]]+\]$/.test(part) || /^(?:@|@@)[^\s@]+$/.test(part);
 }
 
 function isHighlightedToken(part: string): boolean {
   return isComposerMentionHighlight(part) || /^\/\S/.test(part);
 }
 
+/**
+ * Splits `value` into alternating non-token / token segments for highlight
+ * rendering. Bracketed mentions (`@[…]`) are matched before bare mentions
+ * (`@\S+`) so that `@[foo bar]` is captured as a single token rather than
+ * `@[foo` truncated at the space.
+ */
+export function tokenizeComposerHighlights(value: string): string[] {
+  return value.split(
+    /((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g,
+  );
+}
+
 function renderHighlights(value: string): React.ReactNode {
-  const parts = value.split(TOKEN_RE);
+  const parts = tokenizeComposerHighlights(value);
   return parts.map((part, i) => (
     <span key={i} style={isHighlightedToken(part) ? ACCENT : undefined}>
       {part}

@@ -118,11 +118,14 @@ export const CLAUDE_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
 ];
 
 export const CODEX_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
-  { value: 'default', label: 'Workspace Ask' },
-  { value: 'plan', label: 'Read Only' },
-  { value: 'acceptEdits', label: 'Accept Edits' },
   { value: 'auto', label: 'Workspace Auto' },
   { value: 'bypassPermissions', label: 'Bypass' },
+];
+
+export const CODEX_APP_SERVER_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
+  { value: 'acceptEdits', label: 'Accept Edits' },
+  { value: 'plan', label: 'Plan' },
+  ...CODEX_PERMISSION_MODES,
 ];
 
 /* ---------- Option builders ---------- */
@@ -195,8 +198,14 @@ export function getEffortOptions(
   return CLAUDE_EFFORT_OPTIONS_LIMITED;
 }
 
-export function getPermissionModes(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
-  return provider === 'codex' ? CODEX_PERMISSION_MODES : CLAUDE_PERMISSION_MODES;
+export function getPermissionModes(
+  provider: ChatControlProvider,
+  options?: { codexAppServerTransport?: boolean },
+): ReadonlyArray<OptionItem> {
+  if (provider !== 'codex') return CLAUDE_PERMISSION_MODES;
+  return options?.codexAppServerTransport
+    ? CODEX_APP_SERVER_PERMISSION_MODES
+    : CODEX_PERMISSION_MODES;
 }
 
 export function getSelectedModelLabel(

@@ -14,10 +14,10 @@
  * Footer slot: placeholder div for Phase C ChatOnlyUserMenu.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 
 import type { AgentChatThreadRecord } from '../../../types/electron';
-import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
+import { AgentChatStoreContext, useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
 import { BranchRenameDialog } from '../../AgentChat/BranchRenameDialog';
 import { ChatHistoryList } from './ChatHistoryList';
 import { ChatOnlyUserMenu } from './ChatOnlyUserMenu';
@@ -50,7 +50,7 @@ interface CollapsedRailProps { onNewChat: () => void }
 
 function CollapsedRail({ onNewChat }: CollapsedRailProps): React.ReactElement {
   return (
-    <div className="flex flex-col items-center gap-2 py-3 w-12 h-full bg-surface-panel border-r border-border-subtle shrink-0"
+    <div className="flex flex-col items-center gap-2 py-3 w-12 h-full bg-surface-panel shrink-0"
       data-testid="sidebar-collapsed-rail">
       <button className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-interactive-accent hover:bg-surface-hover transition-colors"
         onClick={onNewChat} title="New chat" aria-label="New chat">
@@ -100,17 +100,19 @@ interface PinnedBodyProps {
   onNewChat: () => void;
   onSelectThread: (id: string) => void;
   onDeleteThread: (id: string) => Promise<void>;
+  onPinThread: (id: string, pinned: boolean) => Promise<void>;
   onRenameThread: (t: AgentChatThreadRecord) => void;
 }
 
 function PinnedBody(props: PinnedBodyProps): React.ReactElement {
   return (
-    <div className="flex flex-col w-[280px] h-full bg-surface-panel border-r border-border-subtle shrink-0"
+    <div className="flex flex-col w-[280px] h-full bg-surface-panel shrink-0"
       data-testid="chat-history-sidebar">
       <SidebarHeader searchQuery={props.searchQuery} onSearchChange={props.onSearchChange} onNewChat={props.onNewChat} />
       <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
         <ChatHistoryList threads={props.threads} activeThreadId={props.activeThreadId}
           onSelectThread={props.onSelectThread} onDeleteThread={props.onDeleteThread}
+          onPinThread={props.onPinThread}
           onRenameThread={props.onRenameThread} />
       </div>
       {/* Wave 44 Phase C: user menu in sidebar footer */}
@@ -129,13 +131,23 @@ interface SidebarState {
   renameTarget: AgentChatThreadRecord | null;
   handleNewChat: () => void;
   handleDelete: (id: string) => Promise<void>;
+  handlePin: (id: string, pinned: boolean) => Promise<void>;
   handleRename: (t: AgentChatThreadRecord) => void;
-  handleRenamed: () => void;
+  handleRenamed: (threadId: string, newName: string) => void;
   setSearchQuery: (q: string) => void;
   setRenameTarget: (t: AgentChatThreadRecord | null) => void;
 }
 
+async function listThreadsForWorkspace(workspaceRoot: string): Promise<AgentChatThreadRecord[]> {
+  const result = await window.electronAPI?.agentChat?.listThreads?.(workspaceRoot);
+  if (!result?.success || !result.threads) {
+    throw new Error(result?.error ?? 'Unable to load chat threads.');
+  }
+  return result.threads;
+}
+
 function useSidebarState(): SidebarState {
+  const store = useContext(AgentChatStoreContext);
   const threads = useAgentChatStoreContext((s) => s.threads);
   const activeThread = useAgentChatStoreContext((s) => s.activeThread);
   const onSelectThread = useAgentChatStoreContext((s) => s.onSelectThread);
@@ -145,15 +157,42 @@ function useSidebarState(): SidebarState {
   // Selecting `null` signals the workspace to open a fresh draft thread
   // (see useThreadSelectionActions.startNewChat).
   const handleNewChat = useCallback((): void => { onSelectThread(null); }, [onSelectThread]);
+  const syncThreads = useCallback(async (): Promise<void> => {
+    if (!store) return;
+    const workspaceRoot = activeThread?.workspaceRoot ?? threads[0]?.workspaceRoot;
+    if (!workspaceRoot) return;
+    const nextThreads = await listThreadsForWorkspace(workspaceRoot);
+    store.setState((state) => ({
+      ...state,
+      threads: nextThreads,
+      activeThread: nextThreads.find((thread) => thread.id === state.activeThread?.id) ?? null,
+    }));
+  }, [activeThread?.workspaceRoot, store, threads]);
   const handleDelete = useCallback(async (id: string): Promise<void> => {
     await window.electronAPI?.agentChat?.deleteThread?.(id);
-  }, []);
+    if (!store) return;
+    store.setState((state) => {
+      const nextThreads = state.threads.filter((thread) => thread.id !== id);
+      return {
+        ...state,
+        threads: nextThreads,
+        activeThread: state.activeThread?.id === id ? null : state.activeThread,
+      };
+    });
+  }, [store]);
+  const handlePin = useCallback(async (id: string, pinned: boolean): Promise<void> => {
+    await window.electronAPI?.agentChat?.pinThread?.(id, pinned);
+    await syncThreads();
+  }, [syncThreads]);
   const handleRename = useCallback((t: AgentChatThreadRecord): void => { setRenameTarget(t); }, []);
-  const handleRenamed = useCallback((): void => { setRenameTarget(null); }, []);
+  const handleRenamed = useCallback(async (): Promise<void> => {
+    setRenameTarget(null);
+    await syncThreads();
+  }, [syncThreads]);
 
   return {
     threads, activeThreadId: activeThread?.id ?? null, onSelectThread, searchQuery, renameTarget,
-    handleNewChat, handleDelete, handleRename, handleRenamed, setSearchQuery, setRenameTarget,
+    handleNewChat, handleDelete, handlePin, handleRename, handleRenamed, setSearchQuery, setRenameTarget,
   };
 }
 
@@ -176,7 +215,7 @@ export function ChatHistorySidebar({ mode }: ChatHistorySidebarProps): React.Rea
       <PinnedBody threads={filtered} activeThreadId={s.activeThreadId}
         searchQuery={s.searchQuery} onSearchChange={s.setSearchQuery}
         onNewChat={s.handleNewChat} onSelectThread={s.onSelectThread}
-        onDeleteThread={s.handleDelete} onRenameThread={s.handleRename} />
+        onDeleteThread={s.handleDelete} onPinThread={s.handlePin} onRenameThread={s.handleRename} />
       {s.renameTarget && (
         <BranchRenameDialog threadId={s.renameTarget.id}
           currentName={s.renameTarget.branchName ?? s.renameTarget.title}

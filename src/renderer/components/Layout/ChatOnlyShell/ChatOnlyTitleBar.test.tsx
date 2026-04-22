@@ -30,6 +30,12 @@ vi.mock('../../../contexts/ProjectContext', () => ({
   useProject: () => ({ projectRoot: '/test/project', projectName: 'project', projectRoots: ['/test/project'] }),
 }));
 
+const approvalContextMock = vi.hoisted(() => ({
+  useApprovalContext: vi.fn(() => ({ pendingCount: 0, requests: [] })),
+}));
+
+vi.mock('../../../contexts/ApprovalContext', () => approvalContextMock);
+
 vi.mock('./ChatOnlyHeaderControls', () => ({
   ChatOnlyHeaderControls: () => <div data-testid="header-controls-stub" />,
 }));
@@ -43,6 +49,18 @@ const defaultProps = {
 };
 
 describe('ChatOnlyTitleBar', () => {
+  it('does not show the approval pill when there are no pending approvals', () => {
+    approvalContextMock.useApprovalContext.mockReturnValue({ pendingCount: 0, requests: [] });
+    render(<ChatOnlyTitleBar {...defaultProps} />);
+    expect(screen.queryByTestId('chat-approval-pill')).toBeNull();
+  });
+
+  it('shows the approval pill when approvals are pending', () => {
+    approvalContextMock.useApprovalContext.mockReturnValue({ pendingCount: 2, requests: [] });
+    render(<ChatOnlyTitleBar {...defaultProps} />);
+    expect(screen.getByTestId('chat-approval-pill').textContent).toContain('2 approvals');
+  });
+
   it('renders without throwing', () => {
     const { container } = render(<ChatOnlyTitleBar {...defaultProps} />);
     expect(container).toBeDefined();

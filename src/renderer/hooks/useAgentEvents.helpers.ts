@@ -265,6 +265,21 @@ function startToolCall(
 ): AgentState {
   const baseState = ensureSession(state, action.sessionId, action.toolCall.timestamp);
   return updateSession(baseState, action.sessionId, (session) => {
+    const existingIndex = session.toolCalls.findIndex((tc) => tc.id === action.toolCall.id);
+    if (existingIndex >= 0) {
+      const existing = session.toolCalls[existingIndex];
+      const toolCalls = session.toolCalls.map((tc, index) =>
+        index === existingIndex
+          ? {
+              ...existing,
+              toolName: action.toolCall.toolName,
+              input: action.toolCall.input,
+              timestamp: action.toolCall.timestamp,
+            }
+          : tc,
+      );
+      return { ...session, toolCalls };
+    }
     const isDuplicate = session.toolCalls.some(
       (tc) =>
         tc.toolName === action.toolCall.toolName &&

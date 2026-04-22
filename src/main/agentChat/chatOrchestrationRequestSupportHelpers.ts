@@ -67,6 +67,13 @@ export interface ResolvedSendOptions {
 
 const DEFAULT_MODE: OrchestrationMode = 'edit';
 const DEFAULT_CHAT_EFFORT = 'medium';
+const CODEX_EXEC_PERMISSION_MODES = new Set(['auto', 'bypassPermissions']);
+const CODEX_APP_SERVER_PERMISSION_MODES = new Set([
+  'acceptEdits',
+  'plan',
+  'auto',
+  'bypassPermissions',
+]);
 
 // ---------------------------------------------------------------------------
 // Context selection helpers
@@ -294,7 +301,32 @@ function resolvePermissionMode(
   settings: ResolvedAgentChatSettings,
   provider: AgentChatSettings['defaultProvider'],
 ): string {
-  return provider === 'codex' ? 'default' : settings.claudeCliSettings.permissionMode || 'default';
+  if (provider !== 'codex') {
+    return settings.claudeCliSettings.permissionMode || 'default';
+  }
+  if (settings.codexCliSettings.dangerouslyBypassApprovalsAndSandbox) {
+    return 'bypassPermissions';
+  }
+  if (settings.codexCliSettings.approvalPolicy === 'never') {
+    return 'auto';
+  }
+  if (isCodexAppServerTransportEnabled()) {
+    return settings.codexCliSettings.sandbox === 'read-only' ? 'plan' : 'acceptEdits';
+  }
+  return 'auto';
+}
+
+function isCodexAppServerTransportEnabled(): boolean {
+  const ecosystem = getConfigValue('ecosystem') as
+    | { codexAppServerTransport?: boolean }
+    | undefined;
+  return ecosystem?.codexAppServerTransport === true;
+}
+
+function getSupportedCodexPermissionModes(): Set<string> {
+  return isCodexAppServerTransportEnabled()
+    ? CODEX_APP_SERVER_PERMISSION_MODES
+    : CODEX_EXEC_PERMISSION_MODES;
 }
 
 function resolveModelWithSlot(
@@ -322,9 +354,15 @@ function resolveEffortAndPermission(
   provider: AgentChatSettings['defaultProvider'],
   overrides: NonNullable<AgentChatSendMessageRequest['overrides']> | undefined,
 ): { effort: string; permissionMode: string } {
+  const requestedPermissionMode =
+    overrides?.permissionMode || resolvePermissionMode(settings, provider);
+  const permissionMode =
+    provider === 'codex' && !getSupportedCodexPermissionModes().has(requestedPermissionMode)
+      ? resolvePermissionMode(settings, provider)
+      : requestedPermissionMode;
   return {
     effort: overrides?.effort || DEFAULT_CHAT_EFFORT,
-    permissionMode: overrides?.permissionMode || resolvePermissionMode(settings, provider),
+    permissionMode,
   };
 }
 

@@ -411,8 +411,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17 — layout preset engine. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. Wave 42 — immersiveChat. Wave 43 — chatPrimary retired; migrated to immersiveChat on startup. */
-  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean; immersiveChat?: boolean };
+  /** Wave 17 — layout preset engine. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. Wave 42 — immersiveChat. Wave 43 — chatPrimary retired; migrated to immersiveChat on startup. Wave 46 — chatWorkbench scaffold inside immersive chat. */
+  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean; immersiveChat?: boolean; chatWorkbench?: boolean };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
@@ -474,4 +474,3 @@ export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConf
   ensureStore().set(key, value);
   configCache = null; // invalidate cache on write
 }
-

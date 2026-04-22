@@ -36,6 +36,8 @@ export interface ApprovalRequest {
   toolInput: Record<string, unknown>;
   sessionId: string;
   timestamp: number;
+  provider?: 'claude-code' | 'codex';
+  rawPayload?: unknown;
   permissionContext?: PermissionContext;
 }
 
@@ -201,6 +203,18 @@ export function requestApproval(request: ApprovalRequest): void {
     respondToApproval,
   );
   if (timer) autoApproveTimers.set(request.requestId, timer);
+}
+
+export function cancelApprovalRequest(requestId: string, reason = 'cancelled'): boolean {
+  const request = pendingRequests.get(requestId);
+  if (!request) return false;
+
+  clearAutoApproveTimer(requestId);
+  clearQueuedResponseWrite(requestId);
+  pendingRequests.delete(requestId);
+  log.info(`[approval] cancelled ${requestId}: ${reason}`);
+  notifyApprovalResolved(requestId, 'reject');
+  return true;
 }
 
 const EMFILE_MAX_RETRIES = 2;
@@ -428,6 +442,10 @@ export function getApprovalsDir(): string {
  */
 export function getPendingRequests(): ApprovalRequest[] {
   return Array.from(pendingRequests.values());
+}
+
+export function getPendingRequest(requestId: string): ApprovalRequest | undefined {
+  return pendingRequests.get(requestId);
 }
 
 // waitForResolution is re-exported from approvalWaiterRegistry at the top of this file.

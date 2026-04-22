@@ -234,8 +234,9 @@ export interface AppConfig {
    *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px
    *  Wave 42 — immersiveChat: single-column chat shell
    *  Wave 43 — chatPrimary retired; use immersiveChat instead
-   *  Wave 44 — chatSidebarMode: chat history sidebar pin/collapse/hidden mode */
-  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean; chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden' };
+   *  Wave 44 — chatSidebarMode: chat history sidebar pin/collapse/hidden mode
+   *  Wave 46 — chatWorkbench: workstation scaffold inside immersive chat */
+  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean; chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden'; chatWorkbench?: boolean };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
   chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */
@@ -254,8 +255,9 @@ export interface AppConfig {
   sessionDispatch?: { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: Array<{ id: string; request: { title: string; prompt: string; projectPath: string; worktreeName?: string }; status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled'; createdAt: string; startedAt?: string; endedAt?: string; sessionId?: string; error?: string; deviceId?: string }> };
   /** Wave 35+36 — per-user theming overrides; providers.multiProvider gates non-Claude session providers. */
   theming?: { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }; providers?: { multiProvider?: boolean };
-  /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata. */
-  ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number } };
+  /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
+   *  Wave 45 Phase A — codexAppServerTransport gates the Codex app-server transport scaffold. */
+  ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number }; codexAppServerTransport?: boolean };
   /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
   platform?: PlatformConfig;
 }

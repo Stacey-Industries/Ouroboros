@@ -6,6 +6,7 @@ import type { Profile } from '../../types/electron';
 import { useAgentMonitorSettings } from '../AgentMonitor/useAgentMonitorSettings';
 import { ComposerSection, ConversationBody } from './AgentChatConversationBody';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
+import { AgentChatApprovalBanner } from './AgentChatApprovalBanner';
 import { QueuedMessageBanner } from './AgentChatMessageComponents';
 import {
   useAgentChatActions,
@@ -184,9 +185,15 @@ export function AgentChatConversation(): React.ReactElement {
   const thread = useAgentChatThread();
   const actions = useAgentChatActions();
   const streaming = useAgentChatStreaming(thread.activeThread?.id ?? null);
+  const approvalSessionIds = [
+    thread.activeThread?.latestOrchestration?.sessionId,
+    thread.activeThread?.latestOrchestration?.claudeSessionId,
+    thread.activeThread?.latestOrchestration?.codexThreadId,
+  ];
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface-panel">
+      <AgentChatApprovalBanner sessionIds={approvalSessionIds} />
       <ConversationBody
         activeThread={thread.activeThread} streaming={streaming} error={thread.error}
         hasProject={thread.hasProject} isSending={thread.isSending} isLoading={thread.isLoading}

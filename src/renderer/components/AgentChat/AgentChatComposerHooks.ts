@@ -15,6 +15,7 @@ import { handleComposerChange, handleComposerKeyDown } from './AgentChatComposer
 import { autoResizeTextarea } from './AgentChatComposerParts';
 import {
   appendAttachments,
+  buildMentionInsertion,
   readAttachmentFiles,
   selectComposerFile,
   selectComposerMention,
@@ -60,7 +61,7 @@ function insertDroppedPath(
   const textarea = textareaRef.current;
   if (!textarea) return;
   const cursor = textarea.selectionStart ?? textarea.value.length;
-  const insertion = `@${path} `;
+  const insertion = buildMentionInsertion(path);
   const next = textarea.value.slice(0, cursor) + insertion + textarea.value.slice(cursor);
   setDraftValue(textareaRef, lastSyncedDraft, onChange, next);
   const newCursor = cursor + insertion.length;

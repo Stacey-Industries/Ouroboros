@@ -7,7 +7,7 @@
  *   TitleBar.mobile.tsx — MobileHamburgerMenu, MobileOverflowMenu
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ouroborosLogo from '../../../../public/OUROBOROS.png';
 import { useToastContext } from '../../contexts/ToastContext';
@@ -199,16 +199,32 @@ function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; on
 function NotificationBell(): React.ReactElement {
   const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const updateAnchorRect = useCallback(() => {
+    setAnchorRect(buttonRef.current?.getBoundingClientRect() ?? null);
+  }, []);
   const toggle = useCallback(() => { setOpen((prev) => !prev); }, []);
   useEffect(() => { if (open && unreadCount > 0) markAllRead(); }, [open, unreadCount, markAllRead]);
   const handleClose = useCallback(() => { setOpen(false); }, []);
+  useEffect(() => {
+    if (!open) return;
+    updateAnchorRect();
+    const handlePositionChange = (): void => updateAnchorRect();
+    window.addEventListener('resize', handlePositionChange);
+    window.addEventListener('scroll', handlePositionChange, true);
+    return () => {
+      window.removeEventListener('resize', handlePositionChange);
+      window.removeEventListener('scroll', handlePositionChange, true);
+    };
+  }, [open, updateAnchorRect]);
   return (
     <div className="titlebar-no-drag" style={{ position: 'relative', height: '100%' }}>
-      <button className="titlebar-no-drag text-text-semantic-muted" title="Notifications"
+      <button ref={buttonRef} className="titlebar-no-drag text-text-semantic-muted" title="Notifications"
         onMouseDown={(e) => { e.stopPropagation(); toggle(); }} style={titleButtonStyle} {...hoverStyle}>
         <BellIcon /><NotificationBadge count={unreadCount} />
       </button>
-      {open && <NotificationCenter notifications={notifications} onRemove={removeNotification} onClearAll={clearAllNotifications} onClose={handleClose} />}
+      {open && <NotificationCenter anchorRect={anchorRect} notifications={notifications} onRemove={removeNotification} onClearAll={clearAllNotifications} onClose={handleClose} />}
     </div>
   );
 }

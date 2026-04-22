@@ -8,22 +8,30 @@
  *
  * IdeToolBridge not mounted — IDE-context tool queries return empty in
  * chat-only mode (Wave 42 design).
+ *
+ * Wave 46 Phase C: accepts optional `terminal` prop so the workbench
+ * variant can mount the shared terminal dock without a second PTY stack.
  */
 
 import React from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
+import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { DiffReviewProvider } from '../../DiffReview';
 import { FileViewerManager, MultiBufferManager } from '../../FileViewer';
 import { ChatOnlyShell } from './ChatOnlyShell';
 
-export function ChatOnlyShellWrapper(): React.ReactElement {
+export interface ChatOnlyShellWrapperProps {
+  terminal?: UseTerminalSessionsReturn;
+}
+
+export function ChatOnlyShellWrapper({ terminal }: ChatOnlyShellWrapperProps = {}): React.ReactElement {
   const { projectRoot } = useProject();
   return (
     <FileViewerManager projectRoot={projectRoot}>
       <MultiBufferManager>
         <DiffReviewProvider>
-          <ChatOnlyShell />
+          <ChatOnlyShell terminal={terminal} />
         </DiffReviewProvider>
       </MultiBufferManager>
     </FileViewerManager>

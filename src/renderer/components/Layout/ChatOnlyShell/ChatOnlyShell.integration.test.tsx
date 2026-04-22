@@ -57,6 +57,7 @@ vi.mock('../../../contexts/FocusContext', () => ({
 
 vi.mock('../../../contexts/ApprovalContext', () => ({
   ApprovalProvider: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  useApprovalContext: () => ({ pendingCount: 0 }),
 }));
 
 // FileViewer / DiffReview providers — pass-through.

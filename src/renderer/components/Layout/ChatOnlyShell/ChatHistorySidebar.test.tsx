@@ -38,6 +38,7 @@ const mockThreads: AgentChatThreadRecord[] = [
 ];
 
 vi.mock('../../AgentChat/agentChatStore', () => ({
+  AgentChatStoreContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
   useAgentChatStoreContext: (selector: (s: unknown) => unknown) => {
     const fakeStore = {
       threads: mockThreads,
@@ -65,6 +66,7 @@ vi.mock('./ChatHistoryList', () => ({
     activeThreadId: string | null;
     onSelectThread: (id: string) => void;
     onDeleteThread: (id: string) => Promise<void>;
+    onPinThread: (id: string, pinned: boolean) => Promise<void>;
     onRenameThread: (t: AgentChatThreadRecord) => void;
   }) => (
     <div data-testid="chat-history-list">

@@ -237,7 +237,7 @@ function InnerApp({
   const isImmersive = isChatWindow || immersiveFlag;
 
   // Chat-only shell preserves providers above this branch so toggling does not re-mount state.
-  if (isImmersive) return <ChatOnlyShellWrapper />;
+  if (isImmersive) return <ChatOnlyShellWrapper terminal={hooks.terminal} />;
 
   return <InnerAppLayout {...buildInnerAppLayoutProps({
     ctx: hooks.ctx,

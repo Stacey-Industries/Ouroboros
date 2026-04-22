@@ -8,6 +8,10 @@ const { mockEnqueueTrace, mockAppendStderr } = vi.hoisted(() => ({
   mockAppendStderr: vi.fn(),
 }))
 
+const { spawnCalls } = vi.hoisted(() => ({
+  spawnCalls: [] as Array<{ command: string; args: string[]; options: Record<string, unknown> }>,
+}))
+
 vi.mock('../../telemetry/traceBatcher', () => ({
   enqueueTrace: mockEnqueueTrace,
   redactArgv: (argv: string[]) => argv,
@@ -15,6 +19,13 @@ vi.mock('../../telemetry/traceBatcher', () => ({
 }))
 vi.mock('../../telemetry', () => ({
   getOutcomeObserver: () => ({ appendStderr: mockAppendStderr }),
+}))
+vi.mock('../../ptyEnv', () => ({
+  buildBaseEnv: (extraEnv?: Record<string, string>) => ({
+    OUROBOROS_IDE_SESSION: '1',
+    OUROBOROS_HOOKS_TOKEN: 'hooks-token',
+    ...extraEnv,
+  }),
 }))
 
 import { buildStreamJsonArgs, spawnStreamJsonProcess } from './claudeStreamJsonRunner'
@@ -50,9 +61,16 @@ class FakeChildProcess extends EventEmitter {
 
 let fakeChild: FakeChildProcess
 
-vi.mock('child_process', () => ({
-  spawn: () => fakeChild,
-}))
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>()
+  return {
+    ...actual,
+    spawn: (command: string, args: string[], options: Record<string, unknown>) => {
+      spawnCalls.push({ command, args, options })
+      return fakeChild as unknown as ReturnType<typeof actual.spawn>
+    },
+  }
+})
 
 function defaultOptions(overrides?: Partial<StreamJsonSpawnOptions>): StreamJsonSpawnOptions {
   return {
@@ -238,6 +256,14 @@ function registerResultSpawnTests(): void {
 }
 
 function registerStreamSpawnTests(): void {
+  it('injects the IDE hook env into headless Claude launches', () => {
+    spawnStreamJsonProcess(defaultOptions())
+    expect(spawnCalls).toHaveLength(1)
+    const env = spawnCalls[0]?.options.env as Record<string, string> | undefined
+    expect(env?.OUROBOROS_IDE_SESSION).toBe('1')
+    expect(env?.OUROBOROS_HOOKS_TOKEN).toBeTruthy()
+  })
+
   it('skips malformed JSON lines without crashing', async () => {
     const events: StreamJsonEvent[] = []
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -367,6 +393,7 @@ function registerStderrM1Tests(): void {
 describe('claudeStreamJsonRunner', () => {
   beforeEach(() => {
     fakeChild = new FakeChildProcess()
+    spawnCalls.length = 0
     mockEnqueueTrace.mockClear()
     mockAppendStderr.mockClear()
   })

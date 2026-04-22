@@ -55,6 +55,8 @@ interface ModelChipProps {
   settingsModel?: string;
   codexSettingsModel?: string;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  codexModels?: ReturnType<typeof useAgentChatModel>['codexModels'];
+  providers?: ReturnType<typeof useAgentChatModel>['modelProviders'];
   onChange: (model: string) => void;
 }
 
@@ -63,12 +65,16 @@ function ModelChip({
   settingsModel,
   codexSettingsModel,
   defaultProvider,
+  codexModels,
+  providers,
   onChange,
 }: ModelChipProps): React.ReactElement {
   const { defaultOption, groups } = buildModelOptions({
     defaultProvider: defaultProvider ?? 'claude-code',
     settingsModel: settingsModel ?? '',
     codexSettingsModel: codexSettingsModel ?? '',
+    codexModels,
+    providers,
   });
   return (
     <div
@@ -89,7 +95,14 @@ function ModelChip({
 // ── ChatOnlyHeaderControls ────────────────────────────────────────────────────
 
 export function ChatOnlyHeaderControls(): React.ReactElement | null {
-  const { chatOverrides, settingsModel, codexSettingsModel, defaultProvider } = useAgentChatModel();
+  const {
+    chatOverrides,
+    settingsModel,
+    codexSettingsModel,
+    defaultProvider,
+    codexModels,
+    modelProviders,
+  } = useAgentChatModel();
   const { onChatOverridesChange } = useAgentChatActions();
 
   if (!chatOverrides) return null;
@@ -97,6 +110,7 @@ export function ChatOnlyHeaderControls(): React.ReactElement | null {
   const provider = resolveChatControlProvider(
     chatOverrides.model,
     defaultProvider ?? 'claude-code',
+    codexModels,
   );
 
   return (
@@ -106,6 +120,8 @@ export function ChatOnlyHeaderControls(): React.ReactElement | null {
         settingsModel={settingsModel}
         codexSettingsModel={codexSettingsModel}
         defaultProvider={defaultProvider}
+        codexModels={codexModels}
+        providers={modelProviders}
         onChange={(model) => onChatOverridesChange({ ...chatOverrides, model })}
       />
       <PermissionChip

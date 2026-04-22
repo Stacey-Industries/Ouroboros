@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { type ChildProcess, exec, spawn } from 'child_process';
 
 import log from '../../logger';
+import { buildBaseEnv } from '../../ptyEnv';
 import { getOutcomeObserver } from '../../telemetry';
 import { enqueueTrace, redactArgv, redactHead } from '../../telemetry/traceBatcher';
 import type {
@@ -70,13 +71,8 @@ export function buildStreamJsonArgs(options: StreamJsonSpawnOptions): StreamJson
 
 // ---- Env builder (self-contained, no pty import) ---------------------------
 
-function buildProcessEnv(extraEnv?: Record<string, string>): Record<string, string> {
-  return {
-    ...process.env,
-    TERM: 'xterm-256color',
-    COLORTERM: 'truecolor',
-    ...extraEnv,
-  } as Record<string, string>;
+export function buildProcessEnv(extraEnv?: Record<string, string>): Record<string, string> {
+  return buildBaseEnv(extraEnv);
 }
 
 // ---- Buffer size limit (security: prevent OOM from runaway output) ----------

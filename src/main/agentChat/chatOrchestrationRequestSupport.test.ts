@@ -70,7 +70,7 @@ describe('resolveSendOptions', () => {
 
     expect(result.provider).toBe('codex');
     expect(result.model).toBe('gpt-5.4');
-    expect(result.permissionMode).toBe('default');
+    expect(result.permissionMode).toBe('auto');
   });
 
   it('uses Codex CLI defaults when the request explicitly targets codex', () => {
@@ -78,7 +78,89 @@ describe('resolveSendOptions', () => {
 
     expect(result.provider).toBe('codex');
     expect(result.model).toBe('gpt-5.4');
-    expect(result.permissionMode).toBe('default');
+    expect(result.permissionMode).toBe('auto');
+  });
+
+  it('coerces read-only Codex settings to a supported non-blocking mode', () => {
+    const result = resolveSendOptions(
+      createSettings({
+        defaultProvider: 'codex',
+        codexCliSettings: {
+          ...CODEX_CLI_SETTINGS_FALLBACK,
+          model: 'gpt-5.4',
+          sandbox: 'read-only',
+          approvalPolicy: 'on-request',
+        },
+      }),
+      createRequest(),
+    );
+
+    expect(result.permissionMode).toBe('auto');
+  });
+
+  it('maps bypass Codex settings to bypassPermissions', () => {
+    const result = resolveSendOptions(
+      createSettings({
+        defaultProvider: 'codex',
+        codexCliSettings: {
+          ...CODEX_CLI_SETTINGS_FALLBACK,
+          model: 'gpt-5.4',
+          dangerouslyBypassApprovalsAndSandbox: true,
+        },
+      }),
+      createRequest(),
+    );
+
+    expect(result.permissionMode).toBe('bypassPermissions');
+  });
+
+  it('coerces unsupported Codex chat permission overrides to a supported mode', () => {
+    const result = resolveSendOptions(
+      createSettings({ defaultProvider: 'codex' }),
+      createRequest({ permissionMode: 'acceptEdits' }),
+    );
+
+    expect(result.permissionMode).toBe('auto');
+  });
+
+  it('allows interactive Codex permission overrides when the app-server transport flag is enabled', () => {
+    getConfigValueMock.mockImplementation((key) => {
+      if (key === 'ecosystem') {
+        return { codexAppServerTransport: true };
+      }
+      return undefined as never;
+    });
+
+    const result = resolveSendOptions(
+      createSettings({ defaultProvider: 'codex' }),
+      createRequest({ permissionMode: 'acceptEdits' }),
+    );
+
+    expect(result.permissionMode).toBe('acceptEdits');
+  });
+
+  it('maps read-only Codex settings to plan when the app-server transport flag is enabled', () => {
+    getConfigValueMock.mockImplementation((key) => {
+      if (key === 'ecosystem') {
+        return { codexAppServerTransport: true };
+      }
+      return undefined as never;
+    });
+
+    const result = resolveSendOptions(
+      createSettings({
+        defaultProvider: 'codex',
+        codexCliSettings: {
+          ...CODEX_CLI_SETTINGS_FALLBACK,
+          model: 'gpt-5.4',
+          sandbox: 'read-only',
+          approvalPolicy: 'on-request',
+        },
+      }),
+      createRequest(),
+    );
+
+    expect(result.permissionMode).toBe('plan');
   });
 
   it('ignores a Claude-family agent chat slot when the default provider is codex', () => {

@@ -21,9 +21,6 @@ export const NC_STYLES = `
 `;
 
 export const panelStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 'calc(var(--titlebar-height, 36px) - 2px)',
-  left: 0,
   width: '320px',
   maxHeight: '400px',
   display: 'flex',

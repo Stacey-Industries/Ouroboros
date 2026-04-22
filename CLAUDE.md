@@ -190,6 +190,8 @@ const isImmersive = isChatWindow || immersiveFlag;
 
 **Shell layout (Wave 44 parity pass):** `ChatOnlyTitleBar` + horizontal `ChatOnlyBody` (persistent `ChatHistorySidebar` + `AgentChatWorkspace` with `ChatStatusChipRow` beneath the composer) + `ChatOnlyStatusBar` + overlays (`ChatOnlyDiffOverlay`, `ChatOnlySettingsOverlay`, `KeyboardShortcutCheatSheet`, `CommandPalette`). Sidebar cycles pinned (280px) → collapsed (48px rail) → hidden (off-canvas `ChatOnlySessionDrawer` fallback); mode persists in `config.layout.chatSidebarMode`.
 
+**Chat workbench variant (Wave 46, gated by `layout.chatWorkbench`):** replaces the history-first body with a session-first `WorkbenchRail`, keeps `AgentChatWorkspace` central, and adds three selective IDE reuses around it: `ChatWorkbenchArtifactPane` (file/diff preview), `ChatWorkbenchUtilityDrawer` (approvals, review, activity, subagents), and `ChatWorkbenchTerminalDock` (shared terminal manager in a bottom dock). The utility drawer auto-opens on new approvals, new diff review, and `agent-ide:open-subagent-panel`.
+
 **Chat-only keyboard shortcuts:** `Ctrl+,` Settings · `Ctrl+K` command palette · `Ctrl+/` shortcut cheat-sheet · sidebar toggle cycles mode.
 
 **`IdeToolBridge` is intentionally NOT mounted** in chat-only mode. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty — matching Claude desktop behaviour. Cross-window IDE-tool delegation is a Wave 45+ candidate.

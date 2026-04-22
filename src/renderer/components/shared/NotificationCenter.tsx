@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { NotificationEntry } from '../../hooks/useToast';
 import {
@@ -116,6 +117,7 @@ export interface NotificationCenterProps {
   onRemove: (id: string) => void;
   onClearAll: () => void;
   onClose: () => void;
+  anchorRect: DOMRect | null;
 }
 
 function useNotificationCenterDismiss(
@@ -149,11 +151,16 @@ export const NotificationCenter = memo(function NotificationCenter({
   onRemove,
   onClearAll,
   onClose,
+  anchorRect,
 }: NotificationCenterProps): React.ReactElement {
   const panelRef = useRef<HTMLDivElement>(null);
   useNotificationCenterDismiss(panelRef, onClose);
 
-  return (
+  if (!anchorRect) {
+    return <></>;
+  }
+
+  return createPortal(
     <>
       <style>{NC_STYLES}</style>
       <div
@@ -161,7 +168,12 @@ export const NotificationCenter = memo(function NotificationCenter({
         role="dialog"
         aria-label="Notification center"
         className="bg-surface-panel border border-border-semantic"
-        style={panelStyle}
+        style={{
+          ...panelStyle,
+          position: 'fixed',
+          top: anchorRect.bottom,
+          left: Math.max(8, anchorRect.right - 320),
+        }}
       >
         <PanelHeader count={notifications.length} onClearAll={onClearAll} />
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
@@ -174,7 +186,8 @@ export const NotificationCenter = memo(function NotificationCenter({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 });
 

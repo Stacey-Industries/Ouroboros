@@ -110,6 +110,29 @@ describe('ChatOnlyHeaderControls', () => {
     );
   });
 
+  it('passes Codex models through to the model picker groups', () => {
+    const store = createAgentChatStore();
+    store.setState({
+      chatOverrides: {
+        model: '',
+        effort: 'medium',
+        permissionMode: 'default',
+      },
+      settingsModel: '',
+      codexSettingsModel: 'gpt-5.4',
+      defaultProvider: 'codex',
+      codexModels: [{ id: 'gpt-5.4', name: 'GPT-5.4', reasoningEfforts: ['medium'] }],
+      modelProviders: [],
+      onChatOverridesChange: vi.fn(),
+    });
+    render(
+      <AgentChatStoreContext.Provider value={store}>
+        <ChatOnlyHeaderControls />
+      </AgentChatStoreContext.Provider>,
+    );
+    expect(screen.getByTestId('select-pill-model')).toBeDefined();
+  });
+
   it('calls onChatOverridesChange with cycled permissionMode on chip click', () => {
     const onChatOverridesChange = vi.fn();
     renderWithStore({ onChatOverridesChange });

@@ -113,6 +113,26 @@ export function removeTriggerBeforeCursor(
   setDraftValue(textareaRef, lastSyncedDraft, onChange, nextDraft);
 }
 
+/**
+ * Returns the insertion string for a mention.
+ *
+ * Special mentions that already carry a leading '@' (e.g. @codebase, @diff)
+ * are emitted verbatim; the leading '@' is the trigger character itself, so
+ * we do not add a second one.
+ *
+ * For ordinary file paths: if the path-part (after stripping any leading '@')
+ * contains whitespace or ']', we use bracketed syntax `@[path] `. Paths with
+ * ']' inside brackets are technically unsupported (the tokenizer terminates on
+ * the first ']'), but such paths are vanishingly rare in practice. Bracketed
+ * form is still preferable over bare because at least the '@[' trigger is
+ * identifiable; bare insertion would silently truncate at the ']' too.
+ */
+export function buildMentionInsertion(path: string): string {
+  const bare = path.startsWith('@') ? path.slice(1) : path;
+  if (/[\s\]]/.test(bare)) return `@[${bare}] `;
+  return `@${bare} `;
+}
+
 /** Replace the @trigger text with `@path ` inline in the textarea. */
 export function replaceTriggerWithPath(
   textareaRef: React.RefObject<HTMLTextAreaElement | null>,
@@ -125,7 +145,7 @@ export function replaceTriggerWithPath(
   const cursor = textarea.selectionStart;
   const lastAt = textarea.value.slice(0, cursor).lastIndexOf('@');
   if (lastAt === -1) return;
-  const insertion = `@${path} `;
+  const insertion = buildMentionInsertion(path);
   const nextDraft = textarea.value.slice(0, lastAt) + insertion + textarea.value.slice(cursor);
   setDraftValue(textareaRef, lastSyncedDraft, onChange, nextDraft);
   const newCursor = lastAt + insertion.length;
@@ -200,6 +220,7 @@ export function selectComposerMention(
   mention: MentionItem,
 ): void {
   replaceTriggerWithPath(args.textareaRef, args.lastSyncedDraft, args.onChange, mention.path);
+  args.onAddMention?.(mention);
   args.setIsMentionAutocompleteOpen?.(false);
   args.setMentionQuery?.(null);
   args.textareaRef.current?.focus();

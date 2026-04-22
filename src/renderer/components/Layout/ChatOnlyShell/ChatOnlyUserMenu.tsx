@@ -254,7 +254,7 @@ export function ChatOnlyUserMenu(): React.ReactElement {
   const rect = triggerRef.current?.getBoundingClientRect();
 
   return (
-    <div className="shrink-0 border-t border-border-subtle px-2 py-2" data-testid="user-menu-container">
+    <div className="shrink-0 px-2 py-2" data-testid="user-menu-container">
       <UserMenuTrigger
         triggerRef={triggerRef}
         displayName={displayName}

@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import type { ChatSidebarMode } from './useChatSidebarMode';
@@ -151,8 +152,20 @@ function ExitChatButton(): React.ReactElement {
 // ── TitleBarRight ─────────────────────────────────────────────────────────────
 
 function TitleBarRight(): React.ReactElement {
+  const { pendingCount } = useApprovalContext();
   return (
     <>
+      {pendingCount > 0 && (
+        <div
+          className="rounded-full border border-status-warning bg-status-warning-subtle px-2 py-0.5 text-[11px] font-medium text-status-warning"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          title={`${pendingCount} approval${pendingCount === 1 ? '' : 's'} waiting`}
+          aria-label={`${pendingCount} approval${pendingCount === 1 ? '' : 's'} waiting`}
+          data-testid="chat-approval-pill"
+        >
+          {pendingCount} approval{pendingCount === 1 ? '' : 's'}
+        </div>
+      )}
       <ExitChatButton />
       <WindowControls />
     </>
@@ -176,7 +189,15 @@ export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTi
   const { projectName } = useProject();
   return (
     <header
-      className="titlebar-drag flex items-center h-9 px-2 gap-2 bg-transparent text-text-semantic-primary select-none shrink-0"
+      className="titlebar-drag flex items-center px-2 gap-2 text-text-semantic-primary select-none shrink-0"
+      style={{
+        height: 'var(--titlebar-height, 36px)',
+        background: 'var(--titlebar-bg)',
+        backdropFilter: 'blur(var(--material-blur))',
+        WebkitBackdropFilter: 'blur(var(--material-blur))',
+        boxShadow: 'var(--shadow-inset)',
+        borderBottom: '1px solid var(--stroke-inner)',
+      }}
       data-testid="chat-only-title-bar"
     >
       <TitleBarLeft

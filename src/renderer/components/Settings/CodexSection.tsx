@@ -34,6 +34,10 @@ interface CodexSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
+type CodexEcosystemConfig = NonNullable<AppConfig['ecosystem']> & {
+  codexAppServerTransport?: boolean;
+};
+
 export function CodexSection({ draft, onChange }: CodexSectionProps): React.ReactElement {
   const model = useCodexSectionModel(draft, onChange);
 
@@ -41,7 +45,7 @@ export function CodexSection({ draft, onChange }: CodexSectionProps): React.Reac
     <div style={claudeSectionRootStyle}>
       <HeaderSection />
       <ModelSection model={model} />
-      <ExecutionSection model={model} />
+      <ExecutionSection draft={draft} model={model} onChange={onChange} />
       <WorkspaceSection model={model} />
       <DangerZoneSection model={model} />
     </div>
@@ -134,6 +138,42 @@ function ApprovalPolicySection({ model }: { model: CodexSectionModel }): React.R
   );
 }
 
+function getCodexTransportConfig(draft: AppConfig): CodexEcosystemConfig | undefined {
+  return draft.ecosystem as CodexEcosystemConfig | undefined;
+}
+
+function CodexTransportSection({
+  draft,
+  onChange,
+}: Pick<CodexSectionProps, 'draft' | 'onChange'>): React.ReactElement {
+  const ecosystem = getCodexTransportConfig(draft);
+  const transportEnabled = ecosystem?.codexAppServerTransport === true;
+
+  function updateTransport(value: boolean): void {
+    onChange('ecosystem', {
+      ...draft.ecosystem,
+      codexAppServerTransport: value,
+    } as AppConfig['ecosystem']);
+  }
+
+  return (
+    <>
+      <ToggleSection
+        checked={transportEnabled}
+        description="Use the Codex app-server transport for agent chat. Interactive approval modes require this transport."
+        label="Use app-server transport"
+        title="Chat Transport"
+        onChange={updateTransport}
+      />
+      <p className="text-text-semantic-muted" style={claudeSectionModelHelpStyle}>
+        {transportEnabled
+          ? 'Codex app-server transport is enabled. Chat can use Accept Edits and Plan approval modes.'
+          : 'Codex chat stays on the legacy exec transport until app-server transport is enabled. Interactive approval modes stay hidden while exec is active.'}
+      </p>
+    </>
+  );
+}
+
 function ProfileSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <TextInputSection
@@ -159,11 +199,20 @@ function SearchSection({ model }: { model: CodexSectionModel }): React.ReactElem
   );
 }
 
-function ExecutionSection({ model }: { model: CodexSectionModel }): React.ReactElement {
+function ExecutionSection({
+  draft,
+  model,
+  onChange,
+}: {
+  draft: AppConfig;
+  model: CodexSectionModel;
+  onChange: CodexSectionProps['onChange'];
+}): React.ReactElement {
   return (
     <>
       <SandboxModeSection model={model} />
       <ApprovalPolicySection model={model} />
+      <CodexTransportSection draft={draft} onChange={onChange} />
       <ProfileSection model={model} />
       <SearchSection model={model} />
     </>

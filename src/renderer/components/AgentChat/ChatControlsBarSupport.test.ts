@@ -147,11 +147,20 @@ describe('buildModelOptions', () => {
     ]);
   });
 
-  it('includes Accept Edits in Codex permission modes', () => {
-    expect(getPermissionModes('codex')).toContainEqual({
-      value: 'acceptEdits',
-      label: 'Accept Edits',
-    });
+  it('limits Codex permission modes to the non-blocking chat-supported set on exec transport', () => {
+    expect(getPermissionModes('codex')).toEqual([
+      { value: 'auto', label: 'Workspace Auto' },
+      { value: 'bypassPermissions', label: 'Bypass' },
+    ]);
+  });
+
+  it('unlocks interactive Codex permission modes when app-server transport is enabled', () => {
+    expect(getPermissionModes('codex', { codexAppServerTransport: true })).toEqual([
+      { value: 'acceptEdits', label: 'Accept Edits' },
+      { value: 'plan', label: 'Plan' },
+      { value: 'auto', label: 'Workspace Auto' },
+      { value: 'bypassPermissions', label: 'Bypass' },
+    ]);
   });
 
   it('uses the effective Codex context window percent when available', () => {

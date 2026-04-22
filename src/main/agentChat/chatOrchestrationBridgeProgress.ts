@@ -124,6 +124,11 @@ function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
 type ToolActivity = NonNullable<NonNullable<ProviderProgressEvent['contentBlock']>['toolActivity']>;
 
 function applyToolStart(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {
+  const existing = ctx.accumulatedBlocks[blockIndex];
+  const isRepeatedStart =
+    existing?.kind === 'tool_use' &&
+    existing.status === 'running' &&
+    existing.tool === toolActivity.name;
   // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
   ctx.accumulatedBlocks[blockIndex] = {
     kind: 'tool_use',
@@ -134,8 +139,10 @@ function applyToolStart(ctx: ActiveStreamContext, blockIndex: number, toolActivi
     editSummary: toolActivity.editSummary,
     blockId: `tool-${blockIndex}`,
   };
-  ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
-  emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
+  if (!isRepeatedStart) {
+    ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
+    emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
+  }
 }
 
 function applyToolComplete(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {

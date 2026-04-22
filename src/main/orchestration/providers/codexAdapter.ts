@@ -4,10 +4,12 @@ import {
   buildFailureMessage,
   cleanupTempFiles,
   createCodexCapabilities,
+  getCodexTransportDecision,
   materializeAttachments,
   resolveCodexSettings,
 } from './codexAdapterHelpers';
 import { buildPrompt } from './codexContextBuilder';
+import { runCodexAppServerTurn } from './codexAppServerRunner';
 import type { CodexExecEvent } from './codexExecRunner';
 import { type CodexExecProcessHandle } from './codexExecRunner';
 import {
@@ -30,17 +32,41 @@ import {
 
 export type { CodexCompletionArgs };
 
-const activeProcesses = new Map<string, CodexExecProcessHandle>();
+interface ActiveCodexHandle {
+  kill: () => void;
+  readonly threadId: string | null;
+}
+
+const activeHandles = new Map<string, ActiveCodexHandle>();
 const cancelledTasks = new Set<string>();
 
-
 function cleanupLaunchArtifacts(taskId: string, invocationTempPaths: string[]): void {
-  activeProcesses.delete(taskId);
+  activeHandles.delete(taskId);
   void cleanupTempFiles(invocationTempPaths);
 }
 
+function emitTransportWarning(
+  sink: ProviderProgressSink,
+  sessionRef: ProviderLaunchResult['session'],
+  warning: string | undefined,
+): void {
+  if (!warning) return;
+  sink.emit({
+    provider: 'codex',
+    status: 'streaming',
+    message: warning,
+    timestamp: Date.now(),
+    session: sessionRef,
+    contentBlock: {
+      blockIndex: 0,
+      blockType: 'text',
+      textDelta: `\n\n---\n${warning}`,
+    },
+  });
+}
+
 export function handleLaunchSuccess(
-  result: { threadId: string | null; durationMs: number } | null,
+  result: { durationMs: number; threadId: string | null } | null,
   args: CodexCompletionArgs,
 ): void {
   cleanupLaunchArtifacts(args.taskId, args.invocationTempPaths);
@@ -105,7 +131,7 @@ export function handleLaunchError(error: unknown, args: CodexCompletionArgs): vo
   });
 }
 
-async function scheduleCodexLaunch(args: {
+async function scheduleCodexExecLaunch(args: {
   context: ProviderLaunchContext | ProviderResumeContext;
   cwd: string;
   cliArgs: string[];
@@ -114,7 +140,7 @@ async function scheduleCodexLaunch(args: {
   invocationTempPaths: string[];
   getCancelledBeforeLaunch: () => boolean;
   eventHandler: (event: CodexExecEvent) => void;
-}): Promise<{ threadId: string | null; durationMs: number } | null> {
+}): Promise<{ durationMs: number; threadId: string | null } | null> {
   if (args.context.request.goalAttachments?.length) {
     try {
       const materialized = await materializeAttachments(args.context.request.goalAttachments);
@@ -124,7 +150,7 @@ async function scheduleCodexLaunch(args: {
     }
   }
   if (args.getCancelledBeforeLaunch()) {
-    activeProcesses.delete(args.context.taskId);
+    activeHandles.delete(args.context.taskId);
     return null;
   }
   const prompt = buildPrompt(args.context, args.model, Boolean(args.resumeThreadId));
@@ -138,7 +164,65 @@ async function scheduleCodexLaunch(args: {
       eventHandler: args.eventHandler,
       resumeThreadId: args.resumeThreadId,
     },
-    activeProcesses,
+    activeHandles as Map<string, CodexExecProcessHandle>,
+  );
+}
+
+function scheduleCodexAppServerLaunch(args: {
+  completionArgs: CodexCompletionArgs;
+  context: ProviderLaunchContext | ProviderResumeContext;
+  cwd: string;
+  eventHandler: (event: CodexExecEvent) => void;
+  execCliArgs: string[];
+  getCancelledBeforeLaunch: () => boolean;
+  invocationTempPaths: string[];
+  model: string;
+  resumeThreadId?: string;
+  settings: ReturnType<typeof resolveCodexSettings>['settings'];
+}): void {
+  runCodexAppServerTurn({
+    context: args.context,
+    cwd: args.cwd,
+    model: args.model,
+    resumeThreadId: args.resumeThreadId,
+    sessionRef: args.completionArgs.sessionRef,
+    settings: args.settings,
+    sink: args.completionArgs.sink,
+  }).then(
+    ({ handle, result }) => {
+      if (args.getCancelledBeforeLaunch()) {
+        handle.kill();
+        handleLaunchSuccess(null, args.completionArgs);
+        return;
+      }
+      activeHandles.set(args.context.taskId, handle);
+      return result.then(
+        (completed) => handleLaunchSuccess(completed, args.completionArgs),
+        (error) => handleLaunchError(error, args.completionArgs),
+      );
+    },
+    (error: unknown) => {
+      if (buildFailureMessage(error).includes('runtime is unavailable')) {
+        emitTransportWarning(
+          args.completionArgs.sink,
+          args.completionArgs.sessionRef,
+          'Codex app-server runtime modules are not present yet; falling back to exec transport.',
+        );
+        scheduleExecLaunch({
+          completionArgs: args.completionArgs,
+          context: args.context,
+          cwd: args.cwd,
+          cliArgs: args.execCliArgs,
+          model: args.model,
+          resumeThreadId: args.resumeThreadId,
+          invocationTempPaths: args.invocationTempPaths,
+          getCancelledBeforeLaunch: args.getCancelledBeforeLaunch,
+          eventHandler: args.eventHandler,
+        });
+        return;
+      }
+      handleLaunchError(error, args.completionArgs);
+    },
   );
 }
 
@@ -156,14 +240,10 @@ function setupCodexLaunch(
     timestamp: Date.now(),
     session: sessionRef,
   });
-  const {
-    handler: eventHandler,
-    getNextBlockIndex,
-    getUsage,
-  } = buildCodexEventComponents(sink, sessionRef);
+  const { handler: eventHandler, getNextBlockIndex, getUsage } = buildCodexEventComponents(sink, sessionRef);
   const { placeholder, getCancelledBeforeLaunch } = buildCodexPlaceholderHandle(
     context,
-    activeProcesses,
+    activeHandles as Map<string, CodexExecProcessHandle>,
   );
   return {
     sessionRef,
@@ -175,21 +255,18 @@ function setupCodexLaunch(
   };
 }
 
-interface CodexLaunchScheduleArgs {
+function scheduleExecLaunch(args: {
+  completionArgs: CodexCompletionArgs;
   context: ProviderLaunchContext | ProviderResumeContext;
   cwd: string;
   cliArgs: string[];
   model: string;
-  resumeThreadId: string | undefined;
+  resumeThreadId?: string;
   invocationTempPaths: string[];
   getCancelledBeforeLaunch: () => boolean;
   eventHandler: (event: CodexExecEvent) => void;
-  completionArgs: CodexCompletionArgs;
-}
-
-function scheduleLaunchAndNotify(args: CodexLaunchScheduleArgs): void {
-  const { completionArgs } = args;
-  scheduleCodexLaunch({
+}): void {
+  scheduleCodexExecLaunch({
     context: args.context,
     cwd: args.cwd,
     cliArgs: args.cliArgs,
@@ -199,8 +276,8 @@ function scheduleLaunchAndNotify(args: CodexLaunchScheduleArgs): void {
     getCancelledBeforeLaunch: args.getCancelledBeforeLaunch,
     eventHandler: args.eventHandler,
   }).then(
-    (result) => handleLaunchSuccess(result, completionArgs),
-    (error) => handleLaunchError(error, completionArgs),
+    (result) => handleLaunchSuccess(result, args.completionArgs),
+    (error) => handleLaunchError(error, args.completionArgs),
   );
 }
 
@@ -211,7 +288,7 @@ function launchCodex(
 ): ProviderLaunchResult {
   const requestId = `orchestration-${context.attemptId}`;
   const cwd = context.request.workspaceRoots[0];
-  const { cliArgs, model } = resolveCodexSettings(context);
+  const { transport, warning } = getCodexTransportDecision(context);
   const {
     sessionRef,
     eventHandler,
@@ -220,7 +297,9 @@ function launchCodex(
     placeholder,
     getCancelledBeforeLaunch,
   } = setupCodexLaunch(context, sink, requestId, resumeThreadId);
-  activeProcesses.set(context.taskId, placeholder);
+  activeHandles.set(context.taskId, placeholder);
+  const launchResult = buildCodexLaunchResult(sessionRef, sink);
+  emitTransportWarning(sink, launchResult.session, warning);
   const invocationTempPaths: string[] = [];
   const completionArgs = buildCodexCompletionArgs({
     context,
@@ -230,18 +309,34 @@ function launchCodex(
     getNextBlockIndex,
     invocationTempPaths,
   });
-  scheduleLaunchAndNotify({
+  const resolved = resolveCodexSettings(context, transport);
+  if (transport === 'app-server') {
+    scheduleCodexAppServerLaunch({
+      completionArgs,
+      context,
+      cwd,
+      eventHandler,
+      execCliArgs: resolved.cliArgs,
+      getCancelledBeforeLaunch,
+      invocationTempPaths,
+      model: resolved.model,
+      resumeThreadId,
+      settings: resolved.settings,
+    });
+    return launchResult;
+  }
+  scheduleExecLaunch({
+    completionArgs,
     context,
     cwd,
-    cliArgs,
-    model,
+    cliArgs: resolved.cliArgs,
+    model: resolved.model,
     resumeThreadId,
     invocationTempPaths,
     getCancelledBeforeLaunch,
     eventHandler,
-    completionArgs,
   });
-  return buildCodexLaunchResult(sessionRef, sink);
+  return launchResult;
 }
 
 export class CodexAdapter implements ProviderAdapter {
@@ -277,18 +372,18 @@ export class CodexAdapter implements ProviderAdapter {
   }): Promise<void> {
     const targetId = session.externalTaskId ?? session.requestId ?? session.sessionId;
     if (!targetId) return;
-    const handle = activeProcesses.get(targetId);
+    const handle = activeHandles.get(targetId);
     if (handle) {
       cancelledTasks.add(targetId);
       handle.kill();
-      activeProcesses.delete(targetId);
+      activeHandles.delete(targetId);
       return;
     }
-    for (const [taskId, proc] of activeProcesses) {
+    for (const [taskId, proc] of activeHandles) {
       if (proc.threadId === targetId || taskId === targetId) {
         cancelledTasks.add(taskId);
         proc.kill();
-        activeProcesses.delete(taskId);
+        activeHandles.delete(taskId);
         return;
       }
     }

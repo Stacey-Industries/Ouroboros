@@ -101,6 +101,39 @@ describe('reducer — existing action types still work', () => {
     const next = reducer(STATE_WITH_SESSION, { type: 'CLEAR_COMPLETED' });
     expect(next.sessions).toHaveLength(1);
   });
+
+  it('deduplicates TOOL_START when the same toolCall id is replayed', () => {
+    const first = reducer(STATE_WITH_SESSION, {
+      type: 'TOOL_START',
+      sessionId: 'sess-1',
+      toolCall: {
+        id: 'tool-stream-thread-1',
+        toolName: 'Read',
+        input: 'src/foo.ts',
+        timestamp: 2000,
+        status: 'pending',
+      },
+    });
+    const second = reducer(first, {
+      type: 'TOOL_START',
+      sessionId: 'sess-1',
+      toolCall: {
+        id: 'tool-stream-thread-1',
+        toolName: 'Read',
+        input: 'src/foo.ts',
+        timestamp: 2001,
+        status: 'pending',
+      },
+    });
+    expect(second.sessions[0].toolCalls).toHaveLength(1);
+    expect(second.sessions[0].toolCalls[0]).toMatchObject({
+      id: 'tool-stream-thread-1',
+      toolName: 'Read',
+      input: 'src/foo.ts',
+      timestamp: 2001,
+      status: 'pending',
+    });
+  });
 });
 
 describe('dispatchNewEventTypes module exports', () => {

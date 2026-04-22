@@ -55,10 +55,11 @@ interface PinnedSectionProps {
   activeThreadId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
+  onPin: (id: string, pinned: boolean) => Promise<void>;
   onRename: (thread: AgentChatThreadRecord) => void;
 }
 
-function PinnedSection({ threads, activeThreadId, onSelect, onDelete, onRename }: PinnedSectionProps): React.ReactElement | null {
+function PinnedSection({ threads, activeThreadId, onSelect, onDelete, onPin, onRename }: PinnedSectionProps): React.ReactElement | null {
   if (threads.length === 0) return null;
   return (
     <div data-testid="pinned-section">
@@ -70,6 +71,7 @@ function PinnedSection({ threads, activeThreadId, onSelect, onDelete, onRename }
           isActive={t.id === activeThreadId}
           onClick={onSelect}
           onDelete={onDelete}
+          onPin={onPin}
           onRename={onRename}
         />
       ))}
@@ -84,10 +86,11 @@ interface GroupListProps {
   activeThreadId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
+  onPin: (id: string, pinned: boolean) => Promise<void>;
   onRename: (t: AgentChatThreadRecord) => void;
 }
 
-function GroupList({ groups, activeThreadId, onSelect, onDelete, onRename }: GroupListProps): React.ReactElement {
+function GroupList({ groups, activeThreadId, onSelect, onDelete, onPin, onRename }: GroupListProps): React.ReactElement {
   return (
     <>
       {groups.map((group) => (
@@ -95,7 +98,7 @@ function GroupList({ groups, activeThreadId, onSelect, onDelete, onRename }: Gro
           {groups.length > 1 && <GroupHeader label={group.label} />}
           {group.threads.map((t) => (
             <ChatHistoryRow key={t.id} thread={t} isActive={t.id === activeThreadId}
-              onClick={onSelect} onDelete={onDelete} onRename={onRename} />
+              onClick={onSelect} onDelete={onDelete} onPin={onPin} onRename={onRename} />
           ))}
         </div>
       ))}
@@ -110,13 +113,15 @@ export interface ChatHistoryListProps {
   activeThreadId: string | null;
   onSelectThread: (id: string) => void;
   onDeleteThread: (id: string) => Promise<void>;
+  onPinThread: (id: string, pinned: boolean) => Promise<void>;
   onRenameThread: (thread: AgentChatThreadRecord) => void;
 }
 
 export function ChatHistoryList({
-  threads, activeThreadId, onSelectThread, onDeleteThread, onRenameThread,
+  threads, activeThreadId, onSelectThread, onDeleteThread, onPinThread, onRenameThread,
 }: ChatHistoryListProps): React.ReactElement {
   const handleDelete = useCallback((id: string): Promise<void> => onDeleteThread(id), [onDeleteThread]);
+  const handlePin = useCallback((id: string, pinned: boolean): Promise<void> => onPinThread(id, pinned), [onPinThread]);
 
   const visible = threads.filter((t) => !t.deletedAt);
   const pinned = visible.filter((t) => t.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
@@ -134,9 +139,9 @@ export function ChatHistoryList({
   return (
     <div className="flex flex-col" data-testid="chat-history-list">
       <PinnedSection threads={pinned} activeThreadId={activeThreadId}
-        onSelect={onSelectThread} onDelete={handleDelete} onRename={onRenameThread} />
+        onSelect={onSelectThread} onDelete={handleDelete} onPin={handlePin} onRename={onRenameThread} />
       <GroupList groups={groups} activeThreadId={activeThreadId}
-        onSelect={onSelectThread} onDelete={handleDelete} onRename={onRenameThread} />
+        onSelect={onSelectThread} onDelete={handleDelete} onPin={handlePin} onRename={onRenameThread} />
     </div>
   );
 }

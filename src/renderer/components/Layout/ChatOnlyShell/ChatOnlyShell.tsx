@@ -20,9 +20,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
+import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { AgentChatStoreContext, createAgentChatStore } from '../../AgentChat/agentChatStore';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
 import { CommandPalette } from '../../CommandPalette/CommandPalette';
+import type { Command } from '../../CommandPalette/types';
 import { useCommandPalette } from '../../CommandPalette/useCommandPalette';
 import { useCommandRegistry } from '../../CommandPalette/useCommandRegistry';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
@@ -32,8 +34,10 @@ import { ChatOnlySessionDrawer } from './ChatOnlySessionDrawer';
 import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
+import { ChatWorkbenchShell } from './ChatWorkbenchShell';
 import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
+import { useChatWorkbenchFlag } from './useChatWorkbenchFlag';
 
 function usePendingDiffCount(): number {
   const { state } = useDiffReview();
@@ -74,48 +78,97 @@ function useShellState(pendingDiffCount: number): ShellState {
   return { drawerOpen, diffOverlayOpen, toggleDrawer, closeDrawer, openDiffOverlay, closeDiffOverlay };
 }
 
-export function ChatOnlyShell(): React.ReactElement {
+export interface ChatOnlyShellProps {
+  terminal?: UseTerminalSessionsReturn;
+}
+
+interface ShellRenderArgs {
+  terminal?: UseTerminalSessionsReturn;
+  projectRoot: string | null;
+  shell: ShellState;
+  sidebarMode: ReturnType<typeof useChatSidebarMode>;
+  palette: { open: boolean; close: () => void };
+  commandApi: { commands: Command[]; recentIds: string[]; execute: (c: Command) => Promise<void> };
+}
+
+function renderWorkbenchShell(args: ShellRenderArgs): React.ReactElement {
+  const { terminal, projectRoot, shell, palette, commandApi } = args;
+  return (
+    <ChatWorkbenchShell
+      projectRoot={projectRoot}
+      terminal={terminal}
+      diffOverlayOpen={shell.diffOverlayOpen}
+      openDiffOverlay={shell.openDiffOverlay}
+      closeDiffOverlay={shell.closeDiffOverlay}
+      toggleDrawer={shell.toggleDrawer}
+      paletteOpen={palette.open}
+      closePalette={palette.close}
+      commands={commandApi.commands}
+      recentIds={commandApi.recentIds}
+      execute={commandApi.execute}
+    />
+  );
+}
+
+function renderClassicShell(args: ShellRenderArgs): React.ReactElement {
+  const { projectRoot, shell, sidebarMode, palette, commandApi } = args;
+  return (
+    <div
+      data-layout="app"
+      className="flex flex-col h-screen w-screen bg-surface-base overflow-hidden"
+      style={{ backgroundImage: 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)' }}
+    >
+      <ChatOnlyTitleBar
+        onToggleDrawer={shell.toggleDrawer}
+        onCycleSidebarMode={sidebarMode.cycleMode}
+        sidebarMode={sidebarMode.mode}
+      />
+      <ChatOnlyBody
+        mode={sidebarMode.mode}
+        drawerOpen={shell.drawerOpen}
+        closeDrawer={shell.closeDrawer}
+        projectRoot={projectRoot}
+      />
+      <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={shell.openDiffOverlay} />
+      <ChatOnlyDiffOverlay open={shell.diffOverlayOpen} onClose={shell.closeDiffOverlay} />
+      <ChatOnlyOverlays
+        paletteOpen={palette.open}
+        closePalette={palette.close}
+        commands={commandApi.commands}
+        recentIds={commandApi.recentIds}
+        execute={commandApi.execute}
+      />
+    </div>
+  );
+}
+
+export function ChatOnlyShell({ terminal }: ChatOnlyShellProps = {}): React.ReactElement {
   const { projectRoot } = useProject();
   const pendingDiffCount = usePendingDiffCount();
-  const { drawerOpen, diffOverlayOpen, toggleDrawer, closeDrawer, openDiffOverlay, closeDiffOverlay } =
-    useShellState(pendingDiffCount);
-  const { mode, cycleMode } = useChatSidebarMode();
+  const shell = useShellState(pendingDiffCount);
+  const sidebarMode = useChatSidebarMode();
+  const isWorkbench = useChatWorkbenchFlag();
 
-  // Wave 43 hotfix: lift the AgentChat store above the title bar so
-  // ChatOnlyHeaderControls (which lives in the title bar, outside
-  // AgentChatWorkspace) can subscribe to the same model/permission state.
-  // AgentChatWorkspace reuses this store via context instead of creating its own.
+  // Wave 43 hotfix: lift AgentChat store above the title bar so controls
+  // outside AgentChatWorkspace share the same model/permission state.
   const store = useRef(createAgentChatStore()).current;
 
   // Wave 44 Phase C: command palette wired at shell level (Ctrl+K).
-  // useCommandPalette handles 'agent-ide:command-palette' DOM event + Ctrl+Shift+P.
   const { isOpen: paletteOpen, close: closePalette } = useCommandPalette();
   const { commands, recentIds, execute } = useCommandRegistry();
 
+  const args: ShellRenderArgs = {
+    terminal,
+    projectRoot,
+    shell,
+    sidebarMode,
+    palette: { open: paletteOpen, close: closePalette },
+    commandApi: { commands, recentIds, execute },
+  };
+
   return (
     <AgentChatStoreContext.Provider value={store}>
-      <div
-        data-layout="app"
-        className="flex flex-col h-screen w-screen bg-surface-base overflow-hidden"
-        style={{ backgroundImage: 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)' }}
-      >
-        <ChatOnlyTitleBar onToggleDrawer={toggleDrawer} onCycleSidebarMode={cycleMode} sidebarMode={mode} />
-        <ChatOnlyBody
-          mode={mode}
-          drawerOpen={drawerOpen}
-          closeDrawer={closeDrawer}
-          projectRoot={projectRoot}
-        />
-        <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
-        <ChatOnlyDiffOverlay open={diffOverlayOpen} onClose={closeDiffOverlay} />
-        <ChatOnlyOverlays
-          paletteOpen={paletteOpen}
-          closePalette={closePalette}
-          commands={commands}
-          recentIds={recentIds}
-          execute={execute}
-        />
-      </div>
+      {isWorkbench ? renderWorkbenchShell(args) : renderClassicShell(args)}
     </AgentChatStoreContext.Provider>
   );
 }

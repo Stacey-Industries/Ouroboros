@@ -125,15 +125,24 @@ export function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
   textarea.scrollTop = saved;
 }
 
+/** Extracts the active autocomplete query at cursor, or null if no trigger. */
 export function extractMentionQuery(value: string, cursorPos: number): string | null {
   const textBeforeCursor = value.slice(0, cursorPos);
   const lastAt = textBeforeCursor.lastIndexOf('@');
   if (lastAt === -1) return null;
   if (lastAt > 0 && !/\s/.test(textBeforeCursor[lastAt - 1])) return null;
-  const query = textBeforeCursor.slice(lastAt + 1);
-  if (query.includes('\n')) return null;
-  if (query.length > 0 && /^\s/.test(query)) return null;
-  return query;
+  const afterAt = textBeforeCursor.slice(lastAt + 1);
+  // Bracketed trigger: `@[query…` — active until a closing `]` is found.
+  if (afterAt.startsWith('[')) {
+    const closingBracket = afterAt.indexOf(']');
+    // If a `]` exists between `@[` and the cursor, the bracketed mention is
+    // already complete — no active trigger.
+    if (closingBracket !== -1) return null;
+    return afterAt.slice(1); // return the text between '[' and cursor
+  }
+  // Bare trigger: close on any whitespace (existing rule).
+  if (/\s/.test(afterAt)) return null;
+  return afterAt;
 }
 
 export function extractSlashQuery(value: string, cursorPos: number): string | null {

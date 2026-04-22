@@ -14,9 +14,10 @@ import type { ApprovalRequest } from '../types/electron';
 
 interface ApprovalContextValue {
   pendingCount: number;
+  requests: ApprovalRequest[];
 }
 
-const ApprovalCtx = createContext<ApprovalContextValue>({ pendingCount: 0 });
+const ApprovalCtx = createContext<ApprovalContextValue>({ pendingCount: 0, requests: [] });
 
 export function useApprovalContext(): ApprovalContextValue {
   return useContext(ApprovalCtx);
@@ -127,7 +128,7 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }): R
   const approvalHandlers = useApprovalActions(setRequests);
 
   return (
-    <ApprovalCtx.Provider value={{ pendingCount: requests.length }}>
+    <ApprovalCtx.Provider value={{ pendingCount: requests.length, requests }}>
       {children}
       {requests.length > 0 && <ApprovalDialog requests={requests} {...approvalHandlers} />}
     </ApprovalCtx.Provider>

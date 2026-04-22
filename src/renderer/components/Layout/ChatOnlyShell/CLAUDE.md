@@ -1,8 +1,14 @@
-# ChatOnlyShell — Immersive single-column chat interface (Wave 42–44)
+# ChatOnlyShell — Immersive chat shell + workbench variant (Wave 42–46)
 
 ## Architecture Summary
 
 A dedicated renderer shell that replaces `InnerAppLayout` when immersive chat mode is active. The backend is unchanged — same session store, same threads, same PTY, same hooks pipe. All chat features carry over automatically because they live inside `AgentChatWorkspace`.
+
+**Wave 46 chat-workbench variant:**
+- `layout.chatWorkbench` gates a workstation-style chat shell without mounting the full IDE shell.
+- `ChatWorkbenchShell` keeps the conversation central and adds three docked secondary surfaces: `WorkbenchRail`, `ChatWorkbenchArtifactPane`, and `ChatWorkbenchUtilityDrawer`.
+- `ChatWorkbenchTerminalDock` reuses `TerminalManager` in a lazy-loaded bottom dock so chat-only cold boot and jsdom tests do not pay the xterm cost unless the dock opens.
+- The utility drawer auto-opens on new approvals, new diff-review sessions, and `agent-ide:open-subagent-panel` events.
 
 **Wave 44 parity pass (Claude desktop / Piebald targets):**
 - Shell root uses `h-screen w-screen` (not `h-full w-full`) so it fills the viewport — `#root` / `body` have no explicit height, so `h-full` would resolve to content-height.
@@ -75,7 +81,25 @@ When `isImmersive` is false, `InnerAppLayout` mounts instead (existing IDE shell
 | `agent-ide:toggle-session-drawer` | inbound | Toggles `drawerOpen` state |
 | `agent-ide:toggle-immersive-chat` | outbound | Dispatched by Exit button; handled by `useImmersiveChatFlag` (Phase C) |
 
-## Phase Roadmap (complete as of Wave 43)
+## Wave 46 composition
+
+```
+ChatWorkbenchShell
+  ├─ ChatOnlyTitleBar
+  ├─ WorkbenchRail
+  ├─ AgentChatWorkspace (still primary, variant="chat-only")
+  ├─ ChatWorkbenchArtifactPane
+  ├─ ChatWorkbenchUtilityDrawer
+  │    ├─ WorkbenchApprovalPanel
+  │    ├─ DiffReviewPanel
+  │    └─ WorkbenchActivityPanel (activity + subagent summaries)
+  ├─ ChatWorkbenchTerminalDock
+  └─ existing shell overlays (settings, shortcuts, command palette, diff overlay)
+```
+
+The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`, `CentrePaneConnected`, or arbitrary split-pane editor chrome. Reuse stays selective: `FileViewer`, `DiffReview`, `TerminalManager`, and approval/session contexts are mounted through the existing providers in `ChatOnlyShellWrapper`.
+
+## Phase Roadmap
 
 - **Wave 42 Phase A**: component tree, tests, CLAUDE.md. Initial shell scaffolded.
 - **Wave 42 Phase B**: `App.tsx` integration, `ChatOnlyShellWrapper` with providers, mount condition.
@@ -87,3 +111,6 @@ When `isImmersive` is false, `InnerAppLayout` mounts instead (existing IDE shell
 - **Wave 43 Phase E**: Unified `ASSISTANT_GUTTER`, flat tool cards in chat-only mode, density-aware spacing.
 - **Wave 43 Phase F**: `useRafBatchedChunks` — single `setStateMap` per animation frame during streaming.
 - **Wave 43 Phase G**: Integration test (`ChatOnlyShell.polish.integration.test.tsx`), CLAUDE.md updates.
+- **Wave 46 Phase A-D**: workbench shell scaffold, session-first rail, terminal dock, artifact pane.
+- **Wave 46 Phase E**: `ChatWorkbenchUtilityDrawer` replaces the placeholder drawer with approvals, review, activity, and subagent tabs.
+- **Wave 46 Phase F**: integration coverage for drawer auto-open flows and docs updates.
