@@ -23,7 +23,7 @@ export interface CodexAppServerClientOptions {
 }
 
 interface PendingRequest {
-  resolve: (value: unknown) => void;
+  resolve: (value: any) => void;
   reject: (reason?: unknown) => void;
   timeout: NodeJS.Timeout;
 }

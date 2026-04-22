@@ -436,7 +436,7 @@ export interface AppConfig {
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
    *  Wave 37 Phase D — systemPrompt from marketplace bundle install.
    *  Wave 41 Phase C — rulesAndSkillsInstallEnabled feature gate. */
-  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number }; systemPrompt?: string; rulesAndSkillsInstallEnabled?: boolean };
+  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number }; systemPrompt?: string; rulesAndSkillsInstallEnabled?: boolean; codexAppServerTransport?: boolean };
   /** Wave 38 Phase A — platform-level settings: onboarding gate, language, update channel, crash reporter, changelog gate. */
   platform?: PlatformConfig;
   /** Wave 41 Phase C — marketplace behaviour flags. */

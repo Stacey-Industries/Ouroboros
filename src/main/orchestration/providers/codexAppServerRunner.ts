@@ -1,6 +1,7 @@
 import { buildPrompt } from './codexContextBuilder';
 import { buildCodexAppServerEventMapper, type CodexAppServerMessage } from './codexAppServerEventMapper';
 import type { CodexCliSettings } from '../../config';
+import type { ProviderSessionReference } from '../types';
 import { CodexApprovalBridge } from './codexApprovalBridge';
 import type { ProviderLaunchContext, ProviderProgressSink, ProviderResumeContext } from './providerAdapter';
 
@@ -36,12 +37,7 @@ export interface CodexAppServerTurnArgs {
   context: ProviderLaunchContext | ProviderResumeContext;
   cwd: string;
   model: string;
-  sessionRef: {
-    requestId?: string;
-    sessionId?: string;
-    externalTaskId?: string;
-    provider: 'codex';
-  };
+  sessionRef: ProviderSessionReference;
   settings: CodexCliSettings;
   sink: ProviderProgressSink;
   resumeThreadId?: string;
@@ -130,7 +126,7 @@ function buildInitializeParams(): Record<string, unknown> {
     clientInfo: {
       name: 'agent_ide',
       title: 'Agent IDE',
-      version: '2.3.0',
+      version: '2.5.0',
     },
   };
 }
@@ -240,8 +236,8 @@ export async function runCodexAppServerTurn(args: CodexAppServerTurnArgs): Promi
   let activeThreadId = threadId;
   let activeTurnId: string | null = null;
   let settled = false;
-  let cleanupNotifications = () => undefined;
-  let cleanupServerRequests = () => undefined;
+  let cleanupNotifications: () => void = () => {};
+  let cleanupServerRequests: () => void = () => {};
   const approvalBridge = new CodexApprovalBridge({
     client: {
       respondToApproval: async (requestId, response) => {

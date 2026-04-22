@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ModelSlotAssignments } from '../config';
+import type { AppConfig, ModelSlotAssignments } from '../config';
 import { getConfigValue } from '../config';
 import { logRoutingDecision, routePromptSync } from '../router';
 import { resolveSendOptions } from './chatOrchestrationRequestSupport';
@@ -124,9 +124,9 @@ describe('resolveSendOptions', () => {
   });
 
   it('allows interactive Codex permission overrides when the app-server transport flag is enabled', () => {
-    getConfigValueMock.mockImplementation((key) => {
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
       if (key === 'ecosystem') {
-        return { codexAppServerTransport: true };
+        return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       }
       return undefined as never;
     });
@@ -140,9 +140,9 @@ describe('resolveSendOptions', () => {
   });
 
   it('maps read-only Codex settings to plan when the app-server transport flag is enabled', () => {
-    getConfigValueMock.mockImplementation((key) => {
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
       if (key === 'ecosystem') {
-        return { codexAppServerTransport: true };
+        return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       }
       return undefined as never;
     });

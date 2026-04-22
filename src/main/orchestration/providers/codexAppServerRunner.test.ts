@@ -36,6 +36,7 @@ import {
   setCodexAppServerRuntimeForTests,
 } from './codexAppServerRunner';
 import { createProviderSessionReference, type ProviderProgressSink } from './providerAdapter';
+import type { ProviderProgressEvent } from '../types';
 import type { ProviderLaunchContext } from './providerAdapter';
 
 class FakeClient {
@@ -118,7 +119,9 @@ function makeContext(): ProviderLaunchContext {
       sessionId: 'session-1',
       workspaceRoots: ['C:/repo'],
       goal: 'Fix the bug',
+      mode: 'edit',
       provider: 'codex',
+      verificationProfile: 'default',
     },
     contextPacket: {
       version: 1,
@@ -153,8 +156,8 @@ describe('codexAppServerRunner', () => {
 
   it('runs a turn, emits streaming content, and resolves approvals through the bridge', async () => {
     const client = new FakeClient();
-    const events: Array<Record<string, unknown>> = [];
-    const sink: ProviderProgressSink = { emit: (event) => void events.push(event as Record<string, unknown>) };
+    const events: ProviderProgressEvent[] = [];
+    const sink: ProviderProgressSink = { emit: (event) => void events.push(event) };
     setCodexAppServerRuntimeForTests({
       ensureClient: async () => client,
     });

@@ -194,7 +194,7 @@ function handleItemCompleted(params: Record<string, unknown> | undefined, ctx: C
     emitCommand(ctx, itemId, 'complete', asString(item?.command) || asString(item?.commandLine));
     return;
   }
-  if (itemType === 'fileChange') emitFileChanges(ctx, item);
+  if (itemType === 'fileChange' && item) emitFileChanges(ctx, item);
 }
 
 function handleTextDelta(
@@ -249,7 +249,8 @@ export function buildCodexAppServerEventMapper(
       return;
     }
     if (message.method === 'turn/completed') {
-      const usage = asRecord(message.params?.usage) || asRecord(asRecord(message.params?.turn)?.usage);
+      const turn = asRecord(message.params?.turn);
+      const usage = asRecord(message.params?.usage) || asRecord(turn?.usage);
       if (usage) {
         lastUsage = {
           inputTokens:

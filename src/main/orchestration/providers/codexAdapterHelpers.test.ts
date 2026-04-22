@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { getConfigValue } from '../../config';
+import { getConfigValue, type AppConfig } from '../../config';
 import {
   getCodexTransportDecision,
   resolveCodexSettings,
@@ -28,7 +28,9 @@ function makeContext(permissionMode?: string): ProviderLaunchContext {
       sessionId: 'session-1',
       workspaceRoots: ['C:/repo'],
       goal: 'Fix the bug',
+      mode: 'edit',
       provider: 'codex',
+      verificationProfile: 'default',
       permissionMode,
     },
     contextPacket: {
@@ -62,8 +64,8 @@ describe('codexAdapterHelpers', () => {
 
   beforeEach(() => {
     resetCodexAppServerCapabilityCacheForTests();
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: false };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: false } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
@@ -95,8 +97,8 @@ describe('codexAdapterHelpers', () => {
   });
 
   it('allows interactive settings on app-server transport', () => {
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: true };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
@@ -115,8 +117,8 @@ describe('codexAdapterHelpers', () => {
   });
 
   it('rejects interactive approval modes for Codex exec chat', () => {
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: false };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: false } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
@@ -136,8 +138,8 @@ describe('codexAdapterHelpers', () => {
   });
 
   it('allows bypass mode for Codex exec chat', () => {
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: false };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: false } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
@@ -163,8 +165,8 @@ describe('codexAdapterHelpers', () => {
   });
 
   it('uses app-server when the flag is on and capability is available', () => {
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: true };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
@@ -183,8 +185,8 @@ describe('codexAdapterHelpers', () => {
   });
 
   it('falls back to exec with a warning when capability is missing', () => {
-    getConfigValueMock.mockImplementation((key: string) => {
-      if (key === 'ecosystem') return { codexAppServerTransport: true };
+    getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
+      if (key === 'ecosystem') return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       return {
         model: 'gpt-5.4',
         reasoningEffort: 'medium',
