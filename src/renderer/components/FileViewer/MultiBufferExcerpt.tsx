@@ -3,10 +3,7 @@ import type { BundledTheme } from 'shiki';
 
 import type { BufferExcerpt } from '../../types/electron';
 import { MultiBufferExcerptHeader } from './MultiBufferExcerptHeader';
-import {
-  getExcerptSlice,
-  useHighlightedExcerptLines,
-} from './multiBufferViewSyntax';
+import { getExcerptSlice, useHighlightedExcerptLines } from './multiBufferViewSyntax';
 
 interface ExcerptContentProps {
   excerpt: BufferExcerpt;
@@ -56,7 +53,11 @@ function ExcerptStatus({
   className: string;
   message: string;
 }): React.ReactElement {
-  return <div className={className} style={STATUS_STYLE}>{message}</div>;
+  return (
+    <div className={className} style={STATUS_STYLE}>
+      {message}
+    </div>
+  );
 }
 
 function ExcerptLineRow({
@@ -74,7 +75,9 @@ function ExcerptLineRow({
 
   return (
     <tr>
-      <td className="text-text-semantic-faint" style={lineNumberStyle}>{lineNo}</td>
+      <td className="text-text-semantic-faint" style={lineNumberStyle}>
+        {lineNo}
+      </td>
       <td
         className="text-text-semantic-primary"
         style={LINE_CONTENT_STYLE}
@@ -142,11 +145,7 @@ const ExcerptContent = memo(function ExcerptContent({
   }
 
   return (
-    <ExcerptLineTable
-      excerpt={excerpt}
-      content={content}
-      highlightedLines={highlightedLines}
-    />
+    <ExcerptLineTable excerpt={excerpt} content={content} highlightedLines={highlightedLines} />
   );
 });
 

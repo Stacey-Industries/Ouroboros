@@ -40,7 +40,13 @@ export interface SessionHandle {
 // ── Args builder ──────────────────────────────────────────────────────────────
 
 async function buildClaudeArgs(): Promise<{ shell: string; args: string[] }> {
-  const cliArgs = ['-p', '--verbose', '--output-format', 'stream-json', '--dangerously-skip-permissions'];
+  const cliArgs = [
+    '-p',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+    '--dangerously-skip-permissions',
+  ];
   if (process.platform === 'win32') {
     const { escapePowerShellArg } = await import('../pty');
     const escaped = ['claude', ...cliArgs].map(escapePowerShellArg).join(' ');
@@ -52,15 +58,30 @@ async function buildClaudeArgs(): Promise<{ shell: string; args: string[] }> {
 // ── PtyHost spawn path ────────────────────────────────────────────────────────
 
 async function spawnViaPtyHost(opts: {
-  id: string; launch: { shell: string; args: string[] };
-  env: Record<string, string>; cwd: string; cols: number; rows: number;
-  prompt: string; win: BrowserWindow;
+  id: string;
+  launch: { shell: string; args: string[] };
+  env: Record<string, string>;
+  cwd: string;
+  cols: number;
+  rows: number;
+  prompt: string;
+  win: BrowserWindow;
 }): Promise<SessionHandle> {
   const { spawnAgentViaPtyHost } = await import('../ptyHost/ptyHostProxyAgent');
   const res = await spawnAgentViaPtyHost(
-    { id: opts.id, shell: opts.launch.shell, args: opts.launch.args, env: opts.env,
-      cwd: opts.cwd, cols: opts.cols, rows: opts.rows, windowId: opts.win.id },
-    opts.win, opts.prompt, undefined,
+    {
+      id: opts.id,
+      shell: opts.launch.shell,
+      args: opts.launch.args,
+      env: opts.env,
+      cwd: opts.cwd,
+      cols: opts.cols,
+      rows: opts.rows,
+      windowId: opts.win.id,
+    },
+    opts.win,
+    opts.prompt,
+    undefined,
   );
   if (!res.success) throw new Error(res.error ?? 'PtyHost spawn failed');
   const completion = (res.result ?? Promise.resolve(null)).then(() => undefined);
@@ -69,11 +90,46 @@ async function spawnViaPtyHost(opts: {
 
 // ── Direct PTY spawn path ─────────────────────────────────────────────────────
 
-async function spawnDirect(opts: {
-  id: string; launch: { shell: string; args: string[] };
-  env: Record<string, string>; cwd: string; cols: number; rows: number;
-  prompt: string; win: BrowserWindow;
-}): Promise<SessionHandle> {
+type DirectSpawnOpts = {
+  id: string;
+  launch: { shell: string; args: string[] };
+  env: Record<string, string>;
+  cwd: string;
+  cols: number;
+  rows: number;
+  prompt: string;
+  win: BrowserWindow;
+};
+
+type AttachListenersOpts = {
+  id: string;
+  proc: import('node-pty').IPty;
+  bridge: { feed: (d: string) => void; handleExit: (c: number) => void };
+  resolve: () => void;
+  cleanupSession: (id: string) => void;
+  sessions: Map<string, unknown>;
+};
+
+function attachDirectListeners(a: AttachListenersOpts): void {
+  const { id, proc, bridge, resolve, cleanupSession, sessions } = a;
+  let earlyOutput = '';
+  const dataSub = proc.onData((data: string) => {
+    if (earlyOutput.length < 2000) earlyOutput += data;
+    bridge.feed(data);
+  });
+  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
+    if (exitCode && exitCode !== 0) {
+      log.error(`[dispatchSpawn] session ${id} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`);
+    }
+    bridge.handleExit(exitCode);
+    cleanupSession(id);
+    resolve();
+  });
+  const session = sessions.get(id) as { disposables?: unknown[] } | undefined;
+  if (session) session.disposables = [...(session.disposables ?? []), dataSub, exitSub];
+}
+
+async function spawnDirect(opts: DirectSpawnOpts): Promise<SessionHandle> {
   const nodePty = await import('node-pty');
   const { createAgentBridge } = await import('../ptyAgentBridge');
   const { registerSession, cleanupSession, sessions } = await import('../pty');
@@ -82,39 +138,16 @@ async function spawnDirect(opts: {
 
   let resolve!: () => void;
   const completion = new Promise<void>((r) => { resolve = r; });
-
-  const bridge = createAgentBridge({
-    sessionId: opts.id, onEvent: undefined as never,
-    onComplete: () => resolve(),
-  });
+  const bridge = createAgentBridge({ sessionId: opts.id, onEvent: undefined as never, onComplete: () => resolve() });
 
   const proc = nodePty.spawn(opts.launch.shell, opts.launch.args, {
     name: 'xterm-256color', cols: opts.cols, rows: opts.rows, cwd: opts.cwd, env: opts.env,
   });
   registerSession({ id: opts.id, proc, cwd: opts.cwd, shell: opts.launch.shell, win: opts.win });
-
-  let earlyOutput = '';
-  const dataSub = proc.onData((data: string) => {
-    if (earlyOutput.length < 2000) earlyOutput += data;
-    bridge.feed(data);
-  });
-  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
-    if (exitCode && exitCode !== 0) {
-      log.error(`[dispatchSpawn] session ${opts.id} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`);
-    }
-    bridge.handleExit(exitCode);
-    cleanupSession(opts.id); // walks session.disposables (incl. the two pushed below) then deletes
-    resolve();
-  });
-  // Piggyback onto pty.ts's session record so external cleanup disposes these too.
-  const session = sessions.get(opts.id);
-  if (session) session.disposables = [...(session.disposables ?? []), dataSub, exitSub];
+  attachDirectListeners({ id: opts.id, proc, bridge, resolve, cleanupSession, sessions });
 
   const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
-  setTimeout(() => {
-    if (sessions.has(opts.id)) { proc.write(opts.prompt); proc.write(eofChar); }
-  }, 150);
-
+  setTimeout(() => { if (sessions.has(opts.id)) { proc.write(opts.prompt); proc.write(eofChar); } }, 150);
   return { ptyId: opts.id, completion };
 }
 

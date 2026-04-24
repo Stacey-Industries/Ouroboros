@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
 import {
+  applySubAgentMessageDelta,
   applySubToolDelta,
   applyToolActivityLegacy,
   applyToolActivityStructured,
@@ -62,7 +63,9 @@ describe('applySubToolDelta', () => {
   it('appends a running subTool', () => {
     const blocks: AgentChatContentBlock[] = [makeToolBlock()];
     const result = applySubToolDelta(blocks, 0, {
-      name: 'Read', status: 'running', subToolId: 'st-1',
+      name: 'Read',
+      status: 'running',
+      subToolId: 'st-1',
     });
     expect(result[0].kind).toBe('tool_use');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,12 +73,20 @@ describe('applySubToolDelta', () => {
   });
 
   it('updates an existing subTool by subToolId', () => {
-    const blocks: AgentChatContentBlock[] = [{
-      kind: 'tool_use', tool: 'Task', status: 'running', blockId: 'b1',
-      subTools: [{ name: 'Read', status: 'running', subToolId: 'st-1' }],
-    }];
+    const blocks: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Task',
+        status: 'running',
+        blockId: 'b1',
+        subTools: [{ name: 'Read', status: 'running', subToolId: 'st-1' }],
+      },
+    ];
     const result = applySubToolDelta(blocks, 0, {
-      name: 'Read', status: 'complete', subToolId: 'st-1', output: 'done',
+      name: 'Read',
+      status: 'complete',
+      subToolId: 'st-1',
+      output: 'done',
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((result[0] as any).subTools[0].status).toBe('complete');
@@ -84,7 +95,9 @@ describe('applySubToolDelta', () => {
   it('returns unchanged array when block at index is not tool_use', () => {
     const blocks: AgentChatContentBlock[] = [{ kind: 'text', content: 'hi' }];
     const result = applySubToolDelta(blocks, 0, {
-      name: 'Read', status: 'running', subToolId: 'st-1',
+      name: 'Read',
+      status: 'running',
+      subToolId: 'st-1',
     });
     expect(result[0].kind).toBe('text');
   });
@@ -97,12 +110,51 @@ describe('applySubToolDelta', () => {
   });
 });
 
+describe('applySubAgentMessageDelta', () => {
+  function makeToolBlock(): AgentChatContentBlock {
+    return { kind: 'tool_use', tool: 'Task', status: 'running', blockId: 'b1' };
+  }
+
+  it('appends a new transcript entry when the entry id is unseen', () => {
+    const blocks: AgentChatContentBlock[] = [makeToolBlock()];
+    const result = applySubAgentMessageDelta(blocks, 0, {
+      entryId: 'agent-1:text',
+      subAgentId: 'agent-1',
+      kind: 'text',
+      textDelta: 'hello',
+    });
+    expect(result[0].kind).toBe('tool_use');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0] as any).subAgentTranscript[0].content).toBe('hello');
+  });
+
+  it('appends to an existing transcript entry by entryId', () => {
+    const blocks: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Task',
+        status: 'running',
+        blockId: 'b1',
+        subAgentTranscript: [
+          { entryId: 'agent-1:text', subAgentId: 'agent-1', kind: 'text', content: 'hello' },
+        ],
+      },
+    ];
+    const result = applySubAgentMessageDelta(blocks, 0, {
+      entryId: 'agent-1:text',
+      subAgentId: 'agent-1',
+      kind: 'text',
+      textDelta: ' world',
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0] as any).subAgentTranscript[0].content).toBe('hello world');
+  });
+});
+
 // ── applyToolActivityStructured ───────────────────────────────────────────────
 
 describe('applyToolActivityStructured', () => {
-  function makeChunk(
-    overrides: Partial<AgentChatStreamChunk> = {},
-  ): AgentChatStreamChunk {
+  function makeChunk(overrides: Partial<AgentChatStreamChunk> = {}): AgentChatStreamChunk {
     return {
       type: 'tool_activity',
       messageId: 'm1',
@@ -120,9 +172,14 @@ describe('applyToolActivityStructured', () => {
   });
 
   it('updates an existing tool_use block on completion', () => {
-    const existing: AgentChatContentBlock[] = [{
-      kind: 'tool_use', tool: 'Edit', status: 'running', blockId: 'b1',
-    }];
+    const existing: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Edit',
+        status: 'running',
+        blockId: 'b1',
+      },
+    ];
     const chunk = makeChunk({
       blockIndex: 0,
       toolActivity: { name: 'Edit', status: 'complete', output: 'done' },
@@ -135,13 +192,19 @@ describe('applyToolActivityStructured', () => {
   });
 
   it('delegates to applySubToolDelta when subTool is present', () => {
-    const existing: AgentChatContentBlock[] = [{
-      kind: 'tool_use', tool: 'Task', status: 'running', blockId: 'b1',
-    }];
+    const existing: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Task',
+        status: 'running',
+        blockId: 'b1',
+      },
+    ];
     const chunk = makeChunk({
       blockIndex: 0,
       toolActivity: {
-        name: 'Task', status: 'running',
+        name: 'Task',
+        status: 'running',
         subTool: { name: 'Read', status: 'running', subToolId: 'st-1' },
       },
     });
@@ -149,14 +212,39 @@ describe('applyToolActivityStructured', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((result[0] as any).subTools).toHaveLength(1);
   });
+
+  it('applies nested subagent transcript deltas when subAgentMessage is present', () => {
+    const existing: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Task',
+        status: 'running',
+        blockId: 'b1',
+      },
+    ];
+    const chunk = makeChunk({
+      blockIndex: 0,
+      toolActivity: {
+        name: 'Task',
+        status: 'running',
+        subAgentMessage: {
+          entryId: 'agent-1:text',
+          subAgentId: 'agent-1',
+          kind: 'text',
+          textDelta: 'nested hello',
+        },
+      },
+    });
+    const result = applyToolActivityStructured(existing, chunk);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0] as any).subAgentTranscript[0].content).toBe('nested hello');
+  });
 });
 
 // ── applyToolActivityLegacy ───────────────────────────────────────────────────
 
 describe('applyToolActivityLegacy', () => {
-  function makeChunk(
-    overrides: Partial<AgentChatStreamChunk> = {},
-  ): AgentChatStreamChunk {
+  function makeChunk(overrides: Partial<AgentChatStreamChunk> = {}): AgentChatStreamChunk {
     return {
       type: 'tool_activity',
       messageId: 'm1',
@@ -172,9 +260,14 @@ describe('applyToolActivityLegacy', () => {
   });
 
   it('updates the last matching running tool_use block on completion', () => {
-    const sealed: AgentChatContentBlock[] = [{
-      kind: 'tool_use', tool: 'Write', status: 'running', blockId: 'b1',
-    }];
+    const sealed: AgentChatContentBlock[] = [
+      {
+        kind: 'tool_use',
+        tool: 'Write',
+        status: 'running',
+        blockId: 'b1',
+      },
+    ];
     const chunk = makeChunk({
       toolActivity: { name: 'Write', status: 'complete', output: 'written' },
     });

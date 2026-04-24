@@ -11,6 +11,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import { OPEN_SUBAGENT_PANEL_EVENT } from '../../hooks/appEventNames';
 import { SubagentPanel } from './SubagentPanel';
 
@@ -19,8 +20,10 @@ export const OPEN_SUBAGENT_EVENT = OPEN_SUBAGENT_PANEL_EVENT;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface OpenSubagentPanelDetail {
+export interface OpenSubagentPanelDetail {
   toolCallId: string;
+  parentSessionId?: string;
+  timestamp?: number;
 }
 
 interface ResolvedSubagent {
@@ -28,26 +31,66 @@ interface ResolvedSubagent {
   parentSessionId: string;
 }
 
+let lastOpenedSubagentDetail: OpenSubagentPanelDetail | null = null;
+let openSubagentCacheListenerAttached = false;
+
+function ensureOpenSubagentCacheListener(): void {
+  if (openSubagentCacheListenerAttached || typeof window === 'undefined') return;
+  window.addEventListener(OPEN_SUBAGENT_EVENT, ((event: Event) => {
+    const detail = (event as CustomEvent<OpenSubagentPanelDetail>).detail;
+    if (!detail?.toolCallId) return;
+    lastOpenedSubagentDetail = detail;
+  }) as EventListener);
+  openSubagentCacheListenerAttached = true;
+}
+
 // ─── Resolver ────────────────────────────────────────────────────────────────
 
-async function resolveByToolCallId(toolCallId: string): Promise<ResolvedSubagent | null> {
-  // We can't query by toolCallId directly — fetch all recent subagents
-  // by checking each known parent session. Since the monitor already has
-  // session IDs, we do a broad list and match.
-  //
-  // Limitation: only resolves if the subagent tracker has the record.
-  // Phase C can add a dedicated `subagent:getByToolCallId` channel.
-  try {
-    // Use a sentinel parentSessionId of '' to trigger a tracker-wide scan
-    // is not available. Instead we rely on the DOM event carrying more context
-    // in future. For now, return null and let the panel show a not-found state.
-    // The toolCallId is preserved for display.
-    void toolCallId;
-    return null;
-  } catch {
-    return null;
+export function resolveByToolCallId(
+  detail: OpenSubagentPanelDetail,
+  sessions: Array<{ id: string; parentSessionId?: string; startedAt: number }>,
+): ResolvedSubagent | null {
+  if (!detail.parentSessionId) return null;
+
+  const candidates = sessions.filter(
+    (session) => session.parentSessionId === detail.parentSessionId,
+  );
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) {
+    return {
+      subagentId: candidates[0].id,
+      parentSessionId: detail.parentSessionId,
+    };
   }
+
+  if (typeof detail.timestamp === 'number') {
+    const nearest = candidates
+      .filter((session) => session.startedAt >= detail.timestamp!)
+      .sort(
+        (left, right) => left.startedAt - detail.timestamp! - (right.startedAt - detail.timestamp!),
+      )[0];
+    if (nearest) {
+      return {
+        subagentId: nearest.id,
+        parentSessionId: detail.parentSessionId,
+      };
+    }
+  }
+
+  return {
+    subagentId: candidates.sort((left, right) => right.startedAt - left.startedAt)[0].id,
+    parentSessionId: detail.parentSessionId,
+  };
 }
+
+export function consumeLastOpenedSubagentDetail(): OpenSubagentPanelDetail | null {
+  ensureOpenSubagentCacheListener();
+  const detail = lastOpenedSubagentDetail;
+  lastOpenedSubagentDetail = null;
+  return detail;
+}
+
+ensureOpenSubagentCacheListener();
 
 // ─── Drawer overlay ───────────────────────────────────────────────────────────
 
@@ -58,7 +101,12 @@ interface DrawerProps {
   showCancel: boolean;
 }
 
-function SubagentDrawer({ record, toolCallId, onClose, showCancel }: DrawerProps): React.ReactElement {
+function SubagentDrawer({
+  record,
+  toolCallId,
+  onClose,
+  showCancel,
+}: DrawerProps): React.ReactElement {
   return (
     <div
       className="fixed inset-y-0 right-0 z-50 flex flex-col w-80 bg-surface-base border-l border-border-semantic shadow-lg"
@@ -83,7 +131,10 @@ function SubagentDrawer({ record, toolCallId, onClose, showCancel }: DrawerProps
 function UnresolvableState({
   toolCallId,
   onClose,
-}: { toolCallId: string; onClose: () => void }): React.ReactElement {
+}: {
+  toolCallId: string;
+  onClose: () => void;
+}): React.ReactElement {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border-semantic flex-shrink-0">
@@ -100,15 +151,13 @@ function UnresolvableState({
         </button>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-2 px-4 text-center">
-        <span className="text-[11px] text-text-semantic-muted">
-          Subagent not found in tracker.
-        </span>
+        <span className="text-[11px] text-text-semantic-muted">Subagent not found in tracker.</span>
         <span className="text-[10px] text-text-semantic-faint break-all">
           Tool call: {toolCallId}
         </span>
         <span className="text-[10px] text-text-semantic-faint italic">
-          The subagent may have already completed and been evicted, or the
-          tracker tap is not yet wired for this session type.
+          The subagent may have already completed and been evicted, or the tracker tap is not yet
+          wired for this session type.
         </span>
       </div>
     </div>
@@ -124,7 +173,12 @@ interface OverlayProps {
   showCancel: boolean;
 }
 
-function SubagentOverlay({ resolved, toolCallId, onClose, showCancel }: OverlayProps): React.ReactElement {
+function SubagentOverlay({
+  resolved,
+  toolCallId,
+  onClose,
+  showCancel,
+}: OverlayProps): React.ReactElement {
   return (
     <>
       {/* Backdrop */}
@@ -134,7 +188,12 @@ function SubagentOverlay({ resolved, toolCallId, onClose, showCancel }: OverlayP
         onClick={onClose}
         aria-hidden="true"
       />
-      <SubagentDrawer record={resolved} toolCallId={toolCallId} onClose={onClose} showCancel={showCancel} />
+      <SubagentDrawer
+        record={resolved}
+        toolCallId={toolCallId}
+        onClose={onClose}
+        showCancel={showCancel}
+      />
     </>
   );
 }
@@ -151,6 +210,7 @@ export interface SubagentPanelHostProps {
 export function SubagentPanelHost({
   enabled = true,
 }: SubagentPanelHostProps): React.ReactElement | null {
+  const { currentSessions } = useAgentEventsContext();
   const [open, setOpen] = useState(false);
   const [toolCallId, setToolCallId] = useState('');
   const [resolved, setResolved] = useState<ResolvedSubagent | null>(null);
@@ -161,11 +221,14 @@ export function SubagentPanelHost({
     setResolved(null);
   }, []);
 
-  const handleOpen = useCallback(async (detail: OpenSubagentPanelDetail) => {
-    setToolCallId(detail.toolCallId);
-    setOpen(true);
-    setResolved(await resolveByToolCallId(detail.toolCallId));
-  }, []);
+  const handleOpen = useCallback(
+    async (detail: OpenSubagentPanelDetail) => {
+      setToolCallId(detail.toolCallId);
+      setOpen(true);
+      setResolved(resolveByToolCallId(detail, currentSessions));
+    },
+    [currentSessions],
+  );
 
   useEffect(() => {
     if (!enabled) return;

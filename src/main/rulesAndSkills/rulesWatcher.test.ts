@@ -55,8 +55,7 @@ import { startRulesWatcher } from './rulesWatcher';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const PROJECT_ROOT =
-  process.platform === 'win32' ? 'C:\\projects\\myapp' : '/projects/myapp';
+const PROJECT_ROOT = process.platform === 'win32' ? 'C:\\projects\\myapp' : '/projects/myapp';
 
 /** Flush all pending microtasks (resolved promises). */
 async function flushMicrotasks(): Promise<void> {
@@ -141,7 +140,10 @@ describe('startRulesWatcher()', () => {
       await flushMicrotasks();
 
       const onEvent = getDirEventCallback(0);
-      onEvent({ type: 'create', path: path.join(PROJECT_ROOT, '.claude', 'commands', 'script.sh') });
+      onEvent({
+        type: 'create',
+        path: path.join(PROJECT_ROOT, '.claude', 'commands', 'script.sh'),
+      });
       onEvent({ type: 'update', path: path.join(PROJECT_ROOT, '.claude', 'rules', 'note.txt') });
 
       flushDebounce();

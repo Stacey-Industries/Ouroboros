@@ -19,12 +19,18 @@ import { SettingsModal } from '../../Settings/SettingsModal';
 export function ChatOnlySettingsOverlay(): React.ReactElement {
   const [open, setOpen] = useState(false);
 
-  const handleOpen = useCallback((): void => { setOpen(true); }, []);
-  const handleClose = useCallback((): void => { setOpen(false); }, []);
+  const handleOpen = useCallback((): void => {
+    setOpen(true);
+  }, []);
+  const handleClose = useCallback((): void => {
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     window.addEventListener(OPEN_SETTINGS_EVENT, handleOpen);
-    return () => { window.removeEventListener(OPEN_SETTINGS_EVENT, handleOpen); };
+    return () => {
+      window.removeEventListener(OPEN_SETTINGS_EVENT, handleOpen);
+    };
   }, [handleOpen]);
 
   return <SettingsModal isOpen={open} onClose={handleClose} />;

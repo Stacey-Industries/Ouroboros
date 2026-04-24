@@ -11,24 +11,18 @@ function onChannel<T>(channel: string, callback: (payload: T) => void): () => vo
 }
 
 export const profileCrudApi: ProfileApiType = {
-  list: () =>
-    ipcRenderer.invoke('profileCrud:list'),
-  upsert: (profile: Profile) =>
-    ipcRenderer.invoke('profileCrud:upsert', { profile }),
-  delete: (profileId: string) =>
-    ipcRenderer.invoke('profileCrud:delete', { profileId }),
+  list: () => ipcRenderer.invoke('profileCrud:list'),
+  upsert: (profile: Profile) => ipcRenderer.invoke('profileCrud:upsert', { profile }),
+  delete: (profileId: string) => ipcRenderer.invoke('profileCrud:delete', { profileId }),
   setDefault: (projectRoot: string, profileId: string) =>
     ipcRenderer.invoke('profileCrud:setDefault', { projectRoot, profileId }),
   getDefault: (projectRoot: string) =>
     ipcRenderer.invoke('profileCrud:getDefault', { projectRoot }),
-  export: (profileId: string) =>
-    ipcRenderer.invoke('profileCrud:export', { profileId }),
-  import: (json: string) =>
-    ipcRenderer.invoke('profileCrud:import', { json }),
+  export: (profileId: string) => ipcRenderer.invoke('profileCrud:export', { profileId }),
+  import: (json: string) => ipcRenderer.invoke('profileCrud:import', { json }),
   estimate: ({ profileId, contextTokens }: { profileId: string; contextTokens: number }) =>
     ipcRenderer.invoke('profileCrud:estimate', { profileId, contextTokens }),
-  lint: ({ profile }: { profile: Profile }) =>
-    ipcRenderer.invoke('profileCrud:lint', { profile }),
+  lint: ({ profile }: { profile: Profile }) => ipcRenderer.invoke('profileCrud:lint', { profile }),
   onChanged: (callback: (profiles: Profile[]) => void) =>
     onChannel<Profile[]>('profileCrud:changed', callback),
 };

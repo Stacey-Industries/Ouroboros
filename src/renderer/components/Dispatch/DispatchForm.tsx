@@ -10,10 +10,7 @@
 
 import React, { useCallback, useEffect, useId, useState } from 'react';
 
-import {
-  enqueueOfflineDispatch,
-  listOfflineDispatches,
-} from '../../../web/offlineDispatchQueue';
+import { enqueueOfflineDispatch, listOfflineDispatches } from '../../../web/offlineDispatchQueue';
 import { useWebConnectionState } from '../../hooks/useWebConnectionState';
 import type { DispatchRequest } from '../../types/electron-dispatch';
 import { WorktreeFields } from './DispatchForm.parts';
@@ -83,7 +80,10 @@ async function submitOnline(
   setters: SubmitSetters,
 ): Promise<void> {
   const api = window.electronAPI?.sessions;
-  if (!api?.dispatchTask) { onError('Dispatch API unavailable.'); return; }
+  if (!api?.dispatchTask) {
+    onError('Dispatch API unavailable.');
+    return;
+  }
   setters.setSubmitting(true);
   setters.setInlineError(null);
   try {
@@ -128,12 +128,12 @@ interface SubmitAreaProps {
   onCancelSubmit: () => void;
 }
 
-function SubmitArea({ submitting, isOffline, onCancelSubmit }: SubmitAreaProps): React.ReactElement {
-  const label = submitting
-    ? 'Dispatching…'
-    : isOffline
-    ? 'Save — send when online'
-    : 'Dispatch';
+function SubmitArea({
+  submitting,
+  isOffline,
+  onCancelSubmit,
+}: SubmitAreaProps): React.ReactElement {
+  const label = submitting ? 'Dispatching…' : isOffline ? 'Save — send when online' : 'Dispatch';
   return (
     <>
       <button
@@ -145,7 +145,11 @@ function SubmitArea({ submitting, isOffline, onCancelSubmit }: SubmitAreaProps):
         {label}
       </button>
       {submitting && (
-        <button type="button" onClick={onCancelSubmit} style={{ ...DANGER_BUTTON_STYLE, width: '100%', marginTop: '6px' }}>
+        <button
+          type="button"
+          onClick={onCancelSubmit}
+          style={{ ...DANGER_BUTTON_STYLE, width: '100%', marginTop: '6px' }}
+        >
           Cancel
         </button>
       )}
@@ -191,10 +195,20 @@ function useDispatchFormState(projectRoots: string[], connState: string): FormHo
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [offlineCount, setOfflineCount] = useState(0);
   const [state, setState] = useState<FormState>({
-    title: '', prompt: '', projectPath: projectRoots[0] ?? '', worktreeEnabled: false, worktreeName: '',
+    title: '',
+    prompt: '',
+    projectPath: projectRoots[0] ?? '',
+    worktreeEnabled: false,
+    worktreeName: '',
   });
   const resetForm = useCallback(() => {
-    setState({ title: '', prompt: '', projectPath: projectRoots[0] ?? '', worktreeEnabled: false, worktreeName: '' });
+    setState({
+      title: '',
+      prompt: '',
+      projectPath: projectRoots[0] ?? '',
+      worktreeEnabled: false,
+      worktreeName: '',
+    });
   }, [projectRoots]);
   const set = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setState((prev) => ({ ...prev, [key]: value }));
@@ -202,7 +216,20 @@ function useDispatchFormState(projectRoots: string[], connState: string): FormHo
   useEffect(() => {
     void listOfflineDispatches().then((q) => setOfflineCount(q.length));
   }, [connState]);
-  return { id, state, set, resetForm, submitting, setSubmitting, queued, setQueued, inlineError, setInlineError, offlineCount, setOfflineCount };
+  return {
+    id,
+    state,
+    set,
+    resetForm,
+    submitting,
+    setSubmitting,
+    queued,
+    setQueued,
+    inlineError,
+    setInlineError,
+    offlineCount,
+    setOfflineCount,
+  };
 }
 
 // ── Submit handler factory ────────────────────────────────────────────────────
@@ -217,7 +244,10 @@ function buildSubmitHandler(
     e.preventDefault();
     f.setQueued(false);
     const validationError = validate(f.state);
-    if (validationError) { f.setInlineError(validationError); return; }
+    if (validationError) {
+      f.setInlineError(validationError);
+      return;
+    }
     const request = buildRequest(f.state);
     if (isOffline) {
       await submitOffline(request, f.setInlineError, f.setQueued, f.resetForm);
@@ -225,13 +255,25 @@ function buildSubmitHandler(
       return;
     }
     const setters = { setSubmitting: f.setSubmitting, setInlineError: f.setInlineError };
-    await submitOnline(request, (jobId) => { f.resetForm(); onSuccess(jobId); }, onError, setters);
+    await submitOnline(
+      request,
+      (jobId) => {
+        f.resetForm();
+        onSuccess(jobId);
+      },
+      onError,
+      setters,
+    );
   };
 }
 
 // ── DispatchForm ──────────────────────────────────────────────────────────────
 
-export function DispatchForm({ projectRoots, onSuccess, onError }: DispatchFormProps): React.ReactElement {
+export function DispatchForm({
+  projectRoots,
+  onSuccess,
+  onError,
+}: DispatchFormProps): React.ReactElement {
   const connState = useWebConnectionState();
   const isOffline = connState !== 'connected' && connState !== 'electron';
   const f = useDispatchFormState(projectRoots, connState);
@@ -243,32 +285,72 @@ export function DispatchForm({ projectRoots, onSuccess, onError }: DispatchFormP
   return (
     <form onSubmit={handleSubmit} style={SCROLLABLE_BODY_STYLE} data-testid="dispatch-form">
       {isOffline && (
-        <p role="status" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-warning)', border: '1px solid var(--status-warning)', backgroundColor: 'var(--status-warning-subtle)', marginBottom: '8px' }}>
+        <p
+          role="status"
+          style={{
+            ...ERROR_TEXT_STYLE,
+            color: 'var(--status-warning)',
+            border: '1px solid var(--status-warning)',
+            backgroundColor: 'var(--status-warning-subtle)',
+            marginBottom: '8px',
+          }}
+        >
           Desktop offline — your dispatch will send when we reconnect.
         </p>
       )}
       <OfflineBadge count={f.offlineCount} />
       <TitleField id={`${f.id}-title`} value={f.state.title} onChange={(v) => f.set('title', v)} />
-      <PromptField id={`${f.id}-prompt`} value={f.state.prompt} onChange={(v) => f.set('prompt', v)} />
-      <ProjectField id={`${f.id}-project`} roots={projectRoots} value={f.state.projectPath} onChange={(v) => f.set('projectPath', v)} />
-      <WorktreeFields enabled={f.state.worktreeEnabled} name={f.state.worktreeName}
-        onToggle={(v) => f.set('worktreeEnabled', v)} onNameChange={(v) => f.set('worktreeName', v)} />
+      <PromptField
+        id={`${f.id}-prompt`}
+        value={f.state.prompt}
+        onChange={(v) => f.set('prompt', v)}
+      />
+      <ProjectField
+        id={`${f.id}-project`}
+        roots={projectRoots}
+        value={f.state.projectPath}
+        onChange={(v) => f.set('projectPath', v)}
+      />
+      <WorktreeFields
+        enabled={f.state.worktreeEnabled}
+        name={f.state.worktreeName}
+        onToggle={(v) => f.set('worktreeEnabled', v)}
+        onNameChange={(v) => f.set('worktreeName', v)}
+      />
       {f.inlineError && (
-        <p role="alert" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-error)' }}>{f.inlineError}</p>
+        <p role="alert" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-error)' }}>
+          {f.inlineError}
+        </p>
       )}
       {f.queued && !f.inlineError && (
-        <p role="status" style={{ fontSize: '12px', color: 'var(--status-success)', marginTop: '6px' }} data-testid="queued-confirmation">
+        <p
+          role="status"
+          style={{ fontSize: '12px', color: 'var(--status-success)', marginTop: '6px' }}
+          data-testid="queued-confirmation"
+        >
           Queued locally — will dispatch on reconnect.
         </p>
       )}
-      <SubmitArea submitting={f.submitting} isOffline={isOffline} onCancelSubmit={() => f.setSubmitting(false)} />
+      <SubmitArea
+        submitting={f.submitting}
+        isOffline={isOffline}
+        onCancelSubmit={() => f.setSubmitting(false)}
+      />
     </form>
   );
 }
 
 // ── Field sub-components ──────────────────────────────────────────────────────
 
-function TitleField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }): React.ReactElement {
+function TitleField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
   return (
     <div style={FIELD_GROUP_STYLE}>
       <label htmlFor={id} style={{ ...SECTION_LABEL_STYLE, color: 'var(--text-secondary)' }}>
@@ -288,7 +370,15 @@ function TitleField({ id, value, onChange }: { id: string; value: string; onChan
   );
 }
 
-function PromptField({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }): React.ReactElement {
+function PromptField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
   return (
     <div style={FIELD_GROUP_STYLE}>
       <label htmlFor={id} style={{ ...SECTION_LABEL_STYLE, color: 'var(--text-secondary)' }}>
@@ -308,8 +398,16 @@ function PromptField({ id, value, onChange }: { id: string; value: string; onCha
   );
 }
 
-function ProjectField({ id, roots, value, onChange }: {
-  id: string; roots: string[]; value: string; onChange: (v: string) => void;
+function ProjectField({
+  id,
+  roots,
+  value,
+  onChange,
+}: {
+  id: string;
+  roots: string[];
+  value: string;
+  onChange: (v: string) => void;
 }): React.ReactElement {
   return (
     <div style={FIELD_GROUP_STYLE}>
@@ -325,7 +423,9 @@ function ProjectField({ id, roots, value, onChange }: {
       >
         {roots.length === 0 && <option value="">No projects configured</option>}
         {roots.map((root) => (
-          <option key={root} value={root}>{root}</option>
+          <option key={root} value={root}>
+            {root}
+          </option>
         ))}
       </select>
     </div>

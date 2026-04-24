@@ -47,8 +47,16 @@ const invoke = (ipcMain as any)._invoke as (ch: string, ...args: unknown[]) => P
 
 const SESSION_A = 'session-aaa';
 const SESSION_B = 'session-bbb';
-const TREE_A = { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } };
-const TREE_B = { kind: 'leaf', slotName: 'terminalContent', component: { componentKey: 'terminalContent' } };
+const TREE_A = {
+  kind: 'leaf',
+  slotName: 'editorContent',
+  component: { componentKey: 'editorContent' },
+};
+const TREE_B = {
+  kind: 'leaf',
+  slotName: 'terminalContent',
+  component: { componentKey: 'terminalContent' },
+};
 
 function makeLayout(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -110,7 +118,7 @@ describe('layout:setCustomLayout', () => {
     const [key, val] = mockSetConfigValue.mock.calls[0] as [string, Record<string, unknown>];
     expect(key).toBe('layout');
     expect((val.customLayoutsPerSession as Record<string, unknown>)[SESSION_A]).toEqual(TREE_A);
-    expect((val.customLayoutsMru as string[])).toContain(SESSION_A);
+    expect(val.customLayoutsMru as string[]).toContain(SESSION_A);
   });
 
   it('is a no-op for empty sessionId', async () => {
@@ -142,7 +150,9 @@ describe('layout:setCustomLayout', () => {
       many[id] = TREE_A;
       mru.push(id);
     }
-    mockGetConfigValue.mockReturnValue(makeLayout({ customLayoutsPerSession: many, customLayoutsMru: mru }));
+    mockGetConfigValue.mockReturnValue(
+      makeLayout({ customLayoutsPerSession: many, customLayoutsMru: mru }),
+    );
     await invoke('layout:setCustomLayout', SESSION_A, TREE_A);
     const [, val] = mockSetConfigValue.mock.calls[0] as [string, Record<string, unknown>];
     const entries = val.customLayoutsPerSession as Record<string, unknown>;
@@ -155,14 +165,17 @@ describe('layout:setCustomLayout', () => {
 describe('layout:deleteCustomLayout', () => {
   it('removes session entry from config', async () => {
     mockGetConfigValue.mockReturnValue(
-      makeLayout({ customLayoutsPerSession: { [SESSION_A]: TREE_A }, customLayoutsMru: [SESSION_A] }),
+      makeLayout({
+        customLayoutsPerSession: { [SESSION_A]: TREE_A },
+        customLayoutsMru: [SESSION_A],
+      }),
     );
     const result = await invoke('layout:deleteCustomLayout', SESSION_A);
     expect(result).toMatchObject({ success: true });
     const [, val] = mockSetConfigValue.mock.calls[0] as [string, Record<string, unknown>];
     const entries = val.customLayoutsPerSession as Record<string, unknown>;
     expect(entries[SESSION_A]).toBeUndefined();
-    expect((val.customLayoutsMru as string[])).not.toContain(SESSION_A);
+    expect(val.customLayoutsMru as string[]).not.toContain(SESSION_A);
   });
 
   it('is a no-op for empty sessionId', async () => {

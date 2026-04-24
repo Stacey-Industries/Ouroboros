@@ -36,7 +36,9 @@ describe('MobileLayoutProvider', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.setActivePanel('terminal'); });
+    act(() => {
+      result.current.setActivePanel('terminal');
+    });
     expect(result.current.activePanel).toBe('terminal');
     unmount();
   });
@@ -79,7 +81,9 @@ describe('MobileLayoutProvider — drawer state', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.openDrawer(); });
+    act(() => {
+      result.current.openDrawer();
+    });
     expect(result.current.isDrawerOpen).toBe(true);
     unmount();
   });
@@ -88,8 +92,12 @@ describe('MobileLayoutProvider — drawer state', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.openDrawer(); });
-    act(() => { result.current.closeDrawer(); });
+    act(() => {
+      result.current.openDrawer();
+    });
+    act(() => {
+      result.current.closeDrawer();
+    });
     expect(result.current.isDrawerOpen).toBe(false);
     unmount();
   });
@@ -118,7 +126,9 @@ describe('MobileLayoutProvider — sheet state', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.openSheet(); });
+    act(() => {
+      result.current.openSheet();
+    });
     expect(result.current.isSheetOpen).toBe(true);
     unmount();
   });
@@ -127,7 +137,9 @@ describe('MobileLayoutProvider — sheet state', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.openSheet('monitor'); });
+    act(() => {
+      result.current.openSheet('monitor');
+    });
     expect(result.current.activeSheetView).toBe('monitor');
     unmount();
   });
@@ -136,8 +148,12 @@ describe('MobileLayoutProvider — sheet state', () => {
     const { result, unmount } = renderHook(() => useMobileLayout(), {
       wrapper: MobileLayoutProvider,
     });
-    act(() => { result.current.openSheet('git'); });
-    act(() => { result.current.closeSheet(); });
+    act(() => {
+      result.current.openSheet('git');
+    });
+    act(() => {
+      result.current.closeSheet();
+    });
     expect(result.current.isSheetOpen).toBe(false);
     expect(result.current.activeSheetView).toBeNull();
     unmount();
@@ -150,9 +166,9 @@ describe('useMobileLayout outside provider', () => {
   it('throws with a descriptive message', () => {
     const consoleError = console.error;
     console.error = (): void => undefined;
-    expect(() =>
-      renderHook(() => useMobileLayout()),
-    ).toThrow('useMobileLayout must be used inside <MobileLayoutProvider>');
+    expect(() => renderHook(() => useMobileLayout())).toThrow(
+      'useMobileLayout must be used inside <MobileLayoutProvider>',
+    );
     console.error = consoleError;
   });
 });

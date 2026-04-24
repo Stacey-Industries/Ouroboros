@@ -156,7 +156,10 @@ function CompareHeader({ leftLabel, rightLabel, onClose }: CompareHeaderProps): 
 
 function LoadingPane(): React.ReactElement {
   return (
-    <div className="flex flex-1 items-center justify-center text-xs text-text-semantic-muted" aria-busy="true">
+    <div
+      className="flex flex-1 items-center justify-center text-xs text-text-semantic-muted"
+      aria-busy="true"
+    >
       Loading…
     </div>
   );

@@ -16,10 +16,8 @@ export const aiApi: AiApi = {
 export const embeddingApi: EmbeddingApi = {
   search: (query: string, projectRoot: string, topK?: number) =>
     ipcRenderer.invoke('embedding:search', query, projectRoot, topK),
-  getStatus: (projectRoot: string) =>
-    ipcRenderer.invoke('embedding:status', projectRoot),
-  reindex: (projectRoot: string) =>
-    ipcRenderer.invoke('embedding:reindex', projectRoot),
+  getStatus: (projectRoot: string) => ipcRenderer.invoke('embedding:status', projectRoot),
+  reindex: (projectRoot: string) => ipcRenderer.invoke('embedding:reindex', projectRoot),
 };
 
 export const telemetryApi: TelemetryApi = {

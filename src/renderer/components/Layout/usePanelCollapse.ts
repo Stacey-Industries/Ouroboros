@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import { useCallback, useEffect, useRef,useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type CollapseTarget = 'leftSidebar' | 'rightSidebar' | 'terminal' | 'editor';
 
@@ -63,7 +63,9 @@ function normalizeCollapseState(parsed?: Partial<CollapseState>): CollapseState 
 function loadCollapseState(): CollapseState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? normalizeCollapseState(JSON.parse(stored) as Partial<CollapseState>) : cloneDefaultState();
+    return stored
+      ? normalizeCollapseState(JSON.parse(stored) as Partial<CollapseState>)
+      : cloneDefaultState();
   } catch {
     return cloneDefaultState();
   }
@@ -84,9 +86,8 @@ function usePersistentCollapseState(): [CollapseState, (next: CollapseUpdate) =>
 
   const update = useCallback((next: CollapseUpdate) => {
     setCollapsed((prev) => {
-      const resolved = typeof next === 'function'
-        ? (next as (state: CollapseState) => CollapseState)(prev)
-        : next;
+      const resolved =
+        typeof next === 'function' ? (next as (state: CollapseState) => CollapseState)(prev) : next;
       saveCollapseState(resolved);
       return resolved;
     });
@@ -95,7 +96,11 @@ function usePersistentCollapseState(): [CollapseState, (next: CollapseUpdate) =>
   return [collapsed, update];
 }
 
-function updatePanelState(state: CollapseState, panel: CollapseTarget, collapsed: boolean): CollapseState {
+function updatePanelState(
+  state: CollapseState,
+  panel: CollapseTarget,
+  collapsed: boolean,
+): CollapseState {
   if (state[panel] === collapsed) {
     return state;
   }
@@ -119,13 +124,18 @@ function parseShortcut(shortcut: string): ParsedShortcut | null {
 function matchesShortcut(event: KeyboardEvent, parsed: ParsedShortcut): boolean {
   const key = event.key.toLowerCase();
   const ctrl = event.ctrlKey || event.metaKey;
-  return ctrl === parsed.ctrl
-    && event.shiftKey === parsed.shift
-    && event.altKey === parsed.alt
-    && key === parsed.key;
+  return (
+    ctrl === parsed.ctrl &&
+    event.shiftKey === parsed.shift &&
+    event.altKey === parsed.alt &&
+    key === parsed.key
+  );
 }
 
-function getShortcutTarget(event: KeyboardEvent, keybindings: Record<string, string>): CollapseTarget | null {
+function getShortcutTarget(
+  event: KeyboardEvent,
+  keybindings: Record<string, string>,
+): CollapseTarget | null {
   for (const [actionId, config] of Object.entries(DEFAULT_SHORTCUTS)) {
     const shortcut = keybindings[actionId] ?? config.shortcut;
     const parsed = parseShortcut(shortcut);
@@ -160,18 +170,30 @@ export function usePanelCollapse(options?: UsePanelCollapseOptions): UsePanelCol
   keybindingsRef.current = options?.keybindings ?? {};
 
   const [collapsed, setCollapsed] = usePersistentCollapseState();
-  const toggle = useCallback((panel: CollapseTarget) => {
-    setCollapsed((prev) => ({ ...prev, [panel]: !prev[panel] }));
-  }, [setCollapsed]);
-  const collapse = useCallback((panel: CollapseTarget) => {
-    setCollapsed((prev) => updatePanelState(prev, panel, true));
-  }, [setCollapsed]);
-  const expand = useCallback((panel: CollapseTarget) => {
-    setCollapsed((prev) => updatePanelState(prev, panel, false));
-  }, [setCollapsed]);
-  const applyState = useCallback((state: CollapseState) => {
-    setCollapsed(state);
-  }, [setCollapsed]);
+  const toggle = useCallback(
+    (panel: CollapseTarget) => {
+      setCollapsed((prev) => ({ ...prev, [panel]: !prev[panel] }));
+    },
+    [setCollapsed],
+  );
+  const collapse = useCallback(
+    (panel: CollapseTarget) => {
+      setCollapsed((prev) => updatePanelState(prev, panel, true));
+    },
+    [setCollapsed],
+  );
+  const expand = useCallback(
+    (panel: CollapseTarget) => {
+      setCollapsed((prev) => updatePanelState(prev, panel, false));
+    },
+    [setCollapsed],
+  );
+  const applyState = useCallback(
+    (state: CollapseState) => {
+      setCollapsed(state);
+    },
+    [setCollapsed],
+  );
 
   usePanelCollapseShortcuts(toggle, keybindingsRef);
   return { collapsed, toggle, collapse, expand, applyState };

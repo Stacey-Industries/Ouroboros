@@ -40,10 +40,7 @@ export { cleanupProfileCrudHandlers, registerProfileCrudHandlers } from './profi
 export { registerPtyHandlers } from './pty';
 export { registerPtyPersistenceHandlers } from './ptyPersistence';
 export { cleanupResearchHandlers, registerResearchHandlers } from './research';
-export {
-  cleanupResearchControlHandlers,
-  registerResearchControlHandlers,
-} from './researchControl';
+export { cleanupResearchControlHandlers, registerResearchControlHandlers } from './researchControl';
 export {
   cleanupResearchDashboardHandlers,
   registerResearchDashboardHandlers,
@@ -52,17 +49,11 @@ export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';
 export { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessionCrud';
-export {
-  cleanupDispatchHandlers,
-  registerDispatchHandlers,
-} from './sessionDispatchHandlers';
+export { cleanupDispatchHandlers, registerDispatchHandlers } from './sessionDispatchHandlers';
 export { registerSessionHandlers } from './sessions';
 export { registerSpecHandlers } from './specScaffold';
 export { registerSubagentHandlers } from './subagent';
-export {
-  cleanupSystemPromptHandlers,
-  registerSystemPromptHandlers,
-} from './systemPromptHandlers';
+export { cleanupSystemPromptHandlers, registerSystemPromptHandlers } from './systemPromptHandlers';
 export { cleanupTelemetryHandlers, registerTelemetryHandlers } from './telemetry';
 export { registerUsageExporterHandlers } from './usageExporterHandlers';
 export {

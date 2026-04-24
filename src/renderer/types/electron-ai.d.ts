@@ -43,13 +43,7 @@ export interface AiInlineEditResponse {
 }
 
 export interface AiAPI {
-  inlineCompletion: (
-    request: AiInlineCompletionRequest,
-  ) => Promise<AiInlineCompletionResponse>;
-  generateCommitMessage: (
-    request: AiCommitMessageRequest,
-  ) => Promise<AiCommitMessageResponse>;
-  inlineEdit: (
-    request: AiInlineEditRequest,
-  ) => Promise<AiInlineEditResponse>;
+  inlineCompletion: (request: AiInlineCompletionRequest) => Promise<AiInlineCompletionResponse>;
+  generateCommitMessage: (request: AiCommitMessageRequest) => Promise<AiCommitMessageResponse>;
+  inlineEdit: (request: AiInlineEditRequest) => Promise<AiInlineEditResponse>;
 }

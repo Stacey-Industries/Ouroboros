@@ -21,10 +21,7 @@ interface HunkActionButtonsProps {
   onReject: () => void;
 }
 
-function HunkActionButtons({
-  onAccept,
-  onReject,
-}: HunkActionButtonsProps): React.ReactElement {
+function HunkActionButtons({ onAccept, onReject }: HunkActionButtonsProps): React.ReactElement {
   return (
     <div className="ouroboros-hunk-actions-widget" aria-label="Hunk actions">
       <button
@@ -112,12 +109,7 @@ export function EditorHunkGutterActions({
   return (
     <>
       {decorations.map((dec) => (
-        <HunkWidget
-          key={dec.hunk.id}
-          editor={editor}
-          dec={dec}
-          diffReview={diffReview}
-        />
+        <HunkWidget key={dec.hunk.id} editor={editor} dec={dec} diffReview={diffReview} />
       ))}
     </>
   );

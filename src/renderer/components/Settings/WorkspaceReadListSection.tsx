@@ -23,12 +23,17 @@ function useReadList(projectRoot: string) {
   const [files, setFiles] = useState<string[]>([]);
 
   const load = useCallback(async () => {
-    if (!projectRoot) { setFiles([]); return; }
+    if (!projectRoot) {
+      setFiles([]);
+      return;
+    }
     const result = await window.electronAPI.workspaceReadList.get(projectRoot);
     if (result.success && result.files) setFiles(result.files);
   }, [projectRoot]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!projectRoot) return undefined;
@@ -37,15 +42,21 @@ function useReadList(projectRoot: string) {
     });
   }, [projectRoot]);
 
-  const addFile = useCallback(async (filePath: string) => {
-    if (!projectRoot) return;
-    await window.electronAPI.workspaceReadList.add(projectRoot, filePath);
-  }, [projectRoot]);
+  const addFile = useCallback(
+    async (filePath: string) => {
+      if (!projectRoot) return;
+      await window.electronAPI.workspaceReadList.add(projectRoot, filePath);
+    },
+    [projectRoot],
+  );
 
-  const removeFile = useCallback(async (filePath: string) => {
-    if (!projectRoot) return;
-    await window.electronAPI.workspaceReadList.remove(projectRoot, filePath);
-  }, [projectRoot]);
+  const removeFile = useCallback(
+    async (filePath: string) => {
+      if (!projectRoot) return;
+      await window.electronAPI.workspaceReadList.remove(projectRoot, filePath);
+    },
+    [projectRoot],
+  );
 
   return { files, addFile, removeFile };
 }
@@ -108,7 +119,9 @@ function AddFileButton({ onAdd }: { onAdd: (filePath: string) => void }): React.
 
 // ─── Main section ─────────────────────────────────────────────────────────────
 
-export function WorkspaceReadListSection({ draft }: WorkspaceReadListSectionProps): React.ReactElement {
+export function WorkspaceReadListSection({
+  draft,
+}: WorkspaceReadListSectionProps): React.ReactElement {
   const projectRoot = draft.defaultProjectRoot ?? '';
   const { files, addFile, removeFile } = useReadList(projectRoot);
 

@@ -38,10 +38,13 @@ function useBackgroundJobsPanel() {
   useEffect(() => {
     if (!window.electronAPI?.backgroundJobs) return;
     void loadJobs();
-    cleanupRef.current = window.electronAPI.backgroundJobs.onUpdate(
-      (u: BackgroundJobUpdate) => setJobs((prev) => applyUpdate(prev, u)),
+    cleanupRef.current = window.electronAPI.backgroundJobs.onUpdate((u: BackgroundJobUpdate) =>
+      setJobs((prev) => applyUpdate(prev, u)),
     );
-    return () => { cleanupRef.current?.(); cleanupRef.current = null; };
+    return () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+    };
   }, [loadJobs]);
 
   useEffect(() => {
@@ -109,10 +112,15 @@ export function BackgroundJobsPanel(): React.ReactElement | null {
       role="dialog"
       aria-label="Background Jobs"
       className="fixed inset-0 z-50 flex items-start justify-center pt-16"
-      onClick={(e) => { if (e.target === e.currentTarget) setVisible(false); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setVisible(false);
+      }}
     >
       <div className="w-full max-w-lg rounded-lg border border-border-semantic bg-surface-panel shadow-lg overflow-hidden">
-        <PanelHeader onClear={() => void handleClearCompleted()} onClose={() => setVisible(false)} />
+        <PanelHeader
+          onClear={() => void handleClearCompleted()}
+          onClose={() => setVisible(false)}
+        />
         <div className="overflow-y-auto max-h-96">
           {jobs.length === 0 ? (
             <p className="px-4 py-6 text-sm text-text-semantic-muted text-center">

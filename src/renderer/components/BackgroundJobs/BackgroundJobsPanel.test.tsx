@@ -34,7 +34,9 @@ function buildApi(jobs: BackgroundJob[] = []) {
       }),
       onUpdate: vi.fn((cb: (u: BackgroundJobUpdate) => void) => {
         onUpdateCallback = cb;
-        return () => { onUpdateCallback = null; };
+        return () => {
+          onUpdateCallback = null;
+        };
       }),
       cancel: vi.fn().mockResolvedValue({ success: true }),
       clearCompleted: vi.fn().mockResolvedValue({ success: true }),
@@ -58,53 +60,92 @@ describe('BackgroundJobsPanel', () => {
   afterEach(() => cleanup());
 
   it('renders nothing when closed', () => {
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(),
+      writable: true,
+      configurable: true,
+    });
     const { container } = render(<BackgroundJobsPanel />);
     expect(container.firstChild).toBeNull();
   });
 
   it('opens on agent-ide:open-background-jobs DOM event', async () => {
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(),
+      writable: true,
+      configurable: true,
+    });
     const { getByRole } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     expect(getByRole('dialog')).toBeDefined();
   });
 
   it('toggles closed on second open event', async () => {
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(),
+      writable: true,
+      configurable: true,
+    });
     const { getByRole, queryByRole } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     expect(getByRole('dialog')).toBeDefined();
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     expect(queryByRole('dialog')).toBeNull();
   });
 
   it('shows empty state when no jobs', async () => {
-    Object.defineProperty(window, 'electronAPI', { value: buildApi([]), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi([]),
+      writable: true,
+      configurable: true,
+    });
     const { getByText } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     await act(async () => {});
     expect(getByText(/no background jobs yet/i)).toBeDefined();
   });
 
   it('renders loaded jobs', async () => {
     const jobs = [makeJob({ label: 'My Task', status: 'running' })];
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(jobs), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(jobs),
+      writable: true,
+      configurable: true,
+    });
     const { getByText } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     await act(async () => {});
     expect(getByText('My Task')).toBeDefined();
   });
 
   it('applies incoming update to existing job', async () => {
     const jobs = [makeJob({ id: 'j1', status: 'running', label: 'Task A' })];
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(jobs), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(jobs),
+      writable: true,
+      configurable: true,
+    });
     const { getByText } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     await act(async () => {});
 
     await act(async () => {
-      onUpdateCallback?.({ jobId: 'j1', changes: { status: 'done', resultSummary: 'Finished OK' } });
+      onUpdateCallback?.({
+        jobId: 'j1',
+        changes: { status: 'done', resultSummary: 'Finished OK' },
+      });
     });
 
     expect(getByText('Done')).toBeDefined();
@@ -113,9 +154,15 @@ describe('BackgroundJobsPanel', () => {
 
   it('calls cancel API when Cancel button clicked', async () => {
     const api = buildApi([makeJob({ id: 'j1', status: 'queued', label: 'Cancel Me' })]);
-    Object.defineProperty(window, 'electronAPI', { value: api, writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: api,
+      writable: true,
+      configurable: true,
+    });
     const { getAllByRole } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     await act(async () => {});
     const buttons = getAllByRole('button');
     const cancelBtn = buttons.find((b) => b.getAttribute('aria-label')?.startsWith('Cancel job'));
@@ -131,9 +178,15 @@ describe('BackgroundJobsPanel', () => {
       makeJob({ id: 'j2', status: 'running', label: 'Running Task' }),
     ];
     const api = buildApi(jobs);
-    Object.defineProperty(window, 'electronAPI', { value: api, writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: api,
+      writable: true,
+      configurable: true,
+    });
     const { queryByText, getByText, getAllByRole } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     await act(async () => {});
     const buttons = getAllByRole('button');
     const clearBtn = buttons.find((b) => b.textContent?.includes('Clear completed'));
@@ -146,9 +199,15 @@ describe('BackgroundJobsPanel', () => {
   });
 
   it('closes when close button is clicked', async () => {
-    Object.defineProperty(window, 'electronAPI', { value: buildApi(), writable: true, configurable: true });
+    Object.defineProperty(window, 'electronAPI', {
+      value: buildApi(),
+      writable: true,
+      configurable: true,
+    });
     const { queryByRole, getAllByRole } = render(<BackgroundJobsPanel />);
-    await act(async () => { openPanel(); });
+    await act(async () => {
+      openPanel();
+    });
     const closeBtn = getAllByRole('button').find(
       (b) => b.getAttribute('aria-label') === 'Close background jobs panel',
     );

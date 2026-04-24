@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { Radius,SurfaceLevel } from './types';
+import type { Radius, SurfaceLevel } from './types';
 
 export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
   level?: SurfaceLevel;
@@ -10,18 +10,18 @@ export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const levelClass: Record<SurfaceLevel, string> = {
-  base:    'bg-surface-base',
-  panel:   'bg-surface-panel',
-  raised:  'bg-surface-raised',
+  base: 'bg-surface-base',
+  panel: 'bg-surface-panel',
+  raised: 'bg-surface-raised',
   overlay: 'bg-surface-overlay',
-  inset:   'bg-surface-inset',
+  inset: 'bg-surface-inset',
 };
 
 const radiusClass: Record<Radius, string> = {
   none: 'rounded-none',
-  sm:   'rounded-sm',
-  md:   'rounded-md',
-  lg:   'rounded-lg',
+  sm: 'rounded-sm',
+  md: 'rounded-md',
+  lg: 'rounded-lg',
 };
 
 export function Surface({
@@ -36,7 +36,10 @@ export function Surface({
   const base = `${levelClass[level]} ${radiusClass[radius]}`;
   const border = bordered ? 'border border-border-semantic' : '';
   return (
-    <Tag className={`${base} ${border} ${className ?? ''}`} {...(rest as React.HTMLAttributes<HTMLElement>)}>
+    <Tag
+      className={`${base} ${border} ${className ?? ''}`}
+      {...(rest as React.HTMLAttributes<HTMLElement>)}
+    >
       {children}
     </Tag>
   );

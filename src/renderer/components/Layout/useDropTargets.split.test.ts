@@ -21,7 +21,11 @@ const mockSplitSlot = vi.fn();
 vi.mock('./layoutPresets/LayoutPresetResolver', () => ({
   useLayoutPreset: () => ({
     preset: { slots: {} },
-    slotTree: { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } },
+    slotTree: {
+      kind: 'leaf',
+      slotName: 'editorContent',
+      component: { componentKey: 'editorContent' },
+    },
     swapSlots: mockSwapSlots,
     splitSlot: mockSplitSlot,
   }),
@@ -51,26 +55,46 @@ describe('useDropTargets — edge drops', () => {
   it('calls splitSlot with horizontal/start for north edge', () => {
     const { result } = renderHook(() => useDropTargets());
     result.current.onDragEnd(makeDragEnd('terminalContent', 'editorContent:edge:north'));
-    expect(mockSplitSlot).toHaveBeenCalledWith('editorContent', 'terminalContent', 'horizontal', 'start');
+    expect(mockSplitSlot).toHaveBeenCalledWith(
+      'editorContent',
+      'terminalContent',
+      'horizontal',
+      'start',
+    );
     expect(mockSwapSlots).not.toHaveBeenCalled();
   });
 
   it('calls splitSlot with horizontal/end for south edge', () => {
     const { result } = renderHook(() => useDropTargets());
     result.current.onDragEnd(makeDragEnd('sidebarContent', 'editorContent:edge:south'));
-    expect(mockSplitSlot).toHaveBeenCalledWith('editorContent', 'sidebarContent', 'horizontal', 'end');
+    expect(mockSplitSlot).toHaveBeenCalledWith(
+      'editorContent',
+      'sidebarContent',
+      'horizontal',
+      'end',
+    );
   });
 
   it('calls splitSlot with vertical/start for west edge', () => {
     const { result } = renderHook(() => useDropTargets());
     result.current.onDragEnd(makeDragEnd('terminalContent', 'editorContent:edge:west'));
-    expect(mockSplitSlot).toHaveBeenCalledWith('editorContent', 'terminalContent', 'vertical', 'start');
+    expect(mockSplitSlot).toHaveBeenCalledWith(
+      'editorContent',
+      'terminalContent',
+      'vertical',
+      'start',
+    );
   });
 
   it('calls splitSlot with vertical/end for east edge', () => {
     const { result } = renderHook(() => useDropTargets());
     result.current.onDragEnd(makeDragEnd('terminalContent', 'editorContent:edge:east'));
-    expect(mockSplitSlot).toHaveBeenCalledWith('editorContent', 'terminalContent', 'vertical', 'end');
+    expect(mockSplitSlot).toHaveBeenCalledWith(
+      'editorContent',
+      'terminalContent',
+      'vertical',
+      'end',
+    );
   });
 
   it('is a no-op when source and edge target slot are the same', () => {

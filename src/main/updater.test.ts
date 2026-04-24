@@ -193,9 +193,7 @@ describe('downgrade guard', () => {
   it('logs a warning when offered version is lower than current (2.4.0 < 2.5.0)', () => {
     configureUpdaterChannel();
     fake.emit('update-available', { version: '2.4.0' });
-    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
-      expect.stringContaining('downgrade rejected'),
-    );
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(expect.stringContaining('downgrade rejected'));
   });
 
   it('does not warn for a legitimate upgrade', () => {

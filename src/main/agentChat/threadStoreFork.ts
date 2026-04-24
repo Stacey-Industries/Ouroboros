@@ -141,8 +141,5 @@ export async function listBranchesOfThreadImpl(
 
   const directChildren = adjMap.get(rootThreadId) ?? [];
   const visited = new Set<string>([rootThreadId]);
-  return directChildren.map((child) =>
-    buildBranchNodeFromThread(child, adjMap, visited),
-  );
+  return directChildren.map((child) => buildBranchNodeFromThread(child, adjMap, visited));
 }
-

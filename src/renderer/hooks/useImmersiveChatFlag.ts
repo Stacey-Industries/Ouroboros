@@ -51,8 +51,12 @@ export function useImmersiveChatFlag(): boolean {
   // Read initial value from config on mount.
   useEffect(() => {
     let cancelled = false;
-    void readFlag().then((v) => { if (!cancelled) setFlagOn(v); });
-    return () => { cancelled = true; };
+    void readFlag().then((v) => {
+      if (!cancelled) setFlagOn(v);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Subscribe to live toggle event.
@@ -65,7 +69,9 @@ export function useImmersiveChatFlag(): boolean {
       });
     };
     window.addEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler);
-    return () => { window.removeEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler); };
+    return () => {
+      window.removeEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler);
+    };
   }, []);
 
   return flagOn;

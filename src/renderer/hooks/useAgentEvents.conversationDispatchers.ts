@@ -19,10 +19,7 @@ function dispatchConversationTurn(
   dispatch({ type: 'CONVERSATION_TURN', sessionId, turn });
 }
 
-export function dispatchUserPrompt(
-  payload: HookPayload,
-  dispatch: Dispatch<AgentAction>,
-): void {
+export function dispatchUserPrompt(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
   const data = payload.data ?? {};
   const content = getStringField(data, 'message', 'prompt') ?? '';
   dispatchConversationTurn(
@@ -32,10 +29,7 @@ export function dispatchUserPrompt(
   );
 }
 
-export function dispatchElicitation(
-  payload: HookPayload,
-  dispatch: Dispatch<AgentAction>,
-): void {
+export function dispatchElicitation(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
   const data = payload.data ?? {};
   const content = getStringField(data, 'message') ?? '';
   const question = getStringField(data, 'title');

@@ -25,10 +25,14 @@ import { nativeShare } from './nativeShare';
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('nativeShare — native path (isNativePlatform = true)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(true);
+  });
 
   it('calls Share.share with the provided options and returns true', async () => {
     const opts = { title: 'Test', text: 'hello', url: 'https://example.com' };
@@ -62,7 +66,11 @@ describe('nativeShare — web, navigator.share available', () => {
 
   it('returns false when navigator.share throws (e.g. user cancels)', async () => {
     Object.defineProperty(globalThis, 'navigator', {
-      value: { share: vi.fn(async () => { throw new Error('AbortError'); }) },
+      value: {
+        share: vi.fn(async () => {
+          throw new Error('AbortError');
+        }),
+      },
       writable: true,
       configurable: true,
     });
@@ -112,7 +120,11 @@ describe('nativeShare — web, no navigator.share, clipboard throws', () => {
     Object.defineProperty(globalThis, 'navigator', {
       value: {
         share: undefined,
-        clipboard: { writeText: vi.fn(async () => { throw new Error('NotAllowed'); }) },
+        clipboard: {
+          writeText: vi.fn(async () => {
+            throw new Error('NotAllowed');
+          }),
+        },
       },
       writable: true,
       configurable: true,

@@ -46,10 +46,26 @@ describe('buildHookCommands', () => {
   it('returns generic_hook commands for all 20 new events', () => {
     const cmds = buildHookCommands(hooksDir);
     const newEvents = [
-      'SessionEnd', 'StopFailure', 'Setup', 'PostToolUseFailure', 'TeammateIdle',
-      'TaskCreated', 'TaskCompleted', 'UserPromptSubmit', 'Elicitation', 'ElicitationResult',
-      'Notification', 'CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove',
-      'ConfigChange', 'PreCompact', 'PostCompact', 'PermissionRequest', 'PermissionDenied',
+      'SessionEnd',
+      'StopFailure',
+      'Setup',
+      'PostToolUseFailure',
+      'TeammateIdle',
+      'TaskCreated',
+      'TaskCompleted',
+      'UserPromptSubmit',
+      'Elicitation',
+      'ElicitationResult',
+      'Notification',
+      'CwdChanged',
+      'FileChanged',
+      'WorktreeCreate',
+      'WorktreeRemove',
+      'ConfigChange',
+      'PreCompact',
+      'PostCompact',
+      'PermissionRequest',
+      'PermissionDenied',
     ];
     for (const event of newEvents) {
       expect(cmds).toHaveProperty(event);

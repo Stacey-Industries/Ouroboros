@@ -26,21 +26,12 @@ describe('CompareProvidersDiff', () => {
   });
 
   it('shows "No output to diff yet" when both texts are empty', () => {
-    render(
-      <CompareProvidersDiff textA="" textB="" labelA="A" labelB="B" />,
-    );
+    render(<CompareProvidersDiff textA="" textB="" labelA="A" labelB="B" />);
     expect(screen.getByText(/No output to diff yet/)).toBeTruthy();
   });
 
   it('renders diff tokens for differing text', () => {
-    render(
-      <CompareProvidersDiff
-        textA="the cat sat"
-        textB="the dog sat"
-        labelA="A"
-        labelB="B"
-      />,
-    );
+    render(<CompareProvidersDiff textA="the cat sat" textB="the dog sat" labelA="A" labelB="B" />);
     // shared words are rendered somewhere in the document
     expect(screen.getByText('the')).toBeTruthy();
     expect(screen.getByText('sat')).toBeTruthy();
@@ -48,12 +39,7 @@ describe('CompareProvidersDiff', () => {
 
   it('renders without crashing for identical texts', () => {
     render(
-      <CompareProvidersDiff
-        textA="same text here"
-        textB="same text here"
-        labelA="A"
-        labelB="B"
-      />,
+      <CompareProvidersDiff textA="same text here" textB="same text here" labelA="A" labelB="B" />,
     );
     // all tokens should be present and no error thrown
     expect(screen.getByText('same')).toBeTruthy();

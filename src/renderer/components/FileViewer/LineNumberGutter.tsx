@@ -39,7 +39,7 @@ export const LineNumberGutter = memo(function LineNumberGutter({
           </div>
         ) : (
           <div key={`fp-ln-${row.startLine}`} style={{ height: '1.6em' }} />
-        )
+        ),
       )}
     </div>
   );

@@ -116,10 +116,7 @@ describe('profileCrudApi', () => {
       const cb = vi.fn();
       const cleanup = profileCrudApi.onChanged(cb);
       cleanup();
-      expect(mockRemoveListener).toHaveBeenCalledWith(
-        'profileCrud:changed',
-        expect.any(Function),
-      );
+      expect(mockRemoveListener).toHaveBeenCalledWith('profileCrud:changed', expect.any(Function));
     });
 
     it('strips the IpcRendererEvent and forwards the payload to callback', () => {

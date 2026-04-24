@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-The CLAUDE.md for this directory already exists and is comprehensive. Here's the content:
-
----
-
 # Renderer Hooks
 
 All shared React hooks for the renderer process — IPC bridges, session management, agent monitoring, theming, git, and app-wide event wiring.
@@ -103,6 +99,7 @@ useEffect(() => {
 - IPC surface: `window.electronAPI` — typed in `src/renderer/types/electron.d.ts`
 - Agent session types: `src/renderer/components/AgentMonitor/types.ts`
 - Terminal session type: `src/renderer/components/Terminal/TerminalTabs.tsx`
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

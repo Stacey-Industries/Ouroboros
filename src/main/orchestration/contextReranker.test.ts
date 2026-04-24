@@ -22,11 +22,7 @@ vi.mock('../config', () => ({
 }));
 
 import log from '../logger';
-import {
-  buildRerankPrompt,
-  parseRerankedOrder,
-  rerankCandidates,
-} from './contextReranker';
+import { buildRerankPrompt, parseRerankedOrder, rerankCandidates } from './contextReranker';
 import { spawnHaikuForRerank } from './contextRerankerSpawn';
 
 const mockSpawn = vi.mocked(spawnHaikuForRerank);
@@ -153,7 +149,9 @@ describe('rerankCandidates — threshold guard', () => {
 });
 
 describe('rerankCandidates — successful rerank', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('reorders candidates according to the returned order', async () => {
     const candidates = makeCandidates(16);
@@ -171,7 +169,10 @@ describe('rerankCandidates — successful rerank', () => {
   it('appends unmentioned candidates after the ranked ones', async () => {
     const candidates = makeCandidates(17);
     // Only return order for first 15 — file15.ts and file16.ts are unmentioned
-    const partialOrder = candidates.slice(0, 15).reverse().map((c) => c.path);
+    const partialOrder = candidates
+      .slice(0, 15)
+      .reverse()
+      .map((c) => c.path);
     mockSpawn.mockResolvedValueOnce({
       success: true,
       output: JSON.stringify({ order: partialOrder }),
@@ -193,15 +194,14 @@ describe('rerankCandidates — successful rerank', () => {
       latencyMs: 60,
     });
     await rerankCandidates('goal', makeCandidates(15), { timeoutMs: 800 });
-    expect(mockSpawn).toHaveBeenCalledWith(
-      expect.any(String),
-      800,
-    );
+    expect(mockSpawn).toHaveBeenCalledWith(expect.any(String), 800);
   });
 });
 
 describe('rerankCandidates — fallback paths', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns original candidates on spawn failure (timeout)', async () => {
     mockSpawn.mockResolvedValueOnce({

@@ -82,10 +82,12 @@ function setupMocks() {
     return { success: true, requestId: req.requestId };
   });
 
-  mockOnStream.mockImplementation((requestId: string, callback: (ev: InlineEditStreamEvent) => void) => {
-    streamCallbacks.set(requestId, callback);
-    return () => streamCallbacks.delete(requestId);
-  });
+  mockOnStream.mockImplementation(
+    (requestId: string, callback: (ev: InlineEditStreamEvent) => void) => {
+      streamCallbacks.set(requestId, callback);
+      return () => streamCallbacks.delete(requestId);
+    },
+  );
 
   mockCancelInlineEdit.mockImplementation(async () => ({ success: true }));
 }
@@ -116,9 +118,7 @@ describe('useStreamingInlineEdit', () => {
 
   it('starts in idle state', () => {
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
     expect(result.current.isStreaming).toBe(false);
     expect(result.current.streamedText).toBe('');
   });
@@ -126,9 +126,7 @@ describe('useStreamingInlineEdit', () => {
   it('calls startInlineEdit with correct params', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     const selectionRange = { startLine: 1, endLine: 3 };
     const selectedText = 'const x = 1;';
@@ -150,9 +148,7 @@ describe('useStreamingInlineEdit', () => {
   it('accumulates streamed tokens in streamedText', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
@@ -171,9 +167,7 @@ describe('useStreamingInlineEdit', () => {
   it('calls executeEdits after flush interval', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
@@ -185,7 +179,9 @@ describe('useStreamingInlineEdit', () => {
       emitEvent(requestId, { type: 'token', delta: 'hello world' });
     });
 
-    act(() => { vi.advanceTimersByTime(60); });
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
 
     expect(mockExecuteEdits).toHaveBeenCalled();
   });
@@ -193,9 +189,7 @@ describe('useStreamingInlineEdit', () => {
   it('calls pushUndoStop on each flush for single undo support', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
@@ -203,10 +197,18 @@ describe('useStreamingInlineEdit', () => {
 
     const requestId = getRequestId();
 
-    act(() => { emitEvent(requestId, { type: 'token', delta: 'first' }); });
-    act(() => { vi.advanceTimersByTime(60); });
-    act(() => { emitEvent(requestId, { type: 'token', delta: 'second' }); });
-    act(() => { vi.advanceTimersByTime(60); });
+    act(() => {
+      emitEvent(requestId, { type: 'token', delta: 'first' });
+    });
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
+    act(() => {
+      emitEvent(requestId, { type: 'token', delta: 'second' });
+    });
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
 
     expect(mockPushUndoStop).toHaveBeenCalled();
   });
@@ -214,9 +216,7 @@ describe('useStreamingInlineEdit', () => {
   it('disables editor writability during streaming', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
@@ -229,16 +229,16 @@ describe('useStreamingInlineEdit', () => {
   it('re-enables editor and clears streaming on done event', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
     });
 
     const requestId = getRequestId();
-    act(() => { emitEvent(requestId, { type: 'done', finalText: 'const y = 1;' }); });
+    act(() => {
+      emitEvent(requestId, { type: 'done', finalText: 'const y = 1;' });
+    });
 
     expect(mockUpdateOptions).toHaveBeenCalledWith({ readOnly: false });
     expect(result.current.isStreaming).toBe(false);
@@ -247,16 +247,16 @@ describe('useStreamingInlineEdit', () => {
   it('re-enables editor and resets streamedText on error event', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });
     });
 
     const requestId = getRequestId();
-    act(() => { emitEvent(requestId, { type: 'error', message: 'model error' }); });
+    act(() => {
+      emitEvent(requestId, { type: 'error', message: 'model error' });
+    });
 
     expect(mockUpdateOptions).toHaveBeenCalledWith({ readOnly: false });
     expect(result.current.isStreaming).toBe(false);
@@ -266,9 +266,7 @@ describe('useStreamingInlineEdit', () => {
   it('cancel sends cancelInlineEdit and re-enables editor', async () => {
     vi.useFakeTimers();
     const editorRef = makeEditorRef();
-    const { result } = renderHook(() =>
-      useStreamingInlineEdit(editorRef, '/test/file.ts'),
-    );
+    const { result } = renderHook(() => useStreamingInlineEdit(editorRef, '/test/file.ts'));
 
     await act(async () => {
       await result.current.startStream('edit', 'code', { startLine: 1, endLine: 1 });

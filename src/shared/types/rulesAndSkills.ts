@@ -61,4 +61,3 @@ export type HookEventType =
   | 'PermissionDenied';
 
 export type HooksConfig = Record<string, ClaudeHookMatcher[]>;
-

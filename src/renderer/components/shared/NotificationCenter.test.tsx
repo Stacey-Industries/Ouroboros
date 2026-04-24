@@ -14,10 +14,12 @@ describe('NotificationCenter', () => {
     render(
       <div data-testid="host">
         <NotificationCenter
-          anchorRect={{
-            bottom: 42,
-            right: 300,
-          } as DOMRect}
+          anchorRect={
+            {
+              bottom: 42,
+              right: 300,
+            } as DOMRect
+          }
           notifications={[]}
           onRemove={vi.fn()}
           onClearAll={vi.fn()}
@@ -37,10 +39,12 @@ describe('NotificationCenter', () => {
     const onClose = vi.fn();
     render(
       <NotificationCenter
-        anchorRect={{
-          bottom: 48,
-          right: 500,
-        } as DOMRect}
+        anchorRect={
+          {
+            bottom: 48,
+            right: 500,
+          } as DOMRect
+        }
         notifications={[]}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}

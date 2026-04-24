@@ -39,7 +39,11 @@ describe('pipeAuth', () => {
 
   afterEach(() => {
     // Clean up temp dir
-    try { fs.rmSync(tmpDir, { recursive: true }); } catch { /* ignore */ }
+    try {
+      fs.rmSync(tmpDir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
   });
 
   // ─── Token generation ───────────────────────────────────────────────────

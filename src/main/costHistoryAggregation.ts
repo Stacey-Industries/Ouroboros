@@ -107,7 +107,9 @@ function sumTokens(
 function computeTotalTokens(
   tokens: Pick<CostEntry, 'inputTokens' | 'outputTokens' | 'cacheReadTokens' | 'cacheWriteTokens'>,
 ): number {
-  return tokens.inputTokens + tokens.outputTokens + tokens.cacheReadTokens + tokens.cacheWriteTokens;
+  return (
+    tokens.inputTokens + tokens.outputTokens + tokens.cacheReadTokens + tokens.cacheWriteTokens
+  );
 }
 
 function computeWindowCost(
@@ -158,10 +160,7 @@ function buildUsageTotals(sessions: SessionUsage[]): UsageTotals {
   return totals;
 }
 
-function buildWindowBucket(
-  entries: CostEntry[],
-  model: string,
-): WindowedUsageBucket {
+function buildWindowBucket(entries: CostEntry[], model: string): WindowedUsageBucket {
   const tokens = sumTokens(entries);
   return {
     ...tokens,
@@ -227,9 +226,7 @@ export function aggregateWindowedUsage(entries: CostEntry[]): WindowedUsage {
 
   const weekEntries = entries.filter((e) => e.timestamp >= weekStart);
   const fiveHourEntries = entries.filter((e) => e.timestamp >= fiveHourStart);
-  const sonnetEntries = fiveHourEntries.filter((e) =>
-    e.model.toLowerCase().includes('sonnet'),
-  );
+  const sonnetEntries = fiveHourEntries.filter((e) => e.model.toLowerCase().includes('sonnet'));
 
   return {
     fiveHour: {
@@ -248,10 +245,7 @@ export function aggregateWindowedUsage(entries: CostEntry[]): WindowedUsage {
  * Return the most recent `count` sessions as SessionDetail objects.
  * Entries are assumed to be pre-sorted by timestamp DESC (as returned by getCostHistory).
  */
-export function getRecentSessionsFromEntries(
-  entries: CostEntry[],
-  count: number,
-): SessionDetail[] {
+export function getRecentSessionsFromEntries(entries: CostEntry[], count: number): SessionDetail[] {
   return entries.slice(0, count).map(entryToSessionDetail);
 }
 

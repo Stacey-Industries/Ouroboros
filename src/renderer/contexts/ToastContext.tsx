@@ -40,10 +40,18 @@ export function ToastProvider({ children }: ToastProviderProps): React.ReactElem
       completeProgress: toastState.completeProgress,
     }),
     [
-      toastState.toasts, toastState.toast, toastState.dismiss, toastState.dismissAll,
-      toastState.notifications, toastState.unreadCount, toastState.markAllRead,
-      toastState.removeNotification, toastState.clearAllNotifications,
-      toastState.startProgress, toastState.updateProgress, toastState.completeProgress,
+      toastState.toasts,
+      toastState.toast,
+      toastState.dismiss,
+      toastState.dismissAll,
+      toastState.notifications,
+      toastState.unreadCount,
+      toastState.markAllRead,
+      toastState.removeNotification,
+      toastState.clearAllNotifications,
+      toastState.startProgress,
+      toastState.updateProgress,
+      toastState.completeProgress,
     ],
   );
 

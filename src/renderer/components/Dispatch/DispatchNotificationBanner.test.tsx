@@ -7,7 +7,7 @@
  * banner is capped at MAX_QUEUED=3, cleanup called on unmount.
  */
 
-import { act,renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
@@ -58,12 +58,16 @@ beforeEach(() => {
   mocks.toasts.length = 0;
 });
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('DispatchNotificationBanner — completed job', () => {
   it('fires a success toast with job title and body', () => {
     let capturedHandler: NotifCallback | undefined;
-    setupElectronAPI((h) => { capturedHandler = h; });
+    setupElectronAPI((h) => {
+      capturedHandler = h;
+    });
 
     renderHook(() => DispatchNotificationBanner());
 
@@ -87,7 +91,9 @@ describe('DispatchNotificationBanner — completed job', () => {
 describe('DispatchNotificationBanner — failed job', () => {
   it('fires an error toast', () => {
     let capturedHandler: NotifCallback | undefined;
-    setupElectronAPI((h) => { capturedHandler = h; });
+    setupElectronAPI((h) => {
+      capturedHandler = h;
+    });
 
     renderHook(() => DispatchNotificationBanner());
 
@@ -113,7 +119,9 @@ describe('DispatchNotificationBanner — queue cap', () => {
     // Simulate 3 visible toasts already queued
     (mocks.toasts as unknown[]).push({}, {}, {});
     let capturedHandler: NotifCallback | undefined;
-    setupElectronAPI((h) => { capturedHandler = h; });
+    setupElectronAPI((h) => {
+      capturedHandler = h;
+    });
 
     renderHook(() => DispatchNotificationBanner());
 
@@ -127,7 +135,9 @@ describe('DispatchNotificationBanner — queue cap', () => {
   it('fires toast when queue has room (fewer than 3)', () => {
     (mocks.toasts as unknown[]).push({}, {});
     let capturedHandler: NotifCallback | undefined;
-    setupElectronAPI((h) => { capturedHandler = h; });
+    setupElectronAPI((h) => {
+      capturedHandler = h;
+    });
 
     renderHook(() => DispatchNotificationBanner());
 

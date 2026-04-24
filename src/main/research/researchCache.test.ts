@@ -78,7 +78,8 @@ describe('ttlForLibrary', () => {
   it('returns 30 d for lodash', () => expect(ttlForLibrary('lodash')).toBe(30 * D));
   it('returns 30 d for express', () => expect(ttlForLibrary('express')).toBe(30 * D));
   it('returns 90 d for node', () => expect(ttlForLibrary('node')).toBe(90 * D));
-  it('returns 90 d for @types/node prefix', () => expect(ttlForLibrary('@types/node')).toBe(90 * D));
+  it('returns 90 d for @types/node prefix', () =>
+    expect(ttlForLibrary('@types/node')).toBe(90 * D));
   it('returns 90 d for node: prefix', () => expect(ttlForLibrary('node:fs')).toBe(90 * D));
   it('returns 90 d for mdn: prefix', () => expect(ttlForLibrary('mdn:fetch')).toBe(90 * D));
   it('returns 7 d (default) for unknown library', () => {

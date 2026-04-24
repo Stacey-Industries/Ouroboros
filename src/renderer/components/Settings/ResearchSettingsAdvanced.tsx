@@ -109,8 +109,12 @@ function KnobRow({ label, help, control }: KnobRowProps): React.ReactElement {
   return (
     <div style={rowStyle}>
       <div style={labelColStyle}>
-        <div className="text-text-semantic-primary" style={labelTextStyle}>{label}</div>
-        <div className="text-text-semantic-muted" style={helpTextStyle}>{help}</div>
+        <div className="text-text-semantic-primary" style={labelTextStyle}>
+          {label}
+        </div>
+        <div className="text-text-semantic-muted" style={helpTextStyle}>
+          {help}
+        </div>
       </div>
       {control}
     </div>
@@ -123,14 +127,30 @@ const CONFIDENCE_OPTIONS: Array<{ value: PatternConfidence; label: string }> = [
   { value: 'low', label: 'Low' },
 ];
 
-function ConfidenceRadioGroup({ value, onChange }: {
+function ConfidenceRadioGroup({
+  value,
+  onChange,
+}: {
   value: PatternConfidence;
   onChange: (v: PatternConfidence) => void;
 }): React.ReactElement {
   return (
-    <div role="radiogroup" aria-label="Minimum pattern confidence" style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+    <div
+      role="radiogroup"
+      aria-label="Minimum pattern confidence"
+      style={{ display: 'flex', gap: '12px', flexShrink: 0 }}
+    >
       {CONFIDENCE_OPTIONS.map((opt) => (
-        <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+        <label
+          key={opt.value}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '13px',
+            cursor: 'pointer',
+          }}
+        >
           <input
             checked={value === opt.value}
             name="fact-claim-min-confidence"
@@ -147,12 +167,28 @@ function ConfidenceRadioGroup({ value, onChange }: {
 
 // ─── Floor slider control ─────────────────────────────────────────────────────
 
-function FloorSlider({ value, onChange }: { value: number; onChange: (v: number) => void }): React.ReactElement {
+function FloorSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-      <input max={1.0} min={0.0} step={0.1} style={{ width: '100px' }} type="range" value={value}
-        onChange={(e) => onChange(Number(e.target.value))} />
-      <span className="text-text-semantic-secondary" style={{ fontSize: '12px', width: '28px', textAlign: 'right' }}>
+      <input
+        max={1.0}
+        min={0.0}
+        step={0.1}
+        style={{ width: '100px' }}
+        type="range"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <span
+        className="text-text-semantic-secondary"
+        style={{ fontSize: '12px', width: '28px', textAlign: 'right' }}
+      >
         {value.toFixed(1)}
       </span>
     </div>
@@ -161,10 +197,23 @@ function FloorSlider({ value, onChange }: { value: number; onChange: (v: number)
 
 // ─── Latency number input ─────────────────────────────────────────────────────
 
-function LatencyInput({ value, onChange }: { value: number; onChange: (v: number) => void }): React.ReactElement {
+function LatencyInput({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}): React.ReactElement {
   return (
-    <input max={5000} min={100} step={100} style={inputStyle} type="number" value={value}
-      onChange={(e) => onChange(Math.max(100, Math.min(5000, Number(e.target.value))))} />
+    <input
+      max={5000}
+      min={100}
+      step={100}
+      style={inputStyle}
+      type="number"
+      value={value}
+      onChange={(e) => onChange(Math.max(100, Math.min(5000, Number(e.target.value))))}
+    />
   );
 }
 
@@ -189,22 +238,41 @@ function KnobPanel({ settings, onUpdate }: KnobPanelProps): React.ReactElement {
       <KnobRow
         label="Staleness confidence floor"
         help="Curated entries below this confidence are treated as not-stale. 0.0 = include all."
-        control={<FloorSlider value={floor} onChange={(v) => onUpdate({ stalenessConfidenceFloor: v })} />}
+        control={
+          <FloorSlider value={floor} onChange={(v) => onUpdate({ stalenessConfidenceFloor: v })} />
+        }
       />
       <KnobRow
         label="Fact-claim detector"
         help="When off, stream pausing is skipped but observation telemetry still fires."
-        control={<MiniToggle checked={factClaimEnabled} label="Enable fact-claim detector" onChange={(v) => onUpdate({ factClaimEnabled: v })} />}
+        control={
+          <MiniToggle
+            checked={factClaimEnabled}
+            label="Enable fact-claim detector"
+            onChange={(v) => onUpdate({ factClaimEnabled: v })}
+          />
+        }
       />
       <KnobRow
         label="Min pattern confidence"
         help="Patterns below this level are ignored by the fact-claim detector."
-        control={<ConfidenceRadioGroup value={minConf} onChange={(v) => onUpdate({ factClaimMinPatternConfidence: v })} />}
+        control={
+          <ConfidenceRadioGroup
+            value={minConf}
+            onChange={(v) => onUpdate({ factClaimMinPatternConfidence: v })}
+          />
+        }
       />
       <KnobRow
         label="Pre-edit dry-run mode"
         help="Records what research WOULD fire but skips the actual subagent call."
-        control={<MiniToggle checked={dryRun} label="Pre-edit dry-run mode" onChange={(v) => onUpdate({ preEditDryRunOnly: v })} />}
+        control={
+          <MiniToggle
+            checked={dryRun}
+            label="Pre-edit dry-run mode"
+            onChange={(v) => onUpdate({ preEditDryRunOnly: v })}
+          />
+        }
       />
       <KnobRow
         label="Max latency (ms)"
@@ -223,10 +291,22 @@ export function ResearchSettingsAdvanced({
 }: ResearchSettingsAdvancedProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   return (
-    <section style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+    <section
+      style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}
+    >
       <button
         className="text-text-semantic-primary"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '6px', width: '100%', textAlign: 'left' }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          width: '100%',
+          textAlign: 'left',
+        }}
         type="button"
         onClick={() => setExpanded((v) => !v)}
       >

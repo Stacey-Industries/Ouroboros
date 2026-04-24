@@ -83,7 +83,11 @@ describe('BundleCard — install interaction', () => {
 
   it('shows Installing… and disables button while installing', async () => {
     let resolve!: () => void;
-    const onInstall = vi.fn().mockReturnValue(new Promise<void>((r) => { resolve = r; }));
+    const onInstall = vi.fn().mockReturnValue(
+      new Promise<void>((r) => {
+        resolve = r;
+      }),
+    );
 
     render(<BundleCard entry={makeEntry()} onInstall={onInstall} />);
     fireEvent.click(screen.getByRole('button', { name: /install/i }));

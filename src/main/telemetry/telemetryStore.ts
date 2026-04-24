@@ -153,7 +153,11 @@ function startFlushInterval(state: StoreState): void {
       log.error('[telemetry] flush error', err);
     }
   }, 100);
-  if (typeof state.intervalHandle === 'object' && state.intervalHandle !== null && 'unref' in state.intervalHandle) {
+  if (
+    typeof state.intervalHandle === 'object' &&
+    state.intervalHandle !== null &&
+    'unref' in state.intervalHandle
+  ) {
     (state.intervalHandle as NodeJS.Timeout).unref();
   }
 }
@@ -178,17 +182,19 @@ function enqueueEvent(state: StoreState, payload: HookPayload): string {
 function writeOutcome(state: StoreState, opts: RecordOutcomeOpts): void {
   if (!isFlagEnabled()) return;
   try {
-    state.db.prepare(
-      'INSERT OR REPLACE INTO outcomes (event_id, kind, exit_code, duration_ms, stderr_hash, signals, confidence) VALUES (?,?,?,?,?,?,?)',
-    ).run(
-      opts.eventId,
-      opts.kind,
-      opts.exitCode ?? null,
-      opts.durationMs ?? null,
-      opts.stderrHash ?? null,
-      JSON.stringify(opts.signals ?? []),
-      opts.confidence ?? 'low',
-    );
+    state.db
+      .prepare(
+        'INSERT OR REPLACE INTO outcomes (event_id, kind, exit_code, duration_ms, stderr_hash, signals, confidence) VALUES (?,?,?,?,?,?,?)',
+      )
+      .run(
+        opts.eventId,
+        opts.kind,
+        opts.exitCode ?? null,
+        opts.durationMs ?? null,
+        opts.stderrHash ?? null,
+        JSON.stringify(opts.signals ?? []),
+        opts.confidence ?? 'low',
+      );
   } catch (err) {
     log.warn('[telemetry] outcome insert failed', err);
   }
@@ -197,16 +203,18 @@ function writeOutcome(state: StoreState, opts: RecordOutcomeOpts): void {
 function writeTrace(state: StoreState, opts: RecordTraceOpts): void {
   if (!isFlagEnabled()) return;
   try {
-    state.db.prepare(
-      'INSERT OR IGNORE INTO orchestration_traces (id, trace_id, session_id, phase, timestamp, payload) VALUES (?,?,?,?,?,?)',
-    ).run(
-      opts.id,
-      opts.traceId,
-      opts.sessionId,
-      opts.phase,
-      opts.timestamp ?? Date.now(),
-      JSON.stringify(opts.payload ?? {}),
-    );
+    state.db
+      .prepare(
+        'INSERT OR IGNORE INTO orchestration_traces (id, trace_id, session_id, phase, timestamp, payload) VALUES (?,?,?,?,?,?)',
+      )
+      .run(
+        opts.id,
+        opts.traceId,
+        opts.sessionId,
+        opts.phase,
+        opts.timestamp ?? Date.now(),
+        JSON.stringify(opts.payload ?? {}),
+      );
   } catch (err) {
     log.error('[telemetry] recordTrace error', err);
   }
@@ -215,21 +223,23 @@ function writeTrace(state: StoreState, opts: RecordTraceOpts): void {
 function writeInvocation(state: StoreState, opts: RecordInvocationOpts): void {
   if (!isFlagEnabled()) return;
   try {
-    state.db.prepare(
-      `INSERT INTO research_invocations
+    state.db
+      .prepare(
+        `INSERT INTO research_invocations
         (id, correlation_id, session_id, topic, trigger_reason, artifact_hash, hit_cache, latency_ms, timestamp)
        VALUES (?,?,?,?,?,?,?,?,?)`,
-    ).run(
-      crypto.randomUUID(),
-      opts.correlationId,
-      opts.sessionId,
-      opts.topic,
-      opts.triggerReason,
-      opts.artifactHash ?? null,
-      opts.hitCache ? 1 : 0,
-      opts.latencyMs,
-      opts.timestamp ?? Date.now(),
-    );
+      )
+      .run(
+        crypto.randomUUID(),
+        opts.correlationId,
+        opts.sessionId,
+        opts.topic,
+        opts.triggerReason,
+        opts.artifactHash ?? null,
+        opts.hitCache ? 1 : 0,
+        opts.latencyMs,
+        opts.timestamp ?? Date.now(),
+      );
   } catch (err) {
     log.warn('[telemetry] invocation insert failed', err);
   }
@@ -248,7 +258,11 @@ function schedulePurge(state: StoreState): void {
   setImmediate(runPurge);
   // Schedule daily thereafter
   state.purgeHandle = setInterval(runPurge, PURGE_INTERVAL_MS);
-  if (typeof state.purgeHandle === 'object' && state.purgeHandle !== null && 'unref' in state.purgeHandle) {
+  if (
+    typeof state.purgeHandle === 'object' &&
+    state.purgeHandle !== null &&
+    'unref' in state.purgeHandle
+  ) {
     (state.purgeHandle as NodeJS.Timeout).unref();
   }
 }
@@ -279,7 +293,8 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
   db.exec(TELEMETRY_SCHEMA_SQL);
   migrateSchemaVersion(db);
   const state: StoreState = {
-    db, queue: [],
+    db,
+    queue: [],
     intervalHandle: setInterval(() => undefined, 1 << 30),
     purgeHandle: setInterval(() => undefined, 1 << 30),
   };

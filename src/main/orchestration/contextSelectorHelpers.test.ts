@@ -12,7 +12,11 @@ import { rankCandidates } from './contextSelectorHelpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeCandidate(filePath: string, weight: number, pagerank_score?: number | null): MutableCandidate {
+function makeCandidate(
+  filePath: string,
+  weight: number,
+  pagerank_score?: number | null,
+): MutableCandidate {
   return {
     filePath,
     reasons: [{ kind: 'git_diff', weight, detail: 'changed' }],

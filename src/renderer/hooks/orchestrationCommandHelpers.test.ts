@@ -1,24 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskSessionRecord, VerificationSummary } from '../types/electron';
-import {
-  OPEN_ORCHESTRATION_PANEL_EVENT,
-  OPEN_ORCHESTRATION_SESSION_EVENT,
-} from './appEventNames';
+import { OPEN_ORCHESTRATION_PANEL_EVENT, OPEN_ORCHESTRATION_SESSION_EVENT } from './appEventNames';
 import {
   rerunLatestOrchestrationVerification,
   resolveOrchestrationWorkspaceRoot,
   resumeLatestOrchestrationTask,
 } from './orchestrationCommandHelpers';
 
-const CustomEventImpl = globalThis.CustomEvent ?? class<T = unknown> extends Event {
-  detail: T;
+const CustomEventImpl =
+  globalThis.CustomEvent ??
+  class<T = unknown> extends Event {
+    detail: T;
 
-  constructor(type: string, init?: CustomEventInit<T>) {
-    super(type);
-    this.detail = init?.detail as T;
-  }
-};
+    constructor(type: string, init?: CustomEventInit<T>) {
+      super(type);
+      this.detail = init?.detail as T;
+    }
+  };
 
 function createSession(overrides: Partial<TaskSessionRecord> = {}): TaskSessionRecord {
   return {
@@ -74,7 +73,9 @@ describe('orchestrationCommandHelpers', () => {
   });
 
   it('prefers the command detail workspace root when provided', () => {
-    expect(resolveOrchestrationWorkspaceRoot('C:\\repo', { workspaceRoot: 'D:\\other' })).toBe('D:\\other');
+    expect(resolveOrchestrationWorkspaceRoot('C:\\repo', { workspaceRoot: 'D:\\other' })).toBe(
+      'D:\\other',
+    );
     expect(resolveOrchestrationWorkspaceRoot('C:\\repo')).toBe('C:\\repo');
   });
 
@@ -98,11 +99,15 @@ describe('orchestrationCommandHelpers', () => {
       }),
     );
 
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: OPEN_ORCHESTRATION_PANEL_EVENT }));
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
-      type: OPEN_ORCHESTRATION_SESSION_EVENT,
-      detail: { sessionId: 'session-1' },
-    }));
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: OPEN_ORCHESTRATION_PANEL_EVENT }),
+    );
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: OPEN_ORCHESTRATION_SESSION_EVENT,
+        detail: { sessionId: 'session-1' },
+      }),
+    );
   });
 
   it('warns when there is no active project root to resume from', async () => {

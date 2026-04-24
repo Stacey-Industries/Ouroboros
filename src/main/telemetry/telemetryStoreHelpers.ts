@@ -249,9 +249,7 @@ export function redactPayload(value: unknown, _depth = 0, _seen = new WeakSet())
  */
 export function purgeRetainedRows(db: DatabaseType, retentionDays: number): number {
   const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  const result = db
-    .prepare('DELETE FROM events WHERE timestamp < ?')
-    .run(cutoffMs);
+  const result = db.prepare('DELETE FROM events WHERE timestamp < ?').run(cutoffMs);
   return result.changes;
 }
 
@@ -265,9 +263,9 @@ export function purgeRetainedRows(db: DatabaseType, retentionDays: number): numb
  * No structural DDL changes are needed — this is a metadata-only bump.
  */
 export function migrateSchemaVersion(db: DatabaseType): void {
-  const row = db
-    .prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'")
-    .get() as { value: string } | undefined;
+  const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as
+    | { value: string }
+    | undefined;
   if (row?.value === '1') {
     db.prepare("UPDATE schema_meta SET value = '2' WHERE key = 'schema_version'").run();
   }

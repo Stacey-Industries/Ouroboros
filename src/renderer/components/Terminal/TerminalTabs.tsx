@@ -7,7 +7,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { ProductIcon } from '../shared/ProductIcon';
 import { shortModelName } from './ClaudeModelMenu';
 import { NewTerminalMenu } from './NewTerminalMenu';
-import { getTabClasses, type TabDragDropState,useTabDragDrop } from './TerminalTabs.dnd';
+import { getTabClasses, type TabDragDropState, useTabDragDrop } from './TerminalTabs.dnd';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,12 @@ function CloseIcon(): React.ReactElement {
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
-          <path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path
+            d="M1 1L7 7M7 1L1 7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
         </svg>
       }
     />

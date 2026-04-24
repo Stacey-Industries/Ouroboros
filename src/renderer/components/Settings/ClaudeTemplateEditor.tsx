@@ -22,10 +22,7 @@ import {
   claudeTemplateTextInputStyle,
 } from './claudeTemplateEditorStyles';
 import { SectionLabel } from './settingsStyles';
-import {
-  type TemplateEditorModel,
-  useTemplateEditorModel,
-} from './useClaudeTemplateEditor';
+import { type TemplateEditorModel, useTemplateEditorModel } from './useClaudeTemplateEditor';
 
 interface ClaudeTemplateEditorProps {
   templates: AgentTemplate[];
@@ -59,17 +56,18 @@ export function ClaudeTemplateEditor({
           <TemplateListItem key={template.id} model={model} template={template} />
         ))}
       </div>
-      <button onClick={model.addTemplate} className="text-text-semantic-primary" style={claudeTemplateAddButtonStyle}>
+      <button
+        onClick={model.addTemplate}
+        className="text-text-semantic-primary"
+        style={claudeTemplateAddButtonStyle}
+      >
         + Add Template
       </button>
     </section>
   );
 }
 
-function TemplateListItem({
-  model,
-  template,
-}: TemplateListItemProps): React.ReactElement {
+function TemplateListItem({ model, template }: TemplateListItemProps): React.ReactElement {
   if (model.editingId === template.id) {
     return <EditableTemplateCard model={model} />;
   }
@@ -77,11 +75,7 @@ function TemplateListItem({
   return <TemplateRow model={model} template={template} />;
 }
 
-function EditableTemplateCard({
-  model,
-}: {
-  model: TemplateEditorModel;
-}): React.ReactElement {
+function EditableTemplateCard({ model }: { model: TemplateEditorModel }): React.ReactElement {
   return (
     <div style={claudeTemplateEditCardStyle}>
       <EditableTemplateFields model={model} />
@@ -90,11 +84,7 @@ function EditableTemplateCard({
   );
 }
 
-function EditableTemplateFields({
-  model,
-}: {
-  model: TemplateEditorModel;
-}): React.ReactElement {
+function EditableTemplateFields({ model }: { model: TemplateEditorModel }): React.ReactElement {
   return (
     <>
       <div style={claudeTemplateHeaderRowStyle}>
@@ -130,33 +120,40 @@ function EditableTemplateFields({
   );
 }
 
-function EditableTemplateActions({
-  model,
-}: {
-  model: TemplateEditorModel;
-}): React.ReactElement {
+function EditableTemplateActions({ model }: { model: TemplateEditorModel }): React.ReactElement {
   return (
     <div style={claudeTemplateButtonRowStyle}>
-      <button onClick={model.cancelEdit} className="text-text-semantic-primary" style={claudeTemplateCancelButtonStyle}>
+      <button
+        onClick={model.cancelEdit}
+        className="text-text-semantic-primary"
+        style={claudeTemplateCancelButtonStyle}
+      >
         Cancel
       </button>
-      <button onClick={model.saveEdit} className="text-text-semantic-on-accent" style={claudeTemplateSaveButtonStyle}>
+      <button
+        onClick={model.saveEdit}
+        className="text-text-semantic-on-accent"
+        style={claudeTemplateSaveButtonStyle}
+      >
         Save
       </button>
     </div>
   );
 }
 
-function TemplateRow({
-  model,
-  template,
-}: TemplateListItemProps): React.ReactElement {
+function TemplateRow({ model, template }: TemplateListItemProps): React.ReactElement {
   return (
     <div style={claudeTemplateTemplateRowStyle}>
       {template.icon && <span style={claudeTemplateIconPreviewStyle}>{template.icon}</span>}
       <div style={claudeTemplateTemplateTextStyle}>
-        <div className="text-text-semantic-primary" style={claudeTemplateTemplateNameStyle}>{template.name}</div>
-        <div className="text-text-semantic-muted" style={claudeTemplateTemplatePromptStyle} title={template.promptTemplate}>
+        <div className="text-text-semantic-primary" style={claudeTemplateTemplateNameStyle}>
+          {template.name}
+        </div>
+        <div
+          className="text-text-semantic-muted"
+          style={claudeTemplateTemplatePromptStyle}
+          title={template.promptTemplate}
+        >
           {template.promptTemplate}
         </div>
       </div>
@@ -203,10 +200,18 @@ function TemplateHelpText(): React.ReactElement {
   return (
     <p className="text-text-semantic-muted" style={claudeTemplateHelpTextStyle}>
       Quick-launch profiles for common tasks. Use{' '}
-      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{openFile}}'}</code>,{' '}
-      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{projectRoot}}'}</code>,{' '}
-      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{projectName}}'}</code> as variables in
-      prompts.
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>
+        {'{{openFile}}'}
+      </code>
+      ,{' '}
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>
+        {'{{projectRoot}}'}
+      </code>
+      ,{' '}
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>
+        {'{{projectName}}'}
+      </code>{' '}
+      as variables in prompts.
     </p>
   );
 }

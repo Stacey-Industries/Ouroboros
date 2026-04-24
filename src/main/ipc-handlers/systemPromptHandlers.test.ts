@@ -18,14 +18,8 @@ vi.mock('electron', () => ({
 }));
 
 // ── Import modules after mocks ────────────────────────────────────────────────
-import {
-  clearSystemPromptForSession,
-  getSystemPromptForSession,
-} from '../ptyAgentBridge';
-import {
-  cleanupSystemPromptHandlers,
-  registerSystemPromptHandlers,
-} from './systemPromptHandlers';
+import { clearSystemPromptForSession, getSystemPromptForSession } from '../ptyAgentBridge';
+import { cleanupSystemPromptHandlers, registerSystemPromptHandlers } from './systemPromptHandlers';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -140,8 +134,18 @@ describe('createAgentBridge → system/init caches prompt', () => {
       onEvent: vi.fn(),
       onComplete: vi.fn(),
     });
-    const first = JSON.stringify({ type: 'system', subtype: 'init', system_prompt: 'first', session_id: SESSION_A });
-    const second = JSON.stringify({ type: 'system', subtype: 'init', system_prompt: 'second', session_id: SESSION_A });
+    const first = JSON.stringify({
+      type: 'system',
+      subtype: 'init',
+      system_prompt: 'first',
+      session_id: SESSION_A,
+    });
+    const second = JSON.stringify({
+      type: 'system',
+      subtype: 'init',
+      system_prompt: 'second',
+      session_id: SESSION_A,
+    });
     bridge.feed(`${first}\n${second}\n`);
     expect(getSystemPromptForSession(SESSION_A)?.text).toBe('first');
     bridge.dispose();

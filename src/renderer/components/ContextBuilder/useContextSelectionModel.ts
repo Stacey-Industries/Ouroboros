@@ -2,9 +2,16 @@
  * useContextSelectionModel.ts — Context selection model with toggle/select/clear actions.
  */
 
+import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
-import type { ContextBudgetSummary, ContextPacket, OmittedContextCandidate, RankedContextFile, TaskRequestContextSelection } from '../../types/electron';
+import type {
+  ContextBudgetSummary,
+  ContextPacket,
+  OmittedContextCandidate,
+  RankedContextFile,
+  TaskRequestContextSelection,
+} from '../../types/electron';
 
 // ─── Intent type for picker actions ───────────────────────────────────────────
 
@@ -13,59 +20,59 @@ export type ContextSelectionIntent = 'pin' | 'include' | 'exclude';
 // ─── Group/item types for the checkbox-based selection UI ─────────────────────
 
 export interface ContextSelectionIntentItem {
-  type: string
-  label: string
+  type: string;
+  label: string;
 }
 
 export interface ContextSelectionGroup {
-  label: string
-  items: ContextSelectionIntentItem[]
+  label: string;
+  items: ContextSelectionIntentItem[];
 }
 
 export interface ContextSelectionSummary {
-  selectedCount: number
-  totalCount: number
-  userSelectedCount: number
-  pinnedCount: number
-  includedCount: number
-  excludedCount: number
-  previewCount: number
-  omittedCount: number
+  selectedCount: number;
+  totalCount: number;
+  userSelectedCount: number;
+  pinnedCount: number;
+  includedCount: number;
+  excludedCount: number;
+  previewCount: number;
+  omittedCount: number;
 }
 
 export interface ContextSelectionConfig {
-  groups?: ContextSelectionGroup[]
-  previewPacket?: Pick<ContextPacket, 'budget' | 'files' | 'omittedCandidates'> | null
+  groups?: ContextSelectionGroup[];
+  previewPacket?: Pick<ContextPacket, 'budget' | 'files' | 'omittedCandidates'> | null;
 }
 
 export interface SelectionGroup {
-  key: string
-  label: string
-  files: string[]
+  key: string;
+  label: string;
+  files: string[];
 }
 
 export interface ContextSelectionModel {
   // Checkbox UI groups (for ContextSelectionSection)
-  groups: ContextSelectionGroup[]
-  summary: ContextSelectionSummary
-  isSelected: (groupLabel: string, itemLabel: string) => boolean
-  toggleItem: (groupLabel: string, itemLabel: string) => void
-  selectAll: () => void
-  clearAll: () => void
+  groups: ContextSelectionGroup[];
+  summary: ContextSelectionSummary;
+  isSelected: (groupLabel: string, itemLabel: string) => boolean;
+  toggleItem: (groupLabel: string, itemLabel: string) => void;
+  selectAll: () => void;
+  clearAll: () => void;
   // File-level selection (for OrchestrationTaskComposer)
-  selection: Partial<TaskRequestContextSelection>
-  selectionGroups: SelectionGroup[]
-  previewFiles: RankedContextFile[]
-  omittedCandidates: OmittedContextCandidate[]
-  budget: ContextBudgetSummary | undefined
-  isPinned: (filePath: string) => boolean
-  isIncluded: (filePath: string) => boolean
-  isExcluded: (filePath: string) => boolean
-  togglePinned: (filePath: string) => void
-  toggleIncluded: (filePath: string) => void
-  toggleExcluded: (filePath: string) => void
-  handleOpenFile: (filePath: string) => void
-  removeFile: (groupKey: string, filePath: string) => void
+  selection: Partial<TaskRequestContextSelection>;
+  selectionGroups: SelectionGroup[];
+  previewFiles: RankedContextFile[];
+  omittedCandidates: OmittedContextCandidate[];
+  budget: ContextBudgetSummary | undefined;
+  isPinned: (filePath: string) => boolean;
+  isIncluded: (filePath: string) => boolean;
+  isExcluded: (filePath: string) => boolean;
+  togglePinned: (filePath: string) => void;
+  toggleIncluded: (filePath: string) => void;
+  toggleExcluded: (filePath: string) => void;
+  handleOpenFile: (filePath: string) => void;
+  removeFile: (groupKey: string, filePath: string) => void;
 }
 
 // ─── Pure helper functions ────────────────────────────────────────────────────
@@ -78,7 +85,9 @@ function dedupe(paths: string[]): string[] {
   return [...new Set(paths.map(normalizeSlash).filter(Boolean))];
 }
 
-export function normalizeSelection(partial: Partial<TaskRequestContextSelection>): TaskRequestContextSelection {
+export function normalizeSelection(
+  partial: Partial<TaskRequestContextSelection>,
+): TaskRequestContextSelection {
   return {
     userSelectedFiles: dedupe(partial.userSelectedFiles ?? []),
     pinnedFiles: dedupe(partial.pinnedFiles ?? []),
@@ -172,7 +181,13 @@ interface ComputeSummaryArgs {
   omittedCount: number;
 }
 
-function computeSummary({ groups, selectedSize, fileSelection, previewCount, omittedCount }: ComputeSummaryArgs): ContextSelectionSummary {
+function computeSummary({
+  groups,
+  selectedSize,
+  fileSelection,
+  previewCount,
+  omittedCount,
+}: ComputeSummaryArgs): ContextSelectionSummary {
   let totalCount = 0;
   for (const group of groups) totalCount += group.items.length;
   return {
@@ -197,13 +212,25 @@ function buildSelectionGroups(fileSelection: TaskRequestContextSelection): Selec
     groups.push({ key: 'pinnedFiles', label: 'Pinned files', files: fileSelection.pinnedFiles });
   }
   if (fileSelection.includedFiles.length > 0) {
-    groups.push({ key: 'includedFiles', label: 'Included files', files: fileSelection.includedFiles });
+    groups.push({
+      key: 'includedFiles',
+      label: 'Included files',
+      files: fileSelection.includedFiles,
+    });
   }
   if (fileSelection.excludedFiles.length > 0) {
-    groups.push({ key: 'excludedFiles', label: 'Excluded files', files: fileSelection.excludedFiles });
+    groups.push({
+      key: 'excludedFiles',
+      label: 'Excluded files',
+      files: fileSelection.excludedFiles,
+    });
   }
   if (fileSelection.userSelectedFiles.length > 0) {
-    groups.push({ key: 'userSelectedFiles', label: 'User-selected files', files: fileSelection.userSelectedFiles });
+    groups.push({
+      key: 'userSelectedFiles',
+      label: 'User-selected files',
+      files: fileSelection.userSelectedFiles,
+    });
   }
   return groups;
 }
@@ -218,21 +245,29 @@ function useCheckboxSelection(groups: ContextSelectionGroup[]) {
   );
   const toggleItem = useCallback((groupLabel: string, itemLabel: string): void => {
     const key = makeKey(groupLabel, itemLabel);
-    setSelected((prev) => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }, []);
   const selectAll = useCallback((): void => setSelected(collectAllKeys(groups)), [groups]);
   const clearAll = useCallback((): void => setSelected(new Set()), []);
   return { selected, isSelected, toggleItem, selectAll, clearAll };
 }
 
-function useFileSelectionCallbacks() {
-  const [fileSelection, setFileSelection] = useState<TaskRequestContextSelection>(emptySelection);
+function useFileSelectionFlags(fileSelection: TaskRequestContextSelection) {
   const isPinned = useCallback((f: string) => fileSelection.pinnedFiles.includes(normalizeSlash(f)), [fileSelection]);
   const isIncluded = useCallback((f: string) => fileSelection.includedFiles.includes(normalizeSlash(f)), [fileSelection]);
   const isExcluded = useCallback((f: string) => fileSelection.excludedFiles.includes(normalizeSlash(f)), [fileSelection]);
-  const togglePinned = useCallback((f: string) => setFileSelection((p) => togglePinnedSelection(p, f)), []);
-  const toggleIncluded = useCallback((f: string) => setFileSelection((p) => toggleIncludedSelection(p, f)), []);
-  const toggleExcluded = useCallback((f: string) => setFileSelection((p) => toggleExcludedSelection(p, f)), []);
+  return { isPinned, isIncluded, isExcluded };
+}
+
+function useFileSelectionMutations(setFileSelection: Dispatch<SetStateAction<TaskRequestContextSelection>>) {
+  const togglePinned = useCallback((f: string) => setFileSelection((p) => togglePinnedSelection(p, f)), [setFileSelection]);
+  const toggleIncluded = useCallback((f: string) => setFileSelection((p) => toggleIncludedSelection(p, f)), [setFileSelection]);
+  const toggleExcluded = useCallback((f: string) => setFileSelection((p) => toggleExcludedSelection(p, f)), [setFileSelection]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- file opening handled at IDE layer; intentional no-op
   const handleOpenFile = useCallback((_f: string): void => undefined, []);
   const removeFile = useCallback((groupKey: string, filePath: string): void => {
@@ -242,37 +277,68 @@ function useFileSelectionCallbacks() {
       if (!Array.isArray(prev[key])) return prev;
       return normalizeSelection({ ...prev, [key]: (prev[key] as string[]).filter((f) => normalizeSlash(f) !== norm) });
     });
-  }, []);
+  }, [setFileSelection]);
+  return { togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile };
+}
+
+function useFileSelectionCallbacks() {
+  const [fileSelection, setFileSelection] = useState<TaskRequestContextSelection>(emptySelection);
+  const { isPinned, isIncluded, isExcluded } = useFileSelectionFlags(fileSelection);
+  const { togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile } = useFileSelectionMutations(setFileSelection);
   return { fileSelection, isPinned, isIncluded, isExcluded, togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+interface PreviewState {
+  previewFiles: RankedContextFile[];
+  omittedCandidates: OmittedContextCandidate[];
+  budget: ContextBudgetSummary | undefined;
+}
+
+function usePreviewState(config?: ContextSelectionConfig): PreviewState {
+  const previewPacket = config?.previewPacket ?? null;
+  const previewFiles = useMemo(() => previewPacket?.files ?? [], [previewPacket]);
+  const omittedCandidates = useMemo(() => previewPacket?.omittedCandidates ?? [], [previewPacket]);
+  return { previewFiles, omittedCandidates, budget: previewPacket?.budget };
+}
+
+function buildContextSelectionModel(args: {
+  groups: ContextSelectionGroup[];
+  summary: ContextSelectionSummary;
+  isSelected: (g: string, i: string) => boolean;
+  toggleItem: (g: string, i: string) => void;
+  selectAll: () => void;
+  clearAll: () => void;
+  fileSelection: TaskRequestContextSelection;
+  selectionGroups: SelectionGroup[];
+  previewFiles: RankedContextFile[];
+  omittedCandidates: OmittedContextCandidate[];
+  budget: ContextBudgetSummary | undefined;
+  isPinned: (f: string) => boolean;
+  isIncluded: (f: string) => boolean;
+  isExcluded: (f: string) => boolean;
+  togglePinned: (f: string) => void;
+  toggleIncluded: (f: string) => void;
+  toggleExcluded: (f: string) => void;
+  handleOpenFile: (f: string) => void;
+  removeFile: (k: string, f: string) => void;
+}): ContextSelectionModel {
+  return { ...args, selection: args.fileSelection };
+}
+
 export function useContextSelectionModel(config?: ContextSelectionConfig): ContextSelectionModel {
   const groups = useMemo(() => config?.groups ?? [], [config?.groups]);
-  const previewPacket = config?.previewPacket ?? null;
-  const previewFiles: RankedContextFile[] = useMemo(() => previewPacket?.files ?? [], [previewPacket]);
-  const omittedCandidates: OmittedContextCandidate[] = useMemo(() => previewPacket?.omittedCandidates ?? [], [previewPacket]);
-  const budget = previewPacket?.budget;
-
+  const { previewFiles, omittedCandidates, budget } = usePreviewState(config);
   const { selected, isSelected, toggleItem, selectAll, clearAll } = useCheckboxSelection(groups);
   const { fileSelection, isPinned, isIncluded, isExcluded, togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile } = useFileSelectionCallbacks();
-
   const selectionGroups = useMemo(() => buildSelectionGroups(fileSelection), [fileSelection]);
   const summary = useMemo(
     () => computeSummary({ groups, selectedSize: selected.size, fileSelection, previewCount: previewFiles.length, omittedCount: omittedCandidates.length }),
     [groups, selected, fileSelection, previewFiles, omittedCandidates],
   );
-
   return useMemo<ContextSelectionModel>(
-    () => ({
-      groups, summary, isSelected, toggleItem, selectAll, clearAll,
-      selection: fileSelection, selectionGroups, previewFiles, omittedCandidates, budget,
-      isPinned, isIncluded, isExcluded, togglePinned, toggleIncluded, toggleExcluded,
-      handleOpenFile, removeFile,
-    }),
-    [groups, summary, isSelected, toggleItem, selectAll, clearAll, fileSelection, selectionGroups,
-      previewFiles, omittedCandidates, budget, isPinned, isIncluded, isExcluded,
-      togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile],
+    () => buildContextSelectionModel({ groups, summary, isSelected, toggleItem, selectAll, clearAll, fileSelection, selectionGroups, previewFiles, omittedCandidates, budget, isPinned, isIncluded, isExcluded, togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile }),
+    [groups, summary, isSelected, toggleItem, selectAll, clearAll, fileSelection, selectionGroups, previewFiles, omittedCandidates, budget, isPinned, isIncluded, isExcluded, togglePinned, toggleIncluded, toggleExcluded, handleOpenFile, removeFile],
   );
 }

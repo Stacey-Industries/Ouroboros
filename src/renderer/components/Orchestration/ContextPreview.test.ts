@@ -149,10 +149,12 @@ function createResult(): TaskResult {
 
 describe('ContextPreview', () => {
   it('renders ranked file reasons, snippets, omitted candidates, and diff summaries', () => {
-    const markup = renderToStaticMarkup(ContextPreview({
-      session: createSession(),
-      latestResult: createResult(),
-    }));
+    const markup = renderToStaticMarkup(
+      ContextPreview({
+        session: createSession(),
+        latestResult: createResult(),
+      }),
+    );
 
     expect(markup).toContain('Why it was selected');
     expect(markup).toContain('git_diff');

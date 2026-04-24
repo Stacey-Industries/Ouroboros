@@ -13,7 +13,7 @@ vi.mock('../logger', () => ({
 import type { Profile } from '@shared/types/profile';
 
 import type { ProfileStoreAdaptor } from './profileStore';
-import { buildProfileStore,MAX_USER_PROFILES } from './profileStore';
+import { buildProfileStore, MAX_USER_PROFILES } from './profileStore';
 import { BUILT_IN_PROFILES } from './rolePresets';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -23,9 +23,13 @@ function makeAdaptor(): ProfileStoreAdaptor {
   let defaults: Record<string, string> = {};
   return {
     readProfiles: () => profiles.slice(),
-    writeProfiles: (p) => { profiles = p.slice(); },
+    writeProfiles: (p) => {
+      profiles = p.slice();
+    },
     readDefaults: () => ({ ...defaults }),
-    writeDefaults: (d) => { defaults = { ...d }; },
+    writeDefaults: (d) => {
+      defaults = { ...d };
+    },
   };
 }
 
@@ -66,10 +70,7 @@ describe('profileStore', () => {
       const all = store.listAll();
       const builtInIds = BUILT_IN_PROFILES.map((p) => p.id);
       const firstUserIdx = all.findIndex((p) => !builtInIds.includes(p.id));
-      const lastBuiltInIdx = all.reduce(
-        (acc, p, i) => (builtInIds.includes(p.id) ? i : acc),
-        -1,
-      );
+      const lastBuiltInIdx = all.reduce((acc, p, i) => (builtInIds.includes(p.id) ? i : acc), -1);
       expect(lastBuiltInIdx).toBeLessThan(firstUserIdx);
     });
 
@@ -108,9 +109,7 @@ describe('profileStore', () => {
 
     it('throws when trying to upsert a built-in profile', () => {
       const store = buildProfileStore(adaptor);
-      expect(() => store.upsert({ ...BUILT_IN_PROFILES[0], name: 'Hacked' })).toThrow(
-        /built-in/i,
-      );
+      expect(() => store.upsert({ ...BUILT_IN_PROFILES[0], name: 'Hacked' })).toThrow(/built-in/i);
     });
 
     it(`throws when user profile cap (${MAX_USER_PROFILES}) is exceeded`, () => {
@@ -127,9 +126,7 @@ describe('profileStore', () => {
         store.upsert(makeProfile({ id: `u${i}` }));
       }
       // Updating u0 — already exists, should not throw
-      expect(() =>
-        store.upsert(makeProfile({ id: 'u0', name: 'Updated' })),
-      ).not.toThrow();
+      expect(() => store.upsert(makeProfile({ id: 'u0', name: 'Updated' }))).not.toThrow();
     });
   });
 

@@ -35,13 +35,21 @@ function makeChild(): FakeChild {
   const child = new EventEmitter() as FakeChild;
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
-  child.stdin = { write: vi.fn((_d, _e, cb) => { if (cb) cb(); }), end: vi.fn() };
+  child.stdin = {
+    write: vi.fn((_d, _e, cb) => {
+      if (cb) cb();
+    }),
+    end: vi.fn(),
+  };
   child.kill = vi.fn();
   return child;
 }
 
 /** Returns a spawnFn that emits `output` on stdout and exits 0. */
-function spawnSuccess(output: string): { spawnFn: typeof import('child_process').spawn; child: FakeChild } {
+function spawnSuccess(output: string): {
+  spawnFn: typeof import('child_process').spawn;
+  child: FakeChild;
+} {
   const child = makeChild();
   const spawnFn = vi.fn(() => {
     setImmediate(() => {
@@ -97,8 +105,14 @@ const VALID_JSON: ResearchArtifact = {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-beforeEach(() => { resetResearchCacheForTests(); mockRecordInvocation.mockClear(); });
-afterEach(() => { resetResearchCacheForTests(); vi.useRealTimers(); });
+beforeEach(() => {
+  resetResearchCacheForTests();
+  mockRecordInvocation.mockClear();
+});
+afterEach(() => {
+  resetResearchCacheForTests();
+  vi.useRealTimers();
+});
 
 describe('runResearch — successful spawn', () => {
   it('returns an artifact with the correct topic', async () => {
@@ -124,19 +138,13 @@ describe('runResearch — successful spawn', () => {
   it('strips markdown fences before parsing', async () => {
     const fenced = '```json\n' + JSON.stringify(VALID_JSON) + '\n```';
     const { spawnFn } = spawnSuccess(fenced);
-    const result = await runResearch(
-      { topic: 'app router', library: 'next' },
-      baseDeps(spawnFn),
-    );
+    const result = await runResearch({ topic: 'app router', library: 'next' }, baseDeps(spawnFn));
     expect(result.confidenceHint).toBe('high');
   });
 
   it('populates sources and snippets from the JSON', async () => {
     const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
-    const result = await runResearch(
-      { topic: 'app router', library: 'next' },
-      baseDeps(spawnFn),
-    );
+    const result = await runResearch({ topic: 'app router', library: 'next' }, baseDeps(spawnFn));
     expect(result.sources).toHaveLength(1);
     expect(result.sources[0].url).toBe('https://nextjs.org');
     expect(result.relevantSnippets).toHaveLength(1);
@@ -144,10 +152,7 @@ describe('runResearch — successful spawn', () => {
 
   it('assigns a uuid correlationId', async () => {
     const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
-    const result = await runResearch(
-      { topic: 'app router', library: 'next' },
-      baseDeps(spawnFn),
-    );
+    const result = await runResearch({ topic: 'app router', library: 'next' }, baseDeps(spawnFn));
     expect(result.correlationId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
@@ -159,7 +164,10 @@ describe('runResearch — cache behaviour', () => {
     const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
     const deps = baseDeps(spawnFn);
     await runResearch({ topic: 'app router', library: 'next', version: '15.2.0' }, deps);
-    const second = await runResearch({ topic: 'app router', library: 'next', version: '15.2.0' }, deps);
+    const second = await runResearch(
+      { topic: 'app router', library: 'next', version: '15.2.0' },
+      deps,
+    );
     expect(second.cached).toBe(true);
     // spawn should only have been called once
     expect(spawnFn).toHaveBeenCalledTimes(1);
@@ -185,20 +193,14 @@ describe('runResearch — failure cases', () => {
 
   it('returns failure artifact on malformed JSON output', async () => {
     const { spawnFn } = spawnSuccess('not valid json at all }{');
-    const result = await runResearch(
-      { topic: 'routing', library: 'next' },
-      baseDeps(spawnFn),
-    );
+    const result = await runResearch({ topic: 'routing', library: 'next' }, baseDeps(spawnFn));
     expect(result.confidenceHint).toBe('low');
     expect(result.summary).toContain('Research failed');
   });
 
   it('returns failure artifact on empty stdout', async () => {
     const { spawnFn } = spawnSuccess('');
-    const result = await runResearch(
-      { topic: 'routing', library: 'next' },
-      baseDeps(spawnFn),
-    );
+    const result = await runResearch({ topic: 'routing', library: 'next' }, baseDeps(spawnFn));
     expect(result.confidenceHint).toBe('low');
   });
 
@@ -208,18 +210,13 @@ describe('runResearch — failure cases', () => {
       setImmediate(() => child.emit('error', new Error('ENOENT')));
       return child;
     }) as unknown as typeof import('child_process').spawn;
-    await expect(
-      runResearch({ topic: 'routing' }, baseDeps(spawnFn)),
-    ).resolves.toBeDefined();
+    await expect(runResearch({ topic: 'routing' }, baseDeps(spawnFn))).resolves.toBeDefined();
   });
 
   it('returns failure artifact on timeout (30 s)', async () => {
     vi.useFakeTimers();
     const hangSpawn = spawnHang();
-    const resultPromise = runResearch(
-      { topic: 'routing', library: 'next' },
-      baseDeps(hangSpawn),
-    );
+    const resultPromise = runResearch({ topic: 'routing', library: 'next' }, baseDeps(hangSpawn));
     vi.advanceTimersByTime(31_000);
     const result = await resultPromise;
     expect(result.confidenceHint).toBe('low');

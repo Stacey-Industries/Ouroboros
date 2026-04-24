@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The three-stage pipeline (directory structure → barrel signals → import graph) implements progressively more expensive analysis — Option A is a pure tree walk, Option B scans imports O(files), and Option C builds a full resolved graph. The `maybeRunGraphAnalysis` threshold (≥10% dirty modules) enforces this cost gradient at refresh time.
-`─────────────────────────────────────────────────`
-
 # contextLayer — Repo-aware context enrichment for agent sessions
 
 Builds three context layers (repo map, module summaries, dependency graph) from the repo indexer's data and injects them into context packets before they reach the LLM provider.
@@ -57,6 +53,7 @@ Each stage refines the module assignment output of the previous. Option C is gat
 - **Path alias loading must precede graph analysis**: `configureTypeScriptAliases` in `languageStrategies.ts` mutates module-level alias state. Call `loadPathAliases()` before `buildResolvedImportGraph()` or TS path aliases (e.g. `@renderer/*`) won't resolve.
 - **File splits follow the `max-lines: 300` ESLint rule**: Controller → Support → Helpers → Refresher is a deliberate 4-way split, not a layering decision. Don't merge them.
 - **Dynamic imports for cache invalidation**: `contextPacketBuilder` and `contextSelectionSupport` are loaded via `import()` inside event handlers to avoid circular dependencies with the orchestration layer.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

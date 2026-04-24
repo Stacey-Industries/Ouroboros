@@ -177,10 +177,12 @@ export function resolveSendOptions(
   previousAssistantMessage?: string,
 ): ResolvedSendOptions {
   const provider = request.overrides?.provider ?? settings.defaultProvider;
-  const { overrides, routedBy, tier, traceId: routerTraceId } = applyRouterOverride(
-    request,
-    previousAssistantMessage,
-  );
+  const {
+    overrides,
+    routedBy,
+    tier,
+    traceId: routerTraceId,
+  } = applyRouterOverride(request, previousAssistantMessage);
 
   if (routerTraceId) {
     trackChatTurn({ traceId: routerTraceId, threadId: request.threadId, prompt: request.content });

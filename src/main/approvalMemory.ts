@@ -43,7 +43,7 @@ const NEVER_AUTO_ALLOW_PATTERNS: RegExp[] = [
   /curl[^|]*\|[^|]*sh/,
   /wget[^|]*\|[^|]*sh/,
   /eval\s*\(/,
-  /:\s*\(\s*\)\s*\{.*\}\s*;/,  // fork bomb pattern
+  /:\s*\(\s*\)\s*\{.*\}\s*;/, // fork bomb pattern
   /mkfs\b/,
   /dd\s+.*of=\/dev\/(s|h|xv|nv)d/,
 ];
@@ -51,11 +51,7 @@ const NEVER_AUTO_ALLOW_PATTERNS: RegExp[] = [
 // ─── Hash & safety helpers ────────────────────────────────────────────────────
 
 export function hashPattern(toolName: string, key: string): string {
-  return crypto
-    .createHash('sha256')
-    .update(`${toolName}:${key}`)
-    .digest('hex')
-    .slice(0, 16);
+  return crypto.createHash('sha256').update(`${toolName}:${key}`).digest('hex').slice(0, 16);
 }
 
 function isHazardous(key: string): boolean {

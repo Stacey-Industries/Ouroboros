@@ -30,16 +30,17 @@ const FocusContext = createContext<FocusContextValue>({
 // ─── DOM focus helper ─────────────────────────────────────────────────────────
 
 const FOCUS_TARGETS: Record<FocusPanel, [string, string]> = {
-  sidebar:      ['[data-panel="sidebar"] [tabindex]', '[data-panel="sidebar"]'],
-  editor:       ['.monaco-editor textarea', '[data-panel="editor"]'],
-  terminal:     ['.xterm-helper-textarea', '[data-panel="terminal"]'],
+  sidebar: ['[data-panel="sidebar"] [tabindex]', '[data-panel="sidebar"]'],
+  editor: ['.monaco-editor textarea', '[data-panel="editor"]'],
+  terminal: ['.xterm-helper-textarea', '[data-panel="terminal"]'],
   agentMonitor: ['[data-panel="agent-monitor"] textarea', '[data-panel="agent-monitor"]'],
 };
 
 function focusPanelElement(panel: FocusPanel): void {
   requestAnimationFrame(() => {
     const [primary, fallback] = FOCUS_TARGETS[panel];
-    const el = (document.querySelector(primary) ?? document.querySelector(fallback)) as HTMLElement | null;
+    const el = (document.querySelector(primary) ??
+      document.querySelector(fallback)) as HTMLElement | null;
     el?.focus({ preventScroll: true });
   });
 }
@@ -51,10 +52,17 @@ function useFocusKeyboard(setPanel: (p: FocusPanel) => void): void {
     function handleKeyDown(e: KeyboardEvent): void {
       if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
       const map: Record<string, FocusPanel> = {
-        '1': 'sidebar', '2': 'editor', '3': 'terminal', '4': 'agentMonitor',
+        '1': 'sidebar',
+        '2': 'editor',
+        '3': 'terminal',
+        '4': 'agentMonitor',
       };
       const panel = map[e.key];
-      if (panel) { e.preventDefault(); setPanel(panel); focusPanelElement(panel); }
+      if (panel) {
+        e.preventDefault();
+        setPanel(panel);
+        focusPanelElement(panel);
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);

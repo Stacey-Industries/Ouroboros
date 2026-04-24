@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { Command } from '../CommandPalette/types';
-import { buttonStyle,SectionLabel } from '../Settings/settingsStyles';
+import { buttonStyle, SectionLabel } from '../Settings/settingsStyles';
 import {
   extensionsSectionActionButtonStyle,
   extensionsSectionActionRowStyle,
@@ -33,9 +33,7 @@ interface CommandRowProps {
   isLast: boolean;
 }
 
-export function ActionErrorBanner({
-  message,
-}: ActionErrorBannerProps): React.ReactElement {
+export function ActionErrorBanner({ message }: ActionErrorBannerProps): React.ReactElement {
   return (
     <div role="alert" className="text-status-error" style={extensionsSectionErrorBannerStyle}>
       {message}
@@ -43,9 +41,7 @@ export function ActionErrorBanner({
   );
 }
 
-export function ExtensionActionButtons({
-  model,
-}: ExtensionActionButtonsProps): React.ReactElement {
+export function ExtensionActionButtons({ model }: ExtensionActionButtonsProps): React.ReactElement {
   return (
     <section style={extensionsSectionActionRowStyle}>
       <button
@@ -62,7 +58,11 @@ export function ExtensionActionButtons({
       >
         {model.isOpening ? 'Opening...' : 'Open Extensions Folder'}
       </button>
-      <button onClick={() => void model.fetchExtensions()} className="text-text-semantic-primary" style={buttonStyle}>
+      <button
+        onClick={() => void model.fetchExtensions()}
+        className="text-text-semantic-primary"
+        style={buttonStyle}
+      >
         Refresh List
       </button>
     </section>
@@ -75,17 +75,16 @@ export function ExtensionCommandsSection({
   return (
     <section>
       <SectionLabel>Extension Commands</SectionLabel>
-      <p className="text-text-semantic-muted" style={{ ...extensionsSectionMutedTextStyle, marginBottom: '12px' }}>
+      <p
+        className="text-text-semantic-muted"
+        style={{ ...extensionsSectionMutedTextStyle, marginBottom: '12px' }}
+      >
         {getCommandSummary(commands)}
       </p>
       {commands.length > 0 && (
         <div style={extensionsSectionListContainerStyle}>
           {commands.map((command, index) => (
-            <CommandRow
-              key={command.id}
-              command={command}
-              isLast={index === commands.length - 1}
-            />
+            <CommandRow key={command.id} command={command} isLast={index === commands.length - 1} />
           ))}
         </div>
       )}
@@ -93,18 +92,21 @@ export function ExtensionCommandsSection({
   );
 }
 
-function CommandRow({
-  command,
-  isLast,
-}: CommandRowProps): React.ReactElement {
+function CommandRow({ command, isLast }: CommandRowProps): React.ReactElement {
   return (
     <div style={extensionsSectionCommandRowStyle(isLast)}>
       <div style={extensionsSectionCommandTextStyle}>
-        <span className="text-text-semantic-primary" style={extensionsSectionCommandLabelStyle}>{command.label}</span>
-        <span className="text-text-semantic-muted" style={extensionsSectionCommandIdStyle}>{command.id}</span>
+        <span className="text-text-semantic-primary" style={extensionsSectionCommandLabelStyle}>
+          {command.label}
+        </span>
+        <span className="text-text-semantic-muted" style={extensionsSectionCommandIdStyle}>
+          {command.id}
+        </span>
       </div>
       {command.shortcut && (
-        <kbd className="text-text-semantic-muted" style={extensionsSectionCommandShortcutStyle}>{command.shortcut}</kbd>
+        <kbd className="text-text-semantic-muted" style={extensionsSectionCommandShortcutStyle}>
+          {command.shortcut}
+        </kbd>
       )}
     </div>
   );

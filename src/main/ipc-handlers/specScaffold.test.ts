@@ -46,9 +46,9 @@ type HandlerFn = (event: IpcMainInvokeEvent, request: unknown) => Promise<unknow
 
 function captureHandler(): HandlerFn {
   let captured: HandlerFn | null = null;
-  vi.mocked(electron.ipcMain.handle).mockImplementation(
-    (_channel: string, fn: HandlerFn) => { captured = fn; },
-  );
+  vi.mocked(electron.ipcMain.handle).mockImplementation((_channel: string, fn: HandlerFn) => {
+    captured = fn;
+  });
   registerSpecHandlers();
   if (!captured) throw new Error('handler not registered');
   return captured;
@@ -93,7 +93,7 @@ describe('spec:scaffold handler', () => {
   let handler: HandlerFn;
 
   beforeEach(async () => {
-    projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'spec-test-'));  
+    projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'spec-test-'));
     mockGetWindowProjectRoots.mockReturnValue([projectRoot]);
     mockGetConfigValue.mockImplementation((key: string) => {
       if (key === 'defaultProjectRoot') return projectRoot;
@@ -104,15 +104,15 @@ describe('spec:scaffold handler', () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
-    await fs.rm(projectRoot, { recursive: true, force: true });  
+    await fs.rm(projectRoot, { recursive: true, force: true });
   });
 
   describe('happy path', () => {
     it('creates three spec files under .ouroboros/specs/<slug>/', async () => {
-      const result = await handler(makeEvent(), {
+      const result = (await handler(makeEvent(), {
         projectRoot,
         featureName: 'user auth',
-      }) as { success: boolean; specDir: string; files: string[]; slug: string };
+      })) as { success: boolean; specDir: string; files: string[]; slug: string };
 
       expect(result.success).toBe(true);
       expect(result.slug).toBe('user-auth');
@@ -134,17 +134,21 @@ describe('spec:scaffold handler', () => {
       });
 
       const reqPath = path.join(
-        projectRoot, '.ouroboros', 'specs', 'payment-flow', 'requirements.md',
+        projectRoot,
+        '.ouroboros',
+        'specs',
+        'payment-flow',
+        'requirements.md',
       );
       const content = await fs.readFile(reqPath, 'utf8'); // eslint-disable-line security/detect-non-literal-fs-filename
       expect(content).toContain('payment-flow');
     });
 
     it('returns files in display order: requirements, design, tasks', async () => {
-      const result = await handler(makeEvent(), {
+      const result = (await handler(makeEvent(), {
         projectRoot,
         featureName: 'search',
-      }) as { success: boolean; files: string[] };
+      })) as { success: boolean; files: string[] };
 
       expect(result.files[0]).toMatch(/requirements\.md$/);
       expect(result.files[1]).toMatch(/design\.md$/);
@@ -157,10 +161,10 @@ describe('spec:scaffold handler', () => {
       const specDir = path.join(projectRoot, '.ouroboros', 'specs', 'existing-feature');
       await fs.mkdir(specDir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
 
-      const result = await handler(makeEvent(), {
+      const result = (await handler(makeEvent(), {
         projectRoot,
         featureName: 'existing-feature',
-      }) as { success: boolean; collision: boolean; specDir: string };
+      })) as { success: boolean; collision: boolean; specDir: string };
 
       expect(result.success).toBe(false);
       expect(result.collision).toBe(true);
@@ -182,20 +186,20 @@ describe('spec:scaffold handler', () => {
 
   describe('invalid slug rejection', () => {
     it('returns invalid-feature-name for all-special-char input', async () => {
-      const result = await handler(makeEvent(), {
+      const result = (await handler(makeEvent(), {
         projectRoot,
         featureName: '!!!###',
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('invalid-feature-name');
     });
 
     it('returns invalid-feature-name for empty string', async () => {
-      const result = await handler(makeEvent(), {
+      const result = (await handler(makeEvent(), {
         projectRoot,
         featureName: '   ',
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('invalid-feature-name');
@@ -205,18 +209,18 @@ describe('spec:scaffold handler', () => {
   describe('path security', () => {
     it('rejects a projectRoot outside the allowed workspace', async () => {
       // The allowed root is projectRoot; pass a different tmp dir
-      const outsideRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'outside-'));  
+      const outsideRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'outside-'));
       try {
-        const result = await handler(makeEvent(), {
+        const result = (await handler(makeEvent(), {
           projectRoot: outsideRoot,
           featureName: 'attack',
-        }) as { success: boolean; error: string };
+        })) as { success: boolean; error: string };
 
         // mockGetWindowProjectRoots returns projectRoot, not outsideRoot
         expect(result.success).toBe(false);
         expect(result.error).toBeTruthy();
       } finally {
-        await fs.rm(outsideRoot, { recursive: true, force: true });  
+        await fs.rm(outsideRoot, { recursive: true, force: true });
       }
     });
   });

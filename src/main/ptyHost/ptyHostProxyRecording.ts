@@ -37,13 +37,15 @@ function tempPathFor(id: string): string {
 }
 
 function buildHeader(cols: number, rows: number, startTime: number): string {
-  return JSON.stringify({
-    version: 2,
-    width: cols,
-    height: rows,
-    timestamp: Math.floor(startTime / 1000),
-    title: 'Terminal Recording',
-  }) + '\n';
+  return (
+    JSON.stringify({
+      version: 2,
+      width: cols,
+      height: rows,
+      timestamp: Math.floor(startTime / 1000),
+      title: 'Terminal Recording',
+    }) + '\n'
+  );
 }
 
 /** Called from ptyHostProxy.handleData for every PTY data chunk. */
@@ -52,7 +54,7 @@ export function feedRecordingFrame(id: string, data: string): void {
   if (!recording) return;
   const time = (Date.now() - recording.startTime) / 1000;
   const eventLine = JSON.stringify([parseFloat(time.toFixed(6)), 'o', data]) + '\n';
-   
+
   recording.stream.write(eventLine);
 }
 
@@ -123,7 +125,7 @@ export async function stopRecordingViaPtyHost(
       await deleteTempFile(recording.tempPath);
       return { success: true, cancelled: true };
     }
-     
+
     await fs.copyFile(recording.tempPath, result.filePath);
     await deleteTempFile(recording.tempPath);
     return { success: true, filePath: result.filePath };

@@ -1,29 +1,30 @@
-import React from 'react'
+import React from 'react';
 
 export interface TerminalDisconnectedInfo {
-  reason: string
-  exitCode: number
-  scrollback: string[]
+  reason: string;
+  exitCode: number;
+  scrollback: string[];
 }
 
 export interface TerminalDisconnectedBannerProps {
-  info: TerminalDisconnectedInfo
-  onRestart: () => void
-  onDismiss: () => void
+  info: TerminalDisconnectedInfo;
+  onRestart: () => void;
+  onDismiss: () => void;
 }
 
 function BannerHeader(props: {
-  info: TerminalDisconnectedInfo
-  onRestart: () => void
-  onDismiss: () => void
+  info: TerminalDisconnectedInfo;
+  onRestart: () => void;
+  onDismiss: () => void;
 }): React.ReactElement {
-  const { info, onRestart, onDismiss } = props
+  const { info, onRestart, onDismiss } = props;
   return (
     <div className="flex items-center justify-between border-b border-border-subtle bg-status-warning-subtle px-4 py-2">
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-status-warning">Terminal disconnected</span>
         <span className="text-xs text-text-semantic-muted">
-          PtyHost process exited (code {info.exitCode}) — session state lost. Scrollback preserved below.
+          PtyHost process exited (code {info.exitCode}) — session state lost. Scrollback preserved
+          below.
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -43,7 +44,7 @@ function BannerHeader(props: {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -57,7 +58,7 @@ function BannerHeader(props: {
 export function TerminalDisconnectedBanner(
   props: TerminalDisconnectedBannerProps,
 ): React.ReactElement {
-  const { info, onRestart, onDismiss } = props
+  const { info, onRestart, onDismiss } = props;
   return (
     <div
       role="alert"
@@ -72,5 +73,5 @@ export function TerminalDisconnectedBanner(
         {info.scrollback.length > 0 ? info.scrollback.join('\n') : '(no scrollback captured)'}
       </pre>
     </div>
-  )
+  );
 }

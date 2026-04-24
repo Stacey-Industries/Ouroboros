@@ -22,7 +22,9 @@ function makeAdaptor(initial: ReturnType<typeof makeSession>[] = []) {
   let data = [...initial];
   return {
     read: () => [...data],
-    write: (sessions: ReturnType<typeof makeSession>[]) => { data = [...sessions]; },
+    write: (sessions: ReturnType<typeof makeSession>[]) => {
+      data = [...sessions];
+    },
     snapshot: () => [...data],
   };
 }

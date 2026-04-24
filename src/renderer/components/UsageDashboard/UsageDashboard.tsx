@@ -33,16 +33,13 @@ function ErrorState({ message }: { message: string }): React.ReactElement {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function UsageDashboard(): React.ReactElement {
-  const { rollup, threads, loading, error, timeRange, setTimeRange } =
-    useDashboardData();
+  const { rollup, threads, loading, error, timeRange, setTimeRange } = useDashboardData();
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-surface-base">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle shrink-0">
-        <h2 className="text-sm font-semibold text-text-semantic-primary">
-          Usage Dashboard
-        </h2>
+        <h2 className="text-sm font-semibold text-text-semantic-primary">Usage Dashboard</h2>
         <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 

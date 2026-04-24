@@ -14,9 +14,7 @@ import type { AgentChatMessageRecord } from './types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-function makeMessage(
-  overrides: Partial<AgentChatMessageRecord> = {},
-): AgentChatMessageRecord {
+function makeMessage(overrides: Partial<AgentChatMessageRecord> = {}): AgentChatMessageRecord {
   return {
     id: 'msg-1',
     threadId: 'thread-1',

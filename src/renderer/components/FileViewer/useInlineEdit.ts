@@ -7,6 +7,7 @@
  * Submit routes through useStreamingInlineEdit unconditionally.
  */
 import * as monaco from 'monaco-editor';
+import type React from 'react';
 import type { MutableRefObject } from 'react';
 import { useCallback, useRef, useState } from 'react';
 
@@ -83,30 +84,31 @@ export function applyEdit(
 }
 
 function hasStreamingApi(): boolean {
-  return typeof window !== 'undefined' &&
-    !!(window.electronAPI?.config as unknown as Record<string, unknown> | undefined);
+  return (
+    typeof window !== 'undefined' &&
+    !!(window.electronAPI?.config as unknown as Record<string, unknown> | undefined)
+  );
 }
 
-export function useInlineEdit(
+function useActivateEdit(
   editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>,
-  filePath: string,
-  languageId: string,
-): InlineEditActions {
-  const [state, setState] = useState<InlineEditState>(IDLE_STATE);
-  const stateRef = useRef(state);
-  stateRef.current = state;
-
-  const streaming = useStreamingInlineEdit(editorRef, filePath);
-
-  const activate = useCallback((): void => {
+  setState: React.Dispatch<React.SetStateAction<InlineEditState>>,
+): () => void {
+  return useCallback((): void => {
     const editor = editorRef.current;
     if (!editor) return;
     const captured = captureSelection(editor);
     if (!captured) return;
     setState({ phase: 'input', instruction: '', originalCode: captured.originalCode, editedCode: null, selectionRange: captured.selectionRange, error: null });
-  }, [editorRef]);
+  }, [editorRef, setState]);
+}
 
-  const submit = useCallback((instruction: string): Promise<void> => {
+function useSubmitEdit(
+  stateRef: React.MutableRefObject<InlineEditState>,
+  setState: React.Dispatch<React.SetStateAction<InlineEditState>>,
+  streaming: ReturnType<typeof useStreamingInlineEdit>,
+): (instruction: string) => Promise<void> {
+  return useCallback((instruction: string): Promise<void> => {
     if (hasStreamingApi() && stateRef.current.selectionRange) {
       setState((s) => ({ ...s, phase: 'loading' as InlineEditPhase, instruction, error: null }));
       const { selectionRange, originalCode } = stateRef.current;
@@ -115,19 +117,31 @@ export function useInlineEdit(
       });
     }
     return Promise.resolve();
-  }, [editorRef, filePath, languageId, streaming]);
+  }, [stateRef, setState, streaming]);
+}
 
+export function useInlineEdit(
+  editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>,
+  filePath: string,
+  _languageId: string,
+): InlineEditActions {
+  void _languageId;
+  const [state, setState] = useState<InlineEditState>(IDLE_STATE);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const streaming = useStreamingInlineEdit(editorRef, filePath);
+
+  const activate = useActivateEdit(editorRef, setState);
+  const submit = useSubmitEdit(stateRef, setState, streaming);
   const accept = useCallback((): void => {
     const current = stateRef.current;
     if (current.phase !== 'preview' || !current.selectionRange || !current.editedCode) return;
     if (editorRef.current) applyEdit(editorRef.current, current.selectionRange, current.editedCode);
     setState(IDLE_STATE);
   }, [editorRef]);
-
   const reject = useCallback((): void => { setState(IDLE_STATE); }, []);
-
   const cancel = useCallback((): void => {
-    if (streaming.isStreaming) { void streaming.cancel(); }
+    if (streaming.isStreaming) void streaming.cancel();
     setState(IDLE_STATE);
   }, [streaming]);
 

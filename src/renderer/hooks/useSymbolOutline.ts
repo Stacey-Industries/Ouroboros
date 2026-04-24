@@ -97,7 +97,12 @@ const RUST_PATTERNS: Array<{
   },
   {
     re: /^impl(?:<[^>]*>)?\s+(?:[A-Za-z_][A-Za-z0-9_:]*\s+for\s+)?([A-Za-z_][A-Za-z0-9_]*)/,
-    createSymbol: (match, line) => ({ name: `impl ${match[1]}`, kind: 'interface', line, depth: 0 }),
+    createSymbol: (match, line) => ({
+      name: `impl ${match[1]}`,
+      kind: 'interface',
+      line,
+      depth: 0,
+    }),
   },
   {
     re: /^(?:pub(?:\([^)]*\))?\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)/,
@@ -111,10 +116,15 @@ function getTrimmedLineInfo(line: string): { trimmed: string; indent: number } {
 }
 
 function isBlankOrComment(trimmed: string): boolean {
-  return !trimmed || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
+  return (
+    !trimmed || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')
+  );
 }
 
-function matchNamedPattern(text: string, patterns: NamedPattern[]): { kind: SymbolKind; name: string } | null {
+function matchNamedPattern(
+  text: string,
+  patterns: NamedPattern[],
+): { kind: SymbolKind; name: string } | null {
   for (const { re, kind, nameGroup = 1 } of patterns) {
     const match = text.match(re);
     if (match?.[nameGroup]) return { kind, name: match[nameGroup] };
@@ -134,7 +144,8 @@ function buildSymbol(
 function buildClassRanges(lines: string[]): Array<{ start: number; indent: number }> {
   return lines.reduce<Array<{ start: number; indent: number }>>((ranges, line, index) => {
     const { trimmed, indent } = getTrimmedLineInfo(line);
-    if (/^(?:export\s+)?(?:abstract\s+)?class\s+/.test(trimmed)) ranges.push({ start: index, indent });
+    if (/^(?:export\s+)?(?:abstract\s+)?class\s+/.test(trimmed))
+      ranges.push({ start: index, indent });
     return ranges;
   }, []);
 }
@@ -144,7 +155,9 @@ function isInsideClass(
   lineIndent: number,
   classRanges: Array<{ start: number; indent: number }>,
 ): boolean {
-  return classRanges.some((classRange) => lineIndex > classRange.start && lineIndent > classRange.indent);
+  return classRanges.some(
+    (classRange) => lineIndex > classRange.start && lineIndent > classRange.indent,
+  );
 }
 
 function extractJsTsMethodSymbol(line: string, lineNumber: number): OutlineSymbol | null {
@@ -165,7 +178,9 @@ function extractJsTsSymbols(lines: string[]): OutlineSymbol[] {
     if (isBlankOrComment(trimmed)) continue;
 
     const topLevelSymbol =
-      indent === 0 ? buildSymbol(matchNamedPattern(trimmed, JS_TS_TOP_LEVEL_PATTERNS), index, 0) : null;
+      indent === 0
+        ? buildSymbol(matchNamedPattern(trimmed, JS_TS_TOP_LEVEL_PATTERNS), index, 0)
+        : null;
     if (topLevelSymbol) {
       symbols.push(topLevelSymbol);
       continue;
@@ -223,7 +238,8 @@ function extractCssSymbols(lines: string[]): OutlineSymbol[] {
     if (trimmed.endsWith('{')) {
       const selector = trimmed.slice(0, -1).trim();
       if (selector && !selector.startsWith('//') && !selector.startsWith('*')) {
-        const kind: SymbolKind = selector.startsWith('.') || selector.startsWith('#') ? 'class' : 'variable';
+        const kind: SymbolKind =
+          selector.startsWith('.') || selector.startsWith('#') ? 'class' : 'variable';
         symbols.push({ name: selector, kind, line: i, depth: 0 });
       }
     }
@@ -238,7 +254,8 @@ function extractMarkdownSymbols(lines: string[]): OutlineSymbol[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const match = line.match(/^(#{1,6})\s+(.+)/);
-    if (match) symbols.push({ name: match[2].trim(), kind: 'heading', line: i, depth: match[1].length - 1 });
+    if (match)
+      symbols.push({ name: match[2].trim(), kind: 'heading', line: i, depth: match[1].length - 1 });
   }
 
   return symbols;
@@ -278,7 +295,12 @@ function extractGoSymbols(lines: string[]): OutlineSymbol[] {
     const fnMatch = trimmed.match(/^func\s+(?:\([^)]+\)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
     if (fnMatch) {
       const isMethod = trimmed.startsWith('func (');
-      symbols.push({ name: fnMatch[1], kind: isMethod ? 'method' : 'function', line: i, depth: isMethod ? 1 : 0 });
+      symbols.push({
+        name: fnMatch[1],
+        kind: isMethod ? 'method' : 'function',
+        line: i,
+        depth: isMethod ? 1 : 0,
+      });
       continue;
     }
 
@@ -321,10 +343,7 @@ function extractSymbols(content: string, language: string): OutlineSymbol[] {
  * Memoized: only recomputes when content or language changes.
  * Returns an empty array if the language is unsupported or content is empty.
  */
-export function useSymbolOutline(
-  content: string | null,
-  language: string,
-): OutlineSymbol[] {
+export function useSymbolOutline(content: string | null, language: string): OutlineSymbol[] {
   return useMemo(() => {
     if (!content) return [];
     return extractSymbols(content, language);

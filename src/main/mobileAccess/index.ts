@@ -17,11 +17,7 @@ export {
   consumePairingTicket,
   registerPairingHandlers,
 } from './pairingHandlers';
-export {
-  cleanupExpired,
-  issueTicket,
-  verifyAndConsume,
-} from './pairingTickets';
+export { cleanupExpired, issueTicket, verifyAndConsume } from './pairingTickets';
 export type { TimeoutStats } from './timeoutMetrics';
 export { getTimeoutStats, incrementTimeout, resetTimeoutStats } from './timeoutMetrics';
 export {

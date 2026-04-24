@@ -11,8 +11,14 @@ describe('sessionDispatchRunnerStatus', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('calls broadcast with the correct channel and job payload', async () => {
-    const { broadcastJobStatus, DISPATCH_STATUS_CHANNEL } = await import('./sessionDispatchRunnerStatus');
-    const job = { id: 'j1', status: 'running', request: { title: 'T', prompt: 'P', projectPath: '/p' }, createdAt: new Date().toISOString() } as const;
+    const { broadcastJobStatus, DISPATCH_STATUS_CHANNEL } =
+      await import('./sessionDispatchRunnerStatus');
+    const job = {
+      id: 'j1',
+      status: 'running',
+      request: { title: 'T', prompt: 'P', projectPath: '/p' },
+      createdAt: new Date().toISOString(),
+    } as const;
     broadcastJobStatus(job);
     expect(mockBroadcast).toHaveBeenCalledOnce();
     expect(mockBroadcast).toHaveBeenCalledWith(DISPATCH_STATUS_CHANNEL, job);
@@ -20,7 +26,12 @@ describe('sessionDispatchRunnerStatus', () => {
 
   it('broadcasts on every call — no deduplication', async () => {
     const { broadcastJobStatus } = await import('./sessionDispatchRunnerStatus');
-    const job = { id: 'j2', status: 'completed', request: { title: 'T', prompt: 'P', projectPath: '/p' }, createdAt: new Date().toISOString() } as const;
+    const job = {
+      id: 'j2',
+      status: 'completed',
+      request: { title: 'T', prompt: 'P', projectPath: '/p' },
+      createdAt: new Date().toISOString(),
+    } as const;
     broadcastJobStatus(job);
     broadcastJobStatus(job);
     expect(mockBroadcast).toHaveBeenCalledTimes(2);

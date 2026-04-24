@@ -59,7 +59,9 @@ describe('TELEMETRY_SCHEMA_SQL', () => {
     const db = openMemDb();
     // Run DDL a second time — INSERT OR IGNORE should not throw or duplicate.
     expect(() => db.exec(TELEMETRY_SCHEMA_SQL)).not.toThrow();
-    const rows = db.prepare('SELECT * FROM schema_meta WHERE key = ?').all('schema_version') as Array<{
+    const rows = db
+      .prepare('SELECT * FROM schema_meta WHERE key = ?')
+      .all('schema_version') as Array<{
       key: string;
       value: string;
     }>;
@@ -156,7 +158,7 @@ describe('purgeRetainedRows', () => {
 
     insertEvent(db, 'old-1', now - 40 * dayMs); // 40 days old — should be purged
     insertEvent(db, 'old-2', now - 35 * dayMs); // 35 days old — should be purged
-    insertEvent(db, 'recent', now - 5 * dayMs);  // 5 days old — keep
+    insertEvent(db, 'recent', now - 5 * dayMs); // 5 days old — keep
 
     const deleted = purgeRetainedRows(db, 30);
 
@@ -175,9 +177,12 @@ describe('purgeRetainedRows', () => {
   it('cascades deletions to outcomes table', () => {
     const now = Date.now();
     insertEvent(db, 'old-evt', now - 40 * 24 * 60 * 60 * 1000);
-    db.prepare(
-      'INSERT INTO outcomes (event_id, kind, signals, confidence) VALUES (?,?,?,?)',
-    ).run('old-evt', 'pty_exit', '[]', 'low');
+    db.prepare('INSERT INTO outcomes (event_id, kind, signals, confidence) VALUES (?,?,?,?)').run(
+      'old-evt',
+      'pty_exit',
+      '[]',
+      'low',
+    );
 
     purgeRetainedRows(db, 30);
 

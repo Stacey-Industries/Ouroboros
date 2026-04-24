@@ -59,8 +59,8 @@ describe('EdgeDropZones', () => {
 
   it('assigns correct composite IDs to each edge zone', () => {
     const { container } = render(<EdgeDropZones slotName="terminalContent" />);
-    const ids = Array.from(container.querySelectorAll('[data-edge-drop]')).map(
-      (el) => el.getAttribute('data-edge-drop'),
+    const ids = Array.from(container.querySelectorAll('[data-edge-drop]')).map((el) =>
+      el.getAttribute('data-edge-drop'),
     );
     expect(ids).toContain('terminalContent:edge:north');
     expect(ids).toContain('terminalContent:edge:south');
@@ -78,14 +78,16 @@ describe('EdgeDropZones', () => {
   });
 
   it('shows accent bar on the hovered edge only', () => {
-    mockUseDroppable.mockImplementation((opts: { id: string }): UseDroppableReturn => ({
-      setNodeRef: vi.fn(),
-      isOver: opts.id === 'editorContent:edge:north',
-      over: null,
-      active: null,
-      rect: { current: null },
-      node: { current: null },
-    }));
+    mockUseDroppable.mockImplementation(
+      (opts: { id: string }): UseDroppableReturn => ({
+        setNodeRef: vi.fn(),
+        isOver: opts.id === 'editorContent:edge:north',
+        over: null,
+        active: null,
+        rect: { current: null },
+        node: { current: null },
+      }),
+    );
 
     const { container } = render(<EdgeDropZones slotName="editorContent" />);
 

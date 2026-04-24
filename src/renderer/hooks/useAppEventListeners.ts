@@ -90,9 +90,7 @@ async function selectProjectFolder(
   }
 }
 
-function createBooleanOpener(
-  setter: React.Dispatch<React.SetStateAction<boolean>>,
-): EventListener {
+function createBooleanOpener(setter: React.Dispatch<React.SetStateAction<boolean>>): EventListener {
   return () => setter(true);
 }
 
@@ -121,9 +119,7 @@ function createFolderHandler(
   };
 }
 
-function createNewTerminalHandler(
-  spawnSession: AppEventDeps['spawnSession'],
-): EventListener {
+function createNewTerminalHandler(spawnSession: AppEventDeps['spawnSession']): EventListener {
   return (event) => {
     const detail = (event as CustomEvent<{ cwd?: string }>).detail;
     void spawnSession(detail?.cwd);
@@ -182,14 +178,25 @@ function createDomEventEntries(args: {
     ['agent-ide:open-usage', emitUsagePanel],
     ['agent-ide:open-folder', createFolderHandler(handleProjectChange)],
     ['agent-ide:new-terminal', createNewTerminalHandler(spawnSession)],
-    ['agent-ide:new-claude-terminal', () => { void spawnClaudeSession(); }],
+    [
+      'agent-ide:new-claude-terminal',
+      () => {
+        void spawnClaudeSession();
+      },
+    ],
     ['agent-ide:clear-active-terminal', () => clearTerminal()],
     ['agent-ide:open-file-picker', createBooleanOpener(setFilePickerOpen)],
     ['agent-ide:open-symbol-search', createBooleanOpener(setSymbolSearchOpen)],
     ['agent-ide:open-diff-review', createDiffReviewHandler()],
     ['agent-ide:spawn-claude-template', createClaudeTemplateHandler(spawnClaudeSession)],
-    [RESUME_LATEST_AGENT_CHAT_THREAD_EVENT, createResumeLatestAgentChatThreadHandler({ projectRoot, toast })],
-    [OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT, createOpenLatestAgentChatDetailsHandler({ projectRoot, toast })],
+    [
+      RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+      createResumeLatestAgentChatThreadHandler({ projectRoot, toast }),
+    ],
+    [
+      OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+      createOpenLatestAgentChatDetailsHandler({ projectRoot, toast }),
+    ],
     [SHOW_SYSTEM_PROMPT_EVENT, emitSystemPromptPanel],
   ];
 }
@@ -232,18 +239,30 @@ export function useDomEventListeners(deps: AppEventDeps): void {
   } = deps;
 
   useEffect(() => {
-    return registerWindowEvents(createDomEventEntries({
-      projectRoot,
-      setTheme,
-      setMaterialVariant,
-      handleProjectChange,
-      spawnSession,
-      spawnClaudeSession,
-      setFilePickerOpen,
-      setSymbolSearchOpen,
-      toast,
-    }));
-  }, [projectRoot, setTheme, setMaterialVariant, handleProjectChange, spawnSession, spawnClaudeSession, setFilePickerOpen, setSymbolSearchOpen, toast]);
+    return registerWindowEvents(
+      createDomEventEntries({
+        projectRoot,
+        setTheme,
+        setMaterialVariant,
+        handleProjectChange,
+        spawnSession,
+        spawnClaudeSession,
+        setFilePickerOpen,
+        setSymbolSearchOpen,
+        toast,
+      }),
+    );
+  }, [
+    projectRoot,
+    setTheme,
+    setMaterialVariant,
+    handleProjectChange,
+    spawnSession,
+    spawnClaudeSession,
+    setFilePickerOpen,
+    setSymbolSearchOpen,
+    toast,
+  ]);
 
   useEffect(() => {
     if (!hasElectronAPI()) {

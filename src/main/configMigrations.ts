@@ -7,10 +7,7 @@
 
 import { ensureStore } from './configStoreLazy';
 
-function omitKey(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> {
+function omitKey(obj: Record<string, unknown>, key: string): Record<string, unknown> {
   return Object.fromEntries(Object.entries(obj).filter(([k]) => k !== key));
 }
 
@@ -27,5 +24,8 @@ export function migrateChatPrimary(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const raw = s.get('layout') as any;
   if (!raw || raw.chatPrimary !== true) return;
-  s.set('layout', { ...omitKey(raw as Record<string, unknown>, 'chatPrimary'), immersiveChat: true });
+  s.set('layout', {
+    ...omitKey(raw as Record<string, unknown>, 'chatPrimary'),
+    immersiveChat: true,
+  });
 }

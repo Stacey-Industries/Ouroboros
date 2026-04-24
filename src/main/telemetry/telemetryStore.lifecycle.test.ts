@@ -59,7 +59,11 @@ describe('telemetry store lifecycle — traceBatcher wiring (F.1)', () => {
 
   afterEach(() => {
     // Ensure singleton is always cleaned up
-    try { closeTelemetryStore(); } catch { /* already closed */ }
+    try {
+      closeTelemetryStore();
+    } catch {
+      /* already closed */
+    }
     fs.rmSync(tmpDir, { recursive: true, force: true });
     setFlagEnabledOverride(null);
     vi.useRealTimers();
@@ -78,7 +82,9 @@ describe('telemetry store lifecycle — traceBatcher wiring (F.1)', () => {
 
   it('calls drainTraceBatcher before store.close in closeTelemetryStore', () => {
     const drainOrder: string[] = [];
-    mockDrainTraceBatcher.mockImplementation(() => { drainOrder.push('drain'); });
+    mockDrainTraceBatcher.mockImplementation(() => {
+      drainOrder.push('drain');
+    });
 
     initTelemetryStore(tmpDir);
     closeTelemetryStore();
@@ -90,7 +96,9 @@ describe('telemetry store lifecycle — traceBatcher wiring (F.1)', () => {
 
   it('drain is called before closeTelemetryStore nulls the singleton', () => {
     let drainCalledCount = 0;
-    mockDrainTraceBatcher.mockImplementation(() => { drainCalledCount += 1; });
+    mockDrainTraceBatcher.mockImplementation(() => {
+      drainCalledCount += 1;
+    });
 
     initTelemetryStore(tmpDir);
     closeTelemetryStore();
@@ -110,7 +118,11 @@ describe('telemetry store lifecycle — retention purge scheduling (F.3)', () =>
   });
 
   afterEach(() => {
-    try { closeTelemetryStore(); } catch { /* already closed */ }
+    try {
+      closeTelemetryStore();
+    } catch {
+      /* already closed */
+    }
     fs.rmSync(tmpDir, { recursive: true, force: true });
     setFlagEnabledOverride(null);
     vi.useRealTimers();
@@ -137,10 +149,7 @@ describe('telemetry store lifecycle — retention purge scheduling (F.3)', () =>
     vi.advanceTimersByTime(0);
 
     const expectedRetentionMs = 30 * 24 * 60 * 60 * 1000;
-    expect(mockPurgeRetainedRows).toHaveBeenCalledWith(
-      expect.anything(),
-      expectedRetentionMs,
-    );
+    expect(mockPurgeRetainedRows).toHaveBeenCalledWith(expect.anything(), expectedRetentionMs);
   });
 
   it('purge interval is cleared on closeTelemetryStore', () => {

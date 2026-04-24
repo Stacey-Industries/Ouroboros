@@ -62,9 +62,12 @@ interface ActionBtnProps {
 
 function decisionBorder(decision: HunkDecision): string {
   switch (decision) {
-    case 'accepted': return '3px solid var(--status-success)';
-    case 'rejected': return '3px solid var(--status-error)';
-    default: return '3px solid transparent';
+    case 'accepted':
+      return '3px solid var(--status-success)';
+    case 'rejected':
+      return '3px solid var(--status-error)';
+    default:
+      return '3px solid transparent';
   }
 }
 
@@ -161,7 +164,9 @@ function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement {
 function HunkLines({ lines }: HunkLinesProps): React.ReactElement {
   return (
     <div style={diffLinesStyle}>
-      {lines.map((line) => <HunkLineRow key={line.id} line={line} />)}
+      {lines.map((line) => (
+        <HunkLineRow key={line.id} line={line} />
+      ))}
     </div>
   );
 }
@@ -203,7 +208,12 @@ function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.
   );
 }
 
-export const HunkView = memo(function HunkView({ hunk, isFocused, onAccept, onReject }: HunkViewProps): React.ReactElement {
+export const HunkView = memo(function HunkView({
+  hunk,
+  isFocused,
+  onAccept,
+  onReject,
+}: HunkViewProps): React.ReactElement {
   const lines = buildDisplayLines(hunk);
 
   return (

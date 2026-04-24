@@ -78,15 +78,22 @@ export function spawnTrainer(opts: SpawnTrainerOpts): Promise<SpawnResult> {
         opts.pythonBin,
         [
           opts.scriptPath,
-          '--decisions', opts.decisionsPath,
-          '--outcomes', opts.outcomesPath,
-          '--out', opts.weightsOutPath,
+          '--decisions',
+          opts.decisionsPath,
+          '--outcomes',
+          opts.outcomesPath,
+          '--out',
+          opts.weightsOutPath,
         ],
         { timeout: TRAINER_TIMEOUT_MS },
       );
 
-      proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-      proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+      proc.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
       proc.on('error', (err) => {
         log.warn('[context-ranker] spawn error:', err.message);
         resolve({ success: false, exitCode: null, stdout, stderr: err.message });

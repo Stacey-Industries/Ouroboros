@@ -43,10 +43,7 @@ async function removeWorktree(session: Session): Promise<void> {
   }
 }
 
-async function purgeOne(
-  session: Session,
-  trashAdaptor: TrashAdaptor | undefined,
-): Promise<void> {
+async function purgeOne(session: Session, trashAdaptor: TrashAdaptor | undefined): Promise<void> {
   await removeWorktree(session);
   const store = getSessionStore();
   if (store) store.delete(session.id);
@@ -66,10 +63,7 @@ async function purgeOne(
  * @param now  - Current epoch ms (pass Date.now() in production; use fake time in tests).
  * @param trashAdaptor - Optional injected adaptor for test isolation.
  */
-export async function runSessionGc(
-  now: number,
-  trashAdaptor?: TrashAdaptor,
-): Promise<GcResult> {
+export async function runSessionGc(now: number, trashAdaptor?: TrashAdaptor): Promise<GcResult> {
   const store = getSessionStore();
   if (!store) return { purged: 0 };
 

@@ -53,7 +53,11 @@ export class IndexingPipeline {
 
   // Reports the phase, runs the thunk inside a single transaction, then yields
   // the event loop via setImmediate so IPC messages aren't starved between passes.
-  private async runPass(phase: string, thunk: () => void, report: (p: string) => void): Promise<void> {
+  private async runPass(
+    phase: string,
+    thunk: () => void,
+    report: (p: string) => void,
+  ): Promise<void> {
     report(phase);
     this.db.transaction(thunk);
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -61,7 +65,11 @@ export class IndexingPipeline {
 
   // Like runPass but does NOT add an outer transaction — used for chunked passes
   // that manage their own per-chunk transactions internally.
-  private async runChunkedPass(phase: string, thunk: () => void, report: (p: string) => void): Promise<void> {
+  private async runChunkedPass(
+    phase: string,
+    thunk: () => void,
+    report: (p: string) => void,
+  ): Promise<void> {
     report(phase);
     thunk();
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -78,6 +86,63 @@ export class IndexingPipeline {
     Object.assign(timings, { [phase]: performance.now() - start });
   }
 
+  private async runCorePasses(
+    ctx: { projectName: string; projectRoot: string; indexedFiles: IndexedFile[]; structureFiles: DiscoveredFile[] },
+    report: (p: string) => void,
+    timings: Record<string, number>,
+  ): Promise<void> {
+    const { projectName, projectRoot, indexedFiles, structureFiles } = ctx;
+    const CHUNK = 500;
+    await this.withTiming(
+      'structure',
+      () => this.runPass('structure', () => structurePass(this.db, projectName, projectRoot, structureFiles), report),
+      timings,
+    );
+    await this.withTiming(
+      'definitions',
+      () => this.runChunkedPass('definitions', () => definitionPass(this.db, projectName, indexedFiles, { chunkSize: CHUNK }), report),
+      timings,
+    );
+    await this.withTiming(
+      'imports',
+      () => this.runChunkedPass('imports', () => importPass(this.db, projectName, indexedFiles, { allFiles: structureFiles, chunkSize: CHUNK }), report),
+      timings,
+    );
+    await this.withTiming(
+      'calls',
+      () => this.runChunkedPass('calls', () => callResolutionPass(this.db, projectName, indexedFiles, { chunkSize: CHUNK }), report),
+      timings,
+    );
+  }
+
+  private async runEnrichmentPasses(
+    ctx: { projectName: string; indexedFiles: IndexedFile[]; gitCommitFiles: Map<string, string[]> },
+    report: (p: string) => void,
+    timings: Record<string, number>,
+  ): Promise<void> {
+    const { projectName, indexedFiles, gitCommitFiles } = ctx;
+    await this.withTiming(
+      'http_links',
+      () => this.runPass('http_links', () => httpLinkPass(this.db, projectName, indexedFiles), report),
+      timings,
+    );
+    await this.withTiming(
+      'test_detection',
+      () => this.runPass('test_detection', () => testDetectPass(this.db, projectName, indexedFiles), report),
+      timings,
+    );
+    await this.withTiming(
+      'enrichment',
+      () => this.runPass('enrichment', () => enrichmentPass(this.db, projectName), report),
+      timings,
+    );
+    await this.withTiming(
+      'git_history',
+      () => this.runPass('git_history', () => gitCoChangePass(this.db, projectName, gitCommitFiles), report),
+      timings,
+    );
+  }
+
   private async runAllPasses(
     ctx: { projectName: string; projectRoot: string },
     indexedFiles: IndexedFile[],
@@ -87,27 +152,14 @@ export class IndexingPipeline {
     const { projectName, projectRoot } = ctx;
     const timings: Record<string, number> = {};
 
-    // Pre-fetch async data before entering the synchronous SQLite transactions.
-    // better-sqlite3 transactions are synchronous — no async calls allowed inside.
+    // Pre-fetch async data before entering synchronous SQLite transactions.
     const gitStart = performance.now();
     report('git_prefetch');
     const gitCommitFiles = await prefetchGitCoChangeData(projectRoot);
     Object.assign(timings, { git_prefetch: performance.now() - gitStart });
 
-    // ATOMICITY NOTE: Previously all 8 passes ran in a single transaction —
-    // either all succeeded or all rolled back. Now each pass (and each chunk
-    // within heavy passes) commits independently. A mid-indexing crash can leave
-    // the graph in a partial state. Acceptable because the outer retry logic uses
-    // file-hash comparison to detect incomplete work on next run.
-    const CHUNK = 500;
-    await this.withTiming('structure', () => this.runPass('structure', () => structurePass(this.db, projectName, projectRoot, structureFiles), report), timings);
-    await this.withTiming('definitions', () => this.runChunkedPass('definitions', () => definitionPass(this.db, projectName, indexedFiles, { chunkSize: CHUNK }), report), timings);
-    await this.withTiming('imports', () => this.runChunkedPass('imports', () => importPass(this.db, projectName, indexedFiles, { allFiles: structureFiles, chunkSize: CHUNK }), report), timings);
-    await this.withTiming('calls', () => this.runChunkedPass('calls', () => callResolutionPass(this.db, projectName, indexedFiles, { chunkSize: CHUNK }), report), timings);
-    await this.withTiming('http_links', () => this.runPass('http_links', () => httpLinkPass(this.db, projectName, indexedFiles), report), timings);
-    await this.withTiming('test_detection', () => this.runPass('test_detection', () => testDetectPass(this.db, projectName, indexedFiles), report), timings);
-    await this.withTiming('enrichment', () => this.runPass('enrichment', () => enrichmentPass(this.db, projectName), report), timings);
-    await this.withTiming('git_history', () => this.runPass('git_history', () => gitCoChangePass(this.db, projectName, gitCommitFiles), report), timings);
+    await this.runCorePasses({ projectName, projectRoot, indexedFiles, structureFiles }, report, timings);
+    await this.runEnrichmentPasses({ projectName, indexedFiles, gitCommitFiles }, report, timings);
     return timings;
   }
 
@@ -224,7 +276,9 @@ export class IndexingPipeline {
 
   async index(options: IndexingOptions): Promise<IndexingResult> {
     const startTime = Date.now();
-    log.info(`[trace:pipeline.index] start incremental=${options.incremental ?? false} root=${options.projectRoot}`);
+    log.info(
+      `[trace:pipeline.index] start incremental=${options.incremental ?? false} root=${options.projectRoot}`,
+    );
     const errors: string[] = [];
     const projectName =
       options.projectName ??
@@ -242,7 +296,9 @@ export class IndexingPipeline {
 
     try {
       const result = await this.runIndex(options, projectName, report, progress);
-      log.info(`[trace:pipeline.index] done in ${Date.now() - startTime}ms incremental=${result.incremental} files=${result.filesIndexed}`);
+      log.info(
+        `[trace:pipeline.index] done in ${Date.now() - startTime}ms incremental=${result.incremental} files=${result.filesIndexed}`,
+      );
       return result;
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));

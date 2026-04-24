@@ -1,4 +1,3 @@
- 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -43,7 +42,8 @@ type SpawnReturn = Awaited<ReturnType<typeof spawnTrainer>>;
 
 function successResult(samples = 200, auc = '0.82'): Promise<SpawnReturn> {
   return Promise.resolve({
-    success: true, exitCode: 0,
+    success: true,
+    exitCode: 0,
     stdout: `trained samples=${samples} auc=${auc} version=2026-04-17T00:00:00.000Z`,
     stderr: '',
   });
@@ -51,7 +51,8 @@ function successResult(samples = 200, auc = '0.82'): Promise<SpawnReturn> {
 
 function belowMinResult(): Promise<SpawnReturn> {
   return Promise.resolve({
-    success: true, exitCode: 0,
+    success: true,
+    exitCode: 0,
     stdout: 'trained samples=10 auc=0.55 version=2026-04-17T00:00:00.000Z belowMinSamples=true',
     stderr: '',
   });
@@ -105,7 +106,10 @@ async function flushAsync(): Promise<void> {
 
 function makeConfig(overrides: Partial<Parameters<typeof startContextRetrainTrigger>[0]> = {}) {
   return {
-    outcomesPath, decisionsPath, weightsOutPath, scriptPath,
+    outcomesPath,
+    decisionsPath,
+    weightsOutPath,
+    scriptPath,
     minNewRowsToTrigger: 200,
     cooldownMs: 60_000,
     pythonBin: 'python3',
@@ -276,7 +280,11 @@ describe('startContextRetrainTrigger', () => {
 
     it('is idempotent', () => {
       const ctrl = startContextRetrainTrigger(makeConfig());
-      expect(() => { ctrl.stop(); ctrl.stop(); ctrl.stop(); }).not.toThrow();
+      expect(() => {
+        ctrl.stop();
+        ctrl.stop();
+        ctrl.stop();
+      }).not.toThrow();
     });
 
     it('getStatus returns enabled=false after stop', () => {

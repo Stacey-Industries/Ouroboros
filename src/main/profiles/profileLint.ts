@@ -76,7 +76,8 @@ function checkBypassWithBash(profile: Profile): ProfileLint | null {
   if (!hasTools(profile.enabledTools, 'Bash')) return null;
   return {
     severity: 'error',
-    message: 'bypass permission mode + Bash is high-risk: the agent can execute arbitrary commands without approval.',
+    message:
+      'bypass permission mode + Bash is high-risk: the agent can execute arbitrary commands without approval.',
   };
 }
 

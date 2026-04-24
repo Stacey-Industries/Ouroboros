@@ -6,8 +6,6 @@
  * send-options resolution helpers.
  */
 
-import type { ModelSlotAssignments } from '../config';
-import { getConfigValue } from '../config';
 import log from '../logger';
 import type {
   OrchestrationMode,
@@ -15,9 +13,7 @@ import type {
   TaskRequestContextSelection,
   TaskRequestMetadata,
 } from '../orchestration/types';
-import { getProfileStore } from '../profiles/profileStore';
 import { buildConversationHistory, getAdaptiveBudgets } from './chatOrchestrationHistorySupport';
-import type { ResolvedAgentChatSettings } from './settingsResolver';
 import { isNonEmptyString } from './threadStoreSupport';
 import type {
   AgentChatContextSummary,
@@ -26,6 +22,8 @@ import type {
   AgentChatSettings,
   AgentChatThreadRecord,
 } from './types';
+
+export { buildResolvedOptions } from './chatOrchestrationRequestSupportOptions';
 
 export interface ResolvedSendOptions {
   mode: OrchestrationMode;
@@ -64,16 +62,6 @@ export interface ResolvedSendOptions {
    */
   allowedTools?: string;
 }
-
-const DEFAULT_MODE: OrchestrationMode = 'edit';
-const DEFAULT_CHAT_EFFORT = 'medium';
-const CODEX_EXEC_PERMISSION_MODES = new Set(['auto', 'bypassPermissions']);
-const CODEX_APP_SERVER_PERMISSION_MODES = new Set([
-  'acceptEdits',
-  'plan',
-  'auto',
-  'bypassPermissions',
-]);
 
 // ---------------------------------------------------------------------------
 // Context selection helpers
@@ -173,7 +161,10 @@ function applyBudgetCap(
 // Wave 26 Phase C: inference control fields extracted to keep buildBaseTaskRequest under 40 lines
 function pickInferenceFields(
   resolved: ResolvedSendOptions,
-): Pick<TaskRequest, 'temperature' | 'maxTokens' | 'stopSequences' | 'topP' | 'topK' | 'jsonSchema' | 'allowedTools'> {
+): Pick<
+  TaskRequest,
+  'temperature' | 'maxTokens' | 'stopSequences' | 'topP' | 'topK' | 'jsonSchema' | 'allowedTools'
+> {
   return {
     temperature: resolved.temperature,
     maxTokens: resolved.maxTokens,
@@ -230,13 +221,15 @@ export function buildTaskRequest(args: {
   thread: AgentChatThreadRecord;
 }): TaskRequest {
   const currentModel = args.resolved.model || '';
-  const { canResume, resumeSessionId, providerChanged } = resolveResumeInfo(
+  const { canResume, resumeSessionId, providerChanged, modelChanged } = resolveResumeInfo(
     args.thread,
     args.resolved.provider,
+    currentModel,
   );
   if (!canResume && args.thread.messages.some((m) => m.role === 'assistant')) {
     logResumeSkipped(args.thread, args.resolved.provider, currentModel, {
       providerChanged,
+      modelChanged,
       resumeSessionId,
     });
   }
@@ -262,144 +255,41 @@ function getResumeSessionId(
 function resolveResumeInfo(
   thread: AgentChatThreadRecord,
   provider: TaskRequest['provider'],
-): { canResume: boolean; resumeSessionId: string | undefined; providerChanged: boolean } {
+  currentModel: string,
+): {
+  canResume: boolean;
+  resumeSessionId: string | undefined;
+  providerChanged: boolean;
+  modelChanged: boolean;
+} {
   const lastProvider = thread.latestOrchestration?.provider;
   const providerChanged = !!lastProvider && lastProvider !== provider;
-  const resumeSessionId = providerChanged ? undefined : getResumeSessionId(thread, provider);
-  return { canResume: !!resumeSessionId, resumeSessionId, providerChanged };
+  // Conservative model-change detection: only treat as a change when BOTH sides
+  // are non-empty and they differ. Resuming across models reuses cached
+  // thinking-block signatures keyed on the prior model, which mismatches on the
+  // new one — the CLI rejects the resume or the conversation diverges.
+  const previousModel = thread.latestOrchestration?.model ?? '';
+  const modelChanged = !!previousModel && !!currentModel && previousModel !== currentModel;
+  const shouldInvalidate = providerChanged || modelChanged;
+  const resumeSessionId = shouldInvalidate ? undefined : getResumeSessionId(thread, provider);
+  return { canResume: !!resumeSessionId, resumeSessionId, providerChanged, modelChanged };
 }
 
 function logResumeSkipped(
   thread: AgentChatThreadRecord,
   provider: TaskRequest['provider'],
   model: string,
-  info: { providerChanged: boolean; resumeSessionId: string | undefined },
+  info: { providerChanged: boolean; modelChanged: boolean; resumeSessionId: string | undefined },
 ): void {
   log.info('resume skipped:', {
     resumeSessionId: info.resumeSessionId ?? 'undefined',
     providerChanged: info.providerChanged,
+    modelChanged: info.modelChanged,
     currentProvider: provider,
     lastProvider: thread.latestOrchestration?.provider ?? 'undefined',
     currentModel: model || '(empty)',
+    previousModel: thread.latestOrchestration?.model ?? '(empty)',
     hasOrchestration: !!thread.latestOrchestration,
     claudeSessionId: thread.latestOrchestration?.claudeSessionId ?? 'undefined',
   });
-}
-
-// ---------------------------------------------------------------------------
-// Send options resolution helpers
-// ---------------------------------------------------------------------------
-
-function resolveProviderModel(
-  settings: ResolvedAgentChatSettings,
-  provider: AgentChatSettings['defaultProvider'],
-): string {
-  return provider === 'codex' ? settings.codexCliSettings.model : settings.claudeCliSettings.model;
-}
-
-function resolvePermissionMode(
-  settings: ResolvedAgentChatSettings,
-  provider: AgentChatSettings['defaultProvider'],
-): string {
-  if (provider !== 'codex') {
-    return settings.claudeCliSettings.permissionMode || 'default';
-  }
-  if (settings.codexCliSettings.dangerouslyBypassApprovalsAndSandbox) {
-    return 'bypassPermissions';
-  }
-  if (settings.codexCliSettings.approvalPolicy === 'never') {
-    return 'auto';
-  }
-  if (isCodexAppServerTransportEnabled()) {
-    return settings.codexCliSettings.sandbox === 'read-only' ? 'plan' : 'acceptEdits';
-  }
-  return 'auto';
-}
-
-function isCodexAppServerTransportEnabled(): boolean {
-  const ecosystem = getConfigValue('ecosystem') as
-    | { codexAppServerTransport?: boolean }
-    | undefined;
-  return ecosystem?.codexAppServerTransport === true;
-}
-
-function getSupportedCodexPermissionModes(): Set<string> {
-  return isCodexAppServerTransportEnabled()
-    ? CODEX_APP_SERVER_PERMISSION_MODES
-    : CODEX_EXEC_PERMISSION_MODES;
-}
-
-function resolveModelWithSlot(
-  override: string | undefined,
-  settings: ResolvedAgentChatSettings,
-  provider: AgentChatSettings['defaultProvider'],
-  hasExplicitProviderOverride: boolean,
-): string {
-  const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined;
-  const slotDefault = slots?.agentChat || '';
-  if (override) return override;
-  if (!hasExplicitProviderOverride && slotDefault) {
-    if (provider === 'codex') {
-      if (slotDefault.startsWith('gpt-')) return slotDefault;
-    } else if (!slotDefault.startsWith('gpt-')) {
-      return slotDefault;
-    }
-  }
-  return resolveProviderModel(settings, provider) || 'sonnet';
-}
-
-/** Resolve effort + permission from overrides or defaults. */
-function resolveEffortAndPermission(
-  settings: ResolvedAgentChatSettings,
-  provider: AgentChatSettings['defaultProvider'],
-  overrides: NonNullable<AgentChatSendMessageRequest['overrides']> | undefined,
-): { effort: string; permissionMode: string } {
-  const requestedPermissionMode =
-    overrides?.permissionMode || resolvePermissionMode(settings, provider);
-  const permissionMode =
-    provider === 'codex' && !getSupportedCodexPermissionModes().has(requestedPermissionMode)
-      ? resolvePermissionMode(settings, provider)
-      : requestedPermissionMode;
-  return {
-    effort: overrides?.effort || DEFAULT_CHAT_EFFORT,
-    permissionMode,
-  };
-}
-
-type InferenceControlFields = Pick<
-  ResolvedSendOptions,
-  'temperature' | 'maxTokens' | 'stopSequences' | 'topP' | 'topK' | 'jsonSchema' | 'allowedTools'
->;
-type ProfileInferenceDefaults = {
-  temperature?: number; maxTokens?: number; stopSequences?: string[];
-  topP?: number; topK?: number; jsonSchema?: string | null; enabledTools?: string[];
-};
-function lookupProfile(id: string | undefined): ProfileInferenceDefaults {
-  return id ? (getProfileStore()?.listAll().find((p) => p.id === id) ?? {}) : {};
-}
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyOverrides = Record<string, any>;
-function resolveInferenceControls(ov: AnyOverrides, p: ProfileInferenceDefaults): InferenceControlFields {
-  const toolList: string[] | undefined = ov['toolOverrides'] ?? p.enabledTools;
-  const allowedTools = Array.isArray(toolList) ? toolList.join(',') : undefined;
-  const jsonSchema = 'jsonSchema' in ov ? (ov['jsonSchema'] as string | null | undefined) : p.jsonSchema;
-  const temperature = ov['temperature'] !== undefined ? ov['temperature'] : p.temperature;
-  const maxTokens = ov['maxTokens'] !== undefined ? ov['maxTokens'] : p.maxTokens;
-  const stopSequences = ov['stopSequences'] !== undefined ? ov['stopSequences'] : p.stopSequences;
-  return { temperature, maxTokens, stopSequences, topP: p.topP, topK: p.topK, jsonSchema, allowedTools };
-}
-
-export function buildResolvedOptions(
-  settings: ResolvedAgentChatSettings,
-  provider: AgentChatSettings['defaultProvider'],
-  overrides: NonNullable<AgentChatSendMessageRequest['overrides']> | undefined,
-): ResolvedSendOptions {
-  const verificationProfile =
-    overrides?.verificationProfile ?? settings.defaultVerificationProfile;
-  const mode = overrides?.mode ?? DEFAULT_MODE;
-  const model = resolveModelWithSlot(overrides?.model, settings, provider, Boolean(overrides?.provider));
-  const { effort, permissionMode } = resolveEffortAndPermission(settings, provider, overrides);
-  const ovMap = (overrides ?? {}) as AnyOverrides;
-  const inference = resolveInferenceControls(ovMap, lookupProfile(overrides?.profileId));
-  return { provider, verificationProfile, mode, model, effort, permissionMode, ...inference };
 }

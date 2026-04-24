@@ -127,16 +127,29 @@ export function DispatchJobDetail({
   onCancel,
 }: DispatchJobDetailProps): React.ReactElement {
   const promptPreview =
-    job.request.prompt.length > 200
-      ? `${job.request.prompt.slice(0, 200)}…`
-      : job.request.prompt;
+    job.request.prompt.length > 200 ? `${job.request.prompt.slice(0, 200)}…` : job.request.prompt;
 
   return (
     <div style={{ ...SCROLLABLE_BODY_STYLE, display: 'flex', flexDirection: 'column' }}>
       <DetailHeader job={job} onClose={onClose} onCancel={onCancel} />
 
       <DetailField label="Title" value={job.request.title} testId="detail-title" />
-      <DetailField label="Prompt" value={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono, monospace)', fontSize: '11px' }}>{promptPreview}</pre>} testId="detail-prompt" />
+      <DetailField
+        label="Prompt"
+        value={
+          <pre
+            style={{
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+            }}
+          >
+            {promptPreview}
+          </pre>
+        }
+        testId="detail-prompt"
+      />
       <DetailField label="Project" value={job.request.projectPath} testId="detail-project" />
 
       {job.request.worktreeName && (
@@ -150,12 +163,14 @@ export function DispatchJobDetail({
       {job.endedAt && (
         <DetailField label="Ended" value={formatTs(job.endedAt)} testId="detail-ended" />
       )}
-      {job.error && (
-        <DetailField label="Error" value={job.error} testId="detail-error" />
-      )}
+      {job.error && <DetailField label="Error" value={job.error} testId="detail-error" />}
 
       {/* Log tail — stubbed; full PTY/agent-event subscription deferred to a future wave */}
-      <div style={STUB_NOTICE_STYLE} className="text-text-semantic-muted" data-testid="detail-log-stub">
+      <div
+        style={STUB_NOTICE_STYLE}
+        className="text-text-semantic-muted"
+        data-testid="detail-log-stub"
+      >
         Log streaming coming in a future wave.
       </div>
     </div>

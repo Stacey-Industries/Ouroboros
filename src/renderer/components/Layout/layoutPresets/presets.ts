@@ -87,10 +87,7 @@ export const mobilePrimaryPreset: LayoutPreset = {
 // ---------------------------------------------------------------------------
 
 /** All built-in presets in priority order (ide-primary is the default). */
-export const BUILT_IN_PRESETS: LayoutPreset[] = [
-  idePrimaryPreset,
-  mobilePrimaryPreset,
-];
+export const BUILT_IN_PRESETS: LayoutPreset[] = [idePrimaryPreset, mobilePrimaryPreset];
 
 /**
  * Resolve a preset by ID from the built-in registry.

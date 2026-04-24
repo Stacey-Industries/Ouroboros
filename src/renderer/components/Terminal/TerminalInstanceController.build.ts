@@ -1,11 +1,11 @@
-import type { SelectionTooltipState } from './SelectionTooltip'
-import type { TerminalContextMenuState } from './TerminalContextMenu'
+import type { SelectionTooltipState } from './SelectionTooltip';
+import type { TerminalContextMenuState } from './TerminalContextMenu';
 import type {
   TerminalFoundation,
   TerminalHistoryState,
   TerminalInstanceController,
-} from './TerminalInstanceController.types'
-import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
+} from './TerminalInstanceController.types';
+import type { CommandBlock as RichCommandBlock } from './useCommandBlocks';
 
 type TerminalCoreController = Pick<
   TerminalInstanceController,
@@ -25,59 +25,57 @@ type TerminalCoreController = Pick<
   | 'showSearch'
   | 'closeSearch'
   | 'commandBlocks'
->
+>;
 
 type TerminalInteractionController = Omit<
   TerminalInstanceController,
   keyof TerminalCoreController | 'historyHook' | 'completions'
->
+>;
 
 interface ContextMenuBridge {
-  contextMenu: TerminalContextMenuState
-  handleContextMenu: TerminalInstanceController['handleContextMenu']
-  closeContextMenu: () => void
+  contextMenu: TerminalContextMenuState;
+  handleContextMenu: TerminalInstanceController['handleContextMenu'];
+  closeContextMenu: () => void;
 }
 
 interface PasteBridge {
-  pendingPaste: string | null
-  handlePasteConfirm: () => void
-  handlePasteSingleLine: () => void
-  handlePasteCancel: () => void
+  pendingPaste: string | null;
+  handlePasteConfirm: () => void;
+  handlePasteSingleLine: () => void;
+  handlePasteCancel: () => void;
 }
 
 interface RichInputBridge {
-  richInputActive: boolean
-  openRichInput: () => void
-  handleRichInputSubmit: (text: string) => void
-  handleRichInputCancel: () => void
+  richInputActive: boolean;
+  openRichInput: () => void;
+  handleRichInputSubmit: (text: string) => void;
+  handleRichInputCancel: () => void;
 }
 
 interface TooltipBridge {
-  selectionTooltip: SelectionTooltipState
-  handleTooltipOpenUrl: (url: string) => void
-  handleTooltipOpenFile: (filePath: string) => void
-  handleTooltipDismiss: () => void
+  selectionTooltip: SelectionTooltipState;
+  handleTooltipOpenUrl: (url: string) => void;
+  handleTooltipOpenFile: (filePath: string) => void;
+  handleTooltipDismiss: () => void;
 }
 
 interface CommandSearchBridge {
-  handleCmdSearchSelect: (command: string) => void
-  handleCmdSearchClose: () => void
+  handleCmdSearchSelect: (command: string) => void;
+  handleCmdSearchClose: () => void;
 }
 
 export interface ControllerBuildArgs {
-  foundation: TerminalFoundation
-  contextMenuState: ContextMenuBridge
-  pasteState: PasteBridge
-  richInputState: RichInputBridge
-  tooltipState: TooltipBridge
-  cmdSearchActions: CommandSearchBridge
-  handleCopyBlockOutput: (block: RichCommandBlock) => void
-  historyState: TerminalHistoryState
+  foundation: TerminalFoundation;
+  contextMenuState: ContextMenuBridge;
+  pasteState: PasteBridge;
+  richInputState: RichInputBridge;
+  tooltipState: TooltipBridge;
+  cmdSearchActions: CommandSearchBridge;
+  handleCopyBlockOutput: (block: RichCommandBlock) => void;
+  historyState: TerminalHistoryState;
 }
 
-function buildTerminalCoreController(
-  foundation: TerminalFoundation,
-): TerminalCoreController {
+function buildTerminalCoreController(foundation: TerminalFoundation): TerminalCoreController {
   return {
     sessionId: foundation.sessionId,
     isActive: foundation.isActive,
@@ -95,7 +93,7 @@ function buildTerminalCoreController(
     showSearch: foundation.showSearch,
     closeSearch: foundation.closeSearch,
     commandBlocks: foundation.commandBlocks,
-  }
+  };
 }
 
 function buildTerminalInteractionController(
@@ -120,16 +118,14 @@ function buildTerminalInteractionController(
     handleCmdSearchSelect: args.cmdSearchActions.handleCmdSearchSelect,
     handleCmdSearchClose: args.cmdSearchActions.handleCmdSearchClose,
     handleCopyBlockOutput: args.handleCopyBlockOutput,
-  }
+  };
 }
 
-export function buildTerminalController(
-  args: ControllerBuildArgs,
-): TerminalInstanceController {
+export function buildTerminalController(args: ControllerBuildArgs): TerminalInstanceController {
   return {
     ...buildTerminalCoreController(args.foundation),
     ...buildTerminalInteractionController(args),
     historyHook: args.historyState.historyHook,
     completions: args.historyState.completions,
-  }
+  };
 }

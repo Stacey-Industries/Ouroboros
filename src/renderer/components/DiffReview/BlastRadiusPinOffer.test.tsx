@@ -76,12 +76,7 @@ describe('BlastRadiusPinOffer — feature flag', () => {
 describe('BlastRadiusPinOffer — empty callers', () => {
   it('renders null when callers array is empty', () => {
     const { container } = render(
-      <BlastRadiusPinOffer
-        callers={[]}
-        onAccept={vi.fn()}
-        onDismiss={vi.fn()}
-        enabled={true}
-      />,
+      <BlastRadiusPinOffer callers={[]} onAccept={vi.fn()} onDismiss={vi.fn()} enabled={true} />,
     );
     expect(container.firstChild).toBeNull();
   });

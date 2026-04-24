@@ -71,10 +71,7 @@ function renderHunkLine(line: DiffLine, index: number): React.ReactElement {
 }
 
 function renderChangeLine(line: DiffLine, index: number): React.ReactElement {
-  const bgColor =
-    line.type === 'add'
-      ? 'var(--diff-add-bg)'
-      : 'var(--diff-del-bg)';
+  const bgColor = line.type === 'add' ? 'var(--diff-add-bg)' : 'var(--diff-del-bg)';
   const textColor = line.type === 'add' ? 'var(--status-success)' : 'var(--status-error)';
   const prefix = line.type === 'add' ? '+' : '-';
   return (

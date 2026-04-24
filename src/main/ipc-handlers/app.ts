@@ -3,7 +3,15 @@
  */
 
 import { exec, spawn } from 'child_process';
-import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, Notification, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  IpcMainInvokeEvent,
+  Notification,
+  shell,
+} from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -264,7 +272,10 @@ export async function handleSaveFileDialog(
   const win = BrowserWindow.fromWebContents(event.sender);
   const opts = {
     defaultPath: defaultName,
-    filters: [{ name: 'Markdown', extensions: ['md'] }, { name: 'All Files', extensions: ['*'] }],
+    filters: [
+      { name: 'Markdown', extensions: ['md'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
     title: 'Save PR Description',
   };
   const result = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);

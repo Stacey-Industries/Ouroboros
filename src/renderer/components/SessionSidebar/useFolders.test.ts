@@ -75,7 +75,9 @@ describe('useFolders', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const updated = [makeFolder('f-live-1'), makeFolder('f-live-2')];
-    act(() => { onChangedCallback?.(updated); });
+    act(() => {
+      onChangedCallback?.(updated);
+    });
 
     expect(result.current.folders).toHaveLength(2);
     expect(result.current.folders[0]?.id).toBe('f-live-1');
@@ -93,10 +95,10 @@ describe('useFolders', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const callsBefore = mockFolderCrud.list.mock.calls.length;
-    act(() => { result.current.refresh(); });
-    await waitFor(() =>
-      expect(mockFolderCrud.list.mock.calls.length).toBeGreaterThan(callsBefore),
-    );
+    act(() => {
+      result.current.refresh();
+    });
+    await waitFor(() => expect(mockFolderCrud.list.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
   it('returns empty folders when list result is not success', async () => {

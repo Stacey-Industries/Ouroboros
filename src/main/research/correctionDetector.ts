@@ -40,20 +40,21 @@ const MAX_SCAN_BYTES = 50_000;
 // library name appears inline; otherwise, library extraction falls back to
 // the curated list scan.
 
-/** Pattern 1 — "that is wrong / that's not right / this is incorrect" */
-const PAT_THAT_IS_WRONG =
-  /\b(?:that|that's|this)\s+(?:is\s+)?(?:wrong|incorrect|not right|not how)\b/i;
+/** Pattern 1 — "that is wrong / that's not right / this is incorrect".
+ *  Uses literal spaces rather than `\s+` to avoid the `(?:...\s+)?` star-height-2
+ *  pattern flagged by safe-regex. User messages use normal ASCII spacing. */
+const PAT_THAT_IS_WRONG = /\b(?:that|that's|this) (?:is )?(?:wrong|incorrect|not right|not how)\b/i;
 
 /** Pattern 2 — "doesn't work that way / doesn't work like that" */
 const PAT_DOESNT_WORK = /\bdoesn't work (?:that way|like that)\b/i;
 
 /**
- * Pattern 3 — "deprecated in LibName v?N / removed in LibName v?N /
- *              breaking change in LibName v?N"
- * Capture group 1 = library name, group 2 = version (optional).
+ * Pattern 3 — "deprecated in LibName / removed in LibName / breaking change in LibName".
+ * Capture group 1 = library name. A trailing version like "v14" / "4" is tolerated
+ * (not captured) because only the library name is used downstream. Written with
+ * a single quantifier to keep safe-regex star-height at 1.
  */
-const PAT_DEPRECATED_IN =
-  /\b(?:deprecated|removed|breaking change) in ([A-Z][a-zA-Z0-9.-]+)\s*(v?\d+)?/i;
+const PAT_DEPRECATED_IN = /\b(?:deprecated|removed|breaking change) in ([A-Z][a-zA-Z0-9.-]+)/i;
 
 /**
  * Pattern 4 — "wrong API for LibName / old way in LibName / old syntax for LibName"
@@ -130,9 +131,8 @@ export function detectCorrection(userMessage: string): CorrectionHit | null {
   if (!userMessage) return null;
 
   // Slice to limit — genuine corrections appear near the start
-  const text = userMessage.length > MAX_SCAN_BYTES
-    ? userMessage.slice(0, MAX_SCAN_BYTES)
-    : userMessage;
+  const text =
+    userMessage.length > MAX_SCAN_BYTES ? userMessage.slice(0, MAX_SCAN_BYTES) : userMessage;
 
   for (const { re, libGroup, label } of PATTERNS) {
     const match = re.exec(text);

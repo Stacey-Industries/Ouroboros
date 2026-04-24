@@ -27,10 +27,7 @@ const TABLE_HEADER_COLS = [
   { label: 'Cost', width: '52px', align: 'right' as const },
 ];
 
-function useSubagentRollupMap(
-  entries: CostEntry[],
-  enabled: boolean,
-): Map<string, CombinedCost> {
+function useSubagentRollupMap(entries: CostEntry[], enabled: boolean): Map<string, CombinedCost> {
   const [rollupMap, setRollupMap] = useState<Map<string, CombinedCost>>(new Map());
 
   useEffect(() => {
@@ -44,23 +41,27 @@ function useSubagentRollupMap(
     const api = window.electronAPI.subagent;
     Promise.allSettled(
       sessionIds.map((id) =>
-        api.costRollup({ parentSessionId: id }).then((res): [string, SubagentCostRollup | null] => [
-          id,
-          res.success && res.rollup ? res.rollup : null,
-        ]),
+        api
+          .costRollup({ parentSessionId: id })
+          .then((res): [string, SubagentCostRollup | null] => [
+            id,
+            res.success && res.rollup ? res.rollup : null,
+          ]),
       ),
-    ).then((results) => {
-      const next = new Map<string, CombinedCost>();
-      for (const [i, result] of results.entries()) {
-        const sessionId = sessionIds[i];
-        const parentUsd = entries[i]?.estimatedCost ?? 0;
-        const rollup = result.status === 'fulfilled' ? result.value[1] : null;
-        next.set(sessionId, combineCosts(parentUsd, rollup));
-      }
-      setRollupMap(next);
-    }).catch((err) => {
-      log.warn('[SessionTable] subagent rollup fetch failed:', err);
-    });
+    )
+      .then((results) => {
+        const next = new Map<string, CombinedCost>();
+        for (const [i, result] of results.entries()) {
+          const sessionId = sessionIds[i];
+          const parentUsd = entries[i]?.estimatedCost ?? 0;
+          const rollup = result.status === 'fulfilled' ? result.value[1] : null;
+          next.set(sessionId, combineCosts(parentUsd, rollup));
+        }
+        setRollupMap(next);
+      })
+      .catch((err) => {
+        log.warn('[SessionTable] subagent rollup fetch failed:', err);
+      });
   }, [entries, enabled]);
 
   return rollupMap;

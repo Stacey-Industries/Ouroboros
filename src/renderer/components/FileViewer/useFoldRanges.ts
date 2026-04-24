@@ -15,12 +15,7 @@ export interface FoldRange {
 
 const OPEN_BRACKETS: Record<string, string> = { '{': '}', '(': ')', '[': ']' };
 
-function addRange(
-  ranges: FoldRange[],
-  seen: Set<string>,
-  start: number,
-  end: number,
-): void {
+function addRange(ranges: FoldRange[], seen: Set<string>, start: number, end: number): void {
   if (end <= start) return;
   const key = `${start}:${end}`;
   if (seen.has(key)) return;
@@ -98,11 +93,7 @@ function scanBracketLine(
   }
 }
 
-function collectBracketRanges(
-  lines: string[],
-  ranges: FoldRange[],
-  seen: Set<string>,
-): void {
+function collectBracketRanges(lines: string[], ranges: FoldRange[], seen: Set<string>): void {
   for (const [openChar, closeChar] of Object.entries(OPEN_BRACKETS)) {
     const state: BracketScanState = { ranges, seen, stack: [] };
     const pair = { openChar, closeChar };
@@ -119,11 +110,7 @@ function isIndentBlockHeader(line: string): boolean {
   );
 }
 
-function findIndentedBlockEnd(
-  lines: string[],
-  startIndex: number,
-  baseIndent: number,
-): number {
+function findIndentedBlockEnd(lines: string[], startIndex: number, baseIndent: number): number {
   let end = startIndex + 1;
   for (let lineIndex = startIndex + 2; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex];
@@ -134,11 +121,7 @@ function findIndentedBlockEnd(
   return end;
 }
 
-function collectIndentRanges(
-  lines: string[],
-  ranges: FoldRange[],
-  seen: Set<string>,
-): void {
+function collectIndentRanges(lines: string[], ranges: FoldRange[], seen: Set<string>): void {
   const bracketStarts = new Set(ranges.map((range) => range.start));
   for (let lineIndex = 0; lineIndex < lines.length - 1; lineIndex++) {
     if (bracketStarts.has(lineIndex)) continue;

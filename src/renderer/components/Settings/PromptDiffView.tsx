@@ -9,10 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import {
-  claudeSectionHeaderTextStyle,
-  claudeSectionRootStyle,
-} from './claudeSectionContentStyles';
+import { claudeSectionHeaderTextStyle, claudeSectionRootStyle } from './claudeSectionContentStyles';
 import type { DiffLine } from './lineDiff';
 import { lineDiff } from './lineDiff';
 import { SectionLabel } from './settingsStyles';
@@ -78,7 +75,8 @@ function prefixFor(kind: DiffLine['kind']): string {
 function DiffLineRow({ line }: { line: DiffLine }): React.ReactElement {
   return (
     <span style={lineStyle(line.kind)}>
-      {prefixFor(line.kind)}{line.text}
+      {prefixFor(line.kind)}
+      {line.text}
     </span>
   );
 }
@@ -101,7 +99,7 @@ function DiffBody({ payload }: { payload: PromptDiffPayload }): React.ReactEleme
       <code style={{ display: 'block' }}>
         {lines.map((line, idx) => (
           // index key is stable here — the diff output is deterministic for a given payload
-           
+
           <DiffLineRow key={idx} line={line} />
         ))}
       </code>
@@ -114,8 +112,8 @@ function PaneHeader(): React.ReactElement {
     <div>
       <SectionLabel>Prompt Diff</SectionLabel>
       <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
-        Unified diff of the Claude Code system prompt between CLI versions.
-        Captured automatically when a new session starts after a CLI upgrade.
+        Unified diff of the Claude Code system prompt between CLI versions. Captured automatically
+        when a new session starts after a CLI upgrade.
       </p>
     </div>
   );
@@ -144,8 +142,8 @@ export function PromptDiffView(): React.ReactElement {
       <PaneHeader />
       {!payload && (
         <p style={emptyStyle}>
-          No prompt diff captured yet. Upgrade the Claude CLI and start a new session to
-          see changes here.
+          No prompt diff captured yet. Upgrade the Claude CLI and start a new session to see changes
+          here.
         </p>
       )}
       {payload && (

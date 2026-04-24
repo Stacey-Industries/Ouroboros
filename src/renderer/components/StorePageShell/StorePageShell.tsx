@@ -96,9 +96,7 @@ function ShellTabBar({
           role="tab"
           aria-selected={tab.id === activeTab}
           className={
-            tab.id === activeTab
-              ? 'text-text-semantic-primary'
-              : 'text-text-semantic-muted'
+            tab.id === activeTab ? 'text-text-semantic-primary' : 'text-text-semantic-muted'
           }
           style={tabStyle(tab.id === activeTab)}
           onClick={() => onTabChange(tab.id)}

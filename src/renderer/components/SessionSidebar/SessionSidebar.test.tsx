@@ -99,10 +99,7 @@ describe('SessionSidebar', () => {
   it('groups sessions by project root', async () => {
     mockApi.sessionCrud.list.mockResolvedValue({
       success: true,
-      sessions: [
-        makeSession('s1', '/projects/alpha'),
-        makeSession('s2', '/projects/beta'),
-      ],
+      sessions: [makeSession('s1', '/projects/alpha'), makeSession('s2', '/projects/beta')],
     });
     render(<SessionSidebar />);
     await waitFor(() => {
@@ -117,10 +114,14 @@ describe('SessionSidebar', () => {
       sessions: [makeSession('click-id', '/projects/alpha')],
     });
     render(<SessionSidebar />);
-    await waitFor(() => expect(screen.getByRole('row', { name: /alpha.*last used/i })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole('row', { name: /alpha.*last used/i })).toBeTruthy(),
+    );
 
     const dispatched: CustomEvent[] = [];
-    const listener = (e: Event): void => { dispatched.push(e as CustomEvent); };
+    const listener = (e: Event): void => {
+      dispatched.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:session-switch', listener);
 
     fireEvent.click(screen.getByRole('row', { name: /alpha.*last used/i }));
@@ -134,7 +135,9 @@ describe('SessionSidebar', () => {
     render(<SessionSidebar />);
     await waitFor(() => expect(screen.queryByText(/no sessions yet/i)).toBeTruthy());
 
-    act(() => { onChangedCallback?.([makeSession('live-s1', '/projects/live')]); });
+    act(() => {
+      onChangedCallback?.([makeSession('live-s1', '/projects/live')]);
+    });
 
     await waitFor(() => expect(screen.getAllByText('live').length).toBeGreaterThan(0));
   });
@@ -142,10 +145,7 @@ describe('SessionSidebar', () => {
   it('ArrowDown moves focus to the next row', async () => {
     mockApi.sessionCrud.list.mockResolvedValue({
       success: true,
-      sessions: [
-        makeSession('r1', '/projects/proj'),
-        makeSession('r2', '/projects/proj'),
-      ],
+      sessions: [makeSession('r1', '/projects/proj'), makeSession('r2', '/projects/proj')],
     });
     render(<SessionSidebar />);
     // Wait for session rows (tabindex=0) to appear — skip the non-focusable header row

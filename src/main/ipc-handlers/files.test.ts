@@ -187,7 +187,9 @@ describe('registerFileHandlers — watcher registration', () => {
 });
 
 describe('watchDirectory — creation', () => {
-  beforeEach(() => { setupWatchMock(); });
+  beforeEach(() => {
+    setupWatchMock();
+  });
 
   it('calls watchRecursive with correct ignore globs', async () => {
     const { registerFileHandlers } = await loadModule();
@@ -233,7 +235,9 @@ describe('watchDirectory — creation', () => {
 });
 
 describe('evictOldestWatcher — MAX_WATCHERS limit', () => {
-  beforeEach(() => { setupWatchMock(); });
+  beforeEach(() => {
+    setupWatchMock();
+  });
 
   it('evicts the oldest watcher when limit is exceeded', async () => {
     const { registerFileHandlers } = await loadModule();
@@ -262,7 +266,9 @@ describe('evictOldestWatcher — MAX_WATCHERS limit', () => {
 });
 
 describe('cleanupFileWatchers', () => {
-  beforeEach(() => { setupWatchMock(); });
+  beforeEach(() => {
+    setupWatchMock();
+  });
 
   it('closes all subscriptions and clears the map', async () => {
     const { registerFileHandlers, cleanupFileWatchers } = await loadModule();
@@ -283,7 +289,9 @@ describe('cleanupFileWatchers', () => {
 });
 
 describe('handleUnwatchDir', () => {
-  beforeEach(() => { setupWatchMock(); });
+  beforeEach(() => {
+    setupWatchMock();
+  });
 
   it('closes and removes a watched directory', async () => {
     const { registerFileHandlers } = await loadModule();
@@ -318,7 +326,9 @@ describe('handleUnwatchDir', () => {
 });
 
 describe('event-type mapping (resolveChangeType)', () => {
-  beforeEach(() => { setupWatchMock(); });
+  beforeEach(() => {
+    setupWatchMock();
+  });
 
   async function getWatchHandler() {
     const { registerFileHandlers } = await loadModule();

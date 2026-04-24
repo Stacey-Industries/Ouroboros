@@ -33,7 +33,9 @@ export function useProjectManagement(
           await window.electronAPI.window.setProjectRoot(path);
           await window.electronAPI.config.set('defaultProjectRoot', path);
           await window.electronAPI.config.set('recentProjects', updated);
-        } catch { /* best-effort */ }
+        } catch {
+          /* best-effort */
+        }
       }
     },
     [recentProjects, setProjectRoot],

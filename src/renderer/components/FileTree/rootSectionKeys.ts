@@ -70,10 +70,7 @@ function extendShiftSelection(
   }
 }
 
-function handleVerticalNavKeys(
-  e: React.KeyboardEvent,
-  deps: KeyHandlerDeps
-): boolean {
+function handleVerticalNavKeys(e: React.KeyboardEvent, deps: KeyHandlerDeps): boolean {
   const { displayItems, focusIndex, setFocusIndex } = deps;
   const store = useFileTreeStore.getState();
 
@@ -94,10 +91,7 @@ function handleVerticalNavKeys(
   return false;
 }
 
-function handleExtendedNavKeys(
-  e: React.KeyboardEvent,
-  deps: KeyHandlerDeps
-): boolean {
+function handleExtendedNavKeys(e: React.KeyboardEvent, deps: KeyHandlerDeps): boolean {
   const { displayItems, setFocusIndex } = deps;
 
   // Home: jump to first item
@@ -148,7 +142,7 @@ function handleExtendedNavKeys(
 function handleSelectionKeys(
   e: React.KeyboardEvent,
   item: { node: TreeNode } | undefined,
-  deps: KeyHandlerDeps
+  deps: KeyHandlerDeps,
 ): boolean {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -167,7 +161,7 @@ function handleSelectionKeys(
 function handleFolderNavKeys(
   e: React.KeyboardEvent,
   item: { node: TreeNode } | undefined,
-  deps: KeyHandlerDeps
+  deps: KeyHandlerDeps,
 ): boolean {
   if (e.key === 'ArrowRight' && item?.node.isDirectory && !item.node.isExpanded) {
     e.preventDefault();
@@ -207,7 +201,11 @@ function handleSelectionShortcuts(
   return false;
 }
 
-function handleActionKeys(e: React.KeyboardEvent, item: { node: TreeNode } | undefined, deps: KeyHandlerDeps): boolean {
+function handleActionKeys(
+  e: React.KeyboardEvent,
+  item: { node: TreeNode } | undefined,
+  deps: KeyHandlerDeps,
+): boolean {
   if (e.key === 'F2') {
     e.preventDefault();
     if (item?.node) deps.handleRename(item.node);
@@ -221,7 +219,11 @@ function handleActionKeys(e: React.KeyboardEvent, item: { node: TreeNode } | und
   return false;
 }
 
-function handleCreateKeys(e: React.KeyboardEvent, item: { node: TreeNode } | undefined, deps: KeyHandlerDeps): void {
+function handleCreateKeys(
+  e: React.KeyboardEvent,
+  item: { node: TreeNode } | undefined,
+  deps: KeyHandlerDeps,
+): void {
   if (e.key === 'z' && e.ctrlKey) {
     e.preventDefault();
     void deps.handleUndo();

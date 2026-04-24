@@ -102,7 +102,9 @@ describe('useSessions', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const updated = [makeSession('live-1'), makeSession('live-2')];
-    act(() => { onChangedCallback?.(updated); });
+    act(() => {
+      onChangedCallback?.(updated);
+    });
 
     expect(result.current.sessions).toHaveLength(2);
     expect(result.current.sessions[0].id).toBe('live-1');
@@ -120,8 +122,12 @@ describe('useSessions', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const callsBefore = mockSessionCrud.list.mock.calls.length;
-    act(() => { result.current.refresh(); });
-    await waitFor(() => expect(mockSessionCrud.list.mock.calls.length).toBeGreaterThan(callsBefore));
+    act(() => {
+      result.current.refresh();
+    });
+    await waitFor(() =>
+      expect(mockSessionCrud.list.mock.calls.length).toBeGreaterThan(callsBefore),
+    );
   });
 
   it('returns empty sessions when list result is not success', async () => {

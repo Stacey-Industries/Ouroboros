@@ -42,24 +42,22 @@ export function CommandPaletteResults({
     return <EmptyResults emptyLabel={emptyLabel} listRef={listRef} />;
   }
 
-  const content = showHeaders
-    ? (
-      <GroupedResults
-        grouped={grouped}
-        matches={matches}
-        onExecute={onExecute}
-        onMouseEnter={onMouseEnter}
-        selectedIndex={selectedIndex}
-      />
-    )
-    : (
-      <FlatResults
-        matches={matches}
-        onExecute={onExecute}
-        onMouseEnter={onMouseEnter}
-        selectedIndex={selectedIndex}
-      />
-    );
+  const content = showHeaders ? (
+    <GroupedResults
+      grouped={grouped}
+      matches={matches}
+      onExecute={onExecute}
+      onMouseEnter={onMouseEnter}
+      selectedIndex={selectedIndex}
+    />
+  ) : (
+    <FlatResults
+      matches={matches}
+      onExecute={onExecute}
+      onMouseEnter={onMouseEnter}
+      selectedIndex={selectedIndex}
+    />
+  );
 
   return <ResultsContainer listRef={listRef}>{content}</ResultsContainer>;
 }
@@ -73,7 +71,9 @@ function EmptyResults({
 }): React.ReactElement {
   return (
     <ResultsContainer listRef={listRef}>
-      <div className="text-text-semantic-muted" style={emptyStateStyle}>{emptyLabel}</div>
+      <div className="text-text-semantic-muted" style={emptyStateStyle}>
+        {emptyLabel}
+      </div>
     </ResultsContainer>
   );
 }
@@ -86,7 +86,13 @@ function ResultsContainer({
   listRef: React.RefObject<HTMLDivElement | null>;
 }): React.ReactElement {
   return (
-    <div id="cp-listbox" role="listbox" aria-label="Commands" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
+    <div
+      id="cp-listbox"
+      role="listbox"
+      aria-label="Commands"
+      ref={listRef as React.RefObject<HTMLDivElement | null>}
+      style={listStyle}
+    >
       {children}
     </div>
   );

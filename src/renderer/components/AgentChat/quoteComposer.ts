@@ -44,9 +44,7 @@ function formatAttribution(attr: QuoteAttribution): string {
  */
 export function buildQuoteText(selectedText: string, attribution: QuoteAttribution): string {
   const attrLine = `> [${formatAttribution(attribution)}]`;
-  const lines = selectedText
-    .split('\n')
-    .map((line) => `> ${line}`);
+  const lines = selectedText.split('\n').map((line) => `> ${line}`);
   return [attrLine, ...lines, '', ''].join('\n');
 }
 

@@ -106,8 +106,8 @@ beforeEach(async () => {
   vi.mock('../telemetry', () => ({
     getTelemetryStore: () => ({
       queryInvocations: (filter: { since?: number } = {}) =>
-        mockInvocationRows.filter((r) =>
-          filter.since === undefined || (r.timestamp as number) >= filter.since,
+        mockInvocationRows.filter(
+          (r) => filter.since === undefined || (r.timestamp as number) >= filter.since,
         ),
     }),
   }));
@@ -178,7 +178,7 @@ describe('getDashboardMetrics — invocation aggregation', () => {
       makeInvRow({ triggerReason: 'fact-claim' }),
       makeInvRow({ triggerReason: 'slash-command' }),
       makeInvRow({ triggerReason: 'correction' }),
-      makeInvRow({ triggerReason: 'explicit' }),  // → other
+      makeInvRow({ triggerReason: 'explicit' }), // → other
     ];
     const m = await getDashboardMetrics('all');
     expect(m.invocations.total).toBe(6);
@@ -236,12 +236,7 @@ describe('getDashboardMetrics — outcome aggregation', () => {
   });
 
   it('computes false positive rate from invocations + reverted outcomes', async () => {
-    mockInvocationRows = [
-      makeInvRow(),
-      makeInvRow(),
-      makeInvRow(),
-      makeInvRow(),
-    ];
+    mockInvocationRows = [makeInvRow(), makeInvRow(), makeInvRow(), makeInvRow()];
     const stamp = today();
     const file = `research-outcomes-${stamp}.jsonl`;
     const records = [
@@ -283,8 +278,8 @@ describe('getDashboardMetrics — range filter', () => {
   it('excludes invocation rows older than 7 days', async () => {
     const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
     mockInvocationRows = [
-      makeInvRow({ timestamp: eightDaysAgo }),   // excluded
-      makeInvRow({ timestamp: Date.now() }),      // included
+      makeInvRow({ timestamp: eightDaysAgo }), // excluded
+      makeInvRow({ timestamp: Date.now() }), // included
     ];
     const m = await getDashboardMetrics('7d');
     expect(m.invocations.total).toBe(1);
@@ -295,8 +290,8 @@ describe('getDashboardMetrics — range filter', () => {
     const file = `research-outcomes-${stamp}.jsonl`;
     const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
     const records = [
-      { outcomeSignal: 'accepted', timestamp: eightDaysAgo },  // excluded
-      { outcomeSignal: 'reverted', timestamp: Date.now() },     // included
+      { outcomeSignal: 'accepted', timestamp: eightDaysAgo }, // excluded
+      { outcomeSignal: 'reverted', timestamp: Date.now() }, // included
     ];
     // eslint-disable-next-line security/detect-object-injection -- test fixture, key is a trusted constant
     mockFsEntries[BASE_DIR] = [file];
@@ -317,7 +312,7 @@ describe('getDashboardMetrics — 60 s cache', () => {
     mockInvocationRows = [makeInvRow(), makeInvRow(), makeInvRow()];
     const second = await getDashboardMetrics('7d');
 
-    expect(second).toBe(first);  // same reference
+    expect(second).toBe(first); // same reference
     expect(second.invocations.total).toBe(1);
   });
 

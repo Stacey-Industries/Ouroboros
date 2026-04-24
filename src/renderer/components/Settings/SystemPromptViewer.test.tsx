@@ -67,7 +67,9 @@ describe('SystemPromptViewer', () => {
       await Promise.resolve(); // flush the clipboard promise
     });
     expect(screen.getByRole('button').textContent).toBe('Copied!');
-    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     expect(screen.getByRole('button').textContent).toBe('Copy');
     vi.useRealTimers();
   });

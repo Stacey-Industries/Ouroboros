@@ -136,7 +136,9 @@ describe('extractFeatures', () => {
   });
 
   it('lookupWordCount scores lookup prompts', () => {
-    const result = extractFeatures('Can you explain what is happening here and where is the config?');
+    const result = extractFeatures(
+      'Can you explain what is happening here and where is the config?',
+    );
     expect(result.lookupWordCount).toBeGreaterThan(0);
   });
 

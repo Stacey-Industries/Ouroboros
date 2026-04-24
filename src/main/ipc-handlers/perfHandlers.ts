@@ -25,7 +25,11 @@ type ChannelList = string[];
 const MAX_HISTORY_LIMIT = 100;
 const DEFAULT_HISTORY_LIMIT = 20;
 
-function registerChannel(channels: ChannelList, channel: string, handler: Parameters<typeof ipcMain.handle>[1]): void {
+function registerChannel(
+  channels: ChannelList,
+  channel: string,
+  handler: Parameters<typeof ipcMain.handle>[1],
+): void {
   ipcMain.handle(channel, handler);
   channels.push(channel);
 }
@@ -86,6 +90,8 @@ export function registerPerfHandlers(channels: ChannelList): void {
   registerChannel(channels, 'perf:mark', handleMark);
   registerChannel(channels, 'perf:markFirstRender', handleFirstRender);
   registerChannel(channels, 'perf:getStartupTimings', () => ok({ timings: getStartupTimings() }));
-  registerChannel(channels, 'perf:getRuntimeMetrics', () => ok({ metrics: getLatestPerfMetrics() }));
+  registerChannel(channels, 'perf:getRuntimeMetrics', () =>
+    ok({ metrics: getLatestPerfMetrics() }),
+  );
   registerChannel(channels, 'perf:getStartupHistory', handleGetStartupHistory);
 }

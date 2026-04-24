@@ -67,16 +67,12 @@ describe('GraphNeighbourhood — feature flag', () => {
 
 describe('GraphNeighbourhood — loading state', () => {
   it('shows loading text while loading', () => {
-    render(
-      <GraphNeighbourhood data={null} loading={true} onClose={vi.fn()} enabled={true} />,
-    );
+    render(<GraphNeighbourhood data={null} loading={true} onClose={vi.fn()} enabled={true} />);
     expect(screen.getByText(/loading/i)).toBeTruthy();
   });
 
   it('does not show node rows while loading', () => {
-    render(
-      <GraphNeighbourhood data={null} loading={true} onClose={vi.fn()} enabled={true} />,
-    );
+    render(<GraphNeighbourhood data={null} loading={true} onClose={vi.fn()} enabled={true} />);
     expect(screen.queryByText('callerA')).toBeNull();
   });
 });

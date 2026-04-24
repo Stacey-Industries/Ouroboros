@@ -41,9 +41,17 @@ function isValidMode(v: unknown): v is ResearchMode {
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
-interface GetSessionModeArgs { sessionId?: unknown }
-interface SetSessionModeArgs { sessionId?: unknown; mode?: unknown }
-interface SetGlobalDefaultArgs { globalEnabled?: unknown; defaultMode?: unknown }
+interface GetSessionModeArgs {
+  sessionId?: unknown;
+}
+interface SetSessionModeArgs {
+  sessionId?: unknown;
+  mode?: unknown;
+}
+interface SetGlobalDefaultArgs {
+  globalEnabled?: unknown;
+  defaultMode?: unknown;
+}
 
 function handleGetSessionMode(
   args: GetSessionModeArgs,
@@ -70,11 +78,15 @@ function handleSetSessionMode(
   return ok({});
 }
 
-function handleGetGlobalDefault(): OkPayload<{ globalEnabled: boolean; defaultMode: ResearchMode }> | FailResult {
-  const settings = getConfigValue('researchSettings') as {
-    globalEnabled?: boolean;
-    defaultMode?: string;
-  } | undefined;
+function handleGetGlobalDefault():
+  | OkPayload<{ globalEnabled: boolean; defaultMode: ResearchMode }>
+  | FailResult {
+  const settings = getConfigValue('researchSettings') as
+    | {
+        globalEnabled?: boolean;
+        defaultMode?: string;
+      }
+    | undefined;
   const globalEnabled = settings?.globalEnabled ?? false;
   const rawMode = settings?.defaultMode ?? 'conservative';
   const defaultMode: ResearchMode = isValidMode(rawMode) ? rawMode : 'conservative';
@@ -89,7 +101,9 @@ async function handleSetGlobalDefault(
     return fail('globalEnabled must be a boolean');
   }
   if (!isValidMode(defaultMode)) {
-    return fail(`defaultMode must be one of: off, conservative, aggressive. Got: ${String(defaultMode)}`);
+    return fail(
+      `defaultMode must be one of: off, conservative, aggressive. Got: ${String(defaultMode)}`,
+    );
   }
   await setConfigValue('researchSettings', { globalEnabled, defaultMode });
   return ok({});

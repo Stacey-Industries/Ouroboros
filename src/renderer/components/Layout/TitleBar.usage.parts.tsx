@@ -1,6 +1,10 @@
 import React from 'react';
 
-import type { ClaudeUsageWindow, CodexUsageWindow, UsageWindowSnapshot } from '../../types/electron';
+import type {
+  ClaudeUsageWindow,
+  CodexUsageWindow,
+  UsageWindowSnapshot,
+} from '../../types/electron';
 import { dropdownStyle, separatorStyle } from './TitleBar.navbar';
 
 const usageDropdownStyle: React.CSSProperties = {
@@ -185,12 +189,8 @@ function DropdownHeader({ fetchedAt }: { fetchedAt: number | null }): React.Reac
   return (
     <div className="flex items-center justify-between px-3 pb-2">
       <div>
-        <div className="text-[11px] font-semibold text-text-semantic-primary">
-          Usage Windows
-        </div>
-        <div className="text-[9px] text-text-semantic-faint">
-          Rolling rate limit remaining
-        </div>
+        <div className="text-[11px] font-semibold text-text-semantic-primary">Usage Windows</div>
+        <div className="text-[9px] text-text-semantic-faint">Rolling rate limit remaining</div>
       </div>
       {fetchedAt !== null && (
         <span
@@ -221,6 +221,26 @@ function LoadingOrError({
   return <div className="px-3 py-4 text-[11px] text-status-error">{error}</div>;
 }
 
+function UsageDropdownContent({
+  snapshot,
+  isLoading,
+  error,
+}: {
+  snapshot: UsageWindowSnapshot | null;
+  isLoading: boolean;
+  error: string | null;
+}): React.ReactElement {
+  if (!snapshot) return <LoadingOrError isLoading={isLoading} error={error} />;
+  return (
+    <>
+      <ClaudeSection snapshot={snapshot} />
+      <div style={separatorStyle} />
+      <CodexSection snapshot={snapshot} />
+      <div className="px-3 pt-2 text-[9px] text-text-semantic-faint">Auto-refreshes every 10s</div>
+    </>
+  );
+}
+
 export function UsageDropdown({
   snapshot,
   isLoading,
@@ -236,9 +256,7 @@ export function UsageDropdown({
   alignRight?: boolean;
   dropdownRef?: React.Ref<HTMLDivElement>;
 }): React.ReactElement {
-  if (!anchorRect) {
-    return <></>;
-  }
+  if (!anchorRect) return <></>;
   return (
     <div
       ref={dropdownRef}
@@ -251,18 +269,7 @@ export function UsageDropdown({
       }}
     >
       <DropdownHeader fetchedAt={snapshot?.fetchedAt ?? null} />
-      {snapshot ? (
-        <>
-          <ClaudeSection snapshot={snapshot} />
-          <div style={separatorStyle} />
-          <CodexSection snapshot={snapshot} />
-          <div className="px-3 pt-2 text-[9px] text-text-semantic-faint">
-            Auto-refreshes every 10s
-          </div>
-        </>
-      ) : (
-        <LoadingOrError isLoading={isLoading} error={error} />
-      )}
+      <UsageDropdownContent snapshot={snapshot} isLoading={isLoading} error={error} />
     </div>
   );
 }

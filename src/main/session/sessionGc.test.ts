@@ -28,7 +28,7 @@ import path from 'node:path';
 
 import type { Session } from './session';
 import { makeSession } from './session';
-import { runSessionGc,SEVEN_DAYS_MS } from './sessionGc';
+import { runSessionGc, SEVEN_DAYS_MS } from './sessionGc';
 import type { SessionStore } from './sessionStore';
 import { getSessionStore, openSessionStore } from './sessionStore';
 import type { TrashAdaptor } from './sessionTrash';
@@ -39,7 +39,9 @@ function makeInMemoryStore(): SessionStore {
   const data: Session[] = [];
   return openSessionStore({
     read: () => [...data],
-    write: (sessions) => { data.splice(0, data.length, ...sessions); },
+    write: (sessions) => {
+      data.splice(0, data.length, ...sessions);
+    },
   });
 }
 
@@ -49,10 +51,16 @@ function makeMemTrashAdaptor(): TrashAdaptor & { store: Map<string, Session> } {
     trashDir: '/mock/session-trash',
     store,
     readJson: async (fp: string) => store.get(fp) ?? null,
-    writeJson: async (fp: string, s: Session) => { store.set(fp, s); },
-    deleteFile: async (fp: string) => { store.delete(fp); },
+    writeJson: async (fp: string, s: Session) => {
+      store.set(fp, s);
+    },
+    deleteFile: async (fp: string) => {
+      store.delete(fp);
+    },
     listFiles: async () => [...store.keys()],
-    ensureDir: async () => { /* no-op */ },
+    ensureDir: async () => {
+      /* no-op */
+    },
   };
 }
 

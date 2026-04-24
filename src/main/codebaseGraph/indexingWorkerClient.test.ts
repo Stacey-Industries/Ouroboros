@@ -6,29 +6,29 @@
  * 'error', progress callback invocation, and request queuing.
  */
 
-import { EventEmitter } from 'events'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EventEmitter } from 'events';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Worker mock ───────────────────────────────────────────────────────────────
 
 class MockWorker extends EventEmitter {
-  static lastInstance: MockWorker | null = null
-  postMessage = vi.fn()
-  terminate = vi.fn().mockResolvedValue(0)
+  static lastInstance: MockWorker | null = null;
+  postMessage = vi.fn();
+  terminate = vi.fn().mockResolvedValue(0);
 
   constructor() {
-    super()
-    MockWorker.lastInstance = this
+    super();
+    MockWorker.lastInstance = this;
   }
 }
 
 vi.mock('worker_threads', () => ({
   Worker: MockWorker,
-}))
+}));
 
 vi.mock('../logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-}))
+}));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ function makeResult() {
     errors: [] as string[],
     durationMs: 100,
     incremental: false,
-  }
+  };
 }
 
 function makeOptions(overrides = {}) {
@@ -51,55 +51,55 @@ function makeOptions(overrides = {}) {
     projectRoot: '/tmp/proj',
     projectName: 'proj',
     ...overrides,
-  }
+  };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('IndexingWorkerClient', () => {
-  let client: import('./indexingWorkerClient').IndexingWorkerClient
+  let client: import('./indexingWorkerClient').IndexingWorkerClient;
 
   beforeEach(async () => {
-    MockWorker.lastInstance = null
-    const mod = await import('./indexingWorkerClient')
-    client = new mod.IndexingWorkerClient()
-  })
+    MockWorker.lastInstance = null;
+    const mod = await import('./indexingWorkerClient');
+    client = new mod.IndexingWorkerClient();
+  });
 
-  afterEach(() => {
-    client.dispose()
-    vi.resetModules()
-  })
+  afterEach(async () => {
+    await client.dispose();
+    vi.resetModules();
+  });
 
   it('resolves promise when worker posts a result message', async () => {
-    const promise = client.runIndex(makeOptions())
+    const promise = client.runIndex(makeOptions());
 
-    const worker = MockWorker.lastInstance!
-    expect(worker.postMessage).toHaveBeenCalledOnce()
+    const worker = MockWorker.lastInstance!;
+    expect(worker.postMessage).toHaveBeenCalledOnce();
 
-    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string }
-    worker.emit('message', { type: 'result', requestId, result: makeResult() })
+    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string };
+    worker.emit('message', { type: 'result', requestId, result: makeResult() });
 
-    const result = await promise
-    expect(result.success).toBe(true)
-    expect(result.filesIndexed).toBe(5)
-  })
+    const result = await promise;
+    expect(result.success).toBe(true);
+    expect(result.filesIndexed).toBe(5);
+  });
 
   it('rejects promise when worker posts an error message', async () => {
-    const promise = client.runIndex(makeOptions())
+    const promise = client.runIndex(makeOptions());
 
-    const worker = MockWorker.lastInstance!
-    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string }
-    worker.emit('message', { type: 'error', requestId, message: 'parse failed' })
+    const worker = MockWorker.lastInstance!;
+    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string };
+    worker.emit('message', { type: 'error', requestId, message: 'parse failed' });
 
-    await expect(promise).rejects.toThrow('parse failed')
-  })
+    await expect(promise).rejects.toThrow('parse failed');
+  });
 
   it('invokes onProgress callback for progress messages', async () => {
-    const onProgress = vi.fn()
-    const promise = client.runIndex(makeOptions({ onProgress }))
+    const onProgress = vi.fn();
+    const promise = client.runIndex(makeOptions({ onProgress }));
 
-    const worker = MockWorker.lastInstance!
-    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string }
+    const worker = MockWorker.lastInstance!;
+    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string };
 
     const progress = {
       phase: 'parsing',
@@ -110,81 +110,103 @@ describe('IndexingWorkerClient', () => {
       errors: [],
       startedAt: Date.now(),
       elapsedMs: 50,
-    }
-    worker.emit('message', { type: 'progress', requestId, progress })
-    expect(onProgress).toHaveBeenCalledWith(progress)
+    };
+    worker.emit('message', { type: 'progress', requestId, progress });
+    expect(onProgress).toHaveBeenCalledWith(progress);
 
     // resolve so the test doesn't hang
-    worker.emit('message', { type: 'result', requestId, result: makeResult() })
-    await promise
-  })
+    worker.emit('message', { type: 'result', requestId, result: makeResult() });
+    await promise;
+  });
 
   it('queues a second request until first resolves', async () => {
-    const p1 = client.runIndex(makeOptions({ projectName: 'p1' }))
-    const p2 = client.runIndex(makeOptions({ projectName: 'p2' }))
+    const p1 = client.runIndex(makeOptions({ projectName: 'p1' }));
+    const p2 = client.runIndex(makeOptions({ projectName: 'p2' }));
 
-    const worker = MockWorker.lastInstance!
+    const worker = MockWorker.lastInstance!;
     // Only one postMessage call so far — second is queued
-    expect(worker.postMessage).toHaveBeenCalledTimes(1)
+    expect(worker.postMessage).toHaveBeenCalledTimes(1);
 
-    const req1 = worker.postMessage.mock.calls[0][0] as { requestId: string }
-    worker.emit('message', { type: 'result', requestId: req1.requestId, result: makeResult() })
-    await p1
+    const req1 = worker.postMessage.mock.calls[0][0] as { requestId: string };
+    worker.emit('message', { type: 'result', requestId: req1.requestId, result: makeResult() });
+    await p1;
 
     // Now the second request should have been dispatched
-    expect(worker.postMessage).toHaveBeenCalledTimes(2)
-    const req2 = worker.postMessage.mock.calls[1][0] as { requestId: string }
-    worker.emit('message', { type: 'result', requestId: req2.requestId, result: makeResult() })
-    await p2
-  })
+    expect(worker.postMessage).toHaveBeenCalledTimes(2);
+    const req2 = worker.postMessage.mock.calls[1][0] as { requestId: string };
+    worker.emit('message', { type: 'result', requestId: req2.requestId, result: makeResult() });
+    await p2;
+  });
 
   it('strips onProgress from the serialised options sent to worker', async () => {
-    const onProgress = vi.fn()
-    const promise = client.runIndex(makeOptions({ onProgress }))
+    const onProgress = vi.fn();
+    const promise = client.runIndex(makeOptions({ onProgress }));
 
-    const worker = MockWorker.lastInstance!
-    const msg = worker.postMessage.mock.calls[0][0] as { options: Record<string, unknown> }
-    expect('onProgress' in msg.options).toBe(false)
+    const worker = MockWorker.lastInstance!;
+    const msg = worker.postMessage.mock.calls[0][0] as { options: Record<string, unknown> };
+    expect('onProgress' in msg.options).toBe(false);
 
-    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string }
-    worker.emit('message', { type: 'result', requestId, result: makeResult() })
-    await promise
-  })
+    const { requestId } = worker.postMessage.mock.calls[0][0] as { requestId: string };
+    worker.emit('message', { type: 'result', requestId, result: makeResult() });
+    await promise;
+  });
 
   it('rejects all pending requests on worker error event', async () => {
-    const p1 = client.runIndex(makeOptions())
-    MockWorker.lastInstance!.emit('error', new Error('worker crashed'))
-    await expect(p1).rejects.toThrow('worker crashed')
-  })
+    const p1 = client.runIndex(makeOptions());
+    MockWorker.lastInstance!.emit('error', new Error('worker crashed'));
+    await expect(p1).rejects.toThrow('worker crashed');
+  });
 
   it('dispose rejects in-flight requests', async () => {
-    const p1 = client.runIndex(makeOptions())
-    client.dispose()
-    await expect(p1).rejects.toThrow('disposed')
-  })
-})
+    const p1 = client.runIndex(makeOptions());
+    await client.dispose();
+    await expect(p1).rejects.toThrow('disposed');
+  });
+
+  it('dispose waits for worker termination', async () => {
+    const p1 = client.runIndex(makeOptions());
+    let resolveTerminate: (value: number) => void = () => undefined;
+    const terminatePromise = new Promise<number>((resolve) => {
+      resolveTerminate = resolve;
+    });
+    MockWorker.lastInstance!.terminate.mockReturnValueOnce(terminatePromise);
+
+    let settled = false;
+    const disposePromise = client.dispose().then(() => {
+      settled = true;
+    });
+
+    await expect(p1).rejects.toThrow('disposed');
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    resolveTerminate(1);
+    await disposePromise;
+    expect(settled).toBe(true);
+  });
+});
 
 // ── Singleton helpers ─────────────────────────────────────────────────────────
 
 describe('module singleton', () => {
   afterEach(async () => {
-    const mod = await import('./indexingWorkerClient')
-    mod.disposeIndexingWorkerClient()
-    vi.resetModules()
-  })
+    const mod = await import('./indexingWorkerClient');
+    await mod.disposeIndexingWorkerClient();
+    vi.resetModules();
+  });
 
   it('getIndexingWorkerClient returns the same instance on repeated calls', async () => {
-    const mod = await import('./indexingWorkerClient')
-    const a = mod.getIndexingWorkerClient()
-    const b = mod.getIndexingWorkerClient()
-    expect(a).toBe(b)
-  })
+    const mod = await import('./indexingWorkerClient');
+    const a = mod.getIndexingWorkerClient();
+    const b = mod.getIndexingWorkerClient();
+    expect(a).toBe(b);
+  });
 
   it('disposeIndexingWorkerClient clears the singleton', async () => {
-    const mod = await import('./indexingWorkerClient')
-    const a = mod.getIndexingWorkerClient()
-    mod.disposeIndexingWorkerClient()
-    const b = mod.getIndexingWorkerClient()
-    expect(a).not.toBe(b)
-  })
-})
+    const mod = await import('./indexingWorkerClient');
+    const a = mod.getIndexingWorkerClient();
+    await mod.disposeIndexingWorkerClient();
+    const b = mod.getIndexingWorkerClient();
+    expect(a).not.toBe(b);
+  });
+});

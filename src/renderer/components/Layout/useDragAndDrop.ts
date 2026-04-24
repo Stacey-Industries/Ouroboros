@@ -85,7 +85,11 @@ const OVERLAY_CLASS = [
 
 function buildOverlay(activeId: string | number | null): React.ReactElement | null {
   if (activeId === null) return null;
-  return React.createElement('div', { className: OVERLAY_CLASS }, `Moving: ${slotLabelFromId(activeId)}`);
+  return React.createElement(
+    'div',
+    { className: OVERLAY_CLASS },
+    `Moving: ${slotLabelFromId(activeId)}`,
+  );
 }
 
 function useDragHandlers(

@@ -81,20 +81,28 @@ describe('Web mode (web-mode class present)', () => {
 
   it('updates to "connected" when the transport fires connected', () => {
     const { result } = renderHook(() => useWebConnectionState());
-    act(() => { capturedCallback?.('connected'); });
+    act(() => {
+      capturedCallback?.('connected');
+    });
     expect(result.current).toBe('connected');
   });
 
   it('updates to "disconnected" when the transport fires disconnected', () => {
     const { result } = renderHook(() => useWebConnectionState());
-    act(() => { capturedCallback?.('disconnected'); });
+    act(() => {
+      capturedCallback?.('disconnected');
+    });
     expect(result.current).toBe('disconnected');
   });
 
   it('updates to "connecting" when the transport fires connecting', () => {
     const { result } = renderHook(() => useWebConnectionState());
-    act(() => { capturedCallback?.('connected'); });
-    act(() => { capturedCallback?.('connecting'); });
+    act(() => {
+      capturedCallback?.('connected');
+    });
+    act(() => {
+      capturedCallback?.('connecting');
+    });
     expect(result.current).toBe('connecting');
   });
 

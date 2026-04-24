@@ -27,11 +27,17 @@ export interface IdePanelsProps {
 export function IdePanels(p: IdePanelsProps): React.ReactElement {
   return (
     <>
-      <SideChatDrawer isOpen={p.isDrawerOpen} onClose={() => p.setIsDrawerOpen(false)}
-        sideChats={p.sideChat.sideChats} activeSideChatId={p.sideChat.activeSideChatId}
-        onSelect={p.sideChat.setActive} onCloseTab={p.onCloseTab}
+      <SideChatDrawer
+        isOpen={p.isDrawerOpen}
+        onClose={() => p.setIsDrawerOpen(false)}
+        sideChats={p.sideChat.sideChats}
+        activeSideChatId={p.sideChat.activeSideChatId}
+        onSelect={p.sideChat.setActive}
+        onCloseTab={p.onCloseTab}
       />
-      {p.compareState && <BranchCompareModal compareState={p.compareState} onClose={p.closeCompare} />}
+      {p.compareState && (
+        <BranchCompareModal compareState={p.compareState} onClose={p.closeCompare} />
+      )}
     </>
   );
 }

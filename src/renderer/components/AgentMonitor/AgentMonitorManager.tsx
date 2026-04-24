@@ -220,10 +220,12 @@ function MonitorViewModeBar({
     >
       <ViewModeSelector
         value={monitorSettings.viewMode}
-        onChange={(mode) => void monitorSettings.updateSettings({
-          viewMode: mode,
-          inlineEventTypes: monitorSettings.inlineEventTypes,
-        })}
+        onChange={(mode) =>
+          void monitorSettings.updateSettings({
+            viewMode: mode,
+            inlineEventTypes: monitorSettings.inlineEventTypes,
+          })
+        }
       />
     </div>
   );

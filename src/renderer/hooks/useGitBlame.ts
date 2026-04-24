@@ -1,4 +1,4 @@
-import { useCallback,useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { BlameLine } from '../types/electron';
 
@@ -18,29 +18,26 @@ export interface UseGitBlameReturn {
 export function useGitBlame(
   projectRoot: string | null,
   filePath: string | null,
-  enabled: boolean
+  enabled: boolean,
 ): UseGitBlameReturn {
   const [blameLines, setBlameLines] = useState<BlameLine[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchBlame = useCallback(
-    async (root: string, fp: string) => {
-      setIsLoading(true);
-      try {
-        const result = await window.electronAPI.git.blame(root, fp);
-        if (result.success && result.lines) {
-          setBlameLines(result.lines);
-        } else {
-          setBlameLines([]);
-        }
-      } catch {
+  const fetchBlame = useCallback(async (root: string, fp: string) => {
+    setIsLoading(true);
+    try {
+      const result = await window.electronAPI.git.blame(root, fp);
+      if (result.success && result.lines) {
+        setBlameLines(result.lines);
+      } else {
         setBlameLines([]);
-      } finally {
-        setIsLoading(false);
       }
-    },
-    []
-  );
+    } catch {
+      setBlameLines([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled || !projectRoot || !filePath) {

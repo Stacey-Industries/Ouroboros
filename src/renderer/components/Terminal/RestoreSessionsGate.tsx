@@ -12,8 +12,7 @@ import { usePersistedTerminalSessions } from '../../hooks/usePersistedTerminalSe
 import { RestoreSessionsDialog } from './RestoreSessionsDialog';
 
 export function RestoreSessionsGate(): React.ReactElement | null {
-  const { sessions, isLoading, restore, restoreAll, discardAll } =
-    usePersistedTerminalSessions();
+  const { sessions, isLoading, restore, restoreAll, discardAll } = usePersistedTerminalSessions();
   const [dismissed, setDismissed] = useState(false);
 
   if (isLoading || dismissed || sessions.length === 0) return null;

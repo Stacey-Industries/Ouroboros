@@ -53,9 +53,7 @@ describe('McpChatToggles — empty state', () => {
   it('shows empty message when no servers are configured', async () => {
     stubElectronApi([]);
     render(<McpChatToggles sessionId="s1" onChange={() => undefined} />);
-    await waitFor(() =>
-      expect(screen.getByText(/No MCP servers/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/No MCP servers/i)).toBeTruthy());
   });
 });
 
@@ -81,9 +79,13 @@ describe('McpChatToggles — initial state', () => {
       />,
     );
     await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(3));
-    const c7cb = screen.getByText('context7').closest('label')
+    const c7cb = screen
+      .getByText('context7')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
-    const fsCb = screen.getByText('filesystem').closest('label')
+    const fsCb = screen
+      .getByText('filesystem')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     expect(c7cb?.checked).toBe(true);
     expect(fsCb?.checked).toBe(false);
@@ -92,13 +94,15 @@ describe('McpChatToggles — initial state', () => {
   it('uses profile mcpServers when no session overrides present', async () => {
     stubElectronApi(['context7', 'filesystem']);
     const profile = makeProfile(['filesystem']);
-    render(
-      <McpChatToggles sessionId="s1" profile={profile} onChange={() => undefined} />,
-    );
+    render(<McpChatToggles sessionId="s1" profile={profile} onChange={() => undefined} />);
     await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(2));
-    const fsCb = screen.getByText('filesystem').closest('label')
+    const fsCb = screen
+      .getByText('filesystem')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
-    const c7cb = screen.getByText('context7').closest('label')
+    const c7cb = screen
+      .getByText('context7')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     expect(fsCb?.checked).toBe(true);
     expect(c7cb?.checked).toBe(false);
@@ -125,7 +129,9 @@ describe('McpChatToggles — toggle behaviour', () => {
       />,
     );
     await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(2));
-    const c7cb = screen.getByText('context7').closest('label')
+    const c7cb = screen
+      .getByText('context7')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(c7cb);
     expect(onChange).toHaveBeenCalledWith(['filesystem']);
@@ -135,20 +141,14 @@ describe('McpChatToggles — toggle behaviour', () => {
   it('adds a server when toggled on', async () => {
     stubElectronApi(['context7', 'filesystem']);
     const onChange = vi.fn();
-    render(
-      <McpChatToggles
-        sessionId="s1"
-        mcpServerOverrides={['context7']}
-        onChange={onChange}
-      />,
-    );
+    render(<McpChatToggles sessionId="s1" mcpServerOverrides={['context7']} onChange={onChange} />);
     await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(2));
-    const fsCb = screen.getByText('filesystem').closest('label')
+    const fsCb = screen
+      .getByText('filesystem')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(fsCb);
-    expect(onChange).toHaveBeenCalledWith(
-      expect.arrayContaining(['context7', 'filesystem']),
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.arrayContaining(['context7', 'filesystem']));
     expect(mockSetMcpOverrides).toHaveBeenCalledWith(
       's1',
       expect.arrayContaining(['context7', 'filesystem']),
@@ -165,7 +165,9 @@ describe('McpChatToggles — toggle behaviour', () => {
       />,
     );
     await waitFor(() => expect(screen.getAllByRole('checkbox')).toHaveLength(1));
-    const cb = screen.getByText('github').closest('label')
+    const cb = screen
+      .getByText('github')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(cb);
     expect(mockSetMcpOverrides).toHaveBeenCalledWith('session-xyz', []);

@@ -70,12 +70,7 @@ export const TABS: Tab[] = [
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
 
-export type MainTabId =
-  | 'account'
-  | 'appearance'
-  | 'terminalEditor'
-  | 'aiAgents'
-  | 'general';
+export type MainTabId = 'account' | 'appearance' | 'terminalEditor' | 'aiAgents' | 'general';
 
 export interface MainTab {
   id: MainTabId;
@@ -84,16 +79,39 @@ export interface MainTab {
 }
 
 export const MAIN_TABS: MainTab[] = [
-  { id: 'account',        label: 'Account',           subtabs: ['accounts', 'providers'] },
-  { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
-  { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
-  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'agentProfiles', 'codemode', 'contextDocs', 'workspaceReadList', 'research', 'systemPrompt', 'promptDiff', 'usageExport', 'awesomeRef'] },
-  { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance', 'mobileAccess', 'platform'] },
+  { id: 'account', label: 'Account', subtabs: ['accounts', 'providers'] },
+  { id: 'appearance', label: 'Appearance', subtabs: ['appearance', 'fonts', 'profiles'] },
+  {
+    id: 'terminalEditor',
+    label: 'Terminal & Editor',
+    subtabs: ['terminal', 'keybindings', 'files'],
+  },
+  {
+    id: 'aiAgents',
+    label: 'AI Agents',
+    subtabs: [
+      'agent',
+      'claude',
+      'codex',
+      'agentProfiles',
+      'codemode',
+      'contextDocs',
+      'workspaceReadList',
+      'research',
+      'systemPrompt',
+      'promptDiff',
+      'usageExport',
+      'awesomeRef',
+    ],
+  },
+  {
+    id: 'general',
+    label: 'General',
+    subtabs: ['general', 'hooks', 'integrations', 'performance', 'mobileAccess', 'platform'],
+  },
 ];
 
-const SUBTAB_LABELS = new Map<TabId, string>(
-  TABS.map((t) => [t.id, t.label]),
-);
+const SUBTAB_LABELS = new Map<TabId, string>(TABS.map((t) => [t.id, t.label]));
 
 /** Look up the display label for a subtab. */
 export function getSubTabLabel(sub: TabId): string {

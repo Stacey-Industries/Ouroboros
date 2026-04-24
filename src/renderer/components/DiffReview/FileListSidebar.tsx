@@ -5,7 +5,7 @@
  * decision progress. Click to select and scroll to that file in the main panel.
  */
 
-import React, { type CSSProperties,memo, useState } from 'react';
+import React, { type CSSProperties, memo, useState } from 'react';
 
 import type { ReviewFile } from './types';
 
@@ -90,10 +90,14 @@ const actionRowStyle: CSSProperties = {
 
 function statusBadge(status: ReviewFile['status']): { label: string; color: string } {
   switch (status) {
-    case 'added': return { label: 'A', color: 'var(--status-success)' };
-    case 'deleted': return { label: 'D', color: 'var(--status-error)' };
-    case 'renamed': return { label: 'R', color: 'var(--interactive-accent)' };
-    default: return { label: 'M', color: 'var(--status-warning)' };
+    case 'added':
+      return { label: 'A', color: 'var(--status-success)' };
+    case 'deleted':
+      return { label: 'D', color: 'var(--status-error)' };
+    case 'renamed':
+      return { label: 'R', color: 'var(--interactive-accent)' };
+    default:
+      return { label: 'M', color: 'var(--status-warning)' };
   }
 }
 
@@ -110,7 +114,11 @@ function fileItemStyle(isSelected: boolean, hovered: boolean): CSSProperties {
     gap: '2px',
     padding: '6px 8px',
     cursor: 'pointer',
-    backgroundColor: isSelected ? 'var(--interactive-accent-subtle)' : hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
+    backgroundColor: isSelected
+      ? 'var(--interactive-accent-subtle)'
+      : hovered
+        ? 'rgba(255,255,255,0.03)'
+        : 'transparent',
     borderLeft: isSelected ? '2px solid var(--interactive-accent)' : '2px solid transparent',
     borderBottom: '1px solid var(--border-subtle)',
     transition: 'background-color 0.1s',
@@ -159,21 +167,35 @@ function FileListSidebarHeader({ count }: FileListSidebarHeaderProps): React.Rea
   return <div style={headerStyle}>Changed Files ({count})</div>;
 }
 
-function FileListItemSummary({ allDecided, file, progress }: FileListItemSummaryProps): React.ReactElement {
+function FileListItemSummary({
+  allDecided,
+  file,
+  progress,
+}: FileListItemSummaryProps): React.ReactElement {
   const badge = statusBadge(file.status);
 
   return (
     <div style={fileItemSummaryStyle}>
       <span style={badgeStyle(badge.color)}>{badge.label}</span>
-      <span style={filePathStyle} title={file.relativePath}>{file.relativePath}</span>
-      <span style={progressStyle(allDecided)}>{progress.decided}/{progress.total}</span>
+      <span style={filePathStyle} title={file.relativePath}>
+        {file.relativePath}
+      </span>
+      <span style={progressStyle(allDecided)}>
+        {progress.decided}/{progress.total}
+      </span>
     </div>
   );
 }
 
 function QuickActionButton({ color, label, onClick }: QuickActionButtonProps): React.ReactElement {
   return (
-    <button onClick={(event) => { event.stopPropagation(); onClick(); }} style={actionButtonStyle(color)}>
+    <button
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      style={actionButtonStyle(color)}
+    >
       {label}
     </button>
   );
@@ -186,8 +208,16 @@ function FileListItemActions({
 }: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
   return (
     <div style={actionRowStyle}>
-      <QuickActionButton color="var(--status-success)" label="Accept All" onClick={() => onAcceptAll(index)} />
-      <QuickActionButton color="var(--status-error)" label="Reject All" onClick={() => onRejectAll(index)} />
+      <QuickActionButton
+        color="var(--status-success)"
+        label="Accept All"
+        onClick={() => onAcceptAll(index)}
+      />
+      <QuickActionButton
+        color="var(--status-error)"
+        label="Reject All"
+        onClick={() => onRejectAll(index)}
+      />
     </div>
   );
 }
@@ -212,7 +242,9 @@ function FileListItem({
       onMouseLeave={() => setHovered(false)}
     >
       <FileListItemSummary allDecided={allDecided} file={file} progress={progress} />
-      {isSelected && !allDecided ? <FileListItemActions index={index} onAcceptAll={onAcceptAll} onRejectAll={onRejectAll} /> : null}
+      {isSelected && !allDecided ? (
+        <FileListItemActions index={index} onAcceptAll={onAcceptAll} onRejectAll={onRejectAll} />
+      ) : null}
     </div>
   );
 }

@@ -96,7 +96,12 @@ describe('DispatchScreen.styles — no hardcoded hex/rgb colors in constants', (
 
 describe('statusPillStyle', () => {
   const statuses: DispatchJobStatus[] = [
-    'queued', 'starting', 'running', 'completed', 'failed', 'canceled',
+    'queued',
+    'starting',
+    'running',
+    'completed',
+    'failed',
+    'canceled',
   ];
 
   it.each(statuses)('returns an object for status "%s"', (status) => {

@@ -11,11 +11,7 @@ const ROOT_FOOTER_HINTS = [
   '\u2192 open submenu',
 ];
 
-const SUBMENU_FOOTER_HINTS = [
-  '\u2191\u2193 navigate',
-  '\u21b5 execute',
-  'esc back',
-];
+const SUBMENU_FOOTER_HINTS = ['\u2191\u2193 navigate', '\u21b5 execute', 'esc back'];
 
 type BuildCommandPaletteModelOptions = {
   actions: CommandPaletteActions;

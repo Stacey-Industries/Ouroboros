@@ -48,7 +48,9 @@ export function ProviderList({
 function AnthropicRow(): React.ReactElement {
   return (
     <div style={providerRowStyle}>
-      <span className="text-text-semantic-primary" style={providerNameStyle}>{BUILTIN_ANTHROPIC.name}</span>
+      <span className="text-text-semantic-primary" style={providerNameStyle}>
+        {BUILTIN_ANTHROPIC.name}
+      </span>
       <span className="text-text-semantic-muted" style={providerBuiltInStyle}>
         (Built-in — uses CLI auth)
       </span>
@@ -72,8 +74,12 @@ function UserProviderRow({
 }: UserProviderRowProps): React.ReactElement {
   return (
     <div style={providerRowStyle}>
-      <span className="text-text-semantic-primary" style={providerNameStyle}>{provider.name}</span>
-      <span className="text-text-semantic-muted" style={providerUrlStyle}>{provider.baseUrl}</span>
+      <span className="text-text-semantic-primary" style={providerNameStyle}>
+        {provider.name}
+      </span>
+      <span className="text-text-semantic-muted" style={providerUrlStyle}>
+        {provider.baseUrl}
+      </span>
       <SwitchControl
         checked={provider.enabled}
         label={`Toggle ${provider.name}`}

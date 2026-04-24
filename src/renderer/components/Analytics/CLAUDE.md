@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-The existing CLAUDE.md is missing `RouterAnalyticsPanel.tsx`, `AnalyticsDashboardSessions.detail.tsx`, and the `useRouterStats` data path. Here's the corrected content:
-
----
-
 # Analytics — Claude Code Session Metrics Dashboard
 
 Read-only dashboard that visualizes aggregate and per-session metrics from Claude Code agent runs, plus model-router decision telemetry. Mounted in `InnerAppLayout` as a sidebar/panel view.
@@ -49,6 +45,7 @@ All session data is derived — no direct IPC calls from this directory. Types (
 - **Session table hover uses inline `onMouseEnter/onMouseLeave`** style manipulation rather than Tailwind hover classes — `color-mix()` for the selected-row highlight requires CSS variable support that Tailwind hover variants can't provide.
 - **MCP tool colors**: any tool name starting with `mcp__` falls back to `#94a3b8` (slate-400) since the `TOOL_COLORS` map only covers Claude Code's built-in tools.
 - **`RouterAnalyticsPanel` renders `null`** when `stats` is null or `totalDecisions === 0` — safe to mount unconditionally.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

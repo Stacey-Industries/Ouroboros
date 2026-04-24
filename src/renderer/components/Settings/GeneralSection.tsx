@@ -16,7 +16,11 @@ interface GeneralSectionProps {
   onImport?: (imported: AppConfig) => void;
 }
 
-export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProps): React.ReactElement {
+export function GeneralSection({
+  draft,
+  onChange,
+  onImport,
+}: GeneralSectionProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <DefaultProjectFolder draft={draft} onChange={onChange} />

@@ -29,10 +29,7 @@ export interface PinnedContextStore {
    * Add a new pin. Generates id + addedAt. Returns the created item, or null
    * if the cap is hit and no dismissed items are available to replace.
    */
-  add(
-    sessionId: string,
-    item: Omit<PinnedContextItem, 'id' | 'addedAt'>,
-  ): PinnedContextItem | null;
+  add(sessionId: string, item: Omit<PinnedContextItem, 'id' | 'addedAt'>): PinnedContextItem | null;
 
   /** Hard-remove a pin by id (cannot be undone within the session). */
   remove(sessionId: string, itemId: string): void;
@@ -54,9 +51,15 @@ export interface PinnedContextStoreDeps {
 
 function getSession(deps: PinnedContextStoreDeps, sessionId: string): Session | null {
   const store = deps.getStore();
-  if (!store) { log.warn('[pinnedContextStore] sessionStore not initialised'); return null; }
+  if (!store) {
+    log.warn('[pinnedContextStore] sessionStore not initialised');
+    return null;
+  }
   const session = store.getById(sessionId);
-  if (!session) { log.warn('[pinnedContextStore] session not found:', sessionId); return null; }
+  if (!session) {
+    log.warn('[pinnedContextStore] session not found:', sessionId);
+    return null;
+  }
   return session;
 }
 
@@ -74,7 +77,10 @@ function oldestDismissedIndex(pins: PinnedContextItem[]): number {
   for (let i = 0; i < pins.length; i++) {
     // eslint-disable-next-line security/detect-object-injection
     const pin = pins[i];
-    if (pin.dismissed && pin.addedAt < oldest) { oldest = pin.addedAt; idx = i; }
+    if (pin.dismissed && pin.addedAt < oldest) {
+      oldest = pin.addedAt;
+      idx = i;
+    }
   }
   return idx;
 }
@@ -130,7 +136,10 @@ function applyDismiss(deps: PinnedContextStoreDeps, sessionId: string, itemId: s
   if (!session) return;
   const pins = getPins(session);
   const idx = pins.findIndex((p) => p.id === itemId);
-  if (idx < 0) { log.warn('[pinnedContextStore] dismiss: item not found', itemId); return; }
+  if (idx < 0) {
+    log.warn('[pinnedContextStore] dismiss: item not found', itemId);
+    return;
+  }
   const updated = pins.map((p, i) => (i === idx ? { ...p, dismissed: true } : p));
   deps.getStore()!.upsert({ ...session, pinnedContext: updated });
 }

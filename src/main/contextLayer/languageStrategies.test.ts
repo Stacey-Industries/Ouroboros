@@ -29,9 +29,7 @@ describe('resolveRelativePath', () => {
   });
 
   it('resolves a nested sub-path', () => {
-    expect(resolveRelativePath('src/app.ts', './components/Button')).toBe(
-      'src/components/Button',
-    );
+    expect(resolveRelativePath('src/app.ts', './components/Button')).toBe('src/components/Button');
   });
 
   it('handles current-dir segment (.)', () => {
@@ -127,7 +125,19 @@ describe('getStrategyForLanguage', () => {
 describe('getAllImportableExtensions', () => {
   it('includes all major languages', () => {
     const exts = getAllImportableExtensions();
-    for (const ext of ['.ts', '.tsx', '.js', '.py', '.go', '.rs', '.java', '.kt', '.cs', '.rb', '.php']) {
+    for (const ext of [
+      '.ts',
+      '.tsx',
+      '.js',
+      '.py',
+      '.go',
+      '.rs',
+      '.java',
+      '.kt',
+      '.cs',
+      '.rb',
+      '.php',
+    ]) {
       expect(exts.has(ext)).toBe(true);
     }
   });
@@ -315,16 +325,12 @@ describe('Python — resolveImport', () => {
 
   it('resolves an absolute module path (dot-separated → slash-separated)', () => {
     const known = new Set(['mypackage/utils.py']);
-    expect(strategy.resolveImport('mypackage.utils', 'main.py', known)).toBe(
-      'mypackage/utils.py',
-    );
+    expect(strategy.resolveImport('mypackage.utils', 'main.py', known)).toBe('mypackage/utils.py');
   });
 
   it('resolves an absolute import to a package __init__.py', () => {
     const known = new Set(['mypackage/__init__.py']);
-    expect(strategy.resolveImport('mypackage', 'main.py', known)).toBe(
-      'mypackage/__init__.py',
-    );
+    expect(strategy.resolveImport('mypackage', 'main.py', known)).toBe('mypackage/__init__.py');
   });
 
   it('resolves a single-dot relative import', () => {
@@ -641,9 +647,7 @@ describe('C# — resolveImport', () => {
 
   it('resolves a namespace to a .cs file', () => {
     const known = new Set(['src/MyApp/Utils.cs']);
-    expect(strategy.resolveImport('MyApp.Utils', 'src/Main.cs', known)).toBe(
-      'src/MyApp/Utils.cs',
-    );
+    expect(strategy.resolveImport('MyApp.Utils', 'src/Main.cs', known)).toBe('src/MyApp/Utils.cs');
   });
 });
 
@@ -671,11 +675,7 @@ describe('PHP — resolveImport', () => {
 
   it('resolves a use: namespace (backslash → forward slash)', () => {
     const known = new Set(['src/App/Services/UserService.php']);
-    const result = strategy.resolveImport(
-      'use:App\\Services\\UserService',
-      'src/index.php',
-      known,
-    );
+    const result = strategy.resolveImport('use:App\\Services\\UserService', 'src/index.php', known);
     expect(result).toBe('src/App/Services/UserService.php');
   });
 });

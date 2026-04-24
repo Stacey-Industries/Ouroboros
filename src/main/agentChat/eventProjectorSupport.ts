@@ -1,5 +1,8 @@
 import type { TaskResult, TaskSessionRecord, VerificationSummary } from '../orchestration/types';
-import { buildAgentChatOrchestrationLink, buildAssistantMessageId } from './chatOrchestrationBridgeSupport';
+import {
+  buildAgentChatOrchestrationLink,
+  buildAssistantMessageId,
+} from './chatOrchestrationBridgeSupport';
 import {
   projectProviderFailureToAssistantMessage,
   projectProviderResultToAssistantMessage,

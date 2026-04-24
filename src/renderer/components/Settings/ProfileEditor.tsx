@@ -35,8 +35,15 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const ALL_TOOLS = [
-  'Read', 'Write', 'Edit', 'Bash', 'Grep', 'Glob',
-  'Task', 'WebSearch', 'MultiEdit',
+  'Read',
+  'Write',
+  'Edit',
+  'Bash',
+  'Grep',
+  'Glob',
+  'Task',
+  'WebSearch',
+  'MultiEdit',
 ] as const;
 
 const EFFORT_OPTIONS: Array<{ value: EffortLevel; label: string }> = [
@@ -79,12 +86,15 @@ function buildInitial(profile: Profile | null): Partial<Profile> {
   return { ...profile };
 }
 
-interface McpEntry { name: string }
+interface McpEntry {
+  name: string;
+}
 
 function useMcpServers(): string[] {
   const [names, setNames] = useState<string[]>([]);
   useEffect(() => {
-    window.electronAPI.mcp.getServers()
+    window.electronAPI.mcp
+      .getServers()
       .then((res) => {
         if (res.success && res.servers) {
           setNames(res.servers.map((s: McpEntry) => s.name));
@@ -106,7 +116,9 @@ function FieldRow({
 }): React.ReactElement {
   return (
     <div style={fieldRowStyle}>
-      <label className="text-text-semantic-secondary" style={labelStyle}>{label}</label>
+      <label className="text-text-semantic-secondary" style={labelStyle}>
+        {label}
+      </label>
       <div style={{ flex: 1 }}>{children}</div>
     </div>
   );
@@ -128,7 +140,9 @@ function SegmentedControl<T extends string>({
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={value === opt.value ? 'text-text-semantic-primary' : 'text-text-semantic-muted'}
+          className={
+            value === opt.value ? 'text-text-semantic-primary' : 'text-text-semantic-muted'
+          }
           style={value === opt.value ? segmentActiveStyle : segmentStyle}
         >
           {opt.label}
@@ -225,12 +239,19 @@ function useEditorState(profile: Profile | null, onSave: (p: Profile) => void): 
   }
 
   const handleSave = useCallback(async () => {
-    if (!draft.name?.trim()) { setError('Name is required.'); return; }
+    if (!draft.name?.trim()) {
+      setError('Name is required.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const result = await window.electronAPI.profileCrud.upsert(draft as Profile);
-      if (!result.success) { setError(result.error ?? 'Save failed'); setSaving(false); return; }
+      if (!result.success) {
+        setError(result.error ?? 'Save failed');
+        setSaving(false);
+        return;
+      }
       if (result.profile) onSave(result.profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -250,50 +271,93 @@ interface FieldsProps {
   set: <K extends keyof Profile>(key: K, value: Profile[K]) => void;
 }
 
-function ProfileEditorTextFields({ draft, set }: Omit<FieldsProps, 'mcpServers' | 'multiProvider'>): React.ReactElement {
+function ProfileEditorTextFields({
+  draft,
+  set,
+}: Omit<FieldsProps, 'mcpServers' | 'multiProvider'>): React.ReactElement {
   return (
     <>
       <FieldRow label="Name">
-        <input type="text" value={draft.name ?? ''} onChange={(e) => set('name', e.target.value)}
-          placeholder="Profile name" className="text-text-semantic-primary"
-          style={inputStyle} autoComplete="off" />
+        <input
+          type="text"
+          value={draft.name ?? ''}
+          onChange={(e) => set('name', e.target.value)}
+          placeholder="Profile name"
+          className="text-text-semantic-primary"
+          style={inputStyle}
+          autoComplete="off"
+        />
       </FieldRow>
       <FieldRow label="Description">
-        <input type="text" value={draft.description ?? ''} onChange={(e) => set('description', e.target.value)}
-          placeholder="Optional description" className="text-text-semantic-secondary" style={inputStyle} />
+        <input
+          type="text"
+          value={draft.description ?? ''}
+          onChange={(e) => set('description', e.target.value)}
+          placeholder="Optional description"
+          className="text-text-semantic-secondary"
+          style={inputStyle}
+        />
       </FieldRow>
       <FieldRow label="Model">
-        <input type="text" value={draft.model ?? ''} onChange={(e) => set('model', e.target.value || undefined)}
+        <input
+          type="text"
+          value={draft.model ?? ''}
+          onChange={(e) => set('model', e.target.value || undefined)}
           placeholder="e.g. claude-sonnet-4-6 (leave blank for default)"
-          className="text-text-semantic-secondary" style={inputStyle} />
+          className="text-text-semantic-secondary"
+          style={inputStyle}
+        />
       </FieldRow>
       <FieldRow label="Effort">
-        <SegmentedControl options={EFFORT_OPTIONS} value={draft.effort} onChange={(v) => set('effort', v)} />
+        <SegmentedControl
+          options={EFFORT_OPTIONS}
+          value={draft.effort}
+          onChange={(v) => set('effort', v)}
+        />
       </FieldRow>
       <FieldRow label="Permission">
-        <SegmentedControl options={PERMISSION_OPTIONS} value={draft.permissionMode} onChange={(v) => set('permissionMode', v)} />
+        <SegmentedControl
+          options={PERMISSION_OPTIONS}
+          value={draft.permissionMode}
+          onChange={(v) => set('permissionMode', v)}
+        />
       </FieldRow>
     </>
   );
 }
 
-function ProfileEditorFields({ draft, mcpServers, multiProvider, set }: FieldsProps): React.ReactElement {
+function ProfileEditorFields({
+  draft,
+  mcpServers,
+  multiProvider,
+  set,
+}: FieldsProps): React.ReactElement {
   return (
     <>
       <ProfileEditorTextFields draft={draft} set={set} />
       <FieldRow label="System prompt">
-        <textarea value={draft.systemPromptAddendum ?? ''} rows={3}
+        <textarea
+          value={draft.systemPromptAddendum ?? ''}
+          rows={3}
           onChange={(e) => set('systemPromptAddendum', e.target.value || undefined)}
           placeholder="Optional prompt addendum appended to system prompt"
-          className="text-text-semantic-secondary" style={textareaStyle} />
+          className="text-text-semantic-secondary"
+          style={textareaStyle}
+        />
       </FieldRow>
       <FieldRow label="Tools">
-        <ToolsChecklist enabled={draft.enabledTools} onChange={(tools) => set('enabledTools', tools)} />
+        <ToolsChecklist
+          enabled={draft.enabledTools}
+          onChange={(tools) => set('enabledTools', tools)}
+        />
       </FieldRow>
       {mcpServers.length > 0 && (
         <FieldRow label="MCP servers">
-          <McpChecklist servers={mcpServers} enabled={draft.mcpServers}
-            onChange={(servers) => set('mcpServers', servers)} />
+          <McpChecklist
+            servers={mcpServers}
+            enabled={draft.mcpServers}
+            onChange={(servers) => set('mcpServers', servers)}
+          />
         </FieldRow>
       )}
       {multiProvider && (
@@ -310,7 +374,11 @@ function ProfileEditorFields({ draft, mcpServers, multiProvider, set }: FieldsPr
 
 // ─── ProfileEditor ────────────────────────────────────────────────────────────
 
-export function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps): React.ReactElement {
+export function ProfileEditor({
+  profile,
+  onSave,
+  onCancel,
+}: ProfileEditorProps): React.ReactElement {
   const { draft, saving, error, set, handleSave } = useEditorState(profile, onSave);
   const mcpServers = useMcpServers();
   const multiProvider = useMultiProvider();
@@ -322,20 +390,37 @@ export function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps)
       <div style={editorTitleStyle} className="text-text-semantic-primary">
         {profile ? `Edit "${profile.name}"` : 'New Profile'}
       </div>
-      {error && <div className="text-status-error" style={errorStyle}>{error}</div>}
-      <ProfileEditorFields draft={draft} mcpServers={mcpServers} multiProvider={multiProvider} set={set} />
+      {error && (
+        <div className="text-status-error" style={errorStyle}>
+          {error}
+        </div>
+      )}
+      <ProfileEditorFields
+        draft={draft}
+        mcpServers={mcpServers}
+        multiProvider={multiProvider}
+        set={set}
+      />
       <LintWarnings lints={lints} />
       <div style={footerStyle}>
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="text-text-semantic-muted" style={cancelBtnStyle}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+          className="text-text-semantic-muted"
+          style={cancelBtnStyle}
+        >
           Cancel
         </button>
-        <button type="button" onClick={() => void handleSave()} disabled={!canSave}
-          style={saveBtnStyle(canSave)}>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!canSave}
+          style={saveBtnStyle(canSave)}
+        >
           {saving ? 'Saving…' : 'Save profile'}
         </button>
       </div>
     </div>
   );
 }
-

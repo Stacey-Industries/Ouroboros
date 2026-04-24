@@ -22,11 +22,7 @@ export interface FolderStore {
   delete(id: string): void;
   addSession(folderId: string, sessionId: string): void;
   removeSession(folderId: string, sessionId: string): void;
-  moveSessionBetweenFolders(
-    fromId: string | null,
-    toId: string | null,
-    sessionId: string,
-  ): void;
+  moveSessionBetweenFolders(fromId: string | null, toId: string | null, sessionId: string): void;
   getFolderForSession(sessionId: string): SessionFolder | null;
 }
 
@@ -52,11 +48,7 @@ function applyDelete(adaptor: FolderStoreAdaptor, id: string): void {
   adaptor.write(readSafe(adaptor).filter((f) => f.id !== id));
 }
 
-function applyAddSession(
-  adaptor: FolderStoreAdaptor,
-  folderId: string,
-  sessionId: string,
-): void {
+function applyAddSession(adaptor: FolderStoreAdaptor, folderId: string, sessionId: string): void {
   const all = readSafe(adaptor);
   const idx = all.findIndex((f) => f.id === folderId);
   if (idx < 0) {

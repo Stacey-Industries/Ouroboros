@@ -39,34 +39,102 @@ function getImageAreaStyle(zoomMode: ZoomMode, isPanning: boolean): React.CSSPro
   };
 }
 
-function ImageTransformLayer({ fileUrl, filePath, imgRef, onLoad, onError, imgStyle, panOffset }: Pick<ImageViewportProps, 'fileUrl' | 'filePath' | 'imgRef' | 'onLoad' | 'onError' | 'imgStyle' | 'panOffset'>): React.ReactElement { return <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, background: checkerboardBg, display: 'inline-block', lineHeight: 0 }}><img ref={imgRef as React.RefObject<HTMLImageElement | null>} src={fileUrl ?? undefined} alt={filePath} onLoad={onLoad} onError={onError} style={imgStyle} draggable={false} /></div>; }
-
-function ImageLoadError({ detail }: { detail: string }): React.ReactElement { return <div className="text-status-error" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontSize: '0.875rem', textAlign: 'center' }}><span style={{ fontSize: '1.5rem' }}>!</span><span>Failed to load image</span><span className="text-text-semantic-faint" style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>{detail}</span></div>; }
-
-export function ImageViewport({
+function ImageTransformLayer({
   fileUrl,
   filePath,
-  loadError,
-  fileError,
   imgRef,
   onLoad,
   onError,
-  zoomMode,
   imgStyle,
   panOffset,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerLeave,
-  onWheel,
-  isPanning,
-  containerRef,
-}: ImageViewportProps): React.ReactElement {
+}: Pick<
+  ImageViewportProps,
+  'fileUrl' | 'filePath' | 'imgRef' | 'onLoad' | 'onError' | 'imgStyle' | 'panOffset'
+>): React.ReactElement {
+  return (
+    <div
+      style={{
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+        background: checkerboardBg,
+        display: 'inline-block',
+        lineHeight: 0,
+      }}
+    >
+      <img
+        ref={imgRef as React.RefObject<HTMLImageElement | null>}
+        src={fileUrl ?? undefined}
+        alt={filePath}
+        onLoad={onLoad}
+        onError={onError}
+        style={imgStyle}
+        draggable={false}
+      />
+    </div>
+  );
+}
+
+function ImageLoadError({ detail }: { detail: string }): React.ReactElement {
+  return (
+    <div
+      className="text-status-error"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '0.875rem',
+        textAlign: 'center',
+      }}
+    >
+      <span style={{ fontSize: '1.5rem' }}>!</span>
+      <span>Failed to load image</span>
+      <span
+        className="text-text-semantic-faint"
+        style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}
+      >
+        {detail}
+      </span>
+    </div>
+  );
+}
+
+function ViewportInner(p: ImageViewportProps): React.ReactElement {
+  const { fileUrl, filePath, loadError, imgRef, onLoad, onError, imgStyle, panOffset } = p;
+  if (loadError || !fileUrl) return <ImageLoadError detail={fileUrl ?? ''} />;
+  return (
+    <ImageTransformLayer
+      fileUrl={fileUrl} filePath={filePath}
+      imgRef={imgRef} onLoad={onLoad} onError={onError}
+      imgStyle={imgStyle} panOffset={panOffset}
+    />
+  );
+}
+
+export function ImageViewport(p: ImageViewportProps): React.ReactElement {
+  const { fileError, zoomMode, isPanning, containerRef, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, onWheel } = p;
+  const containerStyle = { ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' as const };
   if (fileError) {
-    return <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }}><ImageLoadError detail={fileError} /></div>;
+    return (
+      <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={containerStyle}>
+        <ImageLoadError detail={fileError} />
+      </div>
+    );
   }
-  if (!fileUrl) {
-    return <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }}><div className="text-text-semantic-faint" style={{ fontSize: '0.875rem' }}>Loading image...</div></div>;
+  if (!p.fileUrl) {
+    return (
+      <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={containerStyle}>
+        <div className="text-text-semantic-faint" style={{ fontSize: '0.875rem' }}>Loading image...</div>
+      </div>
+    );
   }
-  return <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerLeave} onWheel={onWheel}>{loadError ? <ImageLoadError detail={fileUrl} /> : <ImageTransformLayer fileUrl={fileUrl} filePath={filePath} imgRef={imgRef} onLoad={onLoad} onError={onError} imgStyle={imgStyle} panOffset={panOffset} />}</div>;
+  return (
+    <div
+      ref={containerRef as React.RefObject<HTMLDivElement | null>}
+      style={containerStyle}
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp} onPointerLeave={onPointerLeave} onWheel={onWheel}
+    >
+      <ViewportInner {...p} />
+    </div>
+  );
 }

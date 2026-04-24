@@ -116,7 +116,9 @@ describe('tapPreToolResearch', () => {
   });
 
   it('does not throw when maybeFireResearchForPreTool throws', () => {
-    mockMaybeFire.mockImplementation(() => { throw new Error('boom'); });
+    mockMaybeFire.mockImplementation(() => {
+      throw new Error('boom');
+    });
     tapPreToolResearch(makePayload());
     expect(() => vi.runAllTimers()).not.toThrow();
   });

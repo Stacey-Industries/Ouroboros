@@ -69,12 +69,8 @@ vi.mock('./webSocketBridge', () => ({
   handleJsonRpcMessage: vi.fn(),
 }));
 
-const {
-  broadcastToWebClients,
-  getWebClientCount,
-  getWebServerPort,
-  whenWebServerReady,
-} = await import('./webServer');
+const { broadcastToWebClients, getWebClientCount, getWebServerPort, whenWebServerReady } =
+  await import('./webServer');
 
 // ─── Tests — lifecycle ────────────────────────────────────────────────────────
 

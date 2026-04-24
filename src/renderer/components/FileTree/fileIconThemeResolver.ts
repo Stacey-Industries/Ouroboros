@@ -31,7 +31,10 @@ function getMatchingExtensions(filename: string): string[] {
   return matches;
 }
 
-function getDefinition(theme: ExtensionIconThemeData, iconId: string | undefined): ExtensionIconDefinition | null {
+function getDefinition(
+  theme: ExtensionIconThemeData,
+  iconId: string | undefined,
+): ExtensionIconDefinition | null {
   if (!iconId) return null;
   return theme.iconDefinitions[iconId] ?? null;
 }

@@ -19,103 +19,7 @@ import {
   setSchemaVersion,
 } from './database';
 
-// ── Graph Store migration ──────────────────────────────────────────────────
-
-interface GraphJsonData {
-  nodes: Array<{
-    id: string;
-    type: string;
-    name: string;
-    filePath: string;
-    line: number;
-    endLine?: number;
-    metadata?: Record<string, unknown>;
-  }>;
-  edges: Array<{
-    source: string;
-    target: string;
-    type: string;
-    metadata?: Record<string, unknown>;
-  }>;
-}
-
-function ensureGraphSchema(db: Database): void {
-  if (getSchemaVersion(db) >= 1) return;
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS nodes (
-      id TEXT PRIMARY KEY, type TEXT NOT NULL, name TEXT NOT NULL,
-      filePath TEXT NOT NULL, line INTEGER NOT NULL, endLine INTEGER, metadata TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type);
-    CREATE INDEX IF NOT EXISTS idx_nodes_filePath ON nodes(filePath);
-    CREATE TABLE IF NOT EXISTS edges (
-      rowid INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL,
-      target TEXT NOT NULL, type TEXT NOT NULL, metadata TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source);
-    CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target);
-  `);
-  setSchemaVersion(db, 1);
-}
-
-function insertGraphData(db: Database, data: GraphJsonData): void {
-  const insertNode = db.prepare(
-    `INSERT OR REPLACE INTO nodes (id, type, name, filePath, line, endLine, metadata)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  );
-  const insertEdge = db.prepare(
-    `INSERT INTO edges (source, target, type, metadata) VALUES (?, ?, ?, ?)`,
-  );
-  runTransaction(db, () => {
-    for (const n of data.nodes) {
-      insertNode.run(
-        n.id,
-        n.type,
-        n.name,
-        n.filePath,
-        n.line,
-        n.endLine ?? null,
-        n.metadata ? JSON.stringify(n.metadata) : null,
-      );
-    }
-    for (const e of data.edges ?? []) {
-      insertEdge.run(e.source, e.target, e.type, e.metadata ? JSON.stringify(e.metadata) : null);
-    }
-  });
-}
-
-export function migrateGraphStore(projectRoot: string): void {
-  const jsonPath = path.join(projectRoot, '.ouroboros', 'graph.json');
-  const bakPath = jsonPath + '.bak';
-
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
-  if (!fs.existsSync(jsonPath) || fs.existsSync(bakPath)) return;
-
-  let data: GraphJsonData;
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as GraphJsonData;
-    if (!Array.isArray(data.nodes)) return;
-  } catch {
-    return;
-  }
-
-  let db: Database | null = null;
-  try {
-    db = openDatabase(path.join(projectRoot, '.ouroboros', 'graph.db'));
-    ensureGraphSchema(db);
-    insertGraphData(db, data);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    fs.renameSync(jsonPath, bakPath);
-    log.info(
-      `Graph store: migrated ${data.nodes.length} nodes, ${(data.edges ?? []).length} edges`,
-    );
-  } catch (err) {
-    log.warn('Graph store migration failed:', err);
-  } finally {
-    closeDatabase(db);
-  }
-}
+export { migrateGraphStore } from './migrateGraphStore';
 
 // ── Thread Store migration ─────────────────────────────────────────────────
 
@@ -152,12 +56,21 @@ function insertThreadMessages(
   for (const m of msgs) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (insertMsg as any).run(
-      m.id, threadId, m.role, (m.content as string) ?? '',
-      (m.createdAt as number) ?? 0, (m.statusKind as string) ?? null,
-      s(m.orchestration), s(m.contextSummary), s(m.verificationPreview),
-      s(m.error), (m.toolsSummary as string) ?? null,
-      (m.costSummary as string) ?? null, (m.durationSummary as string) ?? null,
-      s(m.tokenUsage), s(m.blocks),
+      m.id,
+      threadId,
+      m.role,
+      (m.content as string) ?? '',
+      (m.createdAt as number) ?? 0,
+      (m.statusKind as string) ?? null,
+      s(m.orchestration),
+      s(m.contextSummary),
+      s(m.verificationPreview),
+      s(m.error),
+      (m.toolsSummary as string) ?? null,
+      (m.costSummary as string) ?? null,
+      (m.durationSummary as string) ?? null,
+      s(m.tokenUsage),
+      s(m.blocks),
     );
   }
 }
@@ -270,7 +183,9 @@ function readCostEntries(jsonPath: string): Array<Record<string, unknown>> | nul
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
     return Array.isArray(data.entries) ? (data.entries as Array<Record<string, unknown>>) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 const COST_INSERT_SQL = `INSERT OR IGNORE INTO cost_entries
@@ -283,9 +198,18 @@ function insertCostEntries(db: Database, entries: Array<Record<string, unknown>>
   runTransaction(db, () => {
     for (const e of entries) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (insert as any).run(e.date, e.sessionId, e.taskLabel, e.model,
-        e.inputTokens, e.outputTokens, e.cacheReadTokens, e.cacheWriteTokens,
-        e.estimatedCost, e.timestamp);
+      (insert as any).run(
+        e.date,
+        e.sessionId,
+        e.taskLabel,
+        e.model,
+        e.inputTokens,
+        e.outputTokens,
+        e.cacheReadTokens,
+        e.cacheWriteTokens,
+        e.estimatedCost,
+        e.timestamp,
+      );
     }
   });
 }

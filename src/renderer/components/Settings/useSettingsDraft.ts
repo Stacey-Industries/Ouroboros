@@ -5,7 +5,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { useConfig } from '../../hooks/useConfig';
-import { applyFontConfig,useTheme } from '../../hooks/useTheme';
+import { applyFontConfig, useTheme } from '../../hooks/useTheme';
 import type { AppConfig } from '../../types/electron';
 
 export interface SettingsDraftApi {
@@ -27,18 +27,27 @@ function useDraftChangeHandlers(
   setShowBgGradient: (visible: boolean) => void,
   setTheme: (id: string) => Promise<void>,
 ): Pick<SettingsDraftApi, 'handleChange' | 'handleImport' | 'handlePreviewTheme'> {
-  const handleChange = useCallback(<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void => {
-    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
-    if (key === 'showBgGradient') setShowBgGradient(value as boolean);
-  }, [setDraft, setShowBgGradient]);
+  const handleChange = useCallback(
+    <K extends keyof AppConfig>(key: K, value: AppConfig[K]): void => {
+      setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+      if (key === 'showBgGradient') setShowBgGradient(value as boolean);
+    },
+    [setDraft, setShowBgGradient],
+  );
 
-  const handleImport = useCallback((imported: AppConfig): void => {
-    setDraft({ ...imported });
-  }, [setDraft]);
+  const handleImport = useCallback(
+    (imported: AppConfig): void => {
+      setDraft({ ...imported });
+    },
+    [setDraft],
+  );
 
-  const handlePreviewTheme = useCallback((themeId: string): void => {
-    void setTheme(themeId);
-  }, [setTheme]);
+  const handlePreviewTheme = useCallback(
+    (themeId: string): void => {
+      void setTheme(themeId);
+    },
+    [setTheme],
+  );
 
   return { handleChange, handleImport, handlePreviewTheme };
 }
@@ -64,11 +73,14 @@ function useDraftSaveHandlers({
   setIsSaving,
   setSaveError,
 }: DraftSaveHandlersArgs): Pick<SettingsDraftApi, 'handleCancel' | 'handleSave'> {
-  const handleCancel = useCallback((onClose: () => void): void => {
-    if (originalThemeRef.current) void setTheme(originalThemeRef.current);
-    setShowBgGradient(originalGradientRef.current);
-    onClose();
-  }, [originalGradientRef, originalThemeRef, setShowBgGradient, setTheme]);
+  const handleCancel = useCallback(
+    (onClose: () => void): void => {
+      if (originalThemeRef.current) void setTheme(originalThemeRef.current);
+      setShowBgGradient(originalGradientRef.current);
+      onClose();
+    },
+    [originalGradientRef, originalThemeRef, setShowBgGradient, setTheme],
+  );
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!draft) return;
@@ -85,7 +97,16 @@ function useDraftSaveHandlers({
     } finally {
       setIsSaving(false);
     }
-  }, [draft, originalGradientRef, originalThemeRef, set, setIsSaving, setSaveError, setShowBgGradient, setTheme]);
+  }, [
+    draft,
+    originalGradientRef,
+    originalThemeRef,
+    set,
+    setIsSaving,
+    setSaveError,
+    setShowBgGradient,
+    setTheme,
+  ]);
 
   return { handleCancel, handleSave };
 }
@@ -116,11 +137,17 @@ export function useSettingsDraft(): SettingsDraftApi {
   });
 
   return {
-    draft, setDraft,
-    handleChange, handleImport, handlePreviewTheme,
-    handleCancel, handleSave,
-    isSaving, saveError,
-    originalThemeRef, originalGradientRef,
+    draft,
+    setDraft,
+    handleChange,
+    handleImport,
+    handlePreviewTheme,
+    handleCancel,
+    handleSave,
+    isSaving,
+    saveError,
+    originalThemeRef,
+    originalGradientRef,
   };
 }
 
@@ -129,9 +156,7 @@ async function persistDraft(
   set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<void>,
 ): Promise<void> {
   const keys = Object.keys(draft) as (keyof AppConfig)[];
-  await Promise.all(
-    keys.map((key) => set(key, draft[key] as AppConfig[typeof key])),
-  );
+  await Promise.all(keys.map((key) => set(key, draft[key] as AppConfig[typeof key])));
 }
 
 async function applyThemeAndFont(

@@ -67,7 +67,11 @@ export function buildSnippetList(options: BuildSnippetListOptions): {
     liveIdeState,
     options.userSelectedRanges,
   );
-  const { snippets, truncationNotes } = dedupeSnippetCandidates(snapshot, candidates, rankedFile.score);
+  const { snippets, truncationNotes } = dedupeSnippetCandidates(
+    snapshot,
+    candidates,
+    rankedFile.score,
+  );
   const acceptedSnippets: ContextSnippet[] = [];
   const fileTruncationNotes: ContextTruncationNote[] = [...truncationNotes];
   const budgetOpts: SnippetBudgetOptions = {

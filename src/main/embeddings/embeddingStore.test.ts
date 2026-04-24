@@ -7,7 +7,10 @@ import { createEmbeddingStore } from './embeddingStore';
 import type { EmbeddingChunk, IEmbeddingStore } from './embeddingTypes';
 
 function tmpDbPath(): string {
-  return path.join(os.tmpdir(), `embed-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  return path.join(
+    os.tmpdir(),
+    `embed-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
 }
 
 function makeChunk(overrides: Partial<EmbeddingChunk> = {}): EmbeddingChunk {
@@ -40,9 +43,21 @@ describe('embeddingStore', () => {
   afterEach(() => {
     store.close();
     /* eslint-disable security/detect-non-literal-fs-filename -- test-controlled paths under tmpdir */
-    try { fs.unlinkSync(dbPath); } catch { /* ignore */ }
-    try { fs.unlinkSync(`${dbPath}-wal`); } catch { /* ignore */ }
-    try { fs.unlinkSync(`${dbPath}-shm`); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(dbPath);
+    } catch {
+      /* ignore */
+    }
+    try {
+      fs.unlinkSync(`${dbPath}-wal`);
+    } catch {
+      /* ignore */
+    }
+    try {
+      fs.unlinkSync(`${dbPath}-shm`);
+    } catch {
+      /* ignore */
+    }
     /* eslint-enable security/detect-non-literal-fs-filename */
   });
 

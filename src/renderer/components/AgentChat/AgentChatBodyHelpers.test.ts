@@ -17,9 +17,7 @@ describe('findLastUserMessageId', () => {
   });
 
   it('returns null when no user messages', () => {
-    const msgs = [
-      { id: '1', role: 'assistant' },
-    ] as Parameters<typeof findLastUserMessageId>[0];
+    const msgs = [{ id: '1', role: 'assistant' }] as Parameters<typeof findLastUserMessageId>[0];
     expect(findLastUserMessageId(msgs)).toBeNull();
   });
 });

@@ -12,7 +12,12 @@ import { INITIAL_TRANSFORM, MAX_SCALE, MIN_SCALE } from './GraphPanelTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface DragState { startX: number; startY: number; originX: number; originY: number }
+interface DragState {
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+}
 
 export interface GraphViewport {
   transform: ViewportTransform;
@@ -29,7 +34,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function zoomAround(current: ViewportTransform, delta: number, cx: number, cy: number): ViewportTransform {
+function zoomAround(
+  current: ViewportTransform,
+  delta: number,
+  cx: number,
+  cy: number,
+): ViewportTransform {
   const factor = delta < 0 ? 1.1 : 0.9;
   const newScale = clamp(current.scale * factor, MIN_SCALE, MAX_SCALE);
   const ratio = newScale / current.scale;
@@ -41,20 +51,38 @@ function zoomAround(current: ViewportTransform, delta: number, cx: number, cy: n
 function usePointerDrag(setTransform: React.Dispatch<React.SetStateAction<ViewportTransform>>) {
   const dragRef = useRef<DragState | null>(null);
 
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, originX: 0, originY: 0 };
-    setTransform((prev) => { if (dragRef.current) { dragRef.current.originX = prev.x; dragRef.current.originY = prev.y; } return prev; });
-  }, [setTransform]);
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+      dragRef.current = { startX: e.clientX, startY: e.clientY, originX: 0, originY: 0 };
+      setTransform((prev) => {
+        if (dragRef.current) {
+          dragRef.current.originX = prev.x;
+          dragRef.current.originY = prev.y;
+        }
+        return prev;
+      });
+    },
+    [setTransform],
+  );
 
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!dragRef.current) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    setTransform((prev) => ({ ...prev, x: dragRef.current!.originX + dx, y: dragRef.current!.originY + dy }));
-  }, [setTransform]);
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!dragRef.current) return;
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setTransform((prev) => ({
+        ...prev,
+        x: dragRef.current!.originX + dx,
+        y: dragRef.current!.originY + dy,
+      }));
+    },
+    [setTransform],
+  );
 
-  const onPointerUp = useCallback(() => { dragRef.current = null; }, []);
+  const onPointerUp = useCallback(() => {
+    dragRef.current = null;
+  }, []);
 
   return { onPointerDown, onPointerMove, onPointerUp };
 }
@@ -66,7 +94,9 @@ export function useGraphViewport(): GraphViewport {
 
   const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    setTransform((prev) => zoomAround(prev, e.deltaY, e.nativeEvent.offsetX, e.nativeEvent.offsetY));
+    setTransform((prev) =>
+      zoomAround(prev, e.deltaY, e.nativeEvent.offsetX, e.nativeEvent.offsetY),
+    );
   }, []);
 
   const resetView = useCallback(() => setTransform(INITIAL_TRANSFORM), []);

@@ -86,33 +86,31 @@ function parseHookLine(line: string, connId: number): HookPayload | null {
 interface SocketChunkArgs {
   socket: net.Socket;
   connId: number;
-  rawBuffer: string;
-  chunk: string;
+  buffer: string;
   onPayload: (p: HookPayload) => void;
 }
 
-function processSocketChunk(args: SocketChunkArgs): string {
-  const { socket, connId, rawBuffer, chunk, onPayload } = args;
-  const nextBuffer = rawBuffer + chunk;
-  if (Buffer.byteLength(nextBuffer, 'utf8') > MAX_BUFFER_BYTES) {
+export function processSocketChunk(args: SocketChunkArgs): string {
+  const { socket, connId, buffer, onPayload } = args;
+  if (Buffer.byteLength(buffer, 'utf8') > MAX_BUFFER_BYTES) {
     log.warn(`#${connId} buffer overflow - dropping connection`);
     socket.destroy();
     return '';
   }
 
-  let buffer = nextBuffer;
-  let newlineIndex = buffer.indexOf('\n');
+  let remaining = buffer;
+  let newlineIndex = remaining.indexOf('\n');
   while (newlineIndex !== -1) {
-    const line = buffer.slice(0, newlineIndex).trim();
-    buffer = buffer.slice(newlineIndex + 1);
+    const line = remaining.slice(0, newlineIndex).trim();
+    remaining = remaining.slice(newlineIndex + 1);
     if (line) {
       const payload = parseHookLine(line, connId);
       if (payload) onPayload(payload);
     }
-    newlineIndex = buffer.indexOf('\n');
+    newlineIndex = remaining.indexOf('\n');
   }
 
-  return buffer;
+  return remaining;
 }
 
 /** Try to extract and validate auth from the first line. Returns remaining buffer or null on failure. */
@@ -140,14 +138,14 @@ function handleSocket(
   socket.setTimeout(60_000);
 
   socket.on('data', (chunk: string) => {
+    let nextBuffer = rawBuffer + chunk;
     if (!authenticated) {
-      rawBuffer += chunk;
-      const result = tryAuthenticate(rawBuffer, socket, connId);
+      const result = tryAuthenticate(nextBuffer, socket, connId);
       if (result === null) return;
-      rawBuffer = result;
+      nextBuffer = result;
       authenticated = true;
     }
-    rawBuffer = processSocketChunk({ socket, connId, rawBuffer, chunk, onPayload });
+    rawBuffer = processSocketChunk({ socket, connId, buffer: nextBuffer, onPayload });
   });
   socket.on('timeout', () => {
     socket.end();

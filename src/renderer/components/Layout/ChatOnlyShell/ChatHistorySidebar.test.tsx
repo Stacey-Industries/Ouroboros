@@ -26,14 +26,24 @@ afterEach(() => cleanup());
 const mockOnSelectThread = vi.fn();
 const mockThreads: AgentChatThreadRecord[] = [
   {
-    version: 1, id: 't1', workspaceRoot: '/project/alpha',
-    createdAt: Date.now() - 7200_000, updatedAt: Date.now() - 60_000,
-    title: 'Fix login bug', status: 'complete', messages: [],
+    version: 1,
+    id: 't1',
+    workspaceRoot: '/project/alpha',
+    createdAt: Date.now() - 7200_000,
+    updatedAt: Date.now() - 60_000,
+    title: 'Fix login bug',
+    status: 'complete',
+    messages: [],
   },
   {
-    version: 1, id: 't2', workspaceRoot: '/project/alpha',
-    createdAt: Date.now() - 3600_000, updatedAt: Date.now() - 120_000,
-    title: 'Add dark mode', status: 'idle', messages: [],
+    version: 1,
+    id: 't2',
+    workspaceRoot: '/project/alpha',
+    createdAt: Date.now() - 3600_000,
+    updatedAt: Date.now() - 120_000,
+    title: 'Add dark mode',
+    status: 'idle',
+    messages: [],
   },
 ];
 
@@ -71,8 +81,12 @@ vi.mock('./ChatHistoryList', () => ({
   }) => (
     <div data-testid="chat-history-list">
       {threads.map((t) => (
-        <div key={t.id} data-testid="list-row" data-thread-id={t.id}
-          onClick={() => onSelectThread(t.id)}>
+        <div
+          key={t.id}
+          data-testid="list-row"
+          data-thread-id={t.id}
+          onClick={() => onSelectThread(t.id)}
+        >
           {t.title}
         </div>
       ))}

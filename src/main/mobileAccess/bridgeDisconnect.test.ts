@@ -13,12 +13,8 @@ vi.mock('../logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-const {
-  disconnectDevice,
-  getTrackedConnectionCount,
-  registerConnection,
-  unregisterConnection,
-} = await import('./bridgeDisconnect');
+const { disconnectDevice, getTrackedConnectionCount, registerConnection, unregisterConnection } =
+  await import('./bridgeDisconnect');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,7 +142,9 @@ describe('disconnectDevice', () => {
   it('does not throw when close() throws on an individual socket', () => {
     const ws = {
       readyState: 1,
-      close: () => { throw new Error('socket already gone'); },
+      close: () => {
+        throw new Error('socket already gone');
+      },
     } as unknown as WebSocket;
     registerConnection('dev-throw-1', ws);
     expect(() => disconnectDevice('dev-throw-1')).not.toThrow();

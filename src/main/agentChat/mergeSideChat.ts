@@ -41,10 +41,7 @@ function buildBranchLabel(sideChatThread: AgentChatThreadRecord): string {
   return sideChatThread.branchName ?? sideChatThread.title;
 }
 
-function buildIncludedSection(
-  messages: AgentChatMessageRecord[],
-  includeIds: string[],
-): string {
+function buildIncludedSection(messages: AgentChatMessageRecord[], includeIds: string[]): string {
   const selected = messages.filter((m) => includeIds.includes(m.id));
   if (selected.length === 0) return '';
 

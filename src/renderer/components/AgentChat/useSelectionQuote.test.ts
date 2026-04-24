@@ -20,7 +20,9 @@ afterEach(() => {
 
 function captureQuoteEvent(): { events: CustomEvent[]; cleanup: () => void } {
   const events: CustomEvent[] = [];
-  const handler = (e: Event): void => { events.push(e as CustomEvent); };
+  const handler = (e: Event): void => {
+    events.push(e as CustomEvent);
+  };
   window.addEventListener(QUOTE_EVENT_NAME, handler);
   return { events, cleanup: () => window.removeEventListener(QUOTE_EVENT_NAME, handler) };
 }
@@ -74,7 +76,10 @@ describe('useSelectionQuote — fallback to full content', () => {
     const { events, cleanup } = captureQuoteEvent();
 
     const { result } = renderHook(() =>
-      useSelectionQuote({ messageContent: 'full message body', attribution: { role: 'assistant' } }),
+      useSelectionQuote({
+        messageContent: 'full message body',
+        attribution: { role: 'assistant' },
+      }),
     );
     result.current.quoteMessage();
 

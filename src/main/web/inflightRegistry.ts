@@ -44,7 +44,9 @@ function makeToken(): string {
   return crypto.randomBytes(32).toString('base64url');
 }
 
-function noop(): void { /* no-op send on detach */ }
+function noop(): void {
+  /* no-op send on detach */
+}
 
 function scheduleCleanup(token: string, ttlMs: number): NodeJS.Timeout {
   return setTimeout(() => {
@@ -53,7 +55,9 @@ function scheduleCleanup(token: string, ttlMs: number): NodeJS.Timeout {
     log.warn(`[inflightRegistry] TTL expired for token ${token.slice(0, 8)}…`);
     try {
       entry.send({ id: token, error: 'resume-timeout' });
-    } catch { /* send may throw if target is gone */ }
+    } catch {
+      /* send may throw if target is gone */
+    }
     registry.delete(token);
   }, ttlMs);
 }
@@ -159,7 +163,9 @@ export function getTokensForDevice(deviceId: string): string[] {
 }
 
 /** For testing — returns current registry size. */
-export function registrySize(): number { return registry.size; }
+export function registrySize(): number {
+  return registry.size;
+}
 
 /** For testing — clears the entire registry without firing TTL callbacks. */
 export function clearRegistry(): void {

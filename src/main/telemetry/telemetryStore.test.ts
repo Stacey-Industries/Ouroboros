@@ -27,7 +27,6 @@ function makeTmpDir(): string {
 }
 
 function cleanTmpDir(dir: string): void {
-   
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
@@ -88,7 +87,7 @@ describe('record() → queryEvents() round-trip', () => {
   it('WAL mode is active', () => {
     const store = openTelemetryStore(tmpDir);
     const dbPath = path.join(tmpDir, 'telemetry', 'telemetry.db');
-     
+
     const db = new Database(dbPath);
     db.exec(TELEMETRY_SCHEMA_SQL);
     const row = db.pragma('journal_mode') as Array<{ journal_mode: string }>;
@@ -260,18 +259,33 @@ describe('recordInvocation → queryInvocations round-trip', () => {
     const store = openTelemetryStore(tmpDir);
     const base = 1_700_000_000_000;
     store.recordInvocation({
-      correlationId: 'c1', sessionId: 's1', topic: 't1',
-      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      correlationId: 'c1',
+      sessionId: 's1',
+      topic: 't1',
+      triggerReason: 'other',
+      hitCache: false,
+      latencyMs: 0,
+      artifactHash: null,
       timestamp: base,
     });
     store.recordInvocation({
-      correlationId: 'c2', sessionId: 's1', topic: 't2',
-      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      correlationId: 'c2',
+      sessionId: 's1',
+      topic: 't2',
+      triggerReason: 'other',
+      hitCache: false,
+      latencyMs: 0,
+      artifactHash: null,
       timestamp: base + 5000,
     });
     store.recordInvocation({
-      correlationId: 'c3', sessionId: 's1', topic: 't3',
-      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      correlationId: 'c3',
+      sessionId: 's1',
+      topic: 't3',
+      triggerReason: 'other',
+      hitCache: false,
+      latencyMs: 0,
+      artifactHash: null,
       timestamp: base + 10_000,
     });
     const rows = store.queryInvocations({ since: base + 1000, until: base + 9000 });

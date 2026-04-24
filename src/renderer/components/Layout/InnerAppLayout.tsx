@@ -94,7 +94,14 @@ type TerminalPanelContentProps = Pick<
 >;
 
 function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutProps'] {
-  const { workspaceLayouts, activeLayoutName, handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout } = props;
+  const {
+    workspaceLayouts,
+    activeLayoutName,
+    handleSelectLayout,
+    handleSaveLayout,
+    handleUpdateLayout,
+    handleDeleteLayout,
+  } = props;
   return {
     layouts: workspaceLayouts,
     activeLayoutName,
@@ -107,7 +114,10 @@ function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutPr
   };
 }
 
-function LayoutProviders({ projectRoot, children }: React.PropsWithChildren<{ projectRoot: string | null }>): React.ReactElement {
+function LayoutProviders({
+  projectRoot,
+  children,
+}: React.PropsWithChildren<{ projectRoot: string | null }>): React.ReactElement {
   return (
     <ErrorBoundary label="Editor">
       <FileViewerManager projectRoot={projectRoot}>
@@ -121,9 +131,16 @@ function LayoutProviders({ projectRoot, children }: React.PropsWithChildren<{ pr
 }
 
 function TerminalPanelContent({
-  sessions, activeSessionId, recordingSessions, handleTerminalRestart,
-  handleTerminalClose, handleTerminalTitleChange, spawnSession,
-  handleToggleRecording, handleSplit, handleCloseSplit,
+  sessions,
+  activeSessionId,
+  recordingSessions,
+  handleTerminalRestart,
+  handleTerminalClose,
+  handleTerminalTitleChange,
+  spawnSession,
+  handleToggleRecording,
+  handleSplit,
+  handleCloseSplit,
 }: TerminalPanelContentProps): React.ReactElement {
   return (
     <ErrorBoundary label="Terminal">
@@ -144,7 +161,12 @@ function TerminalPanelContent({
 }
 
 function ProjectPickerSlot({
-  projectRoot, recentProjects, handleProjectChange, addProjectRoot, setRecentProjects, rootCount,
+  projectRoot,
+  recentProjects,
+  handleProjectChange,
+  addProjectRoot,
+  setRecentProjects,
+  rootCount,
 }: ProjectPickerSlotProps): React.ReactElement {
   const handleAddProject = useCallback(
     (path: string) => {
@@ -179,10 +201,18 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
+      sidebarContent={
+        <ErrorBoundary label="File Tree">
+          <SidebarSections />
+        </ErrorBoundary>
+      }
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
-      terminalContent={<NoDragZone><TerminalPanelContent {...props} /></NoDragZone>}
+      terminalContent={
+        <NoDragZone>
+          <TerminalPanelContent {...props} />
+        </NoDragZone>
+      }
     />
   );
 }

@@ -83,7 +83,10 @@ describe('embeddingHandlers — disabled flag', () => {
     });
 
     it('embedding:search returns disabled error', async () => {
-      const result = await handleSearch(null, 'query', '/root') as { success: boolean; error?: string };
+      const result = (await handleSearch(null, 'query', '/root')) as {
+        success: boolean;
+        error?: string;
+      };
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/embedding:search-disabled/);
     });
@@ -95,7 +98,7 @@ describe('embeddingHandlers — disabled flag', () => {
     });
 
     it('embedding:reindex returns disabled error', async () => {
-      const result = await handleReindex(null, '/root') as { success: boolean; error?: string };
+      const result = (await handleReindex(null, '/root')) as { success: boolean; error?: string };
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/embedding:reindex-disabled/);
     });

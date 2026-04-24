@@ -86,10 +86,16 @@ function applyUpsert(adaptor: ProfileStoreAdaptor, profile: Profile): Profile {
   const existingIdx = all.findIndex((p) => p.id === profile.id);
   const isNew = existingIdx < 0;
   if (isNew && all.length >= MAX_USER_PROFILES) {
-    throw new Error(`Profile cap reached (${MAX_USER_PROFILES}). Delete a profile before adding a new one.`);
+    throw new Error(
+      `Profile cap reached (${MAX_USER_PROFILES}). Delete a profile before adding a new one.`,
+    );
   }
   const now = Date.now();
-  const updated: Profile = { ...profile, updatedAt: now, createdAt: isNew ? now : profile.createdAt };
+  const updated: Profile = {
+    ...profile,
+    updatedAt: now,
+    createdAt: isNew ? now : profile.createdAt,
+  };
   if (isNew) {
     all.push(updated);
   } else {
@@ -124,10 +130,7 @@ function applySetDefault(
   adaptor.writeDefaults(defaults);
 }
 
-function applyGetDefault(
-  adaptor: ProfileStoreAdaptor,
-  projectRoot: string,
-): string | null {
+function applyGetDefault(adaptor: ProfileStoreAdaptor, projectRoot: string): string | null {
   const defaults = adaptor.readDefaults();
   // eslint-disable-next-line security/detect-object-injection
   return defaults[projectRoot] ?? null;
@@ -161,7 +164,9 @@ export function initProfileStore(): void {
       setConfigValue('profiles' as any, profiles as any);
     },
     readDefaults: () => {
-      const stored = getConfigValue('workspaceProfileDefaults') as Record<string, string> | undefined;
+      const stored = getConfigValue('workspaceProfileDefaults') as
+        | Record<string, string>
+        | undefined;
       return stored && typeof stored === 'object' ? stored : {};
     },
     writeDefaults: (defaults) => {

@@ -13,7 +13,11 @@ import type {
 } from '../../types/electron';
 
 export function hasElectronAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && 'orchestration' in window.electronAPI;
+  return (
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'orchestration' in window.electronAPI
+  );
 }
 
 export function normalizeError(error: unknown, fallback: string): string {
@@ -24,19 +28,35 @@ export function normalizeError(error: unknown, fallback: string): string {
   return typeof error === 'string' && error.trim() ? error : fallback;
 }
 
-export function sessionMatchesProjectRoot(session: TaskSessionRecord, projectRoot: string | null): boolean {
-  return !projectRoot || session.workspaceRoots.includes(projectRoot) || session.request.workspaceRoots.includes(projectRoot);
+export function sessionMatchesProjectRoot(
+  session: TaskSessionRecord,
+  projectRoot: string | null,
+): boolean {
+  return (
+    !projectRoot ||
+    session.workspaceRoots.includes(projectRoot) ||
+    session.request.workspaceRoots.includes(projectRoot)
+  );
 }
 
 export function sortSessions(sessions: TaskSessionRecord[]): TaskSessionRecord[] {
   return [...sessions].sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
-export function mergeSession(sessions: TaskSessionRecord[], nextSession: TaskSessionRecord): TaskSessionRecord[] {
-  return sortSessions([...sessions.filter((session) => session.id !== nextSession.id), nextSession]);
+export function mergeSession(
+  sessions: TaskSessionRecord[],
+  nextSession: TaskSessionRecord,
+): TaskSessionRecord[] {
+  return sortSessions([
+    ...sessions.filter((session) => session.id !== nextSession.id),
+    nextSession,
+  ]);
 }
 
-export function updateSessionsWithResult(sessions: TaskSessionRecord[], result: TaskResult): TaskSessionRecord[] {
+export function updateSessionsWithResult(
+  sessions: TaskSessionRecord[],
+  result: TaskResult,
+): TaskSessionRecord[] {
   return sortSessions(sessions.map((session) => updateSessionResult(session, result)));
 }
 
@@ -57,24 +77,33 @@ function updateSessionResult(session: TaskSessionRecord, result: TaskResult): Ta
   };
 }
 
-function patchAttempts(session: TaskSessionRecord, result: TaskResult): TaskSessionRecord['attempts'] {
-  const matchingAttemptIndex = result.attemptId ? session.attempts.findIndex((attempt) => attempt.id === result.attemptId) : -1;
+function patchAttempts(
+  session: TaskSessionRecord,
+  result: TaskResult,
+): TaskSessionRecord['attempts'] {
+  const matchingAttemptIndex = result.attemptId
+    ? session.attempts.findIndex((attempt) => attempt.id === result.attemptId)
+    : -1;
   if (matchingAttemptIndex < 0) {
     return session.attempts;
   }
 
-  return session.attempts.map((attempt, index) => index === matchingAttemptIndex ? {
-    ...attempt,
-    completedAt: attempt.completedAt ?? Date.now(),
-    status: result.status,
-    contextPacketId: result.contextPacketId ?? attempt.contextPacketId,
-    providerArtifact: result.providerArtifact ?? attempt.providerArtifact,
-    verificationSummary: result.verificationSummary ?? attempt.verificationSummary,
-    diffSummary: result.diffSummary ?? attempt.diffSummary,
-    unresolvedIssues: result.unresolvedIssues,
-    nextSuggestedAction: result.nextSuggestedAction ?? attempt.nextSuggestedAction,
-    resultMessage: result.message ?? attempt.resultMessage,
-  } : attempt);
+  return session.attempts.map((attempt, index) =>
+    index === matchingAttemptIndex
+      ? {
+          ...attempt,
+          completedAt: attempt.completedAt ?? Date.now(),
+          status: result.status,
+          contextPacketId: result.contextPacketId ?? attempt.contextPacketId,
+          providerArtifact: result.providerArtifact ?? attempt.providerArtifact,
+          verificationSummary: result.verificationSummary ?? attempt.verificationSummary,
+          diffSummary: result.diffSummary ?? attempt.diffSummary,
+          unresolvedIssues: result.unresolvedIssues,
+          nextSuggestedAction: result.nextSuggestedAction ?? attempt.nextSuggestedAction,
+          resultMessage: result.message ?? attempt.resultMessage,
+        }
+      : attempt,
+  );
 }
 
 export function updateSessionsWithVerification(
@@ -86,18 +115,27 @@ export function updateSessionsWithVerification(
     return sessions;
   }
 
-  return sortSessions(sessions.map((session) => session.id === sessionId ? { ...session, updatedAt: Date.now(), lastVerificationSummary: summary } : session));
+  return sortSessions(
+    sessions.map((session) =>
+      session.id === sessionId
+        ? { ...session, updatedAt: Date.now(), lastVerificationSummary: summary }
+        : session,
+    ),
+  );
 }
 
 function resolvePendingApproval(session: TaskSessionRecord): boolean | undefined {
-  return (session.lastVerificationSummary ?? session.latestResult?.verificationSummary)?.requiredApproval;
+  return (session.lastVerificationSummary ?? session.latestResult?.verificationSummary)
+    ?.requiredApproval;
 }
 
 function resolveSessionMessage(session: TaskSessionRecord): string | undefined {
   return session.latestResult?.providerArtifact?.lastMessage ?? session.latestResult?.message;
 }
 
-export function deriveStateFromSession(session: TaskSessionRecord | null): OrchestrationState | null {
+export function deriveStateFromSession(
+  session: TaskSessionRecord | null,
+): OrchestrationState | null {
   if (!session) {
     return null;
   }
@@ -116,7 +154,9 @@ export function deriveStateFromSession(session: TaskSessionRecord | null): Orche
   };
 }
 
-export async function loadScopedSessions(projectRoot: string): Promise<{ latestResponse: TaskSessionResult; sessionsResponse: TaskSessionsResult }> {
+export async function loadScopedSessions(
+  projectRoot: string,
+): Promise<{ latestResponse: TaskSessionResult; sessionsResponse: TaskSessionsResult }> {
   const [latestResponse, sessionsResponse] = await Promise.all([
     window.electronAPI.orchestration.loadLatestSession(projectRoot),
     window.electronAPI.orchestration.loadSessions(projectRoot),
@@ -150,7 +190,14 @@ function applyResponseState(
 
 function applyResponseSession(
   response: TaskMutationResult | VerificationResult | TaskSessionResult,
-  store: Pick<OrchestrationStateStore, 'setSessions' | 'setState' | 'setLatestResult' | 'setLatestVerificationSummary' | 'setSelectedSessionId'>,
+  store: Pick<
+    OrchestrationStateStore,
+    | 'setSessions'
+    | 'setState'
+    | 'setLatestResult'
+    | 'setLatestVerificationSummary'
+    | 'setSelectedSessionId'
+  >,
 ): void {
   if (!('session' in response) || !response.session) {
     return;
@@ -162,7 +209,9 @@ function applyResponseSession(
   if (!('state' in response && response.state)) {
     store.setState(deriveStateFromSession(session));
   }
-  store.setLatestVerificationSummary(session.lastVerificationSummary ?? session.latestResult?.verificationSummary ?? null);
+  store.setLatestVerificationSummary(
+    session.lastVerificationSummary ?? session.latestResult?.verificationSummary ?? null,
+  );
   store.setLatestResult(session.latestResult ?? null);
 }
 
@@ -175,7 +224,9 @@ function applyResponseResult(
   }
 
   store.setLatestResult(response.result);
-  store.setSessions((previous) => updateSessionsWithResult(previous, response.result as TaskResult));
+  store.setSessions((previous) =>
+    updateSessionsWithResult(previous, response.result as TaskResult),
+  );
 }
 
 function applyResponseSummary(
@@ -189,7 +240,14 @@ function applyResponseSummary(
 
 export function applyMutationResult(
   response: TaskMutationResult | VerificationResult | TaskSessionResult,
-  store: Pick<OrchestrationStateStore, 'setSessions' | 'setState' | 'setLatestResult' | 'setLatestVerificationSummary' | 'setSelectedSessionId'>,
+  store: Pick<
+    OrchestrationStateStore,
+    | 'setSessions'
+    | 'setState'
+    | 'setLatestResult'
+    | 'setLatestVerificationSummary'
+    | 'setSelectedSessionId'
+  >,
 ): void {
   applyResponseState(response, store);
   applyResponseSession(response, store);

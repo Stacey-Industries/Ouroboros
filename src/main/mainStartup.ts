@@ -4,7 +4,7 @@
  * and synchronous bootstrap functions for V8 snapshot safety.
  */
 
-import { app, crashReporter } from 'electron';
+import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -15,15 +15,18 @@ import {
   initCompatRegistry,
 } from './codebaseGraph/graphControllerCompatRegistry';
 import { setGraphController, setSystem2Db } from './codebaseGraph/graphControllerSupport';
+import type { GraphDatabase } from './codebaseGraph/graphDatabase';
 import { pruneExpiredProjects, purgeSkippedNodes } from './codebaseGraph/graphGc';
 import { getConfigValue } from './config';
 import log from './logger';
-import {
-  closeEditProvenance as closeEP,
-  initEditProvenance,
-} from './orchestration/editProvenance';
+import { initEditProvenance } from './orchestration/editProvenance';
 export { initEditProvenance };
-import { migrateLegacyJsonl, purgeOlderThan } from './orchestration/jsonlRetention';
+export {
+  bootstrapApp,
+  bootstrapCrashReporter,
+  closeEditProvenance,
+  scheduleJsonlRetentionPurge,
+} from './mainStartupHelpers';
 import { setGithubTokenForPty } from './ptyEnv';
 import { configureUpdaterChannel, getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
@@ -131,7 +134,8 @@ export function configureAutoUpdater(): void {
   if (!getAutoUpdater()) return;
   configureUpdaterChannel();
   registerAutoUpdaterEvents();
-  void seedUpdaterToken(); scheduleAutoUpdateCheck();
+  void seedUpdaterToken();
+  scheduleAutoUpdateCheck();
 }
 
 // ---------------------------------------------------------------------------
@@ -159,62 +163,71 @@ export async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
 // Codebase graph initialization — System 2
 // ---------------------------------------------------------------------------
 
-type IndexReason = 'first-launch' | 'hash-mismatch' | 'post-gc'
+let sharedSystem2Db: GraphDatabase | null = null;
+
+type IndexReason = 'first-launch' | 'hash-mismatch' | 'post-gc';
 
 interface System2IndexProgressEvent {
-  kind: 'start' | 'progress' | 'complete' | 'error'
-  projectName: string
-  projectRoot?: string
-  reason?: IndexReason
-  phase?: string
-  filesProcessed?: number
-  filesTotal?: number
-  elapsedMs?: number
-  filesIndexed?: number
-  nodesCreated?: number
-  durationMs?: number
-  message?: string
+  kind: 'start' | 'progress' | 'complete' | 'error';
+  projectName: string;
+  projectRoot?: string;
+  reason?: IndexReason;
+  phase?: string;
+  filesProcessed?: number;
+  filesTotal?: number;
+  elapsedMs?: number;
+  filesIndexed?: number;
+  nodesCreated?: number;
+  durationMs?: number;
+  message?: string;
 }
 
 function sendIndexProgress(event: System2IndexProgressEvent): void {
-  broadcastToActiveWindows('system2:indexProgress', event)
+  broadcastToActiveWindows('system2:indexProgress', event);
 }
 
 interface InitialIndexArgs {
-  workerClient: import('./codebaseGraph/indexingWorkerClient').IndexingWorkerClient
-  db: import('./codebaseGraph/graphDatabase').GraphDatabase
-  projectRoot: string
-  projectName: string
-  reason: IndexReason
+  workerClient: import('./codebaseGraph/indexingWorkerClient').IndexingWorkerClient;
+  db: import('./codebaseGraph/graphDatabase').GraphDatabase;
+  projectRoot: string;
+  projectName: string;
+  reason: IndexReason;
 }
 
 async function runInitialIndex(args: InitialIndexArgs): Promise<void> {
-  const { workerClient, db, projectRoot, projectName, reason } = args
-  sendIndexProgress({ kind: 'start', projectName, projectRoot, reason })
+  const { workerClient, db, projectRoot, projectName, reason } = args;
+  sendIndexProgress({ kind: 'start', projectName, projectRoot, reason });
   const result = await workerClient.runIndex({
     projectRoot,
     projectName,
     incremental: false,
     onProgress: (p) => {
       sendIndexProgress({
-        kind: 'progress', projectName,
-        phase: p.phase, filesProcessed: p.filesProcessed,
-        filesTotal: p.filesTotal, elapsedMs: p.elapsedMs,
-      })
+        kind: 'progress',
+        projectName,
+        phase: p.phase,
+        filesProcessed: p.filesProcessed,
+        filesTotal: p.filesTotal,
+        elapsedMs: p.elapsedMs,
+      });
     },
-  })
+  });
   if (result.success) {
-    db.writeCatalogHash(projectName)
+    db.writeCatalogHash(projectName);
     sendIndexProgress({
-      kind: 'complete', projectName,
-      filesIndexed: result.filesIndexed, nodesCreated: result.nodesCreated,
+      kind: 'complete',
+      projectName,
+      filesIndexed: result.filesIndexed,
+      nodesCreated: result.nodesCreated,
       durationMs: result.durationMs,
-    })
-    log.info(`[system2] initial index complete: ${result.filesIndexed} files, ${result.nodesCreated} nodes`)
+    });
+    log.info(
+      `[system2] initial index complete: ${result.filesIndexed} files, ${result.nodesCreated} nodes`,
+    );
   } else {
-    const message = result.errors.join('; ')
-    sendIndexProgress({ kind: 'error', projectName, message })
-    log.warn('[system2] initial index failed:', message)
+    const message = result.errors.join('; ');
+    sendIndexProgress({ kind: 'error', projectName, message });
+    log.warn('[system2] initial index failed:', message);
   }
 }
 
@@ -223,28 +236,30 @@ function resolveIndexReason(
   projectName: string,
   gcPrunedNames: string[],
 ): IndexReason | null {
-  if (gcPrunedNames.includes(projectName)) return 'post-gc'
-  const hashOk = db.verifyCatalogHash(projectName)
+  if (gcPrunedNames.includes(projectName)) return 'post-gc';
+  const hashOk = db.verifyCatalogHash(projectName);
   if (!hashOk) {
-    log.info('[system2] catalog hash mismatch, triggering full rebuild')
-    return 'hash-mismatch'
+    log.info('[system2] catalog hash mismatch, triggering full rebuild');
+    return 'hash-mismatch';
   }
-  if (db.getNodeCount(projectName) === 0) return 'first-launch'
-  return null
+  if (db.getNodeCount(projectName) === 0) return 'first-launch';
+  return null;
 }
 
 function runGraphGcPasses(db: import('./codebaseGraph/graphDatabase').GraphDatabase): string[] {
   const gcConfig = getConfigValue('codebaseGraph');
-  let prunedNames: string[] = []
+  let prunedNames: string[] = [];
   if (gcConfig?.gcEnabled) {
     const report = pruneExpiredProjects(db, gcConfig.gcDaysThreshold);
     if (report.prunedCount > 0) {
-      log.info(`[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`);
-      prunedNames = report.prunedProjects
+      log.info(
+        `[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`,
+      );
+      prunedNames = report.prunedProjects;
     }
   }
   purgeSkippedNodes(db); // one-time migration: evict .claude/worktrees nodes
-  return prunedNames
+  return prunedNames;
 }
 
 async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
@@ -256,6 +271,7 @@ async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   const { getIndexingWorkerClient } = await import('./codebaseGraph/indexingWorkerClient');
 
   const db = new GraphDatabase();
+  sharedSystem2Db = db;
   setSystem2Db(db);
 
   const workerClient = getIndexingWorkerClient();
@@ -269,11 +285,11 @@ async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   const projectName = path.basename(projectRoot);
   const gcPrunedNames = runGraphGcPasses(db);
 
-  const reason = resolveIndexReason(db, projectName, gcPrunedNames)
+  const reason = resolveIndexReason(db, projectName, gcPrunedNames);
   if (reason !== null) {
     runInitialIndex({ workerClient, db, projectRoot, projectName, reason }).catch((err: Error) => {
-      log.error('[system2] initial index failed:', err)
-    })
+      log.error('[system2] initial index failed:', err);
+    });
   }
 
   const parser = new TreeSitterParser();
@@ -288,7 +304,19 @@ async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
 /** Dispose all graph controllers on app shutdown. */
 export async function disposeCodebaseGraph(): Promise<void> {
   const { disposeAllCompat } = await import('./codebaseGraph/graphControllerCompatRegistry');
+  const { disposeAll } = await import('./codebaseGraph/systemTwoRegistry');
+  const { disposeIndexingWorkerClient } = await import('./codebaseGraph/indexingWorkerClient');
+
   await disposeAllCompat();
+  await disposeAll();
+  await disposeIndexingWorkerClient();
+
+  try {
+    sharedSystem2Db?.close();
+  } finally {
+    sharedSystem2Db = null;
+    setSystem2Db(null);
+  }
 }
 
 export async function initCodebaseGraph(): Promise<void> {
@@ -337,49 +365,10 @@ export function bootstrapProcessHandlers(
   process.on('SIGINT', () => app.quit());
 }
 
-export function bootstrapCrashReporter(): void {
-  crashReporter.start({
-    uploadToServer: false,
-    compress: true,
-  });
-}
-
-export function bootstrapApp(): void {
-  // Must be called before app.ready fires.
-  app.setName('Ouroboros');
-
-  // Suppress GPU errors in dev. Must precede app.ready.
-  app.commandLine.appendSwitch('disable-gpu-sandbox');
-  if (!app.isPackaged) {
-    app.commandLine.appendSwitch('no-sandbox');
-  }
-}
-
 export function ensureSingleInstance(): void {
   const gotTheLock = app.requestSingleInstanceLock();
   if (!gotTheLock) {
     app.quit();
     process.exit(0);
   }
-}
-
-/** Close edit provenance store on app shutdown. */
-export function closeEditProvenance(): void {
-  closeEP()
-}
-
-/**
- * Schedule JSONL migration + 30-day retention purge via setImmediate so it
- * does not block window creation (Wave 29.5 M2).
- */
-export function scheduleJsonlRetentionPurge(userDataPath: string): void {
-  const basenames = ['context-decisions', 'context-outcomes', 'research-outcomes', 'corrections'];
-  setImmediate(() => {
-    for (const base of basenames) {
-      migrateLegacyJsonl(userDataPath, base)
-        .then(() => purgeOlderThan(userDataPath, base, 30))
-        .then((n) => { if (n > 0) console.warn(`[jsonlRetention] purged ${n} old files for ${base}`); })
-        .catch((err) => log.error('[jsonlRetention] purge error', err));
-    }
-  });
 }

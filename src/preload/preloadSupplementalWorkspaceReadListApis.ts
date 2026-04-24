@@ -4,10 +4,7 @@
 
 import { ipcRenderer } from 'electron';
 
-import type {
-  ElectronAPI,
-  WorkspaceReadListChangedPayload,
-} from '../renderer/types/electron';
+import type { ElectronAPI, WorkspaceReadListChangedPayload } from '../renderer/types/electron';
 
 type WorkspaceReadListApiType = ElectronAPI['workspaceReadList'];
 
@@ -18,8 +15,7 @@ function onChannel<T>(channel: string, callback: (payload: T) => void): () => vo
 }
 
 export const workspaceReadListApi: WorkspaceReadListApiType = {
-  get: (projectRoot) =>
-    ipcRenderer.invoke('workspaceReadList:get', { projectRoot }),
+  get: (projectRoot) => ipcRenderer.invoke('workspaceReadList:get', { projectRoot }),
   add: (projectRoot, filePath) =>
     ipcRenderer.invoke('workspaceReadList:add', { projectRoot, filePath }),
   remove: (projectRoot, filePath) =>

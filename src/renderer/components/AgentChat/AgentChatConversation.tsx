@@ -1,12 +1,12 @@
 import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import type { Profile } from '../../types/electron';
 import { useAgentMonitorSettings } from '../AgentMonitor/useAgentMonitorSettings';
+import { AgentChatApprovalBanner } from './AgentChatApprovalBanner';
 import { ComposerSection, ConversationBody } from './AgentChatConversationBody';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
-import { AgentChatApprovalBanner } from './AgentChatApprovalBanner';
 import { QueuedMessageBanner } from './AgentChatMessageComponents';
 import {
   useAgentChatActions,
@@ -52,7 +52,8 @@ function ConversationDrawer(): React.ReactElement | null {
   const thread = useAgentChatThread();
   const details = useAgentChatDetails();
   const actions = useAgentChatActions();
-  const sessionId = details.details?.link?.sessionId ?? thread.activeThread?.latestOrchestration?.sessionId;
+  const sessionId =
+    details.details?.link?.sessionId ?? thread.activeThread?.latestOrchestration?.sessionId;
   const skillExecutions = useActiveSkillExecutions(sessionId);
 
   return (
@@ -85,30 +86,52 @@ function ConversationQueue(): React.ReactElement | null {
 
 /* ── Composer wrapper (extracted for max-lines-per-function) ──────────────── */
 
-function ConversationComposer({ streaming }: { streaming: ReturnType<typeof useAgentChatStreaming> }): React.ReactElement {
+function useMidTurnInject(): (tid: string, content: string) => Promise<void> {
+  return useCallback(async (tid: string, content: string) => {
+    const result = await window.electronAPI.agentChat.injectMidTurn(tid, content);
+    if (!result.success) {
+      console.error('[mid-turn] inject failed:', result.error);
+    }
+  }, []);
+}
+
+function ConversationComposer({
+  streaming,
+}: {
+  streaming: ReturnType<typeof useAgentChatStreaming>;
+}): React.ReactElement {
   const thread = useAgentChatThread();
   const ctx = useAgentChatContextFiles();
   const model = useAgentChatModel();
   const slash = useAgentChatSlash();
   const actions = useAgentChatActions();
   const threadModelUsage = useThreadModelUsage(thread.activeThread);
-
+  const onInjectMidTurn = useMidTurnInject();
+  const taskId = thread.activeThread?.latestOrchestration?.taskId ?? null;
+  const activeMidTurnTaskId = streaming.isStreaming ? taskId : null;
   return (
     <ComposerSection
       activeThread={thread.activeThread} canSend={thread.canSend} hasProject={thread.hasProject}
-      draft={thread.draft} isSending={thread.isSending} onDraftChange={actions.onDraftChange} onSend={actions.onSend} onStop={actions.onStop}
-      pinnedFiles={ctx.pinnedFiles} onRemoveFile={actions.onRemoveFile} contextSummary={ctx.contextSummary}
-      autocompleteResults={ctx.autocompleteResults} isAutocompleteOpen={ctx.isAutocompleteOpen}
-      onAutocompleteQuery={actions.onAutocompleteQuery} onSelectFile={actions.onSelectFile}
-      onCloseAutocomplete={actions.onCloseAutocomplete} onOpenAutocomplete={actions.onOpenAutocomplete}
-      mentions={ctx.mentions} onAddMention={actions.onAddMention} onRemoveMention={actions.onRemoveMention}
-      allFiles={ctx.allFiles} chatOverrides={model.chatOverrides} onChatOverridesChange={actions.onChatOverridesChange}
+      draft={thread.draft} isSending={thread.isSending}
+      onDraftChange={actions.onDraftChange} onSend={actions.onSend} onStop={actions.onStop}
+      pinnedFiles={ctx.pinnedFiles} onRemoveFile={actions.onRemoveFile}
+      contextSummary={ctx.contextSummary} autocompleteResults={ctx.autocompleteResults}
+      isAutocompleteOpen={ctx.isAutocompleteOpen} onAutocompleteQuery={actions.onAutocompleteQuery}
+      onSelectFile={actions.onSelectFile} onCloseAutocomplete={actions.onCloseAutocomplete}
+      onOpenAutocomplete={actions.onOpenAutocomplete}
+      mentions={ctx.mentions} onAddMention={actions.onAddMention}
+      onRemoveMention={actions.onRemoveMention} allFiles={ctx.allFiles}
+      chatOverrides={model.chatOverrides} onChatOverridesChange={actions.onChatOverridesChange}
       settingsModel={model.settingsModel} codexSettingsModel={model.codexSettingsModel}
-      defaultProvider={model.defaultProvider} modelProviders={model.modelProviders} codexModels={model.codexModels}
+      defaultProvider={model.defaultProvider} modelProviders={model.modelProviders}
+      codexModels={model.codexModels} codexAppServerTransport={model.codexAppServerTransport}
       threadModelUsage={threadModelUsage} streamingTokenUsage={streaming.streamingTokenUsage}
-      isStreaming={streaming.isStreaming} routedBy={thread.activeThread?.latestOrchestration?.routedBy}
-      slashCommandContext={slash.slashCommandContext ?? undefined} attachments={ctx.attachments}
-      onAttachmentsChange={actions.onAttachmentsChange} activeSessionId={slash.activeSessionId}
+      isStreaming={streaming.isStreaming}
+      routedBy={thread.activeThread?.latestOrchestration?.routedBy}
+      slashCommandContext={slash.slashCommandContext ?? undefined}
+      attachments={ctx.attachments} onAttachmentsChange={actions.onAttachmentsChange}
+      activeSessionId={slash.activeSessionId}
+      activeMidTurnTaskId={activeMidTurnTaskId} onInjectMidTurn={onInjectMidTurn}
     />
   );
 }
@@ -193,14 +216,24 @@ export function AgentChatConversation(): React.ReactElement {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface-panel">
-      <AgentChatApprovalBanner sessionIds={approvalSessionIds} />
       <ConversationBody
-        activeThread={thread.activeThread} streaming={streaming} error={thread.error}
-        hasProject={thread.hasProject} isSending={thread.isSending} isLoading={thread.isLoading}
-        onEdit={actions.onEdit} onRetry={actions.onRetry} onBranch={actions.onBranch}
-        onRevert={actions.onRevert} onOpenLinkedDetails={actions.onOpenLinkedDetails} onStop={actions.onStop}
-        pendingUserMessage={thread.pendingUserMessage} onSelectThread={actions.onSelectThread}
-        onDraftChange={actions.onDraftChange} onRerunSuccess={actions.onRerunSuccess}
+        activeThread={thread.activeThread}
+        streaming={streaming}
+        error={thread.error}
+        hasProject={thread.hasProject}
+        isSending={thread.isSending}
+        isLoading={thread.isLoading}
+        onEdit={actions.onEdit}
+        onRetry={actions.onRetry}
+        onBranch={actions.onBranch}
+        onRevert={actions.onRevert}
+        onOpenLinkedDetails={actions.onOpenLinkedDetails}
+        onStop={actions.onStop}
+        pendingUserMessage={thread.pendingUserMessage}
+        onSelectThread={actions.onSelectThread}
+        onDraftChange={actions.onDraftChange}
+        onRerunSuccess={actions.onRerunSuccess}
+        inlineBanner={<AgentChatApprovalBanner sessionIds={approvalSessionIds} />}
       />
       <InlineEventStrip />
       <ProfileDiffBanner />

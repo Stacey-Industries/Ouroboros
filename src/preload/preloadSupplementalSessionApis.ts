@@ -24,8 +24,7 @@ export const sessionCrudApi: SessionCrudApiType = {
     ipcRenderer.invoke('sessionCrud:updateAgentMonitorSettings', { sessionId, settings }),
   pin: (sessionId: string, pinned: boolean) =>
     ipcRenderer.invoke('sessionCrud:pin', { sessionId, pinned }),
-  softDelete: (sessionId: string) =>
-    ipcRenderer.invoke('sessionCrud:softDelete', { sessionId }),
+  softDelete: (sessionId: string) => ipcRenderer.invoke('sessionCrud:softDelete', { sessionId }),
   restoreDeleted: (sessionId: string) =>
     ipcRenderer.invoke('sessionCrud:restoreDeleted', { sessionId }),
   setProfile: (sessionId: string, profileId: string) =>

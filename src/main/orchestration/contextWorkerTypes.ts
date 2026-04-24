@@ -3,40 +3,40 @@
  * communication. Plain JSON-safe types only -- no class instances.
  */
 
-import type { RepoIndexSnapshot } from './repoIndexer'
-import type { ContextPacket } from './types'
+import type { RepoIndexSnapshot } from './repoIndexer';
+import type { ContextPacket } from './types';
 
 // -- Main -> Worker --------------------------------------------------------
 
 export interface ContextWorkerBuildRequest {
-  type: 'buildContext'
-  id: string
-  roots: string[]
+  type: 'buildContext';
+  id: string;
+  roots: string[];
 }
 
-export type ContextWorkerRequest = ContextWorkerBuildRequest
+export type ContextWorkerRequest = ContextWorkerBuildRequest;
 
 // -- Worker -> Main --------------------------------------------------------
 
 export interface ContextWorkerReadyResponse {
-  type: 'ready'
+  type: 'ready';
 }
 
 export interface ContextWorkerContextResponse {
-  type: 'contextReady'
-  id: string
-  snapshot: RepoIndexSnapshot
-  packet?: ContextPacket
-  durationMs: number
+  type: 'contextReady';
+  id: string;
+  snapshot: RepoIndexSnapshot;
+  packet?: ContextPacket;
+  durationMs: number;
 }
 
 export interface ContextWorkerErrorResponse {
-  type: 'error'
-  id: string
-  message: string
+  type: 'error';
+  id: string;
+  message: string;
 }
 
 export type ContextWorkerResponse =
   | ContextWorkerReadyResponse
   | ContextWorkerContextResponse
-  | ContextWorkerErrorResponse
+  | ContextWorkerErrorResponse;

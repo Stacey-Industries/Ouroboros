@@ -7,14 +7,10 @@
  * FD explosion that chokidar's pure-JS implementation suffers from.
  */
 
-import watcher from '@parcel/watcher'
+import watcher from '@parcel/watcher';
 
-import log from '../logger'
-import type {
-  WatchCallback,
-  WatchOptions,
-  WatchSubscription,
-} from './nativeWatcher.types'
+import log from '../logger';
+import type { WatchCallback, WatchOptions, WatchSubscription } from './nativeWatcher.types';
 
 /**
  * Platform-appropriate backend. Passing an explicit backend avoids the
@@ -26,10 +22,14 @@ import type {
  */
 function defaultBackend(): 'windows' | 'fs-events' | 'inotify' | 'brute-force' {
   switch (process.platform) {
-    case 'win32': return 'windows'
-    case 'darwin': return 'fs-events'
-    case 'linux': return 'inotify'
-    default: return 'brute-force'
+    case 'win32':
+      return 'windows';
+    case 'darwin':
+      return 'fs-events';
+    case 'linux':
+      return 'inotify';
+    default:
+      return 'brute-force';
   }
 }
 
@@ -41,27 +41,27 @@ export async function watchRecursive(
   const subscribeOpts: Parameters<typeof watcher.subscribe>[2] = {
     backend: defaultBackend(),
     ...(opts.ignore ? { ignore: opts.ignore } : {}),
-  }
+  };
   const subscription = await watcher.subscribe(
     rootPath,
     (err, events) => {
       if (err) {
-        log.warn(`[watcher] error on ${rootPath}:`, err.message)
-        return
+        log.warn(`[watcher] error on ${rootPath}:`, err.message);
+        return;
       }
-      for (const e of events) onEvent({ type: e.type, path: e.path })
+      for (const e of events) onEvent({ type: e.type, path: e.path });
     },
     subscribeOpts,
-  )
+  );
 
   return {
     close: async () => {
       try {
-        await subscription.unsubscribe()
+        await subscription.unsubscribe();
       } catch (err) {
         // Native unsubscribe can race with process shutdown; log but don't throw.
-        log.warn(`[watcher] unsubscribe failed for ${rootPath}:`, err)
+        log.warn(`[watcher] unsubscribe failed for ${rootPath}:`, err);
       }
     },
-  }
+  };
 }

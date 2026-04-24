@@ -142,9 +142,7 @@ describe('stdout sampling under burst', () => {
     mockRecordTrace.mockClear();
     enqueueTrace(makeEntry('spawn'));
     vi.advanceTimersByTime(500);
-    expect(mockRecordTrace).toHaveBeenCalledWith(
-      expect.objectContaining({ phase: 'spawn' }),
-    );
+    expect(mockRecordTrace).toHaveBeenCalledWith(expect.objectContaining({ phase: 'spawn' }));
   });
 
   it('stdin entries are always enqueued even when sampling is active', () => {
@@ -157,9 +155,7 @@ describe('stdout sampling under burst', () => {
     mockRecordTrace.mockClear();
     enqueueTrace(makeEntry('stdin'));
     vi.advanceTimersByTime(500);
-    expect(mockRecordTrace).toHaveBeenCalledWith(
-      expect.objectContaining({ phase: 'stdin' }),
-    );
+    expect(mockRecordTrace).toHaveBeenCalledWith(expect.objectContaining({ phase: 'stdin' }));
   });
 });
 

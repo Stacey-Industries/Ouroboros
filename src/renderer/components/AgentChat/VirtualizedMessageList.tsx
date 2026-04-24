@@ -131,28 +131,52 @@ function MessageRows({
   );
 }
 
+function ThreadBranchIndicator({
+  branchInfo,
+  onSelectThread,
+}: {
+  branchInfo: AgentChatThreadRecord['branchInfo'];
+  onSelectThread?: (id: string) => void;
+}): React.ReactElement | null {
+  if (!branchInfo || !onSelectThread) return null;
+  return (
+    <div className="mb-4">
+      <AgentChatBranchIndicator branchInfo={branchInfo} onSwitchToParent={onSelectThread} />
+    </div>
+  );
+}
+
 function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement {
   const { scrollRef, handleScroll } = useVirtualScroll(props.messagesWithStreaming);
   const forksByMessageId = useForksByMessageId(props.activeThread.id, props.allThreads);
   const { density } = useDensity();
   const rowPadding = density === 'compact' ? 'pb-2' : 'pb-4';
   const { activeThread, onSelectThread, pendingUserMessage, error } = props;
-  const branchIndicator = activeThread.branchInfo && onSelectThread
-    ? <div className="mb-4"><AgentChatBranchIndicator branchInfo={activeThread.branchInfo} onSwitchToParent={onSelectThread} /></div>
-    : null;
   // Render the optimistic user bubble whenever pendingUserMessage is set —
   // usePendingUserMessageClearEffect clears it once the persisted turn lands.
   // Previously gated on isSending, which flipped to false before the persisted
   // user message arrived, creating a visible gap where the prompt disappeared.
-  const pendingBubble = pendingUserMessage
-    ? <div className="pb-4"><PendingUserBubble text={pendingUserMessage} /></div>
-    : null;
-
+  const pendingBubble = pendingUserMessage ? (
+    <div className="pb-4"><PendingUserBubble text={pendingUserMessage} /></div>
+  ) : null;
   return (
-    <div ref={scrollRef} onScroll={handleScroll} aria-live="polite" aria-relevant="additions" className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+    <div
+      ref={scrollRef}
+      onScroll={handleScroll}
+      aria-live="polite"
+      aria-relevant="additions"
+      className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
+    >
       <div className="mt-auto">
-        {branchIndicator}
-        <MessageRows messagesWithStreaming={props.messagesWithStreaming} forksByMessageId={forksByMessageId} activeThreadId={activeThread.id} onSelectThread={onSelectThread} rowPadding={rowPadding} props={props} />
+        <ThreadBranchIndicator branchInfo={activeThread.branchInfo} onSelectThread={onSelectThread} />
+        <MessageRows
+          messagesWithStreaming={props.messagesWithStreaming}
+          forksByMessageId={forksByMessageId}
+          activeThreadId={activeThread.id}
+          onSelectThread={onSelectThread}
+          rowPadding={rowPadding}
+          props={props}
+        />
         {pendingBubble}
         <FailedBanner activeThread={activeThread} />
         <InlineError error={error} />

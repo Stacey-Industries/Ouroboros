@@ -160,7 +160,7 @@ describe('installBundle — theme key allowlist', () => {
     const bundle: BundleContent = {
       id: 'multi-bad',
       kind: 'theme',
-      payload: { 'foo--bar': '#1', 'BAD': '#2', '--ok': '#3' },
+      payload: { 'foo--bar': '#1', BAD: '#2', '--ok': '#3' },
     };
     const result = installBundle(bundle);
     expect(result.success).toBe(false);
@@ -206,7 +206,9 @@ describe('installBundle — rules-and-skills', () => {
 
 describe('installBundle — error resilience', () => {
   it('returns error when config throws instead of propagating', () => {
-    mockGetConfigValue.mockImplementation(() => { throw new Error('store locked'); });
+    mockGetConfigValue.mockImplementation(() => {
+      throw new Error('store locked');
+    });
     const bundle: BundleContent = { id: 'x', kind: 'theme', payload: {} };
     const result = installBundle(bundle);
     expect(result.success).toBe(false);

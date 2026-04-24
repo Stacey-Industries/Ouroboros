@@ -219,9 +219,10 @@ export function getWsTicketStats(): { active: number } {
  * immediately — the caller must fall through to the legacy single-token path.
  * NEVER logs the raw token.
  */
-export function verifyRefreshToken(
-  rawToken: string,
-): { device: PairedDevice | null; reason?: string } {
+export function verifyRefreshToken(rawToken: string): {
+  device: PairedDevice | null;
+  reason?: string;
+} {
   const mobileAccess = getConfigValue('mobileAccess');
   if (!mobileAccess?.enabled) {
     return { device: null, reason: 'mobile-access-disabled' };
@@ -254,9 +255,7 @@ export interface PairingHandshakeResult {
  * Returns the device + refreshToken on success, or an error reason on failure.
  * NEVER logs the raw refreshToken.
  */
-export function verifyPairingHandshake(
-  input: PairingHandshakeInput,
-): PairingHandshakeResult {
+export function verifyPairingHandshake(input: PairingHandshakeInput): PairingHandshakeResult {
   const { ticketCode, deviceLabel, clientFingerprint, ip } = input;
   const result = consumePairingTicket(ticketCode, deviceLabel, clientFingerprint, ip);
   if ('error' in result) return { error: result.error };

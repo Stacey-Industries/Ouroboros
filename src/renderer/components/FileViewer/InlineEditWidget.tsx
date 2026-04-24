@@ -17,9 +17,10 @@ const CLS_DEL_GUTTER = 'ouroboros-inline-edit-del-gutter';
 
 // ─── Decoration helpers ───────────────────────────────────────────────────────
 
-function buildPreviewDecorations(
-  range: { startLine: number; endLine: number },
-): monaco.editor.IModelDeltaDecoration[] {
+function buildPreviewDecorations(range: {
+  startLine: number;
+  endLine: number;
+}): monaco.editor.IModelDeltaDecoration[] {
   const decorations: monaco.editor.IModelDeltaDecoration[] = [];
   for (let ln = range.startLine; ln <= range.endLine; ln++) {
     decorations.push({
@@ -49,14 +50,21 @@ function InputPhase({ error, onSubmit, onCancel }: InputPhaseProps): React.React
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Escape') { e.stopPropagation(); onCancel(); return; }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = inputRef.current?.value.trim() ?? '';
-      if (val) onSubmit(val);
-    }
-  }, [onCancel, onSubmit]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onCancel();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = inputRef.current?.value.trim() ?? '';
+        if (val) onSubmit(val);
+      }
+    },
+    [onCancel, onSubmit],
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -67,9 +75,7 @@ function InputPhase({ error, onSubmit, onCancel }: InputPhaseProps): React.React
         placeholder="Describe the change..."
         onKeyDown={handleKeyDown}
       />
-      {error && (
-        <p className="text-xs text-status-error">{error}</p>
-      )}
+      {error && <p className="text-xs text-status-error">{error}</p>}
     </div>
   );
 }
@@ -96,7 +102,11 @@ interface PreviewActionsProps {
   isStreaming?: boolean;
 }
 
-function PreviewActions({ onAccept, onReject, isStreaming }: PreviewActionsProps): React.ReactElement {
+function PreviewActions({
+  onAccept,
+  onReject,
+  isStreaming,
+}: PreviewActionsProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2 pt-1">
       {isStreaming && (
@@ -196,16 +206,18 @@ function usePreviewDecorations(
 
 // ─── Preview keyboard handler ─────────────────────────────────────────────────
 
-function usePreviewKeyboard(
-  phase: string,
-  onAccept: () => void,
-  onReject: () => void,
-): void {
+function usePreviewKeyboard(phase: string, onAccept: () => void, onReject: () => void): void {
   useEffect(() => {
     if (phase !== 'preview') return;
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === 'Enter') { e.preventDefault(); onAccept(); }
-      if (e.key === 'Escape') { e.preventDefault(); onReject(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onAccept();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onReject();
+      }
     };
     window.addEventListener('keydown', handler, { capture: true });
     return () => window.removeEventListener('keydown', handler, { capture: true });
@@ -220,7 +232,11 @@ export interface InlineEditWidgetProps {
   actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel' | 'streaming'>;
 }
 
-export function InlineEditWidget({ editor, state, actions }: InlineEditWidgetProps): React.ReactElement | null {
+export function InlineEditWidget({
+  editor,
+  state,
+  actions,
+}: InlineEditWidgetProps): React.ReactElement | null {
   const nodeRef = useWidgetNode();
   const isActive = state.phase !== 'idle';
 
@@ -230,9 +246,7 @@ export function InlineEditWidget({ editor, state, actions }: InlineEditWidgetPro
 
   if (!isActive) return null;
 
-  return (
-    <WidgetPortal nodeRef={nodeRef} state={state} actions={actions} />
-  );
+  return <WidgetPortal nodeRef={nodeRef} state={state} actions={actions} />;
 }
 
 // ─── Portal renderer (renders into the Monaco widget DOM node) ────────────────
@@ -246,10 +260,7 @@ interface WidgetPortalProps {
 function WidgetPortal({ nodeRef, state, actions }: WidgetPortalProps): React.ReactElement | null {
   const node = nodeRef.current;
   if (!node) return null;
-  return createPortal(
-    <WidgetContent state={state} actions={actions} />,
-    node,
-  );
+  return createPortal(<WidgetContent state={state} actions={actions} />, node);
 }
 
 // ─── Widget content switcher ──────────────────────────────────────────────────
@@ -271,11 +282,5 @@ function WidgetContent({ state, actions }: WidgetContentProps): React.ReactEleme
       />
     );
   }
-  return (
-    <InputPhase
-      error={state.error}
-      onSubmit={actions.submit}
-      onCancel={actions.cancel}
-    />
-  );
+  return <InputPhase error={state.error} onSubmit={actions.submit} onCancel={actions.cancel} />;
 }

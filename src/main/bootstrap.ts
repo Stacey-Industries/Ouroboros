@@ -19,9 +19,8 @@ if (!process.env['UV_THREADPOOL_SIZE']) {
   const cpuBased = os.cpus().length * 2;
   const chosen = Math.min(Math.max(cpuBased, MIN_THREADS), MAX_THREADS);
   process.env['UV_THREADPOOL_SIZE'] = String(chosen);
-   
+
   console.warn('[bootstrap] UV_THREADPOOL_SIZE set to', chosen);
 } else {
-   
   console.warn('[bootstrap] UV_THREADPOOL_SIZE already set to', process.env['UV_THREADPOOL_SIZE']);
 }

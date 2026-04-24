@@ -47,10 +47,14 @@ type ConsumeError = 'invalid' | 'expired' | 'consumed' | 'rate-limited';
 
 function errorResponse(kind: ConsumeError): { status: number; error: string } {
   switch (kind) {
-    case 'rate-limited': return { status: 429, error: 'Rate limited — try again later.' };
-    case 'expired': return { status: 401, error: 'Code expired — generate a new code.' };
-    case 'consumed': return { status: 401, error: 'Code already used.' };
-    default: return { status: 401, error: 'Invalid code.' };
+    case 'rate-limited':
+      return { status: 429, error: 'Rate limited — try again later.' };
+    case 'expired':
+      return { status: 401, error: 'Code expired — generate a new code.' };
+    case 'consumed':
+      return { status: 401, error: 'Code already used.' };
+    default:
+      return { status: 401, error: 'Invalid code.' };
   }
 }
 

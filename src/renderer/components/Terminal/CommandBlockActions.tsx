@@ -8,17 +8,17 @@
  * - Collapse/Expand: toggle output row visibility
  */
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState } from 'react';
 
-import type { CommandBlock } from './useCommandBlocks'
+import type { CommandBlock } from './useCommandBlocks';
 
 export interface CommandBlockActionsProps {
-  block: CommandBlock
-  sessionId: string
-  onCopyOutput: (block: CommandBlock) => void
-  onCopyCommand: (block: CommandBlock) => void
-  onToggleCollapse: (blockId: string) => void
-  onExplainError?: (block: CommandBlock) => void
+  block: CommandBlock;
+  sessionId: string;
+  onCopyOutput: (block: CommandBlock) => void;
+  onCopyCommand: (block: CommandBlock) => void;
+  onToggleCollapse: (blockId: string) => void;
+  onExplainError?: (block: CommandBlock) => void;
 }
 
 const actionsBarStyle: React.CSSProperties = {
@@ -26,7 +26,7 @@ const actionsBarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 2,
   pointerEvents: 'auto',
-}
+};
 
 const actionButtonStyle: React.CSSProperties = {
   background: 'none',
@@ -42,51 +42,80 @@ const actionButtonStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
   fontFamily: 'var(--font-ui, system-ui)',
   transition: 'all 0.1s ease',
-}
+};
 
 const actionButtonHoverStyle: React.CSSProperties = {
   ...actionButtonStyle,
   background: 'rgba(60,60,60,0.8)',
-}
+};
 
 function CopyIcon(): React.ReactElement {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <rect x="5" y="5" width="9" height="9" rx="1" />
       <path d="M3 11V3a1 1 0 011-1h8" />
     </svg>
-  )
+  );
 }
 
 function RerunIcon(): React.ReactElement {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <path d="M2 8a6 6 0 0111.5-2.3" strokeLinecap="round" />
       <path d="M14 8a6 6 0 01-11.5 2.3" strokeLinecap="round" />
       <path d="M14 2v4h-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  )
+  );
 }
 
 function ExplainIcon(): React.ReactElement {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <circle cx="8" cy="8" r="6" />
       <path d="M8 5v4" strokeLinecap="round" />
       <circle cx="8" cy="11.5" r="0.5" fill="currentColor" stroke="none" />
     </svg>
-  )
+  );
 }
 
 function CollapseIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
-      width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
-      style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      style={{
+        transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+        transition: 'transform 0.15s ease',
+      }}
     >
       <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  )
+  );
 }
 
 function ActionButton({
@@ -94,27 +123,37 @@ function ActionButton({
   title,
   children,
 }: {
-  onClick: () => void
-  title: string
-  children: React.ReactNode
+  onClick: () => void;
+  title: string;
+  children: React.ReactNode;
 }): React.ReactElement {
-  const [hovered, setHovered] = useState(false)
+  const [hovered, setHovered] = useState(false);
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); onClick() }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       title={title}
-      className={hovered ? 'text-text-semantic-primary border-border-semantic' : 'text-text-semantic-muted'}
+      className={
+        hovered ? 'text-text-semantic-primary border-border-semantic' : 'text-text-semantic-muted'
+      }
       style={hovered ? actionButtonHoverStyle : actionButtonStyle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {children}
     </button>
-  )
+  );
 }
 
-function shouldShowExplain(block: CommandBlock, onExplainError?: (block: CommandBlock) => void): boolean {
-  return Boolean(block.complete && block.exitCode !== undefined && block.exitCode !== 0 && onExplainError)
+function shouldShowExplain(
+  block: CommandBlock,
+  onExplainError?: (block: CommandBlock) => void,
+): boolean {
+  return Boolean(
+    block.complete && block.exitCode !== undefined && block.exitCode !== 0 && onExplainError,
+  );
 }
 
 export function CommandBlockActions({
@@ -125,7 +164,41 @@ export function CommandBlockActions({
   onToggleCollapse,
   onExplainError,
 }: CommandBlockActionsProps): React.ReactElement {
-  const handleRerun = useCallback(() => { if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n') }, [block.command, sessionId])
-  const canCollapse = block.complete && block.endLine - block.startLine > 1
-  return <div style={actionsBarStyle}>{block.command && <ActionButton onClick={() => onCopyCommand(block)} title="Copy command"><CopyIcon /> Cmd</ActionButton>}{block.complete && <ActionButton onClick={() => onCopyOutput(block)} title="Copy output"><CopyIcon /> Output</ActionButton>}{block.command && <ActionButton onClick={handleRerun} title="Re-run command"><RerunIcon /> Re-run</ActionButton>}{shouldShowExplain(block, onExplainError) && <ActionButton onClick={() => onExplainError?.(block)} title="Explain this error with AI"><ExplainIcon /> Explain</ActionButton>}{canCollapse && <ActionButton onClick={() => onToggleCollapse(block.id)} title={block.collapsed ? 'Expand output' : 'Collapse output'}><CollapseIcon collapsed={block.collapsed} />{block.collapsed ? 'Expand' : 'Collapse'}</ActionButton>}</div>
+  const handleRerun = useCallback(() => {
+    if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n');
+  }, [block.command, sessionId]);
+  const canCollapse = block.complete && block.endLine - block.startLine > 1;
+  return (
+    <div style={actionsBarStyle}>
+      {block.command && (
+        <ActionButton onClick={() => onCopyCommand(block)} title="Copy command">
+          <CopyIcon /> Cmd
+        </ActionButton>
+      )}
+      {block.complete && (
+        <ActionButton onClick={() => onCopyOutput(block)} title="Copy output">
+          <CopyIcon /> Output
+        </ActionButton>
+      )}
+      {block.command && (
+        <ActionButton onClick={handleRerun} title="Re-run command">
+          <RerunIcon /> Re-run
+        </ActionButton>
+      )}
+      {shouldShowExplain(block, onExplainError) && (
+        <ActionButton onClick={() => onExplainError?.(block)} title="Explain this error with AI">
+          <ExplainIcon /> Explain
+        </ActionButton>
+      )}
+      {canCollapse && (
+        <ActionButton
+          onClick={() => onToggleCollapse(block.id)}
+          title={block.collapsed ? 'Expand output' : 'Collapse output'}
+        >
+          <CollapseIcon collapsed={block.collapsed} />
+          {block.collapsed ? 'Expand' : 'Collapse'}
+        </ActionButton>
+      )}
+    </div>
+  );
 }

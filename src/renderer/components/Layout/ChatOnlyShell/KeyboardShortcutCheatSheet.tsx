@@ -111,10 +111,15 @@ function useDismissOnEsc(open: boolean, onClose: () => void): void {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
     };
     document.addEventListener('keydown', handler, { capture: true });
-    return () => { document.removeEventListener('keydown', handler, { capture: true }); };
+    return () => {
+      document.removeEventListener('keydown', handler, { capture: true });
+    };
   }, [open, onClose]);
 }
 
@@ -131,7 +136,9 @@ function useOutsideClick(
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener('pointerdown', handler);
-    return () => { document.removeEventListener('pointerdown', handler); };
+    return () => {
+      document.removeEventListener('pointerdown', handler);
+    };
   }, [open, cardRef, onClose]);
 }
 
@@ -141,40 +148,35 @@ interface CheatSheetModalProps {
   onClose: () => void;
 }
 
+function CheatSheetCardHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border-subtle shrink-0">
+      <h2 className="text-sm font-semibold text-text-semantic-primary">Keyboard shortcuts</h2>
+      <button onClick={onClose} aria-label="Close keyboard shortcuts"
+        className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:bg-surface-hover transition-colors" /* touch-target-ok */>
+        <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <line x1="1" y1="1" x2="11" y2="11" /><line x1="11" y1="1" x2="1" y2="11" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 function CheatSheetModal({ onClose }: CheatSheetModalProps): React.ReactElement {
   const cardRef = useRef<HTMLDivElement>(null);
   useOutsideClick(true, cardRef, onClose);
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center"
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center"
       style={{ backgroundColor: 'var(--surface-scrim, rgba(0,0,0,0.45))' }} // rgba: scrim/overlay, not semantic color
-      data-testid="cheatsheet-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Keyboard shortcuts"
+      data-testid="cheatsheet-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
     >
-      <div
-        ref={cardRef}
+      <div ref={cardRef} data-testid="cheatsheet-card"
         className="relative flex flex-col bg-surface-panel border border-border-subtle rounded-xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto"
-        data-testid="cheatsheet-card"
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border-subtle shrink-0">
-          <h2 className="text-sm font-semibold text-text-semantic-primary">Keyboard shortcuts</h2>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded text-text-semantic-muted hover:bg-surface-hover transition-colors" /* touch-target-ok */
-            aria-label="Close keyboard shortcuts"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <line x1="1" y1="1" x2="11" y2="11" /><line x1="11" y1="1" x2="1" y2="11" />
-            </svg>
-          </button>
-        </div>
+        <CheatSheetCardHeader onClose={onClose} />
         <div className="px-5 py-4">
-          {SHORTCUT_GROUPS.map((group) => (
-            <ShortcutGroupSection key={group.title} group={group} />
-          ))}
+          {SHORTCUT_GROUPS.map((group) => <ShortcutGroupSection key={group.title} group={group} />)}
         </div>
       </div>
     </div>,
@@ -186,14 +188,20 @@ function CheatSheetModal({ onClose }: CheatSheetModalProps): React.ReactElement 
 
 export function KeyboardShortcutCheatSheet(): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const handleClose = useCallback((): void => { setOpen(false); }, []);
+  const handleClose = useCallback((): void => {
+    setOpen(false);
+  }, []);
 
   useDismissOnEsc(open, handleClose);
 
   useEffect(() => {
-    const handler = (): void => { setOpen((prev) => !prev); };
+    const handler = (): void => {
+      setOpen((prev) => !prev);
+    };
     window.addEventListener(TOGGLE_SHORTCUT_CHEATSHEET_EVENT, handler);
-    return () => { window.removeEventListener(TOGGLE_SHORTCUT_CHEATSHEET_EVENT, handler); };
+    return () => {
+      window.removeEventListener(TOGGLE_SHORTCUT_CHEATSHEET_EVENT, handler);
+    };
   }, []);
 
   if (!open) return <></>;

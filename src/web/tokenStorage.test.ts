@@ -34,8 +34,12 @@ vi.mock('./capacitor', () => ({
 const store: Record<string, string> = {};
 const mockLocalStorage = {
   getItem: vi.fn((k: string) => store[k] ?? null),
-  setItem: vi.fn((k: string, v: string) => { store[k] = v; }),
-  removeItem: vi.fn((k: string) => { delete store[k]; }),
+  setItem: vi.fn((k: string, v: string) => {
+    store[k] = v;
+  }),
+  removeItem: vi.fn((k: string) => {
+    delete store[k];
+  }),
 };
 Object.defineProperty(globalThis, 'localStorage', {
   value: mockLocalStorage,
@@ -117,10 +121,7 @@ describe('tokenStorage — native path (isNative = true)', () => {
 
   it('setRefreshToken delegates to setSecureValue', async () => {
     await setRefreshToken('native-token-xyz');
-    expect(mocks.setSecureValue).toHaveBeenCalledWith(
-      'ouroboros.refreshToken',
-      'native-token-xyz',
-    );
+    expect(mocks.setSecureValue).toHaveBeenCalledWith('ouroboros.refreshToken', 'native-token-xyz');
     expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
   });
 
@@ -162,10 +163,7 @@ describe('tokenStorage — migration (native + legacy localStorage token)', () =
     mocks.getSecureValue.mockResolvedValue(null);
     const { getRefreshToken: freshGet } = await import('./tokenStorage');
     await freshGet();
-    expect(mocks.setSecureValue).toHaveBeenCalledWith(
-      'ouroboros.refreshToken',
-      'legacy-tok',
-    );
+    expect(mocks.setSecureValue).toHaveBeenCalledWith('ouroboros.refreshToken', 'legacy-tok');
     expect(store['ouroboros.refreshToken']).toBeUndefined();
   });
 

@@ -130,7 +130,10 @@ interface ToggleButtonProps {
 function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): React.ReactElement {
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); onToggle(filePath); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(filePath);
+      }}
       title={isStaged ? `Unstage ${filePath}` : `Stage ${filePath}`}
       className="rounded p-0.5 text-text-semantic-muted transition-colors duration-75 hover:bg-surface-panel hover:text-text-semantic-primary"
     >
@@ -188,7 +191,10 @@ function DiscardButton({
 
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); onDiscard(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onDiscard();
+      }}
       title={title}
       className={confirmDiscard ? `${className} text-status-error` : className}
     >

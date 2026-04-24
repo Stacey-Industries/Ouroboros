@@ -46,9 +46,7 @@ export function tabStyle(isActive: boolean): React.CSSProperties {
     cursor: 'pointer',
     background: 'none',
     border: 'none',
-    borderBottom: isActive
-      ? '2px solid var(--interactive-accent)'
-      : '2px solid transparent',
+    borderBottom: isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
     transition: 'all 120ms ease',
     whiteSpace: 'nowrap',
   };

@@ -34,8 +34,12 @@ function createFakeChild(): FakeChild {
       if (event === 'exit') exitCb = cb as (code: number) => void;
       return child;
     },
-    emitMessage: (msg) => { messageCb?.(msg); },
-    emitExit: (code) => { exitCb?.(code); },
+    emitMessage: (msg) => {
+      messageCb?.(msg);
+    },
+    emitExit: (code) => {
+      exitCb?.(code);
+    },
   };
   return child;
 }
@@ -60,8 +64,17 @@ import { UtilityProcessHost } from './utilityProcessHost';
 
 // ── Test types ──
 
-interface TestRequest { type: string; requestId?: string; payload?: unknown }
-interface TestOutbound { type: string; requestId?: string; payload?: unknown; message?: string }
+interface TestRequest {
+  type: string;
+  requestId?: string;
+  payload?: unknown;
+}
+interface TestOutbound {
+  type: string;
+  requestId?: string;
+  payload?: unknown;
+  message?: string;
+}
 
 // ── Tests ──
 
@@ -230,7 +243,9 @@ describe('UtilityProcessHost', () => {
     });
 
     it('crash handler errors do not block auto-restart', () => {
-      const onCrash = vi.fn(() => { throw new Error('handler bug'); });
+      const onCrash = vi.fn(() => {
+        throw new Error('handler bug');
+      });
       const host = makeHost({ autoRestart: true, onCrash });
       host.fork();
       createdChildren[0]!.emitExit(1);

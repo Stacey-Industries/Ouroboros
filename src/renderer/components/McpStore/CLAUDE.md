@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-This directory implements a dual-surface pattern: `McpSection` manages **locally configured** servers (CRUD via IPC), while `McpStoreSection` manages **registry/npm discovery** (search + install). Both surfaces share a common `McpStorePage` shell but use completely separate model hooks — there's no shared state between them. The `MCP_SERVERS_CHANGED_EVENT` DOM CustomEvent is the coupling point: the store install flow fires it, and the section model listens for it to auto-refresh.
-`─────────────────────────────────────────────────`
-
 # McpStore — MCP Server Management UI
 
 Two-surface UI for MCP server management: **Browse** (discover and install from Official MCP Registry or npm) and **Installed** (CRUD for locally configured servers). Rendered as a centre-pane `SpecialView` via `McpStorePage`.
@@ -76,4 +72,5 @@ Registry server names are namespaced (e.g. `@scope/mcp-server-name`). `extractSh
 - **`onRegisterRefresh` callback**: `McpStorePage` passes this to both tabs so the shell's refresh button can call the active tab's own refresh. It's a ref-based callback registered via `useEffect` — safe to call without triggering re-renders.
 - **Style co-location split**: `McpStoreSectionDetail` hit the 300-line ESLint limit, so styles were extracted to `mcpStoreSectionDetailStyles.ts` and sub-components to `McpStoreSectionDetail.parts.tsx`. If you add features, watch the line count.
 - **Search debounce**: `mcpStoreModel.ts` debounces search by `SEARCH_DEBOUNCE_MS = 300ms` using a `useRef` timer — changing `query` triggers a delayed `search()` call, not an immediate one.
+
 <!-- claude-md-auto:end -->

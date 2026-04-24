@@ -9,10 +9,7 @@ import type { AgentChatBranchInfo, AgentChatMessageRecord, AgentChatThreadRecord
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function findUserMessageIndex(
-  messages: AgentChatMessageRecord[],
-  anchorIdx: number,
-): number {
+function findUserMessageIndex(messages: AgentChatMessageRecord[], anchorIdx: number): number {
   // Walk backwards from anchor to find the nearest user message.
   for (let i = anchorIdx - 1; i >= 0; i--) {
     const msg = messages.at(i);

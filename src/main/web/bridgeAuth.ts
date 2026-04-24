@@ -47,10 +47,7 @@ function getIp(req: IncomingMessage): string {
   return req.socket?.remoteAddress ?? 'unknown';
 }
 
-function buildMeta(
-  deviceId: string,
-  capabilities: readonly string[],
-): MobileAccessMeta {
+function buildMeta(deviceId: string, capabilities: readonly string[]): MobileAccessMeta {
   return {
     deviceId,
     capabilities: capabilities as MobileAccessMeta['capabilities'],
@@ -68,9 +65,7 @@ function buildMeta(
  *   collect the first WS message and call authenticatePairingHandshake instead).
  * - No header or unrecognised scheme → null (legacy single-token path in caller).
  */
-export async function authenticateUpgrade(
-  req: IncomingMessage,
-): Promise<MobileAccessMeta | null> {
+export async function authenticateUpgrade(req: IncomingMessage): Promise<MobileAccessMeta | null> {
   const authHeader = req.headers.authorization ?? '';
 
   if (!authHeader.startsWith('Bearer ')) {

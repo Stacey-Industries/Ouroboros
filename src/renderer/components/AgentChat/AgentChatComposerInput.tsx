@@ -109,6 +109,9 @@ export type ComposerInputProps = {
   onCloseAutocomplete?: () => void;
   onCloseMentionAutocomplete?: () => void;
   onCloseSlashMenu?: () => void;
+  /** taskId of the active warm process — enables mid-turn inject button when streaming. */
+  activeMidTurnTaskId?: string | null;
+  onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
 };
 
 const ACCENT = { color: '#58a6ff' };
@@ -135,9 +138,7 @@ function isHighlightedToken(part: string): boolean {
  * `@[foo` truncated at the space.
  */
 export function tokenizeComposerHighlights(value: string): string[] {
-  return value.split(
-    /((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g,
-  );
+  return value.split(/((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g);
 }
 
 function renderHighlights(value: string): React.ReactNode {
@@ -149,9 +150,72 @@ function renderHighlights(value: string): React.ReactNode {
   ));
 }
 
+/* ---------- MidTurnInjectButton ---------- */
+
+function LightningIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13 2L4.09 12.97A1 1 0 0 0 5 14.5h6v7.5l8.91-10.97A1 1 0 0 0 19 9.5h-6V2z" />
+    </svg>
+  );
+}
+
+function MidTurnInjectButton(props: {
+  taskId: string;
+  draft: string;
+  onChange: (value: string) => void;
+  onInject: (taskId: string, content: string) => Promise<void>;
+}): React.ReactElement {
+  const disabled = props.draft.trim() === '';
+
+  function handleClick(): void {
+    const content = props.draft.trim();
+    if (!content) return;
+    props.onChange('');
+    void props.onInject(props.taskId, content);
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label="Inject mid-turn message"
+      title="Inject mid-turn message"
+      disabled={disabled}
+      onClick={handleClick}
+      className="absolute flex items-center justify-center rounded-md transition-all duration-100 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-30"
+      style={{
+        top: '6px',
+        right: '38px',
+        width: '28px',
+        height: '28px',
+        color: 'var(--status-warning)',
+      }}
+    >
+      <LightningIcon />
+    </button>
+  );
+}
+
+function makeTextareaFocusHandlers(breakpoint: string) {
+  return {
+    onFocus(e: React.FocusEvent<HTMLTextAreaElement>): void {
+      e.currentTarget.style.borderColor = 'var(--interactive-accent)';
+      e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';
+      if (breakpoint === 'phone') {
+        e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    },
+    onBlurCapture(e: React.FocusEvent<HTMLTextAreaElement>): void {
+      e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';
+      e.currentTarget.style.boxShadow = 'none';
+    },
+  };
+}
+
 function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
   const breakpoint = useViewportBreakpoint();
+  const focusHandlers = makeTextareaFocusHandlers(breakpoint);
   return (
     <div className="w-full">
       <RichTextarea
@@ -172,18 +236,12 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         rows={1}
         autoHeight
         className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-        style={{ ...baseStyle, width: '100%', maxHeight: 'calc(40vh)' /* 40vh: expands freely before scrolling */ }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'var(--interactive-accent)';
-          e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';
-          if (breakpoint === 'phone') {
-            e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          }
+        style={{
+          ...baseStyle,
+          width: '100%',
+          maxHeight: 'calc(40vh)' /* 40vh: expands freely before scrolling */,
         }}
-        onBlurCapture={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
+        {...focusHandlers}
       >
         {renderHighlights}
       </RichTextarea>
@@ -191,42 +249,74 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   );
 }
 
+function PickImageButton({
+  onPickImage,
+  rightClass,
+}: {
+  onPickImage: () => Promise<void>;
+  rightClass: string;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      title="Attach image"
+      onClick={() => void onPickImage()}
+      className={`absolute ${rightClass} flex h-[28px] w-[28px] items-center justify-center rounded-md text-text-semantic-muted transition-colors duration-100 hover:bg-surface-hover hover:text-text-semantic-primary`}
+      style={{ top: 6 }}
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+      </svg>
+    </button>
+  );
+}
+
+function ComposerActionButton(
+  props: ComposerInputProps & {
+    showQueue: boolean;
+    showStop: boolean;
+  },
+): React.ReactElement {
+  if (props.showStop) return <StopButton onClick={() => void props.onStop?.()} />;
+  return (
+    <SendButton
+      canSend={props.canSend}
+      isSending={props.isSending}
+      willQueue={props.showQueue}
+      onClick={() => void props.onSubmit()}
+    />
+  );
+}
+
 export function ComposerInput(props: ComposerInputProps): React.ReactElement {
+  const showQueue = props.threadIsBusy && props.canSend;
+  const showStop = Boolean(props.threadIsBusy && !showQueue && props.onStop);
+  const showMidTurn = Boolean(props.activeMidTurnTaskId && props.onInjectMidTurn);
+  const imageRightClass = showMidTurn ? 'right-20' : 'right-10';
   return (
     <div className="relative">
       <ComposerTextarea {...props} />
       {props.onPickImage && (
-        <button
-          type="button"
-          title="Attach image"
-          onClick={() => void props.onPickImage?.()}
-          className="absolute right-10 flex h-[28px] w-[28px] items-center justify-center rounded-md text-text-semantic-muted transition-colors duration-100 hover:bg-surface-hover hover:text-text-semantic-primary"
-          style={{ top: 6 }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
+        <PickImageButton onPickImage={props.onPickImage} rightClass={imageRightClass} />
       )}
-      {props.threadIsBusy && props.onStop ? (
-        <StopButton onClick={() => void props.onStop?.()} />
-      ) : (
-        <SendButton
-          canSend={props.canSend}
-          isSending={props.isSending}
-          willQueue={props.threadIsBusy}
-          onClick={() => void props.onSubmit()}
+      {showMidTurn && props.activeMidTurnTaskId && props.onInjectMidTurn && (
+        <MidTurnInjectButton
+          taskId={props.activeMidTurnTaskId}
+          draft={props.draft}
+          onChange={props.handleChange}
+          onInject={props.onInjectMidTurn}
         />
       )}
+      <ComposerActionButton {...props} showQueue={showQueue} showStop={showStop} />
     </div>
   );
 }

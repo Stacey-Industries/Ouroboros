@@ -20,19 +20,33 @@ const mockSpawnA = vi.fn();
 const mockSpawnB = vi.fn();
 const mockCancelA = vi.fn().mockResolvedValue(undefined);
 const mockCancelB = vi.fn().mockResolvedValue(undefined);
-const mockOnEventA = vi.fn().mockReturnValue(() => { /* cleanup */ });
-const mockOnEventB = vi.fn().mockReturnValue(() => { /* cleanup */ });
+const mockOnEventA = vi.fn().mockReturnValue(() => {
+  /* cleanup */
+});
+const mockOnEventB = vi.fn().mockReturnValue(() => {
+  /* cleanup */
+});
 
 const mockProviderA = {
-  id: 'claude', label: 'Claude', binary: 'claude',
-  checkAvailability: vi.fn(), spawn: mockSpawnA, send: vi.fn(),
-  cancel: mockCancelA, onEvent: mockOnEventA,
+  id: 'claude',
+  label: 'Claude',
+  binary: 'claude',
+  checkAvailability: vi.fn(),
+  spawn: mockSpawnA,
+  send: vi.fn(),
+  cancel: mockCancelA,
+  onEvent: mockOnEventA,
 };
 
 const mockProviderB = {
-  id: 'codex', label: 'Codex', binary: 'codex',
-  checkAvailability: vi.fn(), spawn: mockSpawnB, send: vi.fn(),
-  cancel: mockCancelB, onEvent: mockOnEventB,
+  id: 'codex',
+  label: 'Codex',
+  binary: 'codex',
+  checkAvailability: vi.fn(),
+  spawn: mockSpawnB,
+  send: vi.fn(),
+  cancel: mockCancelB,
+  onEvent: mockOnEventB,
 };
 
 vi.mock('../providers/providerRegistry', () => ({
@@ -55,8 +69,11 @@ vi.mock('../logger', () => ({
 
 function makeHandle(providerId: string, idx: number) {
   return {
-    id: `handle-${providerId}-${idx}`, providerId,
-    ptySessionId: `pty-${idx}`, startedAt: Date.now(), status: 'ready' as const,
+    id: `handle-${providerId}-${idx}`,
+    providerId,
+    ptySessionId: `pty-${idx}`,
+    startedAt: Date.now(),
+    status: 'ready' as const,
   };
 }
 
@@ -104,9 +121,11 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:start', {
-        prompt: 'hello', projectPath: '/proj', providerIds: ['claude', 'codex'],
-      }) as { success: boolean; compareId: string; sessions: unknown[] };
+      const result = (await invokeHandler('compareProviders:start', {
+        prompt: 'hello',
+        projectPath: '/proj',
+        providerIds: ['claude', 'codex'],
+      })) as { success: boolean; compareId: string; sessions: unknown[] };
 
       expect(result.success).toBe(true);
       expect(result.compareId).toBeTruthy();
@@ -120,9 +139,11 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:start', {
-        prompt: '', projectPath: '/proj', providerIds: ['claude', 'codex'],
-      }) as { success: boolean; error: string };
+      const result = (await invokeHandler('compareProviders:start', {
+        prompt: '',
+        projectPath: '/proj',
+        providerIds: ['claude', 'codex'],
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/prompt/i);
@@ -133,9 +154,11 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:start', {
-        prompt: 'hi', projectPath: '/proj', providerIds: ['claude'],
-      }) as { success: boolean; error: string };
+      const result = (await invokeHandler('compareProviders:start', {
+        prompt: 'hi',
+        projectPath: '/proj',
+        providerIds: ['claude'],
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/providerIds/i);
@@ -146,9 +169,11 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:start', {
-        prompt: 'hi', projectPath: '/proj', providerIds: ['claude', 'unknown-provider'],
-      }) as { success: boolean; error: string };
+      const result = (await invokeHandler('compareProviders:start', {
+        prompt: 'hi',
+        projectPath: '/proj',
+        providerIds: ['claude', 'unknown-provider'],
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
     });
@@ -160,7 +185,10 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:cancel', {}) as { success: boolean; error: string };
+      const result = (await invokeHandler('compareProviders:cancel', {})) as {
+        success: boolean;
+        error: string;
+      };
       expect(result.success).toBe(false);
     });
 
@@ -169,7 +197,9 @@ describe('compareProvidersHandlers', () => {
       const { registerCompareProvidersHandlers } = await import('./compareProvidersHandlers');
       registerCompareProvidersHandlers();
 
-      const result = await invokeHandler('compareProviders:cancel', { compareId: 'nonexistent' }) as { success: boolean };
+      const result = (await invokeHandler('compareProviders:cancel', {
+        compareId: 'nonexistent',
+      })) as { success: boolean };
       expect(result.success).toBe(false);
     });
   });

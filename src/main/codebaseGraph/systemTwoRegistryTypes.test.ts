@@ -6,9 +6,9 @@
  * expected — catching any accidental structural breaks.
  */
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 
-import type { RegistryEntry, SystemTwoHandle } from './systemTwoRegistryTypes'
+import type { RegistryEntry, SystemTwoHandle } from './systemTwoRegistryTypes';
 
 // ─── SystemTwoHandle ──────────────────────────────────────────────────────────
 
@@ -21,13 +21,13 @@ describe('SystemTwoHandle', () => {
       watcher: null,
       createdAt: Date.now(),
       lastIndexStatus: 'idle',
-    }
-    expect(handle.projectRoot).toBe('/home/user/my-project')
-    expect(handle.projectName).toBe('my-project')
-    expect(handle.refCount).toBe(1)
-    expect(handle.watcher).toBeNull()
-    expect(handle.lastIndexStatus).toBe('idle')
-  })
+    };
+    expect(handle.projectRoot).toBe('/home/user/my-project');
+    expect(handle.projectName).toBe('my-project');
+    expect(handle.refCount).toBe(1);
+    expect(handle.watcher).toBeNull();
+    expect(handle.lastIndexStatus).toBe('idle');
+  });
 
   it('allows refCount > 1 for multiply-acquired roots', () => {
     const handle: SystemTwoHandle = {
@@ -37,10 +37,10 @@ describe('SystemTwoHandle', () => {
       watcher: null,
       createdAt: 1000,
       lastIndexStatus: 'indexing',
-    }
-    expect(handle.refCount).toBe(3)
-  })
-})
+    };
+    expect(handle.refCount).toBe(3);
+  });
+});
 
 // ─── RegistryEntry ────────────────────────────────────────────────────────────
 
@@ -53,13 +53,13 @@ describe('RegistryEntry', () => {
       watcher: null,
       createdAt: Date.now(),
       lastIndexStatus: 'idle',
-    }
+    };
     // Mutability: RegistryEntry is mutable (not readonly)
-    entry.refCount = 2
-    entry.lastIndexStatus = 'complete'
-    expect(entry.refCount).toBe(2)
-    expect(entry.lastIndexStatus).toBe('complete')
-  })
+    entry.refCount = 2;
+    entry.lastIndexStatus = 'complete';
+    expect(entry.refCount).toBe(2);
+    expect(entry.lastIndexStatus).toBe('complete');
+  });
 
   it('can represent a zero-refcount entry (about to be removed)', () => {
     const entry: RegistryEntry = {
@@ -69,7 +69,7 @@ describe('RegistryEntry', () => {
       watcher: null,
       createdAt: 0,
       lastIndexStatus: 'disposed',
-    }
-    expect(entry.refCount).toBe(0)
-  })
-})
+    };
+    expect(entry.refCount).toBe(0);
+  });
+});

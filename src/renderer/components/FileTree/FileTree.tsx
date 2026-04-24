@@ -2,7 +2,7 @@
  * FileTree - multi-root hierarchical tree view.
  */
 
-import React, { useCallback, useEffect, useMemo,useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { REFRESH_FILE_TREE_EVENT } from '../../hooks/appEventNames';
@@ -13,7 +13,7 @@ import { FileTreeBody } from './FileTreeBody';
 import { FileTreeSearchBar } from './FileTreeSearchBar';
 import { useFileTreeStore } from './fileTreeStore';
 import { GitBranchIndicator } from './GitBranchIndicator';
-import { computeStatusCounts,GitStatusFilterBar } from './GitStatusFilter';
+import { computeStatusCounts, GitStatusFilterBar } from './GitStatusFilter';
 
 export interface FileTreeProps {
   projectRoots: string[];
@@ -34,23 +34,14 @@ const treeContainerStyle: React.CSSProperties = {
   height: '100%',
 };
 
-function resolveRoots(
-  projectRoots: string[],
-  singleRootProp?: string | null
-): string[] {
+function resolveRoots(projectRoots: string[], singleRootProp?: string | null): string[] {
   if (projectRoots.length > 0) return projectRoots;
   if (singleRootProp) return [singleRootProp];
   return [];
 }
 
-function useResolvedRoots(
-  projectRoots: string[],
-  singleRootProp?: string | null
-): string[] {
-  return useMemo(
-    () => resolveRoots(projectRoots, singleRootProp),
-    [projectRoots, singleRootProp]
-  );
+function useResolvedRoots(projectRoots: string[], singleRootProp?: string | null): string[] {
+  return useMemo(() => resolveRoots(projectRoots, singleRootProp), [projectRoots, singleRootProp]);
 }
 
 /**
@@ -109,7 +100,7 @@ function pinnedName(path: string): string {
 function useUnpinHandler(
   bookmarks: string[],
   setBookmarks: React.Dispatch<React.SetStateAction<string[]>>,
-  toast: ToastFn
+  toast: ToastFn,
 ): (path: string) => Promise<void> {
   return useCallback(
     async (path: string) => {
@@ -122,7 +113,7 @@ function useUnpinHandler(
       setBookmarks(updated);
       toast(`Removed "${pinnedName(path)}" from Pinned`, 'success');
     },
-    [bookmarks, setBookmarks, toast]
+    [bookmarks, setBookmarks, toast],
   );
 }
 
@@ -134,9 +125,7 @@ function useUnpinHandler(
  * The setQuery wrapper is typed to match React.Dispatch<SetStateAction<string>>
  * for backward compatibility with FileTreeSearchBar.
  */
-function useSearchQuery(
-  onFileSelect: (filePath: string) => void
-): {
+function useSearchQuery(onFileSelect: (filePath: string) => void): {
   query: string;
   setQuery: React.Dispatch<React.SetStateAction<string>>;
   handleSearchSelect: (path: string) => void;
@@ -155,7 +144,7 @@ function useSearchQuery(
         storeSetQuery(action);
       }
     },
-    [storeSetQuery]
+    [storeSetQuery],
   );
 
   const handleSearchSelect = useCallback(
@@ -163,7 +152,7 @@ function useSearchQuery(
       onFileSelect(path);
       storeSetQuery('');
     },
-    [onFileSelect, storeSetQuery]
+    [onFileSelect, storeSetQuery],
   );
 
   return { query, setQuery, handleSearchSelect };
@@ -179,8 +168,20 @@ function useRefreshFilesEvent(): void {
 }
 
 const FOLDER_ICON = (
-  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M8 14C8 12.3431 9.34315 11 11 11H19L23 15H37C38.6569 15 40 16.3431 40 18V34C40 35.6569 38.6569 37 37 37H11C9.34315 37 8 35.6569 8 34V14Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+  <svg
+    width="48"
+    height="48"
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path
+      d="M8 14C8 12.3431 9.34315 11 11 11H19L23 15H37C38.6569 15 40 16.3431 40 18V34C40 35.6569 38.6569 37 37 37H11C9.34315 37 8 35.6569 8 34V14Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
     <path d="M8 20H40" stroke="currentColor" strokeWidth="1.5" />
   </svg>
 );
@@ -215,7 +216,10 @@ interface FileTreeContentProps {
   heatMapEnabled: boolean;
   heatMapCount: number;
   onToggleHeatMap: () => void;
-  bodyProps: Omit<React.ComponentProps<typeof FileTreeBody>, 'query' | 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'>;
+  bodyProps: Omit<
+    React.ComponentProps<typeof FileTreeBody>,
+    'query' | 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'
+  >;
   /** Primary project root for git operations */
   primaryRoot: string;
 }
@@ -259,7 +263,11 @@ function FileTreeContent({
   );
 }
 
-export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
+function useFileTreeHooks(
+  projectRoots: string[],
+  singleRootProp: string | null | undefined,
+  onFileSelect: (filePath: string) => void,
+) {
   useRefreshFilesEvent();
   const roots = useResolvedRoots(projectRoots, singleRootProp);
   const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
@@ -270,31 +278,45 @@ export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpe
   const { toast } = useToastContext();
   const { getHeatLevel, heatMap } = useFileHeatMap(heatMapEnabled);
   const handleUnpin = useUnpinHandler(bookmarks, setBookmarks, toast);
+  return {
+    roots, expandedRoots, toggleRoot, bookmarks, extraIgnorePatterns,
+    query, setQuery, handleSearchSelect, heatMapEnabled, setHeatMapEnabled,
+    inputRef, getHeatLevel, heatMap, handleUnpin,
+  };
+}
 
-  if (roots.length === 0) return <EmptyFileTree />;
-
+export function FileTree({
+  projectRoots,
+  activeFilePath,
+  onFileSelect,
+  onFileOpen,
+  onRemoveRoot,
+  projectRoot: singleRootProp,
+}: FileTreeProps): React.ReactElement {
+  const h = useFileTreeHooks(projectRoots, singleRootProp, onFileSelect);
+  if (h.roots.length === 0) return <EmptyFileTree />;
   return (
     <FileTreeContent
-      query={query}
-      setQuery={setQuery}
-      inputRef={inputRef}
-      heatMapEnabled={heatMapEnabled}
-      heatMapCount={heatMap.size}
-      onToggleHeatMap={() => setHeatMapEnabled((prev) => !prev)}
-      primaryRoot={roots[0]}
+      query={h.query}
+      setQuery={h.setQuery}
+      inputRef={h.inputRef}
+      heatMapEnabled={h.heatMapEnabled}
+      heatMapCount={h.heatMap.size}
+      onToggleHeatMap={() => h.setHeatMapEnabled((prev) => !prev)}
+      primaryRoot={h.roots[0]}
       bodyProps={{
-        roots,
+        roots: h.roots,
         activeFilePath,
-        bookmarks,
-        expandedRoots,
-        extraIgnorePatterns,
+        bookmarks: h.bookmarks,
+        expandedRoots: h.expandedRoots,
+        extraIgnorePatterns: h.extraIgnorePatterns,
         onFileSelect,
         onFileOpen,
-        onToggleRoot: toggleRoot,
+        onToggleRoot: h.toggleRoot,
         onRemoveRoot,
-        onSearchSelect: handleSearchSelect,
-        onUnpin: (path) => void handleUnpin(path),
-        getHeatLevel: heatMapEnabled ? getHeatLevel : undefined,
+        onSearchSelect: h.handleSearchSelect,
+        onUnpin: (path) => void h.handleUnpin(path),
+        getHeatLevel: h.heatMapEnabled ? h.getHeatLevel : undefined,
       }}
     />
   );

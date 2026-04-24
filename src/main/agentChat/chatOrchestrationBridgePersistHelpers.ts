@@ -10,7 +10,11 @@ import log from '../logger';
 import { recordTurnEnd } from '../orchestration/contextOutcomeObserver';
 import { emitMonitorSessionEnd, emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
-import type { AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord } from './types';
+import type {
+  AgentChatMessageRecord,
+  AgentChatOrchestrationLink,
+  AgentChatThreadRecord,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Upsert helpers
@@ -65,10 +69,14 @@ export function emitSnapshotChunk(
 ): void {
   log.info(
     '[trace:chat-order] emitSnapshotChunk',
-    'thread:', threadId.slice(-6),
-    'assistantMsg:', messageId.slice(-6),
-    'msgs:', thread.messages.length,
-    'ids:', thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
+    'thread:',
+    threadId.slice(-6),
+    'assistantMsg:',
+    messageId.slice(-6),
+    'msgs:',
+    thread.messages.length,
+    'ids:',
+    thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
   );
   emitStreamChunk(runtime.streamChunkListeners, {
     threadId,

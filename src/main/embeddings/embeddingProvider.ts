@@ -25,7 +25,6 @@ async function loadLocalEmbedder(): Promise<EmbedderFn> {
   if (cachedEmbedder) return cachedEmbedder;
   if (pendingEmbedder) return pendingEmbedder;
   pendingEmbedder = (async (): Promise<EmbedderFn> => {
-     
     const transformers = (await import('@xenova/transformers' as string)) as {
       pipeline: (task: string, model: string) => Promise<EmbedderFn>;
     };
@@ -105,7 +104,10 @@ export function createVoyageProvider(apiKey: string): IEmbeddingProvider {
   return {
     model: VOYAGE_MODEL,
     dimensions: VOYAGE_DIMS,
-    async embed(texts: string[], inputType: EmbeddingInputType = 'document'): Promise<Float32Array[]> {
+    async embed(
+      texts: string[],
+      inputType: EmbeddingInputType = 'document',
+    ): Promise<Float32Array[]> {
       if (texts.length === 0) return [];
       // Voyage allows up to 128 inputs per request
       const batches: string[][] = [];

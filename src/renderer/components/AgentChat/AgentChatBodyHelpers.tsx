@@ -29,13 +29,49 @@ function logMessagesSignature(
   lastSignatureRef.current = signature;
   log.info(
     '[trace:chat-order] messagesWithStreaming',
-    'thread:', threadId.slice(-6),
-    'count:', filtered.length,
-    'synthetic:', meta.synthetic,
-    'streamingAlreadyPersisted:', meta.streamingAlreadyPersisted,
-    'streamingMsgId:', meta.streamingMsgId ? meta.streamingMsgId.slice(-6) : 'null',
-    'ids:', signature,
+    'thread:',
+    threadId.slice(-6),
+    'count:',
+    filtered.length,
+    'synthetic:',
+    meta.synthetic,
+    'streamingAlreadyPersisted:',
+    meta.streamingAlreadyPersisted,
+    'streamingMsgId:',
+    meta.streamingMsgId ? meta.streamingMsgId.slice(-6) : 'null',
+    'ids:',
+    signature,
   );
+}
+
+interface PushSyntheticOpts {
+  filtered: AgentChatMessageRecord[];
+  activeThread: AgentChatThreadRecord;
+  streaming: AgentChatStreamingState;
+  threadIsActive: boolean;
+  streamingAlreadyPersisted: boolean;
+  onStop: (() => Promise<void>) | undefined;
+}
+
+function maybePushSyntheticMessage(opts: PushSyntheticOpts): boolean {
+  const { filtered, activeThread, streaming, threadIsActive, streamingAlreadyPersisted, onStop } = opts;
+  if (!streamingIsActiveFor(streaming, threadIsActive) || streamingAlreadyPersisted) return false;
+  filtered.push(
+    buildSyntheticStreamingMessage({
+      activeThread,
+      streamingBlocks: streaming.blocks,
+      streamingMessageId: streaming.streamingMessageId ?? undefined,
+      activeTextContent: streaming.activeTextContent,
+      isStreaming: streaming.isStreaming,
+      threadIsActive,
+      onStop,
+    }),
+  );
+  return true;
+}
+
+function streamingIsActiveFor(streaming: AgentChatStreamingState, threadIsActive: boolean): boolean {
+  return streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
 }
 
 export function useMessagesWithStreaming(
@@ -45,7 +81,6 @@ export function useMessagesWithStreaming(
 ): AgentChatMessageRecord[] {
   const threadIsActive =
     activeThread?.status === 'submitting' || activeThread?.status === 'running';
-  const streamingIsActive = streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
   const streamingAlreadyPersisted = Boolean(
     streaming.streamingMessageId &&
     activeThread?.messages.some((m) => m.id === streaming.streamingMessageId),
@@ -54,21 +89,22 @@ export function useMessagesWithStreaming(
   return useMemo(() => {
     if (!activeThread) return [];
     const filtered = buildFilteredMessages(activeThread.messages);
-    let synthetic = false;
-    if (streamingIsActive && !streamingAlreadyPersisted) {
-      filtered.push(buildSyntheticStreamingMessage({
-        activeThread, streamingBlocks: streaming.blocks,
-        streamingMessageId: streaming.streamingMessageId ?? undefined,
-        activeTextContent: streaming.activeTextContent,
-        isStreaming: streaming.isStreaming, threadIsActive, onStop,
-      }));
-      synthetic = true;
-    }
+    const synthetic = maybePushSyntheticMessage(
+      { filtered, activeThread, streaming, threadIsActive, streamingAlreadyPersisted, onStop },
+    );
     logMessagesSignature(activeThread.id, filtered, lastSignatureRef, {
-      synthetic, streamingAlreadyPersisted, streamingMsgId: streaming.streamingMessageId ?? null,
+      synthetic,
+      streamingAlreadyPersisted,
+      streamingMsgId: streaming.streamingMessageId ?? null,
     });
     return filtered;
-  }, [activeThread, streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, onStop]);
+  }, [
+    activeThread,
+    streaming,
+    threadIsActive,
+    streamingAlreadyPersisted,
+    onStop,
+  ]);
 }
 
 /** Shown before the first streaming blocks arrive — just the user bubble + status spinner. */

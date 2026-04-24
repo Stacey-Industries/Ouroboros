@@ -30,10 +30,7 @@ vi.mock('./RerunMenu', () => ({
 }));
 
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
-import {
-  AssistantMessageActions,
-  UserMessageActions,
-} from './AgentChatMessageActions';
+import { AssistantMessageActions, UserMessageActions } from './AgentChatMessageActions';
 
 const mockBreakpoint = useViewportBreakpoint as ReturnType<typeof vi.fn>;
 
@@ -68,7 +65,9 @@ function makeAssistantMsg(overrides: Record<string, unknown> = {}) {
   } as Parameters<typeof AssistantMessageActions>[0]['message'];
 }
 
-const noop = () => { /* noop */ };
+const noop = () => {
+  /* noop */
+};
 
 // ── UserMessageActions ────────────────────────────────────────────────────────
 
@@ -88,9 +87,7 @@ describe('UserMessageActions', () => {
     // Hover wrapper has opacity-0 class
     expect(container.querySelector('.opacity-0')).not.toBeNull();
     // No ⋯ overflow button
-    expect(
-      container.querySelector('button[aria-label="More actions"]'),
-    ).toBeNull();
+    expect(container.querySelector('button[aria-label="More actions"]')).toBeNull();
   });
 
   it('phone: renders ⋯ overflow button, not hover toolbar', () => {
@@ -105,9 +102,7 @@ describe('UserMessageActions', () => {
         onBranch={noop}
       />,
     );
-    expect(
-      container.querySelector('button[aria-label="More actions"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('button[aria-label="More actions"]')).not.toBeNull();
     expect(container.querySelector('.opacity-0')).toBeNull();
   });
 
@@ -138,28 +133,18 @@ describe('AssistantMessageActions', () => {
   it('desktop: renders hover toolbar div', () => {
     mockBreakpoint.mockReturnValue('desktop');
     const { container } = render(
-      <AssistantMessageActions
-        message={makeAssistantMsg()}
-        onBranch={noop}
-      />,
+      <AssistantMessageActions message={makeAssistantMsg()} onBranch={noop} />,
     );
     expect(container.querySelector('.opacity-0')).not.toBeNull();
-    expect(
-      container.querySelector('button[aria-label="More actions"]'),
-    ).toBeNull();
+    expect(container.querySelector('button[aria-label="More actions"]')).toBeNull();
   });
 
   it('phone: renders ⋯ overflow button', () => {
     mockBreakpoint.mockReturnValue('phone');
     const { container } = render(
-      <AssistantMessageActions
-        message={makeAssistantMsg()}
-        onBranch={noop}
-      />,
+      <AssistantMessageActions message={makeAssistantMsg()} onBranch={noop} />,
     );
-    expect(
-      container.querySelector('button[aria-label="More actions"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('button[aria-label="More actions"]')).not.toBeNull();
   });
 
   it('phone: Revert action present when snapshot exists', async () => {
@@ -169,11 +154,7 @@ describe('AssistantMessageActions', () => {
     });
     const onRevert = vi.fn();
     const { container } = render(
-      <AssistantMessageActions
-        message={msg}
-        onBranch={noop}
-        onRevert={onRevert}
-      />,
+      <AssistantMessageActions message={msg} onBranch={noop} onRevert={onRevert} />,
     );
     const trigger = container.querySelector(
       'button[aria-label="More actions"]',

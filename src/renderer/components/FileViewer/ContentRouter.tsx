@@ -97,7 +97,7 @@ const previewPanelStyle: React.CSSProperties = {
   display: 'flex',
 };
 
-const noop = (): void => { };
+const noop = (): void => {};
 
 function renderPanel(
   child: React.ReactElement,
@@ -200,14 +200,17 @@ function renderPreviewContent(props: ContentRouterProps): React.ReactElement | n
 
 function renderDiffContent(props: ContentRouterProps): React.ReactElement | null {
   const diffBaseContent = props.diffBaseContent ?? props.originalContent ?? null;
-  if (props.viewMode !== 'diff' || !props.hasDiff || diffBaseContent == null || props.content == null) {
+  if (
+    props.viewMode !== 'diff' ||
+    !props.hasDiff ||
+    diffBaseContent == null ||
+    props.content == null
+  ) {
     return null;
   }
 
   if (USE_MONACO) {
-    const language = props.filePath
-      ? detectLanguage(props.filePath)
-      : 'plaintext';
+    const language = props.filePath ? detectLanguage(props.filePath) : 'plaintext';
     return renderPanel(
       <MonacoDiffEditor
         originalContent={diffBaseContent}
@@ -219,9 +222,7 @@ function renderDiffContent(props: ContentRouterProps): React.ReactElement | null
     );
   }
 
-  return renderPanel(
-    <DiffView originalContent={diffBaseContent} currentContent={props.content} />,
-  );
+  return renderPanel(<DiffView originalContent={diffBaseContent} currentContent={props.content} />);
 }
 
 function renderConflictContent(props: ContentRouterProps): React.ReactElement | null {

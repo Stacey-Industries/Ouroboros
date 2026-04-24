@@ -51,9 +51,15 @@ function useSettingsPanelState(onClose: () => void) {
   };
 
   return {
-    api, activeMainTab, activeSubTab, handleMainTabChange,
+    api,
+    activeMainTab,
+    activeSubTab,
+    handleMainTabChange,
     setActiveSubTab: (sub: TabId) => setActiveSubTab(sub),
-    searchQuery, setSearchQuery, searchInputRef, handleResultClick,
+    searchQuery,
+    setSearchQuery,
+    searchInputRef,
+    handleResultClick,
     doCancel: () => api.handleCancel(onClose),
     doSave: () => void api.handleSave(),
   };
@@ -67,7 +73,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
 
   return (
     <div style={panelStyle}>
-      <SettingsSearchInput inputRef={s.searchInputRef} value={s.searchQuery} onChange={s.setSearchQuery} />
+      <SettingsSearchInput
+        inputRef={s.searchInputRef}
+        value={s.searchQuery}
+        onChange={s.setSearchQuery}
+      />
       {!isSearching && (
         <SettingsTabBar
           activeMainTab={s.activeMainTab}
@@ -81,23 +91,50 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
       ) : (
         <SettingsPanelTabView activeTab={s.activeSubTab} api={s.api} />
       )}
-      <PanelFooter isSaving={s.api.isSaving} saveError={s.api.saveError} onCancel={s.doCancel} onSave={s.doSave} />
+      <PanelFooter
+        isSaving={s.api.isSaving}
+        saveError={s.api.saveError}
+        onCancel={s.doCancel}
+        onSave={s.doSave}
+      />
     </div>
   );
 }
 
-function SettingsPanelSearchView({ query, onResultClick }: { query: string; onResultClick: (e: SettingsEntry) => void }): React.ReactElement {
+function SettingsPanelSearchView({
+  query,
+  onResultClick,
+}: {
+  query: string;
+  onResultClick: (e: SettingsEntry) => void;
+}): React.ReactElement {
   return (
     <div style={contentScrollStyle}>
-      <SettingsSearchResults searchQuery={query} searchResults={searchEntries(query)} onResultClick={onResultClick} />
+      <SettingsSearchResults
+        searchQuery={query}
+        searchResults={searchEntries(query)}
+        onResultClick={onResultClick}
+      />
     </div>
   );
 }
 
-function SettingsPanelTabView({ activeTab, api }: { activeTab: TabId; api: ReturnType<typeof useSettingsDraft> }): React.ReactElement {
+function SettingsPanelTabView({
+  activeTab,
+  api,
+}: {
+  activeTab: TabId;
+  api: ReturnType<typeof useSettingsDraft>;
+}): React.ReactElement {
   return (
     <div style={tabContentStyle}>
-      <SettingsTabContent activeTab={activeTab} draft={api.draft!} onChange={api.handleChange} onImport={api.handleImport} onPreviewTheme={api.handlePreviewTheme} />
+      <SettingsTabContent
+        activeTab={activeTab}
+        draft={api.draft!}
+        onChange={api.handleChange}
+        onImport={api.handleImport}
+        onPreviewTheme={api.handlePreviewTheme}
+      />
     </div>
   );
 }

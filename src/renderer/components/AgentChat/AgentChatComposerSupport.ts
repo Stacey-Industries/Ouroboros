@@ -37,7 +37,6 @@ export function getTextareaStyle(hasAttachmentButton: boolean): React.CSSPropert
   };
 }
 
-
 /* ---------- Attachment file readers ---------- */
 
 function readImageFilesAsAttachments(files: File[]): Promise<ImageAttachment>[] {
@@ -198,7 +197,12 @@ export function selectComposerFile(
   file: FileEntry,
 ): void {
   if (args.useMentionSystem) {
-    replaceTriggerWithPath(args.textareaRef, args.lastSyncedDraft, args.onChange, file.relativePath);
+    replaceTriggerWithPath(
+      args.textareaRef,
+      args.lastSyncedDraft,
+      args.onChange,
+      file.relativePath,
+    );
     args.setIsMentionAutocompleteOpen?.(false);
     args.setMentionQuery?.(null);
     return;

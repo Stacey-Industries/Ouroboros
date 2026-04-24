@@ -20,9 +20,7 @@ import type {
 } from './embeddingTypes';
 
 const BATCH_SIZE = 32;
-const SKIP_DIRS = new Set([
-  'node_modules', '.git', 'dist', 'build', 'out', '.ouroboros',
-]);
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.ouroboros']);
 
 export interface IndexerOptions {
   store: IEmbeddingStore;
@@ -60,17 +58,11 @@ export async function indexFiles(
   return { chunksIndexed, filesProcessed };
 }
 
-function filterUnchanged(
-  candidates: ChunkCandidate[],
-  store: IEmbeddingStore,
-): ChunkCandidate[] {
+function filterUnchanged(candidates: ChunkCandidate[], store: IEmbeddingStore): ChunkCandidate[] {
   return candidates.filter((c) => !store.hasChunkHash(c.contentHash));
 }
 
-async function embedAndStore(
-  candidates: ChunkCandidate[],
-  opts: IndexerOptions,
-): Promise<number> {
+async function embedAndStore(candidates: ChunkCandidate[], opts: IndexerOptions): Promise<number> {
   if (candidates.length === 0) return 0;
   let stored = 0;
   for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
@@ -136,9 +128,26 @@ function collectFiles(dir: string, depth = 0): string[] {
 }
 
 const INDEXABLE_EXT = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.rs',
-  '.java', '.c', '.cpp', '.h', '.hpp', '.rb', '.php',
-  '.swift', '.kt', '.cs', '.sh', '.sql', '.lua',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.py',
+  '.go',
+  '.rs',
+  '.java',
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.rb',
+  '.php',
+  '.swift',
+  '.kt',
+  '.cs',
+  '.sh',
+  '.sql',
+  '.lua',
 ]);
 
 function isIndexable(name: string): boolean {

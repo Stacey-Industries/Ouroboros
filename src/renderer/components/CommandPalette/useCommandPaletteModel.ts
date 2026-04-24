@@ -1,9 +1,6 @@
 import React from 'react';
 
-import {
-  useCommandPaletteActions,
-  useCommandPaletteLifecycle,
-} from './commandPaletteActions';
+import { useCommandPaletteActions, useCommandPaletteLifecycle } from './commandPaletteActions';
 import { useCommandPaletteData, useCommandPaletteState } from './commandPaletteState';
 import { buildCommandPaletteModel } from './commandPaletteViewModel';
 import { groupByCategory } from './commandSearch';
@@ -37,7 +34,27 @@ export interface CommandPaletteModel {
   showHeaders: boolean;
 }
 
-export function useCommandPaletteModel(options: UseCommandPaletteModelOptions): CommandPaletteModel {
+function useRunPaletteLifecycle(
+  options: UseCommandPaletteModelOptions,
+  state: ReturnType<typeof useCommandPaletteState>,
+  data: ReturnType<typeof useCommandPaletteData>,
+  actions: ReturnType<typeof useCommandPaletteActions>,
+): void {
+  useCommandPaletteLifecycle({
+    inputRef: state.inputRef,
+    isOpen: options.isOpen,
+    listRef: state.listRef,
+    matchesLength: data.matches.length,
+    resetSearch: actions.resetSearch,
+    selectedIndex: state.selectedIndex,
+    setNavStack: state.setNavStack,
+    setSelectedIndex: state.setSelectedIndex,
+  });
+}
+
+export function useCommandPaletteModel(
+  options: UseCommandPaletteModelOptions,
+): CommandPaletteModel {
   const state = useCommandPaletteState();
   const data = useCommandPaletteData({
     commands: options.commands,
@@ -55,18 +72,7 @@ export function useCommandPaletteModel(options: UseCommandPaletteModelOptions): 
     setSelectedIndex: state.setSelectedIndex,
     stackDepth: state.navStack.length,
   });
-
-  useCommandPaletteLifecycle({
-    inputRef: state.inputRef,
-    isOpen: options.isOpen,
-    listRef: state.listRef,
-    matchesLength: data.matches.length,
-    resetSearch: actions.resetSearch,
-    selectedIndex: state.selectedIndex,
-    setNavStack: state.setNavStack,
-    setSelectedIndex: state.setSelectedIndex,
-  });
-
+  useRunPaletteLifecycle(options, state, data, actions);
   return buildCommandPaletteModel({
     actions,
     grouped: data.grouped,

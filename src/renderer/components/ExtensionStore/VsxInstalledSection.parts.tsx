@@ -269,7 +269,11 @@ function VsxUtilityButtons({
   return (
     <>
       {hasThemeContributions ? (
-        <button onClick={onOpenAppearance} title="Open Appearance settings" style={smallButtonStyle}>
+        <button
+          onClick={onOpenAppearance}
+          title="Open Appearance settings"
+          style={smallButtonStyle}
+        >
           Appearance
         </button>
       ) : null}

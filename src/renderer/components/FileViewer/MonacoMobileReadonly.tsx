@@ -36,25 +36,25 @@ export function MonacoMobileReadonly({
     if (!node) return;
 
     let cancelled = false;
-    import('monaco-editor').then((monaco) => {
-      if (cancelled || !preRef.current) return;
-      void monaco.editor.colorizeElement(preRef.current, {
-        mimeType: language,
-        theme: monacoTheme,
+    import('monaco-editor')
+      .then((monaco) => {
+        if (cancelled || !preRef.current) return;
+        void monaco.editor.colorizeElement(preRef.current, {
+          mimeType: language,
+          theme: monacoTheme,
+        });
+      })
+      .catch(() => {
+        // colorize is best-effort; plain text is still readable
       });
-    }).catch(() => {
-      // colorize is best-effort; plain text is still readable
-    });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [content, language, monacoTheme]);
 
   return (
-    <pre
-      ref={preRef}
-      data-monaco-fallback="readonly"
-      style={preStyle}
-    >
+    <pre ref={preRef} data-monaco-fallback="readonly" style={preStyle}>
       {content}
     </pre>
   );

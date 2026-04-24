@@ -25,6 +25,21 @@ export interface StreamJsonArgs {
   args: string[];
 }
 
+function appendSettingFlags(cliArgs: string[], options: StreamJsonSpawnOptions): void {
+  if (options.warmMode) cliArgs.push('--input-format', 'stream-json');
+  if (options.allowedTools) cliArgs.push('--allowedTools', options.allowedTools);
+  if (options.disallowedTools) cliArgs.push('--disallowedTools', options.disallowedTools);
+  if (options.appendSystemPrompt) {
+    cliArgs.push('--append-system-prompt', options.appendSystemPrompt);
+  }
+  for (const dir of options.addDirs ?? []) {
+    if (dir) cliArgs.push('--add-dir', dir);
+  }
+  if (typeof options.maxBudgetUsd === 'number' && options.maxBudgetUsd > 0) {
+    cliArgs.push('--max-budget-usd', String(options.maxBudgetUsd));
+  }
+}
+
 export function buildStreamJsonArgs(options: StreamJsonSpawnOptions): StreamJsonArgs {
   const cliArgs: string[] = ['-p', '--verbose', '--output-format', 'stream-json'];
 
@@ -50,6 +65,8 @@ export function buildStreamJsonArgs(options: StreamJsonSpawnOptions): StreamJson
   if (options.effort === 'low') {
     cliArgs.push('--max-turns', '5');
   }
+
+  appendSettingFlags(cliArgs, options);
 
   // Prompt is piped via stdin (not passed as a positional arg) to avoid
   // shell-escaping issues and command-line length limits on Windows.
@@ -102,7 +119,7 @@ function tryParseEvent(line: string): StreamJsonEvent | null {
 
 // ---- Process kill helper ---------------------------------------------------
 
-function killStreamJsonProcess(child: ChildProcess): void {
+export function killStreamJsonProcess(child: ChildProcess): void {
   try {
     if (process.platform !== 'win32') {
       child.kill('SIGTERM');
@@ -155,7 +172,11 @@ function handleStdoutData(chunk: Buffer, args: StdoutHandlerArgs): void {
     traceId: state.traceId,
     sessionId: state.telemetrySessionId,
     kind: 'stdout',
-    payload: { bytes: chunk.byteLength, head: redactHead(chunk.toString('utf8', 0, 120)), timestamp: Date.now() },
+    payload: {
+      bytes: chunk.byteLength,
+      head: redactHead(chunk.toString('utf8', 0, 120)),
+      timestamp: Date.now(),
+    },
   });
   state.stdoutBuf += chunk.toString();
   if (state.stdoutBuf.length > MAX_BUFFER_BYTES) {
@@ -237,12 +258,24 @@ interface SpawnTraceArgs {
 
 function emitSpawnTraces(opts: SpawnTraceArgs): void {
   const cwdHash = crypto.createHash('sha256').update(opts.cwd).digest('hex').slice(0, 16);
-  enqueueTrace({ traceId: opts.traceId, sessionId: opts.sessionId, kind: 'spawn',
-    payload: { argv: redactArgv([opts.command, ...opts.cliArgs]), cwdHash, timestamp: Date.now() } });
+  enqueueTrace({
+    traceId: opts.traceId,
+    sessionId: opts.sessionId,
+    kind: 'spawn',
+    payload: { argv: redactArgv([opts.command, ...opts.cliArgs]), cwdHash, timestamp: Date.now() },
+  });
   if (!opts.hasStdin) return;
   const promptBuf = Buffer.from(opts.prompt, 'utf8');
-  enqueueTrace({ traceId: opts.traceId, sessionId: opts.sessionId, kind: 'stdin',
-    payload: { bytes: promptBuf.byteLength, head: redactHead(opts.prompt.slice(0, 120)), timestamp: Date.now() } });
+  enqueueTrace({
+    traceId: opts.traceId,
+    sessionId: opts.sessionId,
+    kind: 'stdin',
+    payload: {
+      bytes: promptBuf.byteLength,
+      head: redactHead(opts.prompt.slice(0, 120)),
+      timestamp: Date.now(),
+    },
+  });
 }
 
 interface AttachListenersArgs {
@@ -281,8 +314,7 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
     env: buildProcessEnv(options.env),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
-  emitSpawnTraces({ traceId, sessionId: telemetrySessionId, command, cliArgs: args,
-    cwd: options.cwd, prompt: options.prompt, hasStdin: !!child.stdin });
+  emitSpawnTraces({ traceId, sessionId: telemetrySessionId, command, cliArgs: args, cwd: options.cwd, prompt: options.prompt, hasStdin: !!child.stdin });
   if (child.stdin) {
     child.stdin.write(options.prompt);
     child.stdin.end();
@@ -301,3 +333,7 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
   });
   return handle;
 }
+
+// spawnWarmStreamJsonProcess lives in ./claudeWarmStreamJsonRunner to avoid
+// a circular import (the warm runner imports buildStreamJsonArgs, buildProcessEnv,
+// and killStreamJsonProcess from this file). Import directly from there.

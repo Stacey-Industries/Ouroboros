@@ -106,22 +106,39 @@ export function usePersistSessions(
   useEffect(() => {
     if (!enabled || persistedSessionsSeed === null) return;
     if (lastPersistedSerializedRef.current !== null) return;
-    // eslint-disable-next-line react-compiler/react-compiler
+
     lastPersistedSerializedRef.current = persistedSessionsSeed;
   }, [enabled, persistedSessionsSeed, lastPersistedSerializedRef]);
 
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
     const timeout = setTimeout(() => {
-      void persistCurrentSessions(sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef);
+      void persistCurrentSessions(
+        sessionsRef,
+        lastPersistedSerializedRef,
+        persistInFlightRef,
+        hasPendingPersistRef,
+      );
     }, SESSION_PERSIST_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [enabled, runningTopologySignature, sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef]);
+  }, [
+    enabled,
+    runningTopologySignature,
+    sessionsRef,
+    lastPersistedSerializedRef,
+    persistInFlightRef,
+    hasPendingPersistRef,
+  ]);
 
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
     const interval = setInterval(() => {
-      void persistCurrentSessions(sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef);
+      void persistCurrentSessions(
+        sessionsRef,
+        lastPersistedSerializedRef,
+        persistInFlightRef,
+        hasPendingPersistRef,
+      );
     }, SESSION_PERSIST_SAFETY_MS);
     return () => clearInterval(interval);
   }, [enabled, sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef]);
@@ -161,7 +178,9 @@ export function useClaudeSessionCapture(
       const ptyId = pendingClaudeAssocRef.current.shift();
       if (!ptyId) return;
       setSessions((prev) =>
-        prev.map((session) => (session.id === ptyId ? { ...session, claudeSessionId: payload.sessionId } : session)),
+        prev.map((session) =>
+          session.id === ptyId ? { ...session, claudeSessionId: payload.sessionId } : session,
+        ),
       );
     });
   }, [pendingClaudeAssocRef, setSessions]);

@@ -14,10 +14,14 @@ import { describe, expect, it } from 'vitest';
 
 const MAIN_TS = path.join(__dirname, 'main.ts');
 const STARTUP_TS = path.join(__dirname, 'mainStartup.ts');
+const STARTUP_HELPERS_TS = path.join(__dirname, 'mainStartupHelpers.ts');
 // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads its sibling source files
 const source = fs.readFileSync(MAIN_TS, 'utf-8');
 // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads its sibling source files
 const startupSource = fs.readFileSync(STARTUP_TS, 'utf-8');
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads its sibling source files
+const startupHelpersSource = fs.readFileSync(STARTUP_HELPERS_TS, 'utf-8');
+const startupUnifiedSource = `${startupSource}\n${startupHelpersSource}`;
 
 // Split into lines for line-aware assertions
 const lines = source.split('\n');
@@ -60,12 +64,18 @@ describe('main.ts snapshot-safety invariants', () => {
 
   it('does not call app.requestSingleInstanceLock at module scope outside a function', () => {
     const hits = topLevelCallLines(/app\.requestSingleInstanceLock/);
-    expect(hits, `requestSingleInstanceLock found at module scope on lines: ${hits.join(', ')}`).toHaveLength(0);
+    expect(
+      hits,
+      `requestSingleInstanceLock found at module scope on lines: ${hits.join(', ')}`,
+    ).toHaveLength(0);
   });
 
   it('does not call crashReporter.start at module scope outside a function', () => {
     const hits = topLevelCallLines(/crashReporter\.start/);
-    expect(hits, `crashReporter.start found at module scope on lines: ${hits.join(', ')}`).toHaveLength(0);
+    expect(
+      hits,
+      `crashReporter.start found at module scope on lines: ${hits.join(', ')}`,
+    ).toHaveLength(0);
   });
 
   it('does not call app.setName at module scope outside a function', () => {
@@ -82,12 +92,12 @@ describe('main.ts snapshot-safety invariants', () => {
     expect(startupSource).toContain('function bootstrapProcessHandlers(');
   });
 
-  it('defines bootstrapApp function in mainStartup.ts', () => {
-    expect(startupSource).toContain('function bootstrapApp()');
+  it('defines bootstrapApp function in mainStartup.ts or mainStartupHelpers.ts', () => {
+    expect(startupUnifiedSource).toContain('function bootstrapApp()');
   });
 
-  it('defines bootstrapCrashReporter function in mainStartup.ts', () => {
-    expect(startupSource).toContain('function bootstrapCrashReporter()');
+  it('defines bootstrapCrashReporter function in mainStartup.ts or mainStartupHelpers.ts', () => {
+    expect(startupUnifiedSource).toContain('function bootstrapCrashReporter()');
   });
 
   it('defines ensureSingleInstance function in mainStartup.ts', () => {
@@ -100,9 +110,7 @@ describe('main.ts snapshot-safety invariants', () => {
     expect(whenReadyIdx).toBeGreaterThan(-1);
 
     // Find the call site (not the function definition — match the bare call statement)
-    const bootstrapIdx = lines.findIndex(
-      (l) => /^\s*bootstrapProcessHandlers\(/.test(l),
-    );
+    const bootstrapIdx = lines.findIndex((l) => /^\s*bootstrapProcessHandlers\(/.test(l));
     expect(bootstrapIdx).toBeGreaterThan(-1);
     expect(bootstrapIdx).toBeLessThan(whenReadyIdx);
   });
@@ -128,6 +136,16 @@ describe('main.ts snapshot-safety invariants', () => {
   it('preserves all shutdown handlers (window-all-closed, will-quit)', () => {
     expect(source).toContain("app.on('window-all-closed'");
     expect(source).toContain("app.on('will-quit'");
+  });
+
+  it('does not dynamically import cleanup modules during final quit', () => {
+    const willQuitIdx = source.indexOf("app.on('will-quit'");
+    expect(willQuitIdx).toBeGreaterThan(-1);
+    const webContentsIdx = source.indexOf("app.on('web-contents-created'", willQuitIdx);
+    expect(webContentsIdx).toBeGreaterThan(willQuitIdx);
+    const willQuitSource = source.slice(willQuitIdx, webContentsIdx);
+
+    expect(willQuitSource).not.toContain('await import(');
   });
 
   it('preserves web-contents-created security handler', () => {

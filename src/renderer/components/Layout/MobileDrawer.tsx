@@ -10,12 +10,7 @@
 
 import React, { useRef } from 'react';
 
-import {
-  Scrim,
-  useBodyScrollLock,
-  useEscapeKey,
-  useFocusTrap,
-} from './MobileOverlayShell';
+import { Scrim, useBodyScrollLock, useEscapeKey, useFocusTrap } from './MobileOverlayShell';
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 

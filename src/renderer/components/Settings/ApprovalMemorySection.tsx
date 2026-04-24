@@ -96,7 +96,15 @@ function MemoryRow({
           {entry.toolName}
         </span>
       </td>
-      <td style={{ ...tdStyle, maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <td
+        style={{
+          ...tdStyle,
+          maxWidth: '320px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
         <span className="text-text-semantic-muted" title={entry.keyPreview}>
           {entry.keyPreview}
         </span>
@@ -125,12 +133,16 @@ function MemoryTable({
 
   if (total === 0) {
     return (
-      <div style={emptyStyle}>No remembered decisions. Use Allow Always or Deny Always on a tool prompt to save one.</div>
+      <div style={emptyStyle}>
+        No remembered decisions. Use Allow Always or Deny Always on a tool prompt to save one.
+      </div>
     );
   }
 
   return (
-    <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflow: 'hidden' }}>
+    <div
+      style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflow: 'hidden' }}
+    >
       <table style={tableStyle}>
         <thead>
           <tr>
@@ -193,13 +205,21 @@ export function ApprovalMemorySection(): React.ReactElement {
       <SectionLabel>
         Remembered Approvals
         {total > 0 && (
-          <span style={{ marginLeft: '6px', color: 'var(--text-muted)', fontWeight: 400, fontSize: '11px' }}>
+          <span
+            style={{
+              marginLeft: '6px',
+              color: 'var(--text-muted)',
+              fontWeight: 400,
+              fontSize: '11px',
+            }}
+          >
             ({total})
           </span>
         )}
       </SectionLabel>
       <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginBottom: '10px' }}>
-        Commands and files you have chosen to always allow or always deny. Revoke an entry to prompt again on next use.
+        Commands and files you have chosen to always allow or always deny. Revoke an entry to prompt
+        again on next use.
       </p>
       <MemoryTable memory={memory} onRevoke={(hash) => void handleRevoke(hash)} />
     </section>

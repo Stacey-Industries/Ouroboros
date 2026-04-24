@@ -1,4 +1,4 @@
-import { useCallback,useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface DetailedGitStatus {
   /** Files staged in the git index: relative path -> status char (M/A/D/R) */
@@ -72,8 +72,11 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
     if (!isRepoRef.current) return;
     try {
       const result = await window.electronAPI.git.statusDetailed(root);
-      if (result.success) setStatus({ staged: toMap(result.staged), unstaged: toMap(result.unstaged) });
-    } catch { /* silently ignore */ }
+      if (result.success)
+        setStatus({ staged: toMap(result.staged), unstaged: toMap(result.unstaged) });
+    } catch {
+      /* silently ignore */
+    }
   }, []);
 
   const refresh = useCallback(() => {
@@ -82,7 +85,10 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
   }, [fetchStatus]);
 
   useEffect(() => {
-    if (!projectRoot) { resetDetailedState(setStatus, setIsRepo, isRepoRef); return; }
+    if (!projectRoot) {
+      resetDetailedState(setStatus, setIsRepo, isRepoRef);
+      return;
+    }
     const activeRef = { current: true };
 
     window.electronAPI.git.isRepo(projectRoot).then((result) => {
@@ -92,14 +98,19 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
       isRepoRef.current = repo;
       if (repo) {
         void fetchStatus(projectRoot);
-        intervalRef.current = setInterval(() => { if (activeRef.current) void fetchStatus(projectRoot); }, POLL_INTERVAL_MS);
+        intervalRef.current = setInterval(() => {
+          if (activeRef.current) void fetchStatus(projectRoot);
+        }, POLL_INTERVAL_MS);
       }
     });
 
     const cleanupWatcher = setupDetailedFileWatcher(projectRoot, isRepoRef, activeRef, fetchStatus);
     return () => {
       activeRef.current = false;
-      if (intervalRef.current !== null) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       cleanupWatcher?.();
     };
   }, [projectRoot, fetchStatus]);

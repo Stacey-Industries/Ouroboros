@@ -25,9 +25,7 @@ function hasElectronAPI(): boolean {
 
 function dispatchDomEvent(eventName: string, detail?: unknown): void {
   window.dispatchEvent(
-    detail === undefined
-      ? new CustomEvent(eventName)
-      : new CustomEvent(eventName, { detail }),
+    detail === undefined ? new CustomEvent(eventName) : new CustomEvent(eventName, { detail }),
   );
 }
 
@@ -54,9 +52,11 @@ export function useAgentTemplateCommands(
             openFileName: null as string | null,
           };
           const resolvedPrompt = resolveTemplate(t.promptTemplate, ctx);
-          window.dispatchEvent(new CustomEvent('agent-ide:spawn-claude-template', {
-            detail: { prompt: resolvedPrompt, label: t.name, cliOverrides: t.cliOverrides },
-          }));
+          window.dispatchEvent(
+            new CustomEvent('agent-ide:spawn-claude-template', {
+              detail: { prompt: resolvedPrompt, label: t.name, cliOverrides: t.cliOverrides },
+            }),
+          );
         },
       }));
 
@@ -65,7 +65,9 @@ export function useAgentTemplateCommands(
         label: 'Agent Templates',
         category: 'terminal',
         icon: '\u25C6',
-        action: () => { /* submenu */ },
+        action: () => {
+          /* submenu */
+        },
         children,
       });
     });
@@ -81,7 +83,13 @@ export interface LayoutCommandsOptions {
 }
 
 export function useLayoutCommands(opts: LayoutCommandsOptions): void {
-  const { workspaceLayouts, activeLayoutName, registerCommand, handleSelectLayout, handleSaveLayout } = opts;
+  const {
+    workspaceLayouts,
+    activeLayoutName,
+    registerCommand,
+    handleSelectLayout,
+    handleSaveLayout,
+  } = opts;
 
   useEffect(() => {
     if (!workspaceLayouts) return;
@@ -99,7 +107,9 @@ export function useLayoutCommands(opts: LayoutCommandsOptions): void {
       label: 'Switch Layout',
       category: 'view',
       icon: '\u229E',
-      action: () => { /* submenu */ },
+      action: () => {
+        /* submenu */
+      },
       children,
     });
 
@@ -116,9 +126,7 @@ export function useLayoutCommands(opts: LayoutCommandsOptions): void {
   }, [workspaceLayouts, activeLayoutName, registerCommand, handleSelectLayout, handleSaveLayout]);
 }
 
-export function useMultiSessionCommand(
-  registerCommand: (cmd: Command) => void,
-): void {
+export function useMultiSessionCommand(registerCommand: (cmd: Command) => void): void {
   useEffect(() => {
     registerCommand({
       id: 'agent:multi-session',
@@ -173,9 +181,7 @@ export function useAgentChatCommands(
   }, [projectRoot, registerCommand]);
 }
 
-export function useUsageDashboardCommand(
-  registerCommand: (cmd: Command) => void,
-): void {
+export function useUsageDashboardCommand(registerCommand: (cmd: Command) => void): void {
   useEffect(() => {
     registerCommand({
       id: 'usage:dashboard',
@@ -189,9 +195,7 @@ export function useUsageDashboardCommand(
   }, [registerCommand]);
 }
 
-export function usePromptDiffCommand(
-  registerCommand: (cmd: Command) => void,
-): void {
+export function usePromptDiffCommand(registerCommand: (cmd: Command) => void): void {
   useEffect(() => {
     registerCommand({
       id: 'ecosystem:prompt-diff',
@@ -223,9 +227,7 @@ export function useCompareProvidersCommand(
   }, [registerCommand, multiProvider]);
 }
 
-export function useAwesomeRefCommand(
-  registerCommand: (cmd: Command) => void,
-): void {
+export function useAwesomeRefCommand(registerCommand: (cmd: Command) => void): void {
   useEffect(() => {
     registerCommand({
       id: 'awesome-ref:open',
@@ -238,4 +240,3 @@ export function useAwesomeRefCommand(
     });
   }, [registerCommand]);
 }
-

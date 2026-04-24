@@ -7,34 +7,32 @@
 
 export type System2IndexProgressEvent =
   | {
-      kind: 'start'
-      projectName: string
-      projectRoot: string
-      reason: 'first-launch' | 'hash-mismatch' | 'post-gc'
+      kind: 'start';
+      projectName: string;
+      projectRoot: string;
+      reason: 'first-launch' | 'hash-mismatch' | 'post-gc';
     }
   | {
-      kind: 'progress'
-      projectName: string
-      phase: string
-      filesProcessed: number
-      filesTotal: number
-      elapsedMs: number
+      kind: 'progress';
+      projectName: string;
+      phase: string;
+      filesProcessed: number;
+      filesTotal: number;
+      elapsedMs: number;
     }
   | {
-      kind: 'complete'
-      projectName: string
-      filesIndexed: number
-      nodesCreated: number
-      durationMs: number
+      kind: 'complete';
+      projectName: string;
+      filesIndexed: number;
+      nodesCreated: number;
+      durationMs: number;
     }
   | {
-      kind: 'error'
-      projectName: string
-      message: string
-    }
+      kind: 'error';
+      projectName: string;
+      message: string;
+    };
 
 export interface System2API {
-  onIndexProgress: (
-    callback: (event: System2IndexProgressEvent) => void,
-  ) => () => void
+  onIndexProgress: (callback: (event: System2IndexProgressEvent) => void) => () => void;
 }

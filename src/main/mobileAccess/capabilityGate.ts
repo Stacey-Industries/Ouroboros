@@ -18,9 +18,9 @@ import type { Capability } from './types';
 // ─── Timeout constants ────────────────────────────────────────────────────────
 
 const TIMEOUT_MS: Record<import('./types').TimeoutClass, number> = {
-  short:  10_000,
+  short: 10_000,
   normal: 30_000,
-  long:   120_000,
+  long: 120_000,
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -39,9 +39,7 @@ export interface CapabilityCheckResult {
  * Check whether a given channel is permitted for a device capability set.
  * Pure function — no side effects, no I/O.
  */
-export function checkCapability(
-  input: CapabilityCheckInput,
-): CapabilityCheckResult {
+export function checkCapability(input: CapabilityCheckInput): CapabilityCheckResult {
   const { channel, deviceCapabilities } = input;
 
   const entry = CATALOG_LOOKUP.get(channel);
@@ -58,9 +56,7 @@ export function checkCapability(
   }
 
   const permitted = deviceCapabilities.includes(entry.class);
-  return permitted
-    ? { allowed: true }
-    : { allowed: false, reason: `requires:${entry.class}` };
+  return permitted ? { allowed: true } : { allowed: false, reason: `requires:${entry.class}` };
 }
 
 /**

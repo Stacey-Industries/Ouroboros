@@ -23,10 +23,7 @@ function detectNavigatorLocale(navLanguage: string): LocaleCode {
   return SUPPORTED.includes(prefix) ? prefix : 'en';
 }
 
-function resolveInitialLocale(
-  configured: LocaleCode | undefined,
-  navLanguage: string,
-): LocaleCode {
+function resolveInitialLocale(configured: LocaleCode | undefined, navLanguage: string): LocaleCode {
   if (configured && SUPPORTED.includes(configured)) return configured;
   return detectNavigatorLocale(navLanguage);
 }
@@ -53,9 +50,7 @@ describe('resolveInitialLocale', () => {
   });
 
   it('ignores unsupported config values and falls back to navigator', () => {
-    expect(
-      resolveInitialLocale('fr' as LocaleCode, 'es-419'),
-    ).toBe('es');
+    expect(resolveInitialLocale('fr' as LocaleCode, 'es-419')).toBe('es');
   });
 });
 

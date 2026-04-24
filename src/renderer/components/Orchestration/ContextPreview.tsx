@@ -1,11 +1,7 @@
 import React from 'react';
 
 import type { TaskResult, TaskSessionRecord } from '../../types/electron';
-import {
-  ContextFileList,
-  ContextMetricsSection,
-  ContextSidebar,
-} from './ContextPreviewSections';
+import { ContextFileList, ContextMetricsSection, ContextSidebar } from './ContextPreviewSections';
 
 export interface ContextPreviewProps {
   session: TaskSessionRecord | null;

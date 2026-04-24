@@ -42,10 +42,12 @@ describe('reducer — new action types', () => {
   it('handles TASK_COMPLETED action', () => {
     const stateWithTask: AgentState = {
       ...STATE_WITH_SESSION,
-      sessions: [{
-        ...BASE_SESSION,
-        tasks: [{ id: 't1', description: 'Do work', status: 'pending', createdAt: 1000 }],
-      }],
+      sessions: [
+        {
+          ...BASE_SESSION,
+          tasks: [{ id: 't1', description: 'Do work', status: 'pending', createdAt: 1000 }],
+        },
+      ],
     };
     const next = reducer(stateWithTask, {
       type: 'TASK_COMPLETED',

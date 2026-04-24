@@ -9,7 +9,11 @@ export interface TaskSessionHistoryProps {
   onSelectSession: (sessionId: string) => void;
 }
 
-export function TaskSessionHistory({ sessions, selectedSessionId, onSelectSession }: TaskSessionHistoryProps): React.ReactElement {
+export function TaskSessionHistory({
+  sessions,
+  selectedSessionId,
+  onSelectSession,
+}: TaskSessionHistoryProps): React.ReactElement {
   return (
     <TaskSessionHistoryContent
       sessions={sessions}

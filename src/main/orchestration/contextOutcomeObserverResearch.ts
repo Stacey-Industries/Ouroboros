@@ -80,9 +80,7 @@ export function notifyPtyExit(sessionId: string, exitCode: number | null): void 
   if (!signals || !isWindowOpen(signals)) return;
   if (signals.followupTestExit === null) {
     signals.followupTestExit = exitCode ?? null;
-    log.info(
-      `[contextOutcomeObserverResearch] PTY exit session=${sessionId} code=${exitCode}`,
-    );
+    log.info(`[contextOutcomeObserverResearch] PTY exit session=${sessionId} code=${exitCode}`);
   }
 }
 
@@ -120,11 +118,7 @@ export function attributeResearchOutcome(
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 
-function doAttributeResearchOutcome(
-  sessionId: string,
-  toolName: string,
-  filePath: string,
-): void {
+function doAttributeResearchOutcome(sessionId: string, toolName: string, filePath: string): void {
   const correlationStore = getResearchCorrelationStore();
 
   const correlationId = correlationStore.attributeOutcome(sessionId, toolName, filePath);
@@ -153,8 +147,8 @@ function doAttributeResearchOutcome(
   });
   log.info(
     `[contextOutcomeObserverResearch] attributed correlationId=${correlationId} ` +
-    `session=${sessionId} tool=${toolName} file=${filePath} ` +
-    `signal=${outcomeSignal} testExit=${signals.followupTestExit}`,
+      `session=${sessionId} tool=${toolName} file=${filePath} ` +
+      `signal=${outcomeSignal} testExit=${signals.followupTestExit}`,
   );
 }
 

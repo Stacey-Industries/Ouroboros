@@ -11,23 +11,19 @@ export interface ProjectPickerProps {
   rootCount?: number;
 }
 
-export function ProjectPicker({
+function ProjectPickerShell({
   currentPath,
-  recentProjects,
-  onSelectProject,
-  onAddProject,
-  rootCount = 0,
-}: ProjectPickerProps): React.ReactElement {
-  const controller = useProjectPickerController({
-    currentPath,
-    recentProjects,
-    onSelectProject,
-    onAddProject,
-    rootCount,
-  });
-
+  controller,
+}: {
+  currentPath: string | null;
+  controller: ReturnType<typeof useProjectPickerController>;
+}): React.ReactElement {
   return (
-    <div data-tour-anchor="project-picker" ref={controller.containerRef as React.RefObject<HTMLDivElement | null>} style={{ position: 'relative', width: '100%' }}>
+    <div
+      data-tour-anchor="project-picker"
+      ref={controller.containerRef as React.RefObject<HTMLDivElement | null>}
+      style={{ position: 'relative', width: '100%' }}
+    >
       <ProjectPickerToggle
         busy={controller.busy}
         currentPath={currentPath}
@@ -49,4 +45,21 @@ export function ProjectPicker({
       )}
     </div>
   );
+}
+
+export function ProjectPicker({
+  currentPath,
+  recentProjects,
+  onSelectProject,
+  onAddProject,
+  rootCount = 0,
+}: ProjectPickerProps): React.ReactElement {
+  const controller = useProjectPickerController({
+    currentPath,
+    recentProjects,
+    onSelectProject,
+    onAddProject,
+    rootCount,
+  });
+  return <ProjectPickerShell currentPath={currentPath} controller={controller} />;
 }

@@ -7,18 +7,26 @@
 
 export class MicaBrowserWindow {
   constructor(_options?: Record<string, unknown>) {}
-  loadURL(_url: string): Promise<void> { return Promise.resolve() }
-  loadFile(_path: string): Promise<void> { return Promise.resolve() }
+  loadURL(_url: string): Promise<void> {
+    return Promise.resolve();
+  }
+  loadFile(_path: string): Promise<void> {
+    return Promise.resolve();
+  }
   show(): void {}
   hide(): void {}
   close(): void {}
-  on(_event: string, _listener: (...args: unknown[]) => void): this { return this }
-  once(_event: string, _listener: (...args: unknown[]) => void): this { return this }
+  on(_event: string, _listener: (...args: unknown[]) => void): this {
+    return this;
+  }
+  once(_event: string, _listener: (...args: unknown[]) => void): this {
+    return this;
+  }
   setVibrancy(_type: string | null): void {}
   setBackgroundMaterial(_material: string): void {}
   webContents = {
     send: (_channel: string, ..._args: unknown[]): void => {},
-  }
+  };
 }
 
-export default { MicaBrowserWindow }
+export default { MicaBrowserWindow };

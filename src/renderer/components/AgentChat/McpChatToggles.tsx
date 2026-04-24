@@ -66,7 +66,9 @@ const checkItemStyle: React.CSSProperties = {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-interface McpEntry { name: string }
+interface McpEntry {
+  name: string;
+}
 
 function useMcpServerNames(projectRoot?: string): string[] {
   const [names, setNames] = useState<string[]>([]);
@@ -95,7 +97,10 @@ interface UseMcpTogglesOpts {
   allServers: string[];
 }
 
-function useMcpTogglesState(opts: UseMcpTogglesOpts): { enabled: string[]; toggle: (name: string) => void } {
+function useMcpTogglesState(opts: UseMcpTogglesOpts): {
+  enabled: string[];
+  toggle: (name: string) => void;
+} {
   const { sessionId, profile, mcpServerOverrides, onChange, allServers } = opts;
 
   // Extract the profile field that drives resolution so we can use it as a
@@ -127,26 +132,42 @@ function useMcpTogglesState(opts: UseMcpTogglesOpts): { enabled: string[]; toggl
 
   const enabled = override ?? derived ?? [];
 
-  const toggle = useCallback((name: string) => {
-    setOverride((prev) => {
-      // Seed from derivedRef if no user override exists yet.
-      const base = prev ?? derivedRef.current ?? [];
-      const next = base.includes(name) ? base.filter((n) => n !== name) : [...base, name];
-      void window.electronAPI.sessionCrud.setMcpOverrides(sessionId, next).catch(() => undefined);
-      onChange(next);
-      return next;
-    });
-  }, [sessionId, onChange]);
+  const toggle = useCallback(
+    (name: string) => {
+      setOverride((prev) => {
+        // Seed from derivedRef if no user override exists yet.
+        const base = prev ?? derivedRef.current ?? [];
+        const next = base.includes(name) ? base.filter((n) => n !== name) : [...base, name];
+        void window.electronAPI.sessionCrud.setMcpOverrides(sessionId, next).catch(() => undefined);
+        onChange(next);
+        return next;
+      });
+    },
+    [sessionId, onChange],
+  );
   return { enabled, toggle };
 }
 
-export function McpChatToggles({ sessionId, profile, mcpServerOverrides, onChange }: McpChatTogglesProps): React.ReactElement {
+export function McpChatToggles({
+  sessionId,
+  profile,
+  mcpServerOverrides,
+  onChange,
+}: McpChatTogglesProps): React.ReactElement {
   const allServers = useMcpServerNames();
-  const { enabled, toggle } = useMcpTogglesState({ sessionId, profile, mcpServerOverrides, onChange, allServers });
+  const { enabled, toggle } = useMcpTogglesState({
+    sessionId,
+    profile,
+    mcpServerOverrides,
+    onChange,
+    allServers,
+  });
   if (allServers.length === 0) {
     return (
       <div style={wrapStyle}>
-        <span style={emptyStyle} className="text-text-semantic-muted">No MCP servers configured.</span>
+        <span style={emptyStyle} className="text-text-semantic-muted">
+          No MCP servers configured.
+        </span>
       </div>
     );
   }

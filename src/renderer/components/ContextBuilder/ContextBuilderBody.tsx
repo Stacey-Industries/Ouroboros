@@ -1,9 +1,6 @@
 import React from 'react';
 
-import type {
-  ContextGenerateOptions,
-  ProjectContext,
-} from '../../types/electron';
+import type { ContextGenerateOptions, ProjectContext } from '../../types/electron';
 import {
   Badge,
   badgeWrapStyle,
@@ -33,10 +30,10 @@ const OPTION_ITEMS: Array<{
   key: keyof ContextGenerateOptions;
   label: string;
 }> = [
-    { key: 'includeCommands', label: 'Commands' },
-    { key: 'includeStructure', label: 'Structure' },
-    { key: 'includeDeps', label: 'Dependencies' },
-  ];
+  { key: 'includeCommands', label: 'Commands' },
+  { key: 'includeStructure', label: 'Structure' },
+  { key: 'includeDeps', label: 'Dependencies' },
+];
 
 type ContextBuilderBodyProps = Pick<
   ContextBuilderModel,
@@ -63,7 +60,11 @@ export function ContextBuilderBody(props: ContextBuilderBodyProps): React.ReactE
   return (
     <div style={bodyStyle}>
       {props.error && <ErrorBanner error={props.error} />}
-      {context ? <ContextSections {...props} context={context} /> : <ContextBuilderState {...props} />}
+      {context ? (
+        <ContextSections {...props} context={context} />
+      ) : (
+        <ContextBuilderState {...props} />
+      )}
     </div>
   );
 }
@@ -126,34 +127,36 @@ function ContextControlsSection({
   handleOptionToggle,
   options,
   projectRoot,
-}: Pick<ContextBuilderBodyProps, 'contextSelection' | 'handleOptionToggle' | 'options' | 'projectRoot'>): React.ReactElement {
+}: Pick<
+  ContextBuilderBodyProps,
+  'contextSelection' | 'handleOptionToggle' | 'options' | 'projectRoot'
+>): React.ReactElement {
   return (
     <>
       <GenerationOptionsSection handleOptionToggle={handleOptionToggle} options={options} />
       {contextSelection && (
-        <ContextSelectionSection
-          contextSelection={contextSelection}
-          projectRoot={projectRoot}
-        />
+        <ContextSelectionSection contextSelection={contextSelection} projectRoot={projectRoot} />
       )}
     </>
   );
 }
 
-function GeneratedContextBlock(props: Pick<
-  ContextBuilderBodyProps,
-  | 'editedContent'
-  | 'handleCopyToClipboard'
-  | 'handleCreateClaudeMd'
-  | 'handleEditedContentChange'
-  | 'handleResetEdits'
-  | 'handleSetSystemPrompt'
-  | 'handleUpdateClaudeMd'
-  | 'runScan'
-  | 'scanning'
-> & {
-  context: ProjectContext;
-}): React.ReactElement {
+function GeneratedContextBlock(
+  props: Pick<
+    ContextBuilderBodyProps,
+    | 'editedContent'
+    | 'handleCopyToClipboard'
+    | 'handleCreateClaudeMd'
+    | 'handleEditedContentChange'
+    | 'handleResetEdits'
+    | 'handleSetSystemPrompt'
+    | 'handleUpdateClaudeMd'
+    | 'runScan'
+    | 'scanning'
+  > & {
+    context: ProjectContext;
+  },
+): React.ReactElement {
   return <GeneratedContextSection {...props} />;
 }
 
@@ -166,9 +169,11 @@ function ContextBuilderState({
     return null;
   }
 
-  return scanning
-    ? <LoadingState />
-    : <EmptyState>No project root selected. Open a folder to scan.</EmptyState>;
+  return scanning ? (
+    <LoadingState />
+  ) : (
+    <EmptyState>No project root selected. Open a folder to scan.</EmptyState>
+  );
 }
 
 function ProjectSummarySection({ context }: { context: ProjectContext }): React.ReactElement {
@@ -176,7 +181,10 @@ function ProjectSummarySection({ context }: { context: ProjectContext }): React.
     <Section title="Project Summary">
       <div style={cardStyle}>
         <div style={titleRowStyle}>
-          <span className="text-text-semantic-primary" style={{ fontSize: '15px', fontWeight: 600 }}>
+          <span
+            className="text-text-semantic-primary"
+            style={{ fontSize: '15px', fontWeight: 600 }}
+          >
             {context.name}
           </span>
           {context.hasClaudeMd && <Badge label="CLAUDE.md exists" color="#22c55e" />}
@@ -221,7 +229,9 @@ function StructureSection({ context }: { context: ProjectContext }): React.React
           {keyDirs.map((dir) => (
             <React.Fragment key={dir.path}>
               <CodeLine accent>{dir.path}/</CodeLine>
-              <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>{dir.purpose}</span>
+              <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+                {dir.purpose}
+              </span>
             </React.Fragment>
           ))}
         </div>
@@ -241,7 +251,9 @@ function BuildCommandsSection({ context }: { context: ProjectContext }): React.R
         {context.buildCommands.map((command) => (
           <div key={command.name} style={commandRowStyle}>
             <CodeLine accent>{command.name}</CodeLine>
-            <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>{command.command}</span>
+            <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
+              {command.command}
+            </span>
           </div>
         ))}
       </div>

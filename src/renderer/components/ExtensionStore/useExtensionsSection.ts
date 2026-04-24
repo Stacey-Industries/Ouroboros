@@ -81,10 +81,7 @@ export function useExtensionsSectionModel(): ExtensionsSectionModel {
 
 function useExtensionCommands(): Command[] {
   const { commands } = useCommandRegistry();
-  return useMemo(
-    () => commands.filter((command) => command.category === 'extension'),
-    [commands],
-  );
+  return useMemo(() => commands.filter((command) => command.category === 'extension'), [commands]);
 }
 
 function useExtensionsState(): ExtensionsState {
@@ -162,16 +159,19 @@ function useFetchExtensionLog(
   setLogLoading: Dispatch<SetStateAction<boolean>>,
   setExtLog: Dispatch<SetStateAction<string[]>>,
 ): (name: string) => Promise<void> {
-  return useCallback(async (name: string) => {
-    if (!hasElectronApi()) return;
-    setLogLoading(true);
-    try {
-      const result = await window.electronAPI.extensions.getLog(name);
-      setExtLog(result.success && result.log ? result.log : ['Failed to load log.']);
-    } catch {
-      setExtLog(['Failed to load log.']);
-    } finally {
-      setLogLoading(false);
-    }
-  }, [setExtLog, setLogLoading]);
+  return useCallback(
+    async (name: string) => {
+      if (!hasElectronApi()) return;
+      setLogLoading(true);
+      try {
+        const result = await window.electronAPI.extensions.getLog(name);
+        setExtLog(result.success && result.log ? result.log : ['Failed to load log.']);
+      } catch {
+        setExtLog(['Failed to load log.']);
+      } finally {
+        setLogLoading(false);
+      }
+    },
+    [setExtLog, setLogLoading],
+  );
 }

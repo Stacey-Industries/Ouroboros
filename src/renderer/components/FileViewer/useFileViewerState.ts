@@ -1,30 +1,26 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { useGitBlame } from '../../hooks/useGitBlame';
 import { useGitDiff } from '../../hooks/useGitDiff';
 import { useSymbolOutline } from '../../hooks/useSymbolOutline';
 import { useTheme } from '../../hooks/useTheme';
 import type { BlameLine, DiffLineInfo } from '../../types/electron';
-import type { ConflictBlock } from './ConflictResolver';
-import { hasConflictMarkers, parseConflictBlocks } from './ConflictResolver.model';
 import { getLanguage } from './fileViewerUtils';
-import { attachLinkClickHandler,ensureLinkStyles } from './linkDetector';
 import { useFileViewerKeyboard } from './useFileViewerKeyboard';
+import {
+  useCollapsedFoldState,
+  useConflictState,
+  useExpandFoldsForSearch,
+  useGitDiffBaseContent,
+  useLinkHandling,
+  useResetViewerUi,
+  useScrollReset,
+} from './useFileViewerState.effects';
 import {
   createDiffMap,
   createFileViewerState,
   createKeyboardInput,
-  parseConflictContent,
-  toggleCollapsedFold,
-  type ViewerConflicts,
   type ViewerDerivedState,
-  type ViewerFolds,
   type ViewerRefs,
   type ViewerToggles,
   type ViewerUiResetters,
@@ -132,7 +128,7 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
       ui,
       folds,
       setWordWrap: toggles.setWordWrap,
-    })
+    }),
   );
 
   return createFileViewerState({
@@ -157,11 +153,18 @@ function useViewerUiResetters(ui: ViewerUiState): ViewerUiResetters {
       setShowHistory: ui.setShowHistory,
       setEditMode: ui.setEditMode,
     }),
-    [ui.setEditMode, ui.setShowGoToLine, ui.setShowHistory, ui.setShowSearch, ui.setViewMode]
+    [ui.setEditMode, ui.setShowGoToLine, ui.setShowHistory, ui.setShowSearch, ui.setViewMode],
   );
 }
 
-function useViewerRefs(): ViewerRefs { 'use no memo'; return { codeRef: useRef<HTMLDivElement>(null), scrollRef: useRef<HTMLDivElement>(null), containerRef: useRef<HTMLDivElement>(null) }; }
+function useViewerRefs(): ViewerRefs {
+  'use no memo';
+  return {
+    codeRef: useRef<HTMLDivElement>(null),
+    scrollRef: useRef<HTMLDivElement>(null),
+    containerRef: useRef<HTMLDivElement>(null),
+  };
+}
 
 function useViewerToggles(): ViewerToggles {
   'use no memo';
@@ -170,7 +173,18 @@ function useViewerToggles(): ViewerToggles {
   const [showBlame, setShowBlame] = usePersistedToggle('fileviewer:blame', false);
   const [showOutline, setShowOutline] = usePersistedToggle('fileviewer:outline', false);
   const [formatOnSave, setFormatOnSave] = usePersistedToggle('fileviewer:formatOnSave', false);
-  return { wordWrap, setWordWrap, showMinimap, setShowMinimap, showBlame, setShowBlame, showOutline, setShowOutline, formatOnSave, setFormatOnSave };
+  return {
+    wordWrap,
+    setWordWrap,
+    showMinimap,
+    setShowMinimap,
+    showBlame,
+    setShowBlame,
+    showOutline,
+    setShowOutline,
+    formatOnSave,
+    setFormatOnSave,
+  };
 }
 
 function useViewerUiState(): ViewerUiState {
@@ -182,145 +196,73 @@ function useViewerUiState(): ViewerUiState {
   const [showHistory, setShowHistory] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [claudeMdEnhanced, setClaudeMdEnhanced] = useState(true);
-  return { showSearch, setShowSearch, showGoToLine, setShowGoToLine, searchMatchLines, setSearchMatchLines, viewMode, setViewMode, showHistory, setShowHistory, editMode, setEditMode, claudeMdEnhanced, setClaudeMdEnhanced };
+  return {
+    showSearch,
+    setShowSearch,
+    showGoToLine,
+    setShowGoToLine,
+    searchMatchLines,
+    setSearchMatchLines,
+    viewMode,
+    setViewMode,
+    showHistory,
+    setShowHistory,
+    editMode,
+    setEditMode,
+    claudeMdEnhanced,
+    setClaudeMdEnhanced,
+  };
 }
 
-function useViewerDerivedState({ filePath, content, originalContent }: FileViewerStateInput, gitDiffBaseContent: string | null): ViewerDerivedState {
+function useViewerDerivedState(
+  { filePath, content, originalContent }: FileViewerStateInput,
+  gitDiffBaseContent: string | null,
+): ViewerDerivedState {
   'use no memo';
-  const diffBaseContent = originalContent != null && content != null && originalContent !== content ? originalContent : gitDiffBaseContent;
-  return { isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath), isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath), hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content, diffBaseContent };
+  const diffBaseContent =
+    originalContent != null && content != null && originalContent !== content
+      ? originalContent
+      : gitDiffBaseContent;
+  return {
+    isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath),
+    isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath),
+    hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content,
+    diffBaseContent,
+  };
+}
+
+function useEffectiveDiffLines(
+  diffLines: DiffLineInfo[],
+  diffBaseContent: string | null,
+  content: string | null,
+): DiffLineInfo[] {
+  'use no memo';
+  return useMemo(() => {
+    if (diffLines.length > 0) return diffLines;
+    if (diffBaseContent !== '' || content == null || content.length === 0) return diffLines;
+    return content.split('\n').map((_, index) => ({ line: index + 1, kind: 'added' as const }));
+  }, [diffBaseContent, diffLines, content]);
 }
 
 function useViewerData(
   input: FileViewerStateInput,
   ideThemeId: string,
   scrollRef: React.RefObject<HTMLDivElement | null>,
-  showBlame: boolean
+  showBlame: boolean,
 ): ViewerData {
   'use no memo';
   const { highlightedHtml, highlightLang } = useHighlighting(input.filePath, input.content, ideThemeId);
   const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
   const diffBaseContent = useGitDiffBaseContent(input.projectRoot ?? null, input.filePath, input.content, diffLines);
-  const effectiveDiffLines = useMemo(() => {
-    if (diffLines.length > 0) return diffLines;
-    if (diffBaseContent !== '' || input.content == null || input.content.length === 0) return diffLines;
-    return input.content.split('\n').map((_, index) => ({ line: index + 1, kind: 'added' as const }));
-  }, [diffBaseContent, diffLines, input.content]);
+  const effectiveDiffLines = useEffectiveDiffLines(diffLines, diffBaseContent, input.content);
   const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
   const { foldableLines } = useFoldRanges(input.content);
   const scrollMetrics = useScrollMetrics(scrollRef);
-  const outlineSymbols = useSymbolOutline(input.content, input.filePath ? getLanguage(input.filePath) : 'text');
+  const outlineSymbols = useSymbolOutline(
+    input.content,
+    input.filePath ? getLanguage(input.filePath) : 'text',
+  );
   const diffMap = useMemo(() => createDiffMap(effectiveDiffLines), [effectiveDiffLines]);
-
-  return {
-    highlightedHtml,
-    highlightLang,
-    diffBaseContent,
-    diffLines: effectiveDiffLines,
-    diffMap,
-    blameLines,
-    foldableLines,
-    scrollMetrics,
-    outlineSymbols,
-  };
+  return { highlightedHtml, highlightLang, diffBaseContent, diffLines: effectiveDiffLines, diffMap, blameLines, foldableLines, scrollMetrics, outlineSymbols };
 }
 
-interface LoadGitDiffBaseContentInput {
-  projectRoot: string;
-  filePath: string;
-  content: string;
-  diffLines: DiffLineInfo[];
-  setDiffBaseContent: (value: string | null) => void;
-  isActive: () => boolean;
-}
-
-function shouldKeepGitDiffBaseContent(baseContent: string, content: string, diffLines: DiffLineInfo[]): boolean {
-  return diffLines.length > 0 || baseContent !== content;
-}
-
-async function loadGitDiffBaseContent(input: LoadGitDiffBaseContentInput): Promise<void> {
-  const { projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive } = input;
-  const clearIfActive = (): void => {
-    if (isActive()) setDiffBaseContent(null);
-  };
-
-  try {
-    const repoResult = await window.electronAPI.git.isRepo(projectRoot);
-    if (!repoResult.success || !repoResult.isRepo) return clearIfActive();
-    if (!isActive()) return;
-    const baseResult = await window.electronAPI.git.fileAtCommit(projectRoot, 'HEAD', filePath);
-    if (!isActive()) return;
-    const baseContent = baseResult.success ? (baseResult.content ?? '') : null;
-    if (baseContent == null) return clearIfActive();
-    setDiffBaseContent(shouldKeepGitDiffBaseContent(baseContent, content, diffLines) ? baseContent : null);
-  } catch {
-    clearIfActive();
-  }
-}
-
-function useGitDiffBaseContent(
-  projectRoot: string | null,
-  filePath: string | null,
-  content: string | null,
-  diffLines: DiffLineInfo[],
-): string | null {
-  'use no memo';
-  const [diffBaseContent, setDiffBaseContent] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (!projectRoot || !filePath || content == null) { setDiffBaseContent(null); return () => { active = false; }; }
-    void loadGitDiffBaseContent({ projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive: () => active });
-    return () => { active = false; };
-  }, [content, diffLines, filePath, projectRoot]);
-
-  return diffBaseContent;
-}
-
-function useConflictState(
-  filePath: string | null,
-  content: string | null
-): ViewerConflicts {
-  'use no memo';
-  const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
-  useEffect(() => { setConflictBlocks(parseConflictContent(content, hasConflictMarkers, parseConflictBlocks)); }, [content]);
-  const handleConflictResolved = useCallback((newContent: string) => {
-    setConflictBlocks(parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks));
-    if (!filePath) return;
-    window.dispatchEvent(new CustomEvent('agent-ide:reload-file', { detail: { filePath } }));
-  }, [filePath]);
-  return { conflictBlocks, handleConflictResolved };
-}
-
-function useCollapsedFoldState(filePath: string | null, content: string | null): ViewerFolds {
-  'use no memo';
-  const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
-  useEffect(() => { setCollapsedFolds(new Set()); }, [filePath, content]);
-  const toggleFold = useCallback((startLine: number) => { setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine)); }, []);
-  return { collapsedFolds, setCollapsedFolds, toggleFold };
-}
-
-function useScrollReset(filePath: string | null, scrollRef: React.RefObject<HTMLDivElement | null>): void {
-  'use no memo';
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [filePath, scrollRef]);
-}
-
-function useLinkHandling(codeRef: React.RefObject<HTMLDivElement | null>, filePath: string | null, projectRoot?: string | null): void {
-  'use no memo';
-  useEffect(() => { ensureLinkStyles(); }, []);
-  useEffect(() => {
-    const element = codeRef.current;
-    if (!element) return;
-    return attachLinkClickHandler(element, () => filePath, () => projectRoot ?? null);
-  }, [codeRef, filePath, projectRoot]);
-}
-
-function useResetViewerUi(filePath: string | null, resetters: ViewerUiResetters): void {
-  'use no memo';
-  useEffect(() => { resetters.setShowSearch(false); resetters.setShowGoToLine(false); resetters.setViewMode('code'); resetters.setShowHistory(false); resetters.setEditMode(false); }, [filePath, resetters]);
-}
-
-function useExpandFoldsForSearch(showSearch: boolean, setCollapsedFolds: React.Dispatch<React.SetStateAction<Set<number>>>): void {
-  'use no memo';
-  useEffect(() => { if (showSearch) setCollapsedFolds((previous) => (previous.size === 0 ? previous : new Set())); }, [showSearch, setCollapsedFolds]);
-}

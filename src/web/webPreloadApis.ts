@@ -48,7 +48,8 @@ export function buildPtyApis(t: WebSocketTransport) {
   };
   const codexAPI = {
     listModels: () => t.invoke('codex:listModels'),
-    resolveThreadId: (args: { cwd: string; spawnedAfter: number }) => t.invoke('codex:resolveThreadId', args),
+    resolveThreadId: (args: { cwd: string; spawnedAfter: number }) =>
+      t.invoke('codex:resolveThreadId', args),
   };
   return { ptyAPI, codexAPI };
 }
@@ -74,7 +75,10 @@ async function configImport(t: WebSocketTransport): Promise<{ success: boolean; 
     input.accept = '.json';
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) { resolve({ success: false, error: 'No file selected' }); return; }
+      if (!file) {
+        resolve({ success: false, error: 'No file selected' });
+        return;
+      }
       const text = await file.text();
       const result = await t.invoke('config:import', JSON.parse(text) as unknown);
       resolve(result as { success: boolean; error?: string });
@@ -173,9 +177,8 @@ export function buildAppApi(t: WebSocketTransport) {
       return () => cleanups.forEach((c) => c());
     },
     /** Wave 34 Phase G — connection state broadcast for offline dispatch. */
-    onConnectionState: (
-      cb: (state: 'connected' | 'connecting' | 'disconnected') => void,
-    ) => t.subscribeConnectionState(cb as Parameters<typeof t.subscribeConnectionState>[0]),
+    onConnectionState: (cb: (state: 'connected' | 'connecting' | 'disconnected') => void) =>
+      t.subscribeConnectionState(cb as Parameters<typeof t.subscribeConnectionState>[0]),
     minimizeWindow: desktopOnlyNoop(),
     toggleMaximizeWindow: desktopOnlyNoop(),
     closeWindow: desktopOnlyNoop(),

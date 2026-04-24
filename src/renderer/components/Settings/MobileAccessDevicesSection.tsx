@@ -27,11 +27,7 @@ export function formatLastSeen(isoString: string): string {
 // ── CapabilityBadge ───────────────────────────────────────────────────────────
 
 function CapabilityBadge({ label }: { label: string }): React.ReactElement {
-  return (
-    <span style={badgeStyle}>
-      {label}
-    </span>
-  );
+  return <span style={badgeStyle}>{label}</span>;
 }
 
 // ── DeviceRow ─────────────────────────────────────────────────────────────────
@@ -46,11 +42,16 @@ function DeviceRow({ device, onRevoke, revoking }: DeviceRowProps): React.ReactE
   return (
     <div style={rowContainerStyle}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>
+        <div
+          className="text-text-semantic-primary"
+          style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}
+        >
           {device.label}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
-          {device.capabilities.map((cap) => <CapabilityBadge key={cap} label={cap} />)}
+          {device.capabilities.map((cap) => (
+            <CapabilityBadge key={cap} label={cap} />
+          ))}
         </div>
         <div className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
           Last seen: {formatLastSeen(device.lastSeenAt)}
@@ -90,7 +91,9 @@ function useDevicesList() {
     }
   }, []);
 
-  useEffect(() => { void loadDevices(); }, [loadDevices]);
+  useEffect(() => {
+    void loadDevices();
+  }, [loadDevices]);
 
   const handleRevoke = useCallback(async (deviceId: string) => {
     setRevoking(deviceId);
@@ -114,13 +117,33 @@ interface ListBodyProps {
   onRevoke: (id: string) => void;
 }
 
-function DevicesListBody({ devices, revoking, loadError, onRevoke }: ListBodyProps): React.ReactElement {
-  if (loadError) return <p className="text-status-error" style={{ fontSize: '12px' }}>{loadError}</p>;
-  if (devices.length === 0) return <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>No paired devices yet.</p>;
+function DevicesListBody({
+  devices,
+  revoking,
+  loadError,
+  onRevoke,
+}: ListBodyProps): React.ReactElement {
+  if (loadError)
+    return (
+      <p className="text-status-error" style={{ fontSize: '12px' }}>
+        {loadError}
+      </p>
+    );
+  if (devices.length === 0)
+    return (
+      <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+        No paired devices yet.
+      </p>
+    );
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {devices.map((device) => (
-        <DeviceRow key={device.id} device={device} onRevoke={onRevoke} revoking={revoking === device.id} />
+        <DeviceRow
+          key={device.id}
+          device={device}
+          onRevoke={onRevoke}
+          revoking={revoking === device.id}
+        />
       ))}
     </div>
   );
@@ -133,11 +156,21 @@ export function MobileAccessDevicesSection({ enabled }: { enabled: boolean }): R
 
   return (
     <section aria-labelledby="devices-section-label">
-      <div id="devices-section-label"><SectionLabel>Paired Devices</SectionLabel></div>
-      {!enabled
-        ? <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Enable Mobile Access to manage paired devices.</p>
-        : <DevicesListBody devices={devices} loadError={loadError} onRevoke={(id) => void handleRevoke(id)} revoking={revoking} />
-      }
+      <div id="devices-section-label">
+        <SectionLabel>Paired Devices</SectionLabel>
+      </div>
+      {!enabled ? (
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+          Enable Mobile Access to manage paired devices.
+        </p>
+      ) : (
+        <DevicesListBody
+          devices={devices}
+          loadError={loadError}
+          onRevoke={(id) => void handleRevoke(id)}
+          revoking={revoking}
+        />
+      )}
     </section>
   );
 }

@@ -35,12 +35,16 @@ describe('PromptDiffView — heading', () => {
   });
 
   it('renders the section heading', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.getByText('Prompt Diff')).toBeDefined();
   });
 
   it('renders the description text', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.getByText(/unified diff/i)).toBeDefined();
   });
 });
@@ -54,7 +58,9 @@ describe('PromptDiffView — empty state (no payload yet)', () => {
   });
 
   it('shows the no-diff-yet message', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.getByText(/no prompt diff captured yet/i)).toBeDefined();
   });
 });
@@ -71,25 +77,34 @@ describe('PromptDiffView — with diff payload', () => {
     // Immediately invoke callback with the fixture payload
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
-      value: makeElectronApi((cb) => { cb(payload); return () => undefined; }),
+      value: makeElectronApi((cb) => {
+        cb(payload);
+        return () => undefined;
+      }),
     });
   });
 
   it('renders the stats line with added/removed counts', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.getByText('+2')).toBeDefined();
     // The minus sign may be an HTML entity — search by partial text
     expect(screen.getByText(/lines changed/i)).toBeDefined();
   });
 
   it('renders added lines with "+" prefix', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     const addedLines = screen.getAllByText(/^\+ /);
     expect(addedLines.length).toBeGreaterThan(0);
   });
 
   it('renders deleted lines with "-" prefix', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     const deletedLines = screen.getAllByText(/^- /);
     expect(deletedLines.length).toBeGreaterThan(0);
   });
@@ -103,7 +118,9 @@ describe('PromptDiffView — with diff payload', () => {
   });
 
   it('does not render the empty-state message when payload is present', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.queryByText(/no prompt diff captured yet/i)).toBeNull();
   });
 });
@@ -117,7 +134,9 @@ describe('PromptDiffView — electronAPI missing', () => {
   });
 
   it('renders without crashing when ecosystem API is absent', async () => {
-    await act(async () => { render(<PromptDiffView />); });
+    await act(async () => {
+      render(<PromptDiffView />);
+    });
     expect(screen.getByText('Prompt Diff')).toBeDefined();
     expect(screen.getByText(/no prompt diff captured yet/i)).toBeDefined();
   });

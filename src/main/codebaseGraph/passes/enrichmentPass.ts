@@ -13,7 +13,7 @@
  * the extraction would need to be enhanced in treeSitterParser first).
  */
 
-import type { GraphDatabase } from '../graphDatabase'
+import type { GraphDatabase } from '../graphDatabase';
 
 // ─── Decorator names that mark entry points ──────────────────────────────────
 
@@ -43,15 +43,15 @@ const ENTRY_DECORATORS = new Set([
   'main',
   'cli',
   'command',
-])
+]);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function isEntryPoint(props: Record<string, unknown>, filePath: string | null): boolean {
-  const decorators = (props.decorators as string[] | undefined) ?? []
-  if (decorators.some((d) => ENTRY_DECORATORS.has(d))) return true
-  if (filePath && /\/index\.[^.]+$/.test(filePath) && props.is_exported) return true
-  return false
+  const decorators = (props.decorators as string[] | undefined) ?? [];
+  if (decorators.some((d) => ENTRY_DECORATORS.has(d))) return true;
+  if (filePath && /\/index\.[^.]+$/.test(filePath) && props.is_exported) return true;
+  return false;
 }
 
 // ─── Pass implementation ─────────────────────────────────────────────────────
@@ -64,13 +64,13 @@ export function enrichmentPass(
   // IMPLEMENTS edges are a placeholder — tree-sitter extraction would need to
   // expose implements/extends info from class_heritage nodes first.
 
-  const allFunctions = db.getNodesByLabel(projectName, 'Function')
+  const allFunctions = db.getNodesByLabel(projectName, 'Function');
 
   for (const fn of allFunctions) {
-    const props = fn.props as Record<string, unknown>
-    if (props.is_entry_point === true) continue
+    const props = fn.props as Record<string, unknown>;
+    if (props.is_entry_point === true) continue;
     if (isEntryPoint(props, fn.file_path)) {
-      db.updateNodeProps(fn.id, { ...props, is_entry_point: true })
+      db.updateNodeProps(fn.id, { ...props, is_entry_point: true });
     }
   }
 }

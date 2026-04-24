@@ -21,7 +21,9 @@ describe('AgentChatWorkspace store integration', () => {
 
   it('store.setState syncs actions', () => {
     const store = createAgentChatStore();
-    const fn = async () => { /* noop */ };
+    const fn = async () => {
+      /* noop */
+    };
     store.setState({ onSend: fn });
     expect(store.getState().onSend).toBe(fn);
   });

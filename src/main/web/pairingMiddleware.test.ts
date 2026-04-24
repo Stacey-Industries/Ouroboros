@@ -36,11 +36,15 @@ const { createPairingRouter } = await import('./pairingMiddleware');
 
 type ResCtx = { status: number | null; body: unknown };
 
-function makeReq(
-  body: Record<string, unknown> = {},
-  ip = '10.0.0.1',
-): Request {
-  return { body, method: 'POST', url: '/api/pair', ip, socket: { remoteAddress: ip }, headers: {} } as unknown as Request;
+function makeReq(body: Record<string, unknown> = {}, ip = '10.0.0.1'): Request {
+  return {
+    body,
+    method: 'POST',
+    url: '/api/pair',
+    ip,
+    socket: { remoteAddress: ip },
+    headers: {},
+  } as unknown as Request;
 }
 
 async function callHandler(
@@ -53,13 +57,20 @@ async function callHandler(
   const req = makeReq(body, ip);
   const ctx: ResCtx = { status: null, body: null };
   const res = {
-    status(code: number) { ctx.status = code; return res; },
-    json(b: unknown) { ctx.body = b; return res; },
+    status(code: number) {
+      ctx.status = code;
+      return res;
+    },
+    json(b: unknown) {
+      ctx.body = b;
+      return res;
+    },
   } as unknown as Response;
 
   await new Promise<void>((resolve) => {
-    (router as unknown as { handle: (req: Request, res: Response, next: () => void) => void })
-      .handle(req, res, () => resolve());
+    (
+      router as unknown as { handle: (req: Request, res: Response, next: () => void) => void }
+    ).handle(req, res, () => resolve());
     setTimeout(resolve, 10);
   });
   return ctx;
@@ -129,8 +140,17 @@ describe('POST /api/pair — happy path', () => {
       refreshToken: 'tok',
       device: { id: 'dev-2', capabilities: [], label: 'Test' },
     });
-    await callHandler({ code: '654321', label: 'Tablet', fingerprint: 'fp-xy' }, true, '192.168.1.5');
-    expect(mockConsumePairingTicket).toHaveBeenCalledWith('654321', 'Tablet', 'fp-xy', '192.168.1.5');
+    await callHandler(
+      { code: '654321', label: 'Tablet', fingerprint: 'fp-xy' },
+      true,
+      '192.168.1.5',
+    );
+    expect(mockConsumePairingTicket).toHaveBeenCalledWith(
+      '654321',
+      'Tablet',
+      'fp-xy',
+      '192.168.1.5',
+    );
   });
 
   it('uses default label when label omitted', async () => {
@@ -140,7 +160,10 @@ describe('POST /api/pair — happy path', () => {
     });
     await callHandler({ code: '111222' }, true);
     expect(mockConsumePairingTicket).toHaveBeenCalledWith(
-      '111222', 'Mobile device', '', expect.any(String),
+      '111222',
+      'Mobile device',
+      '',
+      expect.any(String),
     );
   });
 });

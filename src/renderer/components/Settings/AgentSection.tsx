@@ -54,26 +54,73 @@ function AgentChatSettingsGroup({
           Configure agent chat behavior, providers, and verification.
         </p>
       </div>
-      <SelectSection description="Choose the default provider for agent chat requests." label="Default provider" title="Default Provider" value={settings.defaultProvider ?? 'claude-code'} onChange={(value) => updateSetting('defaultProvider', value as AgentChatSettings['defaultProvider'])}>
+      <SelectSection
+        description="Choose the default provider for agent chat requests."
+        label="Default provider"
+        title="Default Provider"
+        value={settings.defaultProvider ?? 'claude-code'}
+        onChange={(value) =>
+          updateSetting('defaultProvider', value as AgentChatSettings['defaultProvider'])
+        }
+      >
         <option value="claude-code">Claude Code CLI</option>
         <option value="anthropic-api">Anthropic API (direct)</option>
         <option value="codex">Codex</option>
       </SelectSection>
-      <SelectSection description="Controls how thoroughly the agent verifies its changes." label="Verification profile" title="Verification Profile" value={settings.defaultVerificationProfile ?? 'default'} onChange={(value) => updateSetting('defaultVerificationProfile', value as AgentChatSettings['defaultVerificationProfile'])}>
+      <SelectSection
+        description="Controls how thoroughly the agent verifies its changes."
+        label="Verification profile"
+        title="Verification Profile"
+        value={settings.defaultVerificationProfile ?? 'default'}
+        onChange={(value) =>
+          updateSetting(
+            'defaultVerificationProfile',
+            value as AgentChatSettings['defaultVerificationProfile'],
+          )
+        }
+      >
         <option value="fast">fast</option>
         <option value="default">default</option>
         <option value="full">full</option>
       </SelectSection>
-      <SelectSection description="Whether the agent gathers context automatically or waits for manual selection." label="Context behavior" title="Context Behavior" value={settings.contextBehavior ?? 'auto'} onChange={(value) => updateSetting('contextBehavior', value as AgentChatSettings['contextBehavior'])}>
+      <SelectSection
+        description="Whether the agent gathers context automatically or waits for manual selection."
+        label="Context behavior"
+        title="Context Behavior"
+        value={settings.contextBehavior ?? 'auto'}
+        onChange={(value) =>
+          updateSetting('contextBehavior', value as AgentChatSettings['contextBehavior'])
+        }
+      >
         <option value="auto">Automatic</option>
         <option value="manual">Manual</option>
       </SelectSection>
-      <SelectSection description="Initial view when opening the agent panel." label="Default view" title="Default View" value={settings.defaultView ?? 'chat'} onChange={(value) => updateSetting('defaultView', value as AgentChatSettings['defaultView'])}>
+      <SelectSection
+        description="Initial view when opening the agent panel."
+        label="Default view"
+        title="Default View"
+        value={settings.defaultView ?? 'chat'}
+        onChange={(value) =>
+          updateSetting('defaultView', value as AgentChatSettings['defaultView'])
+        }
+      >
         <option value="chat">Chat</option>
         <option value="monitor">Monitor</option>
       </SelectSection>
-      <ToggleSection checked={settings.showAdvancedControls ?? false} description="Reveal provider and verification overrides in the chat composer without an extra click." label="Show advanced controls" title="Show Advanced Controls" onChange={(value) => updateSetting('showAdvancedControls', value)} />
-      <ToggleSection checked={settings.openDetailsOnFailure ?? false} description="Automatically open linked task details when an agent request fails or needs review." label="Open details on failure" title="Open Details on Failure" onChange={(value) => updateSetting('openDetailsOnFailure', value)} />
+      <ToggleSection
+        checked={settings.showAdvancedControls ?? false}
+        description="Reveal provider and verification overrides in the chat composer without an extra click."
+        label="Show advanced controls"
+        title="Show Advanced Controls"
+        onChange={(value) => updateSetting('showAdvancedControls', value)}
+      />
+      <ToggleSection
+        checked={settings.openDetailsOnFailure ?? false}
+        description="Automatically open linked task details when an agent request fails or needs review."
+        label="Open details on failure"
+        title="Open Details on Failure"
+        onChange={(value) => updateSetting('openDetailsOnFailure', value)}
+      />
     </>
   );
 }
@@ -83,13 +130,28 @@ function ContextLayerSettingsGroup({
   updateSetting,
 }: {
   settings: ContextLayerSettings;
-  updateSetting: <K extends keyof ContextLayerSettings>(field: K, value: ContextLayerSettings[K]) => void;
+  updateSetting: <K extends keyof ContextLayerSettings>(
+    field: K,
+    value: ContextLayerSettings[K],
+  ) => void;
 }): React.ReactElement {
   return (
     <>
       <SectionLabel style={{ marginTop: '8px' }}>Context Layer</SectionLabel>
-      <ToggleSection checked={settings.enabled ?? false} description="Generate and maintain a structural map of detected modules, injected into agent context automatically." label="Enable context layer" title="Enable Context Layer" onChange={(value) => updateSetting('enabled', value)} />
-      <ToggleSection checked={settings.autoSummarize ?? false} description="Use the Anthropic API (Haiku) to generate natural-language descriptions of each module." label="Auto-summarize modules" title="Auto-summarize Modules" onChange={(value) => updateSetting('autoSummarize', value)} />
+      <ToggleSection
+        checked={settings.enabled ?? false}
+        description="Generate and maintain a structural map of detected modules, injected into agent context automatically."
+        label="Enable context layer"
+        title="Enable Context Layer"
+        onChange={(value) => updateSetting('enabled', value)}
+      />
+      <ToggleSection
+        checked={settings.autoSummarize ?? false}
+        description="Use the Anthropic API (Haiku) to generate natural-language descriptions of each module."
+        label="Auto-summarize modules"
+        title="Auto-summarize Modules"
+        onChange={(value) => updateSetting('autoSummarize', value)}
+      />
     </>
   );
 }
@@ -107,8 +169,8 @@ function RouterThresholdSection({
     <section>
       <SectionLabel>Router Classifier Threshold</SectionLabel>
       <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Minimum classifier confidence required before accepting a layer-2 routing result. Range:
-        0.0 to 1.0.
+        Minimum classifier confidence required before accepting a layer-2 routing result. Range: 0.0
+        to 1.0.
       </p>
       <input
         type="number"
@@ -148,8 +210,7 @@ function LlmJudgeSampleRateSection({
       <SectionLabel>LLM Judge Sample Rate</SectionLabel>
       <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
         Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.
-        Currently:{' '}
-        <span className="text-text-semantic-primary">{label}</span>
+        Currently: <span className="text-text-semantic-primary">{label}</span>
       </p>
       <input
         type="range"
@@ -174,10 +235,28 @@ function RouterToggles({
 }): React.ReactElement {
   return (
     <>
-      <ToggleSection checked={settings.layer2Enabled} description="Use the statistical classifier when the rule engine does not produce a routing decision." label="Enable router classifier" title="Router Classifier" onChange={(value) => updateSetting('layer2Enabled', value)} />
+      <ToggleSection
+        checked={settings.layer2Enabled}
+        description="Use the statistical classifier when the rule engine does not produce a routing decision."
+        label="Enable router classifier"
+        title="Router Classifier"
+        onChange={(value) => updateSetting('layer2Enabled', value)}
+      />
       <RouterThresholdSection settings={settings} updateSetting={updateSetting} />
-      <ToggleSection checked={settings.layer3Enabled} description="Reserved for the future async fallback layer. The current synchronous router path does not use this yet." label="Enable layer 3 fallback" title="Router Layer 3" onChange={(value) => updateSetting('layer3Enabled', value)} />
-      <ToggleSection checked={settings.paranoidMode} description="Force Opus for all Agent Chat requests regardless of prompt classification." label="Enable paranoid mode" title="Router Paranoid Mode" onChange={(value) => updateSetting('paranoidMode', value)} />
+      <ToggleSection
+        checked={settings.layer3Enabled}
+        description="Reserved for the future async fallback layer. The current synchronous router path does not use this yet."
+        label="Enable layer 3 fallback"
+        title="Router Layer 3"
+        onChange={(value) => updateSetting('layer3Enabled', value)}
+      />
+      <ToggleSection
+        checked={settings.paranoidMode}
+        description="Force Opus for all Agent Chat requests regardless of prompt classification."
+        label="Enable paranoid mode"
+        title="Router Paranoid Mode"
+        onChange={(value) => updateSetting('paranoidMode', value)}
+      />
       <LlmJudgeSampleRateSection settings={settings} updateSetting={updateSetting} />
     </>
   );
@@ -194,31 +273,49 @@ function RouterSettingsGroup({
     <>
       <SectionLabel style={{ marginTop: '8px' }}>Model Router</SectionLabel>
       <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Agent Chat can automatically choose between Haiku, Sonnet, and Opus when the model picker
-        is set to Auto.
+        Agent Chat can automatically choose between Haiku, Sonnet, and Opus when the model picker is
+        set to Auto.
       </p>
-      <ToggleSection checked={settings.enabled} description="Enable automatic model routing for Agent Chat requests that do not explicitly choose a model." label="Enable model router" title="Automatic Model Routing" onChange={(value) => updateSetting('enabled', value)} />
-      <ToggleSection checked={settings.layer1Enabled} description="Use deterministic rules and slash-command mappings as the first routing layer." label="Enable router rule engine" title="Router Rule Engine" onChange={(value) => updateSetting('layer1Enabled', value)} />
+      <ToggleSection
+        checked={settings.enabled}
+        description="Enable automatic model routing for Agent Chat requests that do not explicitly choose a model."
+        label="Enable model router"
+        title="Automatic Model Routing"
+        onChange={(value) => updateSetting('enabled', value)}
+      />
+      <ToggleSection
+        checked={settings.layer1Enabled}
+        description="Use deterministic rules and slash-command mappings as the first routing layer."
+        label="Enable router rule engine"
+        title="Router Rule Engine"
+        onChange={(value) => updateSetting('layer1Enabled', value)}
+      />
       <RouterToggles settings={settings} updateSetting={updateSetting} />
     </>
   );
 }
 
-export function AgentSection({
-  draft,
-  onChange,
-}: AgentSectionProps): React.ReactElement {
+export function AgentSection({ draft, onChange }: AgentSectionProps): React.ReactElement {
   const agentChatSettings = draft.agentChatSettings ?? {};
   const contextLayerSettings = draft.contextLayer ?? {};
   const contextSettings = draft.context ?? {};
   const routerSettings = { ...DEFAULT_ROUTER_SETTINGS, ...(draft.routerSettings ?? {}) };
-  const updateAgentChat = <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => {
+  const updateAgentChat = <K extends keyof AgentChatSettings>(
+    field: K,
+    value: AgentChatSettings[K],
+  ) => {
     onChange('agentChatSettings', { ...agentChatSettings, [field]: value });
   };
-  const updateContextLayer = <K extends keyof ContextLayerSettings>(field: K, value: ContextLayerSettings[K]) => {
+  const updateContextLayer = <K extends keyof ContextLayerSettings>(
+    field: K,
+    value: ContextLayerSettings[K],
+  ) => {
     onChange('contextLayer', { ...contextLayerSettings, [field]: value });
   };
-  const updateRouterSettings = <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => {
+  const updateRouterSettings = <K extends keyof RouterSettings>(
+    field: K,
+    value: RouterSettings[K],
+  ) => {
     onChange('routerSettings', { ...routerSettings, [field]: value });
   };
   const updateContext = <K extends keyof ContextSettings>(field: K, value: ContextSettings[K]) => {
@@ -229,7 +326,10 @@ export function AgentSection({
     <div style={claudeSectionRootStyle}>
       <AgentChatSettingsGroup settings={agentChatSettings} updateSetting={updateAgentChat} />
       <RouterSettingsGroup settings={routerSettings} updateSetting={updateRouterSettings} />
-      <ContextLayerSettingsGroup settings={contextLayerSettings} updateSetting={updateContextLayer} />
+      <ContextLayerSettingsGroup
+        settings={contextLayerSettings}
+        updateSetting={updateContextLayer}
+      />
       <AgentContextPacketSection contextSettings={contextSettings} updateContext={updateContext} />
       <AgentFeaturesGroup draft={draft} onChange={onChange} />
     </div>
@@ -242,7 +342,10 @@ function BackgroundJobsSection({ draft, onChange }: AgentSectionProps): React.Re
     if (!Number.isFinite(parsed)) {
       return;
     }
-    onChange('backgroundJobsMaxConcurrent', Math.min(BACKGROUND_JOBS_MAX, Math.max(BACKGROUND_JOBS_MIN, parsed)));
+    onChange(
+      'backgroundJobsMaxConcurrent',
+      Math.min(BACKGROUND_JOBS_MAX, Math.max(BACKGROUND_JOBS_MIN, parsed)),
+    );
   }
 
   return (

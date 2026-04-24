@@ -71,10 +71,7 @@ function matchesWorktree(session: SessionRecord, worktree: WorktreeFilter): bool
  * Pinned sort is suppressed in the 'archived' and 'deleted' views (every item
  * is already in a special state; pinned ordering would be confusing).
  */
-export function applyFilters(
-  sessions: SessionRecord[],
-  filters: FilterState,
-): SessionRecord[] {
+export function applyFilters(sessions: SessionRecord[], filters: FilterState): SessionRecord[] {
   const filtered = sessions.filter(
     (s) =>
       matchesStatus(s, filters.status) &&

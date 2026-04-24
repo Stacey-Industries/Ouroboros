@@ -42,7 +42,8 @@ function addArrDiffRows(rows: DiffRow[], field: string, a: string[], b: string[]
   const added = b.filter((x) => !a.includes(x));
   const removed = a.filter((x) => !b.includes(x));
   if (added.length > 0) rows.push({ field: `${field} added`, from: '', to: added.join(', ') });
-  if (removed.length > 0) rows.push({ field: `${field} removed`, from: removed.join(', '), to: '' });
+  if (removed.length > 0)
+    rows.push({ field: `${field} removed`, from: removed.join(', '), to: '' });
 }
 
 function buildDiffRows(oldP: Profile, newP: Profile): DiffRow[] {
@@ -62,15 +63,23 @@ function buildDiffRows(oldP: Profile, newP: Profile): DiffRow[] {
 function DiffRowItem({ row }: { row: DiffRow }): React.ReactElement {
   return (
     <div style={diffRowStyle}>
-      <span className="text-text-semantic-muted" style={fieldStyle}>{row.field}</span>
+      <span className="text-text-semantic-muted" style={fieldStyle}>
+        {row.field}
+      </span>
       {row.from && (
-        <span className="text-status-error" style={fromStyle}>{row.from}</span>
+        <span className="text-status-error" style={fromStyle}>
+          {row.from}
+        </span>
       )}
       {row.from && row.to && (
-        <span className="text-text-semantic-faint" style={arrowStyle}>→</span>
+        <span className="text-text-semantic-faint" style={arrowStyle}>
+          →
+        </span>
       )}
       {row.to && (
-        <span className="text-status-success" style={toStyle}>{row.to}</span>
+        <span className="text-status-success" style={toStyle}>
+          {row.to}
+        </span>
       )}
     </div>
   );
@@ -91,8 +100,7 @@ export function ProfileDiffCard({
     <div style={cardStyle} role="status" aria-label="Profile switched">
       <div style={headerStyle}>
         <span className="text-text-semantic-secondary" style={titleStyle}>
-          Profile switched:{' '}
-          <span className="text-text-semantic-primary">{oldProfile.name}</span>
+          Profile switched: <span className="text-text-semantic-primary">{oldProfile.name}</span>
           {' → '}
           <span className="text-interactive-accent">{newProfile.name}</span>
         </span>

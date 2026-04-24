@@ -63,7 +63,9 @@ describe('CompareProviders', () => {
         compareProviders: {
           start: vi.fn().mockResolvedValue({ success: true, compareId: 'x', sessions: [] }),
           cancel: vi.fn().mockResolvedValue({ success: true }),
-          onEvent: vi.fn().mockReturnValue(() => { /* noop */ }),
+          onEvent: vi.fn().mockReturnValue(() => {
+            /* noop */
+          }),
         },
         config: {
           getAll: vi.fn().mockResolvedValue({ providers: { multiProvider: true } }),
@@ -79,7 +81,9 @@ describe('CompareProviders', () => {
 
   it('renders nothing when isOpen is false', async () => {
     const { CompareProviders } = await import('./CompareProviders');
-    const { container } = render(<CompareProviders isOpen={false} onClose={vi.fn()} projectPath="/proj" />);
+    const { container } = render(
+      <CompareProviders isOpen={false} onClose={vi.fn()} projectPath="/proj" />,
+    );
     expect(container.firstChild).toBeNull();
   });
 

@@ -100,10 +100,7 @@ describe('wave6StubApis — Phase 0 scaffolding', () => {
       const cleanup = wave6StubApis.backgroundJobs.onUpdate(() => {});
       expect(ipcOn).toHaveBeenCalledWith('backgroundJobs:update', expect.any(Function));
       cleanup();
-      expect(ipcRemoveListener).toHaveBeenCalledWith(
-        'backgroundJobs:update',
-        expect.any(Function),
-      );
+      expect(ipcRemoveListener).toHaveBeenCalledWith('backgroundJobs:update', expect.any(Function));
     });
 
     it('agentConflict.onChange wires agentConflict:change channel', () => {
@@ -122,10 +119,7 @@ describe('wave6StubApis — Phase 0 scaffolding', () => {
 
     it('aiStream.onStream wires per-request channel', () => {
       const cleanup = wave6StubApis.aiStream.onStream('req-123', () => {});
-      expect(ipcOn).toHaveBeenCalledWith(
-        'ai:inlineEditStream:req-123',
-        expect.any(Function),
-      );
+      expect(ipcOn).toHaveBeenCalledWith('ai:inlineEditStream:req-123', expect.any(Function));
       cleanup();
       expect(ipcRemoveListener).toHaveBeenCalledWith(
         'ai:inlineEditStream:req-123',

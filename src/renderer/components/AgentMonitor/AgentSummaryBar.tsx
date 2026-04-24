@@ -51,7 +51,9 @@ function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
     }
 
     return {
-      running, complete, errors,
+      running,
+      complete,
+      errors,
       total: sessions.length,
       hasFinished: complete > 0 || errors > 0,
       hasTokens: inputTokens > 0 || outputTokens > 0,

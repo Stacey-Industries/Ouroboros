@@ -18,9 +18,7 @@ function useStatusBarProps(): {
   language: string | undefined;
 } {
   const { activeFile } = useFileViewerManager();
-  const lineCount = activeFile?.content != null
-    ? activeFile.content.split('\n').length
-    : undefined;
+  const lineCount = activeFile?.content != null ? activeFile.content.split('\n').length : undefined;
 
   return {
     activeFilePath: activeFile?.path ?? null,

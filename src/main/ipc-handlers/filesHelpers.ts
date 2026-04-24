@@ -291,7 +291,8 @@ export function createOpenFileHandler(senderWindow: SenderWindowFn): FileHandler
 
 export async function handleShowImageDialog(event: IpcMainInvokeEvent): Promise<unknown> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime
-  const win = ((event.sender as any).getOwnerBrowserWindow?.() ?? BrowserWindow.getFocusedWindow())!;
+  const win = ((event.sender as any).getOwnerBrowserWindow?.() ??
+    BrowserWindow.getFocusedWindow())!;
   const result = await dialog.showOpenDialog(win, {
     title: 'Attach Image',
     properties: ['openFile', 'multiSelections'],

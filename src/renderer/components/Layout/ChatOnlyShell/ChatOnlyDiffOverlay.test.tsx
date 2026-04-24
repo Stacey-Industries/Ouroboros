@@ -134,8 +134,20 @@ describe('ChatOnlyDiffOverlay', () => {
       const [open, setOpen] = useState(true);
       return (
         <>
-          <button onClick={() => { setOpen(false); }} data-testid="force-close">close</button>
-          <ChatOnlyDiffOverlay open={open} onClose={() => { setOpen(false); }} />
+          <button
+            onClick={() => {
+              setOpen(false);
+            }}
+            data-testid="force-close"
+          >
+            close
+          </button>
+          <ChatOnlyDiffOverlay
+            open={open}
+            onClose={() => {
+              setOpen(false);
+            }}
+          />
         </>
       );
     }

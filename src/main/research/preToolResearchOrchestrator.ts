@@ -235,7 +235,12 @@ export async function _runOrchestration(
   }
 
   recordTraceSafe(decision, library, input.correlationId);
-  return runResearch({ topic: library, library, sessionId: input.sessionId, triggerReason: 'hook' });
+  return runResearch({
+    topic: library,
+    library,
+    sessionId: input.sessionId,
+    triggerReason: 'hook',
+  });
 }
 
 // ─── Public entry point ───────────────────────────────────────────────────────

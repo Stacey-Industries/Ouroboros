@@ -18,10 +18,7 @@ import {
   closePinnedContextStore,
   initPinnedContextStore,
 } from '../orchestration/pinnedContextStore';
-import {
-  closeProfileStore,
-  initProfileStore,
-} from '../profiles/profileStore';
+import { closeProfileStore, initProfileStore } from '../profiles/profileStore';
 import { closeFolderStore, initFolderStore } from './folderStore';
 import { loadQueue } from './sessionDispatchQueue';
 import { startDispatchRunner, stopDispatchRunner } from './sessionDispatchRunner';

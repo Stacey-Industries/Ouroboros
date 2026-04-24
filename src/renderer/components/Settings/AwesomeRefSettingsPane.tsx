@@ -62,10 +62,19 @@ const bulletStyle: React.CSSProperties = {
 
 const CATEGORIES = [
   { label: 'Hooks', desc: 'Shell scripts for PreToolUse / PostToolUse / PostSessionStop events' },
-  { label: 'Slash commands', desc: 'Prompt templates installable as global ~/.claude/commands/ files' },
-  { label: 'MCP configs', desc: 'Stub JSON snippets for popular MCP servers (Linear, GitHub, Slack)' },
+  {
+    label: 'Slash commands',
+    desc: 'Prompt templates installable as global ~/.claude/commands/ files',
+  },
+  {
+    label: 'MCP configs',
+    desc: 'Stub JSON snippets for popular MCP servers (Linear, GitHub, Slack)',
+  },
   { label: 'Rules', desc: 'CLAUDE.md rule blocks — copy into your global or project rules file' },
-  { label: 'Skills', desc: 'Reusable prompt instructions — install as global ~/.claude/commands/ files' },
+  {
+    label: 'Skills',
+    desc: 'Reusable prompt instructions — install as global ~/.claude/commands/ files',
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -78,7 +87,9 @@ function CategoryRow({ label, desc }: { label: string; desc: string }): React.Re
   return (
     <div style={categoryItemStyle}>
       <span style={bulletStyle} />
-      <span><strong>{label}</strong> — {desc}</span>
+      <span>
+        <strong>{label}</strong> — {desc}
+      </span>
     </div>
   );
 }
@@ -93,10 +104,9 @@ export function AwesomeRefSettingsPane(): React.ReactElement {
       <SectionLabel>Curated in-app reference</SectionLabel>
 
       <p style={descStyle}>
-        A hand-curated collection of hooks, slash commands, MCP configs, rules,
-        and skills — shipped with the app and searchable by keyword or category.
-        Each entry has a copy-to-clipboard button; rules and skills can be installed
-        directly into your global Claude Code config.
+        A hand-curated collection of hooks, slash commands, MCP configs, rules, and skills — shipped
+        with the app and searchable by keyword or category. Each entry has a copy-to-clipboard
+        button; rules and skills can be installed directly into your global Claude Code config.
       </p>
 
       <button style={openButtonStyle} onClick={openAwesomeRef}>

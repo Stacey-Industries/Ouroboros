@@ -44,10 +44,7 @@ vi.mock('../config', () => ({
 
 // ─── Subject under test ───────────────────────────────────────────────────────
 
-import {
-  cleanupResearchControlHandlers,
-  registerResearchControlHandlers,
-} from './researchControl';
+import { cleanupResearchControlHandlers, registerResearchControlHandlers } from './researchControl';
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -61,7 +58,11 @@ function captureHandlers(): Map<string, HandlerFn> {
   return map;
 }
 
-async function invoke(map: Map<string, HandlerFn>, channel: string, args: unknown): Promise<unknown> {
+async function invoke(
+  map: Map<string, HandlerFn>,
+  channel: string,
+  args: unknown,
+): Promise<unknown> {
   const fn = map.get(channel);
   if (!fn) throw new Error(`No handler registered for "${channel}"`);
   return fn({} /* fake event */, args);
@@ -112,8 +113,9 @@ describe('registerResearchControlHandlers — channel registration', () => {
 describe('research:getSessionMode', () => {
   it('returns mode from researchSessionState', async () => {
     mockGetResearchMode.mockReturnValue('aggressive');
-    const res = await invoke(handlers, 'research:getSessionMode', { sessionId: 'sess-1' }) as {
-      success: boolean; mode?: string;
+    const res = (await invoke(handlers, 'research:getSessionMode', { sessionId: 'sess-1' })) as {
+      success: boolean;
+      mode?: string;
     };
     expect(res.success).toBe(true);
     expect(res.mode).toBe('aggressive');
@@ -122,24 +124,27 @@ describe('research:getSessionMode', () => {
 
   it('returns conservative default via store when session is new', async () => {
     mockGetResearchMode.mockReturnValue('conservative');
-    const res = await invoke(handlers, 'research:getSessionMode', { sessionId: 'new-sess' }) as {
-      success: boolean; mode?: string;
+    const res = (await invoke(handlers, 'research:getSessionMode', { sessionId: 'new-sess' })) as {
+      success: boolean;
+      mode?: string;
     };
     expect(res.success).toBe(true);
     expect(res.mode).toBe('conservative');
   });
 
   it('fails when sessionId is missing', async () => {
-    const res = await invoke(handlers, 'research:getSessionMode', {}) as {
-      success: boolean; error?: string;
+    const res = (await invoke(handlers, 'research:getSessionMode', {})) as {
+      success: boolean;
+      error?: string;
     };
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/sessionId/i);
   });
 
   it('fails when sessionId is empty string', async () => {
-    const res = await invoke(handlers, 'research:getSessionMode', { sessionId: '   ' }) as {
-      success: boolean; error?: string;
+    const res = (await invoke(handlers, 'research:getSessionMode', { sessionId: '   ' })) as {
+      success: boolean;
+      error?: string;
     };
     expect(res.success).toBe(false);
   });
@@ -149,34 +154,37 @@ describe('research:getSessionMode', () => {
 
 describe('research:setSessionMode', () => {
   it('calls setResearchMode with correct args for off', async () => {
-    const res = await invoke(handlers, 'research:setSessionMode', {
-      sessionId: 'sess-2', mode: 'off',
-    }) as { success: boolean };
+    const res = (await invoke(handlers, 'research:setSessionMode', {
+      sessionId: 'sess-2',
+      mode: 'off',
+    })) as { success: boolean };
     expect(res.success).toBe(true);
     expect(mockSetResearchMode).toHaveBeenCalledWith('sess-2', 'off');
   });
 
   it('calls setResearchMode with correct args for aggressive', async () => {
-    const res = await invoke(handlers, 'research:setSessionMode', {
-      sessionId: 'sess-3', mode: 'aggressive',
-    }) as { success: boolean };
+    const res = (await invoke(handlers, 'research:setSessionMode', {
+      sessionId: 'sess-3',
+      mode: 'aggressive',
+    })) as { success: boolean };
     expect(res.success).toBe(true);
     expect(mockSetResearchMode).toHaveBeenCalledWith('sess-3', 'aggressive');
   });
 
   it('fails on invalid mode string', async () => {
-    const res = await invoke(handlers, 'research:setSessionMode', {
-      sessionId: 'sess-4', mode: 'turbo',
-    }) as { success: boolean; error?: string };
+    const res = (await invoke(handlers, 'research:setSessionMode', {
+      sessionId: 'sess-4',
+      mode: 'turbo',
+    })) as { success: boolean; error?: string };
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/mode/i);
     expect(mockSetResearchMode).not.toHaveBeenCalled();
   });
 
   it('fails when sessionId is missing', async () => {
-    const res = await invoke(handlers, 'research:setSessionMode', {
+    const res = (await invoke(handlers, 'research:setSessionMode', {
       mode: 'conservative',
-    }) as { success: boolean; error?: string };
+    })) as { success: boolean; error?: string };
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/sessionId/i);
   });
@@ -187,8 +195,10 @@ describe('research:setSessionMode', () => {
 describe('research:getGlobalDefault', () => {
   it('returns stored globalEnabled and defaultMode', async () => {
     mockGetConfigValue.mockReturnValue({ globalEnabled: true, defaultMode: 'aggressive' });
-    const res = await invoke(handlers, 'research:getGlobalDefault', {}) as {
-      success: boolean; globalEnabled?: boolean; defaultMode?: string;
+    const res = (await invoke(handlers, 'research:getGlobalDefault', {})) as {
+      success: boolean;
+      globalEnabled?: boolean;
+      defaultMode?: string;
     };
     expect(res.success).toBe(true);
     expect(res.globalEnabled).toBe(true);
@@ -197,8 +207,10 @@ describe('research:getGlobalDefault', () => {
 
   it('returns defaults when config is undefined', async () => {
     mockGetConfigValue.mockReturnValue(undefined);
-    const res = await invoke(handlers, 'research:getGlobalDefault', {}) as {
-      success: boolean; globalEnabled?: boolean; defaultMode?: string;
+    const res = (await invoke(handlers, 'research:getGlobalDefault', {})) as {
+      success: boolean;
+      globalEnabled?: boolean;
+      defaultMode?: string;
     };
     expect(res.success).toBe(true);
     expect(res.globalEnabled).toBe(false);
@@ -207,8 +219,9 @@ describe('research:getGlobalDefault', () => {
 
   it('falls back to conservative for an unrecognised stored mode', async () => {
     mockGetConfigValue.mockReturnValue({ globalEnabled: false, defaultMode: 'unknown' });
-    const res = await invoke(handlers, 'research:getGlobalDefault', {}) as {
-      success: boolean; defaultMode?: string;
+    const res = (await invoke(handlers, 'research:getGlobalDefault', {})) as {
+      success: boolean;
+      defaultMode?: string;
     };
     expect(res.success).toBe(true);
     expect(res.defaultMode).toBe('conservative');
@@ -219,28 +232,32 @@ describe('research:getGlobalDefault', () => {
 
 describe('research:setGlobalDefault', () => {
   it('persists globalEnabled and defaultMode via setConfigValue', async () => {
-    const res = await invoke(handlers, 'research:setGlobalDefault', {
-      globalEnabled: true, defaultMode: 'conservative',
-    }) as { success: boolean };
+    const res = (await invoke(handlers, 'research:setGlobalDefault', {
+      globalEnabled: true,
+      defaultMode: 'conservative',
+    })) as { success: boolean };
     expect(res.success).toBe(true);
     expect(mockSetConfigValue).toHaveBeenCalledWith('researchSettings', {
-      globalEnabled: true, defaultMode: 'conservative',
+      globalEnabled: true,
+      defaultMode: 'conservative',
     });
   });
 
   it('fails when globalEnabled is not boolean', async () => {
-    const res = await invoke(handlers, 'research:setGlobalDefault', {
-      globalEnabled: 'yes', defaultMode: 'conservative',
-    }) as { success: boolean; error?: string };
+    const res = (await invoke(handlers, 'research:setGlobalDefault', {
+      globalEnabled: 'yes',
+      defaultMode: 'conservative',
+    })) as { success: boolean; error?: string };
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/globalEnabled/i);
     expect(mockSetConfigValue).not.toHaveBeenCalled();
   });
 
   it('fails on invalid defaultMode', async () => {
-    const res = await invoke(handlers, 'research:setGlobalDefault', {
-      globalEnabled: false, defaultMode: 'extreme',
-    }) as { success: boolean; error?: string };
+    const res = (await invoke(handlers, 'research:setGlobalDefault', {
+      globalEnabled: false,
+      defaultMode: 'extreme',
+    })) as { success: boolean; error?: string };
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/defaultMode/i);
   });

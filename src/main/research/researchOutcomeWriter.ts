@@ -118,7 +118,11 @@ async function rotateIfNeeded(filePath: string, deps: ResearchOutcomeWriterDeps)
   for (let i = 2; i >= 1; i--) {
     const src = rotationPath(filePath, i);
     const dst = rotationPath(filePath, i + 1);
-    try { await deps.rotate(src, dst); } catch { /* may not exist */ }
+    try {
+      await deps.rotate(src, dst);
+    } catch {
+      /* may not exist */
+    }
   }
   await deps.rotate(filePath, rotationPath(filePath, 1));
 }
@@ -184,7 +188,25 @@ function scheduleFlush(state: WriterState, deps: ResearchOutcomeWriterDeps): voi
   }, FLUSH_INTERVAL_MS);
 }
 
-export function createResearchOutcomeWriter(deps: ResearchOutcomeWriterDeps): ResearchOutcomeWriter {
+function buildOutcomeRecord(args: RecordOutcomeArgs): ResearchOutcomeRecord {
+  return {
+    id: randomUUID(),
+    correlationId: args.correlationId,
+    sessionId: args.sessionId,
+    topic: args.topic,
+    toolName: args.toolName,
+    toolKind: args.toolKind,
+    filePath: args.filePath,
+    timestamp: Date.now(),
+    outcomeSignal: args.outcomeSignal,
+    followupTestExit: args.followupTestExit,
+    schemaVersion: 2,
+  };
+}
+
+export function createResearchOutcomeWriter(
+  deps: ResearchOutcomeWriterDeps,
+): ResearchOutcomeWriter {
   const state: WriterState = {
     queue: [],
     timer: null,
@@ -193,22 +215,9 @@ export function createResearchOutcomeWriter(deps: ResearchOutcomeWriterDeps): Re
   };
 
   return {
-    recordOutcome({ correlationId, sessionId, topic, toolName, toolKind, filePath, outcomeSignal, followupTestExit }) {
+    recordOutcome(args: RecordOutcomeArgs) {
       if (state.closed) return;
-      const record: ResearchOutcomeRecord = {
-        id: randomUUID(),
-        correlationId,
-        sessionId,
-        topic,
-        toolName,
-        toolKind,
-        filePath,
-        timestamp: Date.now(),
-        outcomeSignal,
-        followupTestExit,
-        schemaVersion: 2,
-      };
-      state.queue.push(record);
+      state.queue.push(buildOutcomeRecord(args));
       scheduleFlush(state, deps);
     },
 
@@ -244,4 +253,3 @@ export function closeResearchOutcomeWriter(): Promise<void> {
   log.info('[researchOutcomeWriter] closing');
   return writer.closeWriter();
 }
-

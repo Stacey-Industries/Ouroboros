@@ -53,13 +53,7 @@ function MetricCard({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}): React.ReactElement {
+function InfoRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="text-text-semantic-muted">{label}</span>
@@ -68,7 +62,11 @@ function InfoRow({
   );
 }
 
-function FeatureBar({ name, weight, maxAbs }: {
+function FeatureBar({
+  name,
+  weight,
+  maxAbs,
+}: {
   name: string;
   weight: number;
   maxAbs: number;
@@ -78,9 +76,7 @@ function FeatureBar({ name, weight, maxAbs }: {
 
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-32 truncate text-right text-[10px] text-text-semantic-muted">
-        {name}
-      </span>
+      <span className="w-32 truncate text-right text-[10px] text-text-semantic-muted">{name}</span>
       <div className="relative h-2 w-24 rounded-full bg-surface-inset">
         <div
           className="absolute left-0 top-0 h-2 rounded-full"
@@ -91,7 +87,8 @@ function FeatureBar({ name, weight, maxAbs }: {
         />
       </div>
       <span className="w-10 text-right font-mono text-[10px] text-text-semantic-secondary">
-        {weight > 0 ? '+' : ''}{weight.toFixed(2)}
+        {weight > 0 ? '+' : ''}
+        {weight.toFixed(2)}
       </span>
     </div>
   );
@@ -118,9 +115,7 @@ function RankerBody({ data }: { data: ContextRankerDashboard }): React.ReactElem
             <span className="text-xs text-text-semantic-muted">AUC</span>
           </div>
         ) : (
-          <div className="text-xs italic text-text-semantic-muted">
-            No AUC — bundled defaults
-          </div>
+          <div className="text-xs italic text-text-semantic-muted">No AUC — bundled defaults</div>
         )}
       </MetricCard>
 
@@ -149,12 +144,8 @@ function RankerContent({ state }: { state: FetchState }): React.ReactElement {
   if (state.status === 'error') {
     return (
       <div className="rounded-lg border border-status-error-subtle bg-status-error-subtle p-3">
-        <div className="text-xs font-medium text-status-error">
-          Failed to load ranker data
-        </div>
-        <div className="mt-1 font-mono text-[10px] text-text-semantic-muted">
-          {state.message}
-        </div>
+        <div className="text-xs font-medium text-status-error">Failed to load ranker data</div>
+        <div className="mt-1 font-mono text-[10px] text-text-semantic-muted">{state.message}</div>
       </div>
     );
   }
@@ -183,7 +174,9 @@ export function ContextRankerCard(): React.ReactElement {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <div className="flex h-full flex-col bg-surface-base text-text-semantic-primary">

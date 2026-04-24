@@ -12,11 +12,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
 
 import log from '../logger';
-import {
-  addToReadList,
-  getReadList,
-  removeFromReadList,
-} from '../orchestration/workspaceReadList';
+import { addToReadList, getReadList, removeFromReadList } from '../orchestration/workspaceReadList';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
 

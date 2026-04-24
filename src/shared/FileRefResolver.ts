@@ -49,14 +49,52 @@ const FILE_REF_RE =
  * chars from being treated as file refs.
  */
 const KNOWN_EXTENSIONS = new Set([
-  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
-  'py', 'rb', 'go', 'rs', 'java', 'kt', 'swift', 'cs', 'cpp', 'c', 'h',
-  'md', 'mdx', 'txt', 'json', 'yaml', 'yml', 'toml', 'env',
-  'html', 'css', 'scss', 'less', 'svg', 'vue', 'svelte',
-  'sh', 'bash', 'zsh', 'fish', 'ps1',
-  'sql', 'graphql', 'proto',
-  'lock', 'sum', 'mod',
-  'dockerfile', 'gitignore', 'editorconfig',
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'mjs',
+  'cjs',
+  'py',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'swift',
+  'cs',
+  'cpp',
+  'c',
+  'h',
+  'md',
+  'mdx',
+  'txt',
+  'json',
+  'yaml',
+  'yml',
+  'toml',
+  'env',
+  'html',
+  'css',
+  'scss',
+  'less',
+  'svg',
+  'vue',
+  'svelte',
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'ps1',
+  'sql',
+  'graphql',
+  'proto',
+  'lock',
+  'sum',
+  'mod',
+  'dockerfile',
+  'gitignore',
+  'editorconfig',
 ]);
 
 // ── URL prefix rejection ──────────────────────────────────────────────────────
@@ -91,11 +129,7 @@ export function extractFileRefs(text: string): FileRef[] {
 
     // Reconstruct raw with optional :line:col
     const suffix =
-      lineNum !== undefined
-        ? colNum !== undefined
-          ? `:${lineNum}:${colNum}`
-          : `:${lineNum}`
-        : '';
+      lineNum !== undefined ? (colNum !== undefined ? `:${lineNum}:${colNum}` : `:${lineNum}`) : '';
 
     const fullRaw = rawPath + suffix;
 

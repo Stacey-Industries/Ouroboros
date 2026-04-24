@@ -34,7 +34,12 @@ describe('recordPtyStart + reportPtyExit', () => {
 
     expect(mockOnPtyExit).toHaveBeenCalledOnce();
     expect(mockOnPtyExit).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 'sess-1', cwd: '/workspace', exitCode: 0, durationMs: 2000 }),
+      expect.objectContaining({
+        sessionId: 'sess-1',
+        cwd: '/workspace',
+        exitCode: 0,
+        durationMs: 2000,
+      }),
     );
   });
 
@@ -57,8 +62,6 @@ describe('recordPtyStart + reportPtyExit', () => {
 
     vi.setSystemTime(2000);
     reportPtyExit('sess-2', '/a', 0);
-    expect(mockOnPtyExit).toHaveBeenCalledWith(
-      expect.objectContaining({ durationMs: 0 }),
-    );
+    expect(mockOnPtyExit).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 0 }));
   });
 });

@@ -6,18 +6,18 @@
  * they can be used as stateless helpers outside the GraphDatabase class.
  */
 
-import type Database from 'better-sqlite3'
+import type Database from 'better-sqlite3';
 
-import type { GraphNode, NodeSearchResult } from './graphDatabaseTypes'
+import type { GraphNode, NodeSearchResult } from './graphDatabaseTypes';
 
 // ─── BFS traversal ────────────────────────────────────────────────────────────
 
 export interface BfsOptions {
-  startNodeId: string
-  edgeTypes: string[]
-  direction: 'outbound' | 'inbound'
-  maxDepth: number
-  maxNodes?: number
+  startNodeId: string;
+  edgeTypes: string[];
+  direction: 'outbound' | 'inbound';
+  maxDepth: number;
+  maxNodes?: number;
 }
 
 /** Build the BFS SQL and run it. Returns rows with id/depth/path. */
@@ -25,13 +25,13 @@ export function runBfsTraversal(
   db: Database.Database,
   opts: BfsOptions,
 ): Array<{ id: string; depth: number; path: string[] }> {
-  const { startNodeId, edgeTypes, direction, maxDepth, maxNodes = 200 } = opts
-  const typeList = edgeTypes.map((t) => `'${t}'`).join(',')
+  const { startNodeId, edgeTypes, direction, maxDepth, maxNodes = 200 } = opts;
+  const typeList = edgeTypes.map((t) => `'${t}'`).join(',');
   const edgeCondition =
     direction === 'outbound'
       ? `e.source_id = r.id AND e.type IN (${typeList})`
-      : `e.target_id = r.id AND e.type IN (${typeList})`
-  const nextNode = direction === 'outbound' ? 'e.target_id' : 'e.source_id'
+      : `e.target_id = r.id AND e.type IN (${typeList})`;
+  const nextNode = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
 
   const sql = `
     WITH RECURSIVE reachable(id, depth, path) AS (
@@ -47,10 +47,14 @@ export function runBfsTraversal(
     WHERE depth > 0
     ORDER BY depth
     LIMIT ?
-  `
+  `;
 
-  const rows = db.prepare(sql).all(startNodeId, startNodeId, maxDepth, maxNodes) as Array<{ id: string; depth: number; path: string }>
-  return rows.map((r) => ({ id: r.id, depth: r.depth, path: r.path.split('>') }))
+  const rows = db.prepare(sql).all(startNodeId, startNodeId, maxDepth, maxNodes) as Array<{
+    id: string;
+    depth: number;
+    path: string;
+  }>;
+  return rows.map((r) => ({ id: r.id, depth: r.depth, path: r.path.split('>') }));
 }
 
 // ─── Single-node degree query ─────────────────────────────────────────────────
@@ -62,47 +66,54 @@ export function runNodeDegreeQuery(
   type: string | undefined,
   direction: 'in' | 'out' | 'both',
 ): number {
-  const conditions: string[] = []
-  const params: unknown[] = []
+  const conditions: string[] = [];
+  const params: unknown[] = [];
 
-  if (direction === 'in') { conditions.push('e.target_id = ?'); params.push(nodeId) }
-  else if (direction === 'out') { conditions.push('e.source_id = ?'); params.push(nodeId) }
-  else { conditions.push('(e.source_id = ? OR e.target_id = ?)'); params.push(nodeId, nodeId) }
+  if (direction === 'in') {
+    conditions.push('e.target_id = ?');
+    params.push(nodeId);
+  } else if (direction === 'out') {
+    conditions.push('e.source_id = ?');
+    params.push(nodeId);
+  } else {
+    conditions.push('(e.source_id = ? OR e.target_id = ?)');
+    params.push(nodeId, nodeId);
+  }
 
-  if (type) { conditions.push('e.type = ?'); params.push(type) }
+  if (type) {
+    conditions.push('e.type = ?');
+    params.push(type);
+  }
 
-  const sql = `SELECT COUNT(*) as count FROM edges e WHERE ${conditions.join(' AND ')}`
-  const row = db.prepare(sql).get(...params) as { count: number }
-  return row.count
+  const sql = `SELECT COUNT(*) as count FROM edges e WHERE ${conditions.join(' AND ')}`;
+  const row = db.prepare(sql).get(...params) as { count: number };
+  return row.count;
 }
 
 // ─── getNodesByDegree helpers ─────────────────────────────────────────────────
 
 /** Options for the getNodesByDegree query. */
 export interface NodesByDegreeOptions {
-  label?: string
-  type?: string
-  direction: 'in' | 'out' | 'both'
-  minDegree?: number
-  maxDegree?: number
-  excludeEntryPoints?: boolean
-  limit?: number
-  offset?: number
+  label?: string;
+  type?: string;
+  direction: 'in' | 'out' | 'both';
+  minDegree?: number;
+  maxDegree?: number;
+  excludeEntryPoints?: boolean;
+  limit?: number;
+  offset?: number;
 }
 
 /** Build the degree sub-expression for a node-scoped query. */
-export function buildNodeDegreeExpr(
-  direction: 'in' | 'out' | 'both',
-  type?: string,
-): string {
-  const typeClause = type ? ' AND e.type = ?' : ''
+export function buildNodeDegreeExpr(direction: 'in' | 'out' | 'both', type?: string): string {
+  const typeClause = type ? ' AND e.type = ?' : '';
   if (direction === 'in') {
-    return `(SELECT COUNT(*) FROM edges e WHERE e.target_id = n.id${typeClause})`
+    return `(SELECT COUNT(*) FROM edges e WHERE e.target_id = n.id${typeClause})`;
   }
   if (direction === 'out') {
-    return `(SELECT COUNT(*) FROM edges e WHERE e.source_id = n.id${typeClause})`
+    return `(SELECT COUNT(*) FROM edges e WHERE e.source_id = n.id${typeClause})`;
   }
-  return `(SELECT COUNT(*) FROM edges e WHERE (e.source_id = n.id OR e.target_id = n.id)${typeClause})`
+  return `(SELECT COUNT(*) FROM edges e WHERE (e.source_id = n.id OR e.target_id = n.id)${typeClause})`;
 }
 
 /** Add min/max degree conditions with per-use type param bindings. */
@@ -111,17 +122,17 @@ export function addNodeDegreeConditions(
   conditions: string[],
   params: unknown[],
 ): void {
-  const degreeExpr = buildNodeDegreeExpr(options.direction, options.type)
+  const degreeExpr = buildNodeDegreeExpr(options.direction, options.type);
 
   if (options.minDegree !== undefined) {
-    if (options.type) params.push(options.type)
-    conditions.push(`${degreeExpr} >= ?`)
-    params.push(options.minDegree)
+    if (options.type) params.push(options.type);
+    conditions.push(`${degreeExpr} >= ?`);
+    params.push(options.minDegree);
   }
   if (options.maxDegree !== undefined) {
-    if (options.type) params.push(options.type)
-    conditions.push(`${degreeExpr} <= ?`)
-    params.push(options.maxDegree)
+    if (options.type) params.push(options.type);
+    conditions.push(`${degreeExpr} <= ?`);
+    params.push(options.maxDegree);
   }
 }
 
@@ -132,27 +143,34 @@ export function runGetNodesByDegree(
   options: NodesByDegreeOptions,
   rowToNode: (row: unknown) => GraphNode,
 ): NodeSearchResult {
-  const { label, excludeEntryPoints } = options
-  const limit = options.limit ?? 100
-  const offset = options.offset ?? 0
+  const { label, excludeEntryPoints } = options;
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
 
-  const conditions: string[] = ['n.project = ?']
-  const params: unknown[] = [project]
+  const conditions: string[] = ['n.project = ?'];
+  const params: unknown[] = [project];
 
-  if (label) { conditions.push('n.label = ?'); params.push(label) }
+  if (label) {
+    conditions.push('n.label = ?');
+    params.push(label);
+  }
   if (excludeEntryPoints) {
-    conditions.push("json_extract(n.props, '$.is_entry_point') != 1")
+    conditions.push("json_extract(n.props, '$.is_entry_point') != 1");
   }
 
-  addNodeDegreeConditions(options, conditions, params)
+  addNodeDegreeConditions(options, conditions, params);
 
-  const where = `WHERE ${conditions.join(' AND ')}`
-  const countRow = db.prepare(`SELECT COUNT(*) as total FROM nodes n ${where}`).get(...params) as { total: number }
-  const rows = db.prepare(`SELECT * FROM nodes n ${where} ORDER BY n.name LIMIT ? OFFSET ?`).all(...params, limit, offset)
+  const where = `WHERE ${conditions.join(' AND ')}`;
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM nodes n ${where}`).get(...params) as {
+    total: number;
+  };
+  const rows = db
+    .prepare(`SELECT * FROM nodes n ${where} ORDER BY n.name LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
 
   return {
     nodes: rows.map(rowToNode),
     total: countRow.total,
     has_more: offset + limit < countRow.total,
-  }
+  };
 }

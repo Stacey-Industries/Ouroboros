@@ -12,35 +12,32 @@
  * the brackets are never split from the data they wrap.
  */
 
-const CHUNK_SIZE = 4096
-const CHUNK_DELAY_MS = 10
-const CHUNK_THRESHOLD = 4096
+const CHUNK_SIZE = 4096;
+const CHUNK_DELAY_MS = 10;
+const CHUNK_THRESHOLD = 4096;
 
-const BRACKET_OPEN = '\x1b[200~'
-const BRACKET_CLOSE = '\x1b[201~'
+const BRACKET_OPEN = '\x1b[200~';
+const BRACKET_CLOSE = '\x1b[201~';
 
 /**
  * Write paste data to the PTY using chunked delivery with bracketed paste markers.
  * For small pastes (<= CHUNK_THRESHOLD), the data is sent in a single write.
  * For large pastes, it is split into chunks with small delays between them.
  */
-export async function writeChunkedPaste(
-  sessionId: string,
-  data: string,
-): Promise<void> {
-  const wrapped = `${BRACKET_OPEN}${data}${BRACKET_CLOSE}`
+export async function writeChunkedPaste(sessionId: string, data: string): Promise<void> {
+  const wrapped = `${BRACKET_OPEN}${data}${BRACKET_CLOSE}`;
 
   if (wrapped.length <= CHUNK_THRESHOLD) {
-    await window.electronAPI.pty.write(sessionId, wrapped)
-    return
+    await window.electronAPI.pty.write(sessionId, wrapped);
+    return;
   }
 
   for (let i = 0; i < wrapped.length; i += CHUNK_SIZE) {
-    const chunk = wrapped.slice(i, i + CHUNK_SIZE)
-    await window.electronAPI.pty.write(sessionId, chunk)
+    const chunk = wrapped.slice(i, i + CHUNK_SIZE);
+    await window.electronAPI.pty.write(sessionId, chunk);
     // Small delay between chunks to let PTY drain its buffer
     if (i + CHUNK_SIZE < wrapped.length) {
-      await new Promise<void>((resolve) => setTimeout(resolve, CHUNK_DELAY_MS))
+      await new Promise<void>((resolve) => setTimeout(resolve, CHUNK_DELAY_MS));
     }
   }
 }
@@ -52,7 +49,7 @@ export async function writeChunkedPaste(
  * threshold is almost certainly a paste.
  */
 export function isPasteLikeInput(data: string): boolean {
-  return data.length > 100
+  return data.length > 100;
 }
 
-export { CHUNK_THRESHOLD }
+export { CHUNK_THRESHOLD };

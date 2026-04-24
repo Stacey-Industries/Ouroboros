@@ -23,18 +23,13 @@ import {
 import { SelectSection, SwitchControl } from './ClaudeSectionControls';
 import { SectionLabel } from './settingsStyles';
 import type { ClaudeSectionModel } from './useClaudeSection';
-import {
-  EFFORT_LEVELS,
-  PERMISSION_MODES,
-} from './useClaudeSection';
+import { EFFORT_LEVELS, PERMISSION_MODES } from './useClaudeSection';
 
 interface ClaudeSectionConfigProps {
   model: ClaudeSectionModel;
 }
 
-export function PermissionModeSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function PermissionModeSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <SelectSection
       description="Controls how Claude handles tool permission requests."
@@ -52,9 +47,7 @@ export function PermissionModeSection({
   );
 }
 
-export function ModelSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function ModelSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section>
       <SelectSection
@@ -84,9 +77,7 @@ export function ModelSection({
   );
 }
 
-export function EffortSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function EffortSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>Effort Level</SectionLabel>
@@ -108,9 +99,7 @@ export function EffortSection({
   );
 }
 
-export function BudgetSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function BudgetSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>Max Budget (USD)</SectionLabel>
@@ -131,9 +120,7 @@ export function BudgetSection({
   );
 }
 
-export function SystemPromptSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function SystemPromptSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>System Prompt (Append)</SectionLabel>
@@ -170,15 +157,15 @@ export function AdditionalDirectoriesSection({
   );
 }
 
-export function DangerZoneSection({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+export function DangerZoneSection({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section style={claudeSectionDangerSectionStyle}>
       <SectionLabel className="text-status-error">Danger Zone</SectionLabel>
       <div style={claudeSectionDangerRowStyle}>
         <div style={claudeSectionDangerCopyStyle}>
-          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>Skip All Permission Checks</div>
+          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>
+            Skip All Permission Checks
+          </div>
           <p className="text-status-warning" style={claudeSectionDangerTextStyle}>
             Bypasses ALL permission checks. Only use in sandboxed environments with no internet
             access.
@@ -206,7 +193,9 @@ function DirectoryList({
     <div style={claudeSectionDirectoryListStyle}>
       {directories.map((directory, index) => (
         <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}>
-          <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>{directory}</span>
+          <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>
+            {directory}
+          </span>
           <button
             onClick={() => onRemove(index)}
             aria-label={`Remove ${directory}`}
@@ -221,9 +210,7 @@ function DirectoryList({
   );
 }
 
-function AddDirectoryRow({
-  model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+function AddDirectoryRow({ model }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <div style={claudeSectionAddDirectoryRowStyle}>
       <input

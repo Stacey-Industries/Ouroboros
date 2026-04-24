@@ -10,25 +10,25 @@
  *      subject module.
  */
 
-import type { GraphDatabase } from '../graphDatabase'
-import type { GraphEdge, GraphNode } from '../graphDatabaseTypes'
-import type { ExtractedDefinition, ExtractedImport } from '../treeSitterTypes'
-import type { IndexedFile } from './passTypes'
+import type { GraphDatabase } from '../graphDatabase';
+import type { GraphEdge, GraphNode } from '../graphDatabaseTypes';
+import type { ExtractedDefinition, ExtractedImport } from '../treeSitterTypes';
+import type { IndexedFile } from './passTypes';
 
 // ─── Test file detection pattern ─────────────────────────────────────────────
 
-const TEST_FILE_PATTERN = /\.(test|spec|_test|_spec)\.[^.]+$/
+const TEST_FILE_PATTERN = /\.(test|spec|_test|_spec)\.[^.]+$/;
 
 // ─── Test context types ───────────────────────────────────────────────────────
 
 interface TestFileContext {
-  projectName: string
-  fileQn: string
-  subjectPath: string
-  subjectQn: string
-  subjectFunctions: GraphNode[]
-  functionsByName: Map<string, string[]>
-  imports: ExtractedImport[]
+  projectName: string;
+  fileQn: string;
+  subjectPath: string;
+  subjectQn: string;
+  subjectFunctions: GraphNode[];
+  functionsByName: Map<string, string[]>;
+  imports: ExtractedImport[];
 }
 
 // ─── Edge builders ────────────────────────────────────────────────────────────
@@ -41,80 +41,119 @@ function buildNameHeuristicEdges(
 ): Omit<GraphEdge, 'id'>[] {
   return subjectFunctions
     .filter((fn) => testNameLower.includes(fn.name.toLowerCase()))
-    .map((fn) => ({ project: projectName, source_id: testFnQn, target_id: fn.id, type: 'TESTS' as const, props: {} }))
+    .map((fn) => ({
+      project: projectName,
+      source_id: testFnQn,
+      target_id: fn.id,
+      type: 'TESTS' as const,
+      props: {},
+    }));
 }
 
 function buildImportHeuristicEdges(
   ctx: TestFileContext,
   testFnQn: string,
 ): Omit<GraphEdge, 'id'>[] {
-  const { projectName, subjectPath, subjectQn, functionsByName, imports } = ctx
-  const edges: Omit<GraphEdge, 'id'>[] = []
-  const subjectPathNoExt = subjectPath.replace(/\.[^.]+$/, '')
+  const { projectName, subjectPath, subjectQn, functionsByName, imports } = ctx;
+  const edges: Omit<GraphEdge, 'id'>[] = [];
+  const subjectPathNoExt = subjectPath.replace(/\.[^.]+$/, '');
 
   for (const imp of imports) {
-    if (!imp.source.includes(subjectPathNoExt)) continue
+    if (!imp.source.includes(subjectPathNoExt)) continue;
     for (const spec of imp.specifiers) {
-      const candidates = functionsByName.get(spec.originalName ?? spec.name)
-      if (!candidates) continue
-      const target = candidates.find((c) => c.startsWith(subjectQn)) ?? candidates[0]
-      edges.push({ project: projectName, source_id: testFnQn, target_id: target, type: 'TESTS', props: {} })
+      const candidates = functionsByName.get(spec.originalName ?? spec.name);
+      if (!candidates) continue;
+      const target = candidates.find((c) => c.startsWith(subjectQn)) ?? candidates[0];
+      edges.push({
+        project: projectName,
+        source_id: testFnQn,
+        target_id: target,
+        type: 'TESTS',
+        props: {},
+      });
     }
   }
-  return edges
+  return edges;
 }
 
-function buildTestFunctionEdges(ctx: TestFileContext, def: ExtractedDefinition): Omit<GraphEdge, 'id'>[] {
-  const testFnQn = `${ctx.fileQn}.${def.name}`
-  const testNameLower = def.name.toLowerCase()
+function buildTestFunctionEdges(
+  ctx: TestFileContext,
+  def: ExtractedDefinition,
+): Omit<GraphEdge, 'id'>[] {
+  const testFnQn = `${ctx.fileQn}.${def.name}`;
+  const testNameLower = def.name.toLowerCase();
 
   return [
     ...buildNameHeuristicEdges(ctx.projectName, testFnQn, testNameLower, ctx.subjectFunctions),
     ...buildImportHeuristicEdges(ctx, testFnQn),
-  ]
+  ];
 }
 
 // ─── Build function-by-name index (production functions only) ─────────────────
 
 function buildFunctionsByName(allFunctions: GraphNode[]): Map<string, string[]> {
-  const functionsByName = new Map<string, string[]>()
+  const functionsByName = new Map<string, string[]>();
   for (const fn of allFunctions) {
-    if (fn.file_path && TEST_FILE_PATTERN.test(fn.file_path)) continue
-    const names = functionsByName.get(fn.name) ?? []
-    names.push(fn.id)
-    functionsByName.set(fn.name, names)
+    if (fn.file_path && TEST_FILE_PATTERN.test(fn.file_path)) continue;
+    const names = functionsByName.get(fn.name) ?? [];
+    names.push(fn.id);
+    functionsByName.set(fn.name, names);
   }
-  return functionsByName
+  return functionsByName;
 }
 
 // ─── Process a single test file ───────────────────────────────────────────────
 
-function processTestFile(file: IndexedFile, allFunctions: GraphNode[], projectName: string, functionsByName: Map<string, string[]>): Omit<GraphEdge, 'id'>[] {
-  if (!file.parsed || !TEST_FILE_PATTERN.test(file.relativePath)) return []
+function processTestFile(
+  file: IndexedFile,
+  allFunctions: GraphNode[],
+  projectName: string,
+  functionsByName: Map<string, string[]>,
+): Omit<GraphEdge, 'id'>[] {
+  if (!file.parsed || !TEST_FILE_PATTERN.test(file.relativePath)) return [];
 
-  const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
-  const subjectPath = file.relativePath.replace(/\.(test|spec)\.([^.]+)$/, '.$2').replace(/(_test|_spec)\.([^.]+)$/, '.$2')
-  const subjectQn = `${projectName}.${subjectPath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
+  const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`;
+  const subjectPath = file.relativePath
+    .replace(/\.(test|spec)\.([^.]+)$/, '.$2')
+    .replace(/(_test|_spec)\.([^.]+)$/, '.$2');
+  const subjectQn = `${projectName}.${subjectPath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`;
   const ctx: TestFileContext = {
-    projectName, fileQn, subjectPath, subjectQn,
+    projectName,
+    fileQn,
+    subjectPath,
+    subjectQn,
     subjectFunctions: allFunctions.filter((f) => f.id.startsWith(subjectQn + '.')),
-    functionsByName, imports: file.parsed.imports,
-  }
+    functionsByName,
+    imports: file.parsed.imports,
+  };
 
   return file.parsed.definitions
     .filter((def) => def.kind === 'Function')
-    .flatMap((def) => buildTestFunctionEdges(ctx, def))
+    .flatMap((def) => buildTestFunctionEdges(ctx, def));
 }
 
 // ─── Pass implementation ─────────────────────────────────────────────────────
 
-export function testDetectPass(db: GraphDatabase, projectName: string, indexedFiles: IndexedFile[]): void {
-  const allFunctions = db.getNodesByLabel(projectName, 'Function').concat(db.getNodesByLabel(projectName, 'Method'))
-  const functionsByName = buildFunctionsByName(allFunctions)
+export function testDetectPass(
+  db: GraphDatabase,
+  projectName: string,
+  indexedFiles: IndexedFile[],
+): void {
+  const allFunctions = db
+    .getNodesByLabel(projectName, 'Function')
+    .concat(db.getNodesByLabel(projectName, 'Method'));
+  const functionsByName = buildFunctionsByName(allFunctions);
 
-  const allEdges = indexedFiles.flatMap((file) => processTestFile(file, allFunctions, projectName, functionsByName))
+  const allEdges = indexedFiles.flatMap((file) =>
+    processTestFile(file, allFunctions, projectName, functionsByName),
+  );
 
-  const seen = new Set<string>()
-  const unique = allEdges.filter((e) => { const key = `${e.source_id}|${e.target_id}`; if (seen.has(key)) return false; seen.add(key); return true })
-  if (unique.length > 0) db.insertEdges(unique)
+  const seen = new Set<string>();
+  const unique = allEdges.filter((e) => {
+    const key = `${e.source_id}|${e.target_id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (unique.length > 0) db.insertEdges(unique);
 }

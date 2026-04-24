@@ -19,10 +19,16 @@ const PROTOCOL = 'thread';
 
 export function registerThreadProtocol(): void {
   if (process.env.NODE_ENV !== 'development') {
-    try { app.setAsDefaultProtocolClient(PROTOCOL); }
-    catch (err) { log.warn('[protocolHandler] setAsDefaultProtocolClient failed', err); }
+    try {
+      app.setAsDefaultProtocolClient(PROTOCOL);
+    } catch (err) {
+      log.warn('[protocolHandler] setAsDefaultProtocolClient failed', err);
+    }
   }
-  app.on('open-url', (event, url) => { event.preventDefault(); dispatchPermalink(url); });
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    dispatchPermalink(url);
+  });
 }
 
 /** Registers the protocol + handles the initial argv permalink in one call. */
@@ -58,9 +64,14 @@ export function dispatchPermalinkFromArgv(argv: readonly string[]): void {
 export function scheduleInitialPermalinkFromArgv(): void {
   const parsed = extractPermalinkFromArgv(process.argv);
   if (!parsed) return;
-  app.whenReady()
-    .then(() => { setTimeout(() => sendToFocusedWindow(parsed), 500); })
-    .catch(() => { /* ignored */ });
+  app
+    .whenReady()
+    .then(() => {
+      setTimeout(() => sendToFocusedWindow(parsed), 500);
+    })
+    .catch(() => {
+      /* ignored */
+    });
 }
 
 function sendToFocusedWindow(parsed: ParsedPermalink): void {

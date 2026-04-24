@@ -33,8 +33,9 @@ function buildMockApi() {
   return {
     sessions: {
       listDispatchJobs: vi.fn(async () => ({ success: true as const, jobs: [...mockJobs] })),
-      cancelDispatchJob: vi.fn(async (): Promise<CancelDispatchJobResult> =>
-        ({ success: true as const })),
+      cancelDispatchJob: vi.fn(
+        async (): Promise<CancelDispatchJobResult> => ({ success: true as const }),
+      ),
       onDispatchStatus: vi.fn((cb: DispatchStatusCallback) => {
         dispatchStatusListeners.push(cb);
         return () => {
@@ -80,7 +81,9 @@ describe('useDispatchJobs', () => {
     expect(result.current.jobs).toHaveLength(0);
 
     const newJob = makeJob({ id: 'job-2', status: 'running' });
-    act(() => { emitStatus(newJob); });
+    act(() => {
+      emitStatus(newJob);
+    });
     expect(result.current.jobs).toHaveLength(1);
     expect(result.current.jobs[0].id).toBe('job-2');
   });
@@ -92,7 +95,9 @@ describe('useDispatchJobs', () => {
     await act(async () => {});
     expect(result.current.jobs[0].status).toBe('queued');
 
-    act(() => { emitStatus({ ...job, status: 'running' }); });
+    act(() => {
+      emitStatus({ ...job, status: 'running' });
+    });
     expect(result.current.jobs).toHaveLength(1);
     expect(result.current.jobs[0].status).toBe('running');
   });
@@ -104,7 +109,9 @@ describe('useDispatchJobs', () => {
     expect(result.current.jobs).toHaveLength(0);
 
     mockJobs = [makeJob(), makeJob({ id: 'job-2' })];
-    await act(async () => { await result.current.refresh(); });
+    await act(async () => {
+      await result.current.refresh();
+    });
     expect(result.current.jobs).toHaveLength(2);
   });
 
@@ -114,7 +121,9 @@ describe('useDispatchJobs', () => {
     await act(async () => {});
 
     mockJobs = [];
-    await act(async () => { await result.current.cancel('job-1'); });
+    await act(async () => {
+      await result.current.cancel('job-1');
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = (window as any).electronAPI.sessions;
     expect(api.cancelDispatchJob).toHaveBeenCalledWith('job-1');

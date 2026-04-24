@@ -47,7 +47,10 @@ const TODAY = '2026-04-16';
 const DATED_FILENAME = `context-outcomes-${TODAY}.jsonl`;
 const DATED_PATH = path.join(TEST_DIR, DATED_FILENAME);
 
-function makeDeps(fileSize = 0, stamp = TODAY): {
+function makeDeps(
+  fileSize = 0,
+  stamp = TODAY,
+): {
   deps: OutcomeWriterDeps;
   appended: Array<{ fp: string; line: string }>;
   rotated: string[][];
@@ -60,9 +63,15 @@ function makeDeps(fileSize = 0, stamp = TODAY): {
   const deps: OutcomeWriterDeps = {
     getDir: () => TEST_DIR,
     readSize: vi.fn(async () => fileSize),
-    appendLine: vi.fn(async (fp, line) => { appended.push({ fp, line }); }),
-    rotate: vi.fn(async (src, dst) => { rotated.push([src, dst]); }),
-    unlink: vi.fn(async (fp) => { unlinked.push(fp); }),
+    appendLine: vi.fn(async (fp, line) => {
+      appended.push({ fp, line });
+    }),
+    rotate: vi.fn(async (src, dst) => {
+      rotated.push([src, dst]);
+    }),
+    unlink: vi.fn(async (fp) => {
+      unlinked.push(fp);
+    }),
     todayStamp: () => stamp,
   };
 
@@ -72,8 +81,12 @@ function makeDeps(fileSize = 0, stamp = TODAY): {
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('createOutcomeWriter — flush timer', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('batches multiple outcomes in one appendLine call after 50 ms', async () => {
     const { deps, appended } = makeDeps();
@@ -106,8 +119,12 @@ describe('createOutcomeWriter — flush timer', () => {
 });
 
 describe('createOutcomeWriter — flushPendingWrites', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('force-flushes before timer fires', async () => {
     const { deps, appended } = makeDeps();
@@ -131,8 +148,12 @@ describe('createOutcomeWriter — flushPendingWrites', () => {
 });
 
 describe('createOutcomeWriter — closeOutcomeWriter', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('flushes pending queue on close', async () => {
     const { deps, appended } = makeDeps();
@@ -158,8 +179,12 @@ describe('createOutcomeWriter — closeOutcomeWriter', () => {
 });
 
 describe('createOutcomeWriter — date-stamped filename (Phase G)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('writes to the date-stamped path, not the legacy undated path', async () => {
     const { deps, appended } = makeDeps();
@@ -188,8 +213,12 @@ describe('createOutcomeWriter — date-stamped filename (Phase G)', () => {
 });
 
 describe('createOutcomeWriter — rotation (intraday)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('does not rotate when file is under 10 MB', async () => {
     const { deps, rotated } = makeDeps(1024);
@@ -210,16 +239,19 @@ describe('createOutcomeWriter — rotation (intraday)', () => {
 
     const hasPrimaryRotation = rotated.some(
       ([src, dst]) =>
-        src === DATED_PATH &&
-        dst === path.join(TEST_DIR, `context-outcomes-${TODAY}.1.jsonl`),
+        src === DATED_PATH && dst === path.join(TEST_DIR, `context-outcomes-${TODAY}.1.jsonl`),
     );
     expect(hasPrimaryRotation).toBe(true);
   });
 });
 
 describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('emits traceId, fileId, sessionId, timestamp, toolKind, schemaVersion: 2', async () => {
     const { deps, appended } = makeDeps();

@@ -6,7 +6,12 @@
 
 import { useMemo } from 'react';
 
-import type { AppConfig, ModelProvider, ModelSlotAssignments, ProviderModel } from '../../types/electron';
+import type {
+  AppConfig,
+  ModelProvider,
+  ModelSlotAssignments,
+  ProviderModel,
+} from '../../types/electron';
 
 export interface ProviderModelOption {
   label: string;
@@ -74,23 +79,24 @@ export function useProvidersSectionModel(
   const providers = draft.modelProviders ?? EMPTY_PROVIDERS;
   const slots = draft.modelSlots ?? DEFAULT_SLOTS;
 
-  const allModels = useMemo(
-    () => buildAllModels(providers),
-    [providers],
-  );
+  const allModels = useMemo(() => buildAllModels(providers), [providers]);
 
   const addProvider = (provider: ModelProvider): void => {
     onChange('modelProviders', [...providers, provider]);
   };
 
   const updateProvider = (id: string, patch: Partial<ModelProvider>): void => {
-    onChange('modelProviders', providers.map(
-      (p) => (p.id === id ? { ...p, ...patch } : p),
-    ));
+    onChange(
+      'modelProviders',
+      providers.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    );
   };
 
   const removeProvider = (id: string): void => {
-    onChange('modelProviders', providers.filter((p) => p.id !== id));
+    onChange(
+      'modelProviders',
+      providers.filter((p) => p.id !== id),
+    );
   };
 
   const updateSlot = (key: keyof ModelSlotAssignments, value: string): void => {

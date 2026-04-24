@@ -90,6 +90,14 @@ export interface ProviderContentBlockDelta {
       output?: string;
       subToolId: string;
     };
+    /** Nested child-agent transcript delta — emitted for child thread text/thinking. */
+    subAgentMessage?: {
+      entryId: string;
+      subAgentId: string;
+      label?: string;
+      kind: 'text' | 'thinking';
+      textDelta: string;
+    };
   };
 }
 

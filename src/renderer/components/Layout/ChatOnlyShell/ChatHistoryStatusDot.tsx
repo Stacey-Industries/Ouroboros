@@ -58,7 +58,9 @@ export function ChatHistoryStatusDot({ status }: ChatHistoryStatusDotProps): Rea
   useEffect(() => {
     const next = resolveDotStyle(status);
     if (timerRef.current !== null) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => { setDisplayStyle(next); }, 200);
+    timerRef.current = setTimeout(() => {
+      setDisplayStyle(next);
+    }, 200);
     return () => {
       if (timerRef.current !== null) clearTimeout(timerRef.current);
     };

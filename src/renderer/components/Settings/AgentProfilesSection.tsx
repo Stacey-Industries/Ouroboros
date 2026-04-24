@@ -29,7 +29,10 @@ export interface AgentProfilesSectionProps {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DefaultProfilePicker({
-  projectRoot, profiles, defaultId, onSetDefault,
+  projectRoot,
+  profiles,
+  defaultId,
+  onSetDefault,
 }: {
   projectRoot: string;
   profiles: Profile[];
@@ -50,19 +53,29 @@ function DefaultProfilePicker({
       </label>
       <select
         value={defaultId ?? ''}
-        onChange={(e) => { if (e.target.value) void onSetDefault(e.target.value); }}
+        onChange={(e) => {
+          if (e.target.value) void onSetDefault(e.target.value);
+        }}
         className="text-text-semantic-primary"
         style={selectStyle}
       >
         <option value="">— None —</option>
-        {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        {profiles.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
       </select>
     </div>
   );
 }
 
 function ProfileList({
-  profiles, onEdit, onDuplicate, onDelete, onExport,
+  profiles,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onExport,
 }: {
   profiles: Profile[];
   onEdit: (p: Profile) => void;
@@ -71,15 +84,23 @@ function ProfileList({
   onExport: (p: Profile) => void;
 }): React.ReactElement {
   if (profiles.length === 0) {
-    return <p className="text-text-semantic-muted" style={emptyStyle}>Loading profiles…</p>;
+    return (
+      <p className="text-text-semantic-muted" style={emptyStyle}>
+        Loading profiles…
+      </p>
+    );
   }
   return (
     <div style={listStyle}>
       {profiles.map((p, i) => (
         <ProfileRow
-          key={p.id} profile={p} isLast={i === profiles.length - 1}
-          onEdit={() => onEdit(p)} onDuplicate={() => onDuplicate(p)}
-          onDelete={() => onDelete(p)} onExport={() => onExport(p)}
+          key={p.id}
+          profile={p}
+          isLast={i === profiles.length - 1}
+          onEdit={() => onEdit(p)}
+          onDuplicate={() => onDuplicate(p)}
+          onDelete={() => onDelete(p)}
+          onExport={() => onExport(p)}
         />
       ))}
     </div>
@@ -103,7 +124,10 @@ function useProfileActions(reload: () => Promise<void>) {
 
   async function handleExport(profile: Profile): Promise<void> {
     const res = await window.electronAPI.profileCrud.export(profile.id);
-    if (!res.success || !res.json) { showToast('Export failed'); return; }
+    if (!res.success || !res.json) {
+      showToast('Export failed');
+      return;
+    }
     await navigator.clipboard.writeText(res.json);
     showToast(`"${profile.name}" copied to clipboard.`);
   }
@@ -131,7 +155,9 @@ function useProfileActions(reload: () => Promise<void>) {
 // ─── Header row ──────────────────────────────────────────────────────────────
 
 function ProfileSectionHeader({
-  isEditing, onNewProfile, onImport,
+  isEditing,
+  onNewProfile,
+  onImport,
 }: {
   isEditing: boolean;
   onNewProfile: () => void;
@@ -141,10 +167,21 @@ function ProfileSectionHeader({
     <div style={headerRowStyle}>
       <SectionLabel style={{ marginBottom: 0 }}>Agent Profiles</SectionLabel>
       <div style={headerActionsStyle}>
-        <button type="button" onClick={onImport}
-          className="text-text-semantic-muted" style={headerBtnStyle}>Import…</button>
-        <button type="button" onClick={onNewProfile}
-          className="text-interactive-accent" style={headerBtnStyle} disabled={isEditing}>
+        <button
+          type="button"
+          onClick={onImport}
+          className="text-text-semantic-muted"
+          style={headerBtnStyle}
+        >
+          Import…
+        </button>
+        <button
+          type="button"
+          onClick={onNewProfile}
+          className="text-interactive-accent"
+          style={headerBtnStyle}
+          disabled={isEditing}
+        >
           + New profile
         </button>
       </div>
@@ -155,16 +192,25 @@ function ProfileSectionHeader({
 // ─── Default section ─────────────────────────────────────────────────────────
 
 function DefaultSection({
-  projectRoot, profiles, defaultId, onSetDefault,
+  projectRoot,
+  profiles,
+  defaultId,
+  onSetDefault,
 }: {
-  projectRoot: string; profiles: Profile[];
-  defaultId: string | null; onSetDefault: (id: string) => Promise<void>;
+  projectRoot: string;
+  profiles: Profile[];
+  defaultId: string | null;
+  onSetDefault: (id: string) => Promise<void>;
 }): React.ReactElement {
   return (
     <section style={{ marginTop: '16px' }}>
       <SectionLabel>Default for Project</SectionLabel>
-      <DefaultProfilePicker projectRoot={projectRoot} profiles={profiles}
-        defaultId={defaultId} onSetDefault={onSetDefault} />
+      <DefaultProfilePicker
+        projectRoot={projectRoot}
+        profiles={profiles}
+        defaultId={defaultId}
+        onSetDefault={onSetDefault}
+      />
     </section>
   );
 }
@@ -179,28 +225,47 @@ export function AgentProfilesSection({ draft }: AgentProfilesSectionProps): Reac
   const [editTarget, setEditTarget] = useState<Profile | null | undefined>(undefined);
   const [showImport, setShowImport] = useState(false);
   const isEditing = editTarget !== undefined;
-  function handleSaved(): void { setEditTarget(undefined); void reload(); }
+  function handleSaved(): void {
+    setEditTarget(undefined);
+    void reload();
+  }
   function handleImportDone(json: string): Promise<void> {
-    return actions.handleImport(json).then(() => { setShowImport(false); });
+    return actions.handleImport(json).then(() => {
+      setShowImport(false);
+    });
   }
   return (
     <div style={wrapStyle}>
       {actions.toast && (
-        <div className="text-text-semantic-primary" style={toastStyle}>{actions.toast}</div>
+        <div className="text-text-semantic-primary" style={toastStyle}>
+          {actions.toast}
+        </div>
       )}
-      <ProfileSectionHeader isEditing={isEditing}
-        onNewProfile={() => setEditTarget(null)} onImport={() => setShowImport(true)} />
+      <ProfileSectionHeader
+        isEditing={isEditing}
+        onNewProfile={() => setEditTarget(null)}
+        onImport={() => setShowImport(true)}
+      />
       {isEditing && (
-        <ProfileEditor profile={editTarget} onSave={handleSaved}
-          onCancel={() => setEditTarget(undefined)} />
+        <ProfileEditor
+          profile={editTarget}
+          onSave={handleSaved}
+          onCancel={() => setEditTarget(undefined)}
+        />
       )}
-      <ProfileList profiles={profiles}
+      <ProfileList
+        profiles={profiles}
         onEdit={(p) => setEditTarget(p)}
         onDuplicate={(p) => setEditTarget(actions.makeDuplicate(p))}
         onDelete={(p) => void actions.handleDelete(p)}
-        onExport={(p) => void actions.handleExport(p)} />
-      <DefaultSection projectRoot={projectRoot} profiles={profiles}
-        defaultId={defaultId} onSetDefault={setDefault} />
+        onExport={(p) => void actions.handleExport(p)}
+      />
+      <DefaultSection
+        projectRoot={projectRoot}
+        profiles={profiles}
+        defaultId={defaultId}
+        onSetDefault={setDefault}
+      />
       {showImport && (
         <ImportModal onImport={handleImportDone} onClose={() => setShowImport(false)} />
       )}
@@ -213,7 +278,9 @@ export function AgentProfilesSection({ draft }: AgentProfilesSectionProps): Reac
 const wrapStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' };
 
 const headerRowStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
 };
 
 const headerActionsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
@@ -244,7 +311,9 @@ const toastStyle: React.CSSProperties = {
 };
 
 const pickerRowStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
 };
 
 const pickerLabelStyle: React.CSSProperties = { fontSize: '12px', flexShrink: 0 };

@@ -44,12 +44,16 @@ const INVALID_QR = 'https://example.com/not-a-pairing-link';
 
 // ─── Setup / teardown ─────────────────────────────────────────────────────────
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 // ─── scanPairingQr — browser mode ─────────────────────────────────────────────
 
 describe('scanPairingQr — browser mode (!isNative)', () => {
-  beforeEach(() => { mocks.isNative.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNative.mockReturnValue(false);
+  });
 
   it('returns { kind: "unsupported" } immediately', async () => {
     const result = await scanPairingQr();

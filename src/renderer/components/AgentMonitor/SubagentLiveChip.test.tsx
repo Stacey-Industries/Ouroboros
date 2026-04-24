@@ -44,18 +44,14 @@ afterEach(() => {
 describe('SubagentLiveChip — zero state', () => {
   it('renders nothing when live count is zero', async () => {
     mockLiveCount.mockResolvedValue({ success: true, count: 0 });
-    const { container } = render(
-      <SubagentLiveChip parentSessionId="sess-1" />,
-    );
+    const { container } = render(<SubagentLiveChip parentSessionId="sess-1" />);
     await waitFor(() => expect(mockLiveCount).toHaveBeenCalled());
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing when liveCount call fails', async () => {
     mockLiveCount.mockResolvedValue({ success: false, error: 'err' });
-    const { container } = render(
-      <SubagentLiveChip parentSessionId="sess-1" />,
-    );
+    const { container } = render(<SubagentLiveChip parentSessionId="sess-1" />);
     await waitFor(() => expect(mockLiveCount).toHaveBeenCalled());
     expect(container.firstChild).toBeNull();
   });
@@ -73,17 +69,13 @@ describe('SubagentLiveChip — non-zero count', () => {
   it('uses singular aria-label for count of 1', async () => {
     mockLiveCount.mockResolvedValue({ success: true, count: 1 });
     render(<SubagentLiveChip parentSessionId="sess-1" />);
-    await waitFor(() =>
-      expect(screen.getByLabelText(/1 subagent running/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/1 subagent running/i)).toBeTruthy());
   });
 
   it('uses plural aria-label for count > 1', async () => {
     mockLiveCount.mockResolvedValue({ success: true, count: 3 });
     render(<SubagentLiveChip parentSessionId="sess-1" />);
-    await waitFor(() =>
-      expect(screen.getByLabelText(/3 subagents running/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/3 subagents running/i)).toBeTruthy());
   });
 });
 
@@ -111,9 +103,7 @@ describe('SubagentLiveChip — onClick', () => {
 describe('SubagentLiveChip — live updates', () => {
   it('refreshes count when onUpdated fires for same session', async () => {
     mockLiveCount.mockResolvedValueOnce({ success: true, count: 0 });
-    const { container } = render(
-      <SubagentLiveChip parentSessionId="sess-1" />,
-    );
+    const { container } = render(<SubagentLiveChip parentSessionId="sess-1" />);
     await waitFor(() => expect(mockLiveCount).toHaveBeenCalledOnce());
     expect(container.firstChild).toBeNull();
 

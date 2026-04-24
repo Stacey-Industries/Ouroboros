@@ -18,7 +18,7 @@ import { FolderTree } from './FolderTree';
 import { NewSessionButton } from './NewSessionButton';
 import { SessionFilterBar } from './SessionFilterBar';
 import type { FilterState } from './sessionFilters';
-import { applyFilters,DEFAULT_FILTER_STATE } from './sessionFilters';
+import { applyFilters, DEFAULT_FILTER_STATE } from './sessionFilters';
 import type { SessionGroup } from './SessionVirtualList';
 import { SessionVirtualList } from './SessionVirtualList';
 import { useFolders } from './useFolders';
@@ -38,7 +38,9 @@ function groupSessions(sessions: SessionRecord[]): SessionGroup[] {
     map.set(s.projectRoot, group);
   }
   return [...map.entries()].map(([root, list]) => ({
-    projectRoot: root, label: projectBasename(root), sessions: list,
+    projectRoot: root,
+    label: projectBasename(root),
+    sessions: list,
   }));
 }
 
@@ -56,18 +58,34 @@ interface SessionListAreaProps {
 }
 
 function SessionListArea({
-  folders, filtered, activeSessionId, isLoading, onSessionClick, onRestored, onKeyDown,
+  folders,
+  filtered,
+  activeSessionId,
+  isLoading,
+  onSessionClick,
+  onRestored,
+  onKeyDown,
 }: SessionListAreaProps): React.ReactElement {
   if (folders.length > 0) {
     return (
-      <FolderTree folders={folders} sessions={filtered} activeSessionId={activeSessionId}
-        onSessionClick={onSessionClick} onRestored={onRestored} />
+      <FolderTree
+        folders={folders}
+        sessions={filtered}
+        activeSessionId={activeSessionId}
+        onSessionClick={onSessionClick}
+        onRestored={onRestored}
+      />
     );
   }
   return (
-    <SessionVirtualList groups={groupSessions(filtered)} activeSessionId={activeSessionId}
-      isLoading={isLoading} onSessionClick={onSessionClick} onRestored={onRestored}
-      onKeyDown={onKeyDown} />
+    <SessionVirtualList
+      groups={groupSessions(filtered)}
+      activeSessionId={activeSessionId}
+      isLoading={isLoading}
+      onSessionClick={onSessionClick}
+      onRestored={onRestored}
+      onKeyDown={onKeyDown}
+    />
   );
 }
 
@@ -101,9 +119,16 @@ export function SessionSidebar(): React.ReactElement {
       </div>
       <SessionFilterBar filters={filters} onChange={setFilters} />
       <div ref={listRef} className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-        <SessionListArea folders={folders} sessions={sessions} filtered={applyFilters(sessions, filters)}
-          activeSessionId={activeSessionId} isLoading={isLoading} onSessionClick={handleSessionClick}
-          onRestored={refresh} onKeyDown={handleKeyDown} />
+        <SessionListArea
+          folders={folders}
+          sessions={sessions}
+          filtered={applyFilters(sessions, filters)}
+          activeSessionId={activeSessionId}
+          isLoading={isLoading}
+          onSessionClick={handleSessionClick}
+          onRestored={refresh}
+          onKeyDown={handleKeyDown}
+        />
       </div>
     </div>
   );

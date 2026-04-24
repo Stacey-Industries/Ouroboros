@@ -54,10 +54,10 @@ const TIER2_REASONS = new Set<string>(['dirty_buffer', 'git_diff']);
 
 /** Returns which tier a ranked file belongs to, based on its highest-weight reason. */
 export function getFileTier(file: { reasons: Array<{ kind: string; weight: number }> }): number {
-  const topKind = file.reasons.reduce(
-    (best, r) => (r.weight > best.weight ? r : best),
-    { kind: '', weight: -1 },
-  ).kind;
+  const topKind = file.reasons.reduce((best, r) => (r.weight > best.weight ? r : best), {
+    kind: '',
+    weight: -1,
+  }).kind;
   if (TIER1_REASONS.has(topKind)) return 1;
   if (TIER2_REASONS.has(topKind)) return 2;
   return 3;
@@ -123,9 +123,7 @@ function findSymbolRange(
   userSelectedRanges: UserSelectedFileRange[] | undefined,
 ): UserSelectedFileRange | undefined {
   if (!userSelectedRanges?.length) return undefined;
-  return userSelectedRanges.find(
-    (r) => r.path === filePath && r.startLine != null,
-  );
+  return userSelectedRanges.find((r) => r.path === filePath && r.startLine != null);
 }
 
 function appendSymbolRange(

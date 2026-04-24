@@ -18,7 +18,9 @@ export interface TapToRevealResult {
   toggle: () => void;
 }
 
-const NOOP = (): void => { /* desktop pass-through */ };
+const NOOP = (): void => {
+  /* desktop pass-through */
+};
 
 /** Apply / remove the data-revealed attribute to keep CSS in sync. */
 function syncDataAttr(el: HTMLElement | null, revealed: boolean): void {
@@ -64,9 +66,7 @@ function usePhonePointerListener(
  * @param ref - A ref to the element that acts as the reveal container.
  * @returns `{ isRevealed, toggle }` — on desktop always returns `isRevealed: true`.
  */
-export function useTapToReveal(
-  ref: React.RefObject<HTMLElement | null>,
-): TapToRevealResult {
+export function useTapToReveal(ref: React.RefObject<HTMLElement | null>): TapToRevealResult {
   const breakpoint = useViewportBreakpoint();
   const isPhone = breakpoint === 'phone';
 

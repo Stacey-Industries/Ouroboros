@@ -83,9 +83,11 @@ describe('agentChatSelectors (selector shapes)', () => {
       defaultProvider: s.defaultProvider,
       modelProviders: s.modelProviders,
       codexModels: s.codexModels,
+      codexAppServerTransport: s.codexAppServerTransport,
     }));
     expect(model.defaultProvider).toBe('claude-code');
     expect(model.modelProviders).toEqual([]);
+    expect(model.codexAppServerTransport).toBe(false);
   });
 
   it('queue selector returns queuedMessages', () => {

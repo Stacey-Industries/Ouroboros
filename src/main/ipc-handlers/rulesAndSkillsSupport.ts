@@ -44,7 +44,12 @@ export function registerClaudeSettingsHandlers(channels: string[]): void {
     'claudeSettings:writeKey',
     async (_event, args: { scope: string; key: string; value: unknown; projectRoot?: string }) => {
       try {
-        await writeClaudeSettingsKey(args.scope as ClaudeConfigScope, args.key, args.value, args.projectRoot);
+        await writeClaudeSettingsKey(
+          args.scope as ClaudeConfigScope,
+          args.key,
+          args.value,
+          args.projectRoot,
+        );
         return { success: true };
       } catch (error: unknown) {
         return fail(error);

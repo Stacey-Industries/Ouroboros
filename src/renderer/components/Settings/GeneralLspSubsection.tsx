@@ -33,7 +33,10 @@ export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
       {draft.lspEnabled && <LspServersInput draft={draft} onChange={onChange} />}
       <div style={{ ...toggleRowStyle, marginTop: '16px' }}>
         <div style={{ flex: 1 }}>
-          <label className="text-text-semantic-primary" style={{ fontSize: '13px', display: 'block' }}>
+          <label
+            className="text-text-semantic-primary"
+            style={{ fontSize: '13px', display: 'block' }}
+          >
             Inline Completions
           </label>
           <p className="text-text-semantic-faint" style={{ fontSize: '11px', margin: '2px 0 0' }}>

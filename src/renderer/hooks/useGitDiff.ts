@@ -1,4 +1,4 @@
-import { useCallback,useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { DiffLineInfo } from '../types/electron';
 
@@ -19,29 +19,26 @@ export interface UseGitDiffReturn {
 export function useGitDiff(
   projectRoot: string | null,
   filePath: string | null,
-  content: string | null
+  content: string | null,
 ): UseGitDiffReturn {
   const [diffLines, setDiffLines] = useState<DiffLineInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchDiff = useCallback(
-    async (root: string, fp: string) => {
-      setIsLoading(true);
-      try {
-        const result = await window.electronAPI.git.diff(root, fp);
-        if (result.success && result.lines) {
-          setDiffLines(result.lines);
-        } else {
-          setDiffLines([]);
-        }
-      } catch {
+  const fetchDiff = useCallback(async (root: string, fp: string) => {
+    setIsLoading(true);
+    try {
+      const result = await window.electronAPI.git.diff(root, fp);
+      if (result.success && result.lines) {
+        setDiffLines(result.lines);
+      } else {
         setDiffLines([]);
-      } finally {
-        setIsLoading(false);
       }
-    },
-    []
-  );
+    } catch {
+      setDiffLines([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!projectRoot || !filePath) {

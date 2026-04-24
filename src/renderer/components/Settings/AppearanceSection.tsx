@@ -34,7 +34,9 @@ export function AppearanceSection({
 }: AppearanceSectionProps): React.ReactElement {
   const [editorOpen, setEditorOpen] = useState(false);
   const extensionThemes = useExtensionThemes();
-  const hasCustomColors = Boolean(draft.customThemeColors && Object.keys(draft.customThemeColors).length > 0);
+  const hasCustomColors = Boolean(
+    draft.customThemeColors && Object.keys(draft.customThemeColors).length > 0,
+  );
   const displayedThemes = [
     buildNoneCard(draft.materialVariant),
     ...themeList,

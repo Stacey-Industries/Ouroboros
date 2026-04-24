@@ -43,13 +43,17 @@ describe('useEmptyStateDismiss — session-only', () => {
 
   it('dismiss() sets isDismissed to true', () => {
     const { result } = renderHook(() => useEmptyStateDismiss({}));
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(result.current.isDismissed).toBe(true);
   });
 
   it('does not call config.set when no dismissKey', () => {
     const { result } = renderHook(() => useEmptyStateDismiss({}));
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(mockSet).not.toHaveBeenCalled();
   });
 });
@@ -78,7 +82,9 @@ describe('useEmptyStateDismiss — persistent', () => {
   it('dismiss() calls config.set with the dismissKey set to true', () => {
     mockConfig = makeConfig({});
     const { result } = renderHook(() => useEmptyStateDismiss({ dismissKey: 'terminal' }));
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(mockSet).toHaveBeenCalledOnce();
     const [key, value] = mockSet.mock.calls[0] as [string, unknown];
     expect(key).toBe('platform');
@@ -89,7 +95,9 @@ describe('useEmptyStateDismiss — persistent', () => {
   it('dismiss() preserves existing dismissed keys', () => {
     mockConfig = makeConfig({ fileTree: true });
     const { result } = renderHook(() => useEmptyStateDismiss({ dismissKey: 'chat' }));
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     const [, value] = mockSet.mock.calls[0] as [string, unknown];
     const platform = value as { dismissedEmptyStates: Record<string, boolean> };
     expect(platform.dismissedEmptyStates.fileTree).toBe(true);
@@ -99,7 +107,9 @@ describe('useEmptyStateDismiss — persistent', () => {
   it('dismiss() sets local isDismissed true immediately', () => {
     mockConfig = makeConfig({});
     const { result } = renderHook(() => useEmptyStateDismiss({ dismissKey: 'chat' }));
-    act(() => { result.current.dismiss(); });
+    act(() => {
+      result.current.dismiss();
+    });
     expect(result.current.isDismissed).toBe(true);
   });
 });

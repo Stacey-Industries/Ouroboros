@@ -82,9 +82,15 @@ function getHost(): UtilityProcessHost<PtyHostRequest, PtyHostOutbound> {
 
 function handleEvent(event: PtyHostEvent): void {
   switch (event.type) {
-    case 'data': handleData(event.id, event.data); return;
-    case 'exit': handleExit(event.id, event.exitCode, event.signal); return;
-    case 'shellStateChanged': handleShellStateChanged(event.id, event.state); return;
+    case 'data':
+      handleData(event.id, event.data);
+      return;
+    case 'exit':
+      handleExit(event.id, event.exitCode, event.signal);
+      return;
+    case 'shellStateChanged':
+      handleShellStateChanged(event.id, event.state);
+      return;
   }
 }
 
@@ -122,20 +128,26 @@ function handleShellStateChanged(id: string, state: ShellState): void {
 // ── Crash recovery ──
 
 function handleHostCrash(exitCode: number): void {
-  log.warn(`[ptyHostProxy] PtyHost crashed (code=${exitCode}), notifying ${proxySessions.size} session(s)`);
+  log.warn(
+    `[ptyHostProxy] PtyHost crashed (code=${exitCode}), notifying ${proxySessions.size} session(s)`,
+  );
   for (const [id, session] of proxySessions) {
     const scrollback = terminalOutputBuffer.getRecentLines(id, 200);
     if (session.win && !session.win.isDestroyed()) {
       try {
         session.win.webContents.mainFrame.send(`pty:disconnected:${id}`, {
-          reason: 'ptyhost-crashed', exitCode, scrollback,
+          reason: 'ptyhost-crashed',
+          exitCode,
+          scrollback,
         });
       } catch {
         // Render frame disposed.
       }
     }
     broadcastToWebClients(`pty:disconnected:${id}`, {
-      reason: 'ptyhost-crashed', exitCode, scrollback,
+      reason: 'ptyhost-crashed',
+      exitCode,
+      scrollback,
     });
     agentBridges.get(id)?.handleExit(exitCode);
     agentBridges.delete(id);
@@ -156,8 +168,12 @@ export async function spawnViaPtyHost(
     const h = getHost();
     electronBatcher.register(instruction.id, win);
     proxySessions.set(instruction.id, {
-      id: instruction.id, cwd: instruction.cwd, win, shellState: null,
-      cols: instruction.cols, rows: instruction.rows,
+      id: instruction.id,
+      cwd: instruction.cwd,
+      win,
+      shellState: null,
+      cols: instruction.cols,
+      rows: instruction.rows,
     });
     const requestId = h.nextRequestId();
     await h.request<PtyHostResponse>({ type: 'spawn', requestId, instruction });
@@ -176,12 +192,17 @@ export function writeViaPtyHost(id: string, data: string): { success: boolean; e
 }
 
 export function resizeViaPtyHost(
-  id: string, cols: number, rows: number,
+  id: string,
+  cols: number,
+  rows: number,
 ): { success: boolean; error?: string } {
   if (!host || !host.alive) return { success: false, error: 'PtyHost not started' };
   host.send({ type: 'resize', id, cols, rows });
   const s = proxySessions.get(id);
-  if (s) { s.cols = cols; s.rows = rows; }
+  if (s) {
+    s.cols = cols;
+    s.rows = rows;
+  }
   return { success: true };
 }
 
@@ -202,9 +223,11 @@ export async function getCwdViaPtyHost(
   if (!host || !host.alive) return { success: false, error: 'PtyHost not started' };
   try {
     const requestId = host.nextRequestId();
-    const res = await host.request<PtyHostResponse & { type: 'cwd' }>(
-      { type: 'getCwd', requestId, id },
-    );
+    const res = await host.request<PtyHostResponse & { type: 'cwd' }>({
+      type: 'getCwd',
+      requestId,
+      id,
+    });
     return { success: true, cwd: res.cwd };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -215,9 +238,10 @@ export async function listSessionsViaPtyHost(): Promise<PtySessionInfo[]> {
   if (!host || !host.alive) return [];
   try {
     const requestId = host.nextRequestId();
-    const res = await host.request<PtyHostResponse & { type: 'sessions' }>(
-      { type: 'listSessions', requestId },
-    );
+    const res = await host.request<PtyHostResponse & { type: 'sessions' }>({
+      type: 'listSessions',
+      requestId,
+    });
     return res.list;
   } catch {
     return [];

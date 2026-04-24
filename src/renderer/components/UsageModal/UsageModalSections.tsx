@@ -199,13 +199,7 @@ function LoadingState(): React.JSX.Element {
   );
 }
 
-function ErrorState({
-  error,
-  onRetry,
-}: {
-  error: string;
-  onRetry: () => void;
-}): React.JSX.Element {
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }): React.JSX.Element {
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-2">
       <span className="text-[11px] text-status-error">{error}</span>

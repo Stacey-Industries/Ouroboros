@@ -37,10 +37,18 @@ vi.mock('./useResizable', () => ({
   })),
 }));
 vi.mock('./TitleBar', () => ({ TitleBar: () => null }));
-vi.mock('./Sidebar', () => ({ Sidebar: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
-vi.mock('./CentrePane', () => ({ CentrePane: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
-vi.mock('./TerminalPane', () => ({ TerminalPane: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
-vi.mock('./AgentMonitorPane', () => ({ AgentMonitorPane: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
+vi.mock('./Sidebar', () => ({
+  Sidebar: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
+vi.mock('./CentrePane', () => ({
+  CentrePane: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
+vi.mock('./TerminalPane', () => ({
+  TerminalPane: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
+vi.mock('./AgentMonitorPane', () => ({
+  AgentMonitorPane: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
 vi.mock('./ResizeDivider', () => ({ ResizeDivider: () => null }));
 vi.mock('./StatusBar', () => ({ StatusBar: () => null }));
 vi.mock('./AppLayout.mobile', () => ({
@@ -61,7 +69,12 @@ vi.mock('@dnd-kit/core', () => ({
   useSensor: vi.fn((Cls) => ({ sensor: Cls })),
   useSensors: vi.fn((...s: unknown[]) => s),
   useDroppable: vi.fn(() => ({ setNodeRef: vi.fn(), isOver: false })),
-  useDraggable: vi.fn(() => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn(), isDragging: false })),
+  useDraggable: vi.fn(() => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    isDragging: false,
+  })),
   useDndContext: vi.fn(() => ({ active: null })),
 }));
 
@@ -136,8 +149,9 @@ describe('AppLayout DnD integration', () => {
   it('renders the correct slot names as data attributes when DnD is on', () => {
     mockConfig(true);
     const { container } = renderWithMobile();
-    const slotNames = Array.from(container.querySelectorAll('[data-droppable-slot]'))
-      .map((el) => el.getAttribute('data-droppable-slot'));
+    const slotNames = Array.from(container.querySelectorAll('[data-droppable-slot]')).map((el) =>
+      el.getAttribute('data-droppable-slot'),
+    );
     expect(slotNames).toContain('editorContent');
     expect(slotNames).toContain('terminalContent');
     expect(slotNames).toContain('agentCards');

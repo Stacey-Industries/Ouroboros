@@ -14,10 +14,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  extractBareSymbolQuery,
-  useSymbolDisambiguation,
-} from './useSymbolDisambiguation';
+import { extractBareSymbolQuery, useSymbolDisambiguation } from './useSymbolDisambiguation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,9 +78,7 @@ describe('useSymbolDisambiguation', () => {
   });
 
   it('starts with empty results and loading=false', () => {
-    const { result } = renderHook(() =>
-      useSymbolDisambiguation({ query: '', enabled: true }),
-    );
+    const { result } = renderHook(() => useSymbolDisambiguation({ query: '', enabled: true }));
     expect(result.current.symbolResults).toEqual([]);
     expect(result.current.loading).toBe(false);
   });
@@ -92,11 +87,11 @@ describe('useSymbolDisambiguation', () => {
     const searchFn = vi.fn().mockResolvedValue({ success: true, results: [] });
     setApi(searchFn);
 
-    renderHook(() =>
-      useSymbolDisambiguation({ query: 'symbol:myFn', enabled: false }),
-    );
+    renderHook(() => useSymbolDisambiguation({ query: 'symbol:myFn', enabled: false }));
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).not.toHaveBeenCalled();
   });
 
@@ -104,11 +99,11 @@ describe('useSymbolDisambiguation', () => {
     const searchFn = vi.fn();
     setApi(searchFn);
 
-    renderHook(() =>
-      useSymbolDisambiguation({ query: 'file:something', enabled: true }),
-    );
+    renderHook(() => useSymbolDisambiguation({ query: 'file:something', enabled: true }));
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).not.toHaveBeenCalled();
   });
 
@@ -120,7 +115,9 @@ describe('useSymbolDisambiguation', () => {
       useSymbolDisambiguation({ query: 'symbol:src/a.ts::myFn::10', enabled: true }),
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).not.toHaveBeenCalled();
   });
 
@@ -136,7 +133,9 @@ describe('useSymbolDisambiguation', () => {
     // loading should be true before the debounce fires
     expect(result.current.loading).toBe(true);
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
 
     expect(result.current.loading).toBe(false);
     expect(result.current.symbolResults).toHaveLength(1);
@@ -147,11 +146,11 @@ describe('useSymbolDisambiguation', () => {
     const searchFn = vi.fn().mockResolvedValue({ success: true, results: [] });
     setApi(searchFn);
 
-    renderHook(() =>
-      useSymbolDisambiguation({ query: 'symbol:doThing', enabled: true }),
-    );
+    renderHook(() => useSymbolDisambiguation({ query: 'symbol:doThing', enabled: true }));
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).toHaveBeenCalledWith('doThing', 15);
   });
 
@@ -160,16 +159,19 @@ describe('useSymbolDisambiguation', () => {
     setApi(searchFn);
 
     const { rerender } = renderHook(
-      ({ q }: { q: string }) =>
-        useSymbolDisambiguation({ query: q, enabled: true }),
+      ({ q }: { q: string }) => useSymbolDisambiguation({ query: q, enabled: true }),
       { initialProps: { q: 'symbol:myFn' } },
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).toHaveBeenCalledTimes(1);
 
     rerender({ q: 'symbol:myFn' });
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).toHaveBeenCalledTimes(1); // no extra call
   });
 
@@ -178,16 +180,19 @@ describe('useSymbolDisambiguation', () => {
     setApi(searchFn);
 
     const { rerender } = renderHook(
-      ({ q }: { q: string }) =>
-        useSymbolDisambiguation({ query: q, enabled: true }),
+      ({ q }: { q: string }) => useSymbolDisambiguation({ query: q, enabled: true }),
       { initialProps: { q: 'symbol:fn1' } },
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).toHaveBeenCalledTimes(1);
 
     rerender({ q: 'symbol:fn2' });
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(searchFn).toHaveBeenCalledTimes(2);
     expect(searchFn.mock.calls[1][0]).toBe('fn2');
   });
@@ -200,12 +205,13 @@ describe('useSymbolDisambiguation', () => {
     setApi(searchFn);
 
     const { result, rerender } = renderHook(
-      ({ q }: { q: string }) =>
-        useSymbolDisambiguation({ query: q, enabled: true }),
+      ({ q }: { q: string }) => useSymbolDisambiguation({ query: q, enabled: true }),
       { initialProps: { q: 'symbol:myFn' } },
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(result.current.symbolResults).toHaveLength(1);
 
     rerender({ q: 'something-else' });
@@ -222,7 +228,9 @@ describe('useSymbolDisambiguation', () => {
       useSymbolDisambiguation({ query: 'symbol:anything', enabled: true }),
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(result.current.symbolResults).toEqual([]);
     expect(result.current.loading).toBe(false);
   });
@@ -235,7 +243,9 @@ describe('useSymbolDisambiguation', () => {
       useSymbolDisambiguation({ query: 'symbol:broken', enabled: true }),
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     expect(result.current.symbolResults).toEqual([]);
     expect(result.current.loading).toBe(false);
   });
@@ -249,7 +259,9 @@ describe('useSymbolDisambiguation', () => {
       useSymbolDisambiguation({ query: 'symbol:handleRequest', enabled: true }),
     );
 
-    await act(async () => { vi.runAllTimers(); });
+    await act(async () => {
+      vi.runAllTimers();
+    });
     const first = result.current.symbolResults[0];
     expect(first.name).toBe('handleRequest');
     expect(first.type).toBe('function');

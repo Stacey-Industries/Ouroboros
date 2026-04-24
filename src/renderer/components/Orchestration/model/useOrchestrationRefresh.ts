@@ -15,7 +15,11 @@ import {
   resetOrchestrationStore,
 } from './useOrchestrationRefresh.parts';
 
-function resolveSelectedSession(sessions: ReturnType<typeof mergeScopedSessions>, selectedSessionId: string | null, latestScopedSession: ReturnType<typeof getLatestScopedSession>) {
+function resolveSelectedSession(
+  sessions: ReturnType<typeof mergeScopedSessions>,
+  selectedSessionId: string | null,
+  latestScopedSession: ReturnType<typeof getLatestScopedSession>,
+) {
   if (selectedSessionId) {
     const selectedSession = sessions.find((session) => session.id === selectedSessionId);
     if (selectedSession) {
@@ -49,14 +53,26 @@ export function useRefreshSessions(
 
     try {
       const { latestResponse, sessionsResponse } = await loadScopedSessions(projectRoot);
-      const sessionList = getScopedSessionList(projectRoot, sessionsResponse.sessions, sessionsResponse.success);
+      const sessionList = getScopedSessionList(
+        projectRoot,
+        sessionsResponse.sessions,
+        sessionsResponse.success,
+      );
       const latestScopedSession = getLatestScopedSession(projectRoot, sessionList, latestResponse);
       const mergedSessions = mergeScopedSessions(sessionList, latestScopedSession);
-      const resolvedSession = resolveSelectedSession(mergedSessions, selectedSessionId, latestScopedSession);
+      const resolvedSession = resolveSelectedSession(
+        mergedSessions,
+        selectedSessionId,
+        latestScopedSession,
+      );
       applyLoadedSessions(setters, mergedSessions, resolvedSession);
 
       if (hasSessionLoadFailure(latestResponse.success, sessionsResponse.success)) {
-        setters.setError(latestResponse.error ?? sessionsResponse.error ?? 'Failed to load orchestration sessions.');
+        setters.setError(
+          latestResponse.error ??
+            sessionsResponse.error ??
+            'Failed to load orchestration sessions.',
+        );
       }
     } catch (nextError) {
       setters.setError(normalizeError(nextError, 'Failed to load orchestration sessions.'));

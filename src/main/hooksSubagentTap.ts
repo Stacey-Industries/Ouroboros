@@ -10,8 +10,9 @@ import type { HookPayload } from './hooks';
 import { broadcastSubagentUpdated } from './ipc-handlers/subagent';
 
 function getChildSessionId(payload: HookPayload): string | undefined {
-  return (payload.input as Record<string, unknown> | undefined)
-    ?.childSessionId as string | undefined;
+  return (payload.input as Record<string, unknown> | undefined)?.childSessionId as
+    | string
+    | undefined;
 }
 
 export function tapSubagentTracker(payload: HookPayload): void {

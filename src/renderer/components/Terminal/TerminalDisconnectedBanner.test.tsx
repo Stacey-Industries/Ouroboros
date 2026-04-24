@@ -8,7 +8,9 @@ import { TerminalDisconnectedBanner } from './TerminalDisconnectedBanner';
 
 afterEach(() => cleanup());
 
-function makeInfo(overrides: Partial<{ reason: string; exitCode: number; scrollback: string[] }> = {}) {
+function makeInfo(
+  overrides: Partial<{ reason: string; exitCode: number; scrollback: string[] }> = {},
+) {
   return {
     reason: 'ptyhost-crashed',
     exitCode: 137,
@@ -20,11 +22,7 @@ function makeInfo(overrides: Partial<{ reason: string; exitCode: number; scrollb
 describe('TerminalDisconnectedBanner', () => {
   it('renders the disconnected title and exit code', () => {
     render(
-      <TerminalDisconnectedBanner
-        info={makeInfo()}
-        onRestart={vi.fn()}
-        onDismiss={vi.fn()}
-      />,
+      <TerminalDisconnectedBanner info={makeInfo()} onRestart={vi.fn()} onDismiss={vi.fn()} />,
     );
     expect(screen.getByText('Terminal disconnected')).toBeDefined();
     expect(screen.getByText(/code 137/)).toBeDefined();
@@ -58,11 +56,7 @@ describe('TerminalDisconnectedBanner', () => {
   it('calls onRestart when "New terminal" is clicked', () => {
     const onRestart = vi.fn();
     render(
-      <TerminalDisconnectedBanner
-        info={makeInfo()}
-        onRestart={onRestart}
-        onDismiss={vi.fn()}
-      />,
+      <TerminalDisconnectedBanner info={makeInfo()} onRestart={onRestart} onDismiss={vi.fn()} />,
     );
     fireEvent.click(screen.getByText('New terminal'));
     expect(onRestart).toHaveBeenCalledOnce();
@@ -71,11 +65,7 @@ describe('TerminalDisconnectedBanner', () => {
   it('calls onDismiss when "Dismiss" is clicked', () => {
     const onDismiss = vi.fn();
     render(
-      <TerminalDisconnectedBanner
-        info={makeInfo()}
-        onRestart={vi.fn()}
-        onDismiss={onDismiss}
-      />,
+      <TerminalDisconnectedBanner info={makeInfo()} onRestart={vi.fn()} onDismiss={onDismiss} />,
     );
     fireEvent.click(screen.getByText('Dismiss'));
     expect(onDismiss).toHaveBeenCalledOnce();
@@ -83,11 +73,7 @@ describe('TerminalDisconnectedBanner', () => {
 
   it('renders as an alert for screen readers', () => {
     render(
-      <TerminalDisconnectedBanner
-        info={makeInfo()}
-        onRestart={vi.fn()}
-        onDismiss={vi.fn()}
-      />,
+      <TerminalDisconnectedBanner info={makeInfo()} onRestart={vi.fn()} onDismiss={vi.fn()} />,
     );
     expect(screen.getByRole('alert')).toBeDefined();
   });

@@ -63,7 +63,11 @@ function PaletteOverlay({
 
 type SearchOverlaysProps = Pick<
   LayoutOverlaysProps,
-  'filePickerOpen' | 'setFilePickerOpen' | 'projectRoot' | 'symbolSearchOpen' | 'setSymbolSearchOpen'
+  | 'filePickerOpen'
+  | 'setFilePickerOpen'
+  | 'projectRoot'
+  | 'symbolSearchOpen'
+  | 'setSymbolSearchOpen'
 >;
 
 function SearchOverlays({
@@ -89,7 +93,11 @@ function SearchOverlays({
   );
 }
 
-function LazyPanels({ persistTerminalSessions }: { persistTerminalSessions: boolean }): React.ReactElement {
+function LazyPanels({
+  persistTerminalSessions,
+}: {
+  persistTerminalSessions: boolean;
+}): React.ReactElement {
   return (
     <>
       <AboutModal />

@@ -145,8 +145,7 @@ function createViewerFrameState({
   conflicts: ViewerConflicts;
   folds: ViewerFolds;
   derived: ViewerDerivedState;
-}
-) {
+}) {
   return {
     codeRef: refs.codeRef,
     scrollRef: refs.scrollRef,
@@ -163,10 +162,7 @@ function createViewerFrameState({
   };
 }
 
-function createViewerToggleState(
-  toggles: ViewerToggles,
-  ui: ViewerUiState
-) {
+function createViewerToggleState(toggles: ViewerToggles, ui: ViewerUiState) {
   return {
     wordWrap: toggles.wordWrap,
     setWordWrap: toggles.setWordWrap,
@@ -195,7 +191,9 @@ function createViewerToggleState(
   };
 }
 
-function createViewerDataState<TOutlineSymbols>(data: CreateFileViewerStateArgs<TOutlineSymbols>['data']) {
+function createViewerDataState<TOutlineSymbols>(
+  data: CreateFileViewerStateArgs<TOutlineSymbols>['data'],
+) {
   return {
     highlightedHtml: data.highlightedHtml,
     highlightLang: data.highlightLang,
@@ -217,11 +215,9 @@ export function createDiffMap(diffLines: DiffLineInfo[]): Map<number, DiffLineIn
 export function parseConflictContent(
   content: string | null,
   hasConflictMarkers: (content: string) => boolean,
-  parseConflictBlocks: (lines: string[]) => ConflictBlock[]
+  parseConflictBlocks: (lines: string[]) => ConflictBlock[],
 ): ConflictBlock[] {
-  return content && hasConflictMarkers(content)
-    ? parseConflictBlocks(content.split('\n'))
-    : [];
+  return content && hasConflictMarkers(content) ? parseConflictBlocks(content.split('\n')) : [];
 }
 
 export function toggleCollapsedFold(previous: Set<number>, startLine: number): Set<number> {

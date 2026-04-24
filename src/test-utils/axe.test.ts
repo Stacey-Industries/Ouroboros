@@ -17,6 +17,8 @@ describe('axe helper', () => {
     // We verify it exists on the expect object rather than importing it as a value
     // (the vitest-axe/matchers declaration uses `export type *` so direct
     // re-export is not permitted under isolatedModules).
-    expect(typeof (expect as unknown as Record<string, unknown>)['toHaveNoViolations']).not.toBe('undefined');
+    expect(typeof (expect as unknown as Record<string, unknown>)['toHaveNoViolations']).not.toBe(
+      'undefined',
+    );
   });
 });

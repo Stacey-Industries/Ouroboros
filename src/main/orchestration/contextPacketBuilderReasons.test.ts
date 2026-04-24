@@ -16,11 +16,7 @@ function makeFile(reasons: RankedContextFile['reasons']): RankedContextFile {
   };
 }
 
-function makeContext(
-  file: RankedContextFile,
-  content: string,
-  totalLines: number,
-): SnippetContext {
+function makeContext(file: RankedContextFile, content: string, totalLines: number): SnippetContext {
   return {
     file,
     snapshot: { filePath: file.filePath, content, unsaved: false },

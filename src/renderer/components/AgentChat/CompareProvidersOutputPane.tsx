@@ -12,17 +12,15 @@ import type { ProviderPaneState } from '../../hooks/useCompareSession';
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<ProviderPaneState['status'], string> = {
-  idle:      'text-text-semantic-muted',
+  idle: 'text-text-semantic-muted',
   streaming: 'text-status-info',
   completed: 'text-status-success',
-  error:     'text-status-error',
+  error: 'text-status-error',
 };
 
 function StatusBadge({ status }: { status: ProviderPaneState['status'] }): React.ReactElement {
   return (
-    <span className={`text-xs font-medium capitalize ${STATUS_COLORS[status]}`}>
-      {status}
-    </span>
+    <span className={`text-xs font-medium capitalize ${STATUS_COLORS[status]}`}>{status}</span>
   );
 }
 
@@ -51,9 +49,7 @@ function PaneHeader({ label, status, cost }: PaneHeaderProps): React.ReactElemen
       <span className="flex items-center gap-2">
         <StatusBadge status={status} />
         {cost !== null && (
-          <span className="text-xs text-text-semantic-muted">
-            ${cost.toFixed(4)}
-          </span>
+          <span className="text-xs text-text-semantic-muted">${cost.toFixed(4)}</span>
         )}
       </span>
     </div>

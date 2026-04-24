@@ -58,6 +58,7 @@ const DEFAULT_MODEL: AgentChatModelState = {
   defaultProvider: 'claude-code',
   modelProviders: [],
   codexModels: [],
+  codexAppServerTransport: false,
 };
 
 const DEFAULT_QUEUE: AgentChatQueueState = { queuedMessages: [] };
@@ -111,17 +112,12 @@ export function createAgentChatStore(): StoreApi<AgentChatStore> {
 
 /* ── React context ────────────────────────────────── */
 
-export const AgentChatStoreContext =
-  createContext<AgentChatStoreInstance | null>(null);
+export const AgentChatStoreContext = createContext<AgentChatStoreInstance | null>(null);
 
-export function useAgentChatStoreContext<T>(
-  selector: (state: AgentChatStore) => T,
-): T {
+export function useAgentChatStoreContext<T>(selector: (state: AgentChatStore) => T): T {
   const store = useContext(AgentChatStoreContext);
   if (!store) {
-    throw new Error(
-      'useAgentChatStoreContext must be used within AgentChatStoreContext.Provider',
-    );
+    throw new Error('useAgentChatStoreContext must be used within AgentChatStoreContext.Provider');
   }
   return useStore(store, selector);
 }

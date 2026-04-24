@@ -33,7 +33,9 @@ function makeStub(rootPath: string): GraphControllerLike & { disposed: boolean }
       lastIndexedAt: 0,
       indexDurationMs: 0,
     }),
-    indexStatus: function () { return this.getStatus(); },
+    indexStatus: function () {
+      return this.getStatus();
+    },
     getGraphToolContext: () => ({
       pipeline: { index: async () => ({ success: true }) },
       projectRoot: rootPath,
@@ -47,10 +49,15 @@ function makeStub(rootPath: string): GraphControllerLike & { disposed: boolean }
     deleteProject: () => ({ success: true }),
     detectChanges: async () => ({ changedFiles: [], affectedSymbols: [], blastRadius: 0 }),
     detectChangesForSession: async () => ({
-      changedFiles: [], affectedSymbols: [], blastRadius: 0,
+      changedFiles: [],
+      affectedSymbols: [],
+      blastRadius: 0,
     }),
     getArchitecture: () => ({
-      projectName: 'test', modules: [], hotspots: [], fileTree: [],
+      projectName: 'test',
+      modules: [],
+      hotspots: [],
+      fileTree: [],
     }),
     getCodeSnippet: async () => null,
     getGraphSchema: () => ({ nodeTypes: [], edgeTypes: [], nodeCount: 0, edgeCount: 0 }),
@@ -60,7 +67,9 @@ function makeStub(rootPath: string): GraphControllerLike & { disposed: boolean }
     searchCode: async () => [],
     searchGraph: () => [],
     traceCallPath: () => ({ found: false, path: [], edges: [] }),
-    dispose: async function () { this.disposed = true; },
+    dispose: async function () {
+      this.disposed = true;
+    },
   };
 }
 
@@ -79,7 +88,9 @@ function trackSet(stub: GraphControllerLike): void {
 afterEach(async () => {
   // Release all roots registered during the test to reset internal state.
   for (const root of registeredRoots) {
-    await releaseGraphController(root).catch(() => { /* already gone */ });
+    await releaseGraphController(root).catch(() => {
+      /* already gone */
+    });
   }
   registeredRoots.length = 0;
 });

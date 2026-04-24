@@ -34,7 +34,11 @@ function toastRestoreResult(
   }
 }
 
-async function executeUndo(items: UndoItem[], refreshDir: (dir: string) => void, toast: ToastFn): Promise<void> {
+async function executeUndo(
+  items: UndoItem[],
+  refreshDir: (dir: string) => void,
+  toast: ToastFn,
+): Promise<void> {
   const results = await Promise.all(
     items.map((item) => window.electronAPI.files.restoreDeleted(item.tempPath, item.originalPath)),
   );
@@ -42,14 +46,19 @@ async function executeUndo(items: UndoItem[], refreshDir: (dir: string) => void,
   const failed = items.length - succeeded;
   if (succeeded > 0) {
     const parentDirs = new Set(
-      items.filter((_, i) => results[i]?.success).map((item) => item.originalPath.replace(/[\\/][^\\/]+$/, '')),
+      items
+        .filter((_, i) => results[i]?.success)
+        .map((item) => item.originalPath.replace(/[\\/][^\\/]+$/, '')),
     );
     for (const dir of parentDirs) refreshDir(dir);
   }
   toastRestoreResult(toast, items, succeeded, failed);
 }
 
-export function useFileTreeUndo(refreshDir: (dir: string) => void, toast: ToastFn): FileTreeUndoResult {
+export function useFileTreeUndo(
+  refreshDir: (dir: string) => void,
+  toast: ToastFn,
+): FileTreeUndoResult {
   const stackRef = useRef<UndoItem[][]>([]);
 
   const pushUndo = useCallback((items: UndoItem[]) => {

@@ -6,11 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  buildFollowupPrompt,
-  parseResearchCommand,
-  runResearchAndPin,
-} from './researchCommands';
+import { buildFollowupPrompt, parseResearchCommand, runResearchAndPin } from './researchCommands';
 
 // ─── parseResearchCommand ─────────────────────────────────────────────────────
 
@@ -107,16 +103,22 @@ function makeElectronAPI(overrides?: {
   const opts = { researchSuccess: true, pinSuccess: true, ...overrides };
   return {
     research: {
-      invoke: vi.fn().mockResolvedValue(
-        opts.researchSuccess
-          ? { success: true, artifact: MOCK_ARTIFACT }
-          : { success: false, error: opts.researchError ?? 'failed' },
-      ),
+      invoke: vi
+        .fn()
+        .mockResolvedValue(
+          opts.researchSuccess
+            ? { success: true, artifact: MOCK_ARTIFACT }
+            : { success: false, error: opts.researchError ?? 'failed' },
+        ),
     },
     pinnedContext: {
-      add: vi.fn().mockResolvedValue(
-        opts.pinSuccess ? { success: true } : { success: false, error: opts.pinError ?? 'cap hit' },
-      ),
+      add: vi
+        .fn()
+        .mockResolvedValue(
+          opts.pinSuccess
+            ? { success: true }
+            : { success: false, error: opts.pinError ?? 'cap hit' },
+        ),
     },
   };
 }
@@ -163,7 +165,10 @@ describe('runResearchAndPin', () => {
 
   it('returns failure when research.invoke fails', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).electronAPI = makeElectronAPI({ researchSuccess: false, researchError: 'timeout' });
+    (window as any).electronAPI = makeElectronAPI({
+      researchSuccess: false,
+      researchError: 'timeout',
+    });
     const result = await runResearchAndPin({ sessionId: 'sess-1', topic: 'react' });
     expect(result.success).toBe(false);
     expect(result.error).toContain('timeout');

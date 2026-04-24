@@ -38,9 +38,7 @@ describe('SessionFilterBar', () => {
     const onChange = vi.fn();
     render(<SessionFilterBar filters={DEFAULT_FILTER_STATE} onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: /^Archived$/i }));
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'archived' }),
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'archived' }));
   });
 
   it('calls onChange with updated project text on input change', () => {
@@ -48,18 +46,14 @@ describe('SessionFilterBar', () => {
     render(<SessionFilterBar filters={DEFAULT_FILTER_STATE} onChange={onChange} />);
     const input = screen.getByRole('textbox', { name: /filter by project/i });
     fireEvent.change(input, { target: { value: 'my-proj' } });
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ project: 'my-proj' }),
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ project: 'my-proj' }));
   });
 
   it('calls onChange with new worktree value when worktree button clicked', () => {
     const onChange = vi.fn();
     render(<SessionFilterBar filters={DEFAULT_FILTER_STATE} onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: /^Worktree$/i }));
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ worktree: 'worktree' }),
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ worktree: 'worktree' }));
   });
 
   it('marks the active status button with aria-pressed=true', () => {

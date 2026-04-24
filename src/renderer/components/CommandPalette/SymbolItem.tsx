@@ -7,16 +7,39 @@ const ITEM_HEIGHT = 40;
 const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  function: { bg: 'var(--interactive-accent-subtle)', text: 'var(--interactive-accent)', label: 'fn' },
+  function: {
+    bg: 'var(--interactive-accent-subtle)',
+    text: 'var(--interactive-accent)',
+    label: 'fn',
+  },
   fn: { bg: 'var(--interactive-accent-subtle)', text: 'var(--interactive-accent)', label: 'fn' },
-  class: { bg: 'color-mix(in srgb, var(--palette-purple) 18%, transparent)', text: 'var(--palette-purple)', label: 'cls' },
-  interface: { bg: 'color-mix(in srgb, var(--status-info) 18%, transparent)', text: 'var(--status-info)', label: 'if' },
-  type: { bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)', text: 'var(--status-warning)', label: 'ty' },
+  class: {
+    bg: 'color-mix(in srgb, var(--palette-purple) 18%, transparent)',
+    text: 'var(--palette-purple)',
+    label: 'cls',
+  },
+  interface: {
+    bg: 'color-mix(in srgb, var(--status-info) 18%, transparent)',
+    text: 'var(--status-info)',
+    label: 'if',
+  },
+  type: {
+    bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)',
+    text: 'var(--status-warning)',
+    label: 'ty',
+  },
   const: { bg: 'var(--status-success-subtle)', text: 'var(--status-success)', label: 'co' },
-  def: { bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)', text: 'var(--status-warning)', label: 'def' },
+  def: {
+    bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)',
+    text: 'var(--status-warning)',
+    label: 'def',
+  },
 };
 
-const DEFAULT_BADGE = { bg: 'color-mix(in srgb, var(--text-muted) 18%, transparent)', text: 'var(--text-muted)' };
+const DEFAULT_BADGE = {
+  bg: 'color-mix(in srgb, var(--text-muted) 18%, transparent)',
+  text: 'var(--text-muted)',
+};
 
 export interface SymbolItemProps {
   entry: SymbolEntry;
@@ -153,7 +176,9 @@ function SymbolPath({
         flex: 1,
         minWidth: 0,
         fontSize: '11px',
-        color: isSelected ? 'color-mix(in srgb, var(--text-on-accent) 60%, transparent)' : 'var(--text-faint)',
+        color: isSelected
+          ? 'color-mix(in srgb, var(--text-on-accent) 60%, transparent)'
+          : 'var(--text-faint)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -177,7 +202,9 @@ function LineNumber({
       style={{
         flexShrink: 0,
         fontSize: '11px',
-        color: isSelected ? 'color-mix(in srgb, var(--text-on-accent) 50%, transparent)' : 'var(--text-faint)',
+        color: isSelected
+          ? 'color-mix(in srgb, var(--text-on-accent) 50%, transparent)'
+          : 'var(--text-faint)',
         fontFamily: 'var(--font-mono)',
       }}
     >

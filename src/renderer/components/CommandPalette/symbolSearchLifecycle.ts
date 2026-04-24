@@ -65,11 +65,14 @@ function useLoadSymbols({
     const requestState = { cancelled: false };
     setIsLoading(true);
     setLoadError(null);
-    void loadSymbols(projectRoot, createLoadHandlers(requestState, projectRoot, {
-      setAllSymbols,
-      setIsLoading,
-      setLoadError,
-    }));
+    void loadSymbols(
+      projectRoot,
+      createLoadHandlers(requestState, projectRoot, {
+        setAllSymbols,
+        setIsLoading,
+        setLoadError,
+      }),
+    );
 
     return () => {
       requestState.cancelled = true;

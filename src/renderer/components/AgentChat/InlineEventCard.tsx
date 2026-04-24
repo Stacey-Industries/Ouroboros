@@ -36,13 +36,20 @@ function formatTime(ms: number): string {
 function describeEvent(type: string, description?: string): string {
   if (description) return description;
   switch (type) {
-    case 'pre_tool_use': return 'Tool invoked';
-    case 'post_tool_use_failure': return 'Tool failed';
-    case 'user_prompt_submit': return 'User prompt submitted';
-    case 'notification': return 'Agent notification';
-    case 'session_start': return 'Session started';
-    case 'session_end': return 'Session ended';
-    default: return type.replace(/_/g, ' ');
+    case 'pre_tool_use':
+      return 'Tool invoked';
+    case 'post_tool_use_failure':
+      return 'Tool failed';
+    case 'user_prompt_submit':
+      return 'User prompt submitted';
+    case 'notification':
+      return 'Agent notification';
+    case 'session_start':
+      return 'Session started';
+    case 'session_end':
+      return 'Session ended';
+    default:
+      return type.replace(/_/g, ' ');
   }
 }
 
@@ -67,12 +74,7 @@ function EventIcon({ type }: { type: string }): React.ReactElement {
       style={{ color, flexShrink: 0 }}
     >
       {isFailure ? (
-        <path
-          d="M5 1L9 9H1L5 1Z"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinejoin="round"
-        />
+        <path d="M5 1L9 9H1L5 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
       ) : (
         <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2" />
       )}
@@ -94,16 +96,10 @@ export const InlineEventCard = memo(function InlineEventCard({
       aria-label={`Agent event: ${describeEvent(event.type, event.description)} at ${formatTime(event.timestamp)}`}
     >
       <EventIcon type={event.type} />
-      <span
-        className="flex-1 min-w-0 text-[10px] truncate"
-        style={{ color: 'var(--text-muted)' }}
-      >
+      <span className="flex-1 min-w-0 text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
         {describeEvent(event.type, event.description)}
       </span>
-      <span
-        className="shrink-0 text-[10px] tabular-nums"
-        style={{ color: 'var(--text-faint)' }}
-      >
+      <span className="shrink-0 text-[10px] tabular-nums" style={{ color: 'var(--text-faint)' }}>
         {formatTime(event.timestamp)}
       </span>
     </div>

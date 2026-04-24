@@ -52,10 +52,7 @@ interface PairingFormProps {
  * native deep-link listener. Calls setters when a payload is received.
  * Does NOT auto-submit — security requirement from Phase H plan.
  */
-function usePrefill(
-  setCode: (v: string) => void,
-  setHighlight: (v: boolean) => void,
-): void {
+function usePrefill(setCode: (v: string) => void, setHighlight: (v: boolean) => void): void {
   const setCodeRef = useRef(setCode);
   const setHighlightRef = useRef(setHighlight);
   setCodeRef.current = setCode;
@@ -78,7 +75,9 @@ function usePrefill(
     // Native: subscribe to deep-link open events at runtime.
     void initDeepLinkListener((payload) => {
       applyPrefill(payload.code);
-    }).then((cleanup) => { deepLinkCleanup = cleanup; });
+    }).then((cleanup) => {
+      deepLinkCleanup = cleanup;
+    });
 
     return () => {
       deepLinkCleanup?.();
@@ -117,11 +116,7 @@ interface SubmitPairingOpts {
   setLoading: (v: boolean) => void;
 }
 
-function usePairingSubmit(
-  code: string,
-  label: string,
-  fingerprint: string,
-): UseSubmitResult {
+function usePairingSubmit(code: string, label: string, fingerprint: string): UseSubmitResult {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -172,18 +167,25 @@ async function submitPairing(opts: SubmitPairingOpts): Promise<void> {
 
 // ─── Pairing form sub-components ─────────────────────────────────────────────
 
-function CodeInput({ codeRef, value, disabled, highlight, onChange }: {
+function CodeInput({
+  codeRef,
+  value,
+  disabled,
+  highlight,
+  onChange,
+}: {
   codeRef: React.RefObject<HTMLInputElement | null>;
-  value: string; disabled: boolean;
+  value: string;
+  disabled: boolean;
   highlight: boolean;
   onChange: (v: string) => void;
 }): React.ReactElement {
-  const fieldStyle = highlight
-    ? { ...S.field, border: FIELD_HIGHLIGHT_BORDER }
-    : S.field;
+  const fieldStyle = highlight ? { ...S.field, border: FIELD_HIGHLIGHT_BORDER } : S.field;
   return (
     <>
-      <label style={S.label} htmlFor="pair-code">Pairing code</label>
+      <label style={S.label} htmlFor="pair-code">
+        Pairing code
+      </label>
       <input
         ref={codeRef}
         id="pair-code"
@@ -204,10 +206,22 @@ function CodeInput({ codeRef, value, disabled, highlight, onChange }: {
 }
 
 function PairingForm(props: PairingFormProps): React.ReactElement {
-  const { code, label, loading, displayHost, highlight, codeRef, onCodeChange, onLabelChange, onSubmit } = props;
+  const {
+    code,
+    label,
+    loading,
+    displayHost,
+    highlight,
+    codeRef,
+    onCodeChange,
+    onLabelChange,
+    onSubmit,
+  } = props;
   return (
     <form onSubmit={onSubmit}>
-      <label style={S.label} htmlFor="pair-host">Host</label>
+      <label style={S.label} htmlFor="pair-host">
+        Host
+      </label>
       <input
         id="pair-host"
         style={{ ...S.field, ...S.fieldReadonly }}
@@ -215,8 +229,16 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
         readOnly
         tabIndex={-1}
       />
-      <CodeInput codeRef={codeRef} value={code} disabled={loading} highlight={highlight} onChange={onCodeChange} />
-      <label style={S.label} htmlFor="pair-label">Device name (optional)</label>
+      <CodeInput
+        codeRef={codeRef}
+        value={code}
+        disabled={loading}
+        highlight={highlight}
+        onChange={onCodeChange}
+      />
+      <label style={S.label} htmlFor="pair-label">
+        Device name (optional)
+      </label>
       <input
         id="pair-label"
         style={{ ...S.field, letterSpacing: 'normal' }}
@@ -242,11 +264,16 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
 // ─── Root state hook ──────────────────────────────────────────────────────────
 
 interface ScreenState {
-  code: string; setCode: (v: string) => void;
-  label: string; setLabel: (v: string) => void;
-  highlight: boolean; setHighlight: (v: boolean) => void;
-  isScanning: boolean; setIsScanning: (v: boolean) => void;
-  errorMsg: string; setErrorMsg: (v: string) => void;
+  code: string;
+  setCode: (v: string) => void;
+  label: string;
+  setLabel: (v: string) => void;
+  highlight: boolean;
+  setHighlight: (v: boolean) => void;
+  isScanning: boolean;
+  setIsScanning: (v: boolean) => void;
+  errorMsg: string;
+  setErrorMsg: (v: string) => void;
   fingerprint: string;
   codeRef: React.RefObject<HTMLInputElement | null>;
   highlightTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
@@ -262,18 +289,30 @@ function usePairingScreenState(): ScreenState {
   const codeRef = useRef<HTMLInputElement | null>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   usePrefill(setCode, setHighlight);
-  useEffect(() => { codeRef.current?.focus(); }, []);
+  useEffect(() => {
+    codeRef.current?.focus();
+  }, []);
   useEffect(() => {
     getDeviceFingerprint()
       .then(setFingerprint)
-      .catch(() => { setFingerprint('unknown'); });
+      .catch(() => {
+        setFingerprint('unknown');
+      });
   }, []);
   return {
-    code, setCode, label, setLabel,
-    highlight, setHighlight,
-    isScanning, setIsScanning,
-    errorMsg, setErrorMsg,
-    fingerprint, codeRef, highlightTimeoutRef,
+    code,
+    setCode,
+    label,
+    setLabel,
+    highlight,
+    setHighlight,
+    isScanning,
+    setIsScanning,
+    errorMsg,
+    setErrorMsg,
+    fingerprint,
+    codeRef,
+    highlightTimeoutRef,
   };
 }
 
@@ -306,7 +345,11 @@ function useScanQr(state: ScreenState): () => void {
     setIsScanning(true);
     setErrorMsg('');
     const handler = buildScanOutcomeHandler({
-      setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef,
+      setCode,
+      setHighlight,
+      setErrorMsg,
+      setIsScanning,
+      highlightTimeoutRef,
     });
     void scanPairingQr().then(handler);
   }, [setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef]);
@@ -321,7 +364,12 @@ interface PairingCardProps {
   onScan: () => void;
 }
 
-function PairingCard({ formProps, isScanning, displayError, onScan }: PairingCardProps): React.ReactElement {
+function PairingCard({
+  formProps,
+  isScanning,
+  displayError,
+  onScan,
+}: PairingCardProps): React.ReactElement {
   return (
     <div style={S.card}>
       <div style={S.wordmark}>Ouroboros</div>
@@ -332,7 +380,9 @@ function PairingCard({ formProps, isScanning, displayError, onScan }: PairingCar
       <PairingForm {...formProps} />
       {isNative() && <ScanQrButton isScanning={isScanning} onScan={onScan} />}
       {displayError && (
-        <div style={S.error} role="alert">{humanizeError(displayError)}</div>
+        <div style={S.error} role="alert">
+          {humanizeError(displayError)}
+        </div>
       )}
     </div>
   );
@@ -342,14 +392,25 @@ function PairingCard({ formProps, isScanning, displayError, onScan }: PairingCar
 
 export function PairingScreen({ host, port }: PairingScreenProps): React.ReactElement {
   const state = usePairingScreenState();
-  const { code, setCode, label, setLabel, highlight, isScanning, errorMsg, fingerprint, codeRef } = state;
-  const { loading, errorMsg: submitError, handleSubmit } = usePairingSubmit(code, label, fingerprint);
+  const { code, setCode, label, setLabel, highlight, isScanning, errorMsg, fingerprint, codeRef } =
+    state;
+  const {
+    loading,
+    errorMsg: submitError,
+    handleSubmit,
+  } = usePairingSubmit(code, label, fingerprint);
   const displayHost = port && port !== 80 && port !== 443 ? `${host}:${port}` : host;
   const handleScan = useScanQr(state);
   const formProps: PairingFormProps = {
-    code, label, loading: loading || fingerprint === '',
-    displayHost, highlight, codeRef,
-    onCodeChange: setCode, onLabelChange: setLabel, onSubmit: handleSubmit,
+    code,
+    label,
+    loading: loading || fingerprint === '',
+    displayHost,
+    highlight,
+    codeRef,
+    onCodeChange: setCode,
+    onLabelChange: setLabel,
+    onSubmit: handleSubmit,
   };
   return (
     <div style={S.root}>

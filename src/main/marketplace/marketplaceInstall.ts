@@ -45,11 +45,12 @@ function installTheme(bundle: BundleContent): InstallResult {
     return { success: false, error: 'theme-key-invalid', invalidKeys };
   }
 
-  const existing = getConfigValue('theming') as Record<string, unknown> ?? {};
-  const existingTokens =
-    (typeof existing.customTokens === 'object' && existing.customTokens !== null
+  const existing = (getConfigValue('theming') as Record<string, unknown>) ?? {};
+  const existingTokens = (
+    typeof existing.customTokens === 'object' && existing.customTokens !== null
       ? existing.customTokens
-      : {}) as Record<string, string>;
+      : {}
+  ) as Record<string, string>;
 
   const merged = { ...existingTokens, ...(payload as Record<string, string>) };
   setConfigValue('theming', { ...existing, customTokens: merged });
@@ -61,7 +62,7 @@ function installPrompt(bundle: BundleContent): InstallResult {
   if (typeof payload !== 'string') {
     return { success: false, error: 'prompt payload must be a string' };
   }
-  const existing = getConfigValue('ecosystem') as Record<string, unknown> ?? {};
+  const existing = (getConfigValue('ecosystem') as Record<string, unknown>) ?? {};
   setConfigValue('ecosystem', { ...existing, systemPrompt: payload });
   return { success: true };
 }
@@ -95,9 +96,12 @@ function installRulesAndSkills(bundle: BundleContent): InstallResult {
 export function installBundle(bundle: BundleContent): InstallResult {
   try {
     switch (bundle.kind) {
-      case 'theme':           return installTheme(bundle);
-      case 'prompt':          return installPrompt(bundle);
-      case 'rules-and-skills': return installRulesAndSkills(bundle);
+      case 'theme':
+        return installTheme(bundle);
+      case 'prompt':
+        return installPrompt(bundle);
+      case 'rules-and-skills':
+        return installRulesAndSkills(bundle);
       default: {
         const exhaustive: never = bundle.kind;
         return { success: false, error: `unknown bundle kind: ${String(exhaustive)}` };

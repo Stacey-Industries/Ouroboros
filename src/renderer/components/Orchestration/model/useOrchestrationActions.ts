@@ -32,47 +32,66 @@ type MutationResult = TaskMutationResult | VerificationResult | TaskSessionResul
 
 type MutationRunner = () => Promise<MutationResult>;
 
-function useActionRunner(setters: OrchestrationStateStore): (message: string, fallback: string, run: MutationRunner) => Promise<boolean> {
-  return useCallback(async (message: string, fallback: string, run: MutationRunner): Promise<boolean> => {
-    setters.setActionError(null);
-    setters.setActionMessage(message);
+function useActionRunner(
+  setters: OrchestrationStateStore,
+): (message: string, fallback: string, run: MutationRunner) => Promise<boolean> {
+  return useCallback(
+    async (message: string, fallback: string, run: MutationRunner): Promise<boolean> => {
+      setters.setActionError(null);
+      setters.setActionMessage(message);
 
-    try {
-      const response = await run();
-      if (!response.success) {
-        setters.setActionError(response.error ?? fallback);
+      try {
+        const response = await run();
+        if (!response.success) {
+          setters.setActionError(response.error ?? fallback);
+          return false;
+        }
+
+        applyMutationResult(response, setters);
+        return true;
+      } catch (nextError) {
+        setters.setActionError(normalizeError(nextError, fallback));
         return false;
       }
-
-      applyMutationResult(response, setters);
-      return true;
-    } catch (nextError) {
-      setters.setActionError(normalizeError(nextError, fallback));
-      return false;
-    }
-  }, [setters]);
+    },
+    [setters],
+  );
 }
 
-export function useSessionSelection(projectRoot: string | null, setters: OrchestrationStateStore): (sessionId: string) => Promise<void> {
-  return useCallback(async (sessionId: string): Promise<void> => {
-    setters.setSelectedSessionId(sessionId);
+export function useSessionSelection(
+  projectRoot: string | null,
+  setters: OrchestrationStateStore,
+): (sessionId: string) => Promise<void> {
+  return useCallback(
+    async (sessionId: string): Promise<void> => {
+      setters.setSelectedSessionId(sessionId);
 
-    if (!hasElectronAPI()) {
-      return;
-    }
-
-    try {
-      const response = await window.electronAPI.orchestration.loadSession(sessionId);
-      if (response.success && response.session && sessionMatchesProjectRoot(response.session, projectRoot)) {
-        setters.setSessions((previous) => mergeSession(previous, response.session!));
-        setters.setState(deriveStateFromSession(response.session));
-        setters.setLatestVerificationSummary(response.session.lastVerificationSummary ?? response.session.latestResult?.verificationSummary ?? null);
-        setters.setLatestResult(response.session.latestResult ?? null);
+      if (!hasElectronAPI()) {
+        return;
       }
-    } catch {
-      return;
-    }
-  }, [projectRoot, setters]);
+
+      try {
+        const response = await window.electronAPI.orchestration.loadSession(sessionId);
+        if (
+          response.success &&
+          response.session &&
+          sessionMatchesProjectRoot(response.session, projectRoot)
+        ) {
+          setters.setSessions((previous) => mergeSession(previous, response.session!));
+          setters.setState(deriveStateFromSession(response.session));
+          setters.setLatestVerificationSummary(
+            response.session.lastVerificationSummary ??
+              response.session.latestResult?.verificationSummary ??
+              null,
+          );
+          setters.setLatestResult(response.session.latestResult ?? null);
+        }
+      } catch {
+        return;
+      }
+    },
+    [projectRoot, setters],
+  );
 }
 
 export function useTaskControlActions(setters: OrchestrationStateStore, args: ActionArgs) {

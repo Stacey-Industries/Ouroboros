@@ -13,9 +13,9 @@ import { ScopeToggle, type ScopeValue } from './ClaudeConfigPanelParts';
 
 function hasAPI(): boolean {
   return (
-    typeof window !== 'undefined'
-    && 'electronAPI' in window
-    && 'rulesAndSkills' in window.electronAPI
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'rulesAndSkills' in window.electronAPI
   );
 }
 
@@ -67,9 +67,7 @@ function SettingsJsonView({ settings }: { settings: Record<string, unknown> }): 
   const keys = Object.keys(settings);
   if (keys.length === 0) {
     return (
-      <p className="text-[10px] text-text-semantic-muted py-1">
-        No settings found for this scope.
-      </p>
+      <p className="text-[10px] text-text-semantic-muted py-1">No settings found for this scope.</p>
     );
   }
 
@@ -108,9 +106,16 @@ function useSettingsData(scope: ScopeValue, projectRoot: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.rulesAndSkills.readClaudeSettings(scope, projectRoot ?? undefined);
-      if (result.success && result.settings) { setSettings(result.settings); }
-      else { setSettings({}); if (result.error) setError(result.error); }
+      const result = await window.electronAPI.rulesAndSkills.readClaudeSettings(
+        scope,
+        projectRoot ?? undefined,
+      );
+      if (result.success && result.settings) {
+        setSettings(result.settings);
+      } else {
+        setSettings({});
+        if (result.error) setError(result.error);
+      }
     } catch (err: unknown) {
       setSettings({});
       setError(err instanceof Error ? err.message : String(err));
@@ -119,7 +124,9 @@ function useSettingsData(scope: ScopeValue, projectRoot: string | null) {
     }
   }, [scope, projectRoot]);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
   return { settings, loading, error };
 }
 
@@ -134,7 +141,9 @@ export function SettingsTab({ projectRoot }: SettingsTabProps): React.ReactEleme
       <div className="px-3 pb-2">
         <p className="text-[10px] text-text-semantic-muted mb-1.5">{scopeLabel}</p>
         {loading ? (
-          <div className="text-[10px] text-text-semantic-muted animate-pulse py-1">Loading settings...</div>
+          <div className="text-[10px] text-text-semantic-muted animate-pulse py-1">
+            Loading settings...
+          </div>
         ) : error ? (
           <div className="text-[10px] text-status-error py-1">{error}</div>
         ) : (

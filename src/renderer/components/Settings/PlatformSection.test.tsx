@@ -91,7 +91,9 @@ describe('crash reporter toggle writes platform.crashReports.enabled', () => {
   });
 
   it('disables crash reports', () => {
-    const draft = makeDraftWithPlatform({ crashReports: { enabled: true, webhookUrl: 'https://x.com' } });
+    const draft = makeDraftWithPlatform({
+      crashReports: { enabled: true, webhookUrl: 'https://x.com' },
+    });
     const { calls, fn } = captureOnChange();
 
     const currentPlatform = draft.platform ?? {};

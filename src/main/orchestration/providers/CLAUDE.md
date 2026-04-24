@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-Three distinct provider strategies are visible in this directory: `ClaudeCodeAdapter` (CLI subprocess + NDJSON streaming), `AnthropicApiAdapter` (direct SDK, no tool use, no resume), and `CodexAdapter` (separate exec runner with thread-based resume). Each has its own launch/event/context pipeline — the file explosion (~24 files) is a direct consequence of the 300-line ESLint limit forcing decomposition.
-`─────────────────────────────────────────────────`
-
 # Providers — AI Provider Adapter Implementations
 
 Three provider adapters behind a common `ProviderAdapter` interface: **Claude Code CLI** (subprocess + stream-json), **Anthropic API** (direct SDK streaming), and **Codex** (exec runner with thread-based sessions). Each provider owns its own launch, context-building, event-handling, and process-management pipeline.
@@ -87,6 +83,7 @@ Three provider adapters behind a common `ProviderAdapter` interface: **Claude Co
 | Imports from | `../../providers` | `resolveModelEnv` for provider-routed model env vars |
 | Imports from | `../../agentChat/types` | `ImageAttachment` |
 | Consumed by | `../chatOrchestrationBridge` | Creates adapters and registers them in `StaticProviderAdapterRegistry` |
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

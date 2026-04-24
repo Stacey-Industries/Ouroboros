@@ -56,7 +56,5 @@ export async function highlightCode(
  * and container styling.
  */
 function stripShikiWrappers(html: string): string {
-  return html
-    .replace(/^<pre[^>]*><code[^>]*>/, '')
-    .replace(/<\/code><\/pre>$/, '');
+  return html.replace(/^<pre[^>]*><code[^>]*>/, '').replace(/<\/code><\/pre>$/, '');
 }

@@ -36,7 +36,9 @@ beforeEach(() => {
         generatePairingCode: vi.fn(),
         listPairedDevices: mockList,
         revokePairedDevice: mockRevoke,
-        getTimeoutStats: vi.fn().mockResolvedValue({ success: true, stats: { short: 0, normal: 0, long: 0 } }),
+        getTimeoutStats: vi
+          .fn()
+          .mockResolvedValue({ success: true, stats: { short: 0, normal: 0, long: 0 } }),
       },
     },
   });

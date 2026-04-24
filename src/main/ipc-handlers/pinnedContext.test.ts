@@ -43,10 +43,7 @@ vi.mock('../orchestration/pinnedContextStore', () => ({
 
 // ─── Subject ──────────────────────────────────────────────────────────────────
 
-import {
-  cleanupPinnedContextHandlers,
-  registerPinnedContextHandlers,
-} from './pinnedContext';
+import { cleanupPinnedContextHandlers, registerPinnedContextHandlers } from './pinnedContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,10 +129,7 @@ describe('registerPinnedContextHandlers', () => {
     it('broadcasts pinnedContext:changed on success', async () => {
       const created = { ...itemPayload, id: 'uuid-2', addedAt: 2000 };
       mockAdd.mockReturnValue(created);
-      await handlers.get('pinnedContext:add')!(
-        {},
-        { sessionId: 'sess-1', item: itemPayload },
-      );
+      await handlers.get('pinnedContext:add')!({}, { sessionId: 'sess-1', item: itemPayload });
       expect(mockSend).toHaveBeenCalledWith(
         'pinnedContext:changed',
         expect.objectContaining({ sessionId: 'sess-1' }),
@@ -156,10 +150,7 @@ describe('registerPinnedContextHandlers', () => {
     });
 
     it('returns failure when itemId is missing', async () => {
-      const result = await handlers.get('pinnedContext:remove')!(
-        {},
-        { sessionId: 'sess-1' },
-      );
+      const result = await handlers.get('pinnedContext:remove')!({}, { sessionId: 'sess-1' });
       expect(result).toMatchObject({ success: false, error: expect.stringContaining('itemId') });
     });
   });
@@ -181,13 +172,20 @@ describe('registerPinnedContextHandlers', () => {
 
   describe('pinnedContext:list', () => {
     it('returns items from store', async () => {
-      const items = [{ id: 'x', type: 'user-file', source: '/a', title: 'a', content: '', tokens: 1, addedAt: 1 }];
+      const items = [
+        {
+          id: 'x',
+          type: 'user-file',
+          source: '/a',
+          title: 'a',
+          content: '',
+          tokens: 1,
+          addedAt: 1,
+        },
+      ];
       mockList.mockReturnValue(items);
 
-      const result = await handlers.get('pinnedContext:list')!(
-        {},
-        { sessionId: 'sess-1' },
-      );
+      const result = await handlers.get('pinnedContext:list')!({}, { sessionId: 'sess-1' });
       expect(result).toMatchObject({ success: true, items });
     });
 

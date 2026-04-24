@@ -1,10 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The existing CLAUDE.md is already solid. Reading the actual source reveals two non-obvious details worth adding: `filterSessions` not only filters sessions but also *trims their toolCalls array* to only matching calls — which means filtered cards show a subset of tool calls, not all of them. And `enrichSessions` is a no-op guard: it only injects `snapshotHash` if the session doesn't already have one, preserving live-event data over disk-restored fallbacks.
-`─────────────────────────────────────────────────`
-
-Based on reading the source files, here is the generated CLAUDE.md:
-
 # AgentMonitor — Real-time agent session monitoring dashboard
 
 Displays live and historical Claude Code agent sessions with tool call feeds, timelines, cost tracking, approval dialogs, and session comparison.
@@ -108,6 +102,7 @@ Claude Code hooks (named pipe)
 - **`pendingPreCompactTokens` + `failedCompactions`**: compaction events arrive as pre/post pairs; the session holds `pendingPreCompactTokens` until `post_compact` merges them. `failedCompactions` counts unpaired pre-compact events.
 - **`SubToolCallEvent`**: nested tool calls on `ToolCallEvent.subTools` — populated when the parent tool is `Agent` or `Task`.
 - **`snapshotHash`**: captured at session start (git HEAD), used to diff changes the agent made. Set by `useDiffSnapshots` hook in `AgentMonitorManager`, not by the hooks pipeline.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

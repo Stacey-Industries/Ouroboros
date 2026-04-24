@@ -15,18 +15,20 @@ vi.mock('../logger', () => ({
 
 import { getTelemetryStore } from '../telemetry';
 import { makeSession } from './session';
-import {
-  emitSessionActivated,
-  emitSessionArchived,
-  emitSessionCreated,
-} from './sessionLifecycle';
+import { emitSessionActivated, emitSessionArchived, emitSessionCreated } from './sessionLifecycle';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeMockStore() {
-  return { record: vi.fn(), recordOutcome: vi.fn(), recordTrace: vi.fn(),
-    queryEvents: vi.fn(), queryOutcomes: vi.fn(), queryTraces: vi.fn(),
-    close: vi.fn() };
+  return {
+    record: vi.fn(),
+    recordOutcome: vi.fn(),
+    recordTrace: vi.fn(),
+    queryEvents: vi.fn(),
+    queryOutcomes: vi.fn(),
+    queryTraces: vi.fn(),
+    close: vi.fn(),
+  };
 }
 
 const mockGetTelemetryStore = vi.mocked(getTelemetryStore);
@@ -41,7 +43,9 @@ describe('emitSessionCreated', () => {
     mockGetTelemetryStore.mockReturnValue(store as never);
   });
 
-  afterEach(() => { vi.clearAllMocks(); });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('calls store.record with type session.created', () => {
     const session = makeSession('/projects/foo');
@@ -87,7 +91,9 @@ describe('emitSessionCreated', () => {
 });
 
 describe('emitSessionActivated', () => {
-  afterEach(() => { vi.clearAllMocks(); });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('records type session.activated', () => {
     const store = makeMockStore();
@@ -99,7 +105,9 @@ describe('emitSessionActivated', () => {
 });
 
 describe('emitSessionArchived', () => {
-  afterEach(() => { vi.clearAllMocks(); });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('records type session.archived', () => {
     const store = makeMockStore();
@@ -111,7 +119,9 @@ describe('emitSessionArchived', () => {
 });
 
 describe('flag-off / no-store cases', () => {
-  afterEach(() => { vi.clearAllMocks(); });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('is a safe no-op when getTelemetryStore returns null', () => {
     mockGetTelemetryStore.mockReturnValue(null);

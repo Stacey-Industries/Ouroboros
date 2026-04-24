@@ -35,7 +35,11 @@ export function dispatchRuleLoaded(payload: HookPayload, dispatch: Dispatch<Agen
   const input = payload.input ?? {};
   const filePath = typeof input.file_path === 'string' ? input.file_path : '';
   if (!filePath) return;
-  const name = filePath.split(/[/\\]/).pop()?.replace(/\.\w+$/, '') ?? filePath;
+  const name =
+    filePath
+      .split(/[/\\]/)
+      .pop()
+      ?.replace(/\.\w+$/, '') ?? filePath;
   const memoryType = typeof input.memory_type === 'string' ? input.memory_type : 'Project';
   const loadReason = typeof input.load_reason === 'string' ? input.load_reason : 'unknown';
   const globs = Array.isArray(input.globs)

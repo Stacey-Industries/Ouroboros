@@ -102,9 +102,7 @@ export async function clearRefreshToken(): Promise<void> {
  * but resets on Android/iOS data clear (Preferences is app-data scoped).
  */
 export async function getDeviceFingerprint(): Promise<string> {
-  const existing = isNative()
-    ? await getSecureValue(FINGERPRINT_KEY)
-    : lsGet(FINGERPRINT_KEY);
+  const existing = isNative() ? await getSecureValue(FINGERPRINT_KEY) : lsGet(FINGERPRINT_KEY);
 
   if (existing) return existing;
 

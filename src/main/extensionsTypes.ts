@@ -1,4 +1,4 @@
-import vm from 'vm'
+import vm from 'vm';
 
 export type ActivationEvent =
   | '*'
@@ -9,50 +9,50 @@ export type ActivationEvent =
   | 'onSessionStart'
   | 'onSessionEnd'
   | 'onTerminalCreate'
-  | 'onGitCommit'
+  | 'onGitCommit';
 
 export interface ExtensionManifest {
-  name: string
-  version: string
-  description: string
-  author: string
-  main: string
-  permissions: string[]
-  activationEvents?: string[]
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  main: string;
+  permissions: string[];
+  activationEvents?: string[];
 }
 
-export type ExtensionStatus = 'active' | 'inactive' | 'pending' | 'error'
+export type ExtensionStatus = 'active' | 'inactive' | 'pending' | 'error';
 
 export interface ExtensionInfo {
-  name: string
-  version: string
-  description: string
-  author: string
-  enabled: boolean
-  status: ExtensionStatus
-  permissions: string[]
-  activationEvents: string[]
-  errorMessage?: string
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  enabled: boolean;
+  status: ExtensionStatus;
+  permissions: string[];
+  activationEvents: string[];
+  errorMessage?: string;
 }
 
 export interface LoadedExtension {
-  manifest: ExtensionManifest
-  dir: string
-  enabled: boolean
-  status: ExtensionStatus
-  errorMessage?: string
-  log: string[]
-  registeredCommands: Map<string, (...args: unknown[]) => unknown>
-  context: vm.Context | null
+  manifest: ExtensionManifest;
+  dir: string;
+  enabled: boolean;
+  status: ExtensionStatus;
+  errorMessage?: string;
+  log: string[];
+  registeredCommands: Map<string, (...args: unknown[]) => unknown>;
+  context: vm.Context | null;
 }
 
 export interface ExtensionActionResult {
-  success: boolean
-  error?: string
+  success: boolean;
+  error?: string;
 }
 
 export interface ExtensionLogResult extends ExtensionActionResult {
-  log?: string[]
+  log?: string[];
 }
 
 export const VALID_PERMISSIONS = new Set([
@@ -63,7 +63,7 @@ export const VALID_PERMISSIONS = new Set([
   'config.write',
   'ui.notify',
   'commands.register',
-])
+]);
 
 export const EXT_TO_LANGUAGE: Record<string, string> = {
   '.ts': 'typescript',
@@ -110,4 +110,4 @@ export const EXT_TO_LANGUAGE: Record<string, string> = {
   '.ml': 'ocaml',
   '.vue': 'vue',
   '.svelte': 'svelte',
-}
+};

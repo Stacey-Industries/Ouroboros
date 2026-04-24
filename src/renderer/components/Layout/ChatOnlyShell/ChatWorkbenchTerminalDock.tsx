@@ -27,12 +27,15 @@ interface DragController {
 function useDockResize(height: number, onHeightChange: (px: number) => void): DragController {
   const startRef = useRef<{ clientY: number; height: number } | null>(null);
 
-  const onPointerMove = useCallback((event: PointerEvent) => {
-    const start = startRef.current;
-    if (!start) return;
-    const delta = start.clientY - event.clientY;
-    onHeightChange(start.height + delta);
-  }, [onHeightChange]);
+  const onPointerMove = useCallback(
+    (event: PointerEvent) => {
+      const start = startRef.current;
+      if (!start) return;
+      const delta = start.clientY - event.clientY;
+      onHeightChange(start.height + delta);
+    },
+    [onHeightChange],
+  );
 
   const endDrag = useCallback(() => {
     startRef.current = null;
@@ -43,20 +46,27 @@ function useDockResize(height: number, onHeightChange: (px: number) => void): Dr
 
   useEffect(() => endDrag, [endDrag]);
 
-  const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    startRef.current = { clientY: event.clientY, height };
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', endDrag);
-    window.addEventListener('pointercancel', endDrag);
-  }, [endDrag, height, onPointerMove]);
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      startRef.current = { clientY: event.clientY, height };
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('pointercancel', endDrag);
+    },
+    [endDrag, height, onPointerMove],
+  );
 
   return { onPointerDown };
 }
 
 function DockHeader({
-  onSpawn, onClose,
-}: { onSpawn: () => void; onClose: () => void }): React.ReactElement {
+  onSpawn,
+  onClose,
+}: {
+  onSpawn: () => void;
+  onClose: () => void;
+}): React.ReactElement {
   return (
     <div className="flex items-center justify-between border-b border-stroke-default px-3 py-1.5">
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
@@ -99,7 +109,10 @@ function DockResizeHandle({ onPointerDown }: DragController): React.ReactElement
 }
 
 export function ChatWorkbenchTerminalDock({
-  terminal, height, onHeightChange, onClose,
+  terminal,
+  height,
+  onHeightChange,
+  onClose,
 }: ChatWorkbenchTerminalDockProps): React.ReactElement {
   const drag = useDockResize(height, onHeightChange);
   const clampedHeight = Math.min(

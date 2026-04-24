@@ -102,10 +102,7 @@ export function reducePermissionEvent(
   }));
 }
 
-export function reduceNotification(
-  state: AgentState,
-  action: NotificationAction,
-): AgentState {
+export function reduceNotification(state: AgentState, action: NotificationAction): AgentState {
   return updateSession(state, action.sessionId, (session) => ({
     ...session,
     notifications: [...(session.notifications ?? []), action.message].slice(-100),

@@ -93,7 +93,8 @@ describe('redactPaths — API key and JWT redaction (Phase K)', () => {
   });
 
   it('redacts JWT-shaped string in stack trace', () => {
-    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const jwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     const input = `authorization header: Bearer ${jwt}`;
     const result = redactPaths(input);
     expect(result).not.toContain('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
@@ -163,7 +164,11 @@ describe('webhook scheme restriction (Phase K)', () => {
 
   it('rejects http: webhook URL when allowInsecure is false', async () => {
     mockGetConfigValue.mockReturnValue({
-      crashReports: { enabled: true, webhookUrl: 'http://insecure.example.com/crash', allowInsecure: false },
+      crashReports: {
+        enabled: true,
+        webhookUrl: 'http://insecure.example.com/crash',
+        allowInsecure: false,
+      },
     } as never);
 
     initialiseCrashReporter();

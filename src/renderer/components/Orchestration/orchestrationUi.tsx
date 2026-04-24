@@ -2,7 +2,13 @@ import React from 'react';
 
 const SUCCESS_STATUSES = new Set(['complete', 'passed', 'completed']);
 const ERROR_STATUSES = new Set(['failed', 'cancelled']);
-const ACTIVE_STATUSES = new Set(['awaiting_provider', 'applying', 'verifying', 'running', 'streaming']);
+const ACTIVE_STATUSES = new Set([
+  'awaiting_provider',
+  'applying',
+  'verifying',
+  'running',
+  'streaming',
+]);
 
 export function formatDateTime(value: number | undefined): string {
   if (!value) {
@@ -39,7 +45,10 @@ export function badgeStyle(background: string, color: string): React.CSSProperti
   };
 }
 
-export function resolveStatusTone(status: string | undefined): { background: string; color: string } {
+export function resolveStatusTone(status: string | undefined): {
+  background: string;
+  color: string;
+} {
   if (status && SUCCESS_STATUSES.has(status)) {
     return { background: 'var(--status-success-subtle)', color: 'var(--status-success)' };
   }
@@ -49,10 +58,16 @@ export function resolveStatusTone(status: string | undefined): { background: str
   }
 
   if (status && ACTIVE_STATUSES.has(status)) {
-    return { background: 'color-mix(in srgb, var(--accent) 14%, transparent)', color: 'var(--accent)' };
+    return {
+      background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+      color: 'var(--accent)',
+    };
   }
 
-  return { background: 'color-mix(in srgb, var(--text-muted) 16%, transparent)', color: 'var(--text-muted)' };
+  return {
+    background: 'color-mix(in srgb, var(--text-muted) 16%, transparent)',
+    color: 'var(--text-muted)',
+  };
 }
 
 export function panelStyle(background = 'var(--bg-secondary)'): React.CSSProperties {

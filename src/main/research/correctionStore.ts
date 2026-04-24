@@ -58,8 +58,12 @@ export function buildCorrectionStore(): CorrectionStore {
   return {
     noteCorrection: (sid, lib) => doNoteCorrection(state, sid, lib),
     getLibraries: (sid) => doGetLibraries(state, sid),
-    clearSession: (sid) => { state.sessions.delete(sid); },
-    _resetForTests: () => { state.sessions.clear(); },
+    clearSession: (sid) => {
+      state.sessions.delete(sid);
+    },
+    _resetForTests: () => {
+      state.sessions.clear();
+    },
   };
 }
 
@@ -71,4 +75,3 @@ export function getCorrectionStore(): CorrectionStore {
   if (!singleton) singleton = buildCorrectionStore();
   return singleton;
 }
-

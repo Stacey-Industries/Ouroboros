@@ -48,7 +48,9 @@ describe('ThreadSearch', () => {
 
     it('shows no results text when query is non-empty and results are empty', async () => {
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'xyz' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'xyz' },
+      });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
       await waitFor(() => expect(screen.getByText('No results')).toBeTruthy(), { timeout: 1000 });
     });
@@ -65,7 +67,9 @@ describe('ThreadSearch', () => {
   describe('debounced search', () => {
     it('calls searchThreads after debounce elapses', async () => {
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'fox' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'fox' },
+      });
       await waitFor(
         () => expect(mockSearchThreads).toHaveBeenCalledWith({ query: 'fox', limit: 30 }),
         { timeout: 1000 },
@@ -90,11 +94,16 @@ describe('ThreadSearch', () => {
         results: [makeResult('thread-abc', 'snippet 1'), makeResult('thread-def', 'snippet 2')],
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'match' } });
-      await waitFor(() => {
-        expect(screen.getByText('thread-abc')).toBeTruthy();
-        expect(screen.getByText('thread-def')).toBeTruthy();
-      }, { timeout: 1000 });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'match' },
+      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('thread-abc')).toBeTruthy();
+          expect(screen.getByText('thread-def')).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
     });
 
     it('renders snippets in result cards', async () => {
@@ -103,8 +112,12 @@ describe('ThreadSearch', () => {
         results: [makeResult('thread-abc', 'The quick brown fox')],
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'fox' } });
-      await waitFor(() => expect(screen.getByText('The quick brown fox')).toBeTruthy(), { timeout: 1000 });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'fox' },
+      });
+      await waitFor(() => expect(screen.getByText('The quick brown fox')).toBeTruthy(), {
+        timeout: 1000,
+      });
     });
 
     it('strips <b> tags from FTS5 snippets', async () => {
@@ -113,8 +126,12 @@ describe('ThreadSearch', () => {
         results: [makeResult('t1', 'The <b>quick</b> brown fox')],
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'quick' } });
-      await waitFor(() => expect(screen.getByText('The quick brown fox')).toBeTruthy(), { timeout: 1000 });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'quick' },
+      });
+      await waitFor(() => expect(screen.getByText('The quick brown fox')).toBeTruthy(), {
+        timeout: 1000,
+      });
     });
   });
 
@@ -125,14 +142,18 @@ describe('ThreadSearch', () => {
         results: [makeResult('thread-enter-test')],
       });
       const dispatched: CustomEvent[] = [];
-      const listener = (e: Event): void => { dispatched.push(e as CustomEvent); };
+      const listener = (e: Event): void => {
+        dispatched.push(e as CustomEvent);
+      };
       window.addEventListener('agent-ide:open-thread', listener);
 
       render(<ThreadSearch />);
       const input = screen.getByPlaceholderText('Search threads...');
       fireEvent.change(input, { target: { value: 'test' } });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
-      await waitFor(() => expect(screen.getByText('thread-enter-test')).toBeTruthy(), { timeout: 1000 });
+      await waitFor(() => expect(screen.getByText('thread-enter-test')).toBeTruthy(), {
+        timeout: 1000,
+      });
 
       fireEvent.keyDown(input, { key: 'Enter' });
       window.removeEventListener('agent-ide:open-thread', listener);
@@ -169,12 +190,18 @@ describe('ThreadSearch', () => {
         results: [makeResult('click-thread-id', 'some text')],
       });
       const dispatched: CustomEvent[] = [];
-      const listener = (e: Event): void => { dispatched.push(e as CustomEvent); };
+      const listener = (e: Event): void => {
+        dispatched.push(e as CustomEvent);
+      };
       window.addEventListener('agent-ide:open-thread', listener);
 
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'click' } });
-      await waitFor(() => expect(screen.getByText('click-thread-id')).toBeTruthy(), { timeout: 1000 });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'click' },
+      });
+      await waitFor(() => expect(screen.getByText('click-thread-id')).toBeTruthy(), {
+        timeout: 1000,
+      });
 
       fireEvent.click(screen.getByText('click-thread-id'));
       window.removeEventListener('agent-ide:open-thread', listener);
@@ -186,7 +213,9 @@ describe('ThreadSearch', () => {
     it('handles searchThreads rejection gracefully', async () => {
       mockSearchThreads.mockRejectedValue(new Error('IPC error'));
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'error' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'error' },
+      });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
       // Component stays mounted, no throw
       expect(screen.getByPlaceholderText('Search threads...')).toBeTruthy();
@@ -201,11 +230,16 @@ describe('ThreadSearch', () => {
         hasMore: true,
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'many' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'many' },
+      });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
-      await waitFor(() => {
-        expect(screen.getByText(/narrow your search to see all/)).toBeTruthy();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/narrow your search to see all/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
     });
 
     it('does not show hasMore banner when hasMore is false', async () => {
@@ -215,7 +249,9 @@ describe('ThreadSearch', () => {
         hasMore: false,
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'few' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'few' },
+      });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
       await waitFor(() => expect(screen.getByText('t1')).toBeTruthy(), { timeout: 1000 });
       expect(screen.queryByText(/narrow your search/)).toBeNull();
@@ -228,11 +264,16 @@ describe('ThreadSearch', () => {
         hasMore: true,
       });
       render(<ThreadSearch />);
-      fireEvent.change(screen.getByPlaceholderText('Search threads...'), { target: { value: 'count' } });
+      fireEvent.change(screen.getByPlaceholderText('Search threads...'), {
+        target: { value: 'count' },
+      });
       await waitFor(() => expect(mockSearchThreads).toHaveBeenCalled(), { timeout: 1000 });
-      await waitFor(() => {
-        expect(screen.getByText(/Showing 3 results/)).toBeTruthy();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Showing 3 results/)).toBeTruthy();
+        },
+        { timeout: 1000 },
+      );
     });
   });
 });

@@ -2,7 +2,7 @@
  * useAppKeyboardShortcuts.ts — Application keyboard shortcuts.
  */
 
-import { useCallback,useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import type { WorkspaceLayout } from '../types/electron';
 import {
@@ -15,16 +15,16 @@ import {
 } from './appEventNames';
 
 interface KeyboardShortcutsDeps {
-  keybindings: Record<string, string>
-  setFilePickerOpen: React.Dispatch<React.SetStateAction<boolean>>
-  setSymbolSearchOpen: React.Dispatch<React.SetStateAction<boolean>>
-  setPerfOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>
+  keybindings: Record<string, string>;
+  setFilePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setSymbolSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setPerfOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>;
   spawnClaudeSession: (
     cwd?: string,
     opts?: { initialPrompt?: string; cliOverrides?: Record<string, unknown>; label?: string },
-  ) => Promise<void>
-  workspaceLayouts: WorkspaceLayout[]
-  handleSelectLayout: (layout: WorkspaceLayout) => void
+  ) => Promise<void>;
+  workspaceLayouts: WorkspaceLayout[];
+  handleSelectLayout: (layout: WorkspaceLayout) => void;
 }
 
 function buildComboFromEvent(e: KeyboardEvent): string {
@@ -59,7 +59,11 @@ function dispatchShortcutAction(action: string, deps: KeyboardShortcutsDeps): vo
   }
 }
 
-function matchAndApplyLayout(action: string, layouts: WorkspaceLayout[], apply: (l: WorkspaceLayout) => void): void {
+function matchAndApplyLayout(
+  action: string,
+  layouts: WorkspaceLayout[],
+  apply: (l: WorkspaceLayout) => void,
+): void {
   const matched = layouts.find((l) => action.toLowerCase().includes(l.name.toLowerCase()));
   if (matched) apply(matched);
 }

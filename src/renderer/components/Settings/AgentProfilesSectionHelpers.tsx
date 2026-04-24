@@ -11,20 +11,25 @@ import { ProfileEditor } from './ProfileEditor';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
-export function Badge({ label, tone }: {
+export function Badge({
+  label,
+  tone,
+}: {
   label: string;
   tone: 'neutral' | 'accent' | 'warning';
 }): React.ReactElement {
-  const bg = tone === 'accent'
-    ? 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)'
-    : tone === 'warning'
-    ? 'color-mix(in srgb, var(--status-warning) 15%, transparent)'
-    : 'var(--surface-inset)';
-  const color = tone === 'accent'
-    ? 'var(--interactive-accent)'
-    : tone === 'warning'
-    ? 'var(--status-warning)'
-    : 'var(--text-muted)';
+  const bg =
+    tone === 'accent'
+      ? 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)'
+      : tone === 'warning'
+        ? 'color-mix(in srgb, var(--status-warning) 15%, transparent)'
+        : 'var(--surface-inset)';
+  const color =
+    tone === 'accent'
+      ? 'var(--interactive-accent)'
+      : tone === 'warning'
+        ? 'var(--status-warning)'
+        : 'var(--text-muted)';
   return <span style={{ ...badgeStyle, background: bg, color }}>{label}</span>;
 }
 
@@ -45,11 +50,39 @@ export function ProfileRowActions({
 }): React.ReactElement {
   return (
     <div style={actionsStyle}>
-      <button type="button" onClick={onEdit} style={actionBtnStyle} className="text-text-semantic-muted">Edit</button>
-      <button type="button" onClick={onDuplicate} style={actionBtnStyle} className="text-text-semantic-muted">Dup</button>
-      <button type="button" onClick={onExport} style={actionBtnStyle} className="text-text-semantic-muted">Export</button>
+      <button
+        type="button"
+        onClick={onEdit}
+        style={actionBtnStyle}
+        className="text-text-semantic-muted"
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        onClick={onDuplicate}
+        style={actionBtnStyle}
+        className="text-text-semantic-muted"
+      >
+        Dup
+      </button>
+      <button
+        type="button"
+        onClick={onExport}
+        style={actionBtnStyle}
+        className="text-text-semantic-muted"
+      >
+        Export
+      </button>
       {!isBuiltIn && (
-        <button type="button" onClick={onDelete} style={deleteBtnStyle} className="text-status-error">Delete</button>
+        <button
+          type="button"
+          onClick={onDelete}
+          style={deleteBtnStyle}
+          className="text-status-error"
+        >
+          Delete
+        </button>
       )}
     </div>
   );
@@ -58,7 +91,12 @@ export function ProfileRowActions({
 // ─── ProfileRow ───────────────────────────────────────────────────────────────
 
 export function ProfileRow({
-  profile, isLast, onEdit, onDuplicate, onDelete, onExport,
+  profile,
+  isLast,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onExport,
 }: {
   profile: Profile;
   isLast: boolean;
@@ -69,10 +107,20 @@ export function ProfileRow({
 }): React.ReactElement {
   const toolCount = profile.enabledTools?.length;
   return (
-    <div style={{ ...profileRowStyle, borderBottom: isLast ? 'none' : '1px solid var(--border-default)' }}>
+    <div
+      style={{
+        ...profileRowStyle,
+        borderBottom: isLast ? 'none' : '1px solid var(--border-default)',
+      }}
+    >
       <span className="text-text-semantic-primary" style={nameStyle}>
         {profile.name}
-        {profile.builtIn && <span className="text-text-semantic-faint" style={builtInLabelStyle}> built-in</span>}
+        {profile.builtIn && (
+          <span className="text-text-semantic-faint" style={builtInLabelStyle}>
+            {' '}
+            built-in
+          </span>
+        )}
       </span>
       <div style={badgeRowStyle}>
         {profile.model && <Badge label={profile.model.replace('claude-', '')} tone="accent" />}
@@ -81,8 +129,10 @@ export function ProfileRow({
       </div>
       <ProfileRowActions
         isBuiltIn={Boolean(profile.builtIn)}
-        onEdit={onEdit} onDuplicate={onDuplicate}
-        onDelete={onDelete} onExport={onExport}
+        onEdit={onEdit}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onExport={onExport}
       />
     </div>
   );
@@ -91,7 +141,9 @@ export function ProfileRow({
 // ─── ImportModal ──────────────────────────────────────────────────────────────
 
 function ImportModalBody({
-  json, setJson, error,
+  json,
+  setJson,
+  error,
 }: {
   json: string;
   setJson: (v: string) => void;
@@ -102,16 +154,26 @@ function ImportModalBody({
       <p className="text-text-semantic-muted" style={modalDescStyle}>
         Paste the JSON of a previously exported profile.
       </p>
-      {error && <div className="text-status-error" style={{ fontSize: '12px' }}>{error}</div>}
-      <textarea value={json} onChange={(e) => setJson(e.target.value)} rows={8}
-        className="text-text-semantic-primary" style={modalTextareaStyle}
-        placeholder='{ "id": "...", "name": "...", ... }' />
+      {error && (
+        <div className="text-status-error" style={{ fontSize: '12px' }}>
+          {error}
+        </div>
+      )}
+      <textarea
+        value={json}
+        onChange={(e) => setJson(e.target.value)}
+        rows={8}
+        className="text-text-semantic-primary"
+        style={modalTextareaStyle}
+        placeholder='{ "id": "...", "name": "...", ... }'
+      />
     </>
   );
 }
 
 export function ImportModal({
-  onImport, onClose,
+  onImport,
+  onClose,
 }: {
   onImport: (json: string) => Promise<void>;
   onClose: () => void;
@@ -121,18 +183,37 @@ export function ImportModal({
 
   async function handleImport(): Promise<void> {
     setError(null);
-    try { await onImport(json); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Import failed'); }
+    try {
+      await onImport(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    }
   }
 
   return (
     <div style={modalOverlayStyle}>
       <div style={modalCardStyle} className="bg-surface-panel">
-        <div className="text-text-semantic-primary" style={{ fontSize: '14px', fontWeight: 600 }}>Import Profile</div>
+        <div className="text-text-semantic-primary" style={{ fontSize: '14px', fontWeight: 600 }}>
+          Import Profile
+        </div>
         <ImportModalBody json={json} setJson={setJson} error={error} />
         <div style={modalFooterStyle}>
-          <button type="button" onClick={onClose} style={cancelBtnStyle} className="text-text-semantic-muted">Cancel</button>
-          <button type="button" onClick={() => void handleImport()} disabled={!json.trim()} style={importBtnStyle(json.trim().length > 0)}>Import</button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={cancelBtnStyle}
+            className="text-text-semantic-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleImport()}
+            disabled={!json.trim()}
+            style={importBtnStyle(json.trim().length > 0)}
+          >
+            Import
+          </button>
         </div>
       </div>
     </div>
@@ -142,7 +223,8 @@ export function ImportModal({
 // ─── InlineEditor ─────────────────────────────────────────────────────────────
 
 export function InlineEditor({
-  target, onDone,
+  target,
+  onDone,
 }: {
   target: Profile | null | undefined;
   onDone: (saved: Profile) => void;
@@ -150,11 +232,7 @@ export function InlineEditor({
 }): React.ReactElement | null {
   if (target === undefined) return null;
   return (
-    <ProfileEditor
-      profile={target}
-      onSave={onDone}
-      onCancel={() => onDone(target as Profile)}
-    />
+    <ProfileEditor profile={target} onSave={onDone} onCancel={() => onDone(target as Profile)} />
   );
 }
 
@@ -168,7 +246,9 @@ export function useProfileList(): { profiles: Profile[]; reload: () => Promise<v
     if (res.success && res.profiles) setProfiles(res.profiles);
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   useEffect(() => {
     return window.electronAPI.profileCrud.onChanged((updated) => setProfiles(updated));
@@ -184,17 +264,26 @@ export function useDefaultProfile(projectRoot: string): {
   const [defaultId, setDefaultId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectRoot) { setDefaultId(null); return; }
-    window.electronAPI.profileCrud.getDefault(projectRoot)
-      .then((res) => { if (res.success) setDefaultId(res.profileId ?? null); })
+    if (!projectRoot) {
+      setDefaultId(null);
+      return;
+    }
+    window.electronAPI.profileCrud
+      .getDefault(projectRoot)
+      .then((res) => {
+        if (res.success) setDefaultId(res.profileId ?? null);
+      })
       .catch(() => undefined);
   }, [projectRoot]);
 
-  const setDefault = useCallback(async (profileId: string) => {
-    if (!projectRoot) return;
-    await window.electronAPI.profileCrud.setDefault(projectRoot, profileId);
-    setDefaultId(profileId);
-  }, [projectRoot]);
+  const setDefault = useCallback(
+    async (profileId: string) => {
+      if (!projectRoot) return;
+      await window.electronAPI.profileCrud.setDefault(projectRoot, profileId);
+      setDefaultId(profileId);
+    },
+    [projectRoot],
+  );
 
   return { defaultId, setDefault };
 }
@@ -220,7 +309,10 @@ const actionBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-export const deleteBtnStyle: React.CSSProperties = { ...actionBtnStyle, borderColor: 'var(--status-error)' };
+export const deleteBtnStyle: React.CSSProperties = {
+  ...actionBtnStyle,
+  borderColor: 'var(--status-error)',
+};
 
 export const profileRowStyle: React.CSSProperties = {
   display: 'flex',

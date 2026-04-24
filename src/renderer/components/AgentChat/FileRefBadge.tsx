@@ -40,7 +40,10 @@ function useHoverDelay(): { show: boolean; onEnter: () => void; onLeave: () => v
     timer.current = setTimeout(() => setShow(true), HOVER_DELAY_MS);
   }, []);
   const onLeave = useCallback(() => {
-    if (timer.current !== null) { clearTimeout(timer.current); timer.current = null; }
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
     setShow(false);
   }, []);
   return { show, onEnter, onLeave };
@@ -54,27 +57,54 @@ export interface FileRefBadgeProps {
   children: React.ReactNode;
 }
 
-export function FileRefBadge({ fileRef, projectRoot, children }: FileRefBadgeProps): React.ReactElement {
+function BadgeHoverCard({
+  show,
+  fileRef,
+  projectRoot,
+  anchorRef,
+  onClose,
+}: {
+  show: boolean;
+  fileRef: FileRef;
+  projectRoot?: string;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}): React.ReactElement | null {
+  if (!show) return null;
+  return <CitationHoverCard fileRef={fileRef} projectRoot={projectRoot} anchorRef={anchorRef} onClose={onClose} />;
+}
+
+export function FileRefBadge({
+  fileRef,
+  projectRoot,
+  children,
+}: FileRefBadgeProps): React.ReactElement {
   const { show: showCard, onEnter, onLeave } = useHoverDelay();
   const badgeRef = useRef<HTMLButtonElement>(null);
   const resolvedPath = resolveRefPath(fileRef, projectRoot);
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dispatchOpenFile(resolvedPath, fileRef.line, fileRef.col);
-  }, [resolvedPath, fileRef.line, fileRef.col]);
-
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dispatchOpenFile(resolvedPath, fileRef.line, fileRef.col);
+    },
+    [resolvedPath, fileRef.line, fileRef.col],
+  );
   return (
     <span className="relative inline-block">
       <button
-        ref={badgeRef} type="button" aria-label={buildAriaLabel(fileRef)}
+        ref={badgeRef}
+        type="button"
+        aria-label={buildAriaLabel(fileRef)}
         className="cursor-pointer underline text-interactive-accent hover:text-interactive-hover bg-transparent border-0 p-0 font-inherit text-inherit"
         style={{ fontFamily: 'inherit', fontSize: 'inherit' }}
-        onClick={handleClick} onMouseEnter={onEnter} onMouseLeave={onLeave}
-      >{children}</button>
-      {showCard && (
-        <CitationHoverCard fileRef={fileRef} projectRoot={projectRoot} anchorRef={badgeRef} onClose={onLeave} />
-      )}
+        onClick={handleClick}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+      >
+        {children}
+      </button>
+      <BadgeHoverCard show={showCard} fileRef={fileRef} projectRoot={projectRoot} anchorRef={badgeRef} onClose={onLeave} />
     </span>
   );
 }

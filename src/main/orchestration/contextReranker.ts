@@ -48,7 +48,7 @@ export function buildRerankPrompt(
     .join('\n');
 
   return [
-    'Rerank these files by relevance to the user\'s goal.',
+    "Rerank these files by relevance to the user's goal.",
     'Return JSON: {"order": ["path1", "path2", ...]}',
     '',
     `Goal: ${userGoal}`,
@@ -135,27 +135,31 @@ function applyOrder<T extends RerankCandidate>(candidates: T[], order: string[])
  *
  * All fallbacks are logged at warn level.
  */
+async function spawnForRerank(
+  prompt: string,
+  timeoutMs: number,
+): Promise<Awaited<ReturnType<typeof spawnHaikuForRerank>> | null> {
+  try {
+    return await spawnHaikuForRerank(prompt, timeoutMs);
+  } catch (err) {
+    log.warn('[contextReranker] spawn threw unexpectedly, using original order:', err);
+    return null;
+  }
+}
+
 export async function rerankCandidates<T extends RerankCandidate>(
   userGoal: string,
   candidates: T[],
   opts: RerankOptions = {},
 ): Promise<T[]> {
   if (candidates.length < RERANK_THRESHOLD) return candidates;
-
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const prompt = buildRerankPrompt(
     userGoal,
     candidates.map((c) => ({ path: c.path, snippetPreview: c.snippetPreview })),
   );
-
-  let spawnResult: Awaited<ReturnType<typeof spawnHaikuForRerank>>;
-  try {
-    spawnResult = await spawnHaikuForRerank(prompt, timeoutMs);
-  } catch (err) {
-    log.warn('[contextReranker] spawn threw unexpectedly, using original order:', err);
-    return candidates;
-  }
-
+  const spawnResult = await spawnForRerank(prompt, timeoutMs);
+  if (!spawnResult) return candidates;
   if (!spawnResult.success || !spawnResult.output) {
     log.warn(
       '[contextReranker] spawn failed (%s), using original order (latency: %dms)',
@@ -164,21 +168,12 @@ export async function rerankCandidates<T extends RerankCandidate>(
     );
     return candidates;
   }
-
   const order = parseRerankedOrder(spawnResult.output, candidates.map((c) => c.path));
   if (!order) {
-    log.warn(
-      '[contextReranker] could not parse rerank JSON from output, using original order',
-    );
+    log.warn('[contextReranker] could not parse rerank JSON from output, using original order');
     return candidates;
   }
-
-  log.info(
-    '[contextReranker] reranked %d candidates in %dms',
-    candidates.length,
-    spawnResult.latencyMs,
-  );
-
+  log.info('[contextReranker] reranked %d candidates in %dms', candidates.length, spawnResult.latencyMs);
   return applyOrder(candidates, order);
 }
 
@@ -193,7 +188,11 @@ export async function rerankRankedFiles(
   opts: RerankOptions = {},
 ): Promise<RankedContextFile[]> {
   if (store.get('context')?.rerankerEnabled === false) return files;
-  const candidates = files.map((f) => ({ path: f.filePath, snippetPreview: f.reasons[0]?.detail ?? '', _file: f }));
+  const candidates = files.map((f) => ({
+    path: f.filePath,
+    snippetPreview: f.reasons[0]?.detail ?? '',
+    _file: f,
+  }));
   const reranked = await rerankCandidates(goal, candidates, opts);
   return reranked.map((c) => c._file);
 }

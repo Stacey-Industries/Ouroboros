@@ -36,11 +36,16 @@ const PROVIDERS: ProviderMeta[] = [
 export function useMultiProvider(): boolean {
   const [enabled, setEnabled] = useState(false);
   const load = useCallback(() => {
-    window.electronAPI?.config?.getAll()
-      ?.then((cfg) => { setEnabled(cfg?.providers?.multiProvider === true); })
+    window.electronAPI?.config
+      ?.getAll()
+      ?.then((cfg) => {
+        setEnabled(cfg?.providers?.multiProvider === true);
+      })
       ?.catch(() => undefined);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
   return enabled;
 }
 
@@ -100,7 +105,9 @@ export function ProfileEditorProviderPicker({
   const [avail, setAvail] = useState<AvailMap>({});
 
   useEffect(() => {
-    fetchAvailability().then(setAvail).catch(() => undefined);
+    fetchAvailability()
+      .then(setAvail)
+      .catch(() => undefined);
   }, []);
 
   return (
@@ -121,10 +128,7 @@ export function ProfileEditorProviderPicker({
             />
             <span className="text-text-semantic-primary">{p.label}</span>
             {hasBadge && (
-              <span
-                style={badgeStyle(isAvail)}
-                data-testid={`provider-badge-${p.id}`}
-              >
+              <span style={badgeStyle(isAvail)} data-testid={`provider-badge-${p.id}`}>
                 {badgeText}
               </span>
             )}

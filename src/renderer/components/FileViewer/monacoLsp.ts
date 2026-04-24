@@ -13,10 +13,16 @@ import { setActiveLspContext } from './monacoLspContext';
 
 /** Maps file extension to the LSP server language key. */
 const SERVER_LANG_BY_EXT: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript',
-  '.py': 'python', '.rs': 'rust', '.go': 'go',
-  '.css': 'css', '.html': 'html', '.json': 'json',
+  '.ts': 'typescript',
+  '.tsx': 'typescript',
+  '.js': 'javascript',
+  '.jsx': 'javascript',
+  '.py': 'python',
+  '.rs': 'rust',
+  '.go': 'go',
+  '.css': 'css',
+  '.html': 'html',
+  '.json': 'json',
 };
 
 export function detectLspLanguage(fp: string): string | null {
@@ -32,9 +38,7 @@ const SEVERITY_MAP: Record<string, monaco.MarkerSeverity> = {
   hint: monaco.MarkerSeverity.Hint,
 };
 
-export function mapDiagnosticsToMarkers(
-  diagnostics: LspDiagnostic[],
-): monaco.editor.IMarkerData[] {
+export function mapDiagnosticsToMarkers(diagnostics: LspDiagnostic[]): monaco.editor.IMarkerData[] {
   return diagnostics.map((d) => ({
     severity: SEVERITY_MAP[d.severity] ?? monaco.MarkerSeverity.Info,
     startLineNumber: d.range.startLine + 1,
@@ -97,7 +101,10 @@ function cleanupLspSession(opts: LspCleanupOpts): void {
   opts.diagCleanup?.();
   const model = opts.editorRef.current?.getModel();
   if (model) monaco.editor.setModelMarkers(model, 'lsp', []);
-  if (opts.timerRef.current) { clearTimeout(opts.timerRef.current); opts.timerRef.current = null; }
+  if (opts.timerRef.current) {
+    clearTimeout(opts.timerRef.current);
+    opts.timerRef.current = null;
+  }
   setActiveLspContext(null, null);
 }
 
@@ -136,10 +143,13 @@ function useLspOpenClose(
     let cancelled = false;
     let diagCleanup: (() => void) | null = null;
 
-    window.electronAPI.config.get('lspEnabled').then((enabled) => {
-      if (!enabled || cancelled) return;
-      diagCleanup = startLspSession({ root, filePath, language: lang, content, editorRef });
-    }).catch(() => {});
+    window.electronAPI.config
+      .get('lspEnabled')
+      .then((enabled) => {
+        if (!enabled || cancelled) return;
+        diagCleanup = startLspSession({ root, filePath, language: lang, content, editorRef });
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;

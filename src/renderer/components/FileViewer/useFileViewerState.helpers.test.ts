@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { hasConflictMarkers,parseConflictBlocks } from './ConflictResolver.model';
-import { createDiffMap, createFileViewerState, createKeyboardInput, parseConflictContent, toggleCollapsedFold } from './useFileViewerState.helpers';
+import { hasConflictMarkers, parseConflictBlocks } from './ConflictResolver.model';
+import {
+  createDiffMap,
+  createFileViewerState,
+  createKeyboardInput,
+  parseConflictContent,
+  toggleCollapsedFold,
+} from './useFileViewerState.helpers';
 import type { FoldRange } from './useFoldRanges';
 
 describe('useFileViewerState helpers', () => {

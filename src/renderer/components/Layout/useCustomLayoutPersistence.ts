@@ -28,7 +28,9 @@ export function useCustomLayoutPersistence(sessionId: string): CustomLayoutPersi
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -39,14 +41,17 @@ export function useCustomLayoutPersistence(sessionId: string): CustomLayoutPersi
     });
   }, [sessionId]);
 
-  const save = useCallback((tree: SerializedSlotNode) => {
-    if (!sessionId || !hasApi()) return;
-    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (!mountedRef.current) return;
-      void window.electronAPI.layout.setCustomLayout(sessionId, tree);
-    }, DEBOUNCE_MS);
-  }, [sessionId]);
+  const save = useCallback(
+    (tree: SerializedSlotNode) => {
+      if (!sessionId || !hasApi()) return;
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        void window.electronAPI.layout.setCustomLayout(sessionId, tree);
+      }, DEBOUNCE_MS);
+    },
+    [sessionId],
+  );
 
   const clear = useCallback(() => {
     if (!sessionId || !hasApi()) return;

@@ -19,8 +19,14 @@ import { ChatHistoryStatusDot } from './ChatHistoryStatusDot';
 afterEach(() => cleanup());
 
 const ALL_STATUSES: AgentChatThreadStatus[] = [
-  'idle', 'submitting', 'running', 'verifying',
-  'needs_review', 'complete', 'failed', 'cancelled',
+  'idle',
+  'submitting',
+  'running',
+  'verifying',
+  'needs_review',
+  'complete',
+  'failed',
+  'cancelled',
 ];
 
 describe('ChatHistoryStatusDot', () => {

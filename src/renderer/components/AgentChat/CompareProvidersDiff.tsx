@@ -47,7 +47,10 @@ const HEADER_STYLE: React.CSSProperties = {
   flexShrink: 0,
 };
 
-interface DiffLegendProps { labelA: string; labelB: string }
+interface DiffLegendProps {
+  labelA: string;
+  labelB: string;
+}
 
 function DiffLegend({ labelA, labelB }: DiffLegendProps): React.ReactElement {
   return (
@@ -87,10 +90,7 @@ export function CompareProvidersDiff({
           <span className="text-text-semantic-muted">No output to diff yet.</span>
         )}
         {tokens.map((token, i) => (
-          <span
-            key={i}
-            style={token.kind === 'equal' ? undefined : TOKEN_STYLES[token.kind]}
-          >
+          <span key={i} style={token.kind === 'equal' ? undefined : TOKEN_STYLES[token.kind]}>
             {token.text}
           </span>
         ))}

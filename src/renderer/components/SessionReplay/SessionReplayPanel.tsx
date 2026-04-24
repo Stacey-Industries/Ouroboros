@@ -2,9 +2,7 @@ import React from 'react';
 
 import type { AgentSession } from '../AgentMonitor/types';
 import { useSessionReplayController } from './SessionReplayPanelController';
-import {
-  SessionReplayLayout,
-} from './SessionReplayPanelSections';
+import { SessionReplayLayout } from './SessionReplayPanelSections';
 
 interface SessionReplayPanelProps {
   session: AgentSession;

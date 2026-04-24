@@ -19,15 +19,16 @@ import { sendFcmNotification } from './fcmAdapter';
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('sendFcmNotification — stub behaviour', () => {
   it('returns sent:false with reason no-fcm-backend', async () => {
-    const result = await sendFcmNotification(
-      '/path/to/service-account.json',
-      'device-token-xyz',
-      { title: 'Job done', body: 'Your dispatch job completed.' },
-    );
+    const result = await sendFcmNotification('/path/to/service-account.json', 'device-token-xyz', {
+      title: 'Job done',
+      body: 'Your dispatch job completed.',
+    });
     expect(result.sent).toBe(false);
     expect(result.reason).toBe('no-fcm-backend');
     expect(result.error).toBeUndefined();
@@ -60,7 +61,9 @@ describe('sendFcmNotification — stub behaviour', () => {
 });
 
 describe('sendFcmNotification — future wiring guard', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('resolves (does not reject) regardless of serviceAccountPath', async () => {
     await expect(

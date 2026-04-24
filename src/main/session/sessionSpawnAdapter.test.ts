@@ -44,7 +44,9 @@ const mockKillPty = vi.fn(() => ({ success: true }));
 const mockEscapePowerShellArg = vi.fn((s: string) => s);
 
 vi.mock('../pty', () => ({
-  get sessions() { return mockSessions; },
+  get sessions() {
+    return mockSessions;
+  },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registerSession: (...a: any[]) => mockRegisterSession(...a),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +72,9 @@ function makeMockProc(): MockProc {
   let exitH: ExitHandler | null = null;
   return {
     onData: vi.fn(),
-    onExit: (h: ExitHandler) => { exitH = h; },
+    onExit: (h: ExitHandler) => {
+      exitH = h;
+    },
     write: vi.fn(),
     _triggerExit: (code: number) => exitH?.({ exitCode: code }),
   };
@@ -90,7 +94,10 @@ const mockBridgeHandleExit = vi.fn();
 vi.mock('../ptyAgentBridge', () => ({
   createAgentBridge: ({ onComplete }: { onComplete?: () => void }) => ({
     feed: mockBridgeFeed,
-    handleExit: (code: number) => { mockBridgeHandleExit(code); onComplete?.(); },
+    handleExit: (code: number) => {
+      mockBridgeHandleExit(code);
+      onComplete?.();
+    },
     dispose: vi.fn(),
   }),
 }));
@@ -156,8 +163,9 @@ describe('sessionSpawnAdapter', () => {
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValueOnce([]);
 
       const { spawnAgentSession } = await import('./sessionSpawnAdapter');
-      await expect(spawnAgentSession({ prompt: 'x', projectPath: '/p' }))
-        .rejects.toThrow('No BrowserWindow available');
+      await expect(spawnAgentSession({ prompt: 'x', projectPath: '/p' })).rejects.toThrow(
+        'No BrowserWindow available',
+      );
     });
 
     it('completion resolves after proc exits with code 0', async () => {
@@ -193,8 +201,9 @@ describe('sessionSpawnAdapter', () => {
       mockSpawnAgentViaPtyHost.mockResolvedValue({ success: false, error: 'host down' });
 
       const { spawnAgentSession } = await import('./sessionSpawnAdapter');
-      await expect(spawnAgentSession({ prompt: 'hi', projectPath: '/p' }))
-        .rejects.toThrow('host down');
+      await expect(spawnAgentSession({ prompt: 'hi', projectPath: '/p' })).rejects.toThrow(
+        'host down',
+      );
     });
   });
 

@@ -44,15 +44,18 @@ import { rgbStringToHex, useNativeStatusBar } from './useNativeStatusBar';
 // hardcoded: test file — hex/rgba literals are test inputs and expected values for rgbStringToHex.
 // These are not design-token usages; the color hook suppression applies here.
 describe('rgbStringToHex', () => {
-  it('converts rgb() to hex', () => { // hardcoded: test description contains rgb literal
+  it('converts rgb() to hex', () => {
+    // hardcoded: test description contains rgb literal
     expect(rgbStringToHex('rgb(17, 17, 19)', '#000000')).toBe('#111113'); // hardcoded: test input/expected
   });
 
-  it('converts rgba() with non-zero alpha to hex', () => { // hardcoded: test description contains rgba literal
+  it('converts rgba() with non-zero alpha to hex', () => {
+    // hardcoded: test description contains rgba literal
     expect(rgbStringToHex('rgba(255, 255, 255, 1)', '#000000')).toBe('#ffffff'); // hardcoded: test input/expected
   });
 
-  it('returns fallback for transparent rgba(0,0,0,0)', () => { // hardcoded: test description contains rgba literal
+  it('returns fallback for transparent rgba(0,0,0,0)', () => {
+    // hardcoded: test description contains rgba literal
     expect(rgbStringToHex('rgba(0, 0, 0, 0)', '#111113')).toBe('#111113'); // hardcoded: test input/expected
   });
 

@@ -7,11 +7,7 @@
 
 import React, { useId } from 'react';
 
-import {
-  FIELD_GROUP_STYLE,
-  INPUT_STYLE,
-  SECTION_LABEL_STYLE,
-} from './DispatchScreen.styles';
+import { FIELD_GROUP_STYLE, INPUT_STYLE, SECTION_LABEL_STYLE } from './DispatchScreen.styles';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,10 +80,7 @@ function WorktreeNameField({
 }): React.ReactElement {
   return (
     <div>
-      <label
-        htmlFor={inputId}
-        style={{ ...SECTION_LABEL_STYLE, color: 'var(--text-secondary)' }}
-      >
+      <label htmlFor={inputId} style={{ ...SECTION_LABEL_STYLE, color: 'var(--text-secondary)' }}>
         Worktree name *
       </label>
       <input
@@ -118,13 +111,7 @@ export function WorktreeFields({
   return (
     <div style={FIELD_GROUP_STYLE}>
       <WorktreeToggle checkboxId={checkboxId} enabled={enabled} onToggle={onToggle} />
-      {enabled && (
-        <WorktreeNameField
-          inputId={inputId}
-          name={name}
-          onNameChange={onNameChange}
-        />
-      )}
+      {enabled && <WorktreeNameField inputId={inputId} name={name} onNameChange={onNameChange} />}
     </div>
   );
 }

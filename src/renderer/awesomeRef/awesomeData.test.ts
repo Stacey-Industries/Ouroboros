@@ -47,14 +47,10 @@ describe('AWESOME_ENTRIES shape', () => {
     const validKinds = ['rule', 'skill', 'hook'];
     for (const entry of AWESOME_ENTRIES) {
       if (entry.installAction) {
-        expect(
-          validKinds,
-          `${entry.id}: invalid installAction.kind`,
-        ).toContain(entry.installAction.kind);
-        expect(
-          entry.installAction.payload,
-          `${entry.id}: payload must be an object`,
-        ).toBeDefined();
+        expect(validKinds, `${entry.id}: invalid installAction.kind`).toContain(
+          entry.installAction.kind,
+        );
+        expect(entry.installAction.payload, `${entry.id}: payload must be an object`).toBeDefined();
       }
     }
   });

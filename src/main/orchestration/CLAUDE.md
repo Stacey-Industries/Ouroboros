@@ -1,15 +1,5 @@
 <!-- claude-md-auto:start -->
-Here's what changed from the previous version:
 
-**Fixes:**
-- `types.ts` row: was described as "600+ lines, single source of truth" — it's actually a 14-line re-export barrel. The description now explains the intentional split across `typesDomain.ts` / `typesContext.ts` / `typesProvider.ts` and why (300-line ESLint limit).
-- `events.ts` row: now accurately describes the `satisfies` compile-time type checks it contains, not just "IPC channel constants".
-
-**Additions:**
-- `contextWorker.ts` added to the key files table with its actual role (worker thread, 30s proactive refresh).
-- A note in the Data Flow section explaining the worker's proactive warm-up pattern.
-- A gotcha entry for the `types.ts` barrel to prevent future confusion.
-- `@shared/ipc/orchestrationChannels` added to the Dependencies table.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

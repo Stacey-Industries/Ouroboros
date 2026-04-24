@@ -12,7 +12,11 @@ import { useGraphViewport } from './useGraphViewport';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeWheelEvent(deltaY: number, offsetX = 0, offsetY = 0): React.WheelEvent<HTMLCanvasElement> {
+function makeWheelEvent(
+  deltaY: number,
+  offsetX = 0,
+  offsetY = 0,
+): React.WheelEvent<HTMLCanvasElement> {
   return {
     deltaY,
     preventDefault: () => {},
@@ -39,20 +43,26 @@ describe('useGraphViewport', () => {
 
   it('wheel up (negative deltaY) zooms in — increases scale', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onWheel(makeWheelEvent(-100)); });
+    act(() => {
+      result.current.onWheel(makeWheelEvent(-100));
+    });
     expect(result.current.transform.scale).toBeGreaterThan(1);
   });
 
   it('wheel down (positive deltaY) zooms out — decreases scale', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onWheel(makeWheelEvent(100)); });
+    act(() => {
+      result.current.onWheel(makeWheelEvent(100));
+    });
     expect(result.current.transform.scale).toBeLessThan(1);
   });
 
   it('scale is clamped to MAX_SCALE on repeated zoom-in', () => {
     const { result } = renderHook(() => useGraphViewport());
     for (let i = 0; i < 100; i++) {
-      act(() => { result.current.onWheel(makeWheelEvent(-500)); });
+      act(() => {
+        result.current.onWheel(makeWheelEvent(-500));
+      });
     }
     expect(result.current.transform.scale).toBeLessThanOrEqual(MAX_SCALE);
   });
@@ -60,40 +70,62 @@ describe('useGraphViewport', () => {
   it('scale is clamped to MIN_SCALE on repeated zoom-out', () => {
     const { result } = renderHook(() => useGraphViewport());
     for (let i = 0; i < 100; i++) {
-      act(() => { result.current.onWheel(makeWheelEvent(500)); });
+      act(() => {
+        result.current.onWheel(makeWheelEvent(500));
+      });
     }
     expect(result.current.transform.scale).toBeGreaterThanOrEqual(MIN_SCALE);
   });
 
   it('pointer drag updates x and y', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onPointerDown(makePointerEvent(100, 100)); });
-    act(() => { result.current.onPointerMove(makePointerEvent(150, 120)); });
+    act(() => {
+      result.current.onPointerDown(makePointerEvent(100, 100));
+    });
+    act(() => {
+      result.current.onPointerMove(makePointerEvent(150, 120));
+    });
     expect(result.current.transform.x).toBe(50);
     expect(result.current.transform.y).toBe(20);
   });
 
   it('pointer move without prior pointerDown is a no-op', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onPointerMove(makePointerEvent(200, 200)); });
+    act(() => {
+      result.current.onPointerMove(makePointerEvent(200, 200));
+    });
     expect(result.current.transform).toEqual({ x: 0, y: 0, scale: 1 });
   });
 
   it('pointerUp stops panning (subsequent move has no effect)', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onPointerDown(makePointerEvent(0, 0)); });
-    act(() => { result.current.onPointerUp(makePointerEvent(0, 0)); });
-    act(() => { result.current.onPointerMove(makePointerEvent(100, 100)); });
+    act(() => {
+      result.current.onPointerDown(makePointerEvent(0, 0));
+    });
+    act(() => {
+      result.current.onPointerUp(makePointerEvent(0, 0));
+    });
+    act(() => {
+      result.current.onPointerMove(makePointerEvent(100, 100));
+    });
     expect(result.current.transform.x).toBe(0);
     expect(result.current.transform.y).toBe(0);
   });
 
   it('resetView returns transform to identity', () => {
     const { result } = renderHook(() => useGraphViewport());
-    act(() => { result.current.onWheel(makeWheelEvent(-300)); });
-    act(() => { result.current.onPointerDown(makePointerEvent(0, 0)); });
-    act(() => { result.current.onPointerMove(makePointerEvent(50, 50)); });
-    act(() => { result.current.resetView(); });
+    act(() => {
+      result.current.onWheel(makeWheelEvent(-300));
+    });
+    act(() => {
+      result.current.onPointerDown(makePointerEvent(0, 0));
+    });
+    act(() => {
+      result.current.onPointerMove(makePointerEvent(50, 50));
+    });
+    act(() => {
+      result.current.resetView();
+    });
     expect(result.current.transform).toEqual({ x: 0, y: 0, scale: 1 });
   });
 });

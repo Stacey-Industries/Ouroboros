@@ -6,11 +6,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_SPINNER_CHARS,
-  DEFAULT_THINKING_VERBS,
-  SPINNER_PRESETS,
-} from './thinkingDefaults';
+import { DEFAULT_SPINNER_CHARS, DEFAULT_THINKING_VERBS, SPINNER_PRESETS } from './thinkingDefaults';
 
 afterEach(() => {
   // no DOM side-effects to clean up

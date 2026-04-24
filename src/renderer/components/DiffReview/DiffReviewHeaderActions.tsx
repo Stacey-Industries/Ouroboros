@@ -137,8 +137,8 @@ function PopoverItem({
 function ExportButton({ files }: { files: ReviewFile[] }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasDecisions = files.some(
-    (f) => f.hunks.some((h) => h.decision === 'accepted' || h.decision === 'rejected'),
+  const hasDecisions = files.some((f) =>
+    f.hunks.some((h) => h.decision === 'accepted' || h.decision === 'rejected'),
   );
 
   const handleToggle = () => setOpen((prev) => !prev);
@@ -188,7 +188,11 @@ export function DiffReviewHeaderActions({
           <HeaderBtn label="Reject All" color="var(--status-error)" onClick={onRejectAll} />
         </>
       )}
-      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--interactive-accent)" onClick={onClose} />
+      <HeaderBtn
+        label={allDecided ? 'Done' : 'Close'}
+        color="var(--interactive-accent)"
+        onClick={onClose}
+      />
     </div>
   );
 }

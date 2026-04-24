@@ -14,12 +14,22 @@ import type { InnerAppLayoutProps } from './InnerAppLayout';
 import { InnerAppLayout } from './InnerAppLayout';
 
 // Stub every module that would require Electron, xterm, Monaco, etc.
-vi.mock('../FileViewer', () => ({ FileViewerManager: ({ children }: React.PropsWithChildren) => <>{children}</> }));
-vi.mock('../FileViewer/MultiBufferManager', () => ({ MultiBufferManager: ({ children }: React.PropsWithChildren) => <>{children}</> }));
-vi.mock('../DiffReview', () => ({ DiffReviewProvider: ({ children }: React.PropsWithChildren) => <>{children}</> }));
-vi.mock('../shared/ErrorBoundary', () => ({ ErrorBoundary: ({ children }: React.PropsWithChildren) => <>{children}</> }));
+vi.mock('../FileViewer', () => ({
+  FileViewerManager: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
+vi.mock('../FileViewer/MultiBufferManager', () => ({
+  MultiBufferManager: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
+vi.mock('../DiffReview', () => ({
+  DiffReviewProvider: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
+vi.mock('../shared/ErrorBoundary', () => ({
+  ErrorBoundary: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
 vi.mock('./IdeToolBridge', () => ({ IdeToolBridge: () => null }));
-vi.mock('./AppLayoutConnected', () => ({ AppLayoutConnected: () => <div data-testid="app-layout" /> }));
+vi.mock('./AppLayoutConnected', () => ({
+  AppLayoutConnected: () => <div data-testid="app-layout" />,
+}));
 vi.mock('./CentrePaneConnected', () => ({ CentrePaneConnected: () => null }));
 vi.mock('../FileTree/ProjectPicker', () => ({ ProjectPicker: () => null }));
 vi.mock('../Terminal/TerminalManager', () => ({ TerminalManager: () => null }));
@@ -86,9 +96,7 @@ describe('InnerAppLayout', () => {
   });
 
   it('renders with persistTerminalSessions enabled', () => {
-    const { container } = render(
-      <InnerAppLayout {...baseProps} persistTerminalSessions={true} />,
-    );
+    const { container } = render(<InnerAppLayout {...baseProps} persistTerminalSessions={true} />);
     expect(container).toBeDefined();
   });
 });

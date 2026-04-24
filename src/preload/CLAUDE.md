@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The preload layer has a deliberate split across three files driven by the 300-line ESLint limit. `preload.ts` assembles core domains (pty, config, files, hooks, app, shell, theme, git, providers, auth, codex), while `preloadSupplementalApis.ts` carries newer/heavier domains and uses a shared `onChannel<T>` helper that abstracts away the `IpcRendererEvent` stripping pattern. Both files converge into a single `contextBridge.exposeInMainWorld` call — there is only one exposure point.
-`─────────────────────────────────────────────────`
-
 # Preload — contextBridge IPC Surface
 
 Single entry point that assembles typed `window.electronAPI` from domain slices and exposes it to the renderer via `contextBridge.exposeInMainWorld`.
@@ -38,4 +34,5 @@ Single entry point that assembles typed `window.electronAPI` from domain slices 
 - Imports channel name constants from `@shared/ipc/agentChatChannels` and `@shared/ipc/orchestrationChannels`
 - No imports from `@main/*` — preload cannot import main-process modules
 - Consumed exclusively by the renderer via `window.electronAPI`
+
 <!-- claude-md-auto:end -->

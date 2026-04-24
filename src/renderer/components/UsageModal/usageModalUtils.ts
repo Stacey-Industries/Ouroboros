@@ -41,7 +41,12 @@ export function formatCost(value: number): string {
 
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function timeAgo(timestamp: number): string {
@@ -95,7 +100,11 @@ export function getSessionTotalTokens(session: SessionUsage): number {
 
 export function getSummaryCards(totals: UsageTotals): SummaryCardData[] {
   return [
-    { label: 'Sessions', value: String(totals.sessionCount), sub: `${totals.messageCount} messages` },
+    {
+      label: 'Sessions',
+      value: String(totals.sessionCount),
+      sub: `${totals.messageCount} messages`,
+    },
     { label: 'Input Tokens', value: formatTokens(totals.inputTokens) },
     { label: 'Output Tokens', value: formatTokens(totals.outputTokens) },
     { label: 'Cache Read', value: formatTokens(totals.cacheReadTokens) },

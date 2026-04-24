@@ -12,10 +12,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AgentChatStoreContext,
-  createAgentChatStore,
-} from '../../AgentChat/agentChatStore';
+import { AgentChatStoreContext, createAgentChatStore } from '../../AgentChat/agentChatStore';
 import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
 
 // ── Stub heavy sub-components ─────────────────────────────────────────────────
@@ -29,7 +26,10 @@ vi.mock('../../AgentChat/SelectPill', () => ({
     value: string;
     onChange: (v: string) => void;
   }) => (
-    <button data-testid={`select-pill-${label.toLowerCase()}`} onClick={() => onChange('claude-opus-4-5')}>
+    <button
+      data-testid={`select-pill-${label.toLowerCase()}`}
+      onClick={() => onChange('claude-opus-4-5')}
+    >
       {label}
     </button>
   ),
@@ -57,12 +57,14 @@ function makeStore(overrides: Overrides = {}) {
   return store;
 }
 
-function Wrapper({ store, children }: { store: ReturnType<typeof createAgentChatStore>; children: React.ReactNode }) {
-  return (
-    <AgentChatStoreContext.Provider value={store}>
-      {children}
-    </AgentChatStoreContext.Provider>
-  );
+function Wrapper({
+  store,
+  children,
+}: {
+  store: ReturnType<typeof createAgentChatStore>;
+  children: React.ReactNode;
+}) {
+  return <AgentChatStoreContext.Provider value={store}>{children}</AgentChatStoreContext.Provider>;
 }
 
 function renderWithStore(overrides: Overrides = {}) {
@@ -99,6 +101,11 @@ describe('ChatOnlyHeaderControls', () => {
     renderWithStore();
     const chip = screen.getByRole('button', { name: /permission mode/i });
     expect(chip).toBeDefined();
+  });
+
+  it('renders effort SelectPill', () => {
+    renderWithStore();
+    expect(screen.getByTestId('select-pill-effort')).toBeDefined();
   });
 
   it('calls onChatOverridesChange with new model when model pill changes', () => {
@@ -139,6 +146,40 @@ describe('ChatOnlyHeaderControls', () => {
     fireEvent.click(screen.getByRole('button', { name: /permission mode/i }));
     expect(onChatOverridesChange).toHaveBeenCalledWith(
       expect.objectContaining({ permissionMode: expect.any(String) }),
+    );
+  });
+
+  it('shows app-server Codex permission modes when the transport flag is enabled', () => {
+    const onChatOverridesChange = vi.fn();
+    const store = createAgentChatStore();
+    store.setState({
+      chatOverrides: {
+        model: '',
+        effort: 'medium',
+        permissionMode: 'acceptEdits',
+      },
+      defaultProvider: 'codex',
+      codexAppServerTransport: true,
+      onChatOverridesChange,
+    });
+    render(
+      <AgentChatStoreContext.Provider value={store}>
+        <ChatOnlyHeaderControls />
+      </AgentChatStoreContext.Provider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /permission mode: accept edits/i }));
+    expect(onChatOverridesChange).toHaveBeenCalledWith(
+      expect.objectContaining({ permissionMode: 'plan' }),
+    );
+  });
+
+  it('calls onChatOverridesChange with new effort when effort pill changes', () => {
+    const onChatOverridesChange = vi.fn();
+    renderWithStore({ onChatOverridesChange });
+    fireEvent.click(screen.getByTestId('select-pill-effort'));
+    expect(onChatOverridesChange).toHaveBeenCalledWith(
+      expect.objectContaining({ effort: 'claude-opus-4-5' }),
     );
   });
 

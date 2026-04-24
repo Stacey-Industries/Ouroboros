@@ -22,6 +22,7 @@ import {
   type CompletionArgs,
 } from './claudeCodeState';
 import { spawnStreamJsonProcess } from './claudeStreamJsonRunner';
+import { getOrCreateWarm, sendWarmTurn } from './claudeWarmProcessManager';
 import { createProviderSessionReference, type ProviderProgressSink } from './providerAdapter';
 import type { StreamJsonEvent, StreamJsonResultEvent } from './streamJsonTypes';
 
@@ -65,8 +66,10 @@ function formatErrorDetail(result: StreamJsonResultEvent): string {
 }
 
 function buildStopReasonMessage(result: StreamJsonResultEvent): string | null {
-  const isError = result.is_error || result.subtype === 'error' || result.subtype === 'error_during_execution';
-  if (isError) return `**Agent stopped** — Claude Code reported an error${formatErrorDetail(result)}`;
+  const isError =
+    result.is_error || result.subtype === 'error' || result.subtype === 'error_during_execution';
+  if (isError)
+    return `**Agent stopped** — Claude Code reported an error${formatErrorDetail(result)}`;
   if (result.stop_reason === 'max_tokens')
     return '**Agent stopped** — hit output token limit (stop_reason: max_tokens)';
   if (result.stop_reason && result.stop_reason !== 'end_turn')
@@ -79,6 +82,67 @@ export function buildStopDiagnostic(result: StreamJsonResultEvent | null): strin
     return '\n\n---\n**Agent stopped** — no result event received from Claude Code process.';
   const message = buildStopReasonMessage(result);
   return message ? `\n\n---\n${message}` : null;
+}
+
+function pickCoreSettingFlags(s: ClaudeCliSettings): {
+  model: string | undefined;
+  permissionMode: string | undefined;
+  dangerouslySkipPermissions: boolean | undefined;
+  allowedTools: string | undefined;
+  disallowedTools: string | undefined;
+} {
+  return {
+    model: s.model || undefined,
+    permissionMode: s.permissionMode !== 'default' ? s.permissionMode : undefined,
+    dangerouslySkipPermissions: s.dangerouslySkipPermissions || undefined,
+    allowedTools: s.allowedTools || undefined,
+    disallowedTools: s.disallowedTools || undefined,
+  };
+}
+
+function pickExtendedSettingFlags(s: ClaudeCliSettings): {
+  appendSystemPrompt: string | undefined;
+  addDirs: string[] | undefined;
+  maxBudgetUsd: number | undefined;
+} {
+  const budget = s.maxBudgetUsd;
+  return {
+    appendSystemPrompt: s.appendSystemPrompt || undefined,
+    addDirs: s.addDirs?.length ? s.addDirs : undefined,
+    maxBudgetUsd: typeof budget === 'number' && budget > 0 ? budget : undefined,
+  };
+}
+
+function pickSettingOverrides(settings: ClaudeCliSettings) {
+  return { ...pickCoreSettingFlags(settings), ...pickExtendedSettingFlags(settings) };
+}
+
+// Warm-process routing key: taskId is stable across turns of the same chat
+// thread (assigned once at thread creation by the chat orchestration layer).
+// A follow-up can rename the key if the upstream ID model changes.
+
+function launchWarm(args: {
+  context: { taskId: string };
+  prompt: string;
+  cwd: string;
+  settings: ClaudeCliSettings;
+  sink: ProviderProgressSink;
+  sessionRef: ReturnType<typeof createProviderSessionReference>;
+  providerEnv?: Record<string, string>;
+  effort?: string;
+  eventHandler?: (event: StreamJsonEvent) => void;
+}): { result: Promise<StreamJsonResultEvent> } {
+  const key = args.context.taskId;
+  const spawnOpts = {
+    cwd: args.cwd,
+    ...pickSettingOverrides(args.settings),
+    effort: args.effort || undefined,
+    env: { ...args.providerEnv, OUROBOROS_CHAT_SESSION: '1' },
+  };
+  const handler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler;
+  getOrCreateWarm(key, spawnOpts);
+  log.info(`[warm:${key}] routing turn via warm process`);
+  return { result: sendWarmTurn(key, args.prompt, handler) };
 }
 
 export function launchHeadless(args: {
@@ -94,14 +158,14 @@ export function launchHeadless(args: {
   providerEnv?: Record<string, string>;
   eventHandler?: (event: StreamJsonEvent) => void;
 }): { result: Promise<StreamJsonResultEvent> } {
+  if (args.settings.useWarmProcess && !args.resumeSessionId && !args.continueSession) {
+    return launchWarm(args);
+  }
   const handler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler;
   const handle = spawnStreamJsonProcess({
     prompt: args.prompt,
     cwd: args.cwd,
-    model: args.settings.model || undefined,
-    permissionMode:
-      args.settings.permissionMode !== 'default' ? args.settings.permissionMode : undefined,
-    dangerouslySkipPermissions: args.settings.dangerouslySkipPermissions || undefined,
+    ...pickSettingOverrides(args.settings),
     resumeSessionId: args.resumeSessionId || undefined,
     continueSession: args.continueSession || undefined,
     effort: args.effort || undefined,

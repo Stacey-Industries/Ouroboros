@@ -36,7 +36,10 @@ function buildSearchRegex(query: string, caseSensitive: boolean, useRegex: boole
   }
 }
 
-function collectSegments(codeContainer: HTMLElement): { fullText: string; segments: TextSegment[] } {
+function collectSegments(codeContainer: HTMLElement): {
+  fullText: string;
+  segments: TextSegment[];
+} {
   let fullText = '';
   const segments = getTextNodes(codeContainer).map((node) => {
     const segment = { node, start: fullText.length };
@@ -104,7 +107,12 @@ function getMatchLines(fullText: string, matches: SearchMatch[]): number[] {
   return [...new Set(lineNumbers)];
 }
 
-function createHighlightFragment(nodeText: string, start: number, end: number, isActive: boolean): DocumentFragment {
+function createHighlightFragment(
+  nodeText: string,
+  start: number,
+  end: number,
+  isActive: boolean,
+): DocumentFragment {
   const fragment = document.createDocumentFragment();
   const before = nodeText.slice(0, start);
   const after = nodeText.slice(end);

@@ -11,16 +11,18 @@ import { getNumberField, getStringField } from './useAgentEvents.fieldHelpers';
 import type { AgentAction } from './useAgentEvents.helpers';
 import { dispatchAgentEnd } from './useAgentEvents.helpers';
 
-export function dispatchCompaction(
-  payload: HookPayload,
-  dispatch: Dispatch<AgentAction>,
-): void {
+export function dispatchCompaction(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
   const data = payload.data ?? {};
   const tokenCount = getNumberField(data, 'token_count', 'tokens');
   if (payload.type === 'pre_compact') {
     dispatch({ type: 'PRE_COMPACT', sessionId: payload.sessionId, tokenCount });
   } else {
-    dispatch({ type: 'POST_COMPACT', sessionId: payload.sessionId, tokenCount, timestamp: payload.timestamp });
+    dispatch({
+      type: 'POST_COMPACT',
+      sessionId: payload.sessionId,
+      tokenCount,
+      timestamp: payload.timestamp,
+    });
   }
 }
 
@@ -41,9 +43,7 @@ export function dispatchPermissionEvent(
   dispatch({ type: 'PERMISSION_EVENT', sessionId: payload.sessionId, event });
 }
 
-export function dispatchWorkspaceEvent(
-  payload: HookPayload,
-): void {
+export function dispatchWorkspaceEvent(payload: HookPayload): void {
   if (payload.type === 'file_changed') {
     window.dispatchEvent(new CustomEvent('agent-ide:file-changed'));
     return;
@@ -75,6 +75,7 @@ export function dispatchNotification(payload: HookPayload, dispatch: Dispatch<Ag
 }
 
 export function dispatchStopFailure(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  const error = payload.error ?? (payload.data?.['error'] as string | undefined) ?? 'Session stop failed';
+  const error =
+    payload.error ?? (payload.data?.['error'] as string | undefined) ?? 'Session stop failed';
   dispatchAgentEnd({ ...payload, error }, dispatch);
 }

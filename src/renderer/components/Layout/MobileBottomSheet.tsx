@@ -14,12 +14,7 @@
 import React, { useRef } from 'react';
 
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import {
-  Scrim,
-  useBodyScrollLock,
-  useEscapeKey,
-  useFocusTrap,
-} from './MobileOverlayShell';
+import { Scrim, useBodyScrollLock, useEscapeKey, useFocusTrap } from './MobileOverlayShell';
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -105,9 +100,7 @@ export function MobileBottomSheet({
           <div style={DRAG_HANDLE_ROW_STYLE} aria-hidden="true">
             <div style={DRAG_HANDLE_STYLE} />
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            {children}
-          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
         </div>
       </div>
     </>

@@ -16,19 +16,19 @@
  *    ipcMain and the registry. Useful for new code that wants to be explicit.
  */
 
-import { ipcMain } from 'electron'
+import { ipcMain } from 'electron';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type IpcHandler = (...args: any[]) => Promise<any>
+export type IpcHandler = (...args: any[]) => Promise<any>;
 
 /**
  * Map of IPC channel names to their handler functions.
  * Populated automatically by the ipcMain.handle capture, or explicitly
  * via registerHandler() calls.
  */
-export const ipcHandlerRegistry = new Map<string, IpcHandler>()
+export const ipcHandlerRegistry = new Map<string, IpcHandler>();
 
-let captureInstalled = false
+let captureInstalled = false;
 
 /**
  * Monkey-patches `ipcMain.handle` to also store every handler in the
@@ -39,29 +39,29 @@ let captureInstalled = false
  * we simply intercept it to grab a reference to each handler function.
  */
 export function installHandlerCapture(): void {
-  if (captureInstalled) return
-  captureInstalled = true
+  if (captureInstalled) return;
+  captureInstalled = true;
 
-  const originalHandle = ipcMain.handle.bind(ipcMain)
+  const originalHandle = ipcMain.handle.bind(ipcMain);
 
   ipcMain.handle = ((channel: string, handler: IpcHandler) => {
-    ipcHandlerRegistry.set(channel, handler)
-    return originalHandle(channel, handler)
-  }) as typeof ipcMain.handle
+    ipcHandlerRegistry.set(channel, handler);
+    return originalHandle(channel, handler);
+  }) as typeof ipcMain.handle;
 }
 
 /**
  * Returns the handler registered for a given IPC channel, or undefined.
  */
 export function getHandler(channel: string): IpcHandler | undefined {
-  return ipcHandlerRegistry.get(channel)
+  return ipcHandlerRegistry.get(channel);
 }
 
 /**
  * Returns all registered IPC channel names.
  */
 export function getAllChannels(): string[] {
-  return Array.from(ipcHandlerRegistry.keys())
+  return Array.from(ipcHandlerRegistry.keys());
 }
 
 /**
@@ -69,14 +69,14 @@ export function getAllChannels(): string[] {
  * Does NOT call ipcMain.removeHandler — that is handled separately.
  */
 export function removeHandler(channel: string): void {
-  ipcHandlerRegistry.delete(channel)
+  ipcHandlerRegistry.delete(channel);
 }
 
 /**
  * Clears all handlers from the registry.
  */
 export function clearRegistry(): void {
-  ipcHandlerRegistry.clear()
+  ipcHandlerRegistry.clear();
 }
 
 /**
@@ -87,13 +87,9 @@ export function clearRegistry(): void {
  * @param channel - The IPC channel name (e.g. "git:status")
  * @param handler - The async handler function
  */
-export function registerHandler(
-  channels: string[],
-  channel: string,
-  handler: IpcHandler
-): void {
-  ipcMain.handle(channel, handler)
+export function registerHandler(channels: string[], channel: string, handler: IpcHandler): void {
+  ipcMain.handle(channel, handler);
   // Also store in registry (idempotent if capture is installed)
-  ipcHandlerRegistry.set(channel, handler)
-  channels.push(channel)
+  ipcHandlerRegistry.set(channel, handler);
+  channels.push(channel);
 }

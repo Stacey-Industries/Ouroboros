@@ -62,7 +62,6 @@ export const wave6StubApis: Pick<
   aiStream: {
     startInlineEdit: (request) => ipcRenderer.invoke('ai:streamInlineEdit', request),
     cancelInlineEdit: (request) => ipcRenderer.invoke('ai:cancelInlineEditStream', request),
-    onStream: (requestId, callback) =>
-      onChannel(`ai:inlineEditStream:${requestId}`, callback),
+    onStream: (requestId, callback) => onChannel(`ai:inlineEditStream:${requestId}`, callback),
   } satisfies AiStreamAPI,
 };

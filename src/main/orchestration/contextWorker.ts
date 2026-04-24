@@ -30,7 +30,6 @@ async function handleBuildContext(id: string, roots: string[]): Promise<void> {
 
   let packet: ContextPacket | undefined;
   try {
-     
     const dummyRequest = {
       workspaceRoots: roots,
       goal: '',

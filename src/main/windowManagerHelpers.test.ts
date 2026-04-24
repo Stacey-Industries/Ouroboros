@@ -17,9 +17,7 @@ const { mockOnHeadersReceived } = vi.hoisted(() => ({
 vi.mock('electron', () => ({
   BrowserWindow: class {},
   screen: {
-    getAllDisplays: vi.fn(() => [
-      { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
-    ]),
+    getAllDisplays: vi.fn(() => [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]),
   },
   session: {
     defaultSession: {
@@ -67,9 +65,7 @@ const getAllDisplaysMock = screen.getAllDisplays as ReturnType<typeof vi.fn>;
 describe('validateBounds', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getAllDisplaysMock.mockReturnValue([
-      { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
-    ]);
+    getAllDisplaysMock.mockReturnValue([{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]);
   });
 
   it('returns the bounds when fully on screen', () => {
@@ -230,17 +226,16 @@ describe('ensureCSP — first call installs the handler', async () => {
     ) => void;
 
     let captured: { responseHeaders: Record<string, string[]> } | null = null;
-    handler(
-      { responseHeaders: { 'x-existing': ['value'] } },
-      (result) => { captured = result; },
-    );
+    handler({ responseHeaders: { 'x-existing': ['value'] } }, (result) => {
+      captured = result;
+    });
 
     expect(captured).not.toBeNull();
     const csp = captured!.responseHeaders['Content-Security-Policy'];
     expect(Array.isArray(csp)).toBe(true);
     expect(csp[0]).toContain("default-src 'self'");
-    expect(csp[0]).toContain("script-src");
-    expect(csp[0]).toContain("connect-src");
+    expect(csp[0]).toContain('script-src');
+    expect(csp[0]).toContain('connect-src');
   });
 
   it('preserves existing response headers', async () => {
@@ -254,10 +249,9 @@ describe('ensureCSP — first call installs the handler', async () => {
     ) => void;
 
     let captured: { responseHeaders: Record<string, string[]> } | null = null;
-    handler(
-      { responseHeaders: { 'x-custom-header': ['hello'] } },
-      (result) => { captured = result; },
-    );
+    handler({ responseHeaders: { 'x-custom-header': ['hello'] } }, (result) => {
+      captured = result;
+    });
 
     expect(captured!.responseHeaders['x-custom-header']).toEqual(['hello']);
   });

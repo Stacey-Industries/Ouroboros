@@ -30,10 +30,14 @@ import { hapticImpact, hapticSelection } from './nativeHaptics';
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('nativeHaptics — web fallback (isNativePlatform = false)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(false);
+  });
 
   it('hapticSelection is a no-op on web', async () => {
     await hapticSelection();
@@ -47,7 +51,9 @@ describe('nativeHaptics — web fallback (isNativePlatform = false)', () => {
 });
 
 describe('nativeHaptics — native path (isNativePlatform = true)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(true);
+  });
 
   it('hapticSelection calls Haptics.selectionChanged()', async () => {
     await hapticSelection();

@@ -7,7 +7,10 @@ export type { FileViewerManagerProps, OpenFile, SplitState } from './FileViewerM
 
 const FileViewerContext = createContext<FileViewerState | null>(null);
 
-export function FileViewerManager({ projectRoot, children }: FileViewerManagerProps): React.ReactElement {
+export function FileViewerManager({
+  projectRoot,
+  children,
+}: FileViewerManagerProps): React.ReactElement {
   const value = useFileViewerManagerState(projectRoot);
   return <FileViewerContext.Provider value={value}>{children}</FileViewerContext.Provider>;
 }

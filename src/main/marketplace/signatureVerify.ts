@@ -34,10 +34,7 @@ function importPublicKey(base64: string): crypto.KeyObject | null {
   if (buf.length !== 32) return null;
 
   try {
-    const spkiHeader = Buffer.from(
-      '302a300506032b6570032100',
-      'hex',
-    );
+    const spkiHeader = Buffer.from('302a300506032b6570032100', 'hex');
     const spkiDer = Buffer.concat([spkiHeader, buf]);
     return crypto.createPublicKey({ key: spkiDer, format: 'der', type: 'spki' });
   } catch {

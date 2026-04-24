@@ -9,7 +9,9 @@ import { ThemeImportModalBody } from './ThemeImportModalBody';
 
 afterEach(cleanup);
 
-const noop = (): void => { /* no-op */ };
+const noop = (): void => {
+  /* no-op */
+};
 
 describe('ThemeImportModalBody', () => {
   it('renders Paste JSON tab with textarea by default', () => {

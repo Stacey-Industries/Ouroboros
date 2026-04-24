@@ -162,6 +162,7 @@ function ToolUseBlock({
       errorOutput={block.status === 'error' ? block.output : undefined}
       toolOutput={block.status !== 'error' ? block.output : undefined}
       subTools={block.subTools}
+      subAgentTranscript={block.subAgentTranscript}
     />
   );
 }

@@ -9,13 +9,22 @@ import type {
   TaskRequest,
   VerificationProfileName,
 } from '../../types/electron';
-import { type ContextSelectionModel,useContextSelectionModel } from '../ContextBuilder/useContextSelectionModel';
+import {
+  type ContextSelectionModel,
+  useContextSelectionModel,
+} from '../ContextBuilder/useContextSelectionModel';
 
 function hasElectronAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && 'orchestration' in window.electronAPI;
+  return (
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'orchestration' in window.electronAPI
+  );
 }
 
-function toPreviewPacket(packet: ContextPacket | null): Pick<ContextPacket, 'budget' | 'files' | 'omittedCandidates'> | null {
+function toPreviewPacket(
+  packet: ContextPacket | null,
+): Pick<ContextPacket, 'budget' | 'files' | 'omittedCandidates'> | null {
   if (!packet) {
     return null;
   }
@@ -57,7 +66,10 @@ function resolveTaskId(result: TaskMutationResult): string | null {
   return result.taskId ?? result.session?.taskId ?? null;
 }
 
-function resolveSessionId(result: TaskMutationResult, fallbackSessionId: string | null): string | null {
+function resolveSessionId(
+  result: TaskMutationResult,
+  fallbackSessionId: string | null,
+): string | null {
   return result.session?.id ?? fallbackSessionId;
 }
 
@@ -107,16 +119,24 @@ async function handleStartTaskResult(args: {
   }
 
   args.state.setPreviewPacket(toPreviewPacket(args.startResult.session?.contextPacket ?? null));
-  args.state.setStatus('Orchestration task started. Review the session tabs for provider progress and verification results.');
+  args.state.setStatus(
+    'Orchestration task started. Review the session tabs for provider progress and verification results.',
+  );
 }
 
 function useComposerState() {
   const [goal, setGoal] = useState('');
   const [mode, setMode] = useState<OrchestrationMode>('edit');
   const [provider, setProvider] = useState<OrchestrationProvider>('claude-code');
-  const [verificationProfile, setVerificationProfile] = useState<VerificationProfileName>('default');
-  const [previewPacket, setPreviewPacket] = useState<Pick<ContextPacket, 'budget' | 'files' | 'omittedCandidates'> | null>(null);
-  const [status, setStatus] = useState<string | null>('Preview and launch a narrow orchestration task from this panel.');
+  const [verificationProfile, setVerificationProfile] =
+    useState<VerificationProfileName>('default');
+  const [previewPacket, setPreviewPacket] = useState<Pick<
+    ContextPacket,
+    'budget' | 'files' | 'omittedCandidates'
+  > | null>(null);
+  const [status, setStatus] = useState<string | null>(
+    'Preview and launch a narrow orchestration task from this panel.',
+  );
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -147,14 +167,18 @@ function useComposerRequest(
   selection: ContextSelectionModel['selection'],
   state: ReturnType<typeof useComposerState>,
 ): TaskRequest {
-  return useMemo(() => buildTaskRequest({
-    goal: state.goal,
-    mode: state.mode,
-    projectRoot,
-    provider: state.provider,
-    selection,
-    verificationProfile: state.verificationProfile,
-  }), [projectRoot, selection, state.goal, state.mode, state.provider, state.verificationProfile]);
+  return useMemo(
+    () =>
+      buildTaskRequest({
+        goal: state.goal,
+        mode: state.mode,
+        projectRoot,
+        provider: state.provider,
+        selection,
+        verificationProfile: state.verificationProfile,
+      }),
+    [projectRoot, selection, state.goal, state.mode, state.provider, state.verificationProfile],
+  );
 }
 
 function buildComposerModel(args: {
@@ -227,7 +251,12 @@ async function performComposerStartAction(args: {
 
   args.state.setStatus('Submitting orchestration task to the provider...');
   const startResult = await startTask(taskId);
-  await handleStartTaskResult({ createResult, onTaskReady: args.onTaskReady, startResult, state: args.state });
+  await handleStartTaskResult({
+    createResult,
+    onTaskReady: args.onTaskReady,
+    startResult,
+    state: args.state,
+  });
 }
 
 function useComposerStartAction(
@@ -288,5 +317,12 @@ export function useOrchestrationTaskComposerModel(
   const handlePreview = useComposerPreviewAction(request, state);
   const handleStart = useComposerStartAction(args, request, state);
 
-  return buildComposerModel({ canSubmit, contextSelection, handlePreview, handleStart, projectRoot: args.projectRoot, state });
+  return buildComposerModel({
+    canSubmit,
+    contextSelection,
+    handlePreview,
+    handleStart,
+    projectRoot: args.projectRoot,
+    state,
+  });
 }

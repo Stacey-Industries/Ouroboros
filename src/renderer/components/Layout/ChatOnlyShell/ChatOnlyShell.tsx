@@ -39,10 +39,19 @@ import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
 import { useChatWorkbenchFlag } from './useChatWorkbenchFlag';
 
-function usePendingDiffCount(): number {
+interface DiffSummary {
+  pendingCount: number;
+  isLoading: boolean;
+  hasLoadedState: boolean;
+}
+
+function useDiffSummary(): DiffSummary {
   const { state } = useDiffReview();
-  if (!state) return 0;
-  return state.files.filter((f) => f.hunks.some((h) => h.decision === 'pending')).length;
+  if (!state) return { pendingCount: 0, isLoading: false, hasLoadedState: false };
+  const pendingCount = state.files.filter((f) =>
+    f.hunks.some((h) => h.decision === 'pending'),
+  ).length;
+  return { pendingCount, isLoading: state.loading, hasLoadedState: true };
 }
 
 interface ShellState {
@@ -54,28 +63,90 @@ interface ShellState {
   closeDiffOverlay: () => void;
 }
 
-function useShellState(pendingDiffCount: number): ShellState {
+function useShellState(diff: DiffSummary): ShellState {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [diffOverlayOpen, setDiffOverlayOpen] = useState(false);
 
-  const toggleDrawer = useCallback(() => { setDrawerOpen((prev) => !prev); }, []);
-  const closeDrawer = useCallback(() => { setDrawerOpen(false); }, []);
-  const openDiffOverlay = useCallback(() => { setDiffOverlayOpen(true); }, []);
-  const closeDiffOverlay = useCallback(() => { setDiffOverlayOpen(false); }, []);
+  const toggleDrawer = useCallback(() => {
+    setDrawerOpen((prev) => !prev);
+  }, []);
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+  const openDiffOverlay = useCallback(() => {
+    setDiffOverlayOpen(true);
+  }, []);
+  const closeDiffOverlay = useCallback(() => {
+    setDiffOverlayOpen(false);
+  }, []);
 
-  // Auto-close the overlay once all diffs are resolved.
+  // Auto-close only after the review state has finished loading and there are
+  // no pending hunks left — otherwise a just-opened overlay would close itself
+  // during the brief window when files=[] + loading=true.
   useEffect(() => {
-    if (diffOverlayOpen && pendingDiffCount === 0) closeDiffOverlay();
-  }, [diffOverlayOpen, pendingDiffCount, closeDiffOverlay]);
+    if (!diffOverlayOpen) return;
+    if (!diff.hasLoadedState) return;
+    if (diff.isLoading) return;
+    if (diff.pendingCount === 0) closeDiffOverlay();
+  }, [diffOverlayOpen, diff.hasLoadedState, diff.isLoading, diff.pendingCount, closeDiffOverlay]);
 
   // Hidden-mode fallback: legacy drawer toggle event still works.
   useEffect(() => {
-    const handler = (): void => { toggleDrawer(); };
+    const handler = (): void => {
+      toggleDrawer();
+    };
     window.addEventListener(TOGGLE_SESSION_DRAWER_EVENT, handler);
-    return () => { window.removeEventListener(TOGGLE_SESSION_DRAWER_EVENT, handler); };
+    return () => {
+      window.removeEventListener(TOGGLE_SESSION_DRAWER_EVENT, handler);
+    };
   }, [toggleDrawer]);
 
-  return { drawerOpen, diffOverlayOpen, toggleDrawer, closeDrawer, openDiffOverlay, closeDiffOverlay };
+  return {
+    drawerOpen,
+    diffOverlayOpen,
+    toggleDrawer,
+    closeDrawer,
+    openDiffOverlay,
+    closeDiffOverlay,
+  };
+}
+
+interface DiffReviewOpenDetail {
+  sessionId?: string;
+  snapshotHash?: string;
+  projectRoot?: string;
+  filePaths?: string[];
+}
+
+function useChatOnlyDiffReviewEvents(args: {
+  isWorkbench: boolean;
+  openDiffOverlay: () => void;
+}): void {
+  const diffReview = useDiffReview();
+  const { isWorkbench, openDiffOverlay } = args;
+
+  useEffect(() => {
+    const handleOpen = (event: Event): void => {
+      const detail = (event as CustomEvent<DiffReviewOpenDetail>).detail;
+      if (!detail?.sessionId || !detail.snapshotHash || !detail.projectRoot) {
+        return;
+      }
+      diffReview.openReview(
+        detail.sessionId,
+        detail.snapshotHash,
+        detail.projectRoot,
+        detail.filePaths,
+      );
+      if (!isWorkbench) {
+        openDiffOverlay();
+      }
+    };
+
+    window.addEventListener('agent-ide:open-diff-review', handleOpen);
+    return () => {
+      window.removeEventListener('agent-ide:open-diff-review', handleOpen);
+    };
+  }, [diffReview, isWorkbench, openDiffOverlay]);
 }
 
 export interface ChatOnlyShellProps {
@@ -116,7 +187,9 @@ function renderClassicShell(args: ShellRenderArgs): React.ReactElement {
     <div
       data-layout="app"
       className="flex flex-col h-screen w-screen bg-surface-base overflow-hidden"
-      style={{ backgroundImage: 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)' }}
+      style={{
+        backgroundImage: 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)',
+      }}
     >
       <ChatOnlyTitleBar
         onToggleDrawer={shell.toggleDrawer}
@@ -144,10 +217,11 @@ function renderClassicShell(args: ShellRenderArgs): React.ReactElement {
 
 export function ChatOnlyShell({ terminal }: ChatOnlyShellProps = {}): React.ReactElement {
   const { projectRoot } = useProject();
-  const pendingDiffCount = usePendingDiffCount();
-  const shell = useShellState(pendingDiffCount);
+  const diff = useDiffSummary();
+  const shell = useShellState(diff);
   const sidebarMode = useChatSidebarMode();
   const isWorkbench = useChatWorkbenchFlag();
+  useChatOnlyDiffReviewEvents({ isWorkbench, openDiffOverlay: shell.openDiffOverlay });
 
   // Wave 43 hotfix: lift AgentChat store above the title bar so controls
   // outside AgentChatWorkspace share the same model/permission state.
@@ -180,16 +254,22 @@ interface ChatOnlyBodyProps {
   projectRoot: string | null;
 }
 
-function ChatOnlyBody({ mode, drawerOpen, closeDrawer, projectRoot }: ChatOnlyBodyProps): React.ReactElement {
+function ChatOnlyBody({
+  mode,
+  drawerOpen,
+  closeDrawer,
+  projectRoot,
+}: ChatOnlyBodyProps): React.ReactElement {
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-only-body">
       <ChatHistorySidebar mode={mode} />
       <div className="relative flex-1 flex flex-col min-h-0">
-        {mode === 'hidden' && (
-          <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />
-        )}
+        {mode === 'hidden' && <ChatOnlySessionDrawer open={drawerOpen} onClose={closeDrawer} />}
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="w-full max-w-4xl flex flex-col flex-1 min-h-0 mx-auto">
+          <div
+            className="flex w-full min-h-0 flex-1 flex-col pl-2 pr-4 lg:pl-3 lg:pr-6"
+            data-testid="chat-only-workspace-frame"
+          >
             <AgentChatWorkspace projectRoot={projectRoot} variant="chat-only" />
           </div>
         </main>
@@ -207,7 +287,11 @@ interface ChatOnlyOverlaysProps {
 }
 
 function ChatOnlyOverlays({
-  paletteOpen, closePalette, commands, recentIds, execute,
+  paletteOpen,
+  closePalette,
+  commands,
+  recentIds,
+  execute,
 }: ChatOnlyOverlaysProps): React.ReactElement {
   return (
     <>

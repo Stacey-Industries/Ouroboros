@@ -16,7 +16,15 @@ import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 
 function BranchIcon(): React.ReactElement {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
       <circle cx="4" cy="3" r="1.5" />
       <circle cx="4" cy="13" r="1.5" />
       <circle cx="12" cy="6" r="1.5" />
@@ -46,13 +54,20 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-function TokenUsageItem({ sessions }: { sessions: ReturnType<typeof useAgentEventsContext>['currentSessions'] }): React.ReactElement | null {
+function TokenUsageItem({
+  sessions,
+}: {
+  sessions: ReturnType<typeof useAgentEventsContext>['currentSessions'];
+}): React.ReactElement | null {
   const running = sessions.filter((s) => s.status === 'running');
   if (running.length === 0) return null;
   const totalTokens = running.reduce((sum, s) => sum + s.inputTokens + s.outputTokens, 0);
   if (totalTokens === 0) return null;
   return (
-    <span className="text-text-semantic-muted" title={`${totalTokens.toLocaleString()} tokens in active sessions`}>
+    <span
+      className="text-text-semantic-muted"
+      title={`${totalTokens.toLocaleString()} tokens in active sessions`}
+    >
       {formatTokens(totalTokens)} tokens
     </span>
   );
@@ -60,7 +75,13 @@ function TokenUsageItem({ sessions }: { sessions: ReturnType<typeof useAgentEven
 
 // ── DiffButton ────────────────────────────────────────────────────────────────
 
-function DiffButton({ count, onOpen }: { count: number; onOpen: () => void }): React.ReactElement | null {
+function DiffButton({
+  count,
+  onOpen,
+}: {
+  count: number;
+  onOpen: () => void;
+}): React.ReactElement | null {
   if (count === 0) return null;
   return (
     <button
@@ -89,7 +110,10 @@ function usePendingDiffCount(): number {
   return state.files.filter((f) => f.hunks.some((h) => h.decision === 'pending')).length;
 }
 
-export function ChatOnlyStatusBar({ projectRoot, onOpenDiffOverlay }: ChatOnlyStatusBarProps): React.ReactElement | null {
+export function ChatOnlyStatusBar({
+  projectRoot,
+  onOpenDiffOverlay,
+}: ChatOnlyStatusBarProps): React.ReactElement | null {
   const { branch } = useGitBranch(projectRoot);
   const { currentSessions } = useAgentEventsContext();
   const pendingDiffCount = usePendingDiffCount();

@@ -70,7 +70,12 @@ const GRAPH_PANEL_EVENT = 'agent-ide:open-graph-panel';
 // ── Hooks ───────────────────────────────────────────────────────────────────
 
 function useDiffReviewEvents(
-  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void,
+  openReview: (
+    sessionId: string,
+    snapshotHash: string,
+    projectRoot: string,
+    filePaths?: string[],
+  ) => void,
   setReplaySession: (s: AgentMonitorSession | null) => void,
   setActiveView: (v: 'editor') => void,
 ): void {
@@ -107,9 +112,7 @@ function useSessionReplayEvents(
   }, [closeReview, setReplaySession, setActiveView]);
 }
 
-function useSpecialViewEvents(
-  openAndActivate: (view: SpecialViewType) => void,
-): void {
+function useSpecialViewEvents(openAndActivate: (view: SpecialViewType) => void): void {
   useEffect(() => {
     const handlers = SPECIAL_VIEW_EVENTS.map(([event, view]) => {
       const handler = () => openAndActivate(view);
@@ -132,13 +135,12 @@ function useGraphPanelEvent(
   }, [openAndActivate, enabled]);
 }
 
-function useFileTabClicksSwitchToEditor(
-  setActiveView: (v: 'editor') => void,
-): void {
+function useFileTabClicksSwitchToEditor(setActiveView: (v: 'editor') => void): void {
   useEffect(() => {
     const handler = () => setActiveView('editor');
     window.addEventListener('agent-ide:file-tab-clicked-while-special-view', handler);
-    return () => window.removeEventListener('agent-ide:file-tab-clicked-while-special-view', handler);
+    return () =>
+      window.removeEventListener('agent-ide:file-tab-clicked-while-special-view', handler);
   }, [setActiveView]);
 }
 
@@ -146,26 +148,73 @@ function useFileTabClicksSwitchToEditor(
 
 const layerStyle: React.CSSProperties = {
   position: 'absolute',
-  top: 0, left: 0, right: 0, bottom: 0,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
   flexDirection: 'column',
 };
 
-
-function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement | null {
+function SpecialViewPanel({
+  view,
+  projectRoot,
+}: {
+  view: SpecialViewType;
+  projectRoot: string | null;
+}): React.ReactElement | null {
   const noop = useCallback(() => {}, []);
   const fallback = <LazyPanelFallback />;
   switch (view) {
-    case 'settings': return <React.Suspense fallback={fallback}><SettingsPanel onClose={noop} /></React.Suspense>;
-    case 'usage': return <React.Suspense fallback={fallback}><UsagePanel /></React.Suspense>;
-    case 'context-builder': return projectRoot
-      ? <React.Suspense fallback={fallback}><ContextBuilder projectRoot={projectRoot} onClose={noop} /></React.Suspense>
-      : null;
-    case 'time-travel': return <React.Suspense fallback={fallback}><TimeTravelPanelConnected onClose={noop} /></React.Suspense>;
-    case 'extensions': return <React.Suspense fallback={fallback}><ExtensionStorePage /></React.Suspense>;
-    case 'mcp': return <React.Suspense fallback={fallback}><McpStorePage /></React.Suspense>;
-    case 'usage-dashboard': return <React.Suspense fallback={fallback}><UsageDashboard /></React.Suspense>;
-    case 'graph-panel': return <React.Suspense fallback={fallback}><LazyGraphPanel /></React.Suspense>;
-    default: return null;
+    case 'settings':
+      return (
+        <React.Suspense fallback={fallback}>
+          <SettingsPanel onClose={noop} />
+        </React.Suspense>
+      );
+    case 'usage':
+      return (
+        <React.Suspense fallback={fallback}>
+          <UsagePanel />
+        </React.Suspense>
+      );
+    case 'context-builder':
+      return projectRoot ? (
+        <React.Suspense fallback={fallback}>
+          <ContextBuilder projectRoot={projectRoot} onClose={noop} />
+        </React.Suspense>
+      ) : null;
+    case 'time-travel':
+      return (
+        <React.Suspense fallback={fallback}>
+          <TimeTravelPanelConnected onClose={noop} />
+        </React.Suspense>
+      );
+    case 'extensions':
+      return (
+        <React.Suspense fallback={fallback}>
+          <ExtensionStorePage />
+        </React.Suspense>
+      );
+    case 'mcp':
+      return (
+        <React.Suspense fallback={fallback}>
+          <McpStorePage />
+        </React.Suspense>
+      );
+    case 'usage-dashboard':
+      return (
+        <React.Suspense fallback={fallback}>
+          <UsageDashboard />
+        </React.Suspense>
+      );
+    case 'graph-panel':
+      return (
+        <React.Suspense fallback={fallback}>
+          <LazyGraphPanel />
+        </React.Suspense>
+      );
+    default:
+      return null;
   }
 }
 
@@ -186,23 +235,39 @@ function useCentrePaneState(closeReview: () => void): CentrePaneState {
   const [openViews, setOpenViews] = useState<SpecialViewType[]>([]);
   const [activeView, setActiveView] = useState<'editor' | SpecialViewType>('editor');
 
-  const openAndActivate = useCallback((view: SpecialViewType) => {
-    setReplaySession(null);
-    closeReview();
-    setOpenViews((prev) => prev.includes(view) ? prev : [...prev, view]);
-    setActiveView(view);
-  }, [closeReview]);
+  const openAndActivate = useCallback(
+    (view: SpecialViewType) => {
+      setReplaySession(null);
+      closeReview();
+      setOpenViews((prev) => (prev.includes(view) ? prev : [...prev, view]));
+      setActiveView(view);
+    },
+    [closeReview],
+  );
 
   const closeView = useCallback((view: SpecialViewType) => {
     setOpenViews((prev) => prev.filter((v) => v !== view));
-    setActiveView((prev) => prev === view ? 'editor' : prev);
+    setActiveView((prev) => (prev === view ? 'editor' : prev));
   }, []);
 
-  return { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView };
+  return {
+    openViews,
+    activeView,
+    replaySession,
+    setReplaySession,
+    setActiveView,
+    openAndActivate,
+    closeView,
+  };
 }
 
 function useGlobalReviewEvents(
-  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void,
+  openReview: (
+    sessionId: string,
+    snapshotHash: string,
+    projectRoot: string,
+    filePaths?: string[],
+  ) => void,
   projectRoot: string | null,
   setReplaySession: (s: AgentMonitorSession | null) => void,
   setActiveView: (v: 'editor') => void,
@@ -297,13 +362,26 @@ interface CentrePaneWiringArgs {
   openAndActivate: (v: SpecialViewType) => void;
   setReplaySession: (s: AgentMonitorSession | null) => void;
   setActiveView: (v: 'editor') => void;
-  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void;
+  openReview: (
+    sessionId: string,
+    snapshotHash: string,
+    projectRoot: string,
+    filePaths?: string[],
+  ) => void;
   projectRoot: string | null;
   enhancedEnabled: boolean;
 }
 
 function useCentrePaneWiring(args: CentrePaneWiringArgs): void {
-  const { closeReview, openAndActivate, setReplaySession, setActiveView, openReview, projectRoot, enhancedEnabled } = args;
+  const {
+    closeReview,
+    openAndActivate,
+    setReplaySession,
+    setActiveView,
+    openReview,
+    projectRoot,
+    enhancedEnabled,
+  } = args;
   useDiffReviewEvents(openReview, setReplaySession, setActiveView);
   useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
   useSpecialViewEvents(openAndActivate);
@@ -313,21 +391,55 @@ function useCentrePaneWiring(args: CentrePaneWiringArgs): void {
 }
 
 export function CentrePaneConnected(): React.ReactElement {
-  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback } = useDiffReview();
+  const {
+    state,
+    openReview,
+    closeReview,
+    acceptHunk,
+    rejectHunk,
+    acceptAllFile,
+    rejectAllFile,
+    acceptAll,
+    rejectAll,
+    canRollback,
+    rollback,
+  } = useDiffReview();
   const { projectRoot } = useProject();
   const enhancedEnabled = useConfig().config?.review?.enhanced ?? true;
-  const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);
+  const {
+    openViews,
+    activeView,
+    replaySession,
+    setReplaySession,
+    setActiveView,
+    openAndActivate,
+    closeView,
+  } = useCentrePaneState(closeReview);
 
-  useCentrePaneWiring({ closeReview, openAndActivate, setReplaySession, setActiveView, openReview, projectRoot, enhancedEnabled });
+  useCentrePaneWiring({
+    closeReview,
+    openAndActivate,
+    setReplaySession,
+    setActiveView,
+    openReview,
+    projectRoot,
+    enhancedEnabled,
+  });
 
   if (state) {
     return (
       <LazyDiffReview
-        state={state} canRollback={canRollback} enhancedEnabled={enhancedEnabled}
-        onAcceptHunk={acceptHunk} onRejectHunk={rejectHunk}
-        onAcceptAllFile={acceptAllFile} onRejectAllFile={rejectAllFile}
-        onAcceptAll={acceptAll} onRejectAll={rejectAll}
-        onRollback={rollback} onClose={closeReview}
+        state={state}
+        canRollback={canRollback}
+        enhancedEnabled={enhancedEnabled}
+        onAcceptHunk={acceptHunk}
+        onRejectHunk={rejectHunk}
+        onAcceptAllFile={acceptAllFile}
+        onRejectAllFile={rejectAllFile}
+        onAcceptAll={acceptAll}
+        onRejectAll={rejectAll}
+        onRollback={rollback}
+        onClose={closeReview}
       />
     );
   }
@@ -337,7 +449,12 @@ export function CentrePaneConnected(): React.ReactElement {
   }
 
   return (
-    <EditorViewContent activeView={activeView} openViews={openViews}
-      projectRoot={projectRoot} openAndActivate={openAndActivate} closeView={closeView} />
+    <EditorViewContent
+      activeView={activeView}
+      openViews={openViews}
+      projectRoot={projectRoot}
+      openAndActivate={openAndActivate}
+      closeView={closeView}
+    />
   );
 }

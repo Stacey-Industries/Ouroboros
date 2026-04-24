@@ -33,9 +33,7 @@ vi.mock('../../FileViewer', () => {
   const FileViewerContext = React.createContext<object>({ openFiles: [] });
   return {
     FileViewerManager: ({ children }: React.PropsWithChildren) => (
-      <FileViewerContext.Provider value={{ openFiles: [] }}>
-        {children}
-      </FileViewerContext.Provider>
+      <FileViewerContext.Provider value={{ openFiles: [] }}>{children}</FileViewerContext.Provider>
     ),
     useFileViewerManager: () => React.useContext(FileViewerContext),
     MultiBufferManager: ({ children }: React.PropsWithChildren) => <>{children}</>,
@@ -46,9 +44,7 @@ vi.mock('../../DiffReview', () => {
   const DiffReviewContext = React.createContext<object>({ state: null });
   return {
     DiffReviewProvider: ({ children }: React.PropsWithChildren) => (
-      <DiffReviewContext.Provider value={{ state: null }}>
-        {children}
-      </DiffReviewContext.Provider>
+      <DiffReviewContext.Provider value={{ state: null }}>{children}</DiffReviewContext.Provider>
     ),
     useDiffReview: () => React.useContext(DiffReviewContext),
   };

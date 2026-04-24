@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import type { GitFileStatus } from '../../types/electron';
 import type { TreeNode } from './FileTreeItem';
-import { buildIgnorePredicate, getNodeGitStatus, parentDir, pathJoin, relPath, sortNodes } from './fileTreeUtils';
+import {
+  buildIgnorePredicate,
+  getNodeGitStatus,
+  parentDir,
+  pathJoin,
+  relPath,
+  sortNodes,
+} from './fileTreeUtils';
 
 function createNode(name: string, path: string, isDirectory: boolean): TreeNode {
   return {

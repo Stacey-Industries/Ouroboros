@@ -1,11 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 
-import {
-  buildRecentMatches,
-  flattenAll,
-  groupByCategory,
-  rankCommands,
-} from './commandSearch';
+import { buildRecentMatches, flattenAll, groupByCategory, rankCommands } from './commandSearch';
 import type { Command, CommandMatch } from './types';
 
 export interface CommandPaletteState {
@@ -38,10 +33,7 @@ export function useCommandPaletteState(): CommandPaletteState {
   };
 }
 
-function buildSearchMatches(
-  query: string,
-  searchCommands: Command[],
-): CommandMatch[] {
+function buildSearchMatches(query: string, searchCommands: Command[]): CommandMatch[] {
   const eligible = searchCommands.filter((c) => c.when === undefined || c.when());
   return rankCommands(eligible, query).map((r) => ({
     command: r.command,

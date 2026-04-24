@@ -70,7 +70,9 @@ describe('useProfileLint — debounce', () => {
   it('calls profileCrud.lint after 300 ms', async () => {
     stubElectronApi([]);
     render(<LintHookConsumer draft={makeProfile()} onLints={() => undefined} />);
-    await act(async () => { vi.advanceTimersByTime(300); });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
     expect(mockLint).toHaveBeenCalledOnce();
     expect(mockLint).toHaveBeenCalledWith({ profile: expect.objectContaining({ id: 'p1' }) });
   });
@@ -78,7 +80,9 @@ describe('useProfileLint — debounce', () => {
   it('skips the API call when id or name is missing', async () => {
     stubElectronApi([]);
     render(<LintHookConsumer draft={{ name: '' }} onLints={() => undefined} />);
-    await act(async () => { vi.advanceTimersByTime(400); });
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
     expect(mockLint).not.toHaveBeenCalled();
   });
 });
@@ -93,12 +97,18 @@ describe('useProfileLint — results', () => {
     render(
       <LintHookConsumer
         draft={makeProfile()}
-        onLints={(l) => { captured.push(l); }}
+        onLints={(l) => {
+          captured.push(l);
+        }}
       />,
     );
     // Fire debounce then flush all pending microtasks/promises.
-    await act(async () => { vi.advanceTimersByTime(300); });
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(captured.some((c) => c.length > 0)).toBe(true);
     const last = captured[captured.length - 1];
     expect(last[0].severity).toBe('warn');
@@ -109,10 +119,19 @@ describe('useProfileLint — results', () => {
     stubElectronApi([]);
     const captured: ProfileLintItem[][] = [];
     render(
-      <LintHookConsumer draft={makeProfile()} onLints={(l) => { captured.push(l); }} />,
+      <LintHookConsumer
+        draft={makeProfile()}
+        onLints={(l) => {
+          captured.push(l);
+        }}
+      />,
     );
-    await act(async () => { vi.advanceTimersByTime(300); });
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(mockLint).toHaveBeenCalled();
     const last = captured[captured.length - 1];
     expect(last).toHaveLength(0);
@@ -128,19 +147,13 @@ describe('LintWarnings — rendering', () => {
   });
 
   it('renders a warning message with "Warning:" prefix', () => {
-    render(
-      <LintWarnings
-        lints={[{ severity: 'warn', message: 'Agent cannot act.' }]}
-      />,
-    );
+    render(<LintWarnings lints={[{ severity: 'warn', message: 'Agent cannot act.' }]} />);
     expect(screen.getByText(/Warning:.*Agent cannot act/i)).toBeTruthy();
   });
 
   it('renders an error message with "Error:" prefix', () => {
     render(
-      <LintWarnings
-        lints={[{ severity: 'error', message: 'bypass + Bash is high-risk.' }]}
-      />,
+      <LintWarnings lints={[{ severity: 'error', message: 'bypass + Bash is high-risk.' }]} />,
     );
     expect(screen.getByText(/Error:.*bypass/i)).toBeTruthy();
   });
@@ -156,17 +169,13 @@ describe('LintWarnings — rendering', () => {
   });
 
   it('applies error CSS class for error severity', () => {
-    const { container } = render(
-      <LintWarnings lints={[{ severity: 'error', message: 'Bad.' }]} />,
-    );
+    const { container } = render(<LintWarnings lints={[{ severity: 'error', message: 'Bad.' }]} />);
     const el = container.querySelector('.text-status-error');
     expect(el).toBeTruthy();
   });
 
   it('applies warning CSS class for warn severity', () => {
-    const { container } = render(
-      <LintWarnings lints={[{ severity: 'warn', message: 'Meh.' }]} />,
-    );
+    const { container } = render(<LintWarnings lints={[{ severity: 'warn', message: 'Meh.' }]} />);
     const el = container.querySelector('.text-status-warning');
     expect(el).toBeTruthy();
   });

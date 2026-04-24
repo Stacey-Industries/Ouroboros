@@ -43,7 +43,11 @@ const FILE_TOUCHING_TOOLS = new Set([
  * Extract the file path from the tool's argument object regardless of which
  * field name the tool uses (path / filePath / file_path).
  */
-function extractPath(args: { path?: string; filePath?: string; file_path?: string }): string | undefined {
+function extractPath(args: {
+  path?: string;
+  filePath?: string;
+  file_path?: string;
+}): string | undefined {
   return args.path ?? args.filePath ?? args.file_path;
 }
 
@@ -140,21 +144,24 @@ function normalisePath(p: string): string {
  *                      from contextPacketBuilderDecisions.ts.
  * @param traceId       Router trace ID — links Phase A decisions to Phase B outcomes.
  * @param includedFiles Files that were included in the context packet for this turn.
- * @param sessionId     Chat session / thread ID for group-by-session queries.
- * @param workspaceRoot Absolute path to the workspace root for fileId normalisation.
+ * @param ctx           Optional context: sessionId (chat thread) and workspaceRoot
+ *                      (used for fileId normalisation).
  */
-// eslint-disable-next-line max-params
+export interface RecordTurnStartContext {
+  sessionId?: string;
+  workspaceRoot?: string;
+}
+
 export function recordTurnStart(
   turnId: string,
   traceId: string,
   includedFiles: IncludedFile[],
-  sessionId = '',
-  workspaceRoot = '',
+  ctx: RecordTurnStartContext = {},
 ): void {
   activeTurns.set(turnId, {
     traceId,
-    sessionId,
-    workspaceRoot,
+    sessionId: ctx.sessionId ?? '',
+    workspaceRoot: ctx.workspaceRoot ?? '',
     includedFiles,
     touchedPaths: new Map(),
   });

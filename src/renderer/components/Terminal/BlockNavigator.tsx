@@ -7,25 +7,25 @@
  * - Appears only when there are 2+ blocks
  */
 
-import React from 'react'
+import React from 'react';
 
 interface BlockNavigatorProps {
-  totalBlocks: number
-  activeIndex: number
-  onNavigateUp: () => void
-  onNavigateDown: () => void
-  visible: boolean
+  totalBlocks: number;
+  activeIndex: number;
+  onNavigateUp: () => void;
+  onNavigateDown: () => void;
+  visible: boolean;
 }
 
 interface NavButtonProps {
-  onClick: (e: React.MouseEvent) => void
-  disabled: boolean
-  title: string
-  direction: 'up' | 'down'
+  onClick: (e: React.MouseEvent) => void;
+  disabled: boolean;
+  title: string;
+  direction: 'up' | 'down';
 }
 
 function NavButton({ onClick, disabled, title, direction }: NavButtonProps): React.ReactElement {
-  const path = direction === 'up' ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4'
+  const path = direction === 'up' ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4';
   return (
     <button
       onClick={onClick}
@@ -33,43 +33,70 @@ function NavButton({ onClick, disabled, title, direction }: NavButtonProps): Rea
       title={title}
       className={disabled ? 'text-text-semantic-muted' : 'text-text-semantic-primary'}
       style={{
-        background: 'none', border: 'none',
+        background: 'none',
+        border: 'none',
         cursor: disabled ? 'default' : 'pointer',
-        padding: '1px 3px', fontSize: 11, lineHeight: 1,
-        display: 'flex', alignItems: 'center',
+        padding: '1px 3px',
+        fontSize: 11,
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'center',
         opacity: disabled ? 0.3 : 0.8,
       }}
     >
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <path d={path} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
-  )
+  );
 }
 
 const containerStyle: React.CSSProperties = {
-  position: 'absolute', top: 36, right: 8, zIndex: 15,
-  display: 'flex', alignItems: 'center', gap: 2,
-  padding: '2px 4px', borderRadius: 4,
+  position: 'absolute',
+  top: 36,
+  right: 8,
+  zIndex: 15,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 2,
+  padding: '2px 4px',
+  borderRadius: 4,
   backdropFilter: 'blur(4px)',
-  fontFamily: 'var(--font-mono, monospace)', fontSize: 10,
+  fontFamily: 'var(--font-mono, monospace)',
+  fontSize: 10,
   userSelect: 'none',
   boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-}
+};
 
 export function BlockNavigator({
-  totalBlocks, activeIndex,
-  onNavigateUp, onNavigateDown, visible,
+  totalBlocks,
+  activeIndex,
+  onNavigateUp,
+  onNavigateDown,
+  visible,
 }: BlockNavigatorProps): React.ReactElement | null {
-  if (!visible || totalBlocks < 2) return null
+  if (!visible || totalBlocks < 2) return null;
 
-  const displayIndex = activeIndex >= 0 ? activeIndex + 1 : '-'
-  const stop = (e: React.MouseEvent) => e.stopPropagation()
+  const displayIndex = activeIndex >= 0 ? activeIndex + 1 : '-';
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className="border border-border-semantic bg-surface-panel text-text-semantic-muted" style={containerStyle}>
+    <div
+      className="border border-border-semantic bg-surface-panel text-text-semantic-muted"
+      style={containerStyle}
+    >
       <NavButton
-        onClick={(e) => { stop(e); onNavigateUp() }}
+        onClick={(e) => {
+          stop(e);
+          onNavigateUp();
+        }}
         disabled={activeIndex <= 0}
         title="Previous block (Alt+Up)"
         direction="up"
@@ -78,11 +105,14 @@ export function BlockNavigator({
         {displayIndex} / {totalBlocks}
       </span>
       <NavButton
-        onClick={(e) => { stop(e); onNavigateDown() }}
+        onClick={(e) => {
+          stop(e);
+          onNavigateDown();
+        }}
         disabled={activeIndex >= totalBlocks - 1}
         title="Next block (Alt+Down)"
         direction="down"
       />
     </div>
-  )
+  );
 }

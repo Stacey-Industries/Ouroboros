@@ -86,7 +86,9 @@ describe('AccentPicker', () => {
     expect(mockSet).not.toHaveBeenCalled();
 
     // Advance past debounce
-    await act(async () => { vi.advanceTimersByTime(16); });
+    await act(async () => {
+      vi.advanceTimersByTime(16);
+    });
 
     expect(mockSet).toHaveBeenCalledWith(
       'theming',
@@ -103,7 +105,9 @@ describe('AccentPicker', () => {
     fireEvent.change(colorInput, { target: { value: HEX_STEP_2 } });
     fireEvent.change(colorInput, { target: { value: HEX_STEP_3 } });
 
-    await act(async () => { vi.advanceTimersByTime(16); });
+    await act(async () => {
+      vi.advanceTimersByTime(16);
+    });
 
     expect(mockSet).toHaveBeenCalledTimes(1);
     expect(mockSet).toHaveBeenCalledWith(
@@ -136,7 +140,9 @@ describe('AccentPicker', () => {
     const resetBtn = screen.getByRole('button', { name: /reset to theme default/i });
     fireEvent.click(resetBtn);
 
-    await act(async () => { vi.advanceTimersByTime(16); });
+    await act(async () => {
+      vi.advanceTimersByTime(16);
+    });
 
     // Only the reset write should have fired, not the debounced color write
     expect(mockSet).toHaveBeenCalledTimes(1);

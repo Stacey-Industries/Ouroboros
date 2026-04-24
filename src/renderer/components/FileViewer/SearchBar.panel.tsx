@@ -77,7 +77,13 @@ function ArrowIcon({ direction }: { direction: 'up' | 'down' }): React.ReactElem
   const path = direction === 'up' ? 'M2 8L6 4L10 8' : 'M2 4L6 8L10 4';
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d={path} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={path}
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -98,7 +104,11 @@ function ToggleButton(props: {
   onClick: () => void;
 }): React.ReactElement {
   return (
-    <button title={props.title} onClick={props.onClick} style={getToggleButtonStyle(props.active, props.fontFamily)}>
+    <button
+      title={props.title}
+      onClick={props.onClick}
+      style={getToggleButtonStyle(props.active, props.fontFamily)}
+    >
       {props.label}
     </button>
   );
@@ -111,7 +121,12 @@ function IconButton(props: {
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <button title={props.title} onClick={props.onClick} disabled={props.disabled} style={getNavButtonStyle(!props.disabled)}>
+    <button
+      title={props.title}
+      onClick={props.onClick}
+      disabled={props.disabled}
+      style={getNavButtonStyle(!props.disabled)}
+    >
       {props.children}
     </button>
   );
@@ -175,10 +190,18 @@ function SearchToggles({ controller }: { controller: SearchBarController }): Rea
 function SearchNavigation({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <>
-      <IconButton title="Previous match (Shift+Enter)" onClick={controller.goToPrev} disabled={!controller.canNavigate}>
+      <IconButton
+        title="Previous match (Shift+Enter)"
+        onClick={controller.goToPrev}
+        disabled={!controller.canNavigate}
+      >
         <ArrowIcon direction="up" />
       </IconButton>
-      <IconButton title="Next match (Enter)" onClick={controller.goToNext} disabled={!controller.canNavigate}>
+      <IconButton
+        title="Next match (Enter)"
+        onClick={controller.goToNext}
+        disabled={!controller.canNavigate}
+      >
         <ArrowIcon direction="down" />
       </IconButton>
       <IconButton title="Close (Escape)" onClick={controller.handleClose}>

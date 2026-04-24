@@ -45,13 +45,22 @@ export type ExtensionHostEvent =
   /** Extension threw or otherwise failed during activation */
   | { type: 'extensionError'; name: string; message: string }
   /** Extension status transition (active / inactive / error) */
-  | { type: 'extensionStatus'; name: string; status: 'active' | 'inactive' | 'error'; errorMessage?: string }
+  | {
+      type: 'extensionStatus';
+      name: string;
+      status: 'active' | 'inactive' | 'error';
+      errorMessage?: string;
+    }
   /** ouroboros.ui.showNotification call from inside the sandbox */
   | { type: 'uiNotification'; extensionName: string; message: string }
   /** Host requests a main-process API operation (files / terminal). Awaits apiResponse/apiError. */
   | {
-      type: 'apiCall'; callId: string; extName: string;
-      namespace: 'files' | 'terminal'; method: string; args: unknown[];
+      type: 'apiCall';
+      callId: string;
+      extName: string;
+      namespace: 'files' | 'terminal';
+      method: string;
+      args: unknown[];
     }
   /** Notification that an extension registered a command (handler stays in host) */
   | { type: 'commandRegistered'; extensionName: string; commandId: string }

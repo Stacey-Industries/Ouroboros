@@ -1,17 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The barrel (`index.ts`) re-exports both component implementations and their prop types together — this is the React ecosystem's standard pattern for keeping consumers from needing to know internal file structure. It also means renaming `Button.tsx` to `ButtonBase.tsx` only requires updating the barrel, not every consumer.
-`─────────────────────────────────────────────────`
 
-Generated `src/renderer/components/primitives/CLAUDE.md`. Key things captured:
-
-- The **variant lookup table pattern** (`Record<Variant, string>`) used consistently across all components — and why it's better than ternaries (exhaustive at compile time)
-- The `danger` button's **hardcoded rgba exception** — the one color token gap
-- `Dropdown`'s **stateless open/close** — parent owns state, no click-outside handling built in
-- `inputSize` vs `size` naming — avoids clobbering the native HTML attribute
-- `Surface`'s polymorphic `as` prop
-- React 19 ref-as-prop pattern (no `forwardRef` needed)
-- Barrel import convention
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

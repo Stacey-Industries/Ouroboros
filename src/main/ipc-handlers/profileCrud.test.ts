@@ -10,12 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Hoisted mock fns (available inside vi.mock factories) ────────────────────
 
-const {
-  mockSend,
-  mockIsDestroyed,
-  mockHandle,
-  mockRemoveHandler,
-} = vi.hoisted(() => ({
+const { mockSend, mockIsDestroyed, mockHandle, mockRemoveHandler } = vi.hoisted(() => ({
   mockSend: vi.fn(),
   mockIsDestroyed: vi.fn(() => false),
   mockHandle: vi.fn(),
@@ -26,9 +21,7 @@ const {
 
 vi.mock('electron', () => ({
   BrowserWindow: {
-    getAllWindows: vi.fn(() => [
-      { isDestroyed: mockIsDestroyed, webContents: { send: mockSend } },
-    ]),
+    getAllWindows: vi.fn(() => [{ isDestroyed: mockIsDestroyed, webContents: { send: mockSend } }]),
   },
   ipcMain: {
     handle: mockHandle,
@@ -55,10 +48,7 @@ vi.mock('../profiles/profileStore', () => ({
 
 // ─── Subject (imported after mocks) ──────────────────────────────────────────
 
-import {
-  cleanupProfileCrudHandlers,
-  registerProfileCrudHandlers,
-} from './profileCrud';
+import { cleanupProfileCrudHandlers, registerProfileCrudHandlers } from './profileCrud';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -81,7 +71,8 @@ function makeInMemoryStore(): ProfileStore {
       const idx = profiles.findIndex((x) => x.id === p.id);
       const now = Date.now();
       const saved = { ...p, updatedAt: now, createdAt: idx < 0 ? now : p.createdAt };
-      if (idx < 0) profiles.push(saved); else profiles.splice(idx, 1, saved);
+      if (idx < 0) profiles.push(saved);
+      else profiles.splice(idx, 1, saved);
       return saved;
     },
     delete: (id) => {
@@ -90,7 +81,9 @@ function makeInMemoryStore(): ProfileStore {
       }
       profiles = profiles.filter((p) => p.id !== id);
     },
-    setDefaultProfile: (root, profileId) => { defaults[root] = profileId; },
+    setDefaultProfile: (root, profileId) => {
+      defaults[root] = profileId;
+    },
     getDefaultProfile: (root) => defaults[root] ?? null,
   };
 }
@@ -121,14 +114,14 @@ describe('profileCrud IPC handlers', () => {
 
   describe('profileCrud:list', () => {
     it('returns success with all profiles including built-ins', async () => {
-      const res = await invoke('profileCrud:list') as { success: boolean; profiles: Profile[] };
+      const res = (await invoke('profileCrud:list')) as { success: boolean; profiles: Profile[] };
       expect(res.success).toBe(true);
       expect(res.profiles.length).toBeGreaterThanOrEqual(BUILT_IN_PROFILES.length);
     });
 
     it('returns success with empty array when store is null', async () => {
       mockStore = null;
-      const res = await invoke('profileCrud:list') as { success: boolean; profiles: Profile[] };
+      const res = (await invoke('profileCrud:list')) as { success: boolean; profiles: Profile[] };
       expect(res.success).toBe(true);
       expect(res.profiles).toEqual([]);
     });
@@ -139,7 +132,10 @@ describe('profileCrud IPC handlers', () => {
   describe('profileCrud:upsert', () => {
     it('creates a profile and returns it', async () => {
       const profile = makeUserProfile();
-      const res = await invoke('profileCrud:upsert', { profile }) as { success: boolean; profile: Profile };
+      const res = (await invoke('profileCrud:upsert', { profile })) as {
+        success: boolean;
+        profile: Profile;
+      };
       expect(res.success).toBe(true);
       expect(res.profile.id).toBe('user-test-1');
     });
@@ -150,14 +146,16 @@ describe('profileCrud IPC handlers', () => {
     });
 
     it('returns failure for missing profile', async () => {
-      const res = await invoke('profileCrud:upsert', {}) as { success: boolean; error: string };
+      const res = (await invoke('profileCrud:upsert', {})) as { success: boolean; error: string };
       expect(res.success).toBe(false);
       expect(res.error).toBeTruthy();
     });
 
     it('returns failure when store is null', async () => {
       mockStore = null;
-      const res = await invoke('profileCrud:upsert', { profile: makeUserProfile() }) as { success: boolean };
+      const res = (await invoke('profileCrud:upsert', { profile: makeUserProfile() })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
   });
@@ -167,7 +165,9 @@ describe('profileCrud IPC handlers', () => {
   describe('profileCrud:delete', () => {
     it('deletes a user profile', async () => {
       await invoke('profileCrud:upsert', { profile: makeUserProfile() });
-      const res = await invoke('profileCrud:delete', { profileId: 'user-test-1' }) as { success: boolean };
+      const res = (await invoke('profileCrud:delete', { profileId: 'user-test-1' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(true);
     });
 
@@ -179,12 +179,14 @@ describe('profileCrud IPC handlers', () => {
     });
 
     it('returns failure when trying to delete a built-in', async () => {
-      const res = await invoke('profileCrud:delete', { profileId: BUILT_IN_PROFILES[0].id }) as { success: boolean };
+      const res = (await invoke('profileCrud:delete', { profileId: BUILT_IN_PROFILES[0].id })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
 
     it('returns failure for missing profileId', async () => {
-      const res = await invoke('profileCrud:delete', {}) as { success: boolean };
+      const res = (await invoke('profileCrud:delete', {})) as { success: boolean };
       expect(res.success).toBe(false);
     });
   });
@@ -193,25 +195,38 @@ describe('profileCrud IPC handlers', () => {
 
   describe('profileCrud:setDefault / getDefault', () => {
     it('stores and retrieves a per-project default', async () => {
-      await invoke('profileCrud:setDefault', { projectRoot: '/proj/a', profileId: 'builtin-reviewer' });
-      const res = await invoke('profileCrud:getDefault', { projectRoot: '/proj/a' }) as { success: boolean; profileId: string };
+      await invoke('profileCrud:setDefault', {
+        projectRoot: '/proj/a',
+        profileId: 'builtin-reviewer',
+      });
+      const res = (await invoke('profileCrud:getDefault', { projectRoot: '/proj/a' })) as {
+        success: boolean;
+        profileId: string;
+      };
       expect(res.success).toBe(true);
       expect(res.profileId).toBe('builtin-reviewer');
     });
 
     it('returns null profileId when no default is set', async () => {
-      const res = await invoke('profileCrud:getDefault', { projectRoot: '/proj/unset' }) as { success: boolean; profileId: string | null };
+      const res = (await invoke('profileCrud:getDefault', { projectRoot: '/proj/unset' })) as {
+        success: boolean;
+        profileId: string | null;
+      };
       expect(res.success).toBe(true);
       expect(res.profileId).toBeNull();
     });
 
     it('setDefault returns failure for missing projectRoot', async () => {
-      const res = await invoke('profileCrud:setDefault', { profileId: 'x' }) as { success: boolean };
+      const res = (await invoke('profileCrud:setDefault', { profileId: 'x' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
 
     it('setDefault returns failure for missing profileId', async () => {
-      const res = await invoke('profileCrud:setDefault', { projectRoot: '/a' }) as { success: boolean };
+      const res = (await invoke('profileCrud:setDefault', { projectRoot: '/a' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
   });
@@ -220,19 +235,24 @@ describe('profileCrud IPC handlers', () => {
 
   describe('profileCrud:export', () => {
     it('exports a profile as JSON string', async () => {
-      const res = await invoke('profileCrud:export', { profileId: BUILT_IN_PROFILES[0].id }) as { success: boolean; json: string };
+      const res = (await invoke('profileCrud:export', { profileId: BUILT_IN_PROFILES[0].id })) as {
+        success: boolean;
+        json: string;
+      };
       expect(res.success).toBe(true);
       const parsed = JSON.parse(res.json);
       expect(parsed.id).toBe(BUILT_IN_PROFILES[0].id);
     });
 
     it('returns failure for unknown profileId', async () => {
-      const res = await invoke('profileCrud:export', { profileId: 'nonexistent' }) as { success: boolean };
+      const res = (await invoke('profileCrud:export', { profileId: 'nonexistent' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
 
     it('returns failure for missing profileId', async () => {
-      const res = await invoke('profileCrud:export', {}) as { success: boolean };
+      const res = (await invoke('profileCrud:export', {})) as { success: boolean };
       expect(res.success).toBe(false);
     });
   });
@@ -242,36 +262,48 @@ describe('profileCrud IPC handlers', () => {
   describe('profileCrud:import', () => {
     it('imports a valid profile JSON', async () => {
       const profile = makeUserProfile({ id: 'imported-1' });
-      const res = await invoke('profileCrud:import', { json: JSON.stringify(profile) }) as { success: boolean; profile: Profile };
+      const res = (await invoke('profileCrud:import', { json: JSON.stringify(profile) })) as {
+        success: boolean;
+        profile: Profile;
+      };
       expect(res.success).toBe(true);
       expect(res.profile.id).toBe('imported-1');
     });
 
     it('strips builtIn flag on import', async () => {
       const profile = makeUserProfile({ id: 'imported-2', builtIn: true });
-      const res = await invoke('profileCrud:import', { json: JSON.stringify(profile) }) as { success: boolean; profile: Profile };
+      const res = (await invoke('profileCrud:import', { json: JSON.stringify(profile) })) as {
+        success: boolean;
+        profile: Profile;
+      };
       expect(res.success).toBe(true);
       expect(res.profile.builtIn).toBe(false);
     });
 
     it('broadcasts profileCrud:changed on successful import', async () => {
       mockSend.mockClear();
-      await invoke('profileCrud:import', { json: JSON.stringify(makeUserProfile({ id: 'imported-3' })) });
+      await invoke('profileCrud:import', {
+        json: JSON.stringify(makeUserProfile({ id: 'imported-3' })),
+      });
       expect(mockSend).toHaveBeenCalledWith('profileCrud:changed', expect.any(Array));
     });
 
     it('returns failure for invalid JSON', async () => {
-      const res = await invoke('profileCrud:import', { json: '{bad json' }) as { success: boolean };
+      const res = (await invoke('profileCrud:import', { json: '{bad json' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
 
     it('returns failure for JSON missing required fields', async () => {
-      const res = await invoke('profileCrud:import', { json: '{"foo":"bar"}' }) as { success: boolean };
+      const res = (await invoke('profileCrud:import', { json: '{"foo":"bar"}' })) as {
+        success: boolean;
+      };
       expect(res.success).toBe(false);
     });
 
     it('returns failure for missing json arg', async () => {
-      const res = await invoke('profileCrud:import', {}) as { success: boolean };
+      const res = (await invoke('profileCrud:import', {})) as { success: boolean };
       expect(res.success).toBe(false);
     });
   });

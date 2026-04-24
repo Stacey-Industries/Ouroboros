@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FileChangeEvent } from '../types/electron';
-import { applyWatchChange, createFileEntry, processWatchChanges, shouldIgnoreIndexedPath } from './useProjectFileIndex.helpers';
+import {
+  applyWatchChange,
+  createFileEntry,
+  processWatchChanges,
+  shouldIgnoreIndexedPath,
+} from './useProjectFileIndex.helpers';
 
 const root = '/workspace';
 const shouldIgnore = (name: string): boolean => name === 'node_modules' || name.endsWith('.log');
@@ -38,7 +43,9 @@ describe('useProjectFileIndex helpers', () => {
     });
 
     expect(result).toBe(files);
-    expect(shouldIgnoreIndexedPath(root, '/workspace/node_modules/pkg/index.js', shouldIgnore)).toBe(true);
+    expect(
+      shouldIgnoreIndexedPath(root, '/workspace/node_modules/pkg/index.js', shouldIgnore),
+    ).toBe(true);
   });
 
   it('removes a single file on unlink', () => {

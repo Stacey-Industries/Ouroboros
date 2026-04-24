@@ -9,24 +9,24 @@
  */
 export const VS_CODE_COLOR_MAP: Record<string, string> = {
   // Editor
-  'editor.background':              '--surface-base',
-  'editor.foreground':              '--text-primary',
+  'editor.background': '--surface-base',
+  'editor.foreground': '--text-primary',
   'editor.lineHighlightBackground': '--surface-hover',
-  'editor.selectionBackground':     '--interactive-selection',
-  'editorCursor.foreground':        '--interactive-accent',
+  'editor.selectionBackground': '--interactive-selection',
+  'editorCursor.foreground': '--interactive-accent',
 
   // Editor widgets / overlays
   'editorWidget.background': '--surface-overlay',
-  'editorWidget.border':     '--border-default',
+  'editorWidget.border': '--border-default',
 
   // Activity bar
   'activityBar.background': '--surface-panel',
   'activityBar.foreground': '--text-primary',
 
   // Side bar
-  'sideBar.background':                '--surface-raised',
-  'sideBar.foreground':                '--text-primary',
-  'sideBarSectionHeader.background':   '--surface-panel',
+  'sideBar.background': '--surface-raised',
+  'sideBar.foreground': '--text-primary',
+  'sideBarSectionHeader.background': '--surface-panel',
 
   // Status bar
   'statusBar.background': '--surface-panel',
@@ -37,26 +37,26 @@ export const VS_CODE_COLOR_MAP: Record<string, string> = {
   'titleBar.activeForeground': '--text-primary',
 
   // Tabs
-  'tab.activeBackground':   '--surface-base',
-  'tab.activeForeground':   '--text-primary',
+  'tab.activeBackground': '--surface-base',
+  'tab.activeForeground': '--text-primary',
   'tab.inactiveBackground': '--surface-panel',
   'tab.inactiveForeground': '--text-muted',
 
   // Buttons
-  'button.background':      '--interactive-accent',
-  'button.foreground':      '--text-on-accent',
+  'button.background': '--interactive-accent',
+  'button.foreground': '--text-on-accent',
   'button.hoverBackground': '--interactive-hover',
 
   // Inputs
   'input.background': '--surface-inset',
   'input.foreground': '--text-primary',
-  'input.border':     '--border-subtle',
+  'input.border': '--border-subtle',
 
   // Focus / foreground globals
-  'focusBorder':          '--border-accent',
-  'foreground':           '--text-primary',
-  'descriptionForeground': '--text-secondary',
-  'errorForeground':      '--status-error',
+  focusBorder: '--border-accent',
+  foreground: '--text-primary',
+  descriptionForeground: '--text-secondary',
+  errorForeground: '--status-error',
 
   // Dropdowns
   'dropdown.background': '--surface-overlay',
@@ -65,11 +65,11 @@ export const VS_CODE_COLOR_MAP: Record<string, string> = {
   // Lists
   'list.activeSelectionBackground': '--interactive-selection',
   'list.activeSelectionForeground': '--text-primary',
-  'list.hoverBackground':           '--surface-hover',
+  'list.hoverBackground': '--surface-hover',
 
   // Scrollbar
-  'scrollbarSlider.background':       '--surface-scroll-thumb',
-  'scrollbarSlider.hoverBackground':  '--surface-scroll-thumb',
+  'scrollbarSlider.background': '--surface-scroll-thumb',
+  'scrollbarSlider.hoverBackground': '--surface-scroll-thumb',
   'scrollbarSlider.activeBackground': '--surface-scroll-thumb',
 
   // Badges

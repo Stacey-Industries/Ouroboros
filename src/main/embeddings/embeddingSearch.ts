@@ -5,11 +5,7 @@
  * reciprocal rank fusion (RRF).
  */
 
-import type {
-  EmbeddingSearchResult,
-  IEmbeddingProvider,
-  IEmbeddingStore,
-} from './embeddingTypes';
+import type { EmbeddingSearchResult, IEmbeddingProvider, IEmbeddingStore } from './embeddingTypes';
 
 const RRF_K = 60;
 

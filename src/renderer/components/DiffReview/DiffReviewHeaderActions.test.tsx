@@ -33,9 +33,7 @@ function makeFile(
   };
 }
 
-function makeProps(
-  overrides: Partial<React.ComponentProps<typeof DiffReviewHeaderActions>> = {},
-) {
+function makeProps(overrides: Partial<React.ComponentProps<typeof DiffReviewHeaderActions>> = {}) {
   return {
     allDecided: false,
     canRollback: false,
@@ -176,7 +174,9 @@ describe('DiffReviewHeaderActions — export button', () => {
 describe('DiffReviewHeaderActions — export ipc handler', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'electronAPI', {
-      value: { app: { saveFileDialog: vi.fn().mockResolvedValue({ success: false, cancelled: true }) } },
+      value: {
+        app: { saveFileDialog: vi.fn().mockResolvedValue({ success: false, cancelled: true }) },
+      },
       writable: true,
       configurable: true,
     });

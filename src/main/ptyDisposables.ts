@@ -15,7 +15,11 @@ import type * as pty from 'node-pty';
 export function disposeAll(list: pty.IDisposable[] | undefined): void {
   if (!list) return;
   for (const d of list) {
-    try { d.dispose(); } catch { /* already disposed or emitter gone */ }
+    try {
+      d.dispose();
+    } catch {
+      /* already disposed or emitter gone */
+    }
   }
   list.length = 0;
 }

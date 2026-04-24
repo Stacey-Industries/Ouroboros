@@ -185,7 +185,13 @@ describe('contextSelector — Wave 19 provenance weights', () => {
     mockProvenance.set(path.normalize(userFile), { lastAgentEditAt: 0, lastUserEditAt: now - 100 });
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
       repoFacts: createRepoFacts(root, { recentEdits: { files: [userFile], generatedAt: 1 } }),
       liveIdeState: createLiveIdeState(),
     });
@@ -204,10 +210,19 @@ describe('contextSelector — Wave 19 provenance weights', () => {
 
     const now = Date.now();
     // Agent edited 30s ago, user never
-    mockProvenance.set(path.normalize(agentFile), { lastAgentEditAt: now - 30_000, lastUserEditAt: 0 });
+    mockProvenance.set(path.normalize(agentFile), {
+      lastAgentEditAt: now - 30_000,
+      lastUserEditAt: 0,
+    });
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
       repoFacts: createRepoFacts(root, { recentEdits: { files: [agentFile], generatedAt: 1 } }),
       liveIdeState: createLiveIdeState(),
     });
@@ -228,11 +243,22 @@ describe('contextSelector — Wave 19 provenance weights', () => {
 
     const now = Date.now();
     mockProvenance.set(path.normalize(userFile), { lastAgentEditAt: 0, lastUserEditAt: now - 100 });
-    mockProvenance.set(path.normalize(agentFile), { lastAgentEditAt: now - 30_000, lastUserEditAt: 0 });
+    mockProvenance.set(path.normalize(agentFile), {
+      lastAgentEditAt: now - 30_000,
+      lastUserEditAt: 0,
+    });
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
-      repoFacts: createRepoFacts(root, { recentEdits: { files: [userFile, agentFile], generatedAt: 1 } }),
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
+      repoFacts: createRepoFacts(root, {
+        recentEdits: { files: [userFile, agentFile], generatedAt: 1 },
+      }),
       liveIdeState: createLiveIdeState(),
     });
 
@@ -250,7 +276,13 @@ describe('contextSelector — Wave 19 provenance weights', () => {
 
     // No provenance entry for this file
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
       repoFacts: createRepoFacts(root, { recentEdits: { files: [unknownFile], generatedAt: 1 } }),
       liveIdeState: createLiveIdeState(),
     });
@@ -274,7 +306,9 @@ describe('contextSelector — Wave 19 diff weights', () => {
     // No provenance → not agent-authored
     const repoFacts = createRepoFacts(root, {
       gitDiff: {
-        changedFiles: [{ filePath: diffFile, status: 'modified', additions: 1, deletions: 0, hunks: [] }],
+        changedFiles: [
+          { filePath: diffFile, status: 'modified', additions: 1, deletions: 0, hunks: [] },
+        ],
         totalAdditions: 1,
         totalDeletions: 0,
         changedFileCount: 1,
@@ -283,7 +317,13 @@ describe('contextSelector — Wave 19 diff weights', () => {
     });
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
       repoFacts,
       liveIdeState: createLiveIdeState(),
     });
@@ -301,11 +341,16 @@ describe('contextSelector — Wave 19 diff weights', () => {
     await writeFile(agentDiffFile, 'export const ad = 2\n');
 
     const now = Date.now();
-    mockProvenance.set(path.normalize(agentDiffFile), { lastAgentEditAt: now - 100, lastUserEditAt: 0 });
+    mockProvenance.set(path.normalize(agentDiffFile), {
+      lastAgentEditAt: now - 100,
+      lastUserEditAt: 0,
+    });
 
     const repoFacts = createRepoFacts(root, {
       gitDiff: {
-        changedFiles: [{ filePath: agentDiffFile, status: 'modified', additions: 1, deletions: 0, hunks: [] }],
+        changedFiles: [
+          { filePath: agentDiffFile, status: 'modified', additions: 1, deletions: 0, hunks: [] },
+        ],
         totalAdditions: 1,
         totalDeletions: 0,
         changedFileCount: 1,
@@ -314,7 +359,13 @@ describe('contextSelector — Wave 19 diff weights', () => {
     });
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast' },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+      },
       repoFacts,
       liveIdeState: createLiveIdeState(),
     });
@@ -358,8 +409,14 @@ describe('contextSelector — Wave 31 Phase D: learnedRanker flag off', () => {
     await writeFile(file, 'export const x = 1\n');
 
     await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
-        contextSelection: { includedFiles: ['foo.ts'] } },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['foo.ts'] },
+      },
       repoFacts: createRepoFacts(root),
       liveIdeState: createLiveIdeState(),
     });
@@ -373,8 +430,14 @@ describe('contextSelector — Wave 31 Phase D: learnedRanker flag off', () => {
     await writeFile(file, 'export const x = 1\n');
 
     await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
-        contextSelection: { includedFiles: ['foo.ts'] } },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['foo.ts'] },
+      },
       repoFacts: createRepoFacts(root),
       liveIdeState: createLiveIdeState(),
     });
@@ -400,12 +463,26 @@ describe('contextSelector — Wave 31 Phase D: learnedRanker flag on', () => {
     await writeFile(file, 'export const y = 2\n');
 
     mockClassifierRankCandidates.mockReturnValue([
-      { filePath: file, score: 0.9, confidence: 'high', reasons: [], snippets: [], truncationNotes: [], pagerank_score: null },
+      {
+        filePath: file,
+        score: 0.9,
+        confidence: 'high',
+        reasons: [],
+        snippets: [],
+        truncationNotes: [],
+        pagerank_score: null,
+      },
     ]);
 
     const result = await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
-        contextSelection: { includedFiles: ['bar.ts'] } },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['bar.ts'] },
+      },
       repoFacts: createRepoFacts(root),
       liveIdeState: createLiveIdeState(),
     });
@@ -420,12 +497,26 @@ describe('contextSelector — Wave 31 Phase D: learnedRanker flag on', () => {
     await writeFile(file, 'export const z = 3\n');
 
     mockClassifierRankCandidates.mockReturnValue([
-      { filePath: file, score: 0.9, confidence: 'high', reasons: [], snippets: [], truncationNotes: [], pagerank_score: null },
+      {
+        filePath: file,
+        score: 0.9,
+        confidence: 'high',
+        reasons: [],
+        snippets: [],
+        truncationNotes: [],
+        pagerank_score: null,
+      },
     ]);
 
     await selectContextFiles({
-      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
-        contextSelection: { includedFiles: ['baz.ts'] } },
+      request: {
+        workspaceRoots: [root],
+        goal: 'fix',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['baz.ts'] },
+      },
       repoFacts: createRepoFacts(root),
       liveIdeState: createLiveIdeState(),
     });

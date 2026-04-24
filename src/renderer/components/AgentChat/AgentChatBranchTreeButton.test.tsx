@@ -49,38 +49,20 @@ describe('BranchTreeButton', () => {
   });
 
   it('renders "Branches" button when rootThread is provided', () => {
-    render(
-      <BranchTreeButton
-        rootThread={makeThread()}
-        activeThreadId="root"
-        onSelect={vi.fn()}
-      />,
-    );
+    render(<BranchTreeButton rootThread={makeThread()} activeThreadId="root" onSelect={vi.fn()} />);
     expect(screen.getByTitle('Branch tree')).toBeTruthy();
     expect(screen.getByText('Branches')).toBeTruthy();
   });
 
   it('opens popover showing BranchTreeView on click', async () => {
-    render(
-      <BranchTreeButton
-        rootThread={makeThread()}
-        activeThreadId="root"
-        onSelect={vi.fn()}
-      />,
-    );
+    render(<BranchTreeButton rootThread={makeThread()} activeThreadId="root" onSelect={vi.fn()} />);
     fireEvent.click(screen.getByTitle('Branch tree'));
     // BranchTreeView renders a loading state then "No branches yet"
     await waitFor(() => screen.getByRole('tree'));
   });
 
   it('closes popover when Escape is pressed', async () => {
-    render(
-      <BranchTreeButton
-        rootThread={makeThread()}
-        activeThreadId="root"
-        onSelect={vi.fn()}
-      />,
-    );
+    render(<BranchTreeButton rootThread={makeThread()} activeThreadId="root" onSelect={vi.fn()} />);
     fireEvent.click(screen.getByTitle('Branch tree'));
     await waitFor(() => screen.getByRole('tree'));
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -93,9 +75,7 @@ describe('BranchTreeButton', () => {
         agentChat: {
           listBranches: vi.fn().mockResolvedValue({
             success: true,
-            branches: [
-              { id: 'branch-1', branchName: 'Feature', isSideChat: false, children: [] },
-            ],
+            branches: [{ id: 'branch-1', branchName: 'Feature', isSideChat: false, children: [] }],
           }),
         },
       },
@@ -104,11 +84,7 @@ describe('BranchTreeButton', () => {
     });
     const onSelect = vi.fn();
     render(
-      <BranchTreeButton
-        rootThread={makeThread()}
-        activeThreadId="root"
-        onSelect={onSelect}
-      />,
+      <BranchTreeButton rootThread={makeThread()} activeThreadId="root" onSelect={onSelect} />,
     );
     fireEvent.click(screen.getByTitle('Branch tree'));
     await waitFor(() => screen.getByText('Feature'));
@@ -118,13 +94,7 @@ describe('BranchTreeButton', () => {
   });
 
   it('sets aria-expanded on the button when open', async () => {
-    render(
-      <BranchTreeButton
-        rootThread={makeThread()}
-        activeThreadId="root"
-        onSelect={vi.fn()}
-      />,
-    );
+    render(<BranchTreeButton rootThread={makeThread()} activeThreadId="root" onSelect={vi.fn()} />);
     const btn = screen.getByTitle('Branch tree');
     expect(btn.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(btn);

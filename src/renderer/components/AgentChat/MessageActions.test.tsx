@@ -58,7 +58,9 @@ describe('stripMarkdown', () => {
 // ── MessageActions component ──────────────────────────────────────────────────
 
 describe('MessageActions', () => {
-  afterEach(() => { cleanup(); });
+  afterEach(() => {
+    cleanup();
+  });
 
   const defaultProps = {
     content: '**hello** world',
@@ -98,9 +100,7 @@ describe('MessageActions', () => {
   });
 
   it('renders reactionsSlot when provided', () => {
-    render(
-      <MessageActions {...defaultProps} reactionsSlot={<span data-testid="reactions" />} />,
-    );
+    render(<MessageActions {...defaultProps} reactionsSlot={<span data-testid="reactions" />} />);
     expect(screen.getByTestId('reactions')).toBeTruthy();
   });
 });

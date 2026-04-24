@@ -119,8 +119,16 @@ function buildGoMenu(): MenuDefinition {
   return {
     label: 'Go',
     items: [
-      { label: 'Go to File', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
-      { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEv('agent-ide:open-symbol-search') },
+      {
+        label: 'Go to File',
+        shortcut: 'Ctrl+P',
+        action: () => dispatchEv('agent-ide:open-file-picker'),
+      },
+      {
+        label: 'Go to Symbol',
+        shortcut: 'Ctrl+Shift+O',
+        action: () => dispatchEv('agent-ide:open-symbol-search'),
+      },
       { label: 'Go to Line', shortcut: 'Ctrl+G', action: () => dispatchEv('agent-ide:go-to-line') },
       SEPARATOR,
       { label: 'Back', shortcut: 'Alt+Left', action: () => dispatchEv(GO_BACK_EVENT) },
@@ -133,8 +141,16 @@ function buildTerminalMenu(): MenuDefinition {
   return {
     label: 'Terminal',
     items: [
-      { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEv('agent-ide:new-terminal') },
-      { label: 'New Claude Terminal', shortcut: 'Ctrl+Shift+C', action: () => dispatchEv('agent-ide:new-claude-terminal') },
+      {
+        label: 'New Terminal',
+        shortcut: 'Ctrl+Shift+`',
+        action: () => dispatchEv('agent-ide:new-terminal'),
+      },
+      {
+        label: 'New Claude Terminal',
+        shortcut: 'Ctrl+Shift+C',
+        action: () => dispatchEv('agent-ide:new-claude-terminal'),
+      },
       { label: 'Split Terminal', action: () => dispatchEv(SPLIT_TERMINAL_EVENT) },
       SEPARATOR,
       { label: 'Clear Terminal', action: () => dispatchEv('agent-ide:clear-active-terminal') },
@@ -158,11 +174,23 @@ function buildHelpMenu(): MenuDefinition {
   return {
     label: 'Help',
     items: [
-      { label: 'Documentation', action: () => window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros') },
-      { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+K Ctrl+S', action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT, 'keybindings') },
+      {
+        label: 'Documentation',
+        action: () =>
+          window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros'),
+      },
+      {
+        label: 'Keyboard Shortcuts',
+        shortcut: 'Ctrl+K Ctrl+S',
+        action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT, 'keybindings'),
+      },
       SEPARATOR,
       { label: 'Open Logs Folder', action: () => window.electronAPI?.app?.openLogsFolder?.() },
-      { label: 'Toggle Developer Tools', shortcut: 'Ctrl+Shift+I', action: () => window.electronAPI?.app?.toggleDevTools?.() },
+      {
+        label: 'Toggle Developer Tools',
+        shortcut: 'Ctrl+Shift+I',
+        action: () => window.electronAPI?.app?.toggleDevTools?.(),
+      },
       SEPARATOR,
       { label: 'About Ouroboros', action: showAbout },
     ],
@@ -170,5 +198,12 @@ function buildHelpMenu(): MenuDefinition {
 }
 
 export function getMenuDefinitions(isImmersiveChat = false): MenuDefinition[] {
-  return [buildFileMenu(), buildEditMenu(), buildViewMenu(isImmersiveChat), buildGoMenu(), buildTerminalMenu(), buildHelpMenu()];
+  return [
+    buildFileMenu(),
+    buildEditMenu(),
+    buildViewMenu(isImmersiveChat),
+    buildGoMenu(),
+    buildTerminalMenu(),
+    buildHelpMenu(),
+  ];
 }

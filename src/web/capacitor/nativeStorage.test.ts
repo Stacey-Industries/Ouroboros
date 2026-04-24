@@ -30,8 +30,12 @@ vi.mock('@capacitor/preferences', () => ({
 const store: Record<string, string> = {};
 const mockLocalStorage = {
   getItem: vi.fn((k: string) => store[k] ?? null),
-  setItem: vi.fn((k: string, v: string) => { store[k] = v; }),
-  removeItem: vi.fn((k: string) => { delete store[k]; }),
+  setItem: vi.fn((k: string, v: string) => {
+    store[k] = v;
+  }),
+  removeItem: vi.fn((k: string) => {
+    delete store[k];
+  }),
 };
 Object.defineProperty(globalThis, 'localStorage', { value: mockLocalStorage, writable: true });
 
@@ -47,7 +51,9 @@ afterEach(() => {
 });
 
 describe('nativeStorage — web fallback (isNativePlatform = false)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(false);
+  });
 
   it('setSecureValue writes to localStorage', async () => {
     await setSecureValue('token', 'abc');
@@ -77,7 +83,9 @@ describe('nativeStorage — web fallback (isNativePlatform = false)', () => {
 });
 
 describe('nativeStorage — native path (isNativePlatform = true)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(true);
+  });
 
   it('setSecureValue calls Preferences.set with correct args', async () => {
     await setSecureValue('token', 'xyz');

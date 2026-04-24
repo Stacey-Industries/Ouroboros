@@ -45,13 +45,17 @@ export function getDiffReviewStateView(
   state: DiffReviewState,
   onClose: () => void,
 ): React.ReactElement | null {
-  if (state.loading) return <CenteredMessage color="var(--text-muted)">Loading diff…</CenteredMessage>;
+  if (state.loading)
+    return <CenteredMessage color="var(--text-muted)">Loading diff…</CenteredMessage>;
   if (state.error) return <DiffReviewError error={state.error} />;
   if (state.files.length === 0) return <DiffReviewEmptyState onClose={onClose} />;
   return null;
 }
 
-function updateDecisionStats(stats: DiffReviewStats, decision: ReviewFile['hunks'][number]['decision']): void {
+function updateDecisionStats(
+  stats: DiffReviewStats,
+  decision: ReviewFile['hunks'][number]['decision'],
+): void {
   if (decision !== 'pending') stats.decidedHunks += 1;
   if (decision === 'accepted') stats.acceptedHunks += 1;
   if (decision === 'rejected') stats.rejectedHunks += 1;
@@ -92,10 +96,7 @@ function DiffReviewError({ error }: { error: string }): React.ReactElement {
 
 function DiffReviewEmptyState({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
-    <CenteredMessage
-      color="var(--text-muted)"
-      extraStyle={{ flexDirection: 'column', gap: '8px' }}
-    >
+    <CenteredMessage color="var(--text-muted)" extraStyle={{ flexDirection: 'column', gap: '8px' }}>
       <span>No changes detected since session started.</span>
       <button
         onClick={onClose}

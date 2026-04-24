@@ -12,20 +12,13 @@ import { useAuth } from './useAuth';
 
 const OPEN_DELAY_MS = 500;
 
-function allUnauthenticated(
-  states: { status: string }[],
-): boolean {
-  return (
-    states.length > 0 &&
-    states.every((s) => s.status === 'unauthenticated')
-  );
+function allUnauthenticated(states: { status: string }[]): boolean {
+  return states.length > 0 && states.every((s) => s.status === 'unauthenticated');
 }
 
 async function shouldPrompt(): Promise<boolean> {
   if (!window.electronAPI?.config) return false;
-  const dismissed = await window.electronAPI.config.get(
-    'authOnboardingDismissed',
-  );
+  const dismissed = await window.electronAPI.config.get('authOnboardingDismissed');
   return !dismissed;
 }
 
@@ -38,10 +31,7 @@ function openSettingsToAccounts(): void {
 }
 
 async function markDismissed(): Promise<void> {
-  await window.electronAPI.config.set(
-    'authOnboardingDismissed',
-    true,
-  );
+  await window.electronAPI.config.set('authOnboardingDismissed', true);
 }
 
 export function useFirstLaunchAuth(): void {

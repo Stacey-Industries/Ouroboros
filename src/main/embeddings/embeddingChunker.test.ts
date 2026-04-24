@@ -53,9 +53,7 @@ describe('embeddingChunker', () => {
   it('clamps large nodes to MAX_CHUNK_LINES', () => {
     const lines = Array.from({ length: 200 }, (_, i) => `  stmt${i};`);
     const content = lines.join('\n');
-    const nodes: GraphNode[] = [
-      makeNode({ name: 'bigFn', line: 1, endLine: 200 }),
-    ];
+    const nodes: GraphNode[] = [makeNode({ name: 'bigFn', line: 1, endLine: 200 })];
     const chunks = chunkFileWithNodes('src/test.ts', content, nodes);
     expect(chunks).toHaveLength(1);
     expect(chunks[0].endLine).toBeLessThanOrEqual(100);

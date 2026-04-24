@@ -83,7 +83,10 @@ export function upsertFtsRow(db: Database, row: FtsRowData): void {
  * Must be called inside a transaction alongside the message writes.
  */
 export function refreshFtsForThread(db: Database, thread: AgentChatThreadRecord): void {
-  const content = thread.messages.map((m) => m.content).filter(Boolean).join(' ');
+  const content = thread.messages
+    .map((m) => m.content)
+    .filter(Boolean)
+    .join(' ');
   const tags = (thread.tags ?? []).join(' ');
   const filePaths = thread.messages
     .map((m) => extractFilePathsFromBlocks(m.blocks ? JSON.stringify(m.blocks) : null))

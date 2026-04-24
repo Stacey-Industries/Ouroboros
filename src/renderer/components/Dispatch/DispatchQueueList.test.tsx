@@ -10,7 +10,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DispatchJob } from '../../types/electron-dispatch';
 import { DispatchQueueList } from './DispatchQueueList';
 
-afterEach(() => { cleanup(); });
+afterEach(() => {
+  cleanup();
+});
 
 function makeJob(overrides: Partial<DispatchJob> = {}): DispatchJob {
   return {
@@ -64,7 +66,9 @@ describe('DispatchQueueList — job rendering', () => {
   });
 
   it('shows the job title in the card', () => {
-    renderList([makeJob({ request: { title: 'My important task', prompt: 'p', projectPath: '/x' } })]);
+    renderList([
+      makeJob({ request: { title: 'My important task', prompt: 'p', projectPath: '/x' } }),
+    ]);
     expect(screen.getByText('My important task')).not.toBeNull();
   });
 
@@ -75,13 +79,10 @@ describe('DispatchQueueList — job rendering', () => {
 });
 
 describe('DispatchQueueList — cancel button', () => {
-  it.each(['queued', 'running'] as const)(
-    'cancel button is present for status "%s"',
-    (status) => {
-      renderList([makeJob({ id: 'job-1', status })]);
-      expect(screen.getByTestId('job-cancel-job-1')).not.toBeNull();
-    },
-  );
+  it.each(['queued', 'running'] as const)('cancel button is present for status "%s"', (status) => {
+    renderList([makeJob({ id: 'job-1', status })]);
+    expect(screen.getByTestId('job-cancel-job-1')).not.toBeNull();
+  });
 
   it.each(['completed', 'failed', 'canceled'] as const)(
     'cancel button is absent for terminal status "%s"',

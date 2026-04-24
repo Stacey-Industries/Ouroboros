@@ -1,4 +1,4 @@
-import React, { memo,useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 
 import type { OutlineSymbol } from '../../hooks/useSymbolOutline';
 import {
@@ -56,7 +56,7 @@ function getCodeLineHeight(codeContainer: HTMLDivElement | null): number {
 function getActiveSymbolIndex(
   scrollContainer: HTMLDivElement,
   codeContainer: HTMLDivElement | null,
-  symbols: OutlineSymbol[]
+  symbols: OutlineSymbol[],
 ): number {
   const lineHeight = getCodeLineHeight(codeContainer);
   const topLine = Math.floor((scrollContainer.scrollTop - CODE_PADDING_TOP) / lineHeight);
@@ -73,7 +73,7 @@ function useActiveSymbolIndex(
   scrollContainer: HTMLDivElement | null,
   codeContainer: HTMLDivElement | null,
   visible: boolean,
-  symbols: OutlineSymbol[]
+  symbols: OutlineSymbol[],
 ): number {
   const [activeIndex, setActiveIndex] = useState(-1);
   useEffect(() => {
@@ -87,14 +87,10 @@ function useActiveSymbolIndex(
   return activeIndex;
 }
 
-function scrollLineIntoView(
-  scrollContainer: HTMLDivElement,
-  lineElement: HTMLElement
-): void {
+function scrollLineIntoView(scrollContainer: HTMLDivElement, lineElement: HTMLElement): void {
   const containerRect = scrollContainer.getBoundingClientRect();
   const lineRect = lineElement.getBoundingClientRect();
-  const top =
-    lineRect.top - containerRect.top + scrollContainer.scrollTop - SCROLL_OFFSET;
+  const top = lineRect.top - containerRect.top + scrollContainer.scrollTop - SCROLL_OFFSET;
   scrollContainer.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
@@ -108,7 +104,7 @@ function flashLine(lineElement: HTMLElement): void {
 function scrollToApproximateLine(
   scrollContainer: HTMLDivElement,
   codeContainer: HTMLDivElement,
-  line: number
+  line: number,
 ): void {
   const lineHeight = getCodeLineHeight(codeContainer);
   scrollContainer.scrollTo({
@@ -120,11 +116,11 @@ function scrollToApproximateLine(
 function navigateToSymbolLine(
   symbol: OutlineSymbol,
   scrollContainer: HTMLDivElement | null,
-  codeContainer: HTMLDivElement | null
+  codeContainer: HTMLDivElement | null,
 ): void {
   if (!scrollContainer || !codeContainer) return;
   const lineElement = codeContainer.querySelector(
-    `[data-line="${symbol.line}"]`
+    `[data-line="${symbol.line}"]`,
   ) as HTMLElement | null;
   if (!lineElement) {
     scrollToApproximateLine(scrollContainer, codeContainer, symbol.line);
@@ -135,22 +131,26 @@ function navigateToSymbolLine(
 }
 
 function OutlineHeader(): React.ReactElement {
-  return <div className="text-text-semantic-faint" style={OUTLINE_HEADER_STYLE}>Outline</div>;
+  return (
+    <div className="text-text-semantic-faint" style={OUTLINE_HEADER_STYLE}>
+      Outline
+    </div>
+  );
 }
 
 function OutlineEmptyState(): React.ReactElement {
-  return <div className="text-text-semantic-faint" style={OUTLINE_EMPTY_STATE_STYLE}>No symbols found</div>;
+  return (
+    <div className="text-text-semantic-faint" style={OUTLINE_EMPTY_STATE_STYLE}>
+      No symbols found
+    </div>
+  );
 }
 
-function handleOutlineItemMouseEnter(
-  event: React.MouseEvent<HTMLButtonElement>
-): void {
+function handleOutlineItemMouseEnter(event: React.MouseEvent<HTMLButtonElement>): void {
   event.currentTarget.style.backgroundColor = 'var(--surface-panel)';
 }
 
-function handleOutlineItemMouseLeave(
-  event: React.MouseEvent<HTMLButtonElement>
-): void {
+function handleOutlineItemMouseLeave(event: React.MouseEvent<HTMLButtonElement>): void {
   event.currentTarget.style.backgroundColor = 'transparent';
 }
 
@@ -160,11 +160,7 @@ interface OutlineItemProps {
   symbol: OutlineSymbol;
 }
 
-function OutlineItem({
-  isActive,
-  onClick,
-  symbol,
-}: OutlineItemProps): React.ReactElement {
+function OutlineItem({ isActive, onClick, symbol }: OutlineItemProps): React.ReactElement {
   return (
     <button
       onClick={() => onClick(symbol)}
@@ -173,9 +169,7 @@ function OutlineItem({
       onMouseEnter={isActive ? undefined : handleOutlineItemMouseEnter}
       onMouseLeave={isActive ? undefined : handleOutlineItemMouseLeave}
     >
-      <span style={getOutlineIconStyle(KIND_COLOR[symbol.kind])}>
-        {KIND_ICON[symbol.kind]}
-      </span>
+      <span style={getOutlineIconStyle(KIND_COLOR[symbol.kind])}>{KIND_ICON[symbol.kind]}</span>
       <span style={OUTLINE_NAME_STYLE}>{symbol.name}</span>
     </button>
   );
@@ -213,26 +207,17 @@ export const SymbolOutline = memo(function SymbolOutline({
   visible,
 }: SymbolOutlineProps): React.ReactElement | null {
   useOutlineFlashStyle();
-  const activeIndex = useActiveSymbolIndex(
-    scrollContainer,
-    codeContainer,
-    visible,
-    symbols
-  );
+  const activeIndex = useActiveSymbolIndex(scrollContainer, codeContainer, visible, symbols);
   const handleSymbolClick = useCallback(
     (symbol: OutlineSymbol) => navigateToSymbolLine(symbol, scrollContainer, codeContainer),
-    [codeContainer, scrollContainer]
+    [codeContainer, scrollContainer],
   );
   if (!visible) return null;
   if (symbols.length === 0) return <OutlineEmptyState />;
   return (
     <div style={OUTLINE_PANEL_STYLE}>
       <OutlineHeader />
-      <OutlineList
-        activeIndex={activeIndex}
-        onSymbolClick={handleSymbolClick}
-        symbols={symbols}
-      />
+      <OutlineList activeIndex={activeIndex} onSymbolClick={handleSymbolClick} symbols={symbols} />
     </div>
   );
 });

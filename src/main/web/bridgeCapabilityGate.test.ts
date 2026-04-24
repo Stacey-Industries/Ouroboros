@@ -6,7 +6,9 @@ import { enforceCapabilityOrRespond, type MobileAccessMeta } from './bridgeCapab
 
 function makeSend() {
   const calls: unknown[] = [];
-  const fn = vi.fn((response: unknown) => { calls.push(response); });
+  const fn = vi.fn((response: unknown) => {
+    calls.push(response);
+  });
   return { fn, calls };
 }
 
@@ -23,22 +25,14 @@ function makeMeta(capabilities: string[]): MobileAccessMeta {
 describe('enforceCapabilityOrRespond', () => {
   it('returns true and does not send when connectionMeta is null (legacy path)', () => {
     const { fn } = makeSend();
-    const result = enforceCapabilityOrRespond(
-      { id: 1, method: 'pty:spawn' },
-      null,
-      fn,
-    );
+    const result = enforceCapabilityOrRespond({ id: 1, method: 'pty:spawn' }, null, fn);
     expect(result).toBe(true);
     expect(fn).not.toHaveBeenCalled();
   });
 
   it('returns true for an always-class channel with empty capabilities', () => {
     const { fn } = makeSend();
-    const result = enforceCapabilityOrRespond(
-      { id: 2, method: 'perf:ping' },
-      makeMeta([]),
-      fn,
-    );
+    const result = enforceCapabilityOrRespond({ id: 2, method: 'perf:ping' }, makeMeta([]), fn);
     expect(result).toBe(true);
     expect(fn).not.toHaveBeenCalled();
   });
@@ -118,11 +112,7 @@ describe('enforceCapabilityOrRespond', () => {
 
   it('response always has jsonrpc 2.0', () => {
     const { fn, calls } = makeSend();
-    enforceCapabilityOrRespond(
-      { id: 8, method: 'pty:spawn' },
-      makeMeta([]),
-      fn,
-    );
+    enforceCapabilityOrRespond({ id: 8, method: 'pty:spawn' }, makeMeta([]), fn);
     const resp = calls[0] as { jsonrpc: string };
     expect(resp.jsonrpc).toBe('2.0');
   });

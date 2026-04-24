@@ -159,6 +159,17 @@ export interface AgentChatSubToolActivity {
   subToolId: string;
 }
 
+export interface AgentChatSubAgentTranscriptEntry {
+  /** Stable ID for appending deltas to the correct nested transcript row. */
+  entryId: string;
+  /** Provider-side identifier for the child agent/thread. */
+  subAgentId: string;
+  /** Short user-facing label for the child agent. */
+  label?: string;
+  kind: 'text' | 'thinking';
+  content: string;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Structured Content Blocks                                         */
 /* ------------------------------------------------------------------ */
@@ -188,6 +199,8 @@ export type AgentChatContentBlock =
       editSummary?: { oldLines: number; newLines: number };
       /** Nested subagent tool calls (populated when this is an Agent/Task tool). */
       subTools?: AgentChatSubToolActivity[];
+      /** Nested child-agent transcript entries streamed under this tool. */
+      subAgentTranscript?: AgentChatSubAgentTranscriptEntry[];
     }
   | { kind: 'tool_result'; toolUseId: string; content: string }
   | { kind: 'code'; language: string; content: string; filePath?: string; applied?: boolean }
@@ -368,35 +381,6 @@ export interface AgentChatThreadStatusSnapshot {
   updatedAt: number;
 }
 
-// ─── Streaming chunk ─────────────────────────────────────────────────────────
-
-export interface AgentChatStreamChunkToolActivity {
-  name: string;
-  status: 'running' | 'complete' | 'error';
-  filePath?: string;
-  inputSummary?: string;
-  editSummary?: { oldLines: number; newLines: number } | string;
-  /** Tool result content (populated on 'complete' status). */
-  output?: string;
-  /** When present, this is a subagent tool activity targeting the parent Agent tool. */
-  subTool?: AgentChatSubToolActivity;
-}
-
-export interface AgentChatStreamChunk {
-  type: 'text_delta' | 'thinking_delta' | 'tool_activity' | 'complete' | 'error' | 'thread_snapshot';
-  messageId: string;
-  /** Present on all chunk types for cross-thread routing in multi-thread UIs. */
-  threadId?: string;
-  timestamp?: number;
-  textDelta?: string;
-  thinkingDelta?: string;
-  blockIndex?: number;
-  toolActivity?: AgentChatStreamChunkToolActivity;
-  tokenUsage?: { inputTokens: number; outputTokens: number };
-  /** Present only on thread_snapshot chunks — full updated thread state. */
-  thread?: AgentChatThreadRecord;
-}
-
 // ─── Re-exports from split file ──────────────────────────────────────────────
 
 export type {
@@ -423,3 +407,4 @@ export type {
   AgentChatThreadsResult,
   AgentChatThreadUpdatedEvent,
 } from './agentChatResults';
+export type { AgentChatStreamChunk, AgentChatStreamChunkToolActivity } from './agentChatStream';

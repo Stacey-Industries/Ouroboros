@@ -6,7 +6,7 @@
  * and fold computation logic.
  */
 
-import type { BundledTheme,Highlighter } from 'shiki';
+import type { BundledTheme, Highlighter } from 'shiki';
 
 import type { FoldRange } from './useFoldRanges';
 
@@ -90,7 +90,7 @@ export async function getHighlighter(): Promise<Highlighter> {
       createHighlighter({
         themes: Object.values(IDE_TO_SHIKI_THEME) as BundledTheme[],
         langs: [],
-      })
+      }),
     );
   }
 
@@ -126,7 +126,7 @@ export function parseShikiLines(html: string): string[] {
 export function computeVisibleLines(
   lineCount: number,
   collapsedFolds: Set<number>,
-  foldableLines: Map<number, FoldRange>
+  foldableLines: Map<number, FoldRange>,
 ): { visible: Set<number>; foldedCounts: Map<number, number> } {
   const hidden = new Set<number>();
 

@@ -101,7 +101,9 @@ function WarningsList({ warnings }: { warnings: string[] }): React.ReactElement 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       {warnings.map((w, i) => (
-        <div key={i} style={warningStyle}>{w}</div>
+        <div key={i} style={warningStyle}>
+          {w}
+        </div>
       ))}
     </div>
   );

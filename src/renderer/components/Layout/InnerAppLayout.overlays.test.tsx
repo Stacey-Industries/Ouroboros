@@ -58,9 +58,7 @@ describe('LayoutOverlays', () => {
   });
 
   it('renders without crashing when persistTerminalSessions is true', () => {
-    const { container } = render(
-      <LayoutOverlays {...baseProps} persistTerminalSessions={true} />,
-    );
+    const { container } = render(<LayoutOverlays {...baseProps} persistTerminalSessions={true} />);
     expect(container).toBeDefined();
   });
 });

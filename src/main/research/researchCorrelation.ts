@@ -62,7 +62,12 @@ interface StoreState {
 
 // ─── Operation helpers (extracted to satisfy max-lines-per-function) ──────────
 
-function doRecordInvocation(state: StoreState, correlationId: CorrelationId, sessionId: string, topic: string): void {
+function doRecordInvocation(
+  state: StoreState,
+  correlationId: CorrelationId,
+  sessionId: string,
+  topic: string,
+): void {
   state.invocations.set(correlationId, { sessionId, topic, invokedAt: Date.now() });
   const list = state.sessionIndex.get(sessionId) ?? [];
   list.push(correlationId);
@@ -93,7 +98,11 @@ function doSummarizeSession(state: StoreState, sessionId: string): SessionCorrel
   for (const cid of list) {
     const record = state.invocations.get(cid);
     if (!record) continue;
-    result.push({ correlationId: cid, topic: record.topic, touchCount: state.touchCounts.get(cid) ?? 0 });
+    result.push({
+      correlationId: cid,
+      topic: record.topic,
+      touchCount: state.touchCounts.get(cid) ?? 0,
+    });
   }
   return result;
 }
@@ -110,7 +119,11 @@ export function buildResearchCorrelationStore(): ResearchCorrelationStore {
     recordInvocation: (cid, sid, topic) => doRecordInvocation(state, cid, sid, topic),
     attributeOutcome: (sid) => doAttributeOutcome(state, sid),
     summarizeSession: (sid) => doSummarizeSession(state, sid),
-    _resetForTests: () => { state.invocations.clear(); state.sessionIndex.clear(); state.touchCounts.clear(); },
+    _resetForTests: () => {
+      state.invocations.clear();
+      state.sessionIndex.clear();
+      state.touchCounts.clear();
+    },
   };
 }
 
@@ -122,4 +135,3 @@ export function getResearchCorrelationStore(): ResearchCorrelationStore {
   if (!singleton) singleton = buildResearchCorrelationStore();
   return singleton;
 }
-

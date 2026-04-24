@@ -32,9 +32,9 @@ const {
     _resetForTests: vi.fn(),
   }));
   const mockRecordOutcome = vi.fn();
-  const mockGetWriter = vi.fn<() => { recordOutcome: typeof mockRecordOutcome } | null>(
-    () => ({ recordOutcome: mockRecordOutcome }),
-  );
+  const mockGetWriter = vi.fn<() => { recordOutcome: typeof mockRecordOutcome } | null>(() => ({
+    recordOutcome: mockRecordOutcome,
+  }));
 
   // Capture registered listeners so tests can fire them directly
   const capturedRevertListeners: Array<(paths: string[]) => void> = [];

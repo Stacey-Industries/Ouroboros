@@ -152,7 +152,11 @@ function UserMessageFooter(props: UserFooterProps): React.ReactElement {
       >
         Quote
       </button>
-      <ReactionBar messageId={props.messageId} threadId={props.threadId} reactions={props.reactions} />
+      <ReactionBar
+        messageId={props.messageId}
+        threadId={props.threadId}
+        reactions={props.reactions}
+      />
     </div>
   );
 }
@@ -209,13 +213,28 @@ function buildRenderItems(blocks: AgentChatContentBlock[]): RenderItem[] {
   const items: RenderItem[] = [];
   for (let i = 0; i < blocks.length; ) {
     const block = blocks[i];
-    if (block.kind === 'text') { items.push({ type: 'text', block, index: i }); i++; continue; }
-    if (block.kind === 'thinking') { items.push({ type: 'thinking', block, index: i }); i++; continue; }
+    if (block.kind === 'text') {
+      items.push({ type: 'text', block, index: i });
+      i++;
+      continue;
+    }
+    if (block.kind === 'thinking') {
+      items.push({ type: 'thinking', block, index: i });
+      i++;
+      continue;
+    }
     if (block.kind === 'tool_use') {
       const run: AgentChatContentBlock[] = [];
       const startIndex = i;
-      while (i < blocks.length && blocks[i].kind === 'tool_use') { run.push(blocks[i]); i++; }
-      items.push(run.length >= 2 ? { type: 'tool-group', tools: run, startIndex } : { type: 'single-tool', block: run[0], index: startIndex });
+      while (i < blocks.length && blocks[i].kind === 'tool_use') {
+        run.push(blocks[i]);
+        i++;
+      }
+      items.push(
+        run.length >= 2
+          ? { type: 'tool-group', tools: run, startIndex }
+          : { type: 'single-tool', block: run[0], index: startIndex },
+      );
       continue;
     }
     items.push({ type: 'block', block, index: i });
@@ -231,12 +250,17 @@ function findLastTextIndex(items: RenderItem[]): number {
   return -1;
 }
 
-function renderToolGroup(item: RenderItem & { type: 'tool-group' }, isStreaming: boolean): React.ReactNode {
+function renderToolGroup(
+  item: RenderItem & { type: 'tool-group' },
+  isStreaming: boolean,
+): React.ReactNode {
   return (
     <AgentChatToolGroup
       key={`tg-${item.startIndex}`}
       blocks={item.tools as Array<AgentChatContentBlock & { kind: 'tool_use' }>}
-      defaultExpanded={isStreaming && item.tools.some((t) => t.kind === 'tool_use' && t.status === 'running')}
+      defaultExpanded={
+        isStreaming && item.tools.some((t) => t.kind === 'tool_use' && t.status === 'running')
+      }
     />
   );
 }

@@ -23,4 +23,9 @@ export interface BackgroundJobsAPI {
   onUpdate: (callback: (update: BackgroundJobUpdate) => void) => () => void;
 }
 
-export type { BackgroundJob, BackgroundJobQueueSnapshot, BackgroundJobRequest, BackgroundJobUpdate };
+export type {
+  BackgroundJob,
+  BackgroundJobQueueSnapshot,
+  BackgroundJobRequest,
+  BackgroundJobUpdate,
+};

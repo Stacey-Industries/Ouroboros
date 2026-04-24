@@ -5,8 +5,8 @@
  * project metadata, and the list of indexed files from the core pipeline.
  */
 
-import type { GraphDatabase } from '../graphDatabase'
-import type { ParsedFileResult } from '../treeSitterTypes'
+import type { GraphDatabase } from '../graphDatabase';
+import type { ParsedFileResult } from '../treeSitterTypes';
 
 // ─── Indexed file shape ──────────────────────────────────────────────────────
 // Mirrors the pipeline's per-file record. Defined here so passes can import
@@ -14,15 +14,15 @@ import type { ParsedFileResult } from '../treeSitterTypes'
 // yet).
 
 export interface IndexedFile {
-  relativePath: string
-  parsed: ParsedFileResult | null
+  relativePath: string;
+  parsed: ParsedFileResult | null;
 }
 
 // ─── Pass context ────────────────────────────────────────────────────────────
 
 export interface IndexingPassContext {
-  db: GraphDatabase
-  projectName: string
-  projectRoot: string
-  indexedFiles: IndexedFile[]
+  db: GraphDatabase;
+  projectName: string;
+  projectRoot: string;
+  indexedFiles: IndexedFile[];
 }

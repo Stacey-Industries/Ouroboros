@@ -126,9 +126,7 @@ function applyChannelFromConfig(): void {
 function guardDowngrade(info: UpdateInfo): boolean {
   const current = app.getVersion();
   if (isDowngrade(current, info.version)) {
-    log.warn(
-      `[Updater] downgrade rejected — offered ${info.version}, current ${current}`,
-    );
+    log.warn(`[Updater] downgrade rejected — offered ${info.version}, current ${current}`);
     rejectedVersions.add(info.version);
     return true;
   }

@@ -11,29 +11,71 @@ describe('worstSeverity', () => {
   });
 
   it('returns the single severity when only one diagnostic is present', () => {
-    expect(worstSeverity([{ severity: 'warning', message: 'w', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } }])).toBe('warning');
+    expect(
+      worstSeverity([
+        {
+          severity: 'warning',
+          message: 'w',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+      ]),
+    ).toBe('warning');
   });
 
   it('returns error when mixed severities include error', () => {
-    expect(worstSeverity([
-      { severity: 'info', message: 'i', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-      { severity: 'error', message: 'e', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 } },
-      { severity: 'warning', message: 'w', range: { startLine: 2, startChar: 0, endLine: 2, endChar: 1 } },
-    ])).toBe('error');
+    expect(
+      worstSeverity([
+        {
+          severity: 'info',
+          message: 'i',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+        {
+          severity: 'error',
+          message: 'e',
+          range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 },
+        },
+        {
+          severity: 'warning',
+          message: 'w',
+          range: { startLine: 2, startChar: 0, endLine: 2, endChar: 1 },
+        },
+      ]),
+    ).toBe('error');
   });
 
   it('returns warning when no errors present', () => {
-    expect(worstSeverity([
-      { severity: 'hint', message: 'h', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-      { severity: 'warning', message: 'w', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 } },
-      { severity: 'info', message: 'i', range: { startLine: 2, startChar: 0, endLine: 2, endChar: 1 } },
-    ])).toBe('warning');
+    expect(
+      worstSeverity([
+        {
+          severity: 'hint',
+          message: 'h',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+        {
+          severity: 'warning',
+          message: 'w',
+          range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 },
+        },
+        {
+          severity: 'info',
+          message: 'i',
+          range: { startLine: 2, startChar: 0, endLine: 2, endChar: 1 },
+        },
+      ]),
+    ).toBe('warning');
   });
 
   it('ranks severity: error < warning < info < hint', () => {
     const severities = ['error', 'warning', 'info', 'hint'] as const;
     for (let i = 0; i < severities.length; i++) {
-      const diag = [{ severity: severities[i], message: 'm', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } }];
+      const diag = [
+        {
+          severity: severities[i],
+          message: 'm',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+      ];
       expect(worstSeverity(diag)).toBe(severities[i]);
     }
   });
@@ -43,18 +85,26 @@ describe('worstSeverity', () => {
 
 describe('useLspDiagnosticsSync — store integration', () => {
   let capturedCallback: ((event: { filePath: string; diagnostics: unknown[] }) => void) | undefined;
-  const onDiagnostics = vi.fn((cb: (event: { filePath: string; diagnostics: unknown[] }) => void) => {
-    capturedCallback = cb;
-    return () => { capturedCallback = undefined; };
-  });
+  const onDiagnostics = vi.fn(
+    (cb: (event: { filePath: string; diagnostics: unknown[] }) => void) => {
+      capturedCallback = cb;
+      return () => {
+        capturedCallback = undefined;
+      };
+    },
+  );
 
   beforeEach(() => {
     // fileTreeStore persist middleware requires localStorage
     const storage: Record<string, string> = {};
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => storage[k] ?? null,
-      setItem: (k: string, v: string) => { storage[k] = v; },
-      removeItem: (k: string) => { delete storage[k]; },
+      setItem: (k: string, v: string) => {
+        storage[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete storage[k];
+      },
     });
     capturedCallback = undefined;
     onDiagnostics.mockClear();
@@ -72,8 +122,16 @@ describe('useLspDiagnosticsSync — store integration', () => {
   it('pushes worst severity into the store when callback fires', () => {
     // Simulate the subscription callback being called (as it would be by the hook)
     const diagnostics = [
-      { severity: 'warning', message: 'w', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-      { severity: 'error', message: 'e', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 } },
+      {
+        severity: 'warning',
+        message: 'w',
+        range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+      },
+      {
+        severity: 'error',
+        message: 'e',
+        range: { startLine: 1, startChar: 0, endLine: 1, endChar: 1 },
+      },
     ];
 
     // Register by invoking onDiagnostics directly (mirrors what the useEffect does)
@@ -93,14 +151,28 @@ describe('useLspDiagnosticsSync — store integration', () => {
       useFileTreeStore.getState().updateDiagnostics(new Map([[event.filePath, severity]]));
     });
 
-    capturedCallback?.({ filePath: '/src/bar.ts', diagnostics: [
-      { severity: 'error', message: 'e', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-    ] });
+    capturedCallback?.({
+      filePath: '/src/bar.ts',
+      diagnostics: [
+        {
+          severity: 'error',
+          message: 'e',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+      ],
+    });
     expect(useFileTreeStore.getState().diagnostics.get('/src/bar.ts')).toBe('error');
 
-    capturedCallback?.({ filePath: '/src/bar.ts', diagnostics: [
-      { severity: 'info', message: 'i', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-    ] });
+    capturedCallback?.({
+      filePath: '/src/bar.ts',
+      diagnostics: [
+        {
+          severity: 'info',
+          message: 'i',
+          range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 },
+        },
+      ],
+    });
     expect(useFileTreeStore.getState().diagnostics.get('/src/bar.ts')).toBe('info');
   });
 });

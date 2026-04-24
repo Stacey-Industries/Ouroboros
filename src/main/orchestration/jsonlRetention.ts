@@ -123,10 +123,8 @@ function extractDateFromFilename(filename: string, pattern: RegExp): Date | null
 /** Return a Date representing midnight UTC `days` days ago. */
 function utcDaysAgo(days: number): Date {
   const now = new Date();
-  const cutoff = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() - days,
-  ));
+  const cutoff = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days),
+  );
   return cutoff;
 }

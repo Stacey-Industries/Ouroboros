@@ -58,12 +58,27 @@ interface ResCtx {
 function makeRes(): ResCtx {
   const ctx = { status: null as number | null, body: null as unknown, cookies: [] as string[] };
   const res = {
-    status(code: number) { ctx.status = code; return res; },
-    json(b: unknown) { ctx.body = b; return res; },
-    type() { return res; },
-    send(b: unknown) { ctx.body = b; return res; },
-    setHeader(_k: string, v: unknown) { ctx.cookies.push(String(v)); },
-    redirect(code: number) { ctx.status = code; },
+    status(code: number) {
+      ctx.status = code;
+      return res;
+    },
+    json(b: unknown) {
+      ctx.body = b;
+      return res;
+    },
+    type() {
+      return res;
+    },
+    send(b: unknown) {
+      ctx.body = b;
+      return res;
+    },
+    setHeader(_k: string, v: unknown) {
+      ctx.cookies.push(String(v));
+    },
+    redirect(code: number) {
+      ctx.status = code;
+    },
   } as unknown as Response;
   return { res, ctx };
 }

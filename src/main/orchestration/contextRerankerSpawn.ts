@@ -41,7 +41,10 @@ function buildClaudeArgs(platform: string): { cmd: string; args: string[] } {
   if (platform === 'win32') {
     // On Windows invoke via powershell to match the pattern in ptySpawn.ts / ptyAgent.ts.
     const escaped = ['claude', ...cliArgs].join(' ');
-    return { cmd: 'powershell.exe', args: ['-NonInteractive', '-NoLogo', '-Command', `& ${escaped}`] };
+    return {
+      cmd: 'powershell.exe',
+      args: ['-NonInteractive', '-NoLogo', '-Command', `& ${escaped}`],
+    };
   }
   return { cmd: 'claude', args: cliArgs };
 }
@@ -58,8 +61,12 @@ function wireChildEvents(opts: WireOpts): void {
   const { child, start, timer, timedOut, finish } = opts;
   let stdout = '';
   let stderr = '';
-  child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8'); });
-  child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8'); });
+  child.stdout?.on('data', (chunk: Buffer) => {
+    stdout += chunk.toString('utf8');
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    stderr += chunk.toString('utf8');
+  });
   child.on('error', (err) => {
     clearTimeout(timer);
     finish({ success: false, error: err.message, latencyMs: Date.now() - start });
@@ -68,9 +75,15 @@ function wireChildEvents(opts: WireOpts): void {
     clearTimeout(timer);
     if (timedOut()) return;
     const latencyMs = Date.now() - start;
-    if (code !== 0) { finish({ success: false, error: `exit ${code}: ${stderr.slice(0, 200)}`, latencyMs }); return; }
+    if (code !== 0) {
+      finish({ success: false, error: `exit ${code}: ${stderr.slice(0, 200)}`, latencyMs });
+      return;
+    }
     const trimmed = stdout.trim();
-    if (!trimmed) { finish({ success: false, error: 'empty output', latencyMs }); return; }
+    if (!trimmed) {
+      finish({ success: false, error: 'empty output', latencyMs });
+      return;
+    }
     finish({ success: true, output: trimmed, latencyMs });
   });
 }
@@ -86,10 +99,16 @@ interface WriteStdinOpts {
 function writeStdin(opts: WriteStdinOpts): void {
   const { child, prompt, start, timer, finish } = opts;
   try {
-    child.stdin?.write(prompt, 'utf8', () => { child.stdin?.end(); });
+    child.stdin?.write(prompt, 'utf8', () => {
+      child.stdin?.end();
+    });
   } catch (err) {
     clearTimeout(timer);
-    finish({ success: false, error: err instanceof Error ? err.message : String(err), latencyMs: Date.now() - start });
+    finish({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+      latencyMs: Date.now() - start,
+    });
   }
 }
 
@@ -112,11 +131,19 @@ export function spawnHaikuForRerank(
     const { cmd, args } = buildClaudeArgs(platform);
     let _timedOut = false;
     let settled = false;
-    const finish = (result: RerankerSpawnResult): void => { if (settled) return; settled = true; resolve(result); };
+    const finish = (result: RerankerSpawnResult): void => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
     const child = spawnFn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     const timer = setTimeout(() => {
       _timedOut = true;
-      try { child.kill(); } catch { /* ignore */ }
+      try {
+        child.kill();
+      } catch {
+        /* ignore */
+      }
       finish({ success: false, error: 'timeout', latencyMs: Date.now() - start });
     }, timeoutMs);
     wireChildEvents({ child, start, timer, timedOut: () => _timedOut, finish });

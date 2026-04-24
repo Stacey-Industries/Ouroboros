@@ -53,11 +53,21 @@ export function broadcastSubagentUpdated(parentSessionId: string): void {
 
 // ─── Arg types ────────────────────────────────────────────────────────────────
 
-interface ListArgs { parentSessionId: string }
-interface GetArgs { subagentId: string }
-interface LiveCountArgs { parentSessionId: string }
-interface CostRollupArgs { parentSessionId: string }
-interface CancelArgs { subagentId: string }
+interface ListArgs {
+  parentSessionId: string;
+}
+interface GetArgs {
+  subagentId: string;
+}
+interface LiveCountArgs {
+  parentSessionId: string;
+}
+interface CostRollupArgs {
+  parentSessionId: string;
+}
+interface CancelArgs {
+  subagentId: string;
+}
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -122,7 +132,9 @@ async function handleCancel(args: unknown): Promise<HandlerOk<object> | HandlerF
     if (killed) {
       log.info(`[subagent:cancel] PTY killed id=${subagentId} pty=${rec.ptySessionId}`);
     } else {
-      log.warn(`[subagent:cancel] PTY not found id=${subagentId} pty=${rec.ptySessionId} — state-only cancel`);
+      log.warn(
+        `[subagent:cancel] PTY not found id=${subagentId} pty=${rec.ptySessionId} — state-only cancel`,
+      );
     }
   } else {
     log.info(`[subagent:cancel] no ptySessionId — state-only cancel id=${subagentId}`);
@@ -135,11 +147,7 @@ async function handleCancel(args: unknown): Promise<HandlerOk<object> | HandlerF
 
 // ─── Registration helper ──────────────────────────────────────────────────────
 
-function register(
-  channels: string[],
-  channel: string,
-  handler: (args: unknown) => unknown,
-): void {
+function register(channels: string[], channel: string, handler: (args: unknown) => unknown): void {
   ipcMain.removeHandler(channel);
   ipcMain.handle(channel, async (_event, args: unknown) => {
     try {

@@ -1,12 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-This directory has a clean MVVM split enforced at the file level — not just the function level. `commandPaletteState.ts` owns raw React state, `commandPaletteActions.ts` owns event handlers, `commandPaletteViewModel.ts` is a pure function assembling the view model, and `useCommandPaletteModel.ts` is the single orchestrating hook. This means you can unit-test each layer in isolation without touching the component tree.
-`─────────────────────────────────────────────────`
-
-Here is the generated CLAUDE.md content:
-
----
-
 # CommandPalette — VS Code-style command palette, file picker, and symbol search
 
 ## Architecture
@@ -64,6 +56,7 @@ Three independent picker UIs share overlay primitives but have separate state/da
 - `../FileTree/FileListItem` — `FileEntry` type reused by `FilePicker`
 - `window.electronAPI.lsp.getDocumentSymbols` — symbol data source for symbol search
 - `window.electronAPI.extensions.commandExecuted` — execution telemetry
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

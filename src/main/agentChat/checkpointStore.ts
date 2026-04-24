@@ -101,24 +101,20 @@ export class CheckpointStore {
 
   list(threadId: string): SessionCheckpoint[] {
     const rows = this.db
-      .prepare(
-        `SELECT * FROM session_checkpoints WHERE threadId = ? ORDER BY createdAt ASC`,
-      )
+      .prepare(`SELECT * FROM session_checkpoints WHERE threadId = ? ORDER BY createdAt ASC`)
       .all(threadId) as RawRow[];
     return rows.map(rowToCheckpoint);
   }
 
   get(id: string): SessionCheckpoint | null {
-    const row = this.db
-      .prepare(`SELECT * FROM session_checkpoints WHERE id = ?`)
-      .get(id) as RawRow | undefined;
+    const row = this.db.prepare(`SELECT * FROM session_checkpoints WHERE id = ?`).get(id) as
+      | RawRow
+      | undefined;
     return row ? rowToCheckpoint(row) : null;
   }
 
   delete(id: string): boolean {
-    const result = this.db
-      .prepare(`DELETE FROM session_checkpoints WHERE id = ?`)
-      .run(id);
+    const result = this.db.prepare(`DELETE FROM session_checkpoints WHERE id = ?`).run(id);
     return result.changes > 0;
   }
 

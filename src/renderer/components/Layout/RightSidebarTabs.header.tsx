@@ -170,8 +170,12 @@ function SheetTriggerButton(): React.ReactElement {
       onClick={() => openSheet()}
       className="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors duration-100 text-text-semantic-muted"
       title="Open views"
-      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = 'var(--text-primary)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = '';
+      }}
     >
       <GearIcon />
     </button>
@@ -203,9 +207,17 @@ function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement
 
 // ── Desktop view switcher (dropdown) ─────────────────────────────────────────
 
-function DesktopViewSwitcher({ viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView, showDispatch }: {
-  viewDropdownOpen: boolean; onToggleViewDropdown: () => void;
-  activeView: RightSidebarView; onSwitchView: (view: RightSidebarView) => void;
+function DesktopViewSwitcher({
+  viewDropdownOpen,
+  onToggleViewDropdown,
+  activeView,
+  onSwitchView,
+  showDispatch,
+}: {
+  viewDropdownOpen: boolean;
+  onToggleViewDropdown: () => void;
+  activeView: RightSidebarView;
+  onSwitchView: (view: RightSidebarView) => void;
   showDispatch: boolean;
 }): React.ReactElement {
   return (
@@ -239,8 +251,16 @@ type ChatPanelHeaderProps = {
 };
 
 export function ChatPanelHeader({
-  activeThread, threadCount, historyOpen, onToggleHistory, onNewChat,
-  viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView, showDispatch = false,
+  activeThread,
+  threadCount,
+  historyOpen,
+  onToggleHistory,
+  onNewChat,
+  viewDropdownOpen,
+  onToggleViewDropdown,
+  activeView,
+  onSwitchView,
+  showDispatch = false,
 }: ChatPanelHeaderProps): React.ReactElement {
   const isPhone = useViewportBreakpoint() === 'phone';
   return (
@@ -248,7 +268,11 @@ export function ChatPanelHeader({
       className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel pl-2"
       style={{ borderColor: 'var(--border-subtle, var(--border-default))' }}
     >
-      <HistoryToggleButton historyOpen={historyOpen} threadCount={threadCount} onToggle={onToggleHistory} />
+      <HistoryToggleButton
+        historyOpen={historyOpen}
+        threadCount={threadCount}
+        onToggle={onToggleHistory}
+      />
       <ThreadTitle activeThread={activeThread} />
       <NewChatButton onClick={onNewChat} />
       {isPhone ? (

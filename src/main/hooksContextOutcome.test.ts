@@ -159,7 +159,11 @@ describe('tapContextOutcomeObserver — error resilience', () => {
       throw new Error('observer error');
     });
 
-    const payload = makePayload({ type: 'post_tool_use', toolName: 'Read', input: { path: 'x.ts' } });
+    const payload = makePayload({
+      type: 'post_tool_use',
+      toolName: 'Read',
+      input: { path: 'x.ts' },
+    });
     expect(() => tapContextOutcomeObserver(payload)).not.toThrow();
     await vi.runAllTimersAsync(); // setImmediate fires
 

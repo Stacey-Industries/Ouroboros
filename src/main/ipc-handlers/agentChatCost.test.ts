@@ -95,7 +95,7 @@ describe('getThreadCostRollup handler', () => {
       requireValidObject,
     });
 
-    const result = await handlers['agentChat:getThreadCostRollup']({ threadId: 't1' }) as {
+    const result = (await handlers['agentChat:getThreadCostRollup']({ threadId: 't1' })) as {
       success: boolean;
       rollup: { threadId: string; totalUsd: number };
     };
@@ -133,7 +133,7 @@ describe('getGlobalCostRollup handler', () => {
       requireValidObject,
     });
 
-    const result = await handlers['agentChat:getGlobalCostRollup'](null) as {
+    const result = (await handlers['agentChat:getGlobalCostRollup'](null)) as {
       success: boolean;
       rollup: { threadCount: number; totalUsd: number };
       threads: unknown[];
@@ -162,7 +162,7 @@ describe('getGlobalCostRollup handler', () => {
     });
 
     const payload = { timeRange: { from: now - 60_000, to: now + 1000 } };
-    const result = await handlers['agentChat:getGlobalCostRollup'](payload) as {
+    const result = (await handlers['agentChat:getGlobalCostRollup'](payload)) as {
       success: boolean;
       rollup: { threadCount: number };
       threads: unknown[];
@@ -184,7 +184,7 @@ describe('getGlobalCostRollup handler', () => {
       requireValidObject,
     });
 
-    const result = await handlers['agentChat:getGlobalCostRollup'](null) as {
+    const result = (await handlers['agentChat:getGlobalCostRollup'](null)) as {
       success: boolean;
     };
     expect(result.success).toBe(false);

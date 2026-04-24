@@ -84,21 +84,18 @@ function useDiffReviewContextValue(): DiffReviewContextValue {
   const { acceptHunk: baseAcceptHunk, rejectHunk } = useSingleHunkActions(state, dispatch);
   const { acceptAllFile: baseAcceptAllFile, rejectAllFile, acceptAll: baseAcceptAll, rejectAll } =
     useBulkReviewActions(state, dispatch);
-  const checkpoint = useCheckpointGuard(state);
   const { acceptHunk, acceptAllFile, acceptAll } = useWrappedAcceptActions(
     { acceptHunk: baseAcceptHunk, acceptAllFile: baseAcceptAllFile, acceptAll: baseAcceptAll },
-    checkpoint,
+    useCheckpointGuard(state),
   );
   const { canRollback, rollback } = useRollbackAction(state, dispatch);
   const { confirmStaleOp, dismissStaleOp } = useConfirmStaleOp(state, dispatch);
   useStaleFileWatcher(state, dispatch);
   return useMemo<DiffReviewContextValue>(
-    () => ({
-      state, openReview, closeReview,
-      acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll,
-      canRollback, rollback, confirmStaleOp, dismissStaleOp,
-    }),
-    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback, confirmStaleOp, dismissStaleOp],
+    () => ({ state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile,
+      rejectAllFile, acceptAll, rejectAll, canRollback, rollback, confirmStaleOp, dismissStaleOp }),
+    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile,
+      rejectAllFile, acceptAll, rejectAll, canRollback, rollback, confirmStaleOp, dismissStaleOp],
   );
 }
 

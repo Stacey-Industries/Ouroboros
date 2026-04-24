@@ -105,7 +105,10 @@ async function refreshProvider(provider: AuthProvider): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 function isRefreshableState(state: AuthState): boolean {
-  return (state.status === 'authenticated' || state.status === 'expired') && state.credentialType === 'oauth';
+  return (
+    (state.status === 'authenticated' || state.status === 'expired') &&
+    state.credentialType === 'oauth'
+  );
 }
 
 async function handleRefreshOutcome(provider: AuthProvider, ok: boolean): Promise<void> {

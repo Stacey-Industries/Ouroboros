@@ -88,7 +88,10 @@ export function GutterIcon({ block }: { block: CommandBlock }): React.ReactEleme
   useEffect(() => {
     if (block.complete) return;
     const elapsed = Date.now() - block.timestamp;
-    if (elapsed >= SETTLE_MS) { setSettled(true); return; }
+    if (elapsed >= SETTLE_MS) {
+      setSettled(true);
+      return;
+    }
     const id = setTimeout(() => setSettled(true), SETTLE_MS - elapsed);
     return () => clearTimeout(id);
   }, [block.complete, block.timestamp]);

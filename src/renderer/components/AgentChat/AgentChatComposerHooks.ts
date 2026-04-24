@@ -24,6 +24,7 @@ import {
 } from './AgentChatComposerSupport';
 import type { ChatOverrides } from './ChatControlsBar';
 import type { MentionItem } from './MentionAutocomplete';
+import { QUOTE_EVENT_NAME, type QuoteEventDetail } from './quoteComposer';
 import type { SlashCommand, SlashCommandContext } from './SlashCommandMenu';
 
 function hasImageItems(event: React.DragEvent): boolean {
@@ -116,26 +117,8 @@ function useRemoveAttachment(
   );
 }
 
-export function useImageAttachmentHandlers(
-  attachments: ImageAttachment[],
-  onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
-  opts?: { textareaRef?: React.RefObject<HTMLTextAreaElement | null>; lastSyncedDraft?: React.MutableRefObject<string>; onChange?: (value: string) => void },
-) {
-  const handleFiles = useCallback(
-    async (files: File[]) =>
-      appendAttachments(attachments, await readAttachmentFiles(files), onAttachmentsChange),
-    [attachments, onAttachmentsChange],
-  );
-  const noop = useCallback(() => {}, []);
-  const nullRef = useRef<HTMLTextAreaElement>(null);
-  const nullDraft = useRef('');
-  const drag = useAttachmentDragHandlers(
-    handleFiles,
-    opts?.textareaRef ?? nullRef,
-    opts?.lastSyncedDraft ?? nullDraft,
-    opts?.onChange ?? noop,
-  );
-  const handlePaste = useCallback(
+function usePasteHandler(handleFiles: (files: File[]) => Promise<void>) {
+  return useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const imageFiles = Array.from(event.clipboardData.items)
         .filter((item) => item.type.startsWith('image/'))
@@ -147,13 +130,35 @@ export function useImageAttachmentHandlers(
     },
     [handleFiles],
   );
+}
+
+export function useImageAttachmentHandlers(
+  attachments: ImageAttachment[],
+  onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
+  opts?: {
+    textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+    lastSyncedDraft?: React.MutableRefObject<string>;
+    onChange?: (value: string) => void;
+  },
+) {
+  const handleFiles = useCallback(
+    async (files: File[]) =>
+      appendAttachments(attachments, await readAttachmentFiles(files), onAttachmentsChange),
+    [attachments, onAttachmentsChange],
+  );
+  const noop = useCallback(() => {}, []);
+  const nullRef = useRef<HTMLTextAreaElement>(null);
+  const nullDraft = useRef('');
+  const drag = useAttachmentDragHandlers(
+    handleFiles, opts?.textareaRef ?? nullRef, opts?.lastSyncedDraft ?? nullDraft, opts?.onChange ?? noop,
+  );
   const handlePickImage = useCallback(async () => {
     if (!onAttachmentsChange || !window.electronAPI?.files?.showImageDialog) return;
     const result = await window.electronAPI.files.showImageDialog();
     if (result.success && !result.cancelled && result.attachments?.length)
       onAttachmentsChange([...attachments, ...(result.attachments as ImageAttachment[])]);
   }, [attachments, onAttachmentsChange]);
-  return { ...drag, handlePaste, handlePickImage, handleRemoveAttachment: useRemoveAttachment(attachments, onAttachmentsChange) };
+  return { ...drag, handlePaste: usePasteHandler(handleFiles), handlePickImage, handleRemoveAttachment: useRemoveAttachment(attachments, onAttachmentsChange) };
 }
 
 export interface ComposerDraftHandlersArgs {
@@ -179,6 +184,7 @@ export interface ComposerDraftHandlersArgs {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   onAutocompleteQuery?: (query: string) => void;
   onOpenAutocomplete?: () => void;
   onCloseAutocomplete?: () => void;
@@ -222,7 +228,6 @@ export function useComposerDraftSync(
 ): void {
   useEffect(() => {
     if (draft !== lastSyncedDraft.current && textareaRef.current) {
-      // eslint-disable-next-line react-compiler/react-compiler
       lastSyncedDraft.current = draft;
       textareaRef.current.value = draft;
       autoResizeTextarea(textareaRef.current);
@@ -267,6 +272,28 @@ export function useComposerMenuState() {
     closeMentionAutocomplete,
     closeSlashMenu,
   };
+}
+
+/**
+ * Listens for `agent-ide:quote-to-composer` DOM events and appends
+ * the quoted text to the current draft via `onChange`.
+ */
+export function useQuoteListener(draft: string, onChange: (value: string) => void): void {
+  const draftRef = useRef(draft);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent<QuoteEventDetail>).detail;
+      if (!detail?.text) return;
+      const current = draftRef.current;
+      const separator = current.length > 0 && !current.endsWith('\n') ? '\n' : '';
+      onChangeRef.current(current + separator + detail.text);
+    };
+    window.addEventListener(QUOTE_EVENT_NAME, handler);
+    return () => window.removeEventListener(QUOTE_EVENT_NAME, handler);
+  }, []);
 }
 
 /** Pick only the fields needed for ComposerState from useComposerMenuState. */

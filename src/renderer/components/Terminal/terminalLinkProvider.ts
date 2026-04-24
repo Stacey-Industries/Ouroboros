@@ -12,64 +12,73 @@
  * - Project root is used to resolve relative paths but is not required.
  */
 
-import type { ILink,ILinkProvider, Terminal } from '@xterm/xterm'
+import type { ILink, ILinkProvider, Terminal } from '@xterm/xterm';
 
 // ── File extension whitelist ─────────────────────────────────────────────────
 // Only match paths ending with known source/config file extensions.
 // This prevents false positives on random text that looks path-like.
-const EXT_PATTERN = '\\.(ts|tsx|js|jsx|mjs|cjs|json|md|css|scss|less|html|xml|yaml|yml|toml|env|sh|bash|ps1|py|rb|go|rs|java|kt|c|cpp|h|hpp|vue|svelte|astro|prisma|sql|graphql|gql|proto|txt|csv|log|conf|cfg|ini|lock|snap|test|spec|d\\.ts)';
+const EXT_PATTERN =
+  '\\.(ts|tsx|js|jsx|mjs|cjs|json|md|css|scss|less|html|xml|yaml|yml|toml|env|sh|bash|ps1|py|rb|go|rs|java|kt|c|cpp|h|hpp|vue|svelte|astro|prisma|sql|graphql|gql|proto|txt|csv|log|conf|cfg|ini|lock|snap|test|spec|d\\.ts)';
 
 // ── Patterns ─────────────────────────────────────────────────────────────────
 
 // Relative paths starting with common project directories
 // e.g. src/main/ipc.ts, lib/utils.ts, test/foo.spec.ts
 const KNOWN_DIR_RE = new RegExp(
-  '(?:^|[\\s\'"(\\[,=])' +                              // boundary
-  '((?:src|lib|app|test|tests|spec|dist|build|public|assets|config|scripts|packages|node_modules)' +
-  '/[\\w./@-]+' + EXT_PATTERN + ')' +                   // path
-  '(?::(\\d+)(?::(\\d+))?)?' +                          // optional :line:col
-  '(?=[\\s\'"\\)\\],;:]|$)',                             // trailing boundary
-  'g'
+  '(?:^|[\\s\'"(\\[,=])' + // boundary
+    '((?:src|lib|app|test|tests|spec|dist|build|public|assets|config|scripts|packages|node_modules)' +
+    '/[\\w./@-]+' +
+    EXT_PATTERN +
+    ')' + // path
+    '(?::(\\d+)(?::(\\d+))?)?' + // optional :line:col
+    '(?=[\\s\'"\\)\\],;:]|$)', // trailing boundary
+  'g',
 );
 
 // Explicit relative paths: ./foo/bar.ts, ../lib/utils.ts
 const RELATIVE_RE = new RegExp(
   '(?:^|[\\s\'"(\\[,=])' +
-  '(\\.{1,2}/[\\w./@-]+' + EXT_PATTERN + ')' +
-  '(?::(\\d+)(?::(\\d+))?)?' +
-  '(?=[\\s\'"\\)\\],;:]|$)',
-  'g'
+    '(\\.{1,2}/[\\w./@-]+' +
+    EXT_PATTERN +
+    ')' +
+    '(?::(\\d+)(?::(\\d+))?)?' +
+    '(?=[\\s\'"\\)\\],;:]|$)',
+  'g',
 );
 
 // Windows absolute paths: C:\Users\foo\bar.ts
 const WIN_ABS_RE = new RegExp(
-  '([A-Z]:\\\\[\\w\\\\./@ -]+' + EXT_PATTERN + ')' +
-  '(?::(\\d+)(?::(\\d+))?)?' +
-  '(?=[\\s\'"\\)\\],;:]|$)',
-  'gi'
+  '([A-Z]:\\\\[\\w\\\\./@ -]+' +
+    EXT_PATTERN +
+    ')' +
+    '(?::(\\d+)(?::(\\d+))?)?' +
+    '(?=[\\s\'"\\)\\],;:]|$)',
+  'gi',
 );
 
 // Unix absolute paths: /home/user/project/src/foo.ts
 const UNIX_ABS_RE = new RegExp(
-  '(/(?:home|usr|tmp|var|opt|etc|mnt|media|Users|Library|Applications)[\\w./@-]+' + EXT_PATTERN + ')' +
-  '(?::(\\d+)(?::(\\d+))?)?' +
-  '(?=[\\s\'"\\)\\],;:]|$)',
-  'g'
+  '(/(?:home|usr|tmp|var|opt|etc|mnt|media|Users|Library|Applications)[\\w./@-]+' +
+    EXT_PATTERN +
+    ')' +
+    '(?::(\\d+)(?::(\\d+))?)?' +
+    '(?=[\\s\'"\\)\\],;:]|$)',
+  'g',
 );
 
 // ── Match result ─────────────────────────────────────────────────────────────
 
 interface FileMatch {
   /** The file path as found in the text (before resolution) */
-  path: string
+  path: string;
   /** 0-based character offset where the path starts in the line */
-  startIndex: number
+  startIndex: number;
   /** Length of the path text (excludes :line:col suffix) */
-  pathLength: number
+  pathLength: number;
   /** 1-based line number, if present */
-  line?: number
+  line?: number;
   /** 1-based column number, if present */
-  col?: number
+  col?: number;
 }
 
 // ── Matching logic ───────────────────────────────────────────────────────────
@@ -158,11 +167,7 @@ function computeLinkLength(match: FileMatch): number {
   return fullLength;
 }
 
-function matchToLink(
-  match: FileMatch,
-  lineNumber: number,
-  projectRoot: string | null,
-): ILink {
+function matchToLink(match: FileMatch, lineNumber: number, projectRoot: string | null): ILink {
   const fullLength = computeLinkLength(match);
   return {
     range: {
@@ -176,7 +181,7 @@ function matchToLink(
       window.dispatchEvent(
         new CustomEvent('agent-ide:open-file', {
           detail: { filePath: resolved, line: match.line, col: match.col },
-        })
+        }),
       );
     },
   };
@@ -191,13 +196,22 @@ function provideLinks(
   callback: (links: ILink[] | undefined) => void,
 ): void {
   const line = term.buffer.active.getLine(lineNumber - 1);
-  if (!line) { callback(undefined); return; }
+  if (!line) {
+    callback(undefined);
+    return;
+  }
 
   const lineText = line.translateToString(true);
-  if (!lineText.trim()) { callback(undefined); return; }
+  if (!lineText.trim()) {
+    callback(undefined);
+    return;
+  }
 
   const matches = findFileMatches(lineText);
-  if (matches.length === 0) { callback(undefined); return; }
+  if (matches.length === 0) {
+    callback(undefined);
+    return;
+  }
 
   const projectRoot = getProjectRoot();
   callback(matches.map((m) => matchToLink(m, lineNumber, projectRoot)));

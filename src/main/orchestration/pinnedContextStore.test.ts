@@ -16,10 +16,7 @@ import type { Session } from '../session/session';
 import { makeSession } from '../session/session';
 import type { SessionStore } from '../session/sessionStore';
 import { openSessionStore } from '../session/sessionStore';
-import {
-  buildPinnedContextStore,
-  MAX_ACTIVE_PINS,
-} from './pinnedContextStore';
+import { buildPinnedContextStore, MAX_ACTIVE_PINS } from './pinnedContextStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +24,10 @@ function makeInMemoryStore(): SessionStore {
   const sessions: Session[] = [];
   return openSessionStore({
     read: () => sessions.slice(),
-    write: (updated) => { sessions.length = 0; sessions.push(...updated); },
+    write: (updated) => {
+      sessions.length = 0;
+      sessions.push(...updated);
+    },
   });
 }
 

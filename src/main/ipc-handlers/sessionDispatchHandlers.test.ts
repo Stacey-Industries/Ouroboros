@@ -48,9 +48,7 @@ vi.mock('../logger', () => ({
 const { mockEnqueue, mockListJobs, mockCancelJob } = vi.hoisted(() => ({
   mockEnqueue: vi.fn(),
   mockListJobs: vi.fn<() => unknown[]>(() => []),
-  mockCancelJob: vi.fn<(id: string) => { ok: boolean; reason?: string }>(
-    () => ({ ok: true }),
-  ),
+  mockCancelJob: vi.fn<(id: string) => { ok: boolean; reason?: string }>(() => ({ ok: true })),
 }));
 
 vi.mock('../session/sessionDispatchQueue', () => ({
@@ -175,10 +173,11 @@ describe('sessions:dispatchTask handler', () => {
   it('enqueues a valid request and returns jobId', async () => {
     mockEnqueue.mockReturnValue({ id: 'job-uuid-1' });
 
-    const result = await handler(
-      makeEvent(1),
-      { title: 'Fix bug', prompt: 'Please fix it', projectPath: WIN_ROOT },
-    ) as { success: boolean; jobId?: string };
+    const result = (await handler(makeEvent(1), {
+      title: 'Fix bug',
+      prompt: 'Please fix it',
+      projectPath: WIN_ROOT,
+    })) as { success: boolean; jobId?: string };
 
     expect(result.success).toBe(true);
     expect(result.jobId).toBe('job-uuid-1');
@@ -191,23 +190,17 @@ describe('sessions:dispatchTask handler', () => {
   it('passes deviceId to enqueue', async () => {
     mockEnqueue.mockReturnValue({ id: 'job-uuid-2' });
 
-    await handler(
-      makeEvent(1),
-      { title: 'T', prompt: 'P', projectPath: WIN_ROOT },
-      'device-abc',
-    );
+    await handler(makeEvent(1), { title: 'T', prompt: 'P', projectPath: WIN_ROOT }, 'device-abc');
 
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.anything(),
-      'device-abc',
-    );
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.anything(), 'device-abc');
   });
 
   it('rejects empty prompt with invalid-request', async () => {
-    const result = await handler(
-      makeEvent(1),
-      { title: 'T', prompt: '', projectPath: WIN_ROOT },
-    ) as { success: boolean; error?: string };
+    const result = (await handler(makeEvent(1), {
+      title: 'T',
+      prompt: '',
+      projectPath: WIN_ROOT,
+    })) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/^invalid-request/);
@@ -215,27 +208,29 @@ describe('sessions:dispatchTask handler', () => {
   });
 
   it('rejects empty title with invalid-request', async () => {
-    const result = await handler(
-      makeEvent(1),
-      { title: '', prompt: 'Do it', projectPath: WIN_ROOT },
-    ) as { success: boolean; error?: string };
+    const result = (await handler(makeEvent(1), {
+      title: '',
+      prompt: 'Do it',
+      projectPath: WIN_ROOT,
+    })) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/^invalid-request/);
   });
 
   it('rejects non-object request with invalid-request', async () => {
-    const result = await handler(makeEvent(1), null) as { success: boolean; error?: string };
+    const result = (await handler(makeEvent(1), null)) as { success: boolean; error?: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/^invalid-request/);
   });
 
   it('rejects a projectPath outside roots with project-path-not-allowed', async () => {
     const outside = process.platform === 'win32' ? 'C:\\evil\\path' : '/evil/path';
-    const result = await handler(
-      makeEvent(1),
-      { title: 'T', prompt: 'P', projectPath: outside },
-    ) as { success: boolean; error?: string };
+    const result = (await handler(makeEvent(1), {
+      title: 'T',
+      prompt: 'P',
+      projectPath: outside,
+    })) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('project-path-not-allowed');
@@ -244,10 +239,11 @@ describe('sessions:dispatchTask handler', () => {
 
   it('rejects a traversal path with project-path-not-allowed', async () => {
     const traversal = path.join(WIN_ROOT, '..', 'sneaky');
-    const result = await handler(
-      makeEvent(1),
-      { title: 'T', prompt: 'P', projectPath: traversal },
-    ) as { success: boolean; error?: string };
+    const result = (await handler(makeEvent(1), {
+      title: 'T',
+      prompt: 'P',
+      projectPath: traversal,
+    })) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('project-path-not-allowed');
@@ -275,14 +271,14 @@ describe('sessions:listDispatchJobs handler', () => {
     const jobs = [{ id: 'j1', status: 'queued' }];
     mockListJobs.mockReturnValue(jobs);
 
-    const result = await handler() as { success: boolean; jobs?: unknown[] };
+    const result = (await handler()) as { success: boolean; jobs?: unknown[] };
     expect(result.success).toBe(true);
     expect(result.jobs).toEqual(jobs);
   });
 
   it('returns empty array when queue is empty', async () => {
     mockListJobs.mockReturnValue([]);
-    const result = await handler() as { success: boolean; jobs?: unknown[] };
+    const result = (await handler()) as { success: boolean; jobs?: unknown[] };
     expect(result.success).toBe(true);
     expect(result.jobs).toHaveLength(0);
   });
@@ -309,20 +305,20 @@ describe('sessions:cancelDispatchJob handler', () => {
 
   it('cancels a queued job successfully', async () => {
     mockCancelJob.mockReturnValue({ ok: true });
-    const result = await handler(makeEvent(), 'job-123') as { success: boolean };
+    const result = (await handler(makeEvent(), 'job-123')) as { success: boolean };
     expect(result.success).toBe(true);
     expect(mockCancelJob).toHaveBeenCalledWith('job-123');
   });
 
   it('marks active job canceled and returns success', async () => {
     mockCancelJob.mockReturnValue({ ok: true });
-    const result = await handler(makeEvent(), 'job-running') as { success: boolean };
+    const result = (await handler(makeEvent(), 'job-running')) as { success: boolean };
     expect(result.success).toBe(true);
   });
 
   it('returns failure with reason for terminal-state job', async () => {
     mockCancelJob.mockReturnValue({ ok: false, reason: 'already-terminal' });
-    const result = await handler(makeEvent(), 'job-done') as {
+    const result = (await handler(makeEvent(), 'job-done')) as {
       success: boolean;
       reason?: string;
     };
@@ -332,7 +328,7 @@ describe('sessions:cancelDispatchJob handler', () => {
 
   it('returns failure for not-found job', async () => {
     mockCancelJob.mockReturnValue({ ok: false, reason: 'not-found' });
-    const result = await handler(makeEvent(), 'nope') as {
+    const result = (await handler(makeEvent(), 'nope')) as {
       success: boolean;
       reason?: string;
     };
@@ -341,7 +337,7 @@ describe('sessions:cancelDispatchJob handler', () => {
   });
 
   it('rejects empty jobId with invalid-job-id', async () => {
-    const result = await handler(makeEvent(), '') as {
+    const result = (await handler(makeEvent(), '')) as {
       success: boolean;
       reason?: string;
     };

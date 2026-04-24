@@ -9,12 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Session } from './session';
 import { makeSession } from './session';
 import type { TrashAdaptor } from './sessionTrash';
-import {
-  deleteFromTrash,
-  listTrashFiles,
-  restoreFromTrash,
-  writeToTrash,
-} from './sessionTrash';
+import { deleteFromTrash, listTrashFiles, restoreFromTrash, writeToTrash } from './sessionTrash';
 
 // ─── In-memory adaptor factory ────────────────────────────────────────────────
 
@@ -25,10 +20,19 @@ function makeMemAdaptor(): TrashAdaptor & { store: Map<string, Session> } {
     trashDir,
     store,
     readJson: async (filePath: string) => store.get(filePath) ?? null,
-    writeJson: async (filePath: string, session: Session) => { store.set(filePath, session); },
-    deleteFile: async (filePath: string) => { store.delete(filePath); },
-    listFiles: async (dir: string) => { void dir; return [...store.keys()]; },
-    ensureDir: async (dir: string) => { void dir; },
+    writeJson: async (filePath: string, session: Session) => {
+      store.set(filePath, session);
+    },
+    deleteFile: async (filePath: string) => {
+      store.delete(filePath);
+    },
+    listFiles: async (dir: string) => {
+      void dir;
+      return [...store.keys()];
+    },
+    ensureDir: async (dir: string) => {
+      void dir;
+    },
   };
 }
 
@@ -66,7 +70,13 @@ describe('restoreFromTrash', () => {
 
   it('calls onRestore with the session without archivedAt', async () => {
     let restored: Session | null = null;
-    const result = await restoreFromTrash(session.id, (s) => { restored = s; }, adaptor);
+    const result = await restoreFromTrash(
+      session.id,
+      (s) => {
+        restored = s;
+      },
+      adaptor,
+    );
     expect(result).toBe(true);
     expect(restored).not.toBeNull();
     expect((restored as unknown as Session).id).toBe(session.id);
@@ -74,12 +84,24 @@ describe('restoreFromTrash', () => {
   });
 
   it('deletes the trash file after restore', async () => {
-    await restoreFromTrash(session.id, () => { /* noop */ }, adaptor);
+    await restoreFromTrash(
+      session.id,
+      () => {
+        /* noop */
+      },
+      adaptor,
+    );
     expect(adaptor.store.size).toBe(0);
   });
 
   it('returns false when no trash file exists for the sessionId', async () => {
-    const result = await restoreFromTrash('no-such-id', () => { /* noop */ }, adaptor);
+    const result = await restoreFromTrash(
+      'no-such-id',
+      () => {
+        /* noop */
+      },
+      adaptor,
+    );
     expect(result).toBe(false);
   });
 });

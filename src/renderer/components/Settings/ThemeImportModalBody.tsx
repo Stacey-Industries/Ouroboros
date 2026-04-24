@@ -140,7 +140,9 @@ function UploadTab({ onFileLoad }: { onFileLoad: (content: string) => void }): R
         style={{ display: 'none' }}
         type="file"
       />
-      <span aria-hidden="true" style={{ fontSize: '32px' }}>📂</span>
+      <span aria-hidden="true" style={{ fontSize: '32px' }}>
+        📂
+      </span>
       <span style={uploadLabelStyle}>
         Click to select a <strong>.json</strong> VS Code theme file
       </span>

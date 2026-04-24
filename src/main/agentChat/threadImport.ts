@@ -51,20 +51,14 @@ function isValidRole(role: unknown): role is 'user' | 'assistant' | 'system' | '
   return role === 'user' || role === 'assistant' || role === 'system' || role === 'status';
 }
 
-function parseJsonMessages(
-  raw: unknown[],
-  threadId: string,
-  ts: number,
-): AgentChatMessageRecord[] {
+function parseJsonMessages(raw: unknown[], threadId: string, ts: number): AgentChatMessageRecord[] {
   return raw
     .filter(
-      (m): m is Record<string, unknown> =>
-        m !== null && typeof m === 'object' && !Array.isArray(m),
+      (m): m is Record<string, unknown> => m !== null && typeof m === 'object' && !Array.isArray(m),
     )
     .filter((m) => isValidRole(m.role) && typeof m.content === 'string')
     .map((m) => {
-      const createdAt =
-        typeof m.createdAt === 'string' ? Date.parse(m.createdAt) || ts : ts;
+      const createdAt = typeof m.createdAt === 'string' ? Date.parse(m.createdAt) || ts : ts;
       const record: AgentChatMessageRecord = {
         id: newId(),
         threadId,
@@ -90,7 +84,11 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 function parseJsonTopLevel(json: string): ParsedJsonTop | null {
   let parsed: unknown;
-  try { parsed = JSON.parse(json); } catch { return null; }
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
   if (!isPlainObject(parsed)) return null;
   const obj = parsed;
   if (!isPlainObject(obj.thread)) return null;
@@ -114,8 +112,7 @@ function buildImportedThread(
     : [];
   const thread = makeBlankThread(threadId, title as string, createdAt);
   thread.tags = tags;
-  thread.workspaceRoot =
-    typeof threadObj.workspaceRoot === 'string' ? threadObj.workspaceRoot : '';
+  thread.workspaceRoot = typeof threadObj.workspaceRoot === 'string' ? threadObj.workspaceRoot : '';
   return thread;
 }
 

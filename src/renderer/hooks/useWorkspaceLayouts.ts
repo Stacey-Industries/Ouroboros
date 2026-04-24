@@ -32,7 +32,9 @@ function readCurrentPanelState(): {
     if (stored) sizes = { ...sizes, ...JSON.parse(stored) };
     const storedCollapse = localStorage.getItem('agent-ide:panel-collapse');
     if (storedCollapse) collapse = { ...collapse, ...JSON.parse(storedCollapse) };
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { sizes, collapse };
 }
 
@@ -45,10 +47,16 @@ async function loadLayoutsFromConfig(
     const activeName = await window.electronAPI.config.get('activeLayoutName');
     if (Array.isArray(layouts) && layouts.length > 0) setLayouts(layouts);
     if (activeName) setActive(activeName);
-  } catch { /* defaults */ }
+  } catch {
+    /* defaults */
+  }
 }
 
-function buildVisiblePanels(collapse: { leftSidebar: boolean; rightSidebar: boolean; terminal: boolean }) {
+function buildVisiblePanels(collapse: {
+  leftSidebar: boolean;
+  rightSidebar: boolean;
+  terminal: boolean;
+}) {
   return {
     leftSidebar: !collapse.leftSidebar,
     rightSidebar: !collapse.rightSidebar,
@@ -91,7 +99,11 @@ export function useWorkspaceLayouts(): UseWorkspaceLayoutsReturn {
 
   const handleSaveLayout = useCallback((name: string) => {
     const newLayout = buildLayoutFromCurrentState(name);
-    setWorkspaceLayouts((prev) => { const u = [...prev, newLayout]; persistLayouts(u); return u; });
+    setWorkspaceLayouts((prev) => {
+      const u = [...prev, newLayout];
+      persistLayouts(u);
+      return u;
+    });
     setActiveLayoutName(name);
     persistActiveLayout(name);
   }, []);
@@ -105,12 +117,26 @@ export function useWorkspaceLayouts(): UseWorkspaceLayoutsReturn {
   }, []);
 
   const handleDeleteLayout = useCallback((name: string) => {
-    setWorkspaceLayouts((prev) => { const u = prev.filter((l) => l.name !== name); persistLayouts(u); return u; });
+    setWorkspaceLayouts((prev) => {
+      const u = prev.filter((l) => l.name !== name);
+      persistLayouts(u);
+      return u;
+    });
     setActiveLayoutName((prev) => {
-      if (prev === name) { persistActiveLayout('Default'); return 'Default'; }
+      if (prev === name) {
+        persistActiveLayout('Default');
+        return 'Default';
+      }
       return prev;
     });
   }, []);
 
-  return { workspaceLayouts, activeLayoutName, handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout };
+  return {
+    workspaceLayouts,
+    activeLayoutName,
+    handleSelectLayout,
+    handleSaveLayout,
+    handleUpdateLayout,
+    handleDeleteLayout,
+  };
 }

@@ -4,12 +4,12 @@
  * the contract between the @parcel/watcher wrapper and its callers.
  */
 
-export type WatchEventType = 'create' | 'update' | 'delete'
+export type WatchEventType = 'create' | 'update' | 'delete';
 
 export interface WatchEvent {
-  type: WatchEventType
+  type: WatchEventType;
   /** Absolute path to the affected file or directory. */
-  path: string
+  path: string;
 }
 
 export interface WatchOptions {
@@ -17,12 +17,12 @@ export interface WatchOptions {
    * Glob patterns (@parcel/watcher-compatible) to exclude from watching.
    * Example: ['**\/node_modules/**', '**\/.git/**']
    */
-  ignore?: string[]
+  ignore?: string[];
 }
 
 export interface WatchSubscription {
   /** Stop the watcher and release native resources. */
-  close: () => Promise<void>
+  close: () => Promise<void>;
 }
 
-export type WatchCallback = (event: WatchEvent) => void
+export type WatchCallback = (event: WatchEvent) => void;

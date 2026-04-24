@@ -20,38 +20,26 @@ export interface TimeTravelPanelProps {
   scope?: 'workspace' | 'thread';
 }
 
-export function TimeTravelPanel({
-  snapshots,
-  onCreateSnapshot,
-  onRefreshSnapshots,
-  onClose,
-  scope = 'workspace',
-}: TimeTravelPanelProps): React.JSX.Element {
-  const { projectRoot } = useProject();
-  const panel = useTimeTravelPanelState({
-    projectRoot: projectRoot ?? undefined,
-    snapshots,
-    onCreateSnapshot,
-    onRefreshSnapshots,
-    hideCreateSnapshot: scope === 'thread',
-  });
-  const hasDetailPane = Boolean(panel.selectedSnapshot || panel.comparisonReady);
+const PANEL_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-ui)' };
+const BODY_STYLE: React.CSSProperties = { display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' };
 
+function TimeTravelRestoreDialog({ panel }: { panel: ReturnType<typeof useTimeTravelPanelState> }): React.JSX.Element | null {
+  if (!panel.confirmRestore) return null;
+  return <RestoreConfirmDialog snapshot={panel.confirmRestore} dirtyCount={panel.dirtyCount} onConfirm={panel.handleConfirmRestore} onCancel={() => panel.setConfirmRestore(null)} />;
+}
+
+export function TimeTravelPanel({ snapshots, onCreateSnapshot, onRefreshSnapshots, onClose, scope = 'workspace' }: TimeTravelPanelProps): React.JSX.Element {
+  const { projectRoot } = useProject();
+  const panel = useTimeTravelPanelState({ projectRoot: projectRoot ?? undefined, snapshots, onCreateSnapshot, onRefreshSnapshots, hideCreateSnapshot: scope === 'thread' });
+  const hasDetailPane = Boolean(panel.selectedSnapshot || panel.comparisonReady);
   return (
-    <div className="bg-surface-base text-text-semantic-primary" style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-ui)' }}>
+    <div className="bg-surface-base text-text-semantic-primary" style={PANEL_STYLE}>
       <TimeTravelControls snapshotCount={panel.sortedSnapshots.length} onClose={onClose} panel={panel} onRefreshSnapshots={onRefreshSnapshots} />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={BODY_STYLE}>
         <TimeTravelTimelinePane snapshots={panel.sortedSnapshots} hasDetailPane={hasDetailPane} panel={panel} />
         {hasDetailPane && <TimeTravelDetailsPane panel={panel} />}
       </div>
-      {panel.confirmRestore && (
-        <RestoreConfirmDialog
-          snapshot={panel.confirmRestore}
-          dirtyCount={panel.dirtyCount}
-          onConfirm={panel.handleConfirmRestore}
-          onCancel={() => panel.setConfirmRestore(null)}
-        />
-      )}
+      <TimeTravelRestoreDialog panel={panel} />
     </div>
   );
 }

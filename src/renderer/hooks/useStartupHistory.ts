@@ -23,13 +23,16 @@ export function useStartupHistory(limit = DEFAULT_LIMIT): UseStartupHistoryResul
 
   const fetchHistory = useCallback(() => {
     setIsLoading(true);
-    window.electronAPI?.perf?.getStartupHistory?.(limit)
+    window.electronAPI?.perf
+      ?.getStartupHistory?.(limit)
       .then((result) => {
         if (result.success && result.records) {
           setRecords(result.records);
         }
       })
-      .catch(() => { /* silent — handler may not yet be registered */ })
+      .catch(() => {
+        /* silent — handler may not yet be registered */
+      })
       .finally(() => setIsLoading(false));
   }, [limit]);
 

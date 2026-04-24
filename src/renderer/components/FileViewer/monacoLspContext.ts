@@ -14,10 +14,7 @@ interface LspContext {
 
 const activeLspContext: LspContext = { root: null, filePath: null };
 
-export function setActiveLspContext(
-  root: string | null,
-  filePath: string | null,
-): void {
+export function setActiveLspContext(root: string | null, filePath: string | null): void {
   activeLspContext.root = root;
   activeLspContext.filePath = filePath;
 }

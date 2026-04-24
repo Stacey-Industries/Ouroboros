@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import type { SubagentRecord } from '../../types/electron';
+import { formatCost, formatDuration, formatTime } from './SubagentPanel.helpers';
 import { SubagentStatusChip } from './SubagentStatusChip';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -27,25 +28,6 @@ export interface SubagentPanelProps {
   showCancel?: boolean;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCost(usd: number): string {
-  if (usd < 0.001) return '<$0.001';
-  return `$${usd.toFixed(4)}`;
-}
-
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-function formatDuration(startedAt: number, endedAt: number | undefined): string {
-  const end = endedAt ?? Date.now();
-  const ms = end - startedAt;
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`;
-}
-
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 interface HeaderProps {
@@ -55,7 +37,10 @@ interface HeaderProps {
   cancelling?: boolean;
 }
 
-interface CancelBtnProps { onCancel: () => void; cancelling?: boolean }
+interface CancelBtnProps {
+  onCancel: () => void;
+  cancelling?: boolean;
+}
 
 function CancelButton({ onCancel, cancelling }: CancelBtnProps): React.ReactElement {
   return (
@@ -76,7 +61,12 @@ function CancelButton({ onCancel, cancelling }: CancelBtnProps): React.ReactElem
   );
 }
 
-function SubagentPanelHeader({ record, onClose, onCancel, cancelling }: HeaderProps): React.ReactElement {
+function SubagentPanelHeader({
+  record,
+  onClose,
+  onCancel,
+  cancelling,
+}: HeaderProps): React.ReactElement {
   const canCancel = onCancel && record.status === 'running';
   return (
     <div className="flex items-start gap-2 px-3 py-2 border-b border-border-semantic flex-shrink-0">
@@ -151,9 +141,7 @@ function SubagentMessageRow({ role, content, at }: MessageRowProps): React.React
         >
           {role}
         </span>
-        <span className="text-[10px] text-text-semantic-faint tabular-nums">
-          {formatTime(at)}
-        </span>
+        <span className="text-[10px] text-text-semantic-faint tabular-nums">{formatTime(at)}</span>
       </div>
       <p
         className="text-[11px] leading-relaxed text-text-semantic-primary whitespace-pre-wrap break-words m-0 selectable"
@@ -241,10 +229,7 @@ interface UseSubagentDataResult {
   error: string | null;
 }
 
-function useSubagentData(
-  subagentId: string,
-  parentSessionId: string,
-): UseSubagentDataResult {
+function useSubagentData(subagentId: string, parentSessionId: string): UseSubagentDataResult {
   const [record, setRecord] = useState<SubagentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -288,7 +273,8 @@ function useSubagentCancel(subagentId: string): {
 
   const handleCancel = useCallback(() => {
     setCancelling(true);
-    window.electronAPI.subagent.cancel({ subagentId })
+    window.electronAPI.subagent
+      .cancel({ subagentId })
       .then((result) => {
         if (result.success) {
           toast('Subagent cancelled', 'success');
@@ -296,8 +282,12 @@ function useSubagentCancel(subagentId: string): {
           toast(result.error ?? 'Failed to cancel subagent', 'error');
         }
       })
-      .catch(() => { toast('Failed to cancel subagent', 'error'); })
-      .finally(() => { setCancelling(false); });
+      .catch(() => {
+        toast('Failed to cancel subagent', 'error');
+      })
+      .finally(() => {
+        setCancelling(false);
+      });
   }, [subagentId, toast]);
 
   return { cancelling, handleCancel };
@@ -316,14 +306,25 @@ interface PanelBodyProps {
 }
 
 function SubagentPanelBody({
-  subagentId, loading, error, record, onClose, onCancel, cancelling,
+  subagentId,
+  loading,
+  error,
+  record,
+  onClose,
+  onCancel,
+  cancelling,
 }: PanelBodyProps): React.ReactElement {
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={error} />;
   if (!record) return <ErrorState error={`Subagent '${subagentId}' not found.`} />;
   return (
     <>
-      <SubagentPanelHeader record={record} onClose={onClose} onCancel={onCancel} cancelling={cancelling} />
+      <SubagentPanelHeader
+        record={record}
+        onClose={onClose}
+        onCancel={onCancel}
+        cancelling={cancelling}
+      />
       <SubagentMessageList messages={record.messages} />
     </>
   );

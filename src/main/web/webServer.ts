@@ -52,11 +52,16 @@ let webServerReadyReject: ((err: Error) => void) | null = null;
 let webServerReadyPromise: Promise<void> = makeReadyPromise();
 
 function makeReadyPromise(): Promise<void> {
-  return new Promise<void>((res, rej) => { webServerReadyResolve = res; webServerReadyReject = rej; });
+  return new Promise<void>((res, rej) => {
+    webServerReadyResolve = res;
+    webServerReadyReject = rej;
+  });
 }
 
 /** Resolves when listening; rejects on startup failure. Await before getWebServerPort(). */
-export function whenWebServerReady(): Promise<void> { return webServerReadyPromise; }
+export function whenWebServerReady(): Promise<void> {
+  return webServerReadyPromise;
+}
 
 /** Per-connection mobile metadata; null = legacy desktop path. */
 const wsMeta = new Map<WebSocket, MobileAccessMeta | null>();
@@ -118,13 +123,22 @@ function registerSpaFallback(app: express.Express, staticDir: string): void {
 function registerPairingGate(app: express.Express, indexPath: string): void {
   app.get('/', (req, res, next) => {
     const mobileEnabled = Boolean(getConfigValue('mobileAccess')?.enabled);
-    if (!mobileEnabled) { next(); return; }
+    if (!mobileEnabled) {
+      next();
+      return;
+    }
 
     const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
-    if (isLocalhost(ip)) { next(); return; }
+    if (isLocalhost(ip)) {
+      next();
+      return;
+    }
 
     const { token } = extractToken(req);
-    if (token) { next(); return; }
+    if (token) {
+      next();
+      return;
+    }
 
     try {
       const html = readIndexHtml(indexPath);
@@ -141,25 +155,13 @@ function registerPairingGate(app: express.Express, indexPath: string): void {
 
 function handleLoginPost(req: express.Request, res: express.Response): void {
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
-  if (isRateLimited(ip)) {
-    res.status(429).json({ success: false, error: 'Too many attempts. Try again later.' });
-    return;
-  }
+  if (isRateLimited(ip)) { res.status(429).json({ success: false, error: 'Too many attempts. Try again later.' }); return; }
   const { credential } = req.body as { credential?: string };
-  if (!credential || typeof credential !== 'string') {
-    res.status(400).json({ success: false, error: 'Missing credential.' });
-    return;
-  }
-  if (!validateCredential(credential)) {
-    recordFailedAttempt(ip);
-    res.status(401).json({ success: false, error: 'Invalid credentials.' });
-    return;
-  }
+  if (!credential || typeof credential !== 'string') { res.status(400).json({ success: false, error: 'Missing credential.' }); return; }
+  if (!validateCredential(credential)) { recordFailedAttempt(ip); res.status(401).json({ success: false, error: 'Invalid credentials.' }); return; }
   const token = getOrCreateWebToken();
   const maxAge = 30 * 24 * 60 * 60;
-  res.setHeader('Set-Cookie', [
-    `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-  ]);
+  res.setHeader('Set-Cookie', [`webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`]);
   res.json({ success: true });
 }
 
@@ -228,62 +230,50 @@ function buildExpressApp(options: WebServerOptions): express.Express {
 // ─── WS helpers ──────────────────────────────────────────────────────────────
 
 function sendConnected(ws: WebSocket): void {
-  ws.send(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'connected',
-      params: { message: 'Ouroboros WebSocket bridge ready' },
-    }),
-  );
+  ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'connected', params: { message: 'Ouroboros WebSocket bridge ready' } }));
+}
+
+function removeWsClient(ws: WebSocket): void {
+  unregisterConnection(ws);
+  wsMeta.delete(ws);
+  wsClients.delete(ws);
 }
 
 function attachWsListeners(ws: WebSocket): void {
   ws.on('message', (data: Buffer | string) => {
-    const meta = wsMeta.get(ws) ?? null;
-    handleJsonRpcMessage(ws, typeof data === 'string' ? data : data.toString('utf-8'), meta);
+    handleJsonRpcMessage(ws, typeof data === 'string' ? data : data.toString('utf-8'), wsMeta.get(ws) ?? null);
   });
   ws.on('close', () => {
     const closingMeta = wsMeta.get(ws);
     if (closingMeta?.deviceId) detachDevice(closingMeta.deviceId);
-    unregisterConnection(ws);
-    wsMeta.delete(ws);
-    wsClients.delete(ws);
+    removeWsClient(ws);
     log.info(`WebSocket client disconnected (total: ${wsClients.size})`);
   });
-  ws.on('error', (err: Error) => {
-    log.error('WebSocket client error:', err.message);
-    unregisterConnection(ws);
-    wsMeta.delete(ws);
-    wsClients.delete(ws);
-  });
+  ws.on('error', (err: Error) => { log.error('WebSocket client error:', err.message); removeWsClient(ws); });
 }
 
 function isPairingScheme(req: IncomingMessage): boolean {
   return (req.headers.authorization ?? '').startsWith('Pairing ');
 }
 
+function parsePairingMsg(raw: string): { code: string; label: string; fingerprint: string } {
+  let msg: { code?: unknown; label?: unknown; fingerprint?: unknown } = {};
+  try { msg = JSON.parse(raw) as typeof msg; } catch { /* use defaults */ }
+  return {
+    code: typeof msg.code === 'string' ? msg.code : '',
+    label: typeof msg.label === 'string' ? msg.label : 'Unknown Device',
+    fingerprint: typeof msg.fingerprint === 'string' ? msg.fingerprint : '',
+  };
+}
+
 async function handlePairingUpgrade(ws: WebSocket, req: IncomingMessage): Promise<void> {
-  // Wait for first message to get the ticket payload
   const raw = await new Promise<string>((resolve, reject) => {
-    ws.once('message', (d: Buffer | string) =>
-      resolve(typeof d === 'string' ? d : d.toString('utf-8')),
-    );
+    ws.once('message', (d: Buffer | string) => resolve(typeof d === 'string' ? d : d.toString('utf-8')));
     ws.once('close', () => reject(new Error('closed before pairing message')));
   });
-
-  let msg: { code?: unknown; label?: unknown; fingerprint?: unknown };
-  try { msg = JSON.parse(raw) as typeof msg; } catch { msg = {}; }
-
-  const code = typeof msg.code === 'string' ? msg.code : '';
-  const label = typeof msg.label === 'string' ? msg.label : 'Unknown Device';
-  const fingerprint = typeof msg.fingerprint === 'string' ? msg.fingerprint : '';
-
+  const { code, label, fingerprint } = parsePairingMsg(raw);
   const outcome = await authenticatePairingHandshake({ code, label, fingerprint }, req);
-  if (!outcome.ok) {
-    ws.close(4001, 'pair-failed');
-    return;
-  }
-  // Send pairing result as first message
+  if (!outcome.ok) { ws.close(4001, 'pair-failed'); return; }
   ws.send(JSON.stringify({ event: 'pair:result', payload: outcome.result }));
   wsMeta.set(ws, outcome.meta);
   wsClients.add(ws);
@@ -297,8 +287,7 @@ async function handlePairingUpgrade(ws: WebSocket, req: IncomingMessage): Promis
  * Returns true if auth passed; false if the connection was closed.
  */
 function authenticateLegacyWs(ws: WebSocket, req: IncomingMessage): boolean {
-  const url = new URL(req.url ?? '', 'http://localhost');
-  const ticketParam = url.searchParams.get('ticket') ?? '';
+  const ticketParam = new URL(req.url ?? '', 'http://localhost').searchParams.get('ticket') ?? '';
   if (ticketParam) {
     if (!consumeWsTicket(ticketParam)) { ws.close(4001, 'Unauthorized'); return false; }
     return true;
@@ -320,21 +309,12 @@ function acceptWsConnection(ws: WebSocket, meta: MobileAccessMeta | null): void 
 }
 
 async function handleWsConnection(ws: WebSocket, req: IncomingMessage): Promise<void> {
-  // ── Pairing scheme: first-connect after QR scan ───────────────────────────
   if (isPairingScheme(req)) {
-    await handlePairingUpgrade(ws, req).catch((err: Error) => {
-      log.error('[webServer] pairing upgrade error:', err.message);
-      ws.close(4001, 'pair-failed');
-    });
+    await handlePairingUpgrade(ws, req).catch((err: Error) => { log.error('[webServer] pairing upgrade error:', err.message); ws.close(4001, 'pair-failed'); });
     return;
   }
-
-  // ── Bearer scheme: device refresh token ──────────────────────────────────
   const meta = await authenticateUpgrade(req);
-
-  // ── Ticket / legacy fallback (null meta = desktop path) ──────────────────
   if (meta === null && !authenticateLegacyWs(ws, req)) return;
-
   acceptWsConnection(ws, meta);
 }
 
@@ -346,11 +326,7 @@ export function startWebServer(options: WebServerOptions): Promise<void> {
     httpServer = http.createServer(app);
     wss = new WebSocketServer({ server: httpServer, path: '/ws' });
     wss.on('connection', (ws, req) => { void handleWsConnection(ws, req); });
-    httpServer.on('error', (err: Error) => {
-      log.error('HTTP server error:', err.message);
-      webServerReadyReject?.(err);
-      reject(err);
-    });
+    httpServer.on('error', (err: Error) => { log.error('HTTP server error:', err.message); webServerReadyReject?.(err); reject(err); });
     httpServer.listen(options.port, () => {
       log.info(`Server listening on http://localhost:${options.port}`);
       log.info(`WebSocket endpoint: ws://localhost:${options.port}/ws`);
@@ -360,20 +336,26 @@ export function startWebServer(options: WebServerOptions): Promise<void> {
   });
 }
 
+async function closeWss(): Promise<void> {
+  if (!wss) return;
+  await new Promise<void>((r) => { wss!.close(() => r()); });
+  wss = null;
+}
+
+async function closeHttpServer(): Promise<void> {
+  if (!httpServer) return;
+  await new Promise<void>((resolve, reject) => {
+    httpServer!.close((err) => { if (err) reject(err); else resolve(); });
+  });
+  httpServer = null;
+}
+
 export async function stopWebServer(): Promise<void> {
-  for (const client of wsClients) {
-    try { client.close(1001, 'Server shutting down'); } catch { /* already closed */ }
-  }
+  for (const client of wsClients) { try { client.close(1001, 'Server shutting down'); } catch { /* already closed */ } }
   wsClients.clear();
   wsMeta.clear();
-  if (wss) { await new Promise<void>((r) => { wss!.close(() => r()); }); wss = null; }
-  if (httpServer) {
-    await new Promise<void>((resolve, reject) => {
-      httpServer!.close((err) => { if (err) reject(err); else resolve(); });
-    });
-    httpServer = null;
-  }
-  // Reset the ready promise so a subsequent startWebServer works correctly.
+  await closeWss();
+  await closeHttpServer();
   webServerReadyPromise = makeReadyPromise();
   log.info('Server stopped');
 }
@@ -383,12 +365,18 @@ export function broadcastToWebClients(channel: string, payload: unknown): void {
   const message = JSON.stringify({ jsonrpc: '2.0', method: 'event', params: { channel, payload } });
   for (const client of wsClients) {
     if (client.readyState === WebSocket.OPEN) {
-      try { client.send(message); } catch (err) { log.error('Failed to send to WS client:', err); }
+      try {
+        client.send(message);
+      } catch (err) {
+        log.error('Failed to send to WS client:', err);
+      }
     }
   }
 }
 
-export function getWebClientCount(): number { return wsClients.size; }
+export function getWebClientCount(): number {
+  return wsClients.size;
+}
 
 export function getWebServerPort(): number | null {
   if (!httpServer) return null;

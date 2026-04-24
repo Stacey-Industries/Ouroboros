@@ -16,7 +16,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-afterEach(() => { cleanup(); });
+afterEach(() => {
+  cleanup();
+});
 
 import type { DispatchJob } from '../../types/electron-dispatch';
 import { DispatchJobDetail } from './DispatchJobDetail';
@@ -74,7 +76,11 @@ describe('DispatchJobDetail — static fields', () => {
   });
 
   it('shows worktree name when present', () => {
-    renderDetail(makeJob({ request: { title: 'T', prompt: 'p', projectPath: '/x', worktreeName: 'feat/branch' } }));
+    renderDetail(
+      makeJob({
+        request: { title: 'T', prompt: 'p', projectPath: '/x', worktreeName: 'feat/branch' },
+      }),
+    );
     expect(screen.getByTestId('detail-worktree').textContent).toContain('feat/branch');
   });
 

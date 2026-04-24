@@ -2,7 +2,7 @@
  * LayoutSwitcher.tsx — Dropdown popover for switching workspace layouts.
  */
 
-import React, { useCallback,useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
 import { LayoutActionsFooter } from './LayoutActionsFooter';
@@ -21,30 +21,32 @@ export interface LayoutSwitcherProps {
   onClose: () => void;
 }
 
-export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, onUpdate, onDelete, onClose }: LayoutSwitcherProps): React.ReactElement {
-  const [showSaveInput, setShowSaveInput] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
+function useSwitcherDismiss(dropdownRef: React.RefObject<HTMLDivElement | null>, onClose: () => void): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     const onMouse = (e: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) onClose(); };
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onMouse);
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouse); };
-  }, [onClose]);
+  }, [dropdownRef, onClose]);
+}
 
-  const handleSaved = useCallback((name: string) => {
-    onSave(name);
-    setShowSaveInput(false);
-  }, [onSave]);
-
+export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, onUpdate, onDelete, onClose }: LayoutSwitcherProps): React.ReactElement {
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useSwitcherDismiss(dropdownRef, onClose);
+  const handleSaved = useCallback((name: string) => { onSave(name); setShowSaveInput(false); }, [onSave]);
   return (
-    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts" className="bg-surface-overlay border border-border-semantic" style={dropdownStyle}>
+    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts"
+      className="bg-surface-overlay border border-border-semantic" style={dropdownStyle}
+    >
       <LayoutHeader onToggleSave={() => setShowSaveInput((p) => !p)} />
       {showSaveInput && <LayoutSaveInput layouts={layouts} onSave={handleSaved} onCancel={() => setShowSaveInput(false)} />}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {layouts.map((layout) => (
-          <LayoutListItem key={layout.name} layout={layout} isActive={layout.name === activeLayoutName} onSelect={onSelect} onUpdate={onUpdate} onDelete={onDelete} />
+          <LayoutListItem key={layout.name} layout={layout} isActive={layout.name === activeLayoutName}
+            onSelect={onSelect} onUpdate={onUpdate} onDelete={onDelete}
+          />
         ))}
       </div>
       <LayoutActionsFooter />
@@ -56,11 +58,20 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
 }
 
 const dropdownStyle: React.CSSProperties = {
-  position: 'fixed', bottom: '26px', right: '8px', zIndex: 1000,
-  minWidth: '240px', maxWidth: '320px', maxHeight: '340px',
-  borderRadius: '6px', boxShadow: '0 -4px 16px rgba(0,0,0,0.4)',
-  display: 'flex', flexDirection: 'column', overflow: 'hidden',
-  fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
+  position: 'fixed',
+  bottom: '26px',
+  right: '8px',
+  zIndex: 1000,
+  minWidth: '240px',
+  maxWidth: '320px',
+  maxHeight: '340px',
+  borderRadius: '6px',
+  boxShadow: '0 -4px 16px rgba(0,0,0,0.4)',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
   backdropFilter: 'blur(24px) saturate(140%)',
   WebkitBackdropFilter: 'blur(24px) saturate(140%)',
   ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
@@ -68,11 +79,11 @@ const dropdownStyle: React.CSSProperties = {
 
 function LayoutHeader({ onToggleSave }: { onToggleSave: () => void }): React.ReactElement {
   return (
-    <div className="border-b border-border-semantic" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <div className="border-b border-border-semantic"
+      style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}
+    >
       <span className="text-text-semantic-primary" style={{ fontWeight: 600, fontSize: '12px' }}>Workspace Layouts</span>
-      <button
-        onClick={onToggleSave}
-        title="Save current layout"
+      <button onClick={onToggleSave} title="Save current layout"
         className="text-text-semantic-muted border border-border-semantic"
         style={{ background: 'none', borderRadius: '4px', fontSize: '11px', padding: '2px 8px', cursor: 'pointer', transition: 'color 120ms, border-color 120ms' }}
         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--interactive-accent)'; }}

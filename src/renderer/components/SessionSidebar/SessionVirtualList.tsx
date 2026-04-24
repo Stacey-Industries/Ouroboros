@@ -27,8 +27,16 @@ const ROW_HEIGHT = 48;
 
 // ─── Flat row types ───────────────────────────────────────────────────────────
 
-interface HeaderRow { kind: 'header'; projectRoot: string; label: string; count: number }
-interface SessionFlatRow { kind: 'row'; session: SessionRecord }
+interface HeaderRow {
+  kind: 'header';
+  projectRoot: string;
+  label: string;
+  count: number;
+}
+interface SessionFlatRow {
+  kind: 'row';
+  session: SessionRecord;
+}
 type FlatRow = HeaderRow | SessionFlatRow;
 
 // ─── Group → flat array ───────────────────────────────────────────────────────
@@ -55,7 +63,12 @@ export function flattenGroups(groups: SessionGroup[]): FlatRow[] {
   });
   const rows: FlatRow[] = [];
   for (const g of sorted) {
-    rows.push({ kind: 'header', projectRoot: g.projectRoot, label: g.label, count: g.sessions.length });
+    rows.push({
+      kind: 'header',
+      projectRoot: g.projectRoot,
+      label: g.label,
+      count: g.sessions.length,
+    });
     for (const s of g.sessions) {
       rows.push({ kind: 'row', session: s });
     }
@@ -108,7 +121,11 @@ function renderVirtualRow(
 }
 
 function VirtualizedRows({
-  rows, activeSessionId, onSessionClick, onRestored, onKeyDown,
+  rows,
+  activeSessionId,
+  onSessionClick,
+  onRestored,
+  onKeyDown,
 }: VirtualCoreProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -130,7 +147,13 @@ function VirtualizedRows({
         {virtualizer.getVirtualItems().map((item) => (
           <div
             key={item.key}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.start}px)` }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${item.start}px)`,
+            }}
           >
             {renderVirtualRow(rows[item.index], activeSessionId, onSessionClick, onRestored)}
           </div>
@@ -143,7 +166,11 @@ function VirtualizedRows({
 // ─── Flat (non-virtual) renderer ──────────────────────────────────────────────
 
 function FlatRows({
-  rows, activeSessionId, onSessionClick, onRestored, onKeyDown,
+  rows,
+  activeSessionId,
+  onSessionClick,
+  onRestored,
+  onKeyDown,
 }: VirtualCoreProps): React.ReactElement {
   return (
     <div
@@ -153,17 +180,21 @@ function FlatRows({
       onKeyDown={onKeyDown}
     >
       {rows.map((row) =>
-        row.kind === 'header'
-          ? <SessionGroupHeader key={`h-${row.projectRoot}`} projectName={row.label} count={row.count} />
-          : (
-            <SessionRow
-              key={row.session.id}
-              session={row.session}
-              isActive={row.session.id === activeSessionId}
-              onClick={onSessionClick}
-              onRestored={onRestored}
-            />
-          ),
+        row.kind === 'header' ? (
+          <SessionGroupHeader
+            key={`h-${row.projectRoot}`}
+            projectName={row.label}
+            count={row.count}
+          />
+        ) : (
+          <SessionRow
+            key={row.session.id}
+            session={row.session}
+            isActive={row.session.id === activeSessionId}
+            onClick={onSessionClick}
+            onRestored={onRestored}
+          />
+        ),
       )}
     </div>
   );
@@ -183,7 +214,11 @@ export function SessionVirtualList({
     return (
       <div role="grid" aria-label="Session list" className="flex-1 overflow-y-auto">
         <div role="row">
-          <div role="gridcell" aria-live="polite" className="px-3 py-4 text-xs text-text-semantic-muted">
+          <div
+            role="gridcell"
+            aria-live="polite"
+            className="px-3 py-4 text-xs text-text-semantic-muted"
+          >
             Loading…
           </div>
         </div>
@@ -206,10 +241,16 @@ export function SessionVirtualList({
 
   const rows = flattenGroups(groups);
   const coreProps: VirtualCoreProps = {
-    rows, activeSessionId, onSessionClick, onRestored, onKeyDown,
+    rows,
+    activeSessionId,
+    onSessionClick,
+    onRestored,
+    onKeyDown,
   };
 
-  return totalSessions > VIRTUALIZE_THRESHOLD
-    ? <VirtualizedRows {...coreProps} />
-    : <FlatRows {...coreProps} />;
+  return totalSessions > VIRTUALIZE_THRESHOLD ? (
+    <VirtualizedRows {...coreProps} />
+  ) : (
+    <FlatRows {...coreProps} />
+  );
 }

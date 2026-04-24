@@ -21,30 +21,51 @@ import type { ChatSidebarMode } from './useChatSidebarMode';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
 
+const WIN_BTN = 'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
+
+function MinimizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
+  return (
+    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // rgba: win32 hover tint — non-themeable
+      onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
+      <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
+    </button>
+  );
+}
+
+function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
+  return (
+    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // rgba: win32 hover tint — non-themeable
+      onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1">
+        <rect x="0.5" y="0.5" width="9" height="9" />
+      </svg>
+    </button>
+  );
+}
+
+function CloseBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
+  return (
+    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[#e81123] hover:text-white`} // hardcoded: Windows close-button canonical red — non-themeable platform color
+      onClick={() => api?.closeWindow()} title="Close" aria-label="Close">
+      <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
+        <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+      </svg>
+    </button>
+  );
+}
+
 function WindowControls(): React.ReactElement | null {
   const [platform, setPlatform] = useState('');
   useEffect(() => {
     window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {});
   }, []);
-
   if (platform !== 'win32') return null;
-
   const api = window.electronAPI?.app;
-  const base = 'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
   return (
     <div className="flex items-stretch h-full ml-auto bg-transparent" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button className={`${base} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`}
-        onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
-        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
-      </button>
-      <button className={`${base} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`}
-        onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" /></svg>
-      </button>
-      <button className={`${base} text-text-semantic-muted hover:bg-[#e81123] hover:text-white`} // hardcoded: Windows close-button canonical red — non-themeable platform color
-        onClick={() => api?.closeWindow()} title="Close" aria-label="Close">
-        <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2"><line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" /></svg>
-      </button>
+      <MinimizeBtn api={api} />
+      <MaximizeBtn api={api} />
+      <CloseBtn api={api} />
     </div>
   );
 }
@@ -53,7 +74,15 @@ function WindowControls(): React.ReactElement | null {
 
 function SidebarPinnedIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
       <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
     </svg>
@@ -62,7 +91,15 @@ function SidebarPinnedIcon(): React.ReactElement {
 
 function SidebarCollapsedIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
       <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
       <polyline points="3,7 4.5,8.5 3,10" />
@@ -72,7 +109,15 @@ function SidebarCollapsedIcon(): React.ReactElement {
 
 function SidebarHiddenIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
     </svg>
   );
@@ -92,11 +137,19 @@ interface TitleBarLeftProps {
   onCycleSidebarMode: () => void;
 }
 
-function TitleBarLeft({ projectName, sidebarMode, onCycleSidebarMode }: TitleBarLeftProps): React.ReactElement {
+function TitleBarLeft({
+  projectName,
+  sidebarMode,
+  onCycleSidebarMode,
+}: TitleBarLeftProps): React.ReactElement {
   const icon =
-    sidebarMode === 'pinned' ? <SidebarPinnedIcon /> :
-    sidebarMode === 'collapsed' ? <SidebarCollapsedIcon /> :
-    <SidebarHiddenIcon />;
+    sidebarMode === 'pinned' ? (
+      <SidebarPinnedIcon />
+    ) : sidebarMode === 'collapsed' ? (
+      <SidebarCollapsedIcon />
+    ) : (
+      <SidebarHiddenIcon />
+    );
 
   return (
     <>
@@ -123,7 +176,16 @@ function TitleBarLeft({ projectName, sidebarMode, onCycleSidebarMode }: TitleBar
 
 function ExitChatIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
       <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
       <polyline points="13,6.5 14.5,8 13,9.5" />
@@ -185,7 +247,10 @@ export interface ChatOnlyTitleBarProps {
 
 // ── ChatOnlyTitleBar ──────────────────────────────────────────────────────────
 
-export function ChatOnlyTitleBar({ onCycleSidebarMode, sidebarMode }: ChatOnlyTitleBarProps): React.ReactElement {
+export function ChatOnlyTitleBar({
+  onCycleSidebarMode,
+  sidebarMode,
+}: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
   return (
     <header

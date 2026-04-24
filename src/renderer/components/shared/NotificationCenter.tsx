@@ -146,6 +146,23 @@ function useNotificationCenterDismiss(
   }, [onClose, panelRef]);
 }
 
+function NotificationList({
+  notifications,
+  onRemove,
+}: {
+  notifications: NotificationEntry[];
+  onRemove: (id: string) => void;
+}): React.ReactElement {
+  if (notifications.length === 0) return <EmptyState />;
+  return (
+    <>
+      {notifications.map((entry) => (
+        <NotificationRow key={entry.id} entry={entry} onRemove={onRemove} />
+      ))}
+    </>
+  );
+}
+
 export const NotificationCenter = memo(function NotificationCenter({
   notifications,
   onRemove,
@@ -155,11 +172,7 @@ export const NotificationCenter = memo(function NotificationCenter({
 }: NotificationCenterProps): React.ReactElement {
   const panelRef = useRef<HTMLDivElement>(null);
   useNotificationCenterDismiss(panelRef, onClose);
-
-  if (!anchorRect) {
-    return <></>;
-  }
-
+  if (!anchorRect) return <></>;
   return createPortal(
     <>
       <style>{NC_STYLES}</style>
@@ -177,13 +190,7 @@ export const NotificationCenter = memo(function NotificationCenter({
       >
         <PanelHeader count={notifications.length} onClearAll={onClearAll} />
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-          {notifications.length === 0 ? (
-            <EmptyState />
-          ) : (
-            notifications.map((entry) => (
-              <NotificationRow key={entry.id} entry={entry} onRemove={onRemove} />
-            ))
-          )}
+          <NotificationList notifications={notifications} onRemove={onRemove} />
         </div>
       </div>
     </>,

@@ -103,25 +103,43 @@ function openFileInEditor(filePath: string): void {
   window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { filePath } }));
 }
 function openSettings(tab?: string): void {
-  window.dispatchEvent(new CustomEvent('agent-ide:open-settings', tab ? { detail: tab } : undefined));
+  window.dispatchEvent(
+    new CustomEvent('agent-ide:open-settings', tab ? { detail: tab } : undefined),
+  );
 }
 
-function useAgentSidebarCallbacks(createRule: (type: 'claude-md' | 'agents-md') => Promise<string | null>) {
+function useAgentSidebarCallbacks(
+  createRule: (type: 'claude-md' | 'agents-md') => Promise<string | null>,
+) {
   const handleOpenFile = useCallback((f: string) => openFileInEditor(f), []);
   const handleOpenHooks = useCallback(() => openSettings('hooks'), []);
-  const handleCreateRule = useCallback(async (type: 'claude-md' | 'agents-md') => {
-    const fp = await createRule(type);
-    if (fp) openFileInEditor(fp);
-  }, [createRule]);
+  const handleCreateRule = useCallback(
+    async (type: 'claude-md' | 'agents-md') => {
+      const fp = await createRule(type);
+      if (fp) openFileInEditor(fp);
+    },
+    [createRule],
+  );
   return { handleOpenFile, handleOpenHooks, handleCreateRule };
+}
+
+interface RulesSlotProps { rules: ReturnType<typeof useRulesAndSkills>['rules']; commands: ReturnType<typeof useRulesAndSkills>['commands']; isLoading: boolean; projectRoot: string | null; handleOpenFile: (f: string) => void; handleCreateRule: (type: 'claude-md' | 'agents-md') => Promise<void>; handleOpenHooks: () => void }
+
+function RulesSlot({ rules, commands, isLoading, projectRoot, handleOpenFile, handleCreateRule, handleOpenHooks }: RulesSlotProps): React.ReactElement {
+  return (
+    <ErrorBoundary label="Claude Config">
+      <ClaudeConfigPanel rules={rules} commands={commands} isLoading={isLoading}
+        onOpenFile={handleOpenFile} onCreateRule={handleCreateRule}
+        onOpenHooksSettings={handleOpenHooks} projectRoot={projectRoot}
+      />
+    </ErrorBoundary>
+  );
 }
 
 function AgentRightSidebarTabs({ projectRoot, dispatchEnabled }: { projectRoot: string | null; dispatchEnabled: boolean }): React.ReactElement {
   const { chatModel, handleModelReady } = useAgentSidebarModel();
   const { rules, commands, isLoading, createRule } = useRulesAndSkills(projectRoot);
   const { handleOpenFile, handleOpenHooks, handleCreateRule } = useAgentSidebarCallbacks(createRule);
-  const threads = chatModel?.threads;
-  const activeThreadId = chatModel?.activeThreadId;
   return (
     <RightSidebarTabs
       chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
@@ -129,11 +147,11 @@ function AgentRightSidebarTabs({ projectRoot, dispatchEnabled }: { projectRoot: 
       gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
       analyticsContent={<AnalyticsSuspense />}
       memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
-      rulesContent={<ErrorBoundary label="Claude Config"><ClaudeConfigPanel rules={rules} commands={commands} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onOpenHooksSettings={handleOpenHooks} projectRoot={projectRoot} /></ErrorBoundary>}
+      rulesContent={<RulesSlot rules={rules} commands={commands} isLoading={isLoading} projectRoot={projectRoot} handleOpenFile={handleOpenFile} handleCreateRule={handleCreateRule} handleOpenHooks={handleOpenHooks} />}
       dispatchContent={dispatchEnabled ? <ErrorBoundary label="Dispatch"><DispatchScreen /></ErrorBoundary> : null}
       showDispatch={dispatchEnabled}
-      threads={threads}
-      activeThreadId={activeThreadId}
+      threads={chatModel?.threads}
+      activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}
       onDeleteThread={chatModel ? (id) => void chatModel.deleteThread(id) : undefined}
       onNewChat={chatModel?.startNewChat}
@@ -141,10 +159,15 @@ function AgentRightSidebarTabs({ projectRoot, dispatchEnabled }: { projectRoot: 
   );
 }
 
-export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
+export function AgentSidebarContent({
+  projectRoot,
+}: {
+  projectRoot: string | null;
+}): React.ReactElement {
   const { config } = useConfig();
   const subagentUxEnabled = config?.agentic?.subagentUx !== false;
-  const dispatchEnabled = config?.sessionDispatch?.enabled === true || config?.mobileAccess?.enabled === true;
+  const dispatchEnabled =
+    config?.sessionDispatch?.enabled === true || config?.mobileAccess?.enabled === true;
   return (
     <>
       <AgentRightSidebarTabs projectRoot={projectRoot} dispatchEnabled={dispatchEnabled} />

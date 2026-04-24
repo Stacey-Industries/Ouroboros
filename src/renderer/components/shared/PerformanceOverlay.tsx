@@ -70,17 +70,15 @@ function PerformanceMetrics({
   );
 }
 
-export function PerformanceOverlay({ visible }: PerformanceOverlayProps): React.ReactElement | null {
+export function PerformanceOverlay({
+  visible,
+}: PerformanceOverlayProps): React.ReactElement | null {
   const snap = usePerformance(visible);
 
   if (!visible) return null;
 
   return (
-    <div
-      role="status"
-      aria-label="Performance metrics"
-      style={OVERLAY_STYLE}
-    >
+    <div role="status" aria-label="Performance metrics" style={OVERLAY_STYLE}>
       <div style={OVERLAY_TITLE_STYLE}>Performance</div>
       <PerformanceMetrics snap={snap} />
     </div>

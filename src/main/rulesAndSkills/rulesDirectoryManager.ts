@@ -14,10 +14,7 @@ const RULES_DIR = 'rules';
 const MD_EXT = '.md';
 const DESC_MAX_LEN = 80;
 
-function resolveRulesDir(
-  scope: ClaudeConfigScope,
-  projectRoot?: string,
-): string {
+function resolveRulesDir(scope: ClaudeConfigScope, projectRoot?: string): string {
   if (scope === 'global') {
     return path.join(os.homedir(), CLAUDE_DIR, RULES_DIR);
   }
@@ -25,31 +22,20 @@ function resolveRulesDir(
   return path.join(projectRoot, CLAUDE_DIR, RULES_DIR);
 }
 
-function resolveRulePath(
-  scope: ClaudeConfigScope,
-  name: string,
-  projectRoot?: string,
-): string {
+function resolveRulePath(scope: ClaudeConfigScope, name: string, projectRoot?: string): string {
   const dir = resolveRulesDir(scope, projectRoot);
   const safeName = path.basename(name).replace(/[^a-zA-Z0-9_-]/g, '-');
   return path.join(dir, safeName + MD_EXT);
 }
 
 function extractDescription(content: string): string {
-  const firstLine = content
-    .split('\n')
-    .find((line) => line.trim().length > 0);
+  const firstLine = content.split('\n').find((line) => line.trim().length > 0);
   if (!firstLine) return '';
   const trimmed = firstLine.trim();
-  return trimmed.length > DESC_MAX_LEN
-    ? trimmed.slice(0, DESC_MAX_LEN)
-    : trimmed;
+  return trimmed.length > DESC_MAX_LEN ? trimmed.slice(0, DESC_MAX_LEN) : trimmed;
 }
 
-async function scanDir(
-  dirPath: string,
-  scope: ClaudeConfigScope,
-): Promise<RuleDefinition[]> {
+async function scanDir(dirPath: string, scope: ClaudeConfigScope): Promise<RuleDefinition[]> {
   let entries: string[];
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- dir from resolveRulesDir
@@ -80,9 +66,7 @@ async function scanDir(
 }
 
 /** Discover all rule .md files from global and/or project scopes. */
-export async function discoverRuleFiles(
-  projectRoot?: string,
-): Promise<RuleDefinition[]> {
+export async function discoverRuleFiles(projectRoot?: string): Promise<RuleDefinition[]> {
   const globalDir = resolveRulesDir('global');
   const globalRules = await scanDir(globalDir, 'global');
 

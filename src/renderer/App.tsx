@@ -45,7 +45,6 @@ import { useTokenOverrides } from './hooks/useTokenOverrides';
 import { useVisualViewportInsets } from './hooks/useVisualViewportInsets';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 
-
 // ─── useNativeBootstrap ───────────────────────────────────────
 // Runs once after config is resolved. On native: hides the splash screen and
 // starts the Capacitor Keyboard height listener. No-op on web.
@@ -55,8 +54,12 @@ function useNativeBootstrap(): void {
     if (!isNative()) return;
     void hideSplashScreen();
     let cleanup: (() => void) | null = null;
-    void initKeyboardListeners().then((fn: () => void) => { cleanup = fn; });
-    return () => { cleanup?.(); };
+    void initKeyboardListeners().then((fn: () => void) => {
+      cleanup = fn;
+    });
+    return () => {
+      cleanup?.();
+    };
   }, []);
 }
 
@@ -164,9 +167,12 @@ function useInnerAppLifecycle({
 function useCommandExecution(
   execute: ReturnType<typeof useCommandRegistry>['execute'],
 ): (command: Command) => Promise<void> {
-  return useCallback(async (command: Command): Promise<void> => {
-    await execute(command);
-  }, [execute]);
+  return useCallback(
+    async (command: Command): Promise<void> => {
+      await execute(command);
+    },
+    [execute],
+  );
 }
 
 function buildInnerAppLayoutProps({
@@ -222,7 +228,18 @@ function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<s
   useLspDiagnosticsSync();
   useFirstLaunchAuth();
   usePermalinkBridge();
-  useInnerAppLifecycle({ ctx, layouts, palette, project, registerCommand, setTheme, setMaterialVariant, terminal, uiState, keybindings });
+  useInnerAppLifecycle({
+    ctx,
+    layouts,
+    palette,
+    project,
+    registerCommand,
+    setTheme,
+    setMaterialVariant,
+    terminal,
+    uiState,
+    keybindings,
+  });
   return { ctx, palette, commands, recentIds, layouts, terminal, project, uiState, handleExecute };
 }
 
@@ -239,31 +256,41 @@ function InnerApp({
   // Chat-only shell preserves providers above this branch so toggling does not re-mount state.
   if (isImmersive) return <ChatOnlyShellWrapper terminal={hooks.terminal} />;
 
-  return <InnerAppLayout {...buildInnerAppLayoutProps({
-    ctx: hooks.ctx,
-    project: hooks.project,
-    keybindings,
-    layouts: hooks.layouts,
-    terminal: hooks.terminal,
-    palette: hooks.palette,
-    commands: hooks.commands,
-    recentIds: hooks.recentIds,
-    handleExecute: hooks.handleExecute,
-    uiState: hooks.uiState,
-    persistTerminalSessions,
-  })}
-  />;
+  return (
+    <InnerAppLayout
+      {...buildInnerAppLayoutProps({
+        ctx: hooks.ctx,
+        project: hooks.project,
+        keybindings,
+        layouts: hooks.layouts,
+        terminal: hooks.terminal,
+        palette: hooks.palette,
+        commands: hooks.commands,
+        recentIds: hooks.recentIds,
+        handleExecute: hooks.handleExecute,
+        uiState: hooks.uiState,
+        persistTerminalSessions,
+      })}
+    />
+  );
 }
 
-function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>): InnerAppLayoutProps['terminalControl'] {
+function buildTerminalControl(
+  terminal: ReturnType<typeof useTerminalSessions>,
+): InnerAppLayoutProps['terminalControl'] {
   return {
     sessions: terminal.sessions,
     activeSessionId: terminal.activeSessionId,
     onActivate: terminal.setActiveSessionId,
     onClose: terminal.handleTerminalClose,
     onNew: () => void terminal.spawnSession(),
-    onNewClaude: (providerModel?: string) => void terminal.spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
-    onNewCodex: (model?: string) => void terminal.spawnCodexSession(undefined, model ? { model, cliOverrides: { model } } : undefined),
+    onNewClaude: (providerModel?: string) =>
+      void terminal.spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
+    onNewCodex: (model?: string) =>
+      void terminal.spawnCodexSession(
+        undefined,
+        model ? { model, cliOverrides: { model } } : undefined,
+      ),
     onReorder: terminal.handleTerminalReorder,
     focusOrCreate: terminal.focusOrCreateSession,
     onSpawnClaude: terminal.spawnClaudeSession,
@@ -329,11 +356,8 @@ export default function App(): React.ReactElement {
     ? config.recentProjects
     : [];
   const keybindings: Record<string, string> =
-    config.keybindings && typeof config.keybindings === 'object'
-      ? config.keybindings
-      : {};
-  const customCSS: string =
-    typeof config.customCSS === 'string' ? config.customCSS : '';
+    config.keybindings && typeof config.keybindings === 'object' ? config.keybindings : {};
+  const customCSS: string = typeof config.customCSS === 'string' ? config.customCSS : '';
   const persistTerminalSessions: boolean = config.persistTerminalSessions === true;
 
   return (

@@ -12,17 +12,11 @@
  */
 
 import type { ResearchMode } from './researchSessionState';
-import {
-  getEnhancedLibraries,
-  getResearchMode,
-  setResearchMode,
-} from './researchSessionState';
+import { getEnhancedLibraries, getResearchMode, setResearchMode } from './researchSessionState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type SlashCommandResult =
-  | { handled: true; message: string }
-  | { handled: false };
+export type SlashCommandResult = { handled: true; message: string } | { handled: false };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,7 +29,8 @@ function modeLabel(mode: ResearchMode): string {
 function buildStatusMessage(sessionId: string): string {
   const mode = getResearchMode(sessionId);
   const libCount = getEnhancedLibraries(sessionId).size;
-  const libNote = libCount > 0 ? ` (${libCount} enhanced librar${libCount === 1 ? 'y' : 'ies'})` : '';
+  const libNote =
+    libCount > 0 ? ` (${libCount} enhanced librar${libCount === 1 ? 'y' : 'ies'})` : '';
   return `Research mode: **${modeLabel(mode)}**${libNote}`;
 }
 

@@ -82,7 +82,10 @@ describe('addDevice', () => {
     setupStore([original]);
     const updated = makeDevice({ label: 'New Label' });
     addDevice(updated);
-    const [, written] = mockSetConfigValue.mock.calls[0] as [string, { pairedDevices: PairedDevice[] }];
+    const [, written] = mockSetConfigValue.mock.calls[0] as [
+      string,
+      { pairedDevices: PairedDevice[] },
+    ];
     expect(written.pairedDevices).toHaveLength(1);
     expect(written.pairedDevices[0].label).toBe('New Label');
   });
@@ -92,7 +95,10 @@ describe('addDevice', () => {
     setupStore([first]);
     const second = makeDevice({ id: 'device-2', label: 'iPad' });
     addDevice(second);
-    const [, written] = mockSetConfigValue.mock.calls[0] as [string, { pairedDevices: PairedDevice[] }];
+    const [, written] = mockSetConfigValue.mock.calls[0] as [
+      string,
+      { pairedDevices: PairedDevice[] },
+    ];
     expect(written.pairedDevices).toHaveLength(2);
   });
 });
@@ -114,7 +120,10 @@ describe('removeDevice', () => {
     setupStore([device]);
     const result = removeDevice('remove-me');
     expect(result).toBe(true);
-    const [, written] = mockSetConfigValue.mock.calls[0] as [string, { pairedDevices: PairedDevice[] }];
+    const [, written] = mockSetConfigValue.mock.calls[0] as [
+      string,
+      { pairedDevices: PairedDevice[] },
+    ];
     expect(written.pairedDevices).toHaveLength(0);
   });
 
@@ -123,7 +132,10 @@ describe('removeDevice', () => {
     const remove = makeDevice({ id: 'goner' });
     setupStore([keep, remove]);
     removeDevice('goner');
-    const [, written] = mockSetConfigValue.mock.calls[0] as [string, { pairedDevices: PairedDevice[] }];
+    const [, written] = mockSetConfigValue.mock.calls[0] as [
+      string,
+      { pairedDevices: PairedDevice[] },
+    ];
     expect(written.pairedDevices).toHaveLength(1);
     expect(written.pairedDevices[0].id).toBe('keeper');
   });
@@ -165,7 +177,10 @@ describe('updateLastSeen', () => {
     const before = Date.now();
     updateLastSeen('update-me');
     expect(mockSetConfigValue).toHaveBeenCalledOnce();
-    const [, written] = mockSetConfigValue.mock.calls[0] as [string, { pairedDevices: PairedDevice[] }];
+    const [, written] = mockSetConfigValue.mock.calls[0] as [
+      string,
+      { pairedDevices: PairedDevice[] },
+    ];
     const updated = written.pairedDevices.find((d) => d.id === 'update-me');
     expect(updated).toBeDefined();
     const updatedTs = new Date(updated!.lastSeenAt).getTime();

@@ -3,10 +3,10 @@
  */
 
 export interface TemplateContext {
-  projectRoot: string | null
-  projectName: string
-  openFile: string | null
-  openFileName: string | null
+  projectRoot: string | null;
+  projectName: string;
+  openFile: string | null;
+  openFileName: string | null;
 }
 
 /**
@@ -18,5 +18,5 @@ export function resolveTemplate(template: string, ctx: TemplateContext): string 
     .replace(/\{\{projectRoot\}\}/g, ctx.projectRoot ?? '')
     .replace(/\{\{projectName\}\}/g, ctx.projectName)
     .replace(/\{\{openFile\}\}/g, ctx.openFile ?? '')
-    .replace(/\{\{openFileName\}\}/g, ctx.openFileName ?? '')
+    .replace(/\{\{openFileName\}\}/g, ctx.openFileName ?? '');
 }

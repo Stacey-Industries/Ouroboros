@@ -31,7 +31,15 @@ vi.mock('@dnd-kit/sortable', () => ({
 }));
 
 vi.mock('../../hooks/useConfig', () => ({
-  useConfig: vi.fn().mockReturnValue({ config: null, isLoading: true, error: null, set: vi.fn(), refresh: vi.fn() }),
+  useConfig: vi
+    .fn()
+    .mockReturnValue({
+      config: null,
+      isLoading: true,
+      error: null,
+      set: vi.fn(),
+      refresh: vi.fn(),
+    }),
 }));
 
 vi.mock('../../hooks/useViewportBreakpoint', () => ({

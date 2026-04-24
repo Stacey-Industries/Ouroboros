@@ -72,9 +72,9 @@ function EmptyStateBody(): React.ReactElement {
           maxWidth: '340px',
         }}
       >
-        Click &quot;+ Add Excerpt&quot; above to add code snippets from your project files.
-        Each excerpt shows a specific line range from a file, letting you view
-        related code from multiple files side by side.
+        Click &quot;+ Add Excerpt&quot; above to add code snippets from your project files. Each
+        excerpt shows a specific line range from a file, letting you view related code from multiple
+        files side by side.
       </div>
       <div
         className="text-text-semantic-faint"
@@ -85,8 +85,7 @@ function EmptyStateBody(): React.ReactElement {
           maxWidth: '300px',
         }}
       >
-        Tip: You can collapse, remove, or click through to the full file
-        for each excerpt.
+        Tip: You can collapse, remove, or click through to the full file for each excerpt.
       </div>
     </>
   );
@@ -101,13 +100,7 @@ function MultiBufferEmptyState(): React.ReactElement {
   );
 }
 
-function MultiBufferHeader({
-  count,
-  name,
-}: {
-  count: number;
-  name: string;
-}): React.ReactElement {
+function MultiBufferHeader({ count, name }: { count: number; name: string }): React.ReactElement {
   return (
     <div
       className="text-text-semantic-primary"

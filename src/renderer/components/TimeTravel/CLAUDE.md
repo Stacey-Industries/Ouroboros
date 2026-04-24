@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-The CLAUDE.md already exists and is comprehensive. The content is well-structured and covers all the key aspects of the TimeTravel component directory.
-
 # TimeTravel — Git snapshot browser with compare and restore
 
 ## Key Files
@@ -49,6 +47,7 @@ Toggling compare mode clears both FROM and TO.
 - **Status messages auto-dismiss** after 5 seconds via `useStatusMessage` internal hook.
 - **`cancelled` flag pattern** — all async `useEffect` calls use a boolean `cancelled` flag to discard stale results from rapid snapshot clicks. Follow this pattern for any new async fetches here.
 - **`useChangedFiles` deps include the full `args` object** — if you add fields to `ChangedFilesArgs`, ensure the enclosing memo/callback is stable or the effect will re-fire on every render.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

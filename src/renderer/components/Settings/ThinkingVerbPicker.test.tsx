@@ -99,10 +99,7 @@ describe('ThinkingVerbPicker — interactions', () => {
     mockConfig.mockReturnValue(makeConfig({ verbOverride: 'ruminating' }));
     render(<ThinkingVerbPicker />);
     fireEvent.click(screen.getByTestId('override-toggle'));
-    expect(mockSet).toHaveBeenCalledWith(
-      'theming',
-      expect.objectContaining({ verbOverride: '' }),
-    );
+    expect(mockSet).toHaveBeenCalledWith('theming', expect.objectContaining({ verbOverride: '' }));
   });
 
   it('typing in override input updates verbOverride', () => {
@@ -118,11 +115,13 @@ describe('ThinkingVerbPicker — interactions', () => {
   });
 
   it('reset button restores defaults', () => {
-    mockConfig.mockReturnValue(makeConfig({
-      thinkingVerbs: ['custom'],
-      spinnerChars: '|/',
-      verbOverride: 'ruminating',
-    }));
+    mockConfig.mockReturnValue(
+      makeConfig({
+        thinkingVerbs: ['custom'],
+        spinnerChars: '|/',
+        verbOverride: 'ruminating',
+      }),
+    );
     render(<ThinkingVerbPicker />);
     fireEvent.click(screen.getByTestId('thinking-reset-btn'));
     expect(mockSet).toHaveBeenCalledWith(

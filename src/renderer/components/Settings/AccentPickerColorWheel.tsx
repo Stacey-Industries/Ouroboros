@@ -37,15 +37,24 @@ function normaliseHex(raw: string): string | null {
 const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px' };
 
 const colorInputStyle: React.CSSProperties = {
-  width: '36px', height: '36px', padding: '2px',
-  border: '1px solid var(--border-subtle)', borderRadius: '6px',
-  background: 'var(--surface-inset)', cursor: 'pointer', flexShrink: 0,
+  width: '36px',
+  height: '36px',
+  padding: '2px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '6px',
+  background: 'var(--surface-inset)',
+  cursor: 'pointer',
+  flexShrink: 0,
 };
 
 const hexInputStyle: React.CSSProperties = {
-  width: '90px', padding: '6px 8px', borderRadius: '6px',
-  border: '1px solid var(--border-subtle)', background: 'var(--surface-inset)',
-  color: 'var(--text-text-semantic-primary)', fontSize: '12px',
+  width: '90px',
+  padding: '6px 8px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-subtle)',
+  background: 'var(--surface-inset)',
+  color: 'var(--text-text-semantic-primary)',
+  fontSize: '12px',
   fontFamily: 'var(--font-mono, monospace)',
 };
 
@@ -54,7 +63,9 @@ const hexInputStyle: React.CSSProperties = {
 function useColorWheelHandlers(hex: string, onChange: (hex: string) => void) {
   // Color wheel fires onChange directly — parent sets hex, key={hex} remounts text input.
   const handleColorChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => { onChange(e.target.value); },
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.value);
+    },
     [onChange],
   );
 
@@ -85,8 +96,10 @@ export function AccentPickerColorWheel({
   hex,
   onChange,
 }: AccentPickerColorWheelProps): React.ReactElement {
-  const { handleColorChange, handleHexBlur, handleHexChange } =
-    useColorWheelHandlers(hex, onChange);
+  const { handleColorChange, handleHexBlur, handleHexChange } = useColorWheelHandlers(
+    hex,
+    onChange,
+  );
 
   return (
     <div style={rowStyle}>

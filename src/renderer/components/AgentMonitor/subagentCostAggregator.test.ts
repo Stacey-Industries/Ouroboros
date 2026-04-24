@@ -99,8 +99,8 @@ describe('formatRollupDisclosure', () => {
   });
 
   it('label starts with "total $" and contains parent and subagent breakdown', () => {
-    const rollup = makeRollup({ usdCost: 0.0200, childCount: 2 });
-    const combined = combineCosts(0.0300, rollup);
+    const rollup = makeRollup({ usdCost: 0.02, childCount: 2 });
+    const combined = combineCosts(0.03, rollup);
     const label = formatRollupDisclosure(combined);
     expect(label).toMatch(/^total \$0\.0500/);
     expect(label).toContain('parent $0.0300');

@@ -12,25 +12,25 @@
 
 export interface ModelPricing {
   /** USD per 1M input tokens */
-  inputPer1M: number
+  inputPer1M: number;
   /** USD per 1M output tokens */
-  outputPer1M: number
+  outputPer1M: number;
   /** USD per 1M cache-read input tokens */
-  cacheReadPer1M: number
+  cacheReadPer1M: number;
   /** USD per 1M cache-write input tokens */
-  cacheWritePer1M: number
+  cacheWritePer1M: number;
 }
 
 // ─── Pricing table (USD per 1M tokens) ──────────────────────────────────────
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  'opus-4.6':   { inputPer1M: 5,   outputPer1M: 25, cacheReadPer1M: 0.50, cacheWritePer1M: 6.25  },
-  'sonnet-4.6': { inputPer1M: 3,   outputPer1M: 15, cacheReadPer1M: 0.30, cacheWritePer1M: 3.75  },
-  'haiku-4.5':  { inputPer1M: 1,   outputPer1M: 5,  cacheReadPer1M: 0.10, cacheWritePer1M: 1.25  },
-}
+  'opus-4.6': { inputPer1M: 5, outputPer1M: 25, cacheReadPer1M: 0.5, cacheWritePer1M: 6.25 },
+  'sonnet-4.6': { inputPer1M: 3, outputPer1M: 15, cacheReadPer1M: 0.3, cacheWritePer1M: 3.75 },
+  'haiku-4.5': { inputPer1M: 1, outputPer1M: 5, cacheReadPer1M: 0.1, cacheWritePer1M: 1.25 },
+};
 
 /** Default pricing when model is unknown — uses Sonnet 4.6 as most common. */
-export const DEFAULT_PRICING: ModelPricing = MODEL_PRICING['sonnet-4.6']
+export const DEFAULT_PRICING: ModelPricing = MODEL_PRICING['sonnet-4.6'];
 
 // ─── Model detection ────────────────────────────────────────────────────────
 
@@ -42,14 +42,14 @@ export const DEFAULT_PRICING: ModelPricing = MODEL_PRICING['sonnet-4.6']
  *   "claude-3-5-haiku-20241022" -> "haiku-3.5"
  */
 export function detectPricingKey(model?: string): string | null {
-  if (!model) return null
-  const m = model.toLowerCase()
+  if (!model) return null;
+  const m = model.toLowerCase();
 
-  if (m.includes('opus')) return 'opus-4.6'
-  if (m.includes('sonnet')) return 'sonnet-4.6'
-  if (m.includes('haiku')) return 'haiku-4.5'
+  if (m.includes('opus')) return 'opus-4.6';
+  if (m.includes('sonnet')) return 'sonnet-4.6';
+  if (m.includes('haiku')) return 'haiku-4.5';
 
-  return null
+  return null;
 }
 
 /**
@@ -57,6 +57,6 @@ export function detectPricingKey(model?: string): string | null {
  * Falls back to Sonnet 4 pricing if model is unknown.
  */
 export function getPricing(model?: string): ModelPricing {
-  const key = detectPricingKey(model)
-  return key ? MODEL_PRICING[key] : DEFAULT_PRICING
+  const key = detectPricingKey(model);
+  return key ? MODEL_PRICING[key] : DEFAULT_PRICING;
 }

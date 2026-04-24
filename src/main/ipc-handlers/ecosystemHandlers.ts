@@ -13,5 +13,5 @@ export function registerEcosystemHandlers(): string[] {
   // ecosystem:promptDiff is push-only (main → renderer via webContents.send).
   // No ipcMain.handle is needed — the renderer subscribes via preload onChannel.
   // We return the channel name so ipc.ts can log it in the registered list.
-  return ['ecosystem:promptDiff']
+  return ['ecosystem:promptDiff'];
 }

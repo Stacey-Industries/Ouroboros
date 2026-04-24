@@ -34,7 +34,6 @@ export interface CodexTransportDecision {
 }
 
 const MIN_CODEX_APP_SERVER_VERSION = '0.122.0';
-const INTERACTIVE_PERMISSION_MODES = new Set(['acceptEdits', 'plan']);
 
 let cachedCodexAppServerCapability: CodexAppServerCapability | null = null;
 let capabilityProbeOverride: (() => CodexAppServerCapability) | null = null;
@@ -68,6 +67,14 @@ export function buildFailureMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function shouldRetryCodexWithoutResume(error: unknown): boolean {
+  const message = buildFailureMessage(error).toLowerCase();
+  return (
+    message.includes('thread/resume') &&
+    (message.includes('no rollout found') || message.includes('resume failed'))
+  );
+}
+
 export function createCodexCapabilities(): ProviderCapabilities {
   return {
     provider: 'codex',
@@ -82,17 +89,14 @@ export function createCodexCapabilities(): ProviderCapabilities {
   };
 }
 
-function getCodexFeatureFlag(): boolean {
-  const ecosystem = getConfigValue('ecosystem') as { codexAppServerTransport?: boolean } | undefined;
-  return ecosystem?.codexAppServerTransport === true;
-}
-
 function compareVersions(left: string, right: string): number {
   const leftParts = left.split('.').map((part) => Number.parseInt(part, 10) || 0);
   const rightParts = right.split('.').map((part) => Number.parseInt(part, 10) || 0);
   const length = Math.max(leftParts.length, rightParts.length);
   for (let index = 0; index < length; index += 1) {
-    const diff = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    const leftPart = leftParts.at(index) ?? 0;
+    const rightPart = rightParts.at(index) ?? 0;
+    const diff = leftPart - rightPart;
     if (diff !== 0) return diff;
   }
   return 0;
@@ -157,10 +161,6 @@ export function setCodexAppServerCapabilityProbeForTests(
   cachedCodexAppServerCapability = null;
 }
 
-function isInteractivePermissionMode(permissionMode: string | undefined): boolean {
-  return permissionMode ? INTERACTIVE_PERMISSION_MODES.has(permissionMode) : false;
-}
-
 export function supportsCodexChatPermissionMode(
   settings: CodexCliSettings,
   transport: CodexTransport = 'exec',
@@ -180,26 +180,10 @@ function assertCodexChatPermissionMode(
 }
 
 export function getCodexTransportDecision(
-  context: ProviderLaunchContext | ProviderResumeContext,
+  context?: ProviderLaunchContext | ProviderResumeContext,
 ): CodexTransportDecision {
-  if (!getCodexFeatureFlag()) {
-    return {
-      capability: { available: false, reason: 'Feature flag disabled.' },
-      transport: 'exec',
-    };
-  }
-  const capability = getCachedCodexAppServerCapability();
-  if (!capability.available) {
-    const modeNote = isInteractivePermissionMode(context.request.permissionMode)
-      ? ' Interactive approval modes will still fall back to the legacy exec behavior.'
-      : '';
-    return {
-      capability,
-      transport: 'exec',
-      warning: `Codex app-server transport unavailable: ${capability.reason ?? 'unknown reason'}.${modeNote}`,
-    };
-  }
-  return { capability, transport: 'app-server' };
+  void context;
+  return { capability: { available: true }, transport: 'app-server' };
 }
 
 export function resolveCodexTransport(

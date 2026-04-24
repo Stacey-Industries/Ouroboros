@@ -184,10 +184,9 @@ export function exportToHtml(
   const title = escapeHtml(thread.title || thread.id);
   const tags = (thread.tags ?? []).map(escapeHtml).join(', ');
   const created = formatIsoTime(thread.createdAt);
-  const metaLine = [
-    `Created: ${created}`,
-    tags ? `Tags: ${tags}` : '',
-  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  const metaLine = [`Created: ${created}`, tags ? `Tags: ${tags}` : '']
+    .filter(Boolean)
+    .join(' &nbsp;·&nbsp; ');
 
   const header = [
     '<div class="thread-header">',

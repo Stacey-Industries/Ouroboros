@@ -1,8 +1,13 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_CHAT_OVERRIDES,
   resolveChatOverridesForThread,
+  usePerThreadOverrides,
 } from './useAgentChatWorkspace.overrides';
 
 describe('resolveChatOverridesForThread', () => {
@@ -40,5 +45,40 @@ describe('resolveChatOverridesForThread', () => {
     });
     expect(result.model).toBe(DEFAULT_CHAT_OVERRIDES.model);
     expect(result.effort).toBe(DEFAULT_CHAT_OVERRIDES.effort);
+  });
+
+  it('promotes overrides from a generated draft thread id to the persisted thread id', () => {
+    const { result, rerender } = renderHook(
+      ({ threadId, model, effort }) => usePerThreadOverrides(threadId, model, effort),
+      {
+        initialProps: {
+          threadId: '__draft:123',
+          model: null as string | null,
+          effort: null as string | null,
+        },
+      },
+    );
+
+    act(() => {
+      result.current.setChatOverrides({
+        model: 'gpt-5.4',
+        effort: 'high',
+        permissionMode: 'plan',
+        profileId: 'profile-1',
+      });
+    });
+
+    rerender({
+      threadId: 'thread-123',
+      model: 'claude-sonnet-4-6',
+      effort: 'medium',
+    });
+
+    expect(result.current.chatOverrides).toEqual({
+      model: 'gpt-5.4',
+      effort: 'high',
+      permissionMode: 'plan',
+      profileId: 'profile-1',
+    });
   });
 });

@@ -12,9 +12,11 @@ import { type MergeHandlerDeps, registerMergeHandlers } from './agentChatMerge';
 
 type HandlerFn = (...args: unknown[]) => Promise<unknown>;
 
-function makeStubs(overrides: {
-  mergeSideChat?: (p: unknown) => Promise<unknown>;
-} = {}) {
+function makeStubs(
+  overrides: {
+    mergeSideChat?: (p: unknown) => Promise<unknown>;
+  } = {},
+) {
   const mergeSideChat =
     overrides.mergeSideChat ??
     vi.fn().mockResolvedValue({ success: true, systemMessageId: 'msg-1' });
@@ -66,11 +68,11 @@ describe('registerMergeHandlers', () => {
       const mergeSideChat = vi.fn().mockResolvedValue({ success: true, systemMessageId: 'abc' });
       const { handlers } = makeStubs({ mergeSideChat });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, {
         sideChatId: 'side-1',
         mainThreadId: 'main-1',
         summary: 'Key findings.',
-      }) as { success: boolean; systemMessageId: string };
+      })) as { success: boolean; systemMessageId: string };
 
       expect(result.success).toBe(true);
       expect(result.systemMessageId).toBe('abc');
@@ -118,11 +120,11 @@ describe('registerMergeHandlers', () => {
       const mergeSideChat = vi.fn().mockRejectedValue(new Error('Thread not found: side-1'));
       const { handlers } = makeStubs({ mergeSideChat });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, {
         sideChatId: 'side-1',
         mainThreadId: 'main-1',
         summary: 'Summary.',
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Thread not found');

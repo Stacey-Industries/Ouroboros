@@ -23,10 +23,7 @@ export type TimeoutCallback = (jobId: string) => void;
  * Starts a 250 ms polling interval that calls `onTick` each cycle.
  * Returns the updated state. No-op if an interval is already running.
  */
-export function startInterval(
-  state: LifecycleState,
-  onTick: TickCallback,
-): LifecycleState {
+export function startInterval(state: LifecycleState, onTick: TickCallback): LifecycleState {
   if (state.intervalId !== null) return state;
   const id = setInterval(onTick, 250);
   return { ...state, intervalId: id };
@@ -70,10 +67,7 @@ export function registerJobTimeout(
 /**
  * Cancels and removes the timeout for `jobId`. No-op if none registered.
  */
-export function clearJobTimeout(
-  state: LifecycleState,
-  jobId: string,
-): LifecycleState {
+export function clearJobTimeout(state: LifecycleState, jobId: string): LifecycleState {
   const id = state.timeouts.get(jobId);
   if (id === undefined) return state;
   clearTimeout(id);

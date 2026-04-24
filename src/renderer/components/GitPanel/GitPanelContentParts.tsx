@@ -132,7 +132,11 @@ export function CommitSection(props: {
   );
 }
 
-export function ReviewChangesBar({ hasChanges }: { hasChanges: boolean }): React.ReactElement | null {
+export function ReviewChangesBar({
+  hasChanges,
+}: {
+  hasChanges: boolean;
+}): React.ReactElement | null {
   if (!hasChanges) return null;
   return (
     <div className="flex-shrink-0 border-b border-border-semantic px-2 py-1.5 flex items-center gap-1.5">

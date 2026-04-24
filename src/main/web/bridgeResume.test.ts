@@ -7,8 +7,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 
-import { detachDevice, type DispatchContext,dispatchResumable, handleResumeFrame } from './bridgeResume';
-import { clearRegistry, detach, getTokensForDevice, register, setSendTarget } from './inflightRegistry';
+import {
+  detachDevice,
+  type DispatchContext,
+  dispatchResumable,
+  handleResumeFrame,
+} from './bridgeResume';
+import {
+  clearRegistry,
+  detach,
+  getTokensForDevice,
+  register,
+  setSendTarget,
+} from './inflightRegistry';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 // vi.mock calls are hoisted by vitest before any imports execute.
@@ -29,9 +40,9 @@ vi.mock('../windowManager', () => ({
 vi.mock('../mobileAccess/channelCatalog', () => ({
   CATALOG_LOOKUP: new Map([
     ['agentChat:sendMessage', { class: 'paired-write', timeoutClass: 'long' }],
-    ['files:readFile',        { class: 'paired-read',  timeoutClass: 'normal' }],
-    ['app:getVersion',        { class: 'always',       timeoutClass: 'short' }],
-    ['config:get',            { class: 'always',       timeoutClass: 'short' }],
+    ['files:readFile', { class: 'paired-read', timeoutClass: 'normal' }],
+    ['app:getVersion', { class: 'always', timeoutClass: 'short' }],
+    ['config:get', { class: 'always', timeoutClass: 'short' }],
   ]),
 }));
 
@@ -176,9 +187,9 @@ describe('dispatchResumable', () => {
     await Promise.resolve();
 
     // Result frame arrives after handler settles
-    const resultFrame = sent.find(
-      (f) => (f as Record<string, unknown>).result !== undefined,
-    ) as Record<string, unknown> | undefined;
+    const resultFrame = sent.find((f) => (f as Record<string, unknown>).result !== undefined) as
+      | Record<string, unknown>
+      | undefined;
     expect(resultFrame).toBeDefined();
     expect(resultFrame?.result).toEqual({ ok: true });
   });
@@ -243,9 +254,9 @@ describe('dispatchResumable', () => {
     await vi.runAllTimersAsync();
     await Promise.resolve();
 
-    const errFrame = sent.find(
-      (f) => (f as Record<string, unknown>).error !== undefined,
-    ) as Record<string, unknown> | undefined;
+    const errFrame = sent.find((f) => (f as Record<string, unknown>).error !== undefined) as
+      | Record<string, unknown>
+      | undefined;
     expect(errFrame).toBeDefined();
     expect((errFrame?.error as Record<string, unknown>).message).toContain('boom');
   });

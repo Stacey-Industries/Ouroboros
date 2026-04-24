@@ -58,13 +58,16 @@ export function useDispatchJobs(): UseDispatchJobsReturn {
     });
   }, []);
 
-  const cancel = useCallback(async (jobId: string): Promise<CancelDispatchJobResult> => {
-    const api = window.electronAPI?.sessions;
-    if (!api?.cancelDispatchJob) return { success: false, reason: 'api unavailable' };
-    const result = await api.cancelDispatchJob(jobId);
-    await refresh();
-    return result;
-  }, [refresh]);
+  const cancel = useCallback(
+    async (jobId: string): Promise<CancelDispatchJobResult> => {
+      const api = window.electronAPI?.sessions;
+      if (!api?.cancelDispatchJob) return { success: false, reason: 'api unavailable' };
+      const result = await api.cancelDispatchJob(jobId);
+      await refresh();
+      return result;
+    },
+    [refresh],
+  );
 
   return { jobs, refresh, cancel };
 }

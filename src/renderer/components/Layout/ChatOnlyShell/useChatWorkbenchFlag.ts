@@ -22,9 +22,10 @@ export function useChatWorkbenchFlag(): boolean {
     void readChatWorkbenchFlag().then((value) => {
       if (!cancelled) setFlagOn(value);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return flagOn;
 }
-

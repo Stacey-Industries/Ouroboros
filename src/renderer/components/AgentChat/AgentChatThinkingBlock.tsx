@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useConfig } from '../../hooks/useConfig';
-import {
-  DEFAULT_SPINNER_CHARS,
-  DEFAULT_THINKING_VERBS,
-} from '../../themes/thinkingDefaults';
+import { DEFAULT_SPINNER_CHARS, DEFAULT_THINKING_VERBS } from '../../themes/thinkingDefaults';
 
 export interface AgentChatThinkingBlockProps {
   content: string;
@@ -87,7 +84,10 @@ function DurationBadge({ duration }: { duration: number }): React.ReactElement {
   );
 }
 
-function StreamingLabel({ verbs, spinnerChars }: {
+function StreamingLabel({
+  verbs,
+  spinnerChars,
+}: {
   verbs: readonly string[];
   spinnerChars: string;
 }): React.ReactElement {
@@ -163,9 +163,11 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
         className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised"
       >
         <ChevronIcon collapsed={isCollapsed} />
-        {isStreaming
-          ? <StreamingLabel verbs={verbs} spinnerChars={spinnerChars} />
-          : <span>{getStaticLabel(duration)}</span>}
+        {isStreaming ? (
+          <StreamingLabel verbs={verbs} spinnerChars={spinnerChars} />
+        ) : (
+          <span>{getStaticLabel(duration)}</span>
+        )}
         {duration !== undefined && !isStreaming && <DurationBadge duration={duration} />}
       </button>
       <ThinkingContent content={content} isStreaming={isStreaming} isCollapsed={isCollapsed} />

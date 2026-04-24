@@ -124,8 +124,12 @@ describe('ES_STRINGS translations differ from English', () => {
   });
 
   it('settings.updateChannel is translated', () => {
-    expect(ES_STRINGS.settings.updateChannel.label).not.toBe(EN_STRINGS.settings.updateChannel.label);
-    expect(ES_STRINGS.settings.updateChannel.stable).not.toBe(EN_STRINGS.settings.updateChannel.stable);
+    expect(ES_STRINGS.settings.updateChannel.label).not.toBe(
+      EN_STRINGS.settings.updateChannel.label,
+    );
+    expect(ES_STRINGS.settings.updateChannel.stable).not.toBe(
+      EN_STRINGS.settings.updateChannel.stable,
+    );
     // Beta is a proper noun — allowed to remain identical
     expect(isAllowedIdentical(ES_STRINGS.settings.updateChannel.beta)).toBe(true);
   });
@@ -139,8 +143,12 @@ describe('ES_STRINGS translations differ from English', () => {
 
   it('settings.crashReports is translated', () => {
     expect(ES_STRINGS.settings.crashReports.label).not.toBe(EN_STRINGS.settings.crashReports.label);
-    expect(ES_STRINGS.settings.crashReports.enableOptIn).not.toBe(EN_STRINGS.settings.crashReports.enableOptIn);
-    expect(ES_STRINGS.settings.crashReports.webhookLabel).not.toBe(EN_STRINGS.settings.crashReports.webhookLabel);
+    expect(ES_STRINGS.settings.crashReports.enableOptIn).not.toBe(
+      EN_STRINGS.settings.crashReports.enableOptIn,
+    );
+    expect(ES_STRINGS.settings.crashReports.webhookLabel).not.toBe(
+      EN_STRINGS.settings.crashReports.webhookLabel,
+    );
   });
 
   it('changelog.drawer is translated', () => {

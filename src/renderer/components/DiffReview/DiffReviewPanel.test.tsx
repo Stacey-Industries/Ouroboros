@@ -19,7 +19,14 @@ vi.mock('./DiffReviewPanelSections', () => ({
 }));
 
 vi.mock('./DiffReviewPanelState', () => ({
-  getDiffReviewStats: () => ({ added: 0, removed: 0, totalHunks: 0, decidedHunks: 0, acceptedHunks: 0, rejectedHunks: 0 }),
+  getDiffReviewStats: () => ({
+    added: 0,
+    removed: 0,
+    totalHunks: 0,
+    decidedHunks: 0,
+    acceptedHunks: 0,
+    rejectedHunks: 0,
+  }),
   getDiffReviewStateView: () => null,
 }));
 

@@ -129,9 +129,7 @@ function registerThreadLinkHandlers(channels: string[]): void {
   );
   channels.push('pty:linkToThread');
 
-  ipcMain.handle('pty:getLinkedThread', (_event, sessionId: string) =>
-    getLinkedThread(sessionId),
-  );
+  ipcMain.handle('pty:getLinkedThread', (_event, sessionId: string) => getLinkedThread(sessionId));
   channels.push('pty:getLinkedThread');
 
   ipcMain.handle('pty:getLinkedSessionIds', (_event, threadId: string) => ({

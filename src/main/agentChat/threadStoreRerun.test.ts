@@ -37,9 +37,7 @@ function makeThread(messages: AgentChatMessageRecord[]): AgentChatThreadRecord {
 function makeRuntime(thread: AgentChatThreadRecord) {
   return {
     requireThread: vi.fn().mockResolvedValue(thread),
-    writeThread: vi.fn().mockImplementation((t: AgentChatThreadRecord) =>
-      Promise.resolve(t),
-    ),
+    writeThread: vi.fn().mockImplementation((t: AgentChatThreadRecord) => Promise.resolve(t)),
   };
 }
 

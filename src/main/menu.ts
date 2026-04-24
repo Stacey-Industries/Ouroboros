@@ -1,22 +1,27 @@
-import { app, BrowserWindow, dialog, Menu, MenuItemConstructorOptions, shell } from 'electron'
+import { app, BrowserWindow, dialog, Menu, MenuItemConstructorOptions, shell } from 'electron';
 
-import { broadcastToWebClients } from './web/webServer'
-import { createChatWindow, createWindow, getAllWindows, setWindowProjectRoot } from './windowManager'
+import { broadcastToWebClients } from './web/webServer';
+import {
+  createChatWindow,
+  createWindow,
+  getAllWindows,
+  setWindowProjectRoot,
+} from './windowManager';
 
 function sendMenuEvent(win: BrowserWindow, channel: string): void {
-  win.webContents.send(channel)
-  broadcastToWebClients(channel, undefined)
+  win.webContents.send(channel);
+  broadcastToWebClients(channel, undefined);
 }
 
 async function openFolderInNewWindow(win: BrowserWindow): Promise<void> {
   const result = await dialog.showOpenDialog(win, {
     properties: ['openDirectory', 'createDirectory'],
-    title: 'Open Folder in New Window'
-  })
+    title: 'Open Folder in New Window',
+  });
   if (!result.canceled && result.filePaths.length > 0) {
-    const projectRoot = result.filePaths[0]
-    const newWin = createWindow(projectRoot)
-    setWindowProjectRoot(newWin.id, projectRoot)
+    const projectRoot = result.filePaths[0];
+    const newWin = createWindow(projectRoot);
+    setWindowProjectRoot(newWin.id, projectRoot);
   }
 }
 
@@ -32,25 +37,33 @@ function buildMacAppMenu(): MenuItemConstructorOptions {
       { role: 'hideOthers' as const },
       { role: 'unhide' as const },
       { type: 'separator' as const },
-      { role: 'quit' as const }
-    ]
-  }
+      { role: 'quit' as const },
+    ],
+  };
 }
 
 function buildFileMenu(win: BrowserWindow, isMac: boolean): MenuItemConstructorOptions {
   return {
     label: 'File',
     submenu: [
-      { label: 'Open Folder…', accelerator: 'CmdOrCtrl+O', click: () => sendMenuEvent(win, 'menu:open-folder') },
+      {
+        label: 'Open Folder…',
+        accelerator: 'CmdOrCtrl+O',
+        click: () => sendMenuEvent(win, 'menu:open-folder'),
+      },
       { type: 'separator' },
       { label: 'New Window', accelerator: 'CmdOrCtrl+Shift+N', click: () => createWindow() },
       { label: 'Open in New Window…', click: async () => openFolderInNewWindow(win) },
       { type: 'separator' },
-      { label: 'New Terminal', accelerator: 'CmdOrCtrl+T', click: () => sendMenuEvent(win, 'menu:new-terminal') },
+      {
+        label: 'New Terminal',
+        accelerator: 'CmdOrCtrl+T',
+        click: () => sendMenuEvent(win, 'menu:new-terminal'),
+      },
       { type: 'separator' },
-      isMac ? { role: 'close' as const } : { role: 'quit' as const }
-    ]
-  }
+      isMac ? { role: 'close' as const } : { role: 'quit' as const },
+    ],
+  };
 }
 
 function buildEditMenu(isMac: boolean): MenuItemConstructorOptions {
@@ -64,10 +77,18 @@ function buildEditMenu(isMac: boolean): MenuItemConstructorOptions {
       { role: 'copy' as const },
       { role: 'paste' as const },
       ...(isMac
-        ? [{ role: 'pasteAndMatchStyle' as const }, { role: 'delete' as const }, { role: 'selectAll' as const }]
-        : [{ role: 'delete' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }])
-    ]
-  }
+        ? [
+            { role: 'pasteAndMatchStyle' as const },
+            { role: 'delete' as const },
+            { role: 'selectAll' as const },
+          ]
+        : [
+            { role: 'delete' as const },
+            { type: 'separator' as const },
+            { role: 'selectAll' as const },
+          ]),
+    ],
+  };
 }
 
 function openDedicatedChat(win: BrowserWindow): void {
@@ -95,14 +116,30 @@ function buildViewMenu(win: BrowserWindow): MenuItemConstructorOptions {
       { type: 'separator' as const },
       { role: 'togglefullscreen' as const },
       { type: 'separator' as const },
-      { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendMenuEvent(win, 'menu:command-palette') },
+      {
+        label: 'Command Palette',
+        accelerator: 'CmdOrCtrl+Shift+P',
+        click: () => sendMenuEvent(win, 'menu:command-palette'),
+      },
       { type: 'separator' },
-      { label: 'Open Dedicated Chat', accelerator: 'CommandOrControl+Shift+O', click: () => openDedicatedChat(win) },
-      { label: 'Open Side Chat', accelerator: 'CmdOrCtrl+;', click: () => sendMenuEvent(win, 'menu:toggle-side-chat') },
+      {
+        label: 'Open Dedicated Chat',
+        accelerator: 'CommandOrControl+Shift+O',
+        click: () => openDedicatedChat(win),
+      },
+      {
+        label: 'Open Side Chat',
+        accelerator: 'CmdOrCtrl+;',
+        click: () => sendMenuEvent(win, 'menu:toggle-side-chat'),
+      },
       { type: 'separator' },
-      { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => sendMenuEvent(win, 'menu:settings') }
-    ]
-  }
+      {
+        label: 'Settings',
+        accelerator: 'CmdOrCtrl+,',
+        click: () => sendMenuEvent(win, 'menu:settings'),
+      },
+    ],
+  };
 }
 
 function buildWindowMenu(isMac: boolean): MenuItemConstructorOptions {
@@ -116,25 +153,28 @@ function buildWindowMenu(isMac: boolean): MenuItemConstructorOptions {
             { type: 'separator' as const },
             { role: 'front' as const },
             { type: 'separator' as const },
-            { role: 'window' as const }
+            { role: 'window' as const },
           ]
-        : [{ role: 'close' as const }])
-    ]
-  }
+        : [{ role: 'close' as const }]),
+    ],
+  };
 }
 
 function buildHelpMenu(): MenuItemConstructorOptions {
   return {
     role: 'help' as const,
     submenu: [
-      { label: 'Learn More', click: async () => shell.openExternal('https://claude.ai/claude-code') },
-      { label: 'Open Logs Folder', click: async () => shell.openPath(app.getPath('logs')) }
-    ]
-  }
+      {
+        label: 'Learn More',
+        click: async () => shell.openExternal('https://claude.ai/claude-code'),
+      },
+      { label: 'Open Logs Folder', click: async () => shell.openPath(app.getPath('logs')) },
+    ],
+  };
 }
 
 export function buildApplicationMenu(win: BrowserWindow): void {
-  const isMac = process.platform === 'darwin'
+  const isMac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
     ...(isMac ? [buildMacAppMenu()] : []),
     buildFileMenu(win, isMac),
@@ -142,7 +182,7 @@ export function buildApplicationMenu(win: BrowserWindow): void {
     buildViewMenu(win),
     buildWindowMenu(isMac),
     buildHelpMenu(),
-  ]
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }

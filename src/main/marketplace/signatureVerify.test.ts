@@ -15,7 +15,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { keyRef } = vi.hoisted(() => ({ keyRef: { value: 'REPLACE_WITH_PRODUCTION_KEY' } }));
 
 vi.mock('./trustedKeys', () => ({
-  get TRUSTED_PUBLIC_KEY_BASE64() { return keyRef.value; },
+  get TRUSTED_PUBLIC_KEY_BASE64() {
+    return keyRef.value;
+  },
   MARKETPLACE_MANIFEST_URL: 'https://example.com/index.json',
   REVOKED_BUNDLES_URL: 'https://example.com/revoked-bundles.json',
 }));
@@ -39,7 +41,9 @@ function sign(content: string, privateKey: crypto.KeyObject): string {
 // ── Placeholder key tests ─────────────────────────────────────────────────────
 
 describe('verifyBundleSignature — placeholder key', () => {
-  beforeEach(() => { keyRef.value = 'REPLACE_WITH_PRODUCTION_KEY'; });
+  beforeEach(() => {
+    keyRef.value = 'REPLACE_WITH_PRODUCTION_KEY';
+  });
 
   it('returns false with the placeholder key', () => {
     expect(verifyBundleSignature('{"id":"x"}', 'c29tZXNpZ25hdHVyZQ==')).toBe(false);

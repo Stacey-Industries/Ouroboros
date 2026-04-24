@@ -14,13 +14,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 let tmpDir: string;
 let jobStorePath: string;
 
-
 beforeEach(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bg-job-test-'));
   jobStorePath = path.join(tmpDir, 'test-jobs.db');
   // Patch the db path before the module initialises
   vi.doMock('../storage/database', async () => {
-    const actual = await vi.importActual<typeof import('../storage/database')>('../storage/database');
+    const actual =
+      await vi.importActual<typeof import('../storage/database')>('../storage/database');
     return actual;
   });
   vi.resetModules();

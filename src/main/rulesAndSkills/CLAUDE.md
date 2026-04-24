@@ -1,13 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-A few things worth noting about this module's design:
 
-- **Dual-scope pattern is the load-bearing abstraction** — every public function accepts `ClaudeConfigScope + projectRoot?`. This mirrors exactly how Claude Code itself resolves configuration (global wins unless project overrides). The module is essentially an SDK over Claude Code's own config conventions.
-- **`settingsManager` vs `hooksManager` split** — `settingsManager` is generic (any key), `hooksManager` is a typed specialisation for the `hooks` sub-object. Using `settingsManager` for hooks would work mechanically but would bypass the `ClaudeHookMatcher` type enforcement and the matcher-merging logic.
-- **12 KB truncation in `rulesReader.ts`** is a context-budget guardrail. Large `CLAUDE.md` files silently get cut before being injected into agent prompts — important to know when debugging "why didn't the agent see my rule".
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md is written. It covers the scope convention table, per-file roles, the five non-obvious behaviours (name sanitization, description extraction, 12 KB truncation, index-based hook removal, the settingsManager/hooksManager boundary), and the watcher's `persistent: false` flag.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

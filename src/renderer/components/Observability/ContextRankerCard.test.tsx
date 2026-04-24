@@ -26,9 +26,7 @@ vi.stubGlobal('electronAPI', {
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-function makeDashboard(
-  overrides: Partial<ContextRankerDashboard> = {},
-): ContextRankerDashboard {
+function makeDashboard(overrides: Partial<ContextRankerDashboard> = {}): ContextRankerDashboard {
   return {
     version: '2024-03-01T12:00:00.000Z',
     trainedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), // 2 days ago
@@ -77,9 +75,7 @@ describe('ContextRankerCard — error state', () => {
     });
 
     render(<ContextRankerCard />);
-    await waitFor(() =>
-      expect(screen.getByText(/failed to load ranker data/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/failed to load ranker data/i)).toBeTruthy());
     expect(screen.getByText(/classifier not ready/i)).toBeTruthy();
   });
 
@@ -87,9 +83,7 @@ describe('ContextRankerCard — error state', () => {
     mockGetRankerDashboard.mockRejectedValue(new Error('IPC error'));
 
     render(<ContextRankerCard />);
-    await waitFor(() =>
-      expect(screen.getByText(/failed to load ranker data/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/failed to load ranker data/i)).toBeTruthy());
     expect(screen.getByText(/IPC error/i)).toBeTruthy();
   });
 });
@@ -104,9 +98,7 @@ describe('ContextRankerCard — bundled weights (no AUC)', () => {
 
   it('shows "bundled defaults" when auc is null', async () => {
     render(<ContextRankerCard />);
-    await waitFor(() =>
-      expect(screen.getByText(/bundled defaults/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/bundled defaults/i)).toBeTruthy());
   });
 
   it('renders version string', async () => {
@@ -130,9 +122,7 @@ describe('ContextRankerCard — trained weights', () => {
 
   it('renders the version string', async () => {
     render(<ContextRankerCard />);
-    await waitFor(() =>
-      expect(screen.getByText('2024-03-01T12:00:00.000Z')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText('2024-03-01T12:00:00.000Z')).toBeTruthy());
   });
 
   it('renders Top Features section', async () => {

@@ -16,14 +16,30 @@ interface GraphPanelHeaderProps {
 }
 
 const btnBase: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  width: 28, height: 28, borderRadius: 4,
-  border: '1px solid var(--border-semantic)', background: 'transparent',
-  color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 28,
+  height: 28,
+  borderRadius: 4,
+  border: '1px solid var(--border-semantic)',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  cursor: 'pointer',
+  fontSize: 14,
+  flexShrink: 0,
 };
 
-function ToolbarButton({ label, title, onClick, children }: {
-  label: string; title: string; onClick: () => void; children: React.ReactNode;
+function ToolbarButton({
+  label,
+  title,
+  onClick,
+  children,
+}: {
+  label: string;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
 }): React.ReactElement {
   return (
     <button style={btnBase} title={title} aria-label={label} onClick={onClick}>
@@ -38,7 +54,9 @@ export function GraphPanelHeader({ scale, filter, onZoomIn, onZoomOut, onResetVi
       <ToolbarButton label="Zoom in" title="Zoom in" onClick={onZoomIn}>+</ToolbarButton>
       <ToolbarButton label="Zoom out" title="Zoom out" onClick={onZoomOut}>−</ToolbarButton>
       <ToolbarButton label="Reset view" title="Reset view" onClick={onResetView}>⌂</ToolbarButton>
-      <span className="text-xs text-text-semantic-muted" style={{ minWidth: 36, textAlign: 'center' }} aria-label={`Zoom level ${Math.round(scale * 100)}%`}>
+      <span className="text-xs text-text-semantic-muted" style={{ minWidth: 36, textAlign: 'center' }}
+        aria-label={`Zoom level ${Math.round(scale * 100)}%`}
+      >
         {`${Math.round(scale * 100)}%`}
       </span>
       <input type="search" value={filter} onChange={(e) => onFilterChange(e.target.value)}

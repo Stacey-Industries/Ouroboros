@@ -25,7 +25,10 @@ describe('logFirstChunk', () => {
   });
 
   it('does not throw when sendStartedAt is undefined', () => {
-    const ctx = { firstChunkLogged: false, sendStartedAt: undefined } as unknown as ActiveStreamContext;
+    const ctx = {
+      firstChunkLogged: false,
+      sendStartedAt: undefined,
+    } as unknown as ActiveStreamContext;
     expect(() => logFirstChunk(ctx)).not.toThrow();
   });
 });
@@ -39,34 +42,44 @@ describe('findContextForProgress', () => {
   it('returns entry when sessionId matches', () => {
     const ctx = makeCtx('sess-1', 'task-1');
     const activeSends = new Map([['task-1', ctx]]);
-    const progress = { session: { sessionId: 'sess-1' } } as Parameters<typeof findContextForProgress>[1];
+    const progress = { session: { sessionId: 'sess-1' } } as Parameters<
+      typeof findContextForProgress
+    >[1];
     expect(findContextForProgress(activeSends, progress)).toBe(ctx);
   });
 
   it('returns entry when externalTaskId matches', () => {
     const ctx = makeCtx('sess-1', 'task-1');
     const activeSends = new Map([['task-1', ctx]]);
-    const progress = { session: { externalTaskId: 'task-1' } } as Parameters<typeof findContextForProgress>[1];
+    const progress = { session: { externalTaskId: 'task-1' } } as Parameters<
+      typeof findContextForProgress
+    >[1];
     expect(findContextForProgress(activeSends, progress)).toBe(ctx);
   });
 
   it('returns entry when requestId includes taskId', () => {
     const ctx = makeCtx('sess-1', 'task-1');
     const activeSends = new Map([['task-1', ctx]]);
-    const progress = { session: { requestId: 'prefix:task-1:suffix' } } as Parameters<typeof findContextForProgress>[1];
+    const progress = { session: { requestId: 'prefix:task-1:suffix' } } as Parameters<
+      typeof findContextForProgress
+    >[1];
     expect(findContextForProgress(activeSends, progress)).toBe(ctx);
   });
 
   it('returns undefined when no match', () => {
     const ctx = makeCtx('sess-1', 'task-1');
     const activeSends = new Map([['task-1', ctx]]);
-    const progress = { session: { sessionId: 'no-match' } } as Parameters<typeof findContextForProgress>[1];
+    const progress = { session: { sessionId: 'no-match' } } as Parameters<
+      typeof findContextForProgress
+    >[1];
     expect(findContextForProgress(activeSends, progress)).toBeUndefined();
   });
 
   it('returns undefined for empty activeSends', () => {
     const activeSends = new Map<string, ActiveStreamContext>();
-    const progress = { session: { sessionId: 'any' } } as Parameters<typeof findContextForProgress>[1];
+    const progress = { session: { sessionId: 'any' } } as Parameters<
+      typeof findContextForProgress
+    >[1];
     expect(findContextForProgress(activeSends, progress)).toBeUndefined();
   });
 });

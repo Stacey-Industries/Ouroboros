@@ -37,8 +37,12 @@ function makeFakeDeps(overrides: Partial<CorrectionWriterDeps> = {}): {
   const deps: CorrectionWriterDeps = {
     getDir: () => TEST_DIR,
     readSize: async () => state.fileSize,
-    appendLine: async (fp, line) => { state.written.push({ fp, line }); },
-    rotate: async (src, dst) => { state.rotations.push({ src, dst }); },
+    appendLine: async (fp, line) => {
+      state.written.push({ fp, line });
+    },
+    rotate: async (src, dst) => {
+      state.rotations.push({ src, dst });
+    },
     todayStamp: () => TODAY,
     ...overrides,
   };
@@ -112,12 +116,18 @@ describe('CorrectionWriter', () => {
 
   it('assigns a unique id to each record', async () => {
     writer.append({
-      library: 'Zod', userCorrectionText: 'msg1', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'msg1',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     writer.append({
-      library: 'React', userCorrectionText: 'msg2', sessionId: 's',
-      phrasingMatch: 'deprecated in React', confidence: 'high',
+      library: 'React',
+      userCorrectionText: 'msg2',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in React',
+      confidence: 'high',
     });
     await writer.flushPendingWrites();
     const [a, b] = parseLines(state.written);
@@ -126,12 +136,18 @@ describe('CorrectionWriter', () => {
 
   it('batches multiple records in a single flush', async () => {
     writer.append({
-      library: 'Zod', userCorrectionText: 'a', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'a',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     writer.append({
-      library: 'React', userCorrectionText: 'b', sessionId: 's',
-      phrasingMatch: "doesn't work that way", confidence: 'medium',
+      library: 'React',
+      userCorrectionText: 'b',
+      sessionId: 's',
+      phrasingMatch: "doesn't work that way",
+      confidence: 'medium',
     });
     await writer.flushPendingWrites();
     expect(parseLines(state.written)).toHaveLength(2);
@@ -139,13 +155,19 @@ describe('CorrectionWriter', () => {
 
   it('two appends on the same day go to the same file', async () => {
     writer.append({
-      library: 'Zod', userCorrectionText: 'a', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'a',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     await writer.flushPendingWrites();
     writer.append({
-      library: 'React', userCorrectionText: 'b', sessionId: 's',
-      phrasingMatch: "doesn't work that way", confidence: 'medium',
+      library: 'React',
+      userCorrectionText: 'b',
+      sessionId: 's',
+      phrasingMatch: "doesn't work that way",
+      confidence: 'medium',
     });
     await writer.flushPendingWrites();
     expect(state.written[0].fp).toBe(state.written[1].fp);
@@ -157,8 +179,11 @@ describe('CorrectionWriter', () => {
     });
     const rotWriter = createCorrectionWriter(deps);
     rotWriter.append({
-      library: 'Zod', userCorrectionText: 'msg', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'msg',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     await rotWriter.flushPendingWrites();
     expect(rotState.rotations.length).toBeGreaterThan(0);
@@ -168,8 +193,11 @@ describe('CorrectionWriter', () => {
 
   it('does not rotate when file is under 10 MB', async () => {
     writer.append({
-      library: 'Zod', userCorrectionText: 'msg', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'msg',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     await writer.flushPendingWrites();
     expect(state.rotations).toHaveLength(0);
@@ -177,8 +205,11 @@ describe('CorrectionWriter', () => {
 
   it('flushes pending records on closeWriter', async () => {
     writer.append({
-      library: 'Zod', userCorrectionText: 'msg', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'msg',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     await writer.closeWriter();
     expect(parseLines(state.written)).toHaveLength(1);
@@ -187,8 +218,11 @@ describe('CorrectionWriter', () => {
   it('does not write after closeWriter', async () => {
     await writer.closeWriter();
     writer.append({
-      library: 'Zod', userCorrectionText: 'msg', sessionId: 's',
-      phrasingMatch: 'deprecated in Zod', confidence: 'high',
+      library: 'Zod',
+      userCorrectionText: 'msg',
+      sessionId: 's',
+      phrasingMatch: 'deprecated in Zod',
+      confidence: 'high',
     });
     await writer.flushPendingWrites();
     expect(state.written).toHaveLength(0);

@@ -46,8 +46,6 @@ const mockDeleteCredential = vi.mocked(deleteCredential);
 
 const savedEnv: Record<string, string | undefined> = {};
 
-
-
 function restoreEnv(): void {
   for (const [key, value] of Object.entries(savedEnv)) {
     if (value === undefined) {

@@ -39,9 +39,14 @@ function collectRenderedPins(
   for (const pin of pins) {
     const rendered = renderPin(pin.title, pin.content);
     const tokenCost = pin.tokens > 0 ? pin.tokens : estimateTokens(rendered);
-    if (budget.tokenLimit !== undefined && budget.estimatedTokens + totalTokens + tokenCost > budget.tokenLimit) {
+    if (
+      budget.tokenLimit !== undefined &&
+      budget.estimatedTokens + totalTokens + tokenCost > budget.tokenLimit
+    ) {
       log.info(`[contextPacketBuilderPins] pin "${pin.title}" skipped — would exceed token budget`);
-      budget.droppedContentNotes.push(`Pinned item "${pin.title}" skipped: would exceed token limit`);
+      budget.droppedContentNotes.push(
+        `Pinned item "${pin.title}" skipped: would exceed token limit`,
+      );
       continue;
     }
     sections.push(rendered);
@@ -72,6 +77,8 @@ export function injectPinnedContext(
   if (sections.length === 0) return packet;
   budget.estimatedTokens += totalTokens;
   budget.estimatedBytes += sections.reduce((n, s) => n + s.length, 0);
-  log.info(`[contextPacketBuilderPins] injected ${sections.length} pin(s) (~${totalTokens} tokens) for session ${sessionId}`);
+  log.info(
+    `[contextPacketBuilderPins] injected ${sections.length} pin(s) (~${totalTokens} tokens) for session ${sessionId}`,
+  );
   return { ...packet, pinnedContext: sections.join('\n') };
 }

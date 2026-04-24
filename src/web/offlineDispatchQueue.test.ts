@@ -12,9 +12,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const store: Record<string, string> = {};
 const localStorageMock = {
   getItem: (key: string) => store[key] ?? null,
-  setItem: (key: string, value: string) => { store[key] = value; },
-  removeItem: (key: string) => { delete store[key]; },
-  clear: () => { Object.keys(store).forEach((k) => { delete store[k]; }); },
+  setItem: (key: string, value: string) => {
+    store[key] = value;
+  },
+  removeItem: (key: string) => {
+    delete store[key];
+  },
+  clear: () => {
+    Object.keys(store).forEach((k) => {
+      delete store[k];
+    });
+  },
 };
 
 vi.stubGlobal('localStorage', localStorageMock);
@@ -144,9 +152,7 @@ describe('drainOfflineDispatches', () => {
     await enqueueOfflineDispatch({ ...SAMPLE_REQUEST, title: 'A' });
     await enqueueOfflineDispatch({ ...SAMPLE_REQUEST, title: 'B' });
 
-    const send = vi.fn()
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false);
+    const send = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const result = await drainOfflineDispatches(send);
 
     expect(result).toEqual({ sent: 1, failed: 1, lost: 0 });
@@ -187,7 +193,8 @@ describe('drainOfflineDispatches', () => {
     await enqueueOfflineDispatch({ ...SAMPLE_REQUEST, title: 'failed' });
     await enqueueOfflineDispatch({ ...SAMPLE_REQUEST, title: 'lost' });
 
-    const send = vi.fn()
+    const send = vi
+      .fn()
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(false)
       .mockRejectedValueOnce(new Error('duplicate'));

@@ -32,7 +32,9 @@ vi.mock('../../hooks/useConfig', () => ({
 vi.mock('./ThemeImportModal', () => ({
   ThemeImportModal: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="theme-import-modal">
-      <button onClick={onClose} type="button">Close modal</button>
+      <button onClick={onClose} type="button">
+        Close modal
+      </button>
     </div>
   ),
 }));

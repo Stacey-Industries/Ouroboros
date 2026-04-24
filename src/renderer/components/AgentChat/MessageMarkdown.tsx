@@ -54,10 +54,7 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({
       className="agent-chat-markdown text-sm leading-relaxed text-text-semantic-primary"
       onClick={handleLinkClick}
     >
-      <Streamdown
-        mode={streaming ? 'streaming' : 'static'}
-        components={markdownComponents}
-      >
+      <Streamdown mode={streaming ? 'streaming' : 'static'} components={markdownComponents}>
         {(streaming ? displayedContent : content) || ' '}
       </Streamdown>
       {showCursor && <BlinkingCursor />}

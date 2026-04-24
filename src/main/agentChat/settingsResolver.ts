@@ -43,6 +43,7 @@ export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   chrome: false,
   worktree: false,
   dangerouslySkipPermissions: false,
+  useWarmProcess: true,
 };
 
 export const CODEX_CLI_SETTINGS_FALLBACK: CodexCliSettings = {
@@ -74,7 +75,7 @@ type ClaudeCliStringSettings = Pick<
 >;
 type ClaudeCliBooleanSettings = Pick<
   ClaudeCliSettings,
-  'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions'
+  'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions' | 'useWarmProcess'
 >;
 type CodexCliStringSettings = Pick<CodexCliSettings, 'model' | 'reasoningEffort' | 'profile'>;
 type CodexCliBooleanSettings = Pick<
@@ -141,6 +142,10 @@ function resolveClaudeCliBooleanSettings(
     dangerouslySkipPermissions: resolveBoolean(
       settings?.dangerouslySkipPermissions,
       CLAUDE_CLI_SETTINGS_FALLBACK.dangerouslySkipPermissions,
+    ),
+    useWarmProcess: resolveBoolean(
+      settings?.useWarmProcess,
+      CLAUDE_CLI_SETTINGS_FALLBACK.useWarmProcess,
     ),
   };
 }

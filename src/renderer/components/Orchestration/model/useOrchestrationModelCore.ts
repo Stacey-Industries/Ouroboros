@@ -10,9 +10,13 @@ import { useOrchestrationStore } from './useOrchestrationStore';
 export function useOrchestrationModelCore(projectRoot: string | null): UseOrchestrationModelReturn {
   const store = useOrchestrationStore(projectRoot);
   const latestSession = useMemo(() => store.sessions[0] ?? null, [store.sessions]);
-  const session = useMemo(() => store.selectedSessionId
-    ? store.sessions.find((item) => item.id === store.selectedSessionId) ?? latestSession
-    : latestSession, [latestSession, store.selectedSessionId, store.sessions]);
+  const session = useMemo(
+    () =>
+      store.selectedSessionId
+        ? (store.sessions.find((item) => item.id === store.selectedSessionId) ?? latestSession)
+        : latestSession,
+    [latestSession, store.selectedSessionId, store.sessions],
+  );
   const refresh = useRefreshSessions(projectRoot, store.selectedSessionId, store.setters);
   const selectSession = useSessionSelection(projectRoot, store.setters);
   const actions = useTaskControlActions(store.setters, {
@@ -40,7 +44,10 @@ export function useOrchestrationModelCore(projectRoot: string | null): UseOrches
     sessions: store.sessions,
     selectedSessionId: store.selectedSessionId,
     providerEvent: store.providerEvent,
-    verificationSummary: session?.lastVerificationSummary ?? session?.latestResult?.verificationSummary ?? store.latestVerificationSummary,
+    verificationSummary:
+      session?.lastVerificationSummary ??
+      session?.latestResult?.verificationSummary ??
+      store.latestVerificationSummary,
     latestResult: session?.latestResult ?? store.latestResult,
     refresh,
     selectSession,

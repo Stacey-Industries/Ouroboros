@@ -34,9 +34,10 @@ function buildPayload(job: DispatchJob): DispatchNotificationPayload {
   const label = job.request.title || job.id;
   const status = job.status as 'completed' | 'failed';
   const title = status === 'completed' ? 'Job completed' : 'Job failed';
-  const body = status === 'completed'
-    ? `"${label}" finished successfully.`
-    : `"${label}" failed: ${job.error ?? 'unknown error'}`;
+  const body =
+    status === 'completed'
+      ? `"${label}" finished successfully.`
+      : `"${label}" failed: ${job.error ?? 'unknown error'}`;
   return { jobId: job.id, title, body, status };
 }
 
@@ -53,7 +54,7 @@ function broadcastInAppBanner(payload: DispatchNotificationPayload): void {
 function getFcmServiceAccountPath(): string | undefined {
   // Future: read from config.sessionDispatch.fcmServiceAccountPath
   // Not yet in the config schema — stub returns undefined until wired.
-  const cfg = getConfigValue('sessionDispatch') as (Record<string, unknown> | undefined);
+  const cfg = getConfigValue('sessionDispatch') as Record<string, unknown> | undefined;
   const p = cfg?.['fcmServiceAccountPath'];
   return typeof p === 'string' && p.length > 0 ? p : undefined;
 }

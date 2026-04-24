@@ -22,16 +22,14 @@ describe('FileViewerManager helpers', () => {
   });
 
   it('classifies media files before binary fallback', () => {
-    const loadedAudio = toLoadedFile(
-      createLoadingFile('/music/track.mp3'),
-      '/music/track.mp3',
-      { success: true, content: '\x00\x01' },
-    );
-    const loadedVideo = toLoadedFile(
-      createLoadingFile('/videos/demo.mp4'),
-      '/videos/demo.mp4',
-      { success: true, content: '\x00\x02' },
-    );
+    const loadedAudio = toLoadedFile(createLoadingFile('/music/track.mp3'), '/music/track.mp3', {
+      success: true,
+      content: '\x00\x01',
+    });
+    const loadedVideo = toLoadedFile(createLoadingFile('/videos/demo.mp4'), '/videos/demo.mp4', {
+      success: true,
+      content: '\x00\x02',
+    });
 
     expect(loadedAudio.isAudio).toBe(true);
     expect(loadedAudio.isBinary).toBe(false);
@@ -40,11 +38,10 @@ describe('FileViewerManager helpers', () => {
   });
 
   it('still falls back to hex for unknown binary files', () => {
-    const loaded = toLoadedFile(
-      createLoadingFile('/archives/blob.bin'),
-      '/archives/blob.bin',
-      { success: true, content: '\x00\x01\x02' },
-    );
+    const loaded = toLoadedFile(createLoadingFile('/archives/blob.bin'), '/archives/blob.bin', {
+      success: true,
+      content: '\x00\x01\x02',
+    });
 
     expect(looksLikeBinary('\x00\x01\x02')).toBe(true);
     expect(loaded.isBinary).toBe(true);

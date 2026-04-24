@@ -158,11 +158,7 @@ describe('registerTelemetryHandlers', () => {
     // Mocked app.getPath('downloads') → '/tmp/downloads'; on Windows path.join
     // normalises to backslashes. Compare via path.normalize for cross-platform.
     expect(path.normalize(result.filePath).startsWith(path.normalize('/tmp/downloads'))).toBe(true);
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      result.filePath,
-      expect.any(String),
-      'utf8',
-    );
+    expect(fs.writeFileSync).toHaveBeenCalledWith(result.filePath, expect.any(String), 'utf8');
   });
 
   it('exportTrace returns failure for missing sessionId', async () => {

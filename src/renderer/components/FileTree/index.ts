@@ -1,15 +1,15 @@
 // New hierarchical tree
 export type { FileTreeProps } from './FileTree';
 export { FileTree } from './FileTree';
-export type { FileTreeItemProps, FlatRow, MatchRange,TreeNode } from './FileTreeItem';
+export type { FileTreeItemProps, FlatRow, MatchRange, TreeNode } from './FileTreeItem';
 export { FileTreeItem } from './FileTreeItem';
 
 // Context menu
-export type { ContextMenuProps,ContextMenuState } from './ContextMenu';
+export type { ContextMenuProps, ContextMenuState } from './ContextMenu';
 export { ContextMenu } from './ContextMenu';
 
 // Store
-export type { DiagnosticSeverity,FileTreeState, SortMode, TreeFilter } from './fileTreeStore';
+export type { DiagnosticSeverity, FileTreeState, SortMode, TreeFilter } from './fileTreeStore';
 export { useFileTreeStore } from './fileTreeStore';
 export {
   useDiagnosticForPath,
@@ -32,15 +32,24 @@ export type { FileTreeSearchBarProps } from './FileTreeSearchBar';
 export { FileTreeSearchBar } from './FileTreeSearchBar';
 
 // Git status filter
-export type { GitFilteredViewProps,GitStatusCounts, GitStatusFilterBarProps } from './GitStatusFilter';
-export { computeStatusCounts, getFilteredFiles,GitFilteredView, GitStatusFilterBar } from './GitStatusFilter';
+export type {
+  GitFilteredViewProps,
+  GitStatusCounts,
+  GitStatusFilterBarProps,
+} from './GitStatusFilter';
+export {
+  computeStatusCounts,
+  getFilteredFiles,
+  GitFilteredView,
+  GitStatusFilterBar,
+} from './GitStatusFilter';
 
 // Git branch indicator
 export type { GitBranchIndicatorProps } from './GitBranchIndicator';
 export { GitBranchIndicator } from './GitBranchIndicator';
 
 // File nesting rules
-export { applyNesting,DEFAULT_NESTING_RULES, expandNestingPattern } from './fileNestingRules';
+export { applyNesting, DEFAULT_NESTING_RULES, expandNestingPattern } from './fileNestingRules';
 
 // Shared
 export type { FileIconInfo } from './fileIcons';

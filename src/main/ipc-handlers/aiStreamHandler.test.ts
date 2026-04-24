@@ -25,7 +25,10 @@ vi.mock('../logger', () => ({
 }));
 
 vi.mock('../orchestration/providers/claudeStreamJsonRunner', () => ({
-  buildStreamJsonArgs: vi.fn(() => ({ command: 'claude', args: ['-p', '--output-format', 'stream-json'] })),
+  buildStreamJsonArgs: vi.fn(() => ({
+    command: 'claude',
+    args: ['-p', '--output-format', 'stream-json'],
+  })),
 }));
 
 // ── Child process capture ─────────────────────────────────────────────────────
@@ -47,15 +50,14 @@ vi.mock('child_process', () => ({
     spawnState.lastChild = child;
     return child;
   }),
-  exec: vi.fn((_cmd: string, _opts: unknown, cb: () => void) => { if (cb) cb(); }),
+  exec: vi.fn((_cmd: string, _opts: unknown, cb: () => void) => {
+    if (cb) cb();
+  }),
 }));
 
 // ── Imports under test ────────────────────────────────────────────────────────
 
-import {
-  handleCancelInlineEditStream,
-  handleStreamInlineEdit,
-} from './aiStreamHandler';
+import { handleCancelInlineEditStream, handleStreamInlineEdit } from './aiStreamHandler';
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -63,7 +65,9 @@ type SendCapture = [string, unknown];
 
 function makeMockEvent(sends: SendCapture[]) {
   const sender = {
-    send: vi.fn((channel: string, payload: unknown) => { sends.push([channel, payload]); }),
+    send: vi.fn((channel: string, payload: unknown) => {
+      sends.push([channel, payload]);
+    }),
     isDestroyed: () => false,
   };
   return { sender } as unknown as Electron.IpcMainInvokeEvent;
@@ -166,8 +170,9 @@ describe('handleStreamInlineEdit', () => {
     await resultPromise;
 
     const tokens = sends
-      .filter(([ch, p]) =>
-        ch === 'ai:inlineEditStream:req-001' && (p as { type: string }).type === 'token',
+      .filter(
+        ([ch, p]) =>
+          ch === 'ai:inlineEditStream:req-001' && (p as { type: string }).type === 'token',
       )
       .map(([, p]) => (p as { delta: string }).delta);
 

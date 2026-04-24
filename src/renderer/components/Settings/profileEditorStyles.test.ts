@@ -60,10 +60,19 @@ describe('profileEditorStyles', () => {
 
   it('all style exports are defined objects', () => {
     const styles = [
-      editorWrapStyle, editorTitleStyle, errorStyle, fieldRowStyle,
-      labelStyle, inputStyle, textareaStyle, segmentedWrapStyle,
-      segmentActiveStyle, checklistWrapStyle, checkItemStyle,
-      footerStyle, cancelBtnStyle,
+      editorWrapStyle,
+      editorTitleStyle,
+      errorStyle,
+      fieldRowStyle,
+      labelStyle,
+      inputStyle,
+      textareaStyle,
+      segmentedWrapStyle,
+      segmentActiveStyle,
+      checklistWrapStyle,
+      checkItemStyle,
+      footerStyle,
+      cancelBtnStyle,
     ];
     for (const s of styles) {
       expect(typeof s).toBe('object');

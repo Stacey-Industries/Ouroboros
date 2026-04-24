@@ -8,12 +8,15 @@
 import { BrowserWindow } from 'electron';
 import path from 'path';
 
-import { acquireGraphController, releaseGraphController } from './codebaseGraph/graphControllerSupport';
-import { getConfigValue, setConfigValue, type WindowSession } from './config';
+import {
+  acquireGraphController,
+  releaseGraphController,
+} from './codebaseGraph/graphControllerSupport';
+import { getConfigValue } from './config';
 import { acquireContextLayer, releaseContextLayer } from './contextLayer/contextLayerController';
 import { registerIpcHandlers } from './ipc';
 import { killPtySessionsForWindow } from './pty';
-import { makeSession, type Session } from './session/session';
+import { makeSession } from './session/session';
 import { getSessionStore } from './session/sessionStore';
 import {
   clearWindowActiveSession,
@@ -22,23 +25,20 @@ import {
 import { buildChatWindowBounds, loadChatWindowContent } from './windowManagerChatWindow';
 import {
   applyMicaEffect,
-  applyPersistedBounds,
-  captureWindowBounds,
   createBoundsSaveHandler,
   ensureCSP,
   getInitialWindowPlacement,
   getInitialWindowSize,
   loadWindowContent,
   markWindowMaximized,
-  mergeBoundsIntoSessions,
   MicaBrowserWindow,
   outMainDir,
   saveWindowBounds,
-  sessionsDataToWindowSessions,
   setupReadyToShow,
   validateBounds,
   type WindowCreationState,
 } from './windowManagerHelpers';
+import { persistWindowSessions, wireSessionHelpers } from './windowManagerSessions';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -62,6 +62,17 @@ export interface WindowInfo {
 const windows = new Map<number, ManagedWindow>();
 const windowCleanups = new Map<number, () => void>(); // Per-window IPC cleanup
 const boundsTimers = new Map<number, ReturnType<typeof setTimeout>>(); // Per-window bounds-save
+
+// Wire session helpers with live accessor functions so windowManagerSessions
+// can read/write the windows map without a circular import.
+wireSessionHelpers(
+  () => windows.values(),
+  (root) => createWindow(root),
+  (id, key, val) => {
+    const m = windows.get(id);
+    if (m) Reflect.set(m, key, val);
+  },
+);
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
@@ -112,7 +123,9 @@ function seedProjectRoots(projectRoot: string | undefined): string[] {
     try {
       const saved = getConfigValue('multiRoots') ?? [];
       if (Array.isArray(saved) && saved.length > 0) return saved as string[];
-    } catch { /* config not ready yet */ }
+    } catch {
+      /* config not ready yet */
+    }
   }
   return [];
 }
@@ -131,11 +144,17 @@ function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number
     activeSessionId = session.id;
     setWindowActiveSession(winId, session.id);
   }
-  windows.set(winId, { id: winId, win, projectRoot: root, projectRoots: roots, activeSessionId, kind: 'main' });
+  windows.set(winId, {
+    id: winId,
+    win,
+    projectRoot: root,
+    projectRoots: roots,
+    activeSessionId,
+    kind: 'main',
+  });
   windowCleanups.set(winId, registerIpcHandlers(win));
   return winId;
 }
-
 
 function clearBoundsTimer(winId: number): void {
   const timer = boundsTimers.get(winId);
@@ -218,9 +237,21 @@ export function createChatWindow(sessionId: string): BrowserWindow {
   const state: WindowCreationState = { isFirst: false, savedBounds: null, width, height };
   const win = createBrowserWindow(preloadPath, state);
   const winId = win.id;
-  windows.set(winId, { id: winId, win, projectRoot: null, projectRoots: [], activeSessionId: sessionId, kind: 'chat' });
+  windows.set(winId, {
+    id: winId,
+    win,
+    projectRoot: null,
+    projectRoots: [],
+    activeSessionId: sessionId,
+    kind: 'chat',
+  });
   windowCleanups.set(winId, registerIpcHandlers(win));
-  loadChatWindowContent(win, sessionId, process.env['ELECTRON_RENDERER_URL'], path.join(outMainDir, '../renderer/index.html'));
+  loadChatWindowContent(
+    win,
+    sessionId,
+    process.env['ELECTRON_RENDERER_URL'],
+    path.join(outMainDir, '../renderer/index.html'),
+  );
   setupWindowLifecycle(win, winId, state);
   return win;
 }
@@ -234,9 +265,11 @@ export function getAllWindows(): ManagedWindow[] {
 }
 
 export function getWindowInfos(): WindowInfo[] {
-  return Array.from(windows.values()).map(
-    ({ id, projectRoot, projectRoots }) => ({ id, projectRoot, projectRoots }),
-  );
+  return Array.from(windows.values()).map(({ id, projectRoot, projectRoots }) => ({
+    id,
+    projectRoot,
+    projectRoots,
+  }));
 }
 
 export function setWindowProjectRoot(winId: number, projectRoot: string): void {
@@ -256,7 +289,9 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
     const { startContextRefreshTimer } = require('./ipc-handlers/agentChat');
     startContextRefreshTimer([projectRoot]);
-  } catch { /* agentChat module may not be loaded yet */ }
+  } catch {
+    /* agentChat module may not be loaded yet */
+  }
 }
 
 export function setWindowProjectRoots(winId: number, roots: string[]): void {
@@ -327,53 +362,4 @@ export function getAllActiveWindows(): BrowserWindow[] {
 
 // ─── Session persistence ────────────────────────────────────────────────────
 
-function buildLiveBoundsByRoot(): Map<string, Session['bounds']> {
-  const map = new Map<string, Session['bounds']>();
-  for (const managed of windows.values()) {
-    if (managed.win.isDestroyed()) continue;
-    if (!managed.projectRoot) continue;
-    map.set(managed.projectRoot, captureWindowBounds(managed.win));
-  }
-  return map;
-}
-
-/**
- * Persist current window bounds into sessionsData (canonical store).
- * No longer writes to the legacy windowSessions key (Wave 40 Phase D).
- */
-export function persistWindowSessions(): void {
-  try {
-    const existing = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
-    if (!Array.isArray(existing)) return;
-    const byRoot = buildLiveBoundsByRoot();
-    if (byRoot.size === 0) return;
-    setConfigValue('sessionsData', mergeBoundsIntoSessions(existing, byRoot) as never);
-  } catch { /* best-effort */ }
-}
-
-function restoreOneSession(session: WindowSession): BrowserWindow | null {
-  if (!session.projectRoots?.length) return null;
-  const win = createWindow(session.projectRoots[0]);
-  const managed = windows.get(win.id);
-  if (managed) {
-    managed.projectRoots = session.projectRoots;
-    managed.projectRoot = session.projectRoots[0] ?? null;
-  }
-  applyPersistedBounds(win, session.bounds);
-  return win;
-}
-
-/**
- * Restore windows on startup.
- * Reads from sessionsData (canonical store) first; falls back to the legacy
- * windowSessions key for one-release transition (Wave 40 Phase D).
- */
-export function restoreWindowSessions(): BrowserWindow[] {
-  const sessionsData = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
-  const canonical = Array.isArray(sessionsData) ? sessionsDataToWindowSessions(sessionsData) : [];
-  const source = canonical.length > 0
-    ? canonical
-    : (getConfigValue('windowSessions') as WindowSession[] | undefined) ?? [];
-  if (!Array.isArray(source) || source.length === 0) return [];
-  return source.map(restoreOneSession).filter((w): w is BrowserWindow => w !== null);
-}
+export { persistWindowSessions, restoreWindowSessions } from './windowManagerSessions';

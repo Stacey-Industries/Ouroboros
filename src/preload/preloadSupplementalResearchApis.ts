@@ -16,16 +16,13 @@ export const researchApi: ResearchApiType = {
   invoke: (input) => ipcRenderer.invoke('research:invoke', input),
 
   // ── Wave 30 Phase G — per-session mode + global default controls ──────────
-  getSessionMode: (sessionId) =>
-    ipcRenderer.invoke('research:getSessionMode', { sessionId }),
+  getSessionMode: (sessionId) => ipcRenderer.invoke('research:getSessionMode', { sessionId }),
   setSessionMode: (sessionId, mode) =>
     ipcRenderer.invoke('research:setSessionMode', { sessionId, mode }),
-  getGlobalDefault: () =>
-    ipcRenderer.invoke('research:getGlobalDefault', {}),
+  getGlobalDefault: () => ipcRenderer.invoke('research:getGlobalDefault', {}),
   setGlobalDefault: (globalEnabled, defaultMode) =>
     ipcRenderer.invoke('research:setGlobalDefault', { globalEnabled, defaultMode }),
 
   // ── Wave 30 Phase H — research metrics dashboard ──────────────────────────
-  getDashboardMetrics: (range) =>
-    ipcRenderer.invoke('research:getDashboardMetrics', range),
+  getDashboardMetrics: (range) => ipcRenderer.invoke('research:getDashboardMetrics', range),
 };

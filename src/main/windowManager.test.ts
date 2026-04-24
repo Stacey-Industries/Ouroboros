@@ -31,9 +31,7 @@ const mocks = vi.hoisted(() => {
   const webContentsSend = vi.fn();
   const webContentsOn = vi.fn();
   const openDevTools = vi.fn();
-  const getAllDisplays = vi.fn(() => [
-    { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
-  ]);
+  const getAllDisplays = vi.fn(() => [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]);
   const onHeadersReceived = vi.fn();
   const getConfigValue: ReturnType<typeof vi.fn> = vi.fn(() => undefined);
   const setConfigValue = vi.fn();
@@ -48,16 +46,42 @@ const mocks = vi.hoisted(() => {
   let nextId = 1;
 
   return {
-    loadURL, loadFile, show, close, focus, isDestroyed, isMinimized, isMaximized,
-    restore, getBounds, setBounds, maximize, winOn, winOnce,
-    webContentsSend, webContentsOn, openDevTools, getAllDisplays, onHeadersReceived,
-    getConfigValue, setConfigValue, killPtySessionsForWindow,
-    acquireGraphController, releaseGraphController,
-    acquireContextLayer, releaseContextLayer,
+    loadURL,
+    loadFile,
+    show,
+    close,
+    focus,
+    isDestroyed,
+    isMinimized,
+    isMaximized,
+    restore,
+    getBounds,
+    setBounds,
+    maximize,
+    winOn,
+    winOnce,
+    webContentsSend,
+    webContentsOn,
+    openDevTools,
+    getAllDisplays,
+    onHeadersReceived,
+    getConfigValue,
+    setConfigValue,
+    killPtySessionsForWindow,
+    acquireGraphController,
+    releaseGraphController,
+    acquireContextLayer,
+    releaseContextLayer,
     registerIpcHandlers,
-    get nextId() { return nextId; },
-    bumpId() { return nextId++; },
-    resetId() { nextId = 1; },
+    get nextId() {
+      return nextId;
+    },
+    bumpId() {
+      return nextId++;
+    },
+    resetId() {
+      nextId = 1;
+    },
   };
 });
 
@@ -154,9 +178,7 @@ function resetMocks() {
   mocks.isMaximized.mockReturnValue(false);
   mocks.getBounds.mockReturnValue({ x: 100, y: 100, width: 1280, height: 800 });
   mocks.getConfigValue.mockReturnValue(undefined);
-  mocks.getAllDisplays.mockReturnValue([
-    { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
-  ]);
+  mocks.getAllDisplays.mockReturnValue([{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]);
   mocks.registerIpcHandlers.mockReturnValue(vi.fn());
 }
 
@@ -639,10 +661,16 @@ describe('restoreWindowSessions', () => {
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'sessionsData') {
         return [
-          { projectRoot: '/proj/a', id: 's1',
-            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false } },
-          { projectRoot: '/proj/b', id: 's2',
-            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false } },
+          {
+            projectRoot: '/proj/a',
+            id: 's1',
+            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false },
+          },
+          {
+            projectRoot: '/proj/b',
+            id: 's2',
+            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false },
+          },
         ];
       }
       return undefined;
@@ -692,16 +720,16 @@ describe('restoreWindowSessions', () => {
   });
 
   it('applies validated bounds when sessionsData session has valid bounds', () => {
-    mocks.getAllDisplays.mockReturnValue([
-      { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
-    ]);
+    mocks.getAllDisplays.mockReturnValue([{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }]);
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'sessionsData') {
-        return [{
-          projectRoot: '/proj/bounded',
-          id: 's1',
-          bounds: { x: 100, y: 100, width: 1280, height: 800, isMaximized: false },
-        }];
+        return [
+          {
+            projectRoot: '/proj/bounded',
+            id: 's1',
+            bounds: { x: 100, y: 100, width: 1280, height: 800, isMaximized: false },
+          },
+        ];
       }
       return undefined;
     });

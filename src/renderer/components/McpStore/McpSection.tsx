@@ -15,9 +15,7 @@ interface McpSectionProps {
   onRegisterRefresh?: (fn: () => void) => void;
 }
 
-export function McpSection({
-  onRegisterRefresh,
-}: McpSectionProps = {}): React.ReactElement {
+export function McpSection({ onRegisterRefresh }: McpSectionProps = {}): React.ReactElement {
   const model = useMcpSectionModel();
   const refresh = model.refresh;
 
@@ -39,11 +37,7 @@ export function McpSection({
   );
 }
 
-function McpHeader({
-  onAdd,
-}: {
-  onAdd: () => void;
-}): React.ReactElement {
+function McpHeader({ onAdd }: { onAdd: () => void }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>

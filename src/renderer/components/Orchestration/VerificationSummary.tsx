@@ -1,6 +1,9 @@
 import React from 'react';
 
-import type { ProviderProgressEvent, VerificationSummary as VerificationSummaryType } from '../../types/electron';
+import type {
+  ProviderProgressEvent,
+  VerificationSummary as VerificationSummaryType,
+} from '../../types/electron';
 import {
   ProviderActivityCard,
   VerificationIssuesCard,
@@ -13,7 +16,10 @@ export interface VerificationSummaryProps {
   providerEvent: ProviderProgressEvent | null;
 }
 
-export function VerificationSummary({ summary, providerEvent }: VerificationSummaryProps): React.ReactElement {
+export function VerificationSummary({
+  summary,
+  providerEvent,
+}: VerificationSummaryProps): React.ReactElement {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">

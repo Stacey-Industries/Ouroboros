@@ -57,7 +57,9 @@ export function updateSessionStatus(
   sessionId: string,
   update: (session: TerminalSession) => TerminalSession,
 ): void {
-  setSessions((prev) => prev.map((session) => (session.id === sessionId ? update(session) : session)));
+  setSessions((prev) =>
+    prev.map((session) => (session.id === sessionId ? update(session) : session)),
+  );
 }
 
 export function markSessionExited(setSessions: SessionSetter, sessionId: string): void {
@@ -131,7 +133,8 @@ export async function spawnManagedSession(args: {
   killTimersRef: KillTimersRef;
   spawnProcess: () => Promise<unknown>;
 }): Promise<void> {
-  const { id, title, isClaude, setSessions, setActiveSessionId, killTimersRef, spawnProcess } = args;
+  const { id, title, isClaude, setSessions, setActiveSessionId, killTimersRef, spawnProcess } =
+    args;
   const newSession: TerminalSession = {
     id,
     title,
@@ -207,7 +210,11 @@ function restoreActiveSessions(args: RestoreSessionsArgs, active: Array<{ id: st
 }
 
 function hasSavedSessionCwd(snapshot: unknown): snapshot is SavedSessionSnapshot {
-  return Boolean(snapshot && typeof snapshot === 'object' && typeof (snapshot as SavedSessionSnapshot).cwd === 'string');
+  return Boolean(
+    snapshot &&
+    typeof snapshot === 'object' &&
+    typeof (snapshot as SavedSessionSnapshot).cwd === 'string',
+  );
 }
 
 async function restoreSavedSessions(
@@ -240,7 +247,9 @@ export async function restoreSessions(args: RestoreSessionsArgs): Promise<void> 
   }
 }
 
-async function buildSessionSnapshot(session: TerminalSession): Promise<{ cwd: string; title: string }> {
+async function buildSessionSnapshot(
+  session: TerminalSession,
+): Promise<{ cwd: string; title: string }> {
   try {
     const result = await window.electronAPI.pty.getCwd(session.id);
     return { cwd: result.cwd ?? '', title: session.title };

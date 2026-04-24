@@ -10,9 +10,21 @@ import { describe, expect, it } from 'vitest';
 import type { SerializedSlotNode } from '../../types/electron-layout';
 import { useLayoutUndoStack } from './useLayoutUndoStack';
 
-const LEAF_A: SerializedSlotNode = { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } };
-const LEAF_B: SerializedSlotNode = { kind: 'leaf', slotName: 'terminalContent', component: { componentKey: 'terminalContent' } };
-const LEAF_C: SerializedSlotNode = { kind: 'leaf', slotName: 'agentCards', component: { componentKey: 'agentCards' } };
+const LEAF_A: SerializedSlotNode = {
+  kind: 'leaf',
+  slotName: 'editorContent',
+  component: { componentKey: 'editorContent' },
+};
+const LEAF_B: SerializedSlotNode = {
+  kind: 'leaf',
+  slotName: 'terminalContent',
+  component: { componentKey: 'terminalContent' },
+};
+const LEAF_C: SerializedSlotNode = {
+  kind: 'leaf',
+  slotName: 'agentCards',
+  component: { componentKey: 'agentCards' },
+};
 
 describe('useLayoutUndoStack', () => {
   it('canUndo is false initially', () => {
@@ -22,30 +34,44 @@ describe('useLayoutUndoStack', () => {
 
   it('push adds to stack and canUndo becomes true', () => {
     const { result } = renderHook(() => useLayoutUndoStack());
-    act(() => { result.current.push(LEAF_A); });
+    act(() => {
+      result.current.push(LEAF_A);
+    });
     expect(result.current.canUndo).toBe(true);
   });
 
   it('pop returns the most recently pushed tree', () => {
     const { result } = renderHook(() => useLayoutUndoStack());
-    act(() => { result.current.push(LEAF_A); });
-    act(() => { result.current.push(LEAF_B); });
+    act(() => {
+      result.current.push(LEAF_A);
+    });
+    act(() => {
+      result.current.push(LEAF_B);
+    });
     let popped: SerializedSlotNode | null = null;
-    act(() => { popped = result.current.pop(); });
+    act(() => {
+      popped = result.current.pop();
+    });
     expect(popped).toEqual(LEAF_B);
   });
 
   it('pop() on empty stack returns null', () => {
     const { result } = renderHook(() => useLayoutUndoStack());
     let popped: unknown = 'sentinel';
-    act(() => { popped = result.current.pop(); });
+    act(() => {
+      popped = result.current.pop();
+    });
     expect(popped).toBeNull();
   });
 
   it('canUndo becomes false after popping the last entry', () => {
     const { result } = renderHook(() => useLayoutUndoStack());
-    act(() => { result.current.push(LEAF_A); });
-    act(() => { result.current.pop(); });
+    act(() => {
+      result.current.push(LEAF_A);
+    });
+    act(() => {
+      result.current.pop();
+    });
     expect(result.current.canUndo).toBe(false);
   });
 
@@ -53,7 +79,11 @@ describe('useLayoutUndoStack', () => {
     const { result } = renderHook(() => useLayoutUndoStack());
     act(() => {
       for (let i = 0; i < 12; i++) {
-        result.current.push({ kind: 'leaf', slotName: `slot-${i}`, component: { componentKey: `slot-${i}` } });
+        result.current.push({
+          kind: 'leaf',
+          slotName: `slot-${i}`,
+          component: { componentKey: `slot-${i}` },
+        });
       }
     });
     // Pop all 10 allowed entries — the 11th pop should return null
@@ -61,7 +91,9 @@ describe('useLayoutUndoStack', () => {
       for (let i = 0; i < 10; i++) result.current.pop();
     });
     let eleventh: unknown = 'sentinel';
-    act(() => { eleventh = result.current.pop(); });
+    act(() => {
+      eleventh = result.current.pop();
+    });
     expect(eleventh).toBeNull();
     expect(result.current.canUndo).toBe(false);
   });

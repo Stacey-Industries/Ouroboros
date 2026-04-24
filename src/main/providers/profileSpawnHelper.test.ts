@@ -145,9 +145,9 @@ describe('spawnForProfile', () => {
   it('throws when provider is not registered', async () => {
     mockGetSessionProvider.mockReturnValue(null);
 
-    await expect(
-      spawnForProfile(makeProfile({ providerId: 'codex' }), makeOpts()),
-    ).rejects.toThrow(/Unknown provider/);
+    await expect(spawnForProfile(makeProfile({ providerId: 'codex' }), makeOpts())).rejects.toThrow(
+      /Unknown provider/,
+    );
   });
 
   it('returns the SessionHandle from the provider', async () => {

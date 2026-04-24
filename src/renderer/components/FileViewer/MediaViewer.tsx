@@ -85,22 +85,44 @@ function fileLabel(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').pop() ?? filePath;
 }
 
-function MediaToolbar({ filePath, title }: { filePath: string; title: string }): React.ReactElement {
+function MediaToolbar({
+  filePath,
+  title,
+}: {
+  filePath: string;
+  title: string;
+}): React.ReactElement {
   return (
     <div style={toolbarStyle}>
-      <span className="text-text-semantic-primary" style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'var(--font-ui)' }}>
+      <span
+        className="text-text-semantic-primary"
+        style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'var(--font-ui)' }}
+      >
         {title}
       </span>
-      <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)' }}>
+      <span
+        className="text-text-semantic-faint"
+        style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)' }}
+      >
         {fileLabel(filePath)}
       </span>
       <div style={{ flex: 1 }} />
-      <button style={buttonStyle} onClick={() => openExternalFile(filePath)}>Open External</button>
+      <button style={buttonStyle} onClick={() => openExternalFile(filePath)}>
+        Open External
+      </button>
     </div>
   );
 }
 
-function MediaStage({ mediaType, fileUrl, error }: { mediaType: 'audio' | 'video'; fileUrl: string | null; error: string | null }): React.ReactElement {
+function MediaStage({
+  mediaType,
+  fileUrl,
+  error,
+}: {
+  mediaType: 'audio' | 'video';
+  fileUrl: string | null;
+  error: string | null;
+}): React.ReactElement {
   const MediaTag = mediaType;
   return (
     <div style={stageStyle}>
@@ -114,7 +136,10 @@ function MediaStage({ mediaType, fileUrl, error }: { mediaType: 'audio' | 'video
             Your environment could not load this {mediaType} file.
           </MediaTag>
         ) : (
-          <div className="text-text-semantic-faint" style={{ padding: '24px', textAlign: 'center' }}>
+          <div
+            className="text-text-semantic-faint"
+            style={{ padding: '24px', textAlign: 'center' }}
+          >
             Loading {mediaType}...
           </div>
         )}
@@ -123,7 +148,13 @@ function MediaStage({ mediaType, fileUrl, error }: { mediaType: 'audio' | 'video
   );
 }
 
-function MediaStatusBar({ mediaType, fileSize }: { mediaType: 'audio' | 'video'; fileSize?: number }): React.ReactElement {
+function MediaStatusBar({
+  mediaType,
+  fileSize,
+}: {
+  mediaType: 'audio' | 'video';
+  fileSize?: number;
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-faint" style={statusBarStyle}>
       <span>{mediaType === 'video' ? 'HTML5 video preview' : 'HTML5 audio preview'}</span>
@@ -132,7 +163,11 @@ function MediaStatusBar({ mediaType, fileSize }: { mediaType: 'audio' | 'video';
   );
 }
 
-export function MediaViewer({ filePath, mediaType, fileSize }: MediaViewerProps): React.ReactElement {
+export function MediaViewer({
+  filePath,
+  mediaType,
+  fileSize,
+}: MediaViewerProps): React.ReactElement {
   const mimeType = useMemo(
     () => inferMimeType(filePath, mediaType === 'video' ? 'video/mp4' : 'audio/mpeg'),
     [filePath, mediaType],

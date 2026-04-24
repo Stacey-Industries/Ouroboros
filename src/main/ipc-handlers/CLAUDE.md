@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The existing CLAUDE.md is already thorough, but reading the actual source reveals two patterns worth reinforcing: (1) the `sub-registrar vs primary registrar` split is the most confusing structural choice in this directory, and (2) path security has three distinct escape hatches (`isTrustedConfigPath`, `isTrustedVsxExtensionPath`, `assertPathAllowed`) that handlers pick from based on context — not one universal check.
-`─────────────────────────────────────────────────`
-
 # IPC Handlers — Domain-split `ipcMain.handle()` registrars
 
 All Electron IPC handler registration lives here. Each file is a domain registrar that binds `ipcMain.handle()` calls. Imported and orchestrated by `../ipc.ts`.
@@ -128,6 +124,7 @@ ESLint's `security/detect-non-literal-fs-filename` fires even on trusted paths (
 | `../orchestration/` | Claude Code / Codex adapters, context packets, graph summaries |
 | `../approvalManager` | Pre-execution approval response-file protocol |
 | `../contributions/themeLoader` | Extension theme loading |
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

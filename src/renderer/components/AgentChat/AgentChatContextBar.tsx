@@ -36,16 +36,10 @@ export function AgentChatContextBar({
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pb-1 pt-1.5">
       {pinnedFiles.map((file) => (
-        <PinnedFileChip
-          key={file.path}
-          file={file}
-          onRemove={() => onRemoveFile(file.path)}
-        />
+        <PinnedFileChip key={file.path} file={file} onRemove={() => onRemoveFile(file.path)} />
       ))}
       {contextSummary && (
-        <span className="ml-auto text-[10px] text-text-semantic-muted">
-          {contextSummary}
-        </span>
+        <span className="ml-auto text-[10px] text-text-semantic-muted">{contextSummary}</span>
       )}
     </div>
   );

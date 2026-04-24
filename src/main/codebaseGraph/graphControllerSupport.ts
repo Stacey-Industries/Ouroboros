@@ -113,7 +113,9 @@ async function resolveEffectiveRoot(root: string, sessionId: string | undefined)
     const { getSessionStore } = await import('../session/sessionStore');
     const session = getSessionStore()?.getById(sessionId);
     if (session?.worktree && session.worktreePath) return session.worktreePath;
-  } catch { /* session store not available */ }
+  } catch {
+    /* session store not available */
+  }
   return root;
 }
 

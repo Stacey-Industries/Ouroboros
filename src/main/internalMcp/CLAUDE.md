@@ -1,15 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The two-tier tool fallback in `getActiveTools()` is worth noting: it's a resilience pattern that keeps the MCP server useful even when the graph hasn't been indexed yet. The graph tools and context-layer tools overlap in purpose but differ in accuracy — graph tools know call relationships, context-layer tools know module metadata. They're not interchangeable, just substitutable for orientation queries.
-`─────────────────────────────────────────────────`
 
-Key things captured:
-
-- **Wired and active** — `main.ts` calls `startInternalMcpServer` at startup (line 164), gated by `internalMcpEnabled` config flag (default on)
-- The **two-tier tool fallback** logic in `getActiveTools()` (graph → context-layer)
-- `validateModuleId`'s security role and its limits
-- Why the files are split (`max-lines: 300` lint rule, not logical separation)
-- The atomic write pattern in `internalMcpAutoInject.ts`
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

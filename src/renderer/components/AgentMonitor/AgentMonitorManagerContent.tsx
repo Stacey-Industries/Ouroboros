@@ -55,9 +55,7 @@ function applyViewModeToSessions(
   viewMode: AgentMonitorViewMode,
 ): AgentSession[] {
   if (viewMode === 'verbose') return sessions;
-  return sessions.filter((s) =>
-    isEventTypeVisible(sessionStatusToEventType(s.status), viewMode),
-  );
+  return sessions.filter((s) => isEventTypeVisible(sessionStatusToEventType(s.status), viewMode));
 }
 
 interface SessionCardListProps {
@@ -161,7 +159,10 @@ function CurrentSessionsView({
   updateNotes,
   useTree,
   visibleCurrentSessions,
-}: Omit<NormalMonitorPaneProps, 'filterQuery' | 'visibleHistoricalSessions'>): React.ReactElement<unknown> {
+}: Omit<
+  NormalMonitorPaneProps,
+  'filterQuery' | 'visibleHistoricalSessions'
+>): React.ReactElement<unknown> {
   if (useTree) {
     return <AgentTree sessions={visibleCurrentSessions} onDismiss={dismiss} />;
   }

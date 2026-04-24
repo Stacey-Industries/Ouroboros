@@ -37,7 +37,10 @@ export function DensityProvider({ children }: { children: React.ReactNode }): Re
     [set],
   );
 
-  const value = useMemo<DensityContextValue>(() => ({ density, setDensity }), [density, setDensity]);
+  const value = useMemo<DensityContextValue>(
+    () => ({ density, setDensity }),
+    [density, setDensity],
+  );
 
   return <DensityContext.Provider value={value}>{children}</DensityContext.Provider>;
 }

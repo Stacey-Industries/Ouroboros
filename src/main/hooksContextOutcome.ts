@@ -38,9 +38,7 @@ export function tapContextOutcomeObserver(payload: HookPayload): void {
     return;
   }
   const isEnd =
-    payload.type === 'agent_end' ||
-    payload.type === 'agent_stop' ||
-    payload.type === 'session_end';
+    payload.type === 'agent_end' || payload.type === 'agent_stop' || payload.type === 'session_end';
   if (isEnd) {
     setImmediate(() => {
       try {

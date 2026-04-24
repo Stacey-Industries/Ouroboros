@@ -6,10 +6,14 @@ import type { PinnedContextItem, PinnedContextType } from '../../types/electron'
 
 function typeIcon(type: PinnedContextType): string {
   switch (type) {
-    case 'research-artifact': return '📚';
-    case 'user-file': return '📄';
-    case 'symbol-neighborhood': return '🔣';
-    case 'graph-blast-radius': return '🌐';
+    case 'research-artifact':
+      return '📚';
+    case 'user-file':
+      return '📄';
+    case 'symbol-neighborhood':
+      return '🔣';
+    case 'graph-blast-radius':
+      return '🌐';
   }
 }
 
@@ -54,7 +58,13 @@ interface CardHeaderProps {
   onRemove: (id: string) => void;
 }
 
-function CardHeader({ item, expanded, onToggle, onDismiss, onRemove }: CardHeaderProps): React.ReactElement {
+function CardHeader({
+  item,
+  expanded,
+  onToggle,
+  onDismiss,
+  onRemove,
+}: CardHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">
       <button
@@ -64,8 +74,12 @@ function CardHeader({ item, expanded, onToggle, onDismiss, onRemove }: CardHeade
         aria-expanded={expanded}
         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
       >
-        <span className="shrink-0 text-sm" aria-hidden="true">{typeIcon(item.type)}</span>
-        <span className="truncate text-xs font-medium text-text-semantic-primary">{item.title}</span>
+        <span className="shrink-0 text-sm" aria-hidden="true">
+          {typeIcon(item.type)}
+        </span>
+        <span className="truncate text-xs font-medium text-text-semantic-primary">
+          {item.title}
+        </span>
         <span className="ml-auto shrink-0 text-xs text-text-semantic-muted">{item.tokens}t</span>
         <span className="shrink-0 text-xs text-text-semantic-faint" aria-hidden="true">
           {expanded ? '▲' : '▼'}
@@ -76,7 +90,9 @@ function CardHeader({ item, expanded, onToggle, onDismiss, onRemove }: CardHeade
   );
 }
 
-interface CardBodyProps { content: string }
+interface CardBodyProps {
+  content: string;
+}
 
 function CardBody({ content }: CardBodyProps): React.ReactElement {
   return (
@@ -96,14 +112,20 @@ export interface PinnedContextCardProps {
   onRemove: (id: string) => void;
 }
 
-export function PinnedContextCard({ item, onDismiss, onRemove }: PinnedContextCardProps): React.ReactElement {
+export function PinnedContextCard({
+  item,
+  onDismiss,
+  onRemove,
+}: PinnedContextCardProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="rounded border border-border-subtle bg-surface-raised text-sm">
       <CardHeader
-        item={item} expanded={expanded}
+        item={item}
+        expanded={expanded}
         onToggle={() => setExpanded((v) => !v)}
-        onDismiss={onDismiss} onRemove={onRemove}
+        onDismiss={onDismiss}
+        onRemove={onRemove}
       />
       {expanded && <CardBody content={item.content} />}
     </div>

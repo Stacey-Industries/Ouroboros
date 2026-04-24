@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { ButtonSize,ButtonVariant } from './types';
+import type { ButtonSize, ButtonVariant } from './types';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -13,14 +13,11 @@ const BASE =
   'inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors duration-100 disabled:opacity-40 disabled:pointer-events-none';
 
 const variantClass: Record<ButtonVariant, string> = {
-  'primary':
-    'bg-interactive-accent text-text-semantic-on-accent hover:bg-interactive-hover',
-  'ghost':
+  primary: 'bg-interactive-accent text-text-semantic-on-accent hover:bg-interactive-hover',
+  ghost:
     'bg-transparent text-text-semantic-muted hover:bg-interactive-muted hover:text-text-semantic-primary',
-  'danger':
-    'bg-transparent text-status-error hover:bg-[rgba(248,81,73,0.1)]',
-  'accent-muted':
-    'bg-interactive-muted text-text-semantic-primary',
+  danger: 'bg-transparent text-status-error hover:bg-[rgba(248,81,73,0.1)]',
+  'accent-muted': 'bg-interactive-muted text-text-semantic-primary',
 };
 
 const sizeClass: Record<ButtonSize, string> = {
@@ -28,9 +25,15 @@ const sizeClass: Record<ButtonSize, string> = {
   md: 'px-2.5 py-1 text-sm',
 };
 
-export function Button(
-  { variant = 'ghost', size = 'md', icon = false, className, children, ref, ...rest }: ButtonProps,
-): React.ReactElement {
+export function Button({
+  variant = 'ghost',
+  size = 'md',
+  icon = false,
+  className,
+  children,
+  ref,
+  ...rest
+}: ButtonProps): React.ReactElement {
   const padding = icon ? 'p-1.5 aspect-square' : sizeClass[size];
   const classes = `${BASE} ${variantClass[variant]} ${padding} ${className ?? ''}`;
   return (

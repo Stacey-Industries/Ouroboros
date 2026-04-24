@@ -1,11 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-A few non-obvious things worth capturing here:
-- The CSS keyframe injection pattern (style tag with a guard ID) is used by Toast, Skeleton, and Tooltip — it's the established pattern for animations in this shared layer, not an anti-pattern.
-- `NotificationCenter` is split across three files by responsibility (component/parts/styles), which is the decomposition convention for heavier shared components.
-- `ProviderLogos.tsx` is the only file in the renderer with intentional hardcoded brand colors — it's explicitly exempt from the design token rule.
-`─────────────────────────────────────────────────`
-
 # Shared Components — Cross-Feature UI Primitives
 
 Reusable, theme-aware UI components consumed across all feature areas. No feature-specific logic — these are pure presentational primitives.
@@ -62,6 +55,7 @@ Icons are inlined as JSX — no external SVG files, no icon library. Keeps the b
 - `Tooltip` uses `position: fixed` and renders at `z-index: 9999` — it escapes any `overflow: hidden` container. `cloneTooltipChild` in `Tooltip.helpers.ts` handles attaching ref forwarding to arbitrary children.
 - `Skeleton.tsx` guards `document` access with `typeof document !== 'undefined'` for SSR safety, even though this app doesn't SSR — keep the guard when adding similar injection code.
 - `ProviderLogos.tsx` is the **only** place in `src/renderer/` where hardcoded colors are allowed. Don't use it as a model for other components.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

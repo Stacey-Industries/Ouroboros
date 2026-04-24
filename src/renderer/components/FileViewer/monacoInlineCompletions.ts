@@ -23,13 +23,25 @@ function extractContext(
   const startLine = Math.max(1, position.lineNumber - 500);
   const endLine = Math.min(model.getLineCount(), position.lineNumber + 100);
   return {
-    before: model.getValueInRange(new monaco.Range(startLine, 1, position.lineNumber, position.column)),
-    after: model.getValueInRange(new monaco.Range(position.lineNumber, position.column, endLine, model.getLineMaxColumn(endLine))),
+    before: model.getValueInRange(
+      new monaco.Range(startLine, 1, position.lineNumber, position.column),
+    ),
+    after: model.getValueInRange(
+      new monaco.Range(
+        position.lineNumber,
+        position.column,
+        endLine,
+        model.getLineMaxColumn(endLine),
+      ),
+    ),
   };
 }
 
 function clearDebounce(): void {
-  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
 }
 
 function debounce(ms: number, token: monaco.CancellationToken): Promise<void> {
@@ -40,7 +52,10 @@ function debounce(ms: number, token: monaco.CancellationToken): Promise<void> {
       if (token.isCancellationRequested) reject(new Error('cancelled'));
       else resolve();
     }, ms);
-    token.onCancellationRequested(() => { clearDebounce(); reject(new Error('cancelled')); });
+    token.onCancellationRequested(() => {
+      clearDebounce();
+      reject(new Error('cancelled'));
+    });
   });
 }
 
@@ -50,19 +65,25 @@ function makeResult(
   completion: string,
   position: monaco.Position,
 ): monaco.languages.InlineCompletions {
-  const range = new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column);
+  const range = new monaco.Range(
+    position.lineNumber,
+    position.column,
+    position.lineNumber,
+    position.column,
+  );
   return { items: [{ insertText: completion, range }] };
 }
 
-function buildOpenTabContext(
-  currentPath: string,
-): Array<{ filePath: string; snippet: string }> {
+function buildOpenTabContext(currentPath: string): Array<{ filePath: string; snippet: string }> {
   const openTabContext: Array<{ filePath: string; snippet: string }> = [];
   const openPaths = getOpenFilePaths().filter((p) => p !== currentPath);
   for (const tabPath of openPaths.slice(0, 5)) {
     const content = getEditorContent(tabPath);
     if (content) {
-      openTabContext.push({ filePath: tabPath, snippet: content.split('\n').slice(0, 50).join('\n') });
+      openTabContext.push({
+        filePath: tabPath,
+        snippet: content.split('\n').slice(0, 50).join('\n'),
+      });
     }
   }
   return openTabContext;
@@ -95,18 +116,31 @@ async function fetchCompletion(
 
 const provider: monaco.languages.InlineCompletionsProvider = {
   async provideInlineCompletions(
-    model, position, context, token,
+    model,
+    position,
+    context,
+    token,
   ): Promise<monaco.languages.InlineCompletions> {
     if (!hasAiApi() || context.selectedSuggestionInfo) return EMPTY;
 
     const id = ++requestId;
-    try { await debounce(500, token); } catch { return EMPTY; }
+    try {
+      await debounce(500, token);
+    } catch {
+      return EMPTY;
+    }
     if (token.isCancellationRequested || id !== requestId) return EMPTY;
 
-    try { return await fetchCompletion(model, position, id, token); } catch { return EMPTY; }
+    try {
+      return await fetchCompletion(model, position, id, token);
+    } catch {
+      return EMPTY;
+    }
   },
 
-  disposeInlineCompletions(): void { clearDebounce(); },
+  disposeInlineCompletions(): void {
+    clearDebounce();
+  },
 };
 
 let registration: monaco.IDisposable | null = null;
@@ -115,6 +149,9 @@ export function registerInlineCompletionProvider(): monaco.IDisposable {
   if (registration) return registration;
   registration = monaco.languages.registerInlineCompletionsProvider({ pattern: '**' }, provider);
   const orig = registration.dispose.bind(registration);
-  registration.dispose = () => { orig(); registration = null; };
+  registration.dispose = () => {
+    orig();
+    registration = null;
+  };
   return registration;
 }

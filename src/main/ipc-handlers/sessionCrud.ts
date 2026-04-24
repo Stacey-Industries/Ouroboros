@@ -77,7 +77,7 @@ function handleActive(event: IpcMainInvokeEvent): HandlerResult<{ sessionId: str
   // sessionCrud.active() returns null for freshly-opened windows that never
   // called activate, breaking openChatWindow and other session-bound actions.
   const explicit = activeSessionByWindow.get(winId);
-  const fromManager = winId >= 0 ? getWindow(winId)?.activeSessionId ?? null : null;
+  const fromManager = winId >= 0 ? (getWindow(winId)?.activeSessionId ?? null) : null;
   return ok({ sessionId: explicit ?? fromManager });
 }
 
@@ -266,7 +266,10 @@ let registeredChannels: string[] = [];
 export function registerSessionCrudHandlers(): string[] {
   const channels: string[] = [];
 
-  function reg(channel: string, handler: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
+  function reg(
+    channel: string,
+    handler: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown,
+  ): void {
     ipcMain.removeHandler(channel);
     ipcMain.handle(channel, async (event, ...args) => {
       try {

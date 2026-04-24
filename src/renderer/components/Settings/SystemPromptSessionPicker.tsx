@@ -108,7 +108,9 @@ function SessionSelect({
         value={selectedId ?? ''}
       >
         {sessions.map((s) => (
-          <option key={s.id} value={s.id}>{sessionLabel(s)}</option>
+          <option key={s.id} value={s.id}>
+            {sessionLabel(s)}
+          </option>
         ))}
       </select>
       <button
@@ -142,7 +144,9 @@ export function SystemPromptSessionPicker({
     }
   }, [selectedId, onSelect]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (sessions.length === 0) {
     return <EmptyState onRefresh={() => void load()} />;

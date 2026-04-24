@@ -6,7 +6,7 @@
  * can be tested without a real editor instance.
  */
 import * as monaco from 'monaco-editor';
-import { type MutableRefObject, useEffect, useRef } from 'react';
+import { type MutableRefObject, useEffect, useMemo, useRef } from 'react';
 
 import { useDiffReview } from '../DiffReview';
 import type { DiffReviewContextValue } from '../DiffReview/DiffReviewManager';
@@ -46,14 +46,9 @@ export function buildHunkDecorations(hunks: ReviewHunk[]): HunkDecoration[] {
  * Returns the HunkDecoration whose hunk range contains `line`, or null.
  * Deleted hunks (newCount=0) occupy exactly 1 line at newStart.
  */
-export function findHunkAtLine(
-  decs: HunkDecoration[],
-  line: number,
-): HunkDecoration | null {
+export function findHunkAtLine(decs: HunkDecoration[], line: number): HunkDecoration | null {
   for (const dec of decs) {
-    const end = dec.hunk.newCount > 0
-      ? dec.anchorLine + dec.hunk.newCount - 1
-      : dec.anchorLine;
+    const end = dec.hunk.newCount > 0 ? dec.anchorLine + dec.hunk.newCount - 1 : dec.anchorLine;
     if (line >= dec.anchorLine && line <= end) return dec;
   }
   return null;
@@ -116,7 +111,10 @@ export function useEditorHunkDecorations(
 
   const state = diffReview.state;
   const fileIdx = state?.files.findIndex((f) => f.filePath === filePath) ?? -1;
-  const hunks = fileIdx >= 0 ? (state?.files[fileIdx]?.hunks ?? []) : [];
+  const hunks = useMemo(
+    () => (fileIdx >= 0 ? (state?.files[fileIdx]?.hunks ?? []) : []),
+    [fileIdx, state?.files],
+  );
   const editor = editorRef.current;
 
   useEffect(() => {
@@ -132,8 +130,9 @@ export function useEditorHunkDecorations(
   useEffect(() => {
     if (!editor) return;
     const disposables = bindKeyboard(editor, () => decsRef.current, diffReview);
-    return () => { disposables.forEach((d) => d.dispose()); };
-   
+    return () => {
+      disposables.forEach((d) => d.dispose());
+    };
   }, [editor, diffReview]);
 
   return { decorations: decsRef.current, diffReview };

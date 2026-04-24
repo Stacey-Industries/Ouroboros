@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 import type { BufferExcerpt, MultiBufferConfig } from '../../types/electron';
 
@@ -129,47 +123,79 @@ async function readFileContentState(filePath: string): Promise<FileContentState>
 }
 
 function useFileContentLoader(setMultiBuffers: SetMultiBuffers): LoadFileContent {
-  return useCallback(async (filePath: string, multiBufferId: string) => {
-    setMultiBuffers((prev) =>
-      updateMultiBuffers(prev, multiBufferId, (buffer) => ensureLoadingFileContent(buffer, filePath)),
-    );
-    const nextState = await readFileContentState(filePath);
-    setMultiBuffers((prev) =>
-      updateMultiBuffers(prev, multiBufferId, (buffer) => withFileContent(buffer, filePath, nextState)),
-    );
-  }, [setMultiBuffers]);
+  return useCallback(
+    async (filePath: string, multiBufferId: string) => {
+      setMultiBuffers((prev) =>
+        updateMultiBuffers(prev, multiBufferId, (buffer) =>
+          ensureLoadingFileContent(buffer, filePath),
+        ),
+      );
+      const nextState = await readFileContentState(filePath);
+      setMultiBuffers((prev) =>
+        updateMultiBuffers(prev, multiBufferId, (buffer) =>
+          withFileContent(buffer, filePath, nextState),
+        ),
+      );
+    },
+    [setMultiBuffers],
+  );
 }
 
-function useBufferLifecycleActions(setMultiBuffers: SetMultiBuffers, loadFileContent: LoadFileContent) {
-  const openMultiBuffer = useCallback((config?: MultiBufferConfig): string => {
-    const tab = createMultiBufferTab(config);
-    setMultiBuffers((prev) => [...prev, tab]);
-    queueExcerptLoads(tab.config, tab.id, loadFileContent);
-    return tab.id;
-  }, [loadFileContent, setMultiBuffers]);
+function useBufferLifecycleActions(
+  setMultiBuffers: SetMultiBuffers,
+  loadFileContent: LoadFileContent,
+) {
+  const openMultiBuffer = useCallback(
+    (config?: MultiBufferConfig): string => {
+      const tab = createMultiBufferTab(config);
+      setMultiBuffers((prev) => [...prev, tab]);
+      queueExcerptLoads(tab.config, tab.id, loadFileContent);
+      return tab.id;
+    },
+    [loadFileContent, setMultiBuffers],
+  );
 
-  const closeMultiBuffer = useCallback((id: string) => {
-    setMultiBuffers((prev) => prev.filter((buffer) => buffer.id !== id));
-  }, [setMultiBuffers]);
+  const closeMultiBuffer = useCallback(
+    (id: string) => {
+      setMultiBuffers((prev) => prev.filter((buffer) => buffer.id !== id));
+    },
+    [setMultiBuffers],
+  );
 
   return { openMultiBuffer, closeMultiBuffer };
 }
 
-function useBufferConfigActions(setMultiBuffers: SetMultiBuffers, loadFileContent: LoadFileContent) {
-  const addExcerpt = useCallback((id: string, excerpt: BufferExcerpt) => {
-    setMultiBuffers((prev) => updateMultiBuffers(prev, id, (buffer) => appendExcerpt(buffer, excerpt)));
-    void loadFileContent(excerpt.filePath, id);
-  }, [loadFileContent, setMultiBuffers]);
+function useBufferConfigActions(
+  setMultiBuffers: SetMultiBuffers,
+  loadFileContent: LoadFileContent,
+) {
+  const addExcerpt = useCallback(
+    (id: string, excerpt: BufferExcerpt) => {
+      setMultiBuffers((prev) =>
+        updateMultiBuffers(prev, id, (buffer) => appendExcerpt(buffer, excerpt)),
+      );
+      void loadFileContent(excerpt.filePath, id);
+    },
+    [loadFileContent, setMultiBuffers],
+  );
 
-  const removeExcerpt = useCallback((id: string, excerptIndex: number) => {
-    setMultiBuffers((prev) =>
-      updateMultiBuffers(prev, id, (buffer) => removeExcerptAtIndex(buffer, excerptIndex)),
-    );
-  }, [setMultiBuffers]);
+  const removeExcerpt = useCallback(
+    (id: string, excerptIndex: number) => {
+      setMultiBuffers((prev) =>
+        updateMultiBuffers(prev, id, (buffer) => removeExcerptAtIndex(buffer, excerptIndex)),
+      );
+    },
+    [setMultiBuffers],
+  );
 
-  const renameMultiBuffer = useCallback((id: string, name: string) => {
-    setMultiBuffers((prev) => updateMultiBuffers(prev, id, (buffer) => renameBuffer(buffer, name)));
-  }, [setMultiBuffers]);
+  const renameMultiBuffer = useCallback(
+    (id: string, name: string) => {
+      setMultiBuffers((prev) =>
+        updateMultiBuffers(prev, id, (buffer) => renameBuffer(buffer, name)),
+      );
+    },
+    [setMultiBuffers],
+  );
 
   return { addExcerpt, removeExcerpt, renameMultiBuffer };
 }
@@ -187,14 +213,24 @@ function useOpenMultiBufferListener(openMultiBuffer: MultiBufferState['openMulti
 function useMultiBufferState(): MultiBufferState {
   const [multiBuffers, setMultiBuffers] = useState<MultiBufferTab[]>([]);
   const loadFileContent = useFileContentLoader(setMultiBuffers);
-  const { openMultiBuffer, closeMultiBuffer } = useBufferLifecycleActions(setMultiBuffers, loadFileContent);
+  const { openMultiBuffer, closeMultiBuffer } = useBufferLifecycleActions(
+    setMultiBuffers,
+    loadFileContent,
+  );
   const { addExcerpt, removeExcerpt, renameMultiBuffer } = useBufferConfigActions(
     setMultiBuffers,
     loadFileContent,
   );
 
   useOpenMultiBufferListener(openMultiBuffer);
-  return { multiBuffers, openMultiBuffer, closeMultiBuffer, addExcerpt, removeExcerpt, renameMultiBuffer };
+  return {
+    multiBuffers,
+    openMultiBuffer,
+    closeMultiBuffer,
+    addExcerpt,
+    removeExcerpt,
+    renameMultiBuffer,
+  };
 }
 
 export function MultiBufferManager({ children }: MultiBufferManagerProps): React.ReactElement {

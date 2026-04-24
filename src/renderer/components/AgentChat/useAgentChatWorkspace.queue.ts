@@ -15,7 +15,10 @@ let queueIdCounter = 0;
 type QueueMap = Map<string | null, QueuedMessage[]>;
 type SetQueue = (action: SetStateAction<QueuedMessage[]>) => void;
 
-function useThreadQueueState(activeThreadId: string | null): { queuedMessages: QueuedMessage[]; setForThread: SetQueue } {
+function useThreadQueueState(activeThreadId: string | null): {
+  queuedMessages: QueuedMessage[];
+  setForThread: SetQueue;
+} {
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
   const queueMapRef = useRef<QueueMap>(new Map());
 
@@ -62,9 +65,17 @@ export function useQueueActions(activeThreadId: string | null, setDraft: (v: str
   );
 
   const deleteQueuedMessage = useCallback(
-    (id: string) => { setForThread((prev) => prev.filter((m) => m.id !== id)); },
+    (id: string) => {
+      setForThread((prev) => prev.filter((m) => m.id !== id));
+    },
     [setForThread],
   );
 
-  return { queuedMessages, setQueuedMessages: setForThread, addToQueue, editQueuedMessage, deleteQueuedMessage };
+  return {
+    queuedMessages,
+    setQueuedMessages: setForThread,
+    addToQueue,
+    editQueuedMessage,
+    deleteQueuedMessage,
+  };
 }

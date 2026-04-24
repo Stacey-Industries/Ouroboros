@@ -37,9 +37,15 @@ function makeFakeDeps(overrides: Partial<ResearchOutcomeWriterDeps> = {}): {
   const deps: ResearchOutcomeWriterDeps = {
     getDir: () => TEST_DIR,
     readSize: async () => state.fileSize,
-    appendLine: async (fp, line) => { state.written.push({ fp, line }); },
-    rotate: async (src, dst) => { state.rotations.push({ src, dst }); },
-    unlink: async (fp) => { state.unlinked.push(fp); },
+    appendLine: async (fp, line) => {
+      state.written.push({ fp, line });
+    },
+    rotate: async (src, dst) => {
+      state.rotations.push({ src, dst });
+    },
+    unlink: async (fp) => {
+      state.unlinked.push(fp);
+    },
     todayStamp: () => TODAY,
     ...overrides,
   };
@@ -111,13 +117,25 @@ describe('ResearchOutcomeWriter', () => {
 
   it('two writes on the same day go to the same file (Phase G)', async () => {
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 's', topic: 't', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 's',
+      topic: 't',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     writer.recordOutcome({
-      correlationId: 'cid-2', sessionId: 's', topic: 't', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/b.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-2',
+      sessionId: 's',
+      topic: 't',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/b.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     expect(state.written[0].fp).toBe(state.written[1].fp);
@@ -182,12 +200,24 @@ describe('ResearchOutcomeWriter', () => {
 
   it('batches multiple records in a single flush', async () => {
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Write',
-      toolKind: 'write', filePath: '/b.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Write',
+      toolKind: 'write',
+      filePath: '/b.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     const records = parseLines(state.written);
@@ -196,12 +226,24 @@ describe('ResearchOutcomeWriter', () => {
 
   it('assigns a unique id to each record', async () => {
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/b.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/b.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     const records = parseLines(state.written);
@@ -211,8 +253,14 @@ describe('ResearchOutcomeWriter', () => {
   it('does not write after closeWriter', async () => {
     await writer.closeWriter();
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     expect(state.written).toHaveLength(0);
@@ -220,8 +268,14 @@ describe('ResearchOutcomeWriter', () => {
 
   it('flushes pending records on closeWriter', async () => {
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.closeWriter();
     expect(parseLines(state.written)).toHaveLength(1);
@@ -231,8 +285,14 @@ describe('ResearchOutcomeWriter', () => {
     const { deps, state: rotState } = makeFakeDeps({ readSize: async () => 11 * 1024 * 1024 });
     const rotatingWriter = createResearchOutcomeWriter(deps);
     rotatingWriter.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await rotatingWriter.flushPendingWrites();
     expect(rotState.rotations.length).toBeGreaterThan(0);
@@ -243,8 +303,14 @@ describe('ResearchOutcomeWriter', () => {
 
   it('does not rotate when file is under 10 MB', async () => {
     writer.recordOutcome({
-      correlationId: 'cid-1', sessionId: 'sess-1', topic: 'topic', toolName: 'Edit',
-      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 'topic',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
     });
     await writer.flushPendingWrites();
     expect(state.rotations).toHaveLength(0);

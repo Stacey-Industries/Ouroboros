@@ -312,7 +312,6 @@ async function handleRestoreDeleted(
   });
 }
 
-
 export function registerFileHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
   const register = createRegistrar(channels);

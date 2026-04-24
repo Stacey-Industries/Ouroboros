@@ -15,7 +15,9 @@ export interface ProcessWatchChangesOptions {
 }
 
 export function sortIgnorePatterns(patterns: string[]): string[] {
-  return [...new Set(patterns.map((pattern) => pattern.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right));
+  return [...new Set(patterns.map((pattern) => pattern.trim()).filter(Boolean))].sort(
+    (left, right) => left.localeCompare(right),
+  );
 }
 
 export function createFileEntry(root: string, itemPath: string): FileEntry {
@@ -52,13 +54,20 @@ export function isPathInsideRoot(filePath: string, root: string): boolean {
   return normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`);
 }
 
-export function shouldIgnoreIndexedPath(root: string, filePath: string, shouldIgnore: (name: string) => boolean): boolean {
+export function shouldIgnoreIndexedPath(
+  root: string,
+  filePath: string,
+  shouldIgnore: (name: string) => boolean,
+): boolean {
   if (!isPathInsideRoot(filePath, root)) {
     return false;
   }
 
   const relativePath = relPath(root, filePath);
-  return relativePath.split('/').filter(Boolean).some((segment) => shouldIgnore(segment));
+  return relativePath
+    .split('/')
+    .filter(Boolean)
+    .some((segment) => shouldIgnore(segment));
 }
 
 function upsertFiles(existingFiles: FileEntry[], addedFiles: FileEntry[]): FileEntry[] {
@@ -74,12 +83,19 @@ function upsertFiles(existingFiles: FileEntry[], addedFiles: FileEntry[]): FileE
   return sortFiles([...nextFiles.values()]);
 }
 
-function removeFiles(existingFiles: FileEntry[], predicate: (file: FileEntry) => boolean): FileEntry[] {
+function removeFiles(
+  existingFiles: FileEntry[],
+  predicate: (file: FileEntry) => boolean,
+): FileEntry[] {
   const filteredFiles = existingFiles.filter((file) => !predicate(file));
   return filteredFiles.length === existingFiles.length ? existingFiles : filteredFiles;
 }
 
-export function applyWatchChange(files: FileEntry[], change: FileChangeEvent, options: ApplyWatchChangeOptions): FileEntry[] {
+export function applyWatchChange(
+  files: FileEntry[],
+  change: FileChangeEvent,
+  options: ApplyWatchChangeOptions,
+): FileEntry[] {
   if (!isPathInsideRoot(change.path, options.root)) {
     return files;
   }
@@ -119,9 +135,8 @@ export async function processWatchChanges(
   let nextFiles = files;
 
   for (const change of changes) {
-    const addedFiles = change.type === 'addDir'
-      ? await options.scanFilesForAddedDirectory(change.path)
-      : undefined;
+    const addedFiles =
+      change.type === 'addDir' ? await options.scanFilesForAddedDirectory(change.path) : undefined;
 
     nextFiles = applyWatchChange(nextFiles, change, {
       addedFiles,

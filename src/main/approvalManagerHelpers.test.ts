@@ -55,10 +55,7 @@ function makeWindow(opts: { destroyed?: boolean; focused?: boolean } = {}): Brow
 
 // ─── Import SUT after mocks ───────────────────────────────────────────────────
 
-import {
-  broadcastApprovalRequest,
-  scheduleAutoApproveTimeout,
-} from './approvalManagerHelpers';
+import { broadcastApprovalRequest, scheduleAutoApproveTimeout } from './approvalManagerHelpers';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

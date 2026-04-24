@@ -26,7 +26,9 @@ vi.mock('./BranchCompareView', () => ({
     <div data-testid="branch-compare-view">
       <span>{leftThreadId}</span>
       <span>{rightThreadId}</span>
-      <button onClick={onClose} aria-label="Close comparison">close</button>
+      <button onClick={onClose} aria-label="Close comparison">
+        close
+      </button>
     </div>
   ),
 }));

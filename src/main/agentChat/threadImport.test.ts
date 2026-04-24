@@ -21,9 +21,7 @@ function makeThread(overrides: Partial<AgentChatThreadRecord> = {}): AgentChatTh
   };
 }
 
-function makeMessage(
-  overrides: Partial<AgentChatMessageRecord> = {},
-): AgentChatMessageRecord {
+function makeMessage(overrides: Partial<AgentChatMessageRecord> = {}): AgentChatMessageRecord {
   return {
     id: 'msg-orig-1',
     threadId: 'thread-orig',
@@ -81,7 +79,12 @@ describe('importFromJson', () => {
   it('assigns new IDs to all messages', () => {
     const msgs = [
       makeMessage({ id: 'msg-orig-1', role: 'user', content: 'Hi' }),
-      makeMessage({ id: 'msg-orig-2', role: 'assistant', content: 'Hello', createdAt: 1700000020000 }),
+      makeMessage({
+        id: 'msg-orig-2',
+        role: 'assistant',
+        content: 'Hello',
+        createdAt: 1700000020000,
+      }),
     ];
     const json = exportToJson(makeThread(), msgs);
     const result = importFromJson(json);
@@ -96,7 +99,12 @@ describe('importFromJson', () => {
   it('preserves message roles and content', () => {
     const msgs = [
       makeMessage({ role: 'user', content: 'User says hi' }),
-      makeMessage({ id: 'msg-2', role: 'assistant', content: 'Assistant replies', createdAt: 1700000020000 }),
+      makeMessage({
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Assistant replies',
+        createdAt: 1700000020000,
+      }),
     ];
     const json = exportToJson(makeThread(), msgs);
     const result = importFromJson(json);
@@ -211,12 +219,9 @@ describe('importFromTranscript', () => {
   });
 
   it('handles multi-line message content', () => {
-    const text = [
-      '## [user] at 2023-01-01T00:00:00Z',
-      'Line one',
-      'Line two',
-      'Line three',
-    ].join('\n');
+    const text = ['## [user] at 2023-01-01T00:00:00Z', 'Line one', 'Line two', 'Line three'].join(
+      '\n',
+    );
 
     const result = importFromTranscript(text);
     expect(result!.messages[0].content).toContain('Line one');

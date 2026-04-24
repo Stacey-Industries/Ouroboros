@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-`PRAGMA user_version` is SQLite's built-in schema version slot — a single integer in the database header, zero table overhead, atomically updated with DDL. Using it instead of a `schema_migrations` table avoids the chicken-and-egg problem of needing a table before you can track whether tables exist.
-`─────────────────────────────────────────────────`
-
 # src/main/storage/ — SQLite database layer and JSON→SQLite migration
 
 Shared `better-sqlite3` foundation plus one-time migration of three legacy JSON stores into SQLite. Must complete at startup before any store consumer opens its database.
@@ -47,6 +43,7 @@ Shared `better-sqlite3` foundation plus one-time migration of three legacy JSON 
 - **`threads.db` lives *inside* the threads directory** (`userData/agent-chat/threads/threads.db`). The migration's `*.json` filter naturally excludes it since it lacks a `.json` extension.
 - **Schema DDL lives in `migrate.ts`, not in consuming modules.** Downstream stores that add columns later must bump `user_version` themselves and issue `ALTER TABLE` — `migrate.ts` only runs once per install.
 - **`edges.metadata` has no DEFAULT** — insertions must pass `null` explicitly for rows without metadata (see `insertGraphData`).
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

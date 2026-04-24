@@ -57,7 +57,13 @@ function extractSessionId(event: StreamJsonEvent): string | null {
 // ── Spawn helpers ─────────────────────────────────────────────────────────────
 
 async function resolveClaudeArgs(): Promise<{ shell: string; args: string[] }> {
-  const cliArgs = ['-p', '--verbose', '--output-format', 'stream-json', '--dangerously-skip-permissions'];
+  const cliArgs = [
+    '-p',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+    '--dangerously-skip-permissions',
+  ];
   if (process.platform === 'win32') {
     const { escapePowerShellArg } = await import('../pty');
     const escaped = ['claude', ...cliArgs].map(escapePowerShellArg).join(' ');
@@ -73,7 +79,16 @@ async function spawnViaPtyHost(args: SpawnArgs): Promise<SpawnResult> {
   if (!win) throw new Error('No BrowserWindow available for PTY spawn');
   const { spawnAgentViaPtyHost } = await import('../ptyHost/ptyHostProxyAgent');
   const res = await spawnAgentViaPtyHost(
-    { id: sessionId, shell: launch.shell, args: launch.args, env, cwd, cols, rows, windowId: win.id },
+    {
+      id: sessionId,
+      shell: launch.shell,
+      args: launch.args,
+      env,
+      cwd,
+      cols,
+      rows,
+      windowId: win.id,
+    },
     win,
     prompt,
     onEvent,
@@ -95,18 +110,52 @@ interface SettledTracker {
 function makeSettledTracker(): SettledTracker {
   let settled = false;
   let resolve!: (v: { exitCode: number | null; resultText: string | null }) => void;
-  const resultPromise = new Promise<{ exitCode: number | null; resultText: string | null }>((r) => { resolve = r; });
+  const resultPromise = new Promise<{ exitCode: number | null; resultText: string | null }>((r) => {
+    resolve = r;
+  });
   return {
     resultPromise,
-    settle: (v) => { if (!settled) { settled = true; resolve(v); } },
+    settle: (v) => {
+      if (!settled) {
+        settled = true;
+        resolve(v);
+      }
+    },
     isSettled: () => settled,
   };
 }
 
-async function attachDirectPtyProc(
-  args: SpawnArgs,
-  tracker: SettledTracker,
-): Promise<void> {
+interface WireOpts {
+  bridge: ReturnType<typeof import('../ptyAgentBridge')['createAgentBridge']>;
+  tracker: SettledTracker;
+  cleanupSession: (id: string) => void;
+}
+
+function wireProcEvents(
+  proc: Awaited<ReturnType<typeof import('node-pty')['spawn']>>,
+  sessionId: string,
+  opts: WireOpts,
+): { dataSub: unknown; exitSub: unknown } {
+  const { bridge, tracker, cleanupSession } = opts;
+  let earlyOutput = '';
+  const dataSub = proc.onData((data: string) => {
+    if (earlyOutput.length < 2000) earlyOutput += data;
+    bridge.feed(data);
+  });
+  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
+    if (exitCode && exitCode !== 0) {
+      log.error(
+        `[bgJob] session ${sessionId} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`,
+      );
+    }
+    bridge.handleExit(exitCode);
+    tracker.settle({ exitCode, resultText: null });
+    cleanupSession(sessionId);
+  });
+  return { dataSub, exitSub };
+}
+
+async function attachDirectPtyProc(args: SpawnArgs, tracker: SettledTracker): Promise<void> {
   const { sessionId, launch, env, cwd, cols, rows, prompt, onEvent } = args;
   const pty = await import('node-pty');
   const { createAgentBridge } = await import('../ptyAgentBridge');
@@ -115,32 +164,30 @@ async function attachDirectPtyProc(
   if (sessions.has(sessionId)) throw new Error(`Session ${sessionId} already exists`);
 
   const bridge = createAgentBridge({
-    sessionId, onEvent,
+    sessionId,
+    onEvent,
     onComplete: (res, exitCode) => tracker.settle({ exitCode, resultText: res?.result ?? null }),
   });
 
-  const proc = pty.spawn(launch.shell, launch.args, { name: 'xterm-256color', cols, rows, cwd, env });
+  const proc = pty.spawn(launch.shell, launch.args, {
+    name: 'xterm-256color', cols, rows, cwd, env,
+  });
   const wins = BrowserWindow.getAllWindows();
   if (wins[0]) registerSession({ id: sessionId, proc, cwd, shell: launch.shell, win: wins[0] });
 
-  let earlyOutput = '';
-  const dataSub = proc.onData((data: string) => { if (earlyOutput.length < 2000) earlyOutput += data; bridge.feed(data); });
-  const exitSub = proc.onExit(({ exitCode }: { exitCode: number }) => {
-    if (exitCode && exitCode !== 0) {
-      log.error(`[bgJob] session ${sessionId} exited ${exitCode}. Early: ${earlyOutput.slice(0, 500)}`);
-    }
-    bridge.handleExit(exitCode);
-    tracker.settle({ exitCode, resultText: null });
-    cleanupSession(sessionId); // walks session.disposables (incl. the two pushed below) then deletes
-  });
+  const { dataSub, exitSub } = wireProcEvents(proc, sessionId, { bridge, tracker, cleanupSession });
   // Piggyback our local subs onto the shared session record so external
   // cleanup (window close, killPty, force-recovery) also disposes them.
   const ownedSession = sessions.get(sessionId);
-  if (ownedSession) ownedSession.disposables = [...(ownedSession.disposables ?? []), dataSub, exitSub];
+  if (ownedSession)
+    ownedSession.disposables = [...(ownedSession.disposables ?? []), dataSub, exitSub];
 
   const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
   setTimeout(() => {
-    if (sessions.has(sessionId)) { proc.write(prompt); proc.write(eofChar); }
+    if (sessions.has(sessionId)) {
+      proc.write(prompt);
+      proc.write(eofChar);
+    }
   }, 150);
 }
 
@@ -167,7 +214,10 @@ async function spawnJob(
 
 // ── Result recording ──────────────────────────────────────────────────────────
 
-interface RunResult { exitCode: number | null; resultText: string | null }
+interface RunResult {
+  exitCode: number | null;
+  resultText: string | null;
+}
 
 function recordJobSuccess(store: JobStore, jobId: string, result: RunResult): void {
   const completedAt = new Date().toISOString();
@@ -225,9 +275,17 @@ async function runJobToCompletion(ctx: RunContext): Promise<void> {
   const { job, store, onComplete, getCancelled, setPtyId } = ctx;
   const { cwd: resolvedCwd } = resolveSpawnOptions({ cwd: job.projectRoot });
   const handleEvent = makeEventHandler(store, job.id);
-  const { ptyId: pid, resultPromise } = await spawnJob(job.id, resolvedCwd, job.prompt, handleEvent);
+  const { ptyId: pid, resultPromise } = await spawnJob(
+    job.id,
+    resolvedCwd,
+    job.prompt,
+    handleEvent,
+  );
   setPtyId(pid);
-  if (getCancelled()) { await cancelPty(pid); return; }
+  if (getCancelled()) {
+    await cancelPty(pid);
+    return;
+  }
   const result = await resultPromise;
   if (getCancelled()) return;
   if (store.getJob(job.id)?.status === 'cancelled') return;
@@ -245,7 +303,15 @@ export function createJobRunner(opts: JobRunnerOptions): JobRunnerHandle {
     store.updateJob(job.id, { status: 'running', startedAt: new Date().toISOString() });
     log.info(`[bgJob] starting job ${job.id} in ${job.projectRoot}`);
     try {
-      await runJobToCompletion({ job, store, onComplete, getCancelled: () => cancelled, setPtyId: (id) => { ptyId = id; } });
+      await runJobToCompletion({
+        job,
+        store,
+        onComplete,
+        getCancelled: () => cancelled,
+        setPtyId: (id) => {
+          ptyId = id;
+        },
+      });
     } catch (err: unknown) {
       if (cancelled) return;
       recordJobError(store, job.id, err);
@@ -257,7 +323,12 @@ export function createJobRunner(opts: JobRunnerOptions): JobRunnerHandle {
   async function cancel(): Promise<void> {
     cancelled = true;
     const current = store.getJob(job.id);
-    if (current && current.status !== 'cancelled' && current.status !== 'done' && current.status !== 'error') {
+    if (
+      current &&
+      current.status !== 'cancelled' &&
+      current.status !== 'done' &&
+      current.status !== 'error'
+    ) {
       store.updateJob(job.id, { status: 'cancelled', completedAt: new Date().toISOString() });
     }
     if (ptyId) await cancelPty(ptyId);

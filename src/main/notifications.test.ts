@@ -116,9 +116,7 @@ describe('showStreamCompletionNotification', () => {
     mockGetAllWindows.mockReturnValue([]);
     vi.resetModules();
     const { showStreamCompletionNotification } = await import('./notifications');
-    expect(() =>
-      showStreamCompletionNotification({ title: 'T', body: 'B' }),
-    ).not.toThrow();
+    expect(() => showStreamCompletionNotification({ title: 'T', body: 'B' })).not.toThrow();
     expect(mockShow).toHaveBeenCalledOnce();
   });
 });

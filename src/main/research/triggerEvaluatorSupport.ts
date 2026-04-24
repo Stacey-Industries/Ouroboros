@@ -46,7 +46,9 @@ export function normalizeImportToLibrary(imp: string): string {
  * Result from a layer evaluation. `undefined` means "no opinion — continue".
  * A returned object means the layer has reached a final decision for this import.
  */
-export type LayerResult = Pick<TriggerDecision, 'fire' | 'reason' | 'triggerSource' | 'library'> | undefined;
+export type LayerResult =
+  | Pick<TriggerDecision, 'fire' | 'reason' | 'triggerSource' | 'library'>
+  | undefined;
 
 // ─── Correction layer ─────────────────────────────────────────────────────────
 

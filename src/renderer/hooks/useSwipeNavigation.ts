@@ -78,14 +78,22 @@ function dispatchXSwipe({ dx, dy, dt, threshold, velocity, options }: DispatchAr
   if (Math.abs(dx) <= threshold) return;
   if (Math.abs(dx) / dt <= velocity) return;
   if (Math.abs(dx) <= Math.abs(dy)) return;
-  if (dx < 0) { options.onSwipeLeft?.(); } else { options.onSwipeRight?.(); }
+  if (dx < 0) {
+    options.onSwipeLeft?.();
+  } else {
+    options.onSwipeRight?.();
+  }
 }
 
 function dispatchYSwipe({ dx, dy, dt, threshold, velocity, options }: DispatchArgs): void {
   if (Math.abs(dy) <= threshold) return;
   if (Math.abs(dy) / dt <= velocity) return;
   if (Math.abs(dy) <= Math.abs(dx)) return;
-  if (dy > 0) { options.onSwipeDown?.(); } else { options.onSwipeUp?.(); }
+  if (dy > 0) {
+    options.onSwipeDown?.();
+  } else {
+    options.onSwipeUp?.();
+  }
 }
 
 // ── Listener builders ─────────────────────────────────────────────────────────
@@ -120,7 +128,11 @@ function makePointerUp(
     const thr = opts.threshold ?? 50;
     const vel = opts.velocity ?? 0.3;
     const args: DispatchArgs = { dx, dy, dt, threshold: thr, velocity: vel, options: opts };
-    if (opts.axis === 'y') { dispatchYSwipe(args); } else { dispatchXSwipe(args); }
+    if (opts.axis === 'y') {
+      dispatchYSwipe(args);
+    } else {
+      dispatchXSwipe(args);
+    }
   };
 }
 
@@ -139,7 +151,9 @@ export function useSwipeNavigation(
     const gestureRef: { state: GestureState | null } = { state: null };
     const onPointerDown = makePointerDown(gestureRef, optionsRef);
     const onPointerUp = makePointerUp(gestureRef, optionsRef);
-    const onPointerCancel = (): void => { gestureRef.state = null; };
+    const onPointerCancel = (): void => {
+      gestureRef.state = null;
+    };
     el.addEventListener('pointerdown', onPointerDown);
     el.addEventListener('pointerup', onPointerUp);
     el.addEventListener('pointercancel', onPointerCancel);

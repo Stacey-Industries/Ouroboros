@@ -120,9 +120,7 @@ describe('BranchRenameDialog', () => {
   });
 
   it('shows error message when API returns failure', async () => {
-    setupElectronApi(() =>
-      Promise.resolve({ success: false, error: 'Name already taken' }),
-    );
+    setupElectronApi(() => Promise.resolve({ success: false, error: 'Name already taken' }));
     render(
       <BranchRenameDialog
         threadId="thread-1"

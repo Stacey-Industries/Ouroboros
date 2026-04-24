@@ -19,13 +19,8 @@ export function basename(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? filePath;
 }
 
-function getRecentProjects(
-  recentProjects: string[],
-  currentPath: string | null,
-): string[] {
-  return [...new Set(recentProjects)]
-    .filter((path) => path !== currentPath)
-    .slice(0, 8);
+function getRecentProjects(recentProjects: string[], currentPath: string | null): string[] {
+  return [...new Set(recentProjects)].filter((path) => path !== currentPath).slice(0, 8);
 }
 
 async function pickFolder(onSelect: (path: string) => void): Promise<void> {
@@ -77,10 +72,50 @@ function useRecentProjectSelector(
   onSelectProject: (path: string) => void,
   setOpen: React.Dispatch<React.SetStateAction<boolean>>,
 ): (path: string) => void {
-  return useCallback((path: string) => {
-    onSelectProject(path);
-    setOpen(false);
-  }, [onSelectProject, setOpen]);
+  return useCallback(
+    (path: string) => {
+      onSelectProject(path);
+      setOpen(false);
+    },
+    [onSelectProject, setOpen],
+  );
+}
+
+interface UseProjectPickerControllerProps {
+  currentPath: string | null;
+  recentProjects: string[];
+  onSelectProject: (path: string) => void;
+  onAddProject?: (path: string) => void;
+  rootCount?: number;
+}
+
+function buildPickerResult(
+  opts: UseProjectPickerControllerProps & {
+    open: boolean;
+    busy: boolean;
+    containerRef: React.RefObject<HTMLDivElement | null>;
+    toggleOpen: () => void;
+    openFolder: () => void;
+    addFolder: () => void;
+    selectRecent: (path: string) => void;
+    recents: string[];
+  },
+): ProjectPickerController {
+  const { currentPath, rootCount = 0, onAddProject, open, busy, containerRef } = opts;
+  return {
+    busy,
+    canAddProject: rootCount > 0 && Boolean(onAddProject),
+    containerRef,
+    hasMultipleRoots: rootCount > 1,
+    open,
+    projectName: currentPath ? basename(currentPath) : 'Open a folder...',
+    recents: opts.recents,
+    rootCount: rootCount,
+    addFolder: opts.addFolder,
+    openFolder: opts.openFolder,
+    selectRecent: opts.selectRecent,
+    toggleOpen: opts.toggleOpen,
+  };
 }
 
 export function useProjectPickerController({
@@ -89,39 +124,24 @@ export function useProjectPickerController({
   onSelectProject,
   onAddProject,
   rootCount = 0,
-}: {
-  currentPath: string | null;
-  recentProjects: string[];
-  onSelectProject: (path: string) => void;
-  onAddProject?: (path: string) => void;
-  rootCount?: number;
-}): ProjectPickerController {
+}: UseProjectPickerControllerProps): ProjectPickerController {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useDismissOnOutsideClick(containerRef, open, setOpen);
 
-  const toggleOpen = useCallback(() => {
-    setOpen((previous) => !previous);
-  }, []);
+  const toggleOpen = useCallback(() => setOpen((p) => !p), []);
   const openFolder = useFolderPickerAction(onSelectProject, setBusy, setOpen);
   const addFolder = useFolderPickerAction(onAddProject ?? onSelectProject, setBusy, setOpen);
   const selectRecent = useRecentProjectSelector(onSelectProject, setOpen);
-  const recents = useMemo(() => getRecentProjects(recentProjects, currentPath), [currentPath, recentProjects]);
+  const recents = useMemo(
+    () => getRecentProjects(recentProjects, currentPath),
+    [currentPath, recentProjects],
+  );
 
-  return {
-    busy,
-    canAddProject: rootCount > 0 && Boolean(onAddProject),
-    containerRef,
-    hasMultipleRoots: rootCount > 1,
-    open,
-    projectName: currentPath ? basename(currentPath) : 'Open a folder...',
-    recents,
-    rootCount,
-    addFolder,
-    openFolder,
-    selectRecent,
-    toggleOpen,
-  };
+  return buildPickerResult({
+    currentPath, recentProjects, onSelectProject, onAddProject, rootCount,
+    open, busy, containerRef, toggleOpen, openFolder, addFolder, selectRecent, recents,
+  });
 }

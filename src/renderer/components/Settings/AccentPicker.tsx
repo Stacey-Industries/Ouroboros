@@ -23,7 +23,8 @@ const FALLBACK_HEX = '#5865f2'; // hardcoded: static fallback when CSS var canno
 
 function readComputedAccent(): string {
   const val = getComputedStyle(document.documentElement)
-    .getPropertyValue('--interactive-accent').trim();
+    .getPropertyValue('--interactive-accent')
+    .trim();
   return val || FALLBACK_HEX;
 }
 
@@ -47,21 +48,31 @@ function resetAccent(set: ConfigSet, theming: AppConfig['theming']): void {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const rowStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  gap: '12px', flexWrap: 'wrap',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  flexWrap: 'wrap',
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '12px', color: 'var(--text-text-semantic-muted)', flexShrink: 0,
+  fontSize: '12px',
+  color: 'var(--text-text-semantic-muted)',
+  flexShrink: 0,
 };
 
 function resetButtonStyle(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px', borderRadius: '6px',
-    border: '1px solid var(--border-subtle)', background: 'transparent',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-subtle)',
+    background: 'transparent',
     color: disabled ? 'var(--text-text-semantic-muted)' : 'var(--text-text-semantic-primary)',
-    fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1, whiteSpace: 'nowrap', flexShrink: 0,
+    fontSize: '12px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   };
 }
 
@@ -73,23 +84,34 @@ function useAccentPicker() {
   const [displayHex, setDisplayHex] = useState<string>(() => override ?? readComputedAccent());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setDisplayHex(override ?? readComputedAccent()); }, [override]);
+  useEffect(() => {
+    setDisplayHex(override ?? readComputedAccent());
+  }, [override]);
 
-  useEffect(() => () => {
-    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
-  const handleChange = useCallback((hex: string) => {
-    setDisplayHex(hex);
-    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      writeAccent(set, config?.theming, hex);
-      debounceRef.current = null;
-    }, DEBOUNCE_MS);
-  }, [set, config?.theming]);
+  const handleChange = useCallback(
+    (hex: string) => {
+      setDisplayHex(hex);
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        writeAccent(set, config?.theming, hex);
+        debounceRef.current = null;
+      }, DEBOUNCE_MS);
+    },
+    [set, config?.theming],
+  );
 
   const handleReset = useCallback(() => {
-    if (debounceRef.current !== null) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     resetAccent(set, config?.theming);
     setDisplayHex(readComputedAccent());
   }, [set, config?.theming]);
@@ -105,7 +127,9 @@ export function AccentPicker(): React.ReactElement {
 
   return (
     <section>
-      <div className="text-text-semantic-muted" style={sectionLabelStyle}>Accent Color</div>
+      <div className="text-text-semantic-muted" style={sectionLabelStyle}>
+        Accent Color
+      </div>
       <div style={panelStyle}>
         <div style={rowStyle}>
           <AccentPickerColorWheel hex={displayHex} onChange={handleChange} />

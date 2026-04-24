@@ -114,8 +114,12 @@ describe('channelTimeoutClass', () => {
 // ─── invoke() timeout integration ─────────────────────────────────────────────
 
 describe('WebSocketTransport.invoke timeout (non-resumable)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('rejects with timeout error at the short budget (10 000 ms)', async () => {
     // Inline a minimal transport rather than importing the full class to avoid
@@ -132,7 +136,9 @@ describe('WebSocketTransport.invoke timeout (non-resumable)', () => {
 
     vi.advanceTimersByTime(9_999);
     let rejected = false;
-    promise.catch(() => { rejected = true; });
+    promise.catch(() => {
+      rejected = true;
+    });
     await Promise.resolve();
     expect(rejected).toBe(false);
 

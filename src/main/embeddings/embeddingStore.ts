@@ -121,17 +121,21 @@ function prepareStatements(db: Database) {
   };
 }
 
-function upsertChunks(
-  db: Database,
-  stmts: PreparedStatements,
-  chunks: EmbeddingChunk[],
-): void {
+function upsertChunks(db: Database, stmts: PreparedStatements, chunks: EmbeddingChunk[]): void {
   runTransaction(db, () => {
     for (const c of chunks) {
       stmts.upsert.run(
-        c.id, c.filePath, c.symbolName, c.symbolType,
-        c.startLine, c.endLine, c.contentHash,
-        toBuffer(c.embedding), c.dimensions, c.model, c.indexedAt,
+        c.id,
+        c.filePath,
+        c.symbolName,
+        c.symbolType,
+        c.startLine,
+        c.endLine,
+        c.contentHash,
+        toBuffer(c.embedding),
+        c.dimensions,
+        c.model,
+        c.indexedAt,
       );
     }
     if (chunks.length > 0) {
@@ -147,9 +151,15 @@ function deleteByFile(stmts: PreparedStatements, filePath: string): void {
 }
 
 interface RawRow {
-  id: string; filePath: string; symbolName: string; symbolType: string;
-  startLine: number; endLine: number; contentHash: string;
-  embedding: Buffer; dimensions: number;
+  id: string;
+  filePath: string;
+  symbolName: string;
+  symbolType: string;
+  startLine: number;
+  endLine: number;
+  contentHash: string;
+  embedding: Buffer;
+  dimensions: number;
 }
 
 function searchSimilar(
@@ -157,11 +167,13 @@ function searchSimilar(
   queryEmbedding: Float32Array,
   topK: number,
 ): EmbeddingSearchResult[] {
-  const rows = db.prepare(
-    `SELECT id, filePath, symbolName, symbolType, startLine, endLine,
+  const rows = db
+    .prepare(
+      `SELECT id, filePath, symbolName, symbolType, startLine, endLine,
             contentHash, embedding, dimensions
      FROM chunks`,
-  ).all() as RawRow[];
+    )
+    .all() as RawRow[];
 
   const scored = rows.map((row) => ({
     chunk: toChunkMeta(row),
@@ -183,10 +195,7 @@ function toChunkMeta(row: RawRow | ChunkMetadata): ChunkMetadata {
   };
 }
 
-function getChunksByFile(
-  stmts: PreparedStatements,
-  filePath: string,
-): ChunkMetadata[] {
+function getChunksByFile(stmts: PreparedStatements, filePath: string): ChunkMetadata[] {
   return stmts.byFile.all(filePath) as ChunkMetadata[];
 }
 

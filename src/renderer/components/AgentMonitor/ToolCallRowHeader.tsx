@@ -103,7 +103,13 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
 
 // ─── Tiny sub-slots ───────────────────────────────────────────────────────────
 
-function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): React.ReactElement<unknown> {
+function ChevronSlot({
+  open,
+  visible,
+}: {
+  open: boolean;
+  visible: boolean;
+}): React.ReactElement<unknown> {
   return (
     <span
       className="shrink-0 mt-0.5 text-text-semantic-faint"
@@ -114,7 +120,13 @@ function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): Re
   );
 }
 
-function ToolBadge({ color, toolName }: { color: string; toolName: string }): React.ReactElement<unknown> {
+function ToolBadge({
+  color,
+  toolName,
+}: {
+  color: string;
+  toolName: string;
+}): React.ReactElement<unknown> {
   return (
     <span
       className="shrink-0 mt-0.5 inline-flex items-center justify-center rounded text-[10px] font-bold leading-none"

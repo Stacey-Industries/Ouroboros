@@ -54,10 +54,7 @@ function getErrorMessage(errorValue: unknown): string {
   return errorValue instanceof Error ? errorValue.message : String(errorValue);
 }
 
-export function setElementColor(
-  target: HTMLSpanElement | HTMLButtonElement,
-  color: string,
-): void {
+export function setElementColor(target: HTMLSpanElement | HTMLButtonElement, color: string): void {
   target.style.color = color;
 }
 
@@ -102,7 +99,8 @@ export function useBranches(projectRoot: string): {
   useEffect(() => {
     let active = true;
 
-    window.electronAPI.git.branches(projectRoot)
+    window.electronAPI.git
+      .branches(projectRoot)
       .then((result) => {
         if (!active) {
           return;
@@ -201,34 +199,14 @@ export function LayoutIcon(): React.ReactElement {
   );
 }
 
-export function StatusBarToggleButton({
-  icon,
-  label,
-  maxWidth,
-  open,
-  title,
-  onToggle,
-  restingColor,
-  canHover = true,
-  cursor = 'pointer',
-}: {
-  icon: React.ReactNode;
-  label: string;
-  maxWidth: string;
-  open: boolean;
-  title: string;
-  onToggle: () => void;
-  restingColor: string;
-  canHover?: boolean;
-  cursor?: string;
-}): React.ReactElement {
+interface StatusBarToggleButtonProps {
+  icon: React.ReactNode; label: string; maxWidth: string; open: boolean; title: string;
+  onToggle: () => void; restingColor: string; canHover?: boolean; cursor?: string;
+}
+
+export function StatusBarToggleButton({ icon, label, maxWidth, open, title, onToggle, restingColor, canHover = true, cursor = 'pointer' }: StatusBarToggleButtonProps): React.ReactElement {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      title={title}
-      aria-haspopup="listbox"
-      aria-expanded={open}
+    <button type="button" onClick={onToggle} title={title} aria-haspopup="listbox" aria-expanded={open}
       style={{ ...STATUS_BUTTON_STYLE, cursor, color: restingColor }}
       onMouseEnter={(event) => canHover && setElementColor(event.currentTarget, 'var(--text-primary)')}
       onMouseLeave={(event) => setElementColor(event.currentTarget, restingColor)}
@@ -240,17 +218,16 @@ export function StatusBarToggleButton({
   );
 }
 
-export function LayoutControl({
-  layout,
-}: {
-  layout: StatusBarLayoutProps;
-}): React.ReactElement {
+export function LayoutControl({ layout }: { layout: StatusBarLayoutProps }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const closeMenu = useCallback(() => setOpen(false), []);
-  const handleSelect = useCallback((selectedLayout: WorkspaceLayout) => {
-    layout.onSelectLayout(selectedLayout);
-    closeMenu();
-  }, [closeMenu, layout]);
+  const handleSelect = useCallback(
+    (selectedLayout: WorkspaceLayout) => {
+      layout.onSelectLayout(selectedLayout);
+      closeMenu();
+    },
+    [closeMenu, layout],
+  );
 
   return (
     <>

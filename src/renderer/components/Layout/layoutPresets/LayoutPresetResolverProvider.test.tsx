@@ -43,7 +43,11 @@ const mockPromoteToGlobal = vi.fn().mockResolvedValue({ success: true });
 import { useLayoutPreset } from './LayoutPresetResolver';
 import { LayoutPresetResolverProvider } from './LayoutPresetResolverProvider';
 
-const TREE_A = { kind: 'leaf' as const, slotName: 'editorContent', component: { componentKey: 'editorContent' } };
+const TREE_A = {
+  kind: 'leaf' as const,
+  slotName: 'editorContent',
+  component: { componentKey: 'editorContent' },
+};
 
 function Probe(): React.ReactElement {
   const { canUndo, slotTree } = useLayoutPreset();
@@ -73,7 +77,9 @@ describe('LayoutPresetResolverProvider Phase D', () => {
     mockPromoteToGlobal.mockClear();
     mockGetCustomLayout.mockResolvedValue({ success: true, tree: null });
   });
-  afterEach(() => { cleanup(); });
+  afterEach(() => {
+    cleanup();
+  });
 
   it('renders without crashing', () => {
     render(wrap());
@@ -100,9 +106,7 @@ describe('LayoutPresetResolverProvider Phase D', () => {
   it('exposes resetLayout and promoteToGlobal on context', () => {
     const { result } = renderHook(() => useLayoutPreset(), {
       wrapper: ({ children }) => (
-        <LayoutPresetResolverProvider sessionId="sess-x">
-          {children}
-        </LayoutPresetResolverProvider>
+        <LayoutPresetResolverProvider sessionId="sess-x">{children}</LayoutPresetResolverProvider>
       ),
     });
     expect(typeof result.current.resetLayout).toBe('function');
@@ -112,13 +116,15 @@ describe('LayoutPresetResolverProvider Phase D', () => {
   it('promoteToGlobal calls IPC with name and current tree', async () => {
     const { result } = renderHook(() => useLayoutPreset(), {
       wrapper: ({ children }) => (
-        <LayoutPresetResolverProvider sessionId="sess-x">
-          {children}
-        </LayoutPresetResolverProvider>
+        <LayoutPresetResolverProvider sessionId="sess-x">{children}</LayoutPresetResolverProvider>
       ),
     });
-    act(() => { result.current.promoteToGlobal('My Layout'); });
-    await waitFor(() => expect(mockPromoteToGlobal).toHaveBeenCalledWith('My Layout', expect.any(Object)));
+    act(() => {
+      result.current.promoteToGlobal('My Layout');
+    });
+    await waitFor(() =>
+      expect(mockPromoteToGlobal).toHaveBeenCalledWith('My Layout', expect.any(Object)),
+    );
   });
 });
 

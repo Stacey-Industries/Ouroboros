@@ -16,7 +16,13 @@ export interface ChatOnlySessionDrawerProps {
 
 // ── Backdrop ──────────────────────────────────────────────────────────────────
 
-function Backdrop({ visible, onClose }: { visible: boolean; onClose: () => void }): React.ReactElement | null {
+function Backdrop({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}): React.ReactElement | null {
   if (!visible) return null;
   return (
     <div
@@ -31,7 +37,10 @@ function Backdrop({ visible, onClose }: { visible: boolean; onClose: () => void 
 
 // ── ChatOnlySessionDrawer ─────────────────────────────────────────────────────
 
-export function ChatOnlySessionDrawer({ open, onClose }: ChatOnlySessionDrawerProps): React.ReactElement {
+export function ChatOnlySessionDrawer({
+  open,
+  onClose,
+}: ChatOnlySessionDrawerProps): React.ReactElement {
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Esc key closes the drawer
@@ -41,7 +50,9 @@ export function ChatOnlySessionDrawer({ open, onClose }: ChatOnlySessionDrawerPr
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handler);
-    return () => { document.removeEventListener('keydown', handler); };
+    return () => {
+      document.removeEventListener('keydown', handler);
+    };
   }, [open, onClose]);
 
   // Move focus into drawer when it opens

@@ -8,14 +8,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionRecord } from '../../types/electron';
 import type { SessionGroup } from './SessionVirtualList';
-import { flattenGroups,SessionVirtualList, VIRTUALIZE_THRESHOLD } from './SessionVirtualList';
+import { flattenGroups, SessionVirtualList, VIRTUALIZE_THRESHOLD } from './SessionVirtualList';
 
 // ─── @tanstack/react-virtual mock ─────────────────────────────────────────────
 // jsdom has no layout engine, so getVirtualItems() would return [] without this.
 // We replace useVirtualizer with a passthrough that returns all items "visible".
 
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({ count, estimateSize }: { count: number; estimateSize: (i: number) => number }) => {
+  useVirtualizer: ({
+    count,
+    estimateSize,
+  }: {
+    count: number;
+    estimateSize: (i: number) => number;
+  }) => {
     let offset = 0;
     const items = Array.from({ length: count }, (_, i) => {
       const size = estimateSize(i);
@@ -58,7 +64,10 @@ function makeGroup(projectRoot: string, count: number): SessionGroup {
 
 const noop = vi.fn();
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 // ─── flattenGroups unit tests ─────────────────────────────────────────────────
 

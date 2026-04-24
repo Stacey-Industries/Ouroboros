@@ -19,17 +19,7 @@ interface VsxActionGroupProps {
   verb?: string;
 }
 
-export function ThemeActionCollections({
-  activeFileIconThemeId,
-  activeProductIconThemeId,
-  activeThemeId,
-  extensionThemes,
-  fileIconThemes,
-  onApplyFileIconTheme,
-  onApplyProductIconTheme,
-  onApplyTheme,
-  productIconThemes,
-}: {
+export interface ThemeActionCollectionsProps {
   activeFileIconThemeId: string;
   activeProductIconThemeId: string;
   activeThemeId: string;
@@ -39,20 +29,14 @@ export function ThemeActionCollections({
   onApplyProductIconTheme: (themeId: string) => Promise<void>;
   onApplyTheme: (themeId: string) => Promise<void>;
   productIconThemes: ExtensionProductIconThemeData[];
-}): React.ReactElement {
+}
+
+export function ThemeActionCollections(p: ThemeActionCollectionsProps): React.ReactElement {
   return (
     <>
-      <ThemeContributionActions activeThemeId={activeThemeId} themes={extensionThemes} onApplyTheme={onApplyTheme} />
-      <FileIconContributionActions
-        activeThemeId={activeFileIconThemeId}
-        themes={fileIconThemes}
-        onApplyTheme={onApplyFileIconTheme}
-      />
-      <ProductIconContributionActions
-        activeThemeId={activeProductIconThemeId}
-        themes={productIconThemes}
-        onApplyTheme={onApplyProductIconTheme}
-      />
+      <ThemeContributionActions activeThemeId={p.activeThemeId} themes={p.extensionThemes} onApplyTheme={p.onApplyTheme} />
+      <FileIconContributionActions activeThemeId={p.activeFileIconThemeId} themes={p.fileIconThemes} onApplyTheme={p.onApplyFileIconTheme} />
+      <ProductIconContributionActions activeThemeId={p.activeProductIconThemeId} themes={p.productIconThemes} onApplyTheme={p.onApplyProductIconTheme} />
     </>
   );
 }

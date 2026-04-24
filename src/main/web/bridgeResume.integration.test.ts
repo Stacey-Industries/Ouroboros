@@ -45,9 +45,7 @@ function sendResponseFn(ws: WebSocket, msg: unknown): void {
 
 const noopEvent = {} as Electron.IpcMainInvokeEvent;
 
-function makeCtx(
-  handlerFn: (...args: unknown[]) => unknown,
-): DispatchContext {
+function makeCtx(handlerFn: (...args: unknown[]) => unknown): DispatchContext {
   return {
     handler: handlerFn as DispatchContext['handler'],
     createEvent: () => noopEvent,
@@ -75,8 +73,14 @@ function waitForMessage(
 
     function check(): void {
       const found = msgs.find(predicate);
-      if (found !== undefined) { resolve(found); return; }
-      if (Date.now() > deadline) { reject(new Error('waitForMessage timed out')); return; }
+      if (found !== undefined) {
+        resolve(found);
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error('waitForMessage timed out'));
+        return;
+      }
       setTimeout(check, 20);
     }
 
@@ -115,7 +119,9 @@ describe('bridgeResume — real-socket integration', () => {
 
     // Slow handler that resolves after reconnect
     let resolveHandler!: (value: unknown) => void;
-    const handlerPromise = new Promise<unknown>((res) => { resolveHandler = res; });
+    const handlerPromise = new Promise<unknown>((res) => {
+      resolveHandler = res;
+    });
 
     server.on('connection', (ws) => {
       currentWs = ws;
@@ -138,7 +144,12 @@ describe('bridgeResume — real-socket integration', () => {
           const meta = { deviceId, capabilities: ['paired-write'] as const, issuedAt: 0 };
           dispatchResumable(
             ws,
-            { jsonrpc: '2.0', id: msg['id'] as number, method: 'agentChat:sendMessage', params: [] },
+            {
+              jsonrpc: '2.0',
+              id: msg['id'] as number,
+              method: 'agentChat:sendMessage',
+              params: [],
+            },
             meta,
             makeCtx(() => handlerPromise),
           );
@@ -159,18 +170,20 @@ describe('bridgeResume — real-socket integration', () => {
       client1.on('error', reject);
     });
 
-    client1.send(JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'agentChat:sendMessage',
-      params: [],
-    }));
+    client1.send(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'agentChat:sendMessage',
+        params: [],
+      }),
+    );
 
     // Wait for meta frame
-    const metaFrame = await waitForMessage(
+    const metaFrame = (await waitForMessage(
       msgs1,
       (m) => typeof (m as Record<string, unknown>).meta === 'object',
-    ) as Record<string, unknown>;
+    )) as Record<string, unknown>;
 
     resumeToken = (metaFrame.meta as Record<string, string>).resumeToken;
     expect(resumeToken).toBeTruthy();
@@ -189,21 +202,20 @@ describe('bridgeResume — real-socket integration', () => {
     });
 
     // Reattach the resume token to client2's send function
-    client2.send(JSON.stringify({
-      jsonrpc: '2.0',
-      id: 2,
-      method: 'resume',
-      params: { tokens: [resumeToken] },
-    }));
+    client2.send(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'resume',
+        params: { tokens: [resumeToken] },
+      }),
+    );
 
     // Wait for ack showing token was resumed
-    const ackFrame = await waitForMessage(
-      msgs2,
-      (m) => {
-        const r = (m as Record<string, unknown>).result as Record<string, unknown> | undefined;
-        return Array.isArray(r?.resumed);
-      },
-    ) as Record<string, unknown>;
+    const ackFrame = (await waitForMessage(msgs2, (m) => {
+      const r = (m as Record<string, unknown>).result as Record<string, unknown> | undefined;
+      return Array.isArray(r?.resumed);
+    })) as Record<string, unknown>;
 
     const result = ackFrame.result as { resumed: string[] };
     expect(result.resumed).toContain(resumeToken);
@@ -211,13 +223,12 @@ describe('bridgeResume — real-socket integration', () => {
     // Now let the handler resolve — result should arrive on client2
     resolveHandler({ answer: 42 });
 
-    const resultFrame = await waitForMessage(
-      msgs2,
-      (m) => {
-        const r = m as Record<string, unknown>;
-        return r.result !== undefined && typeof (r.result as Record<string, unknown>).answer === 'number';
-      },
-    ) as Record<string, unknown>;
+    const resultFrame = (await waitForMessage(msgs2, (m) => {
+      const r = m as Record<string, unknown>;
+      return (
+        r.result !== undefined && typeof (r.result as Record<string, unknown>).answer === 'number'
+      );
+    })) as Record<string, unknown>;
 
     expect((resultFrame.result as Record<string, unknown>).answer).toBe(42);
 
@@ -247,15 +258,14 @@ describe('bridgeResume — real-socket integration', () => {
       client.on('error', reject);
     });
 
-    client.send(JSON.stringify({ jsonrpc: '2.0', id: 10, method: 'agentChat:sendMessage', params: [] }));
+    client.send(
+      JSON.stringify({ jsonrpc: '2.0', id: 10, method: 'agentChat:sendMessage', params: [] }),
+    );
 
-    const frame = await waitForMessage(
-      msgs,
-      (m) => {
-        const r = (m as Record<string, unknown>).result as Record<string, unknown> | undefined;
-        return r?.direct === true;
-      },
-    ) as Record<string, unknown>;
+    const frame = (await waitForMessage(msgs, (m) => {
+      const r = (m as Record<string, unknown>).result as Record<string, unknown> | undefined;
+      return r?.direct === true;
+    })) as Record<string, unknown>;
 
     expect(frame.meta).toBeUndefined();
     expect((frame.result as Record<string, unknown>).direct).toBe(true);

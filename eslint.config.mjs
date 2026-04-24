@@ -64,11 +64,9 @@ export default tseslint.config(
       'max-params': ['error', 4],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
 
-      // ── React Compiler — flags rule violations statically ─────────
-      // NOTE: 'warn' (not 'error') — large existing codebase has ~65 pre-existing
-      // violations (mostly prop mutation). Compiler bails gracefully on these;
-      // fix them incrementally and promote to 'error' once clean.
-      'react-compiler/react-compiler': 'warn',
+      // ── React Compiler — not currently adopted in this project ────
+      // Kept off intentionally; re-enable if/when React Compiler is turned on.
+      'react-compiler/react-compiler': 'off',
 
       // ── Import sorting (deterministic, diff-friendly) ─────────────
       'simple-import-sort/imports': 'error',

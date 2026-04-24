@@ -71,7 +71,9 @@ describe('useStartupHistory', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockGetStartupHistory).toHaveBeenCalledTimes(1);
 
-    act(() => { result.current.reload(); });
+    act(() => {
+      result.current.reload();
+    });
 
     await waitFor(() => expect(mockGetStartupHistory).toHaveBeenCalledTimes(2));
   });

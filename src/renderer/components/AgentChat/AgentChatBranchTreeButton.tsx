@@ -20,8 +20,7 @@ function usePopoverDismiss(
     if (!open) return;
     function dismiss(e: MouseEvent): void {
       const target = e.target as Node;
-      const outside =
-        !buttonRef.current?.contains(target) && !popoverRef.current?.contains(target);
+      const outside = !buttonRef.current?.contains(target) && !popoverRef.current?.contains(target);
       if (outside) onClose();
     }
     function onKey(e: KeyboardEvent): void {
@@ -127,7 +126,10 @@ export function BranchTreeButton({
           rect={rect}
           rootThread={rootThread}
           activeThreadId={activeThreadId}
-          onSelect={(id) => { onSelect(id); setOpen(false); }}
+          onSelect={(id) => {
+            onSelect(id);
+            setOpen(false);
+          }}
         />
       )}
     </>

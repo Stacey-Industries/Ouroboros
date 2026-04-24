@@ -21,14 +21,17 @@ export function useRuntimeMetrics(): UseRuntimeMetricsResult {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchMetrics = useCallback(() => {
-    window.electronAPI?.perf?.getRuntimeMetrics?.()
+    window.electronAPI?.perf
+      ?.getRuntimeMetrics?.()
       .then((result) => {
         if (result.success) {
           setMetrics(result.metrics ?? null);
           setLastUpdated(new Date());
         }
       })
-      .catch(() => { /* silent — handler may not yet be registered */ });
+      .catch(() => {
+        /* silent — handler may not yet be registered */
+      });
   }, []);
 
   useEffect(() => {

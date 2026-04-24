@@ -1,4 +1,4 @@
-import { customTheme,getTheme } from '../../themes';
+import { customTheme, getTheme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
 
 export interface ColorToken {
@@ -74,7 +74,10 @@ export function restoreThemeColors(activeThemeId: string): void {
   const baseTheme = getBaseTheme(activeThemeId);
 
   for (const token of COLOR_TOKENS) {
-    document.documentElement.style.setProperty(token.cssVar, baseTheme.colors[token.colorKey] ?? '');
+    document.documentElement.style.setProperty(
+      token.cssVar,
+      baseTheme.colors[token.colorKey] ?? '',
+    );
   }
 }
 

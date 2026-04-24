@@ -51,8 +51,4 @@ export const HEURISTIC_DENYLIST: readonly string[] = [
  * flagged stale (e.g. `@mycompany/`, `@internal/`).
  * Matched via `String.prototype.startsWith`.
  */
-export const INTERNAL_PACKAGE_PREFIXES: readonly string[] = [
-  '@internal/',
-  '@local/',
-  '@private/',
-];
+export const INTERNAL_PACKAGE_PREFIXES: readonly string[] = ['@internal/', '@local/', '@private/'];

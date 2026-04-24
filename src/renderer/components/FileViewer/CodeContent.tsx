@@ -64,11 +64,7 @@ function CodeRows({
   toggleFold,
 }: CodeRowsProps): React.ReactElement {
   return (
-    <>
-      {rows.map((row) =>
-        renderCodeRow({ row, lines, shikiLines, textLayout, toggleFold })
-      )}
-    </>
+    <>{rows.map((row) => renderCodeRow({ row, lines, shikiLines, textLayout, toggleFold }))}</>
   );
 }
 
@@ -109,10 +105,7 @@ function getCodeTextLayout(wordWrap: boolean): CodeTextLayout {
   };
 }
 
-function getCodeContentStyle(
-  showMinimap: boolean,
-  lineCount: number
-): React.CSSProperties {
+function getCodeContentStyle(showMinimap: boolean, lineCount: number): React.CSSProperties {
   return {
     flex: 1,
     padding: '16px 16px 16px 12px',
@@ -187,11 +180,7 @@ function CodeLine({
   }
 
   return (
-    <div
-      className="code-line text-text-semantic-primary"
-      data-line={index}
-      style={style}
-    >
+    <div className="code-line text-text-semantic-primary" data-line={index} style={style}>
       {plainText}
     </div>
   );

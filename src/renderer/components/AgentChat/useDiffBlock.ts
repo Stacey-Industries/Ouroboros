@@ -120,10 +120,13 @@ type HunkActions = {
   setHunkStatuses: React.Dispatch<React.SetStateAction<Map<number, HunkStatus>>>;
 };
 
-function useHunkActions(hunks: DiffHunk[], filePath: string, setHunkStatuses: HunkActions['setHunkStatuses']): { applyHunks: (indices: number[]) => Promise<void>; rejectHunk: (index: number) => void; applyError: string | null } {
-  const [applyError, setApplyError] = useState<string | null>(null);
-
-  const applyHunks = useCallback(async (indices: number[]): Promise<void> => {
+function useApplyHunks(
+  hunks: DiffHunk[],
+  filePath: string,
+  setHunkStatuses: HunkActions['setHunkStatuses'],
+  setApplyError: (e: string | null) => void,
+): (indices: number[]) => Promise<void> {
+  return useCallback(async (indices: number[]): Promise<void> => {
     setApplyError(null);
     const readResult = await window.electronAPI.files.readFile(filePath);
     if (!readResult.success || readResult.content === undefined) {
@@ -140,14 +143,25 @@ function useHunkActions(hunks: DiffHunk[], filePath: string, setHunkStatuses: Hu
       fileLines = patched;
     }
     const saveResult = await window.electronAPI.files.saveFile(filePath, fileLines.join('\n'));
-    if (!saveResult.success) { setApplyError('Could not save file: ' + (saveResult.error ?? 'unknown error')); return; }
+    if (!saveResult.success) {
+      setApplyError('Could not save file: ' + (saveResult.error ?? 'unknown error'));
+      return;
+    }
     setHunkStatuses((prev) => { const next = new Map(prev); for (const idx of indices) next.set(idx, 'accepted'); return next; });
-  }, [filePath, hunks, setHunkStatuses]);
+  }, [filePath, hunks, setHunkStatuses, setApplyError]);
+}
 
-  const rejectHunk = useCallback((index: number) => {
-    setHunkStatuses((prev) => { const next = new Map(prev); next.set(index, 'rejected'); return next; });
-  }, [setHunkStatuses]);
-
+function useHunkActions(
+  hunks: DiffHunk[],
+  filePath: string,
+  setHunkStatuses: HunkActions['setHunkStatuses'],
+): { applyHunks: (indices: number[]) => Promise<void>; rejectHunk: (index: number) => void; applyError: string | null } {
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const applyHunks = useApplyHunks(hunks, filePath, setHunkStatuses, setApplyError);
+  const rejectHunk = useCallback(
+    (index: number) => { setHunkStatuses((prev) => { const next = new Map(prev); next.set(index, 'rejected'); return next; }); },
+    [setHunkStatuses],
+  );
   return { applyHunks, rejectHunk, applyError };
 }
 
@@ -169,10 +183,22 @@ export function useDiffBlock(diffText: string, filePath: string): UseDiffBlockRe
   const rejectAll = useCallback(() => {
     setHunkStatuses((prev) => {
       const next = new Map(prev);
-      for (const [k, v] of prev) { if (v === 'pending') next.set(k, 'rejected'); }
+      for (const [k, v] of prev) {
+        if (v === 'pending') next.set(k, 'rejected');
+      }
       return next;
     });
   }, []);
 
-  return { hunks, hunkStatuses, additions, deletions, acceptHunk, rejectHunk, acceptAll, rejectAll, applyError };
+  return {
+    hunks,
+    hunkStatuses,
+    additions,
+    deletions,
+    acceptHunk,
+    rejectHunk,
+    acceptAll,
+    rejectAll,
+    applyError,
+  };
 }

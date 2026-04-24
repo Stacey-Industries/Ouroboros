@@ -30,9 +30,7 @@ function buildSlashResult(message: string): AgentChatSendResult {
   };
 }
 
-function parseSlashCommand(
-  content: string,
-): { command: string; subcommand: string } | null {
+function parseSlashCommand(content: string): { command: string; subcommand: string } | null {
   const trimmed = content.trim();
   if (!trimmed.startsWith('/')) return null;
   const withoutSlash = trimmed.slice(1);

@@ -129,7 +129,13 @@ function processEntry(vsKey: string, rawValue: unknown): EntryResult {
   }
 
   if (tokenName === null) {
-    return { tokenName: null, colorValue: rawValue, warning: null, applied: false, unsupported: true };
+    return {
+      tokenName: null,
+      colorValue: rawValue,
+      warning: null,
+      applied: false,
+      unsupported: true,
+    };
   }
 
   let finalValue = rawValue;
@@ -145,9 +151,7 @@ function processEntry(vsKey: string, rawValue: unknown): EntryResult {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function parseVsCodeTheme(
-  json: unknown,
-): VsCodeThemeImportResult | VsCodeThemeParseError {
+export function parseVsCodeTheme(json: unknown): VsCodeThemeImportResult | VsCodeThemeParseError {
   const root = parseInput(json);
   if (isParseError(root)) return root;
 

@@ -198,7 +198,9 @@ const revertListeners = new Set<RevertListener>();
 /** Register a listener that fires on every successful revert. */
 export function registerRevertListener(fn: RevertListener): () => void {
   revertListeners.add(fn);
-  return () => { revertListeners.delete(fn); };
+  return () => {
+    revertListeners.delete(fn);
+  };
 }
 
 function notifyRevertListeners(revertedPaths: string[]): void {

@@ -23,7 +23,9 @@ const mocks = vi.hoisted(() => ({
   getConfigValue: vi.fn((): unknown => undefined),
   sendFcm: vi.fn(async (): Promise<FcmResult> => ({ sent: false, reason: 'no-fcm-backend' })),
   webContentsSend: vi.fn(),
-  getAllWindows: vi.fn((): Array<{ isDestroyed(): boolean; webContents: { send: ReturnType<typeof vi.fn> } }> => []),
+  getAllWindows: vi.fn(
+    (): Array<{ isDestroyed(): boolean; webContents: { send: ReturnType<typeof vi.fn> } }> => [],
+  ),
   logInfo: vi.fn(),
   logWarn: vi.fn(),
 }));
@@ -71,7 +73,9 @@ function makeDevice(extra: Partial<PairedDevice> = {}): PairedDevice {
   };
 }
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -176,11 +180,10 @@ describe('notifyJobTransition — FCM path', () => {
 describe('notifyJobTransition — failed job payload', () => {
   it('includes error text in banner body', async () => {
     mocks.getAllWindows.mockReturnValue([makeWindow()]);
-    await notifyJobTransition(
-      makeJob({ status: 'failed', error: 'timeout', deviceId: undefined }),
-    );
+    await notifyJobTransition(makeJob({ status: 'failed', error: 'timeout', deviceId: undefined }));
     const payload = mocks.webContentsSend.mock.calls[0]?.[1] as {
-      body: string; status: string;
+      body: string;
+      status: string;
     };
     expect(payload.body).toContain('timeout');
     expect(payload.status).toBe('failed');

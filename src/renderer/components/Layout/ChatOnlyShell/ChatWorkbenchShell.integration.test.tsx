@@ -9,6 +9,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OPEN_SUBAGENT_PANEL_EVENT } from '../../../hooks/appEventNames';
 import { ChatWorkbenchShell } from './ChatWorkbenchShell';
 
+const mockSelectThread = vi.fn();
+const mockRefreshSessions = vi.fn();
+const mockActivateSession = vi.fn();
+let mockCompareTarget: null | {
+  sessionId: string;
+  projectRoot: string;
+  threadId: string;
+  projectLabel: string;
+} = null;
 let approvalRequests = [] as Array<{
   requestId: string;
   toolName: string;
@@ -80,6 +89,89 @@ vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   AgentChatWorkspace: () => <div data-testid="agent-chat-workspace" />,
 }));
 
+vi.mock('../../AgentChat/agentChatStore', () => ({
+  useAgentChatStoreContext: (
+    selector: (state: {
+      threads: Array<{
+        id: string;
+        title: string;
+        createdAt: number;
+        updatedAt: number;
+        lastActivityAt: number;
+        status: 'complete';
+        projectId: string;
+        workspaceRoot: string;
+      }>;
+      onSelectThread: typeof mockSelectThread;
+    }) => unknown,
+  ) =>
+    selector({
+      threads: [
+        {
+          id: 'thread-1',
+          title: 'Thread One',
+          createdAt: 1,
+          updatedAt: 2,
+          lastActivityAt: 2,
+          status: 'complete',
+          projectId: 'project-1',
+          workspaceRoot: '/test/project',
+        },
+      ],
+      onSelectThread: mockSelectThread,
+    }),
+}));
+
+vi.mock('../../SessionSidebar/useSessions', () => ({
+  useSessions: () => ({
+    sessions: [
+      {
+        id: 'session-1',
+        projectRoot: '/test/project',
+        branchName: 'main',
+        createdAt: 1,
+        updatedAt: 2,
+        lastAccessedAt: 2,
+        isActive: true,
+        metadata: {},
+      },
+    ],
+    refresh: mockRefreshSessions,
+  }),
+}));
+
+vi.mock('./useWorkbenchSessionActivation', () => ({
+  useWorkbenchSessionActivation: () => ({
+    activateSession: mockActivateSession,
+    activatingSessionId: null,
+  }),
+}));
+
+vi.mock('./useWorkbenchSessions', () => ({
+  useWorkbenchSessions: () => ({
+    items: [],
+    activeItems: [],
+    backgroundItems: [],
+    activeSessionId: 'session-1',
+    isLoading: false,
+    refresh: mockRefreshSessions,
+  }),
+}));
+
+vi.mock('./useWorkbenchCompare', () => ({
+  useWorkbenchCompare: () => ({
+    compareTarget: mockCompareTarget,
+    isComparing: mockCompareTarget !== null,
+    canCompare: vi.fn(() => true),
+    openCompare: vi.fn(),
+    closeCompare: vi.fn(),
+  }),
+}));
+
+vi.mock('./ChatWorkbenchComparePane', () => ({
+  ChatWorkbenchComparePane: () => <div data-testid="chat-workbench-compare-pane" />,
+}));
+
 vi.mock('./ChatOnlyTitleBar', () => ({
   ChatOnlyTitleBar: () => <div data-testid="chat-only-title-bar" />,
 }));
@@ -143,6 +235,10 @@ beforeEach(() => {
   approvalRequests = [];
   diffState = null;
   currentSessions = [];
+  mockCompareTarget = null;
+  mockSelectThread.mockReset();
+  mockRefreshSessions.mockReset();
+  mockActivateSession.mockReset();
   window.electronAPI = {
     approval: {
       respond: vi.fn().mockResolvedValue({ success: true }),
@@ -156,17 +252,19 @@ afterEach(() => {
 });
 
 describe('ChatWorkbenchShell integration', () => {
-  it('auto-opens the approvals tab when a new approval arrives', () => {
+  it('shows a compact background approval prompt when a new approval arrives', () => {
     const view = renderShell();
     expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
 
-    approvalRequests = [{
-      requestId: 'req-1',
-      toolName: 'Bash',
-      toolInput: { command: 'npm test' },
-      sessionId: 'session-1',
-      timestamp: Date.now(),
-    }];
+    approvalRequests = [
+      {
+        requestId: 'req-1',
+        toolName: 'Bash',
+        toolInput: { command: 'npm test' },
+        sessionId: 'session-1',
+        timestamp: Date.now(),
+      },
+    ];
     view.rerender(
       <ChatWorkbenchShell
         projectRoot="/test/project"
@@ -182,9 +280,8 @@ describe('ChatWorkbenchShell integration', () => {
       />,
     );
 
-    expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
-    expect(screen.getByTestId('chat-workbench-utility-tab-approvals')).toBeDefined();
-    expect(screen.getByTestId('workbench-approval-panel')).toBeDefined();
+    expect(screen.getByTestId('workbench-background-approval-prompt')).toBeDefined();
+    expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
   });
 
   it('auto-opens the review tab when diff review becomes active', () => {
@@ -215,18 +312,22 @@ describe('ChatWorkbenchShell integration', () => {
   });
 
   it('switches to the subagents tab when a subagent-open event fires', () => {
-    currentSessions = [{
-      id: 'child-1',
-      taskLabel: 'Investigate',
-      status: 'running',
-      startedAt: Date.now(),
-      toolCalls: [],
-      parentSessionId: 'parent-1',
-    }];
+    currentSessions = [
+      {
+        id: 'child-1',
+        taskLabel: 'Investigate',
+        status: 'running',
+        startedAt: Date.now(),
+        toolCalls: [],
+        parentSessionId: 'parent-1',
+      },
+    ];
     renderShell();
 
     act(() => {
-      window.dispatchEvent(new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, { detail: { toolCallId: 'tc-1' } }));
+      window.dispatchEvent(
+        new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, { detail: { toolCallId: 'tc-1' } }),
+      );
     });
 
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();

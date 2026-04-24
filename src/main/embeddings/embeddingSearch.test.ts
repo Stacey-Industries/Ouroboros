@@ -5,7 +5,15 @@ import type { EmbeddingSearchResult } from './embeddingTypes';
 
 function makeResult(id: string, score: number): EmbeddingSearchResult {
   return {
-    chunk: { id, filePath: `src/${id}.ts`, symbolName: id, symbolType: 'function', startLine: 1, endLine: 10, contentHash: id },
+    chunk: {
+      id,
+      filePath: `src/${id}.ts`,
+      symbolName: id,
+      symbolType: 'function',
+      startLine: 1,
+      endLine: 10,
+      contentHash: id,
+    },
     score,
   };
 }

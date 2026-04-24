@@ -34,12 +34,14 @@ describe('usePermalinkBridge', () => {
     };
 
     const dispatched: CustomEvent[] = [];
-    const listener = (e: Event): void => { dispatched.push(e as CustomEvent); };
+    const listener = (e: Event): void => {
+      dispatched.push(e as CustomEvent);
+    };
     window.addEventListener(OPEN_THREAD_EVENT, listener);
 
     renderHook(() => usePermalinkBridge());
     expect(ipcCallback).not.toBeNull();
-     
+
     ipcCallback!({ threadId: 'abc', messageId: 'm1' });
 
     window.removeEventListener(OPEN_THREAD_EVENT, listener);

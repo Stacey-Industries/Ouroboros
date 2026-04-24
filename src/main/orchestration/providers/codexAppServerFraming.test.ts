@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  CodexAppServerFramingParser,
-  encodeCodexAppServerMessage,
-} from './codexAppServerFraming';
+import { CodexAppServerFramingParser, encodeCodexAppServerMessage } from './codexAppServerFraming';
 
 describe('CodexAppServerFramingParser', () => {
   it('buffers partial NDJSON messages across chunks', () => {

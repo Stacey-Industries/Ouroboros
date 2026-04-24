@@ -1,13 +1,5 @@
 <!-- claude-md-auto:start -->
-A CLAUDE.md already exists for this directory. Comparing it against the actual source files, it's accurate and complete — no updates needed.
 
-The existing file correctly documents:
-- All five context files and their roles
-- The key patterns (thin wrappers, `useMemo` on values, consistent hook shape)
-- The non-obvious gotchas (`AgentEventsContext` unmounting problem, `ApprovalContext` rendering UI, `ProjectContext` synchronous persistence)
-- Dependencies on IPC bridge, hooks, and components
-
-No changes were made.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

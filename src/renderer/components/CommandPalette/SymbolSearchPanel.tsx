@@ -8,11 +8,7 @@ import type { SymbolSearchModel, SymbolSearchProps } from './useSymbolSearchMode
 
 const ITEM_HEIGHT = 40;
 const MAX_VISIBLE = 12;
-const BASE_FOOTER_HINTS = [
-  '\u2191\u2193 navigate',
-  '\u21b5 open',
-  'esc close',
-];
+const BASE_FOOTER_HINTS = ['\u2191\u2193 navigate', '\u21b5 open', 'esc close'];
 
 const listStyle: React.CSSProperties = {
   maxHeight: `${ITEM_HEIGHT * MAX_VISIBLE}px`,
@@ -32,12 +28,7 @@ export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactEle
   return (
     <>
       <PaletteAnimations prefix="ss" />
-      <PickerOverlay
-        label="Symbol Search"
-        animPrefix="ss"
-        maxWidth="620px"
-        onClose={props.onClose}
-      >
+      <PickerOverlay label="Symbol Search" animPrefix="ss" maxWidth="620px" onClose={props.onClose}>
         <PickerInput
           inputRef={props.inputRef}
           prefix="@"
@@ -63,6 +54,43 @@ export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactEle
   );
 }
 
+function SymbolListContent({
+  emptyLabel,
+  matches,
+  onHover,
+  onSelect,
+  selectedIndex,
+}: {
+  emptyLabel: string;
+  matches: SymbolSearchModel['matches'];
+  onHover: (index: number) => void;
+  onSelect: SymbolSearchModel['handleSelect'];
+  selectedIndex: number;
+}): React.ReactElement {
+  if (matches.length === 0) {
+    return (
+      <div className="text-text-semantic-muted" style={emptyStateStyle}>
+        {emptyLabel}
+      </div>
+    );
+  }
+  return (
+    <>
+      {matches.map((match, index) => (
+        <SymbolItem
+          key={`${match.entry.filePath}:${match.entry.line}:${match.entry.name}`}
+          entry={match.entry}
+          isSelected={index === selectedIndex}
+          nameIndices={match.nameIndices}
+          onClick={() => onSelect(match.entry)}
+          onMouseEnter={() => onHover(index)}
+          pathIndices={match.pathIndices}
+        />
+      ))}
+    </>
+  );
+}
+
 function SymbolResultsList({
   emptyLabel,
   listRef,
@@ -78,27 +106,21 @@ function SymbolResultsList({
   onSelect: SymbolSearchModel['handleSelect'];
   selectedIndex: number;
 }): React.ReactElement {
-  if (matches.length === 0) {
-    return (
-      <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
-        <div className="text-text-semantic-muted" style={emptyStateStyle}>{emptyLabel}</div>
-      </div>
-    );
-  }
-
   return (
-    <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
-      {matches.map((match, index) => (
-        <SymbolItem
-          key={`${match.entry.filePath}:${match.entry.line}:${match.entry.name}`}
-          entry={match.entry}
-          isSelected={index === selectedIndex}
-          nameIndices={match.nameIndices}
-          onClick={() => onSelect(match.entry)}
-          onMouseEnter={() => onHover(index)}
-          pathIndices={match.pathIndices}
-        />
-      ))}
+    <div
+      id="ss-listbox"
+      role="listbox"
+      aria-label="Symbols"
+      ref={listRef as React.RefObject<HTMLDivElement | null>}
+      style={listStyle}
+    >
+      <SymbolListContent
+        emptyLabel={emptyLabel}
+        matches={matches}
+        onHover={onHover}
+        onSelect={onSelect}
+        selectedIndex={selectedIndex}
+      />
     </div>
   );
 }

@@ -45,7 +45,13 @@ interface ActiveStepProps {
   onDone: () => void;
 }
 
-function ActiveStep({ stepIndex, onNext, onBack, onSkip, onDone }: ActiveStepProps): React.ReactElement {
+function ActiveStep({
+  stepIndex,
+  onNext,
+  onBack,
+  onSkip,
+  onDone,
+}: ActiveStepProps): React.ReactElement {
   const anchorName = TOUR_ANCHORS[stepIndex];
   const anchorRect = useAnchorPosition(anchorName);
   return (

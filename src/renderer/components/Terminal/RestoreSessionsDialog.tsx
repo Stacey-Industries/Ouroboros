@@ -127,7 +127,11 @@ function DialogContent({
         <h2 id="restore-dialog-title" className="text-sm font-semibold text-text-semantic-primary">
           Restore previous terminals?
         </h2>
-        <button onClick={onDismiss} className="text-text-semantic-muted hover:text-text-semantic-primary" aria-label="Not now">
+        <button
+          onClick={onDismiss}
+          className="text-text-semantic-muted hover:text-text-semantic-primary"
+          aria-label="Not now"
+        >
           ✕
         </button>
       </div>
@@ -138,7 +142,12 @@ function DialogContent({
       </p>
       <div className="mb-4 max-h-48 overflow-y-auto rounded border border-border-subtle bg-surface-inset">
         {sessions.map((s) => (
-          <SessionRow key={s.id} session={s} selected={selected.has(s.id)} onToggle={() => onToggle(s.id)} />
+          <SessionRow
+            key={s.id}
+            session={s}
+            selected={selected.has(s.id)}
+            onToggle={() => onToggle(s.id)}
+          />
         ))}
       </div>
       <ActionButtons
@@ -164,13 +173,22 @@ export function RestoreSessionsDialog({
   function toggleSession(id: string): void {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay" role="dialog" aria-modal="true" aria-labelledby="restore-dialog-title">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="restore-dialog-title"
+    >
       <DialogContent
         sessions={sessions}
         selected={selected}

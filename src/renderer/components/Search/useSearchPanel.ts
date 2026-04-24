@@ -82,7 +82,12 @@ function applySearchResponse(
   s.setTruncated(res.truncated ?? false);
 }
 
-function resetSearch(s: Pick<SearchSetters, 'setResults' | 'setGroupedResults' | 'setError' | 'setTruncated' | 'setIsSearching'>): void {
+function resetSearch(
+  s: Pick<
+    SearchSetters,
+    'setResults' | 'setGroupedResults' | 'setError' | 'setTruncated' | 'setIsSearching'
+  >,
+): void {
   s.setResults([]);
   s.setGroupedResults(new Map());
   s.setError(null);
@@ -97,25 +102,31 @@ function useRunSearch(
   requestIdRef: React.MutableRefObject<number>,
   s: SearchSetters,
 ): (q: string, opts: SearchOptions) => void {
-  return useCallback((q: string, opts: SearchOptions) => {
-    if (q.length < MIN_QUERY_LENGTH || !projectRoot) {
-      resetSearch(s);
-      return;
-    }
-    requestIdRef.current += 1;
-    const thisId = requestIdRef.current;
-    s.setIsSearching(true);
-    s.setError(null);
-    void window.electronAPI.files.search(projectRoot, q, opts).then((res) => {
-      if (thisId !== requestIdRef.current) return;
-      applySearchResponse(res, s);
-    }).catch((err: unknown) => {
-      if (thisId !== requestIdRef.current) return;
-      s.setIsSearching(false);
-      s.setError(err instanceof Error ? err.message : 'Search failed');
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectRoot]);
+  return useCallback(
+    (q: string, opts: SearchOptions) => {
+      if (q.length < MIN_QUERY_LENGTH || !projectRoot) {
+        resetSearch(s);
+        return;
+      }
+      requestIdRef.current += 1;
+      const thisId = requestIdRef.current;
+      s.setIsSearching(true);
+      s.setError(null);
+      void window.electronAPI.files
+        .search(projectRoot, q, opts)
+        .then((res) => {
+          if (thisId !== requestIdRef.current) return;
+          applySearchResponse(res, s);
+        })
+        .catch((err: unknown) => {
+          if (thisId !== requestIdRef.current) return;
+          s.setIsSearching(false);
+          s.setError(err instanceof Error ? err.message : 'Search failed');
+        });
+       
+    },
+    [projectRoot],
+  );
 }
 
 // ── useScheduleSearch ─────────────────────────────────────────────────────────
@@ -124,13 +135,16 @@ function useScheduleSearch(
   debounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
   runSearch: (q: string, opts: SearchOptions) => void,
 ): (q: string, opts: SearchOptions) => void {
-  return useCallback((q: string, opts: SearchOptions) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      debounceRef.current = null;
-      runSearch(q, opts);
-    }, DEBOUNCE_MS);
-  }, [debounceRef, runSearch]);
+  return useCallback(
+    (q: string, opts: SearchOptions) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        runSearch(q, opts);
+      }, DEBOUNCE_MS);
+    },
+    [debounceRef, runSearch],
+  );
 }
 
 // ── useGlobSetters ────────────────────────────────────────────────────────────
@@ -140,21 +154,27 @@ function useGlobSetters(
   setOptions: React.Dispatch<React.SetStateAction<SearchOptions>>,
   scheduleSearch: (q: string, opts: SearchOptions) => void,
 ): { setIncludeGlob: (v: string) => void; setExcludeGlob: (v: string) => void } {
-  const setIncludeGlob = useCallback((glob: string) => {
-    setOptions((prev) => {
-      const next = { ...prev, includeGlob: glob || undefined };
-      scheduleSearch(query, next);
-      return next;
-    });
-  }, [query, scheduleSearch, setOptions]);
+  const setIncludeGlob = useCallback(
+    (glob: string) => {
+      setOptions((prev) => {
+        const next = { ...prev, includeGlob: glob || undefined };
+        scheduleSearch(query, next);
+        return next;
+      });
+    },
+    [query, scheduleSearch, setOptions],
+  );
 
-  const setExcludeGlob = useCallback((glob: string) => {
-    setOptions((prev) => {
-      const next = { ...prev, excludeGlob: glob || undefined };
-      scheduleSearch(query, next);
-      return next;
-    });
-  }, [query, scheduleSearch, setOptions]);
+  const setExcludeGlob = useCallback(
+    (glob: string) => {
+      setOptions((prev) => {
+        const next = { ...prev, excludeGlob: glob || undefined };
+        scheduleSearch(query, next);
+        return next;
+      });
+    },
+    [query, scheduleSearch, setOptions],
+  );
 
   return { setIncludeGlob, setExcludeGlob };
 }
@@ -173,24 +193,37 @@ export function useSearchPanel(projectRoot: string): UseSearchPanelReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
-  const s: SearchSetters = { setResults, setGroupedResults, setIsSearching, setError, setTruncated, setQueryState };
+  const s: SearchSetters = {
+    setResults,
+    setGroupedResults,
+    setIsSearching,
+    setError,
+    setTruncated,
+    setQueryState,
+  };
 
   const runSearch = useRunSearch(projectRoot, requestIdRef, s);
   const scheduleSearch = useScheduleSearch(debounceRef, runSearch);
   const { setIncludeGlob, setExcludeGlob } = useGlobSetters(query, setOptions, scheduleSearch);
 
-  const setQuery = useCallback((q: string) => {
-    setQueryState(q);
-    scheduleSearch(q, options);
-  }, [options, scheduleSearch]);
+  const setQuery = useCallback(
+    (q: string) => {
+      setQueryState(q);
+      scheduleSearch(q, options);
+    },
+    [options, scheduleSearch],
+  );
 
-  const setOption = useCallback(<K extends keyof SearchOptions>(key: K, value: SearchOptions[K]) => {
-    setOptions((prev) => {
-      const next = { ...prev, [key]: value };
-      scheduleSearch(query, next);
-      return next;
-    });
-  }, [query, scheduleSearch]);
+  const setOption = useCallback(
+    <K extends keyof SearchOptions>(key: K, value: SearchOptions[K]) => {
+      setOptions((prev) => {
+        const next = { ...prev, [key]: value };
+        scheduleSearch(query, next);
+        return next;
+      });
+    },
+    [query, scheduleSearch],
+  );
 
   const clearResults = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -202,6 +235,10 @@ export function useSearchPanel(projectRoot: string): UseSearchPanelReturn {
 
   return {
     state: { query, options, results, groupedResults, isSearching, error, truncated },
-    setQuery, setOption, setIncludeGlob, setExcludeGlob, clearResults,
+    setQuery,
+    setOption,
+    setIncludeGlob,
+    setExcludeGlob,
+    clearResults,
   };
 }

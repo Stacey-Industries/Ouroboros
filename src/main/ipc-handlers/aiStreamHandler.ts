@@ -64,17 +64,30 @@ function extractTextDelta(event: StreamJsonAssistantEvent): string {
 
 function killProcess(child: ChildProcess): void {
   try {
-    if (process.platform !== 'win32') { child.kill('SIGTERM'); return; }
+    if (process.platform !== 'win32') {
+      child.kill('SIGTERM');
+      return;
+    }
     if (child.pid) {
       const pid = child.pid;
       // eslint-disable-next-line security/detect-child-process -- PID is a numeric integer from child_process.spawn, not user input
       exec(`taskkill /T /F /PID ${pid}`, { timeout: 5000 }, () => {
-        try { child.kill(); } catch { /* already dead */ }
+        try {
+          child.kill();
+        } catch {
+          /* already dead */
+        }
       });
     } else {
-      try { child.kill(); } catch { /* already dead */ }
+      try {
+        child.kill();
+      } catch {
+        /* already dead */
+      }
     }
-  } catch { /* already dead */ }
+  } catch {
+    /* already dead */
+  }
 }
 
 function tryParseStreamLine(line: string): StreamJsonEvent | null {
@@ -84,7 +97,9 @@ function tryParseStreamLine(line: string): StreamJsonEvent | null {
     const parsed = JSON.parse(trimmed);
     if (parsed && typeof parsed.type === 'string') return parsed as StreamJsonEvent;
     return null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ── Stream state ──────────────────────────────────────────────────────────────
@@ -154,26 +169,37 @@ function onProcessClose(
 
 // ── Public handlers ───────────────────────────────────────────────────────────
 
-export function handleStreamInlineEdit(
-  event: IpcMainInvokeEvent,
-  req: InlineEditStreamRequest,
-): Promise<StreamResult> {
-  const { requestId } = req;
-  const sender = event.sender;
-  const prompt = buildPrompt(req);
-  const cwd = (getConfigValue('defaultProjectRoot') as string) || process.cwd();
+function spawnStreamChild(prompt: string, cwd: string, requestId: string): ReturnType<typeof spawn> {
   const { command, args } = buildStreamJsonArgs({ prompt, cwd });
-
   const child = spawn(command, args, {
     cwd,
     env: { ...process.env, TERM: 'xterm-256color' } as Record<string, string>,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
-  if (child.stdin) { child.stdin.write(prompt); child.stdin.end(); }
+  if (child.stdin) {
+    child.stdin.write(prompt);
+    child.stdin.end();
+  }
   activeStreams.set(requestId, child);
+  return child;
+}
+
+export function handleStreamInlineEdit(
+  event: IpcMainInvokeEvent,
+  req: InlineEditStreamRequest,
+): Promise<StreamResult> {
+  const { requestId } = req;
+  const prompt = buildPrompt(req);
+  const cwd = (getConfigValue('defaultProjectRoot') as string) || process.cwd();
+  const child = spawnStreamChild(prompt, cwd, requestId);
 
   const state: StreamState = {
-    requestId, sender, stdoutBuf: '', stderrBuf: '', finalText: '', emittedLength: 0,
+    requestId,
+    sender: event.sender,
+    stdoutBuf: '',
+    stderrBuf: '',
+    finalText: '',
+    emittedLength: 0,
   };
 
   return new Promise<StreamResult>((resolve) => {

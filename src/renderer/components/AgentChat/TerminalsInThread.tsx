@@ -8,9 +8,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import {
-  FOCUS_TERMINAL_SESSION_EVENT,
-} from '../../hooks/appEventNames';
+import { FOCUS_TERMINAL_SESSION_EVENT } from '../../hooks/appEventNames';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,9 +41,7 @@ async function resolveAll(sessionIds: string[]): Promise<LinkedTerminalInfo[]> {
 }
 
 function focusTerminal(sessionId: string): void {
-  window.dispatchEvent(
-    new CustomEvent(FOCUS_TERMINAL_SESSION_EVENT, { detail: { sessionId } }),
-  );
+  window.dispatchEvent(new CustomEvent(FOCUS_TERMINAL_SESSION_EVENT, { detail: { sessionId } }));
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -70,9 +66,7 @@ function TerminalRow({ info }: { info: LinkedTerminalInfo }): React.ReactElement
         {info.sessionId}
       </span>
       {info.lastLine && (
-        <span className="max-w-[40%] truncate text-text-semantic-muted">
-          {info.lastLine}
-        </span>
+        <span className="max-w-[40%] truncate text-text-semantic-muted">{info.lastLine}</span>
       )}
     </button>
   );
@@ -90,17 +84,29 @@ function useLinkedTerminals(threadId: string): LinkedTerminalInfo[] {
       fetchLinkedIds(threadId)
         .then((ids) => {
           if (cancelled) return;
-          if (ids.length === 0) { setTerminals([]); return; }
+          if (ids.length === 0) {
+            setTerminals([]);
+            return;
+          }
           resolveAll(ids)
-            .then((infos) => { if (!cancelled) setTerminals(infos); })
-            .catch(() => { /* non-fatal */ });
+            .then((infos) => {
+              if (!cancelled) setTerminals(infos);
+            })
+            .catch(() => {
+              /* non-fatal */
+            });
         })
-        .catch(() => { /* non-fatal */ });
+        .catch(() => {
+          /* non-fatal */
+        });
     }
 
     refresh();
     const cleanup = window.electronAPI.sessionCrud.onChanged(() => refresh());
-    return () => { cancelled = true; cleanup(); };
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
   }, [threadId]);
 
   return terminals;
@@ -135,7 +141,9 @@ export function TerminalsInThread({ threadId }: Props): React.ReactElement | nul
       {open && (
         <ul className="mt-1 space-y-px" role="list">
           {terminals.map((info) => (
-            <li key={info.sessionId}><TerminalRow info={info} /></li>
+            <li key={info.sessionId}>
+              <TerminalRow info={info} />
+            </li>
           ))}
         </ul>
       )}

@@ -334,8 +334,8 @@ describe('modelId — per-model training cutoff', () => {
     resetWarnedModelIdsForTests();
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     // Use real model lookups for per-model assertions in this describe block
-    vi.mocked(support.resolveModelCutoffDate).mockImplementation(
-      (ctx) => getModelCutoffDate((ctx as TriggerContext).modelId),
+    vi.mocked(support.resolveModelCutoffDate).mockImplementation((ctx) =>
+      getModelCutoffDate((ctx as TriggerContext).modelId),
     );
   });
   afterEach(() => {

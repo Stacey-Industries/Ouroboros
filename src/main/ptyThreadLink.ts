@@ -23,9 +23,11 @@ export function linkSessionToThread(
 }
 
 /** Return the threadId linked to a session, or null if not linked. */
-export function getLinkedThread(
-  sessionId: string,
-): { success: boolean; threadId: string | null; error?: string } {
+export function getLinkedThread(sessionId: string): {
+  success: boolean;
+  threadId: string | null;
+  error?: string;
+} {
   const session = sessions.get(sessionId);
   if (!session) {
     return { success: false, threadId: null, error: `Session ${sessionId} not found` };

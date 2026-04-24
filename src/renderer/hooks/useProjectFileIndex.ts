@@ -33,12 +33,15 @@ export function useProjectFileIndex({
   // Stabilize roots array reference — callers often pass inline `[projectRoot]`
   // which creates a new array every render, causing infinite re-scan loops.
   const rootsKey = roots.join('\0');
-  // eslint-disable-next-line react-compiler/react-compiler
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableRoots = useMemo(() => roots, [rootsKey]);
 
   const scanRoots = useCallback(async () => {
-    if (!enabled || stableRoots.length === 0) { setAllFiles([]); return; }
+    if (!enabled || stableRoots.length === 0) {
+      setAllFiles([]);
+      return;
+    }
     const hasElectron = typeof window !== 'undefined' && 'electronAPI' in window;
     if (!hasElectron) return;
 
@@ -47,13 +50,20 @@ export function useProjectFileIndex({
     try {
       const files = await collectAllFiles(stableRoots);
       if (generation === generationRef.current) setAllFiles(files);
-    } catch { /* silently ignore */ }
-    finally { if (generation === generationRef.current) setIsIndexing(false); }
+    } catch {
+      /* silently ignore */
+    } finally {
+      if (generation === generationRef.current) setIsIndexing(false);
+    }
   }, [enabled, stableRoots]);
 
-  useEffect(() => { void scanRoots(); }, [scanRoots]);
+  useEffect(() => {
+    void scanRoots();
+  }, [scanRoots]);
 
-  const refresh = useCallback(() => { void scanRoots(); }, [scanRoots]);
+  const refresh = useCallback(() => {
+    void scanRoots();
+  }, [scanRoots]);
 
   return useMemo(() => ({ allFiles, isIndexing, refresh }), [allFiles, isIndexing, refresh]);
 }
@@ -96,13 +106,19 @@ interface WalkOptions {
 }
 
 function toFileEntry(itemPath: string, itemName: string, rootPath: string): FileEntry {
-  const relativePath = itemPath.replace(rootPath, '').replace(/^[\\/]/, '').replace(/\\/g, '/');
+  const relativePath = itemPath
+    .replace(rootPath, '')
+    .replace(/^[\\/]/, '')
+    .replace(/\\/g, '/');
   const parts = relativePath.split('/');
   const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
   return { path: itemPath, relativePath, name: itemName, dir, size: 0 };
 }
 
-async function walkItems(items: Array<{ path: string; name: string; isDirectory: boolean }>, opts: WalkOptions): Promise<void> {
+async function walkItems(
+  items: Array<{ path: string; name: string; isDirectory: boolean }>,
+  opts: WalkOptions,
+): Promise<void> {
   for (const item of items) {
     if (opts.files.length >= MAX_FILES) return;
     if (item.isDirectory && !SKIP_DIRS.has(item.name)) {
@@ -122,5 +138,7 @@ async function walkDirectory(opts: WalkOptions): Promise<void> {
     const result = await window.electronAPI.files.readDir(opts.dirPath);
     if (!result.success || !result.items) return;
     await walkItems(result.items, opts);
-  } catch { /* skip unreadable dirs */ }
+  } catch {
+    /* skip unreadable dirs */
+  }
 }

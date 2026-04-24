@@ -21,11 +21,7 @@ export interface BranchTreeViewProps {
 
 function SideChatIcon(): React.ReactElement {
   return (
-    <span
-      className="shrink-0 text-text-semantic-muted"
-      title="Side chat"
-      aria-label="Side chat"
-    >
+    <span className="shrink-0 text-text-semantic-muted" title="Side chat" aria-label="Side chat">
       &#x1F4AC;
     </span>
   );
@@ -70,8 +66,16 @@ function dispatchCompare(leftThreadId: string, rightThreadId: string): void {
 }
 
 function NodeSelectButton({
-  node, isActive, label, onSelect,
-}: { node: BranchNode; isActive: boolean; label: string; onSelect: (id: string) => void }): React.ReactElement {
+  node,
+  isActive,
+  label,
+  onSelect,
+}: {
+  node: BranchNode;
+  isActive: boolean;
+  label: string;
+  onSelect: (id: string) => void;
+}): React.ReactElement {
   return (
     <button
       className={[
@@ -111,7 +115,13 @@ function TreeNodeRow({ node, activeThreadId, depth, onSelect }: TreeNodeProps): 
         )}
       </div>
       {node.children.map((child) => (
-        <TreeNodeRow key={child.id} node={child} activeThreadId={activeThreadId} depth={depth + 1} onSelect={onSelect} />
+        <TreeNodeRow
+          key={child.id}
+          node={child}
+          activeThreadId={activeThreadId}
+          depth={depth + 1}
+          onSelect={onSelect}
+        />
       ))}
     </>
   );
@@ -153,9 +163,12 @@ function RootRow({
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-function useBranchTree(
-  rootThreadId: string,
-): { nodes: BranchNode[]; loading: boolean; error: string | null; reload: () => void } {
+function useBranchTree(rootThreadId: string): {
+  nodes: BranchNode[];
+  loading: boolean;
+  error: string | null;
+  reload: () => void;
+} {
   const [nodes, setNodes] = useState<BranchNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

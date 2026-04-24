@@ -15,19 +15,35 @@ export const OPEN_SUBAGENT_EVENT = OPEN_SUBAGENT_PANEL_EVENT;
 
 interface OpenSubagentPanelDetail {
   toolCallId: string;
+  parentSessionId: string;
+  timestamp: number;
 }
 
-function OpenSubagentLink({ toolCallId }: { toolCallId: string }): React.ReactElement<unknown> {
+function OpenSubagentLink({
+  toolCallId,
+  parentSessionId,
+  timestamp,
+}: {
+  toolCallId: string;
+  parentSessionId: string;
+  timestamp: number;
+}): React.ReactElement<unknown> {
   const handleClick = useCallback(() => {
-    const detail: OpenSubagentPanelDetail = { toolCallId };
+    const detail: OpenSubagentPanelDetail = { toolCallId, parentSessionId, timestamp };
     window.dispatchEvent(new CustomEvent(OPEN_SUBAGENT_EVENT, { detail }));
-  }, [toolCallId]);
+  }, [parentSessionId, timestamp, toolCallId]);
 
   return (
     <div className="mx-3 mb-2 ml-8">
       <button
         className="text-[11px] underline transition-colors"
-        style={{ color: 'var(--interactive-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        style={{
+          color: 'var(--interactive-accent)',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+        }}
         onClick={handleClick}
         aria-label="Open subagent transcript"
       >
@@ -41,15 +57,30 @@ function OpenSubagentLink({ toolCallId }: { toolCallId: string }): React.ReactEl
 
 interface ToolCallRowProps {
   call: ToolCallEvent;
+  parentSessionId: string;
   expanded: boolean;
   onToggle: (id: string) => void;
 }
 
-function ExpandedSection({ call }: { call: ToolCallEvent }): React.ReactElement<unknown> | null {
+function ExpandedSection({
+  call,
+  parentSessionId,
+}: {
+  call: ToolCallEvent;
+  parentSessionId: string;
+}): React.ReactElement<unknown> | null {
   const isTask = call.toolName === 'Task';
   const hasOutput = call.output !== undefined && call.output.length > 0;
   const hasSubTools = call.subTools !== undefined && call.subTools.length > 0;
-  if (isTask) return <OpenSubagentLink toolCallId={call.id} />;
+  if (isTask) {
+    return (
+      <OpenSubagentLink
+        toolCallId={call.id}
+        parentSessionId={parentSessionId}
+        timestamp={call.timestamp}
+      />
+    );
+  }
   if (hasOutput) return <ExpandedOutput call={call} />;
   if (hasSubTools) return <SubToolList subTools={call.subTools!} />;
   if (call.status !== 'pending') return <EmptyOutput />;
@@ -58,6 +89,7 @@ function ExpandedSection({ call }: { call: ToolCallEvent }): React.ReactElement<
 
 export const ToolCallRow = memo(function ToolCallRow({
   call,
+  parentSessionId,
   expanded,
   onToggle,
 }: ToolCallRowProps): React.ReactElement<unknown> {
@@ -66,8 +98,13 @@ export const ToolCallRow = memo(function ToolCallRow({
   const isExpandable = isTask || hasOutput || call.subTools?.length || call.status !== 'pending';
   return (
     <div>
-      <ToolCallRowHeader call={call} expanded={expanded} isExpandable={!!isExpandable} onToggle={onToggle} />
-      {expanded && <ExpandedSection call={call} />}
+      <ToolCallRowHeader
+        call={call}
+        expanded={expanded}
+        isExpandable={!!isExpandable}
+        onToggle={onToggle}
+      />
+      {expanded && <ExpandedSection call={call} parentSessionId={parentSessionId} />}
     </div>
   );
 });
@@ -99,9 +136,17 @@ function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement<u
 
 function SubToolRow({ sub }: { sub: SubToolCallEvent }): React.ReactElement<unknown> {
   const icon = sub.status === 'pending' ? '◌' : sub.status === 'success' ? '✓' : '✗';
-  const color = sub.status === 'success' ? 'var(--status-success)' : sub.status === 'error' ? 'var(--status-error)' : 'var(--text-faint)';
+  const color =
+    sub.status === 'success'
+      ? 'var(--status-success)'
+      : sub.status === 'error'
+        ? 'var(--status-error)'
+        : 'var(--text-faint)';
   return (
-    <div className="flex items-center gap-1.5 text-[10px]" style={{ fontFamily: 'var(--font-mono)' }}>
+    <div
+      className="flex items-center gap-1.5 text-[10px]"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
       <span style={{ color }}>{icon}</span>
       <span className="text-text-semantic-primary">{sub.toolName}</span>
       {sub.input && <span className="truncate text-text-semantic-muted">{sub.input}</span>}
@@ -113,9 +158,14 @@ function SubToolList({ subTools }: { subTools: SubToolCallEvent[] }): React.Reac
   return (
     <div
       className="mx-3 mb-2 ml-8 rounded px-2 py-1.5 space-y-0.5"
-      style={{ background: 'color-mix(in srgb, var(--surface-base) 80%, var(--surface-raised))', border: '1px solid var(--border-subtle)' }}
+      style={{
+        background: 'color-mix(in srgb, var(--surface-base) 80%, var(--surface-raised))',
+        border: '1px solid var(--border-subtle)',
+      }}
     >
-      {subTools.map((sub) => <SubToolRow key={sub.id} sub={sub} />)}
+      {subTools.map((sub) => (
+        <SubToolRow key={sub.id} sub={sub} />
+      ))}
     </div>
   );
 }

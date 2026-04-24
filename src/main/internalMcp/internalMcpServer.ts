@@ -1,27 +1,27 @@
-import type { IncomingMessage, ServerResponse } from 'http'
-import http from 'http'
-import type { AddressInfo } from 'net'
+import type { IncomingMessage, ServerResponse } from 'http';
+import http from 'http';
+import type { AddressInfo } from 'net';
 
-import { findTool,getActiveTools } from './internalMcpTools'
-import type { InternalMcpServerHandle,InternalMcpServerOptions } from './internalMcpTypes'
+import { findTool, getActiveTools } from './internalMcpTools';
+import type { InternalMcpServerHandle, InternalMcpServerOptions } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
 // JSON-RPC helpers
 // ---------------------------------------------------------------------------
 
 interface JsonRpcRequest {
-  jsonrpc: '2.0'
-  id?: string | number | null
-  method: string
-  params?: Record<string, unknown>
+  jsonrpc: '2.0';
+  id?: string | number | null;
+  method: string;
+  params?: Record<string, unknown>;
 }
 
 function rpcSuccess(id: string | number | null | undefined, result: unknown): string {
-  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, result })
+  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, result });
 }
 
 function rpcError(id: string | number | null | undefined, code: number, message: string): string {
-  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, error: { code, message } })
+  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
 }
 
 // ---------------------------------------------------------------------------
@@ -30,11 +30,11 @@ function rpcError(id: string | number | null | undefined, code: number, message:
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer) => chunks.push(chunk))
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')))
-    req.on('error', reject)
-  })
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+    req.on('error', reject);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -45,25 +45,25 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': '*',
-  })
+  });
 
   // Send initialized notification immediately
-  res.write('data: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n')
+  res.write('data: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n');
 
   // Heartbeat every 30 seconds to keep the connection alive
   const heartbeat = setInterval(() => {
     try {
-      res.write(': heartbeat\n\n')
+      res.write(': heartbeat\n\n');
     } catch {
-      clearInterval(heartbeat)
+      clearInterval(heartbeat);
     }
-  }, 30_000)
+  }, 30_000);
 
   req.on('close', () => {
-    clearInterval(heartbeat)
-  })
+    clearInterval(heartbeat);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -74,22 +74,22 @@ async function parseRpcRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<{ rpc: JsonRpcRequest; id: string | number | null } | null> {
-  let body: string
+  let body: string;
   try {
-    body = await readBody(req)
+    body = await readBody(req);
   } catch {
-    res.writeHead(400, { 'Content-Type': 'application/json' })
-    res.end(rpcError(null, -32700, 'Parse error: could not read request body'))
-    return null
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(rpcError(null, -32700, 'Parse error: could not read request body'));
+    return null;
   }
 
   try {
-    const rpc = JSON.parse(body) as JsonRpcRequest
-    return { rpc, id: rpc.id ?? null }
+    const rpc = JSON.parse(body) as JsonRpcRequest;
+    return { rpc, id: rpc.id ?? null };
   } catch {
-    res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(rpcError(null, -32700, 'Parse error: invalid JSON'))
-    return null
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(rpcError(null, -32700, 'Parse error: invalid JSON'));
+    return null;
   }
 }
 
@@ -104,20 +104,22 @@ async function dispatchRpcMethod(
         protocolVersion: '2024-11-05',
         capabilities: { tools: {} },
         serverInfo: { name: 'ouroboros', version: '1.0.0' },
-      })
+      });
 
     case 'tools/list': {
       const tools = getActiveTools().map((t) => ({
-        name: t.name, description: t.description, inputSchema: t.inputSchema,
-      }))
-      return rpcSuccess(id, { tools })
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema,
+      }));
+      return rpcSuccess(id, { tools });
     }
 
     case 'tools/call':
-      return handleToolCall(rpc, id, workspaceRoot)
+      return handleToolCall(rpc, id, workspaceRoot);
 
     default:
-      return rpcError(id, -32601, `Method not found: ${rpc.method}`)
+      return rpcError(id, -32601, `Method not found: ${rpc.method}`);
   }
 }
 
@@ -126,40 +128,47 @@ async function handleToolCall(
   id: string | number | null,
   workspaceRoot: string,
 ): Promise<string> {
-  const params = (rpc.params ?? {}) as { name?: string; arguments?: Record<string, unknown> }
-  const toolName = params.name
-  const toolArgs = params.arguments ?? {}
+  const params = (rpc.params ?? {}) as { name?: string; arguments?: Record<string, unknown> };
+  const toolName = params.name;
+  const toolArgs = params.arguments ?? {};
 
-  if (!toolName) return rpcError(id, -32602, 'Invalid params: missing tool name')
+  if (!toolName) return rpcError(id, -32602, 'Invalid params: missing tool name');
 
-  const tool = findTool(toolName)
+  const tool = findTool(toolName);
   if (!tool) {
-    return rpcSuccess(id, { content: [{ type: 'text', text: `Unknown tool: ${toolName}` }], isError: true })
+    return rpcSuccess(id, {
+      content: [{ type: 'text', text: `Unknown tool: ${toolName}` }],
+      isError: true,
+    });
   }
 
   try {
-    const text = await tool.handler(toolArgs, workspaceRoot)
-    return rpcSuccess(id, { content: [{ type: 'text', text }], isError: false })
+    const text = await tool.handler(toolArgs, workspaceRoot);
+    return rpcSuccess(id, { content: [{ type: 'text', text }], isError: false });
   } catch (toolErr) {
-    const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr)
-    return rpcSuccess(id, { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true })
+    const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr);
+    return rpcSuccess(id, { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true });
   }
 }
 
-async function handleJsonRpc(req: IncomingMessage, res: ServerResponse, workspaceRoot: string): Promise<void> {
-  const parsed = await parseRpcRequest(req, res)
-  if (!parsed) return
+async function handleJsonRpc(
+  req: IncomingMessage,
+  res: ServerResponse,
+  workspaceRoot: string,
+): Promise<void> {
+  const parsed = await parseRpcRequest(req, res);
+  if (!parsed) return;
 
-  const { rpc, id } = parsed
+  const { rpc, id } = parsed;
 
   try {
-    const responseBody = await dispatchRpcMethod(rpc, id, workspaceRoot)
-    res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(responseBody)
+    const responseBody = await dispatchRpcMethod(rpc, id, workspaceRoot);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(responseBody);
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err)
-    res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(rpcError(id, -32603, `Internal error: ${errMsg}`))
+    const errMsg = err instanceof Error ? err.message : String(err);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(rpcError(id, -32603, `Internal error: ${errMsg}`));
   }
 }
 
@@ -171,35 +180,35 @@ function createRequestHandler(
   workspaceRoot: string,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req: IncomingMessage, res: ServerResponse) => {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(204)
-      res.end()
-      return
+      res.writeHead(204);
+      res.end();
+      return;
     }
 
     if (req.method === 'GET' && req.url === '/sse') {
-      handleSse(req, res)
-      return
+      handleSse(req, res);
+      return;
     }
 
     if (req.method === 'POST' && req.url === '/message') {
-      await handleJsonRpc(req, res, workspaceRoot)
-      return
+      await handleJsonRpc(req, res, workspaceRoot);
+      return;
     }
 
     if (req.method === 'GET' && req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }))
-      return
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }));
+      return;
     }
 
-    res.writeHead(404)
-    res.end()
-  }
+    res.writeHead(404);
+    res.end();
+  };
 }
 
 /**
@@ -208,32 +217,32 @@ function createRequestHandler(
 export async function startInternalMcpServer(
   options: InternalMcpServerOptions,
 ): Promise<InternalMcpServerHandle> {
-  const { workspaceRoot, port = 0 } = options
+  const { workspaceRoot, port = 0 } = options;
 
   return new Promise((resolve, reject) => {
-    const server = http.createServer(createRequestHandler(workspaceRoot))
+    const server = http.createServer(createRequestHandler(workspaceRoot));
 
     server.on('error', (err) => {
-      reject(err)
-    })
+      reject(err);
+    });
 
     // Bind to localhost only — never expose to network
     server.listen(port, '127.0.0.1', () => {
-      const address = server.address() as AddressInfo
-      const actualPort = address.port
+      const address = server.address() as AddressInfo;
+      const actualPort = address.port;
 
       const handle: InternalMcpServerHandle = {
         port: actualPort,
         stop: () =>
           new Promise<void>((res, rej) => {
             server.close((err) => {
-              if (err) rej(err)
-              else res()
-            })
+              if (err) rej(err);
+              else res();
+            });
           }),
-      }
+      };
 
-      resolve(handle)
-    })
-  })
+      resolve(handle);
+    });
+  });
 }

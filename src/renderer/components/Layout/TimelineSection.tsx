@@ -4,7 +4,7 @@
  * Uses the existing `git:log` IPC endpoint to fetch commits.
  */
 
-import React, { useCallback,useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useProject } from '../../contexts/ProjectContext';
 import type { CommitEntry } from '../../types/electron-git';
@@ -36,10 +36,24 @@ interface CommitItemProps {
   commit: CommitEntry;
 }
 
-const COMMIT_HASH_STYLE: React.CSSProperties = { flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '0.6rem' };
-const COMMIT_MSG_STYLE: React.CSSProperties = { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 };
+const COMMIT_HASH_STYLE: React.CSSProperties = {
+  flexShrink: 0,
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.6rem',
+};
+const COMMIT_MSG_STYLE: React.CSSProperties = {
+  flex: 1,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  minWidth: 0,
+};
 const COMMIT_DATE_STYLE: React.CSSProperties = { marginLeft: 'auto', fontSize: '0.6rem' };
-const COMMIT_ROW_STYLE: React.CSSProperties = { padding: '3px 8px', fontSize: '0.6875rem', fontFamily: 'var(--font-ui)' };
+const COMMIT_ROW_STYLE: React.CSSProperties = {
+  padding: '3px 8px',
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-ui)',
+};
 
 function CommitItem({ commit }: CommitItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -49,17 +63,28 @@ function CommitItem({ commit }: CommitItemProps): React.ReactElement {
     e.currentTarget.style.backgroundColor = 'transparent';
   }, []);
   return (
-    <div className="flex flex-col cursor-pointer select-none border-b border-border-semantic"
-      style={COMMIT_ROW_STYLE} onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}
+    <div
+      className="flex flex-col cursor-pointer select-none border-b border-border-semantic"
+      style={COMMIT_ROW_STYLE}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
       title={`${commit.hash}\n${commit.author}\n${commit.date}\n\n${commit.message}`}
     >
       <div className="flex items-center gap-1.5">
-        <span className="text-text-semantic-faint" style={COMMIT_HASH_STYLE}>{commit.hash.slice(0, 7)}</span>
-        <span className="text-text-semantic-muted" style={COMMIT_MSG_STYLE}>{commit.message}</span>
+        <span className="text-text-semantic-faint" style={COMMIT_HASH_STYLE}>
+          {commit.hash.slice(0, 7)}
+        </span>
+        <span className="text-text-semantic-muted" style={COMMIT_MSG_STYLE}>
+          {commit.message}
+        </span>
       </div>
       <div className="flex items-center gap-1.5" style={{ marginTop: '1px' }}>
-        <span className="text-text-semantic-faint" style={{ fontSize: '0.6rem' }}>{commit.author}</span>
-        <span className="text-text-semantic-faint" style={COMMIT_DATE_STYLE}>{relativeTime(commit.date)}</span>
+        <span className="text-text-semantic-faint" style={{ fontSize: '0.6rem' }}>
+          {commit.author}
+        </span>
+        <span className="text-text-semantic-faint" style={COMMIT_DATE_STYLE}>
+          {relativeTime(commit.date)}
+        </span>
       </div>
     </div>
   );
@@ -86,7 +111,10 @@ function useFileCommits(projectRoot: string | null, filePath: string | undefined
   const [commits, setCommits] = useState<CommitEntry[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (!hasElectronAPI() || !projectRoot || !filePath) { setCommits([]); return; }
+    if (!hasElectronAPI() || !projectRoot || !filePath) {
+      setCommits([]);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     void window.electronAPI.git.log(projectRoot, filePath).then((result) => {
@@ -94,7 +122,9 @@ function useFileCommits(projectRoot: string | null, filePath: string | undefined
       setLoading(false);
       setCommits(result.success && result.commits ? result.commits : []);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [projectRoot, filePath]);
   return { commits, loading };
 }
@@ -110,7 +140,9 @@ export function TimelineSection(): React.ReactElement {
 
   return (
     <div className="flex flex-col">
-      {commits.map((commit) => <CommitItem key={commit.hash} commit={commit} />)}
+      {commits.map((commit) => (
+        <CommitItem key={commit.hash} commit={commit} />
+      ))}
     </div>
   );
 }

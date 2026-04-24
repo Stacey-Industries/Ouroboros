@@ -48,7 +48,10 @@ interface ToolInputPreviewProps {
   input: Record<string, unknown>;
 }
 
-export function ToolInputPreview({ toolName, input }: ToolInputPreviewProps): React.ReactElement<unknown> {
+export function ToolInputPreview({
+  toolName,
+  input,
+}: ToolInputPreviewProps): React.ReactElement<unknown> {
   const filePath = extractString(input, ['file_path', 'filePath', 'path']);
   const command = extractString(input, ['command']);
   const content = extractString(input, ['content', 'new_string', 'newString']);
@@ -101,7 +104,13 @@ function OldStringRow({ oldString }: { oldString: string }): React.ReactElement<
   );
 }
 
-function ContentRow({ content, isEdit }: { content: string; isEdit: boolean }): React.ReactElement<unknown> {
+function ContentRow({
+  content,
+  isEdit,
+}: {
+  content: string;
+  isEdit: boolean;
+}): React.ReactElement<unknown> {
   return (
     <div>
       <span className="font-semibold text-text-semantic-muted">

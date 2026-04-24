@@ -30,9 +30,13 @@ function useInstallHandler(
   const [installing, setInstalling] = useState(false);
   function handleInstall(): void {
     setInstalling(true);
-    onInstall(entry.id, entry.title).catch(() => {
-      /* errors are surfaced via the onInstall callback's own toast logic */
-    }).finally(() => { setInstalling(false); });
+    onInstall(entry.id, entry.title)
+      .catch(() => {
+        /* errors are surfaced via the onInstall callback's own toast logic */
+      })
+      .finally(() => {
+        setInstalling(false);
+      });
   }
   return [installing, handleInstall];
 }
@@ -51,9 +55,7 @@ export function BundleCard({ entry, onInstall }: BundleCardProps): React.ReactEl
           <span className={`text-xs px-1.5 py-0.5 rounded font-mono shrink-0 ${badgeClass}`}>
             {entry.kind}
           </span>
-          <span className="text-text-semantic-faint text-xs shrink-0">
-            v{entry.version}
-          </span>
+          <span className="text-text-semantic-faint text-xs shrink-0">v{entry.version}</span>
         </div>
         <p className="text-text-semantic-secondary text-xs line-clamp-2 mb-0.5">
           {entry.description}

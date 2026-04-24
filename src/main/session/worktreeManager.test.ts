@@ -50,7 +50,7 @@ vi.mock('node:fs', async (importOriginal) => {
 
 // ─── Import SUT after mocks ───────────────────────────────────────────────────
 
-import { createWorktreeManager,LowDiskError } from './worktreeManager';
+import { createWorktreeManager, LowDiskError } from './worktreeManager';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -121,9 +121,7 @@ describe('WorktreeManager.remove', () => {
 
   it('calls git worktree remove --force', async () => {
     // First call: git rev-parse --git-common-dir, second: git worktree remove
-    mockExecFile
-      .mockReturnValueOnce('C:\\repos\\myproject\\.git')
-      .mockReturnValueOnce('');
+    mockExecFile.mockReturnValueOnce('C:\\repos\\myproject\\.git').mockReturnValueOnce('');
 
     const manager = createWorktreeManager();
     await manager.remove('C:\\repos\\.ouroboros\\worktrees\\sess-1');
@@ -152,9 +150,9 @@ describe('WorktreeManager.remove', () => {
     mockExecFile.mockReturnValueOnce(err);
 
     const manager = createWorktreeManager();
-    await expect(
-      manager.remove('C:\\repos\\.ouroboros\\worktrees\\sess-1'),
-    ).rejects.toThrow('fatal git error');
+    await expect(manager.remove('C:\\repos\\.ouroboros\\worktrees\\sess-1')).rejects.toThrow(
+      'fatal git error',
+    );
   });
 });
 

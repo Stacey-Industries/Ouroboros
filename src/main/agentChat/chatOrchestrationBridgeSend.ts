@@ -1,20 +1,17 @@
-/**
- * chatOrchestrationBridgeSend.ts — Task send flow helpers for the orchestration bridge.
- *
- * Extracted from chatOrchestrationBridge.ts to keep file line counts under the ESLint limit.
- * Handles task creation, linking, context building, and start flow.
- */
+/** chatOrchestrationBridgeSend.ts — Task send flow. Low-level helpers in chatOrchestrationBridgeSendHelpers.ts. */
 
 import { beginChatSessionLaunch } from '../hooks';
 import log from '../logger';
 import { captureHeadHash } from './chatOrchestrationBridgeGit';
 import { startIncrementalFlush, stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
 import {
+  failPendingSend,
+  inheritExistingLinkFields,
+} from './chatOrchestrationBridgeSendHelpers';
+import {
   buildAgentChatOrchestrationLink,
   buildAssistantMessageId,
-  buildSendFailureResult,
   buildSendSuccessResult,
-  createOrchestrationFailure,
   mapOrchestrationStatusToAgentChatStatus,
   persistThreadLinkage,
 } from './chatOrchestrationBridgeSupport';
@@ -28,53 +25,14 @@ import type { AgentChatThreadStore } from './threadStore';
 import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatOrchestrationLink, AgentChatSendResult } from './types';
 
+export { failPendingSend } from './chatOrchestrationBridgeSendHelpers';
+
 type CreateTaskResult = Awaited<ReturnType<OrchestrationClient['createTask']>>;
 type StartTaskResult = Awaited<ReturnType<OrchestrationClient['startTask']>>;
 
 // ---------------------------------------------------------------------------
-// Fail helper
-// ---------------------------------------------------------------------------
-
-export async function failPendingSend(args: {
-  error: string;
-  link?: AgentChatOrchestrationLink;
-  messageId?: string;
-  thread?: PreparedSend['thread'];
-  threadStore: AgentChatThreadStore;
-}): Promise<AgentChatSendResult> {
-  if (!args.thread || !args.messageId) {
-    return buildSendFailureResult({ error: args.error, orchestration: args.link });
-  }
-  const thread = await persistThreadLinkage({
-    error: createOrchestrationFailure(args.error),
-    link: args.link,
-    messageId: args.messageId,
-    status: 'failed',
-    thread: args.thread,
-    threadStore: args.threadStore,
-  });
-  return buildSendFailureResult({
-    error: args.error,
-    messageId: args.messageId,
-    orchestration: args.link,
-    thread,
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Task creation / linkage
 // ---------------------------------------------------------------------------
-
-function inheritExistingLinkFields(
-  link: AgentChatOrchestrationLink,
-  existing: AgentChatOrchestrationLink,
-): void {
-  if (!link.claudeSessionId && existing.claudeSessionId)
-    link.claudeSessionId = existing.claudeSessionId;
-  if (!link.codexThreadId && existing.codexThreadId) link.codexThreadId = existing.codexThreadId;
-  if (!link.model && existing.model) link.model = existing.model;
-  if (!link.effort && existing.effort) link.effort = existing.effort;
-}
 
 export async function persistCreatedLink(args: {
   created: CreateTaskResult;
@@ -243,25 +201,22 @@ type ValidCreated = CreateTaskResult & {
   session: NonNullable<CreateTaskResult['session']>;
 };
 
+type CreateAndLinkResult =
+  | { validCreated: ValidCreated; linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] } }
+  | AgentChatSendResult;
+
 async function createAndLinkTask(args: {
   orchestration: OrchestrationClient;
   pending: PreparedSend;
   threadStore: AgentChatThreadStore;
   et0: number;
-}): Promise<
-  | {
-      validCreated: ValidCreated;
-      linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] };
-    }
-  | AgentChatSendResult
-> {
+}): Promise<CreateAndLinkResult> {
   const preSnapshotPromise = captureHeadHash(args.pending.thread.workspaceRoot);
   const et1 = Date.now();
   const created = await args.orchestration.createTask(args.pending.taskRequest);
   log.info('createTask:', Date.now() - et1, 'ms');
   const preSnapshotHash = await preSnapshotPromise;
   log.info('total up to createTask:', Date.now() - args.et0, 'ms');
-
   if (!created.success || !created.taskId || !created.session) {
     log.error('createTask failed:', created.error);
     return failPendingSend({
@@ -271,13 +226,8 @@ async function createAndLinkTask(args: {
       threadStore: args.threadStore,
     });
   }
-
   const et2 = Date.now();
-  const linked = await persistCreatedLink({
-    created,
-    pending: args.pending,
-    threadStore: args.threadStore,
-  });
+  const linked = await persistCreatedLink({ created, pending: args.pending, threadStore: args.threadStore });
   log.info('persistCreatedLink:', Date.now() - et2, 'ms');
   if (preSnapshotHash) linked.link.preSnapshotHash = preSnapshotHash;
   return { validCreated: created as ValidCreated, linked };
@@ -296,7 +246,7 @@ async function abortCancelledTask(args: {
     thread: args.linked.thread,
     threadStore: args.threadStore,
   });
-  return buildSendFailureResult({ error: 'Cancelled by user.' });
+  return { success: false, error: 'Cancelled by user.' };
 }
 
 export async function executePendingSend(args: {
@@ -324,7 +274,13 @@ export async function executePendingSend(args: {
   }
 
   const assistantMessageId = buildAssistantMessageId(validCreated.taskId);
-  const streamCtx = buildStreamContext({ pending: args.pending, created: validCreated, link: linked.link, assistantMessageId, sendStartedAt: et0 });
+  const streamCtx = buildStreamContext({
+    pending: args.pending,
+    created: validCreated,
+    link: linked.link,
+    assistantMessageId,
+    sendStartedAt: et0,
+  });
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 
   // Signal hooks.ts to suppress lifecycle events until synthetic agent_start fires.

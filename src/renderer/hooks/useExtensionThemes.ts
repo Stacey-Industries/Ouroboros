@@ -6,64 +6,66 @@
  * install/uninstall events from the extension store.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react';
 
-import type { Theme } from '../themes'
-import { registerExtensionTheme, themes,unregisterExtensionTheme } from '../themes'
+import type { Theme } from '../themes';
+import { registerExtensionTheme, themes, unregisterExtensionTheme } from '../themes';
 
 /** DOM event name dispatched after extension install/uninstall/toggle. */
-export const EXTENSION_THEMES_CHANGED_EVENT = 'agent-ide:extension-themes-changed'
+export const EXTENSION_THEMES_CHANGED_EVENT = 'agent-ide:extension-themes-changed';
 
 /**
  * Returns a live array of extension theme objects registered with the theme system.
  * Automatically refreshes when extensions are installed or uninstalled.
  */
 export function useExtensionThemes(): Theme[] {
-  const [extensionThemes, setExtensionThemes] = useState<Theme[]>([])
+  const [extensionThemes, setExtensionThemes] = useState<Theme[]>([]);
 
   const loadThemes = useCallback(async () => {
-    const api = window.electronAPI?.extensionStore
-    if (!api?.getThemeContributions) return
+    const api = window.electronAPI?.extensionStore;
+    if (!api?.getThemeContributions) return;
 
     try {
-      const result = await api.getThemeContributions()
-      if (!result.success || !result.themes) return
+      const result = await api.getThemeContributions();
+      if (!result.success || !result.themes) return;
 
       // Unregister any previously registered extension themes
-      const extThemeIds = Object.keys(themes).filter((id) => id.startsWith('ext:'))
+      const extThemeIds = Object.keys(themes).filter((id) => id.startsWith('ext:'));
       for (const id of extThemeIds) {
-        unregisterExtensionTheme(id)
+        unregisterExtensionTheme(id);
       }
 
       // Register the new set
-      const loaded: Theme[] = []
+      const loaded: Theme[] = [];
       for (const t of result.themes) {
         const theme: Theme = {
           id: t.id,
           name: t.name,
           fontFamily: t.fontFamily,
           colors: t.colors,
-        }
-        registerExtensionTheme(theme)
-        loaded.push(theme)
+        };
+        registerExtensionTheme(theme);
+        loaded.push(theme);
       }
-      setExtensionThemes(loaded)
+      setExtensionThemes(loaded);
     } catch {
       // Non-critical — extension themes are optional
     }
-  }, [])
+  }, []);
 
   // Load on mount
   useEffect(() => {
-    void loadThemes()
-  }, [loadThemes])
+    void loadThemes();
+  }, [loadThemes]);
 
   // Reload when extensions change via DOM custom event
   useEffect(() => {
-    const handler = () => { void loadThemes() }
-    window.addEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler)
-  }, [loadThemes])
+    const handler = () => {
+      void loadThemes();
+    };
+    window.addEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler);
+  }, [loadThemes]);
 
-  return extensionThemes
+  return extensionThemes;
 }

@@ -48,7 +48,9 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => { cleanup(); });
+afterEach(() => {
+  cleanup();
+});
 
 const PROJECT_ROOTS = ['/home/user/proj-a', '/home/user/proj-b'];
 
@@ -114,7 +116,9 @@ describe('DispatchForm — validation', () => {
     renderForm();
     fillPrompt('do the thing');
     submit();
-    await waitFor(() => { expect(screen.getByRole('alert')).toBeTruthy(); });
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
     expect(mockDispatchTask).not.toHaveBeenCalled();
   });
 
@@ -122,7 +126,9 @@ describe('DispatchForm — validation', () => {
     renderForm();
     fillTitle('My task');
     submit();
-    await waitFor(() => { expect(screen.getByRole('alert')).toBeTruthy(); });
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
     expect(mockDispatchTask).not.toHaveBeenCalled();
   });
 
@@ -132,7 +138,9 @@ describe('DispatchForm — validation', () => {
     fillPrompt('do the thing');
     fireEvent.click(screen.getByTestId('dispatch-worktree-toggle'));
     submit();
-    await waitFor(() => { expect(screen.getByRole('alert')).toBeTruthy(); });
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
     expect(mockDispatchTask).not.toHaveBeenCalled();
   });
 });
@@ -212,7 +220,9 @@ describe('DispatchForm — error path', () => {
     fillTitle('No API');
     fillPrompt('No sessions API');
     submit();
-    await waitFor(() => { expect(onError).toHaveBeenCalled(); });
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalled();
+    });
   });
 });
 
@@ -252,9 +262,7 @@ describe('DispatchForm — offline branch', () => {
     fillTitle('Queued task');
     fillPrompt('Send later');
     submit();
-    await waitFor(() =>
-      expect(screen.getByTestId('queued-confirmation')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByTestId('queued-confirmation')).toBeTruthy());
   });
 
   it('shows queue-full error when enqueue returns queue-full', async () => {

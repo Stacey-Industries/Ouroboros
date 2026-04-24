@@ -15,17 +15,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // `vi.hoisted` runs before the module mock factory so the Map reference is live.
 
 const { stubSessions } = vi.hoisted(() => ({
-  stubSessions: new Map<string, { id: string; threadId?: string; process: unknown; cwd: string; shell: string }>(),
+  stubSessions: new Map<
+    string,
+    { id: string; threadId?: string; process: unknown; cwd: string; shell: string }
+  >(),
 }));
 
 vi.mock('./pty', () => ({ sessions: stubSessions }));
 
 // Import AFTER the mock is registered so the module gets our stub map.
-import {
-  getLinkedSessionIds,
-  getLinkedThread,
-  linkSessionToThread,
-} from './ptyThreadLink';
+import { getLinkedSessionIds, getLinkedThread, linkSessionToThread } from './ptyThreadLink';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -77,9 +77,7 @@ describe('useDiffReviewKeyboard', () => {
 
   it('a triggers onAccept with focused hunk id', () => {
     const onAccept = vi.fn();
-    renderHook(() =>
-      useDiffReviewKeyboard({ enabled: true, hunks, onAccept, onReject: vi.fn() }),
-    );
+    renderHook(() => useDiffReviewKeyboard({ enabled: true, hunks, onAccept, onReject: vi.fn() }));
     fireKey('a');
     expect(onAccept).toHaveBeenCalledOnce();
     expect(onAccept).toHaveBeenCalledWith('h1');
@@ -87,9 +85,7 @@ describe('useDiffReviewKeyboard', () => {
 
   it('r triggers onReject with focused hunk id', () => {
     const onReject = vi.fn();
-    renderHook(() =>
-      useDiffReviewKeyboard({ enabled: true, hunks, onAccept: vi.fn(), onReject }),
-    );
+    renderHook(() => useDiffReviewKeyboard({ enabled: true, hunks, onAccept: vi.fn(), onReject }));
     fireKey('r');
     expect(onReject).toHaveBeenCalledOnce();
     expect(onReject).toHaveBeenCalledWith('h1');
@@ -126,9 +122,7 @@ describe('useDiffReviewKeyboard', () => {
     document.body.appendChild(input);
     input.focus();
 
-    renderHook(() =>
-      useDiffReviewKeyboard({ enabled: true, hunks, onAccept, onReject: vi.fn() }),
-    );
+    renderHook(() => useDiffReviewKeyboard({ enabled: true, hunks, onAccept, onReject: vi.fn() }));
     fireKey('a');
     expect(onAccept).not.toHaveBeenCalled();
 
@@ -141,9 +135,7 @@ describe('useDiffReviewKeyboard', () => {
     document.body.appendChild(textarea);
     textarea.focus();
 
-    renderHook(() =>
-      useDiffReviewKeyboard({ enabled: true, hunks, onAccept: vi.fn(), onReject }),
-    );
+    renderHook(() => useDiffReviewKeyboard({ enabled: true, hunks, onAccept: vi.fn(), onReject }));
     fireKey('r');
     expect(onReject).not.toHaveBeenCalled();
 

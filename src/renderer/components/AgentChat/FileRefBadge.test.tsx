@@ -22,11 +22,7 @@ function makeRef(overrides: Partial<FileRef> = {}): FileRef {
 
 describe('FileRefBadge', () => {
   it('renders children', () => {
-    render(
-      <FileRefBadge fileRef={makeRef()}>
-        src/foo.ts
-      </FileRefBadge>,
-    );
+    render(<FileRefBadge fileRef={makeRef()}>src/foo.ts</FileRefBadge>);
     expect(screen.getByText('src/foo.ts')).toBeTruthy();
   });
 
@@ -34,11 +30,7 @@ describe('FileRefBadge', () => {
     const received: CustomEvent[] = [];
     window.addEventListener('agent-ide:open-file', (e) => received.push(e as CustomEvent));
 
-    render(
-      <FileRefBadge fileRef={makeRef({ path: 'src/foo.ts' })}>
-        src/foo.ts
-      </FileRefBadge>,
-    );
+    render(<FileRefBadge fileRef={makeRef({ path: 'src/foo.ts' })}>src/foo.ts</FileRefBadge>);
     fireEvent.click(screen.getByRole('button'));
 
     window.removeEventListener('agent-ide:open-file', (e) => received.push(e as CustomEvent));
@@ -48,7 +40,9 @@ describe('FileRefBadge', () => {
 
   it('includes line and col in dispatched event when present', () => {
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:open-file', handler);
 
     render(
@@ -65,7 +59,9 @@ describe('FileRefBadge', () => {
 
   it('resolves relative path against projectRoot', () => {
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:open-file', handler);
 
     render(
@@ -81,7 +77,9 @@ describe('FileRefBadge', () => {
 
   it('does not prepend projectRoot when path is already absolute', () => {
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:open-file', handler);
 
     render(
@@ -96,49 +94,47 @@ describe('FileRefBadge', () => {
   });
 
   it('sets aria-label without line when line is absent', () => {
-    render(
-      <FileRefBadge fileRef={makeRef({ path: 'src/baz.ts' })}>baz</FileRefBadge>,
-    );
+    render(<FileRefBadge fileRef={makeRef({ path: 'src/baz.ts' })}>baz</FileRefBadge>);
     const btn = screen.getByRole('button');
     expect(btn.getAttribute('aria-label')).toBe('Open file src/baz.ts');
   });
 
   it('includes line in aria-label when line is present', () => {
-    render(
-      <FileRefBadge fileRef={makeRef({ path: 'src/baz.ts', line: 10 })}>baz</FileRefBadge>,
-    );
+    render(<FileRefBadge fileRef={makeRef({ path: 'src/baz.ts', line: 10 })}>baz</FileRefBadge>);
     const btn = screen.getByRole('button');
     expect(btn.getAttribute('aria-label')).toBe('Open file src/baz.ts:10');
   });
 
   describe('hover card delay', () => {
-    beforeEach(() => { vi.useFakeTimers(); });
-    afterEach(() => { vi.useRealTimers(); });
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     it('does not show card immediately on mouseenter', () => {
-      render(
-        <FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>,
-      );
+      render(<FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>);
       fireEvent.mouseEnter(screen.getByRole('button'));
       expect(document.querySelector('[data-testid="citation-hover-card"]')).toBeNull();
     });
 
     it('shows card after 200ms delay', () => {
-      render(
-        <FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>,
-      );
+      render(<FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>);
       fireEvent.mouseEnter(screen.getByRole('button'));
-      act(() => { vi.advanceTimersByTime(200); });
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
       expect(document.querySelector('[data-testid="citation-hover-card"]')).toBeTruthy();
     });
 
     it('hides card on mouseleave and cancels timer', () => {
-      render(
-        <FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>,
-      );
+      render(<FileRefBadge fileRef={makeRef()}>foo.ts</FileRefBadge>);
       const btn = screen.getByRole('button');
       fireEvent.mouseEnter(btn);
-      act(() => { vi.advanceTimersByTime(200); });
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
       fireEvent.mouseLeave(btn);
       expect(document.querySelector('[data-testid="citation-hover-card"]')).toBeNull();
     });

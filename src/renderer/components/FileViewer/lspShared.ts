@@ -3,11 +3,7 @@
  */
 
 export function hasLspApi(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    'electronAPI' in window &&
-    !!window.electronAPI?.lsp
-  );
+  return typeof window !== 'undefined' && 'electronAPI' in window && !!window.electronAPI?.lsp;
 }
 
 export function normalizeFilePath(filePath: string): string {

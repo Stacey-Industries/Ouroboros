@@ -36,24 +36,18 @@ afterEach(() => {
 
 describe('EffortEstimate', () => {
   it('renders nothing when profileId is null', () => {
-    const { container } = render(
-      <EffortEstimate profileId={null} contextTokens={1000} />,
-    );
+    const { container } = render(<EffortEstimate profileId={null} contextTokens={1000} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing when profileId is undefined', () => {
-    const { container } = render(
-      <EffortEstimate profileId={undefined} contextTokens={1000} />,
-    );
+    const { container } = render(<EffortEstimate profileId={undefined} contextTokens={1000} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders nothing while estimate is loading', () => {
     mockEstimate.mockReturnValue(new Promise(() => undefined)); // never resolves
-    const { container } = render(
-      <EffortEstimate profileId="p1" contextTokens={1000} />,
-    );
+    const { container } = render(<EffortEstimate profileId="p1" contextTokens={1000} />);
     // Before debounce fires — still nothing
     expect(container.firstChild).toBeNull();
   });
@@ -100,9 +94,7 @@ describe('EffortEstimate', () => {
   it('hides pill when IPC returns success: false', async () => {
     mockEstimate.mockResolvedValue({ success: false, error: 'not found' });
 
-    const { container } = render(
-      <EffortEstimate profileId="missing" contextTokens={1000} />,
-    );
+    const { container } = render(<EffortEstimate profileId="missing" contextTokens={1000} />);
 
     await act(async () => {
       vi.runAllTimers();

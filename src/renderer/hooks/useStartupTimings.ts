@@ -24,13 +24,16 @@ export function useStartupTimings(): UseStartupTimingsResult {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchTimings = useCallback(() => {
-    window.electronAPI?.perf?.getStartupTimings?.()
+    window.electronAPI?.perf
+      ?.getStartupTimings?.()
       .then((result) => {
         if (result.success && result.timings) {
           setTimings(result.timings);
         }
       })
-      .catch(() => { /* silent — handler may not yet be registered */ });
+      .catch(() => {
+        /* silent — handler may not yet be registered */
+      });
   }, []);
 
   useEffect(() => {

@@ -38,19 +38,13 @@ export function ChangelogEntryCard({ entry }: Props): React.ReactElement {
         <span className="font-mono text-sm font-semibold text-text-semantic-primary">
           v{entry.version}
         </span>
-        {entry.date && (
-          <span className="text-xs text-text-semantic-muted">{entry.date}</span>
-        )}
+        {entry.date && <span className="text-xs text-text-semantic-muted">{entry.date}</span>}
       </div>
-      {entry.added && entry.added.length > 0 && (
-        <BulletSection label="Added" items={entry.added} />
-      )}
+      {entry.added && entry.added.length > 0 && <BulletSection label="Added" items={entry.added} />}
       {entry.changed && entry.changed.length > 0 && (
         <BulletSection label="Changed" items={entry.changed} />
       )}
-      {entry.fixed && entry.fixed.length > 0 && (
-        <BulletSection label="Fixed" items={entry.fixed} />
-      )}
+      {entry.fixed && entry.fixed.length > 0 && <BulletSection label="Fixed" items={entry.fixed} />}
       {entry.removed && entry.removed.length > 0 && (
         <BulletSection label="Removed" items={entry.removed} />
       )}

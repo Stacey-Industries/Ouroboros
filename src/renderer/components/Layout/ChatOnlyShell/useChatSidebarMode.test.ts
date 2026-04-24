@@ -55,43 +55,66 @@ describe('useChatSidebarMode', () => {
   it('reads persisted mode from config on mount', async () => {
     configApi.getAll.mockResolvedValueOnce({ layout: { chatSidebarMode: 'collapsed' } });
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(result.current.mode).toBe('collapsed');
   });
 
   it('cycles pinned → collapsed on first cycleMode call', async () => {
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
-    act(() => { result.current.cycleMode(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      result.current.cycleMode();
+    });
     expect(result.current.mode).toBe('collapsed');
   });
 
   it('cycles collapsed → hidden on second cycleMode call', async () => {
     configApi.getAll.mockResolvedValueOnce({ layout: { chatSidebarMode: 'collapsed' } });
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
-    act(() => { result.current.cycleMode(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      result.current.cycleMode();
+    });
     expect(result.current.mode).toBe('hidden');
   });
 
   it('cycles hidden → pinned (wraps around)', async () => {
     configApi.getAll.mockResolvedValueOnce({ layout: { chatSidebarMode: 'hidden' } });
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
-    act(() => { result.current.cycleMode(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      result.current.cycleMode();
+    });
     expect(result.current.mode).toBe('pinned');
   });
 
   it('calls config.set when mode changes', async () => {
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
-    act(() => { result.current.cycleMode(); });
-    expect(configApi.set).toHaveBeenCalledWith('layout', expect.objectContaining({ chatSidebarMode: 'collapsed' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      result.current.cycleMode();
+    });
+    expect(configApi.set).toHaveBeenCalledWith(
+      'layout',
+      expect.objectContaining({ chatSidebarMode: 'collapsed' }),
+    );
   });
 
   it('responds to CYCLE_CHAT_SIDEBAR_MODE_EVENT DOM event', async () => {
     const { result } = renderHook(() => useChatSidebarMode());
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     act(() => {
       window.dispatchEvent(new CustomEvent(CYCLE_CHAT_SIDEBAR_MODE_EVENT));
     });

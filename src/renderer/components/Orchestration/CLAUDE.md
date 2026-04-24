@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-Now I have enough to write a precise CLAUDE.md.
-
 # Orchestration — Task Composer & Session Monitor
 
 UI panel for composing, launching, and inspecting orchestration tasks. Connects the renderer to `window.electronAPI.orchestration.*` IPC calls. Displays a four-tab view: overview, context packet, verification results, and session history.
@@ -71,4 +69,5 @@ This gives live streaming progress events priority over persisted state. Preserv
 - **Types**: `../../types/electron` — `TaskSessionRecord`, `OrchestrationState`, `ContextPacket`, `TaskResult`, `VerificationSummary`, `ProviderProgressEvent`
 - **ContextBuilder**: `../ContextBuilder/useContextSelectionModel`, `../ContextBuilder/ContextSelectionSection`, `../ContextBuilder/ContextBuilderPrimitives`
 - **Model subdirectory**: `model/useOrchestrationModelCore` — contains the subscription and session management logic
+
 <!-- claude-md-auto:end -->

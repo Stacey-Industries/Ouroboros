@@ -18,7 +18,9 @@ interface FinalizeDirtyCloseArgs {
   saveFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-export async function finalizeDirtyCloseChoice(args: FinalizeDirtyCloseArgs): Promise<DirtyCloseResolution> {
+export async function finalizeDirtyCloseChoice(
+  args: FinalizeDirtyCloseArgs,
+): Promise<DirtyCloseResolution> {
   const { choice, discardDraft, filePath, saveFile } = args;
 
   if (choice === 'cancel') {

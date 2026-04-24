@@ -27,7 +27,9 @@ export function exportSessionReport(session: AgentSession): string {
   lines.push(`**Duration**: ${formatDuration(totalDuration(session))}`);
   lines.push(`**Status**: ${session.status}`);
   if (session.model) lines.push(`**Model**: ${session.model}`);
-  lines.push(`**Tokens**: ${session.inputTokens.toLocaleString()} in / ${session.outputTokens.toLocaleString()} out`);
+  lines.push(
+    `**Tokens**: ${session.inputTokens.toLocaleString()} in / ${session.outputTokens.toLocaleString()} out`,
+  );
   lines.push('');
   lines.push('## Steps');
   lines.push('');

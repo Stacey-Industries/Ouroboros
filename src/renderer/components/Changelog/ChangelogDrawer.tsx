@@ -52,7 +52,7 @@ function DrawerContent({ entries, onDismiss }: DrawerProps): React.ReactElement 
         </button>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {entries.map(e => (
+        {entries.map((e) => (
           <ChangelogEntryCard key={e.version} entry={e} />
         ))}
       </div>
@@ -64,8 +64,7 @@ function DrawerContent({ entries, onDismiss }: DrawerProps): React.ReactElement 
 
 export function ChangelogDrawer(): React.ReactElement | null {
   const { config, set } = useConfig();
-  const { shouldShow, currentVersion, visibleVersions, moduleAbsent } =
-    useShouldShowChangelog();
+  const { shouldShow, currentVersion, visibleVersions, moduleAbsent } = useShouldShowChangelog();
   const [dismissed, setDismissed] = useState(false);
 
   const handleDismiss = useCallback(async () => {
@@ -79,12 +78,7 @@ export function ChangelogDrawer(): React.ReactElement | null {
   if (!shouldShow || dismissed) return null;
 
   // Lazily load the generated module to build the entry list.
-  return (
-    <ChangelogDrawerLoader
-      visibleVersions={visibleVersions}
-      onDismiss={handleDismiss}
-    />
-  );
+  return <ChangelogDrawerLoader visibleVersions={visibleVersions} onDismiss={handleDismiss} />;
 }
 
 // ── Async loader (avoids top-level dynamic import in the gate) ────────────────
@@ -102,9 +96,9 @@ function ChangelogDrawerLoader({
 
   React.useEffect(() => {
     import('@renderer/generated/changelog')
-      .then(mod => {
+      .then((mod) => {
         const resolved = visibleVersions
-          .map(v => mod.CHANGELOG[v])
+          .map((v) => mod.CHANGELOG[v])
           .filter((e): e is ChangelogEntry => Boolean(e));
         setEntries(resolved);
       })

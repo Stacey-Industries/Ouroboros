@@ -8,12 +8,7 @@ import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 
 import { TELEMETRY_SCHEMA_SQL } from './telemetryStoreHelpers';
-import {
-  queryEvents,
-  queryInvocations,
-  queryOutcomes,
-  queryTraces,
-} from './telemetryStoreQueries';
+import { queryEvents, queryInvocations, queryOutcomes, queryTraces } from './telemetryStoreQueries';
 
 function makeDb() {
   const db = new Database(':memory:');
@@ -48,11 +43,24 @@ const INV_DEFAULTS = {
   timestamp: 2000,
 };
 
-function insertInvocation(db: ReturnType<typeof makeDb>, overrides: Partial<typeof INV_DEFAULTS> = {}) {
+function insertInvocation(
+  db: ReturnType<typeof makeDb>,
+  overrides: Partial<typeof INV_DEFAULTS> = {},
+) {
   const v = { ...INV_DEFAULTS, ...overrides };
   db.prepare(
     'INSERT INTO research_invocations (id, correlation_id, session_id, topic, trigger_reason, artifact_hash, hit_cache, latency_ms, timestamp) VALUES (?,?,?,?,?,?,?,?,?)',
-  ).run(v.id, v.correlation_id, v.session_id, v.topic, v.trigger_reason, v.artifact_hash, v.hit_cache, v.latency_ms, v.timestamp);
+  ).run(
+    v.id,
+    v.correlation_id,
+    v.session_id,
+    v.topic,
+    v.trigger_reason,
+    v.artifact_hash,
+    v.hit_cache,
+    v.latency_ms,
+    v.timestamp,
+  );
   return v.id;
 }
 

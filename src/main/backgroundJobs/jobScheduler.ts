@@ -6,7 +6,11 @@
  * Max pending queue length: 50.
  */
 
-import type { BackgroundJob, BackgroundJobQueueSnapshot, BackgroundJobRequest } from '@shared/types/backgroundJob';
+import type {
+  BackgroundJob,
+  BackgroundJobQueueSnapshot,
+  BackgroundJobRequest,
+} from '@shared/types/backgroundJob';
 
 import type { IpcResult } from '../../renderer/types/electron-foundation';
 import log from '../logger';
@@ -88,15 +92,17 @@ export function createJobScheduler(store: JobStore, opts: SchedulerOptions): Job
   const state: SchedulerState = { store, opts, activeRunners: new Map(), disposed: false };
 
   async function enqueue(request: BackgroundJobRequest): Promise<EnqueueResult> {
-    const pending = store.listJobs().filter(
-      (j) => j.status === 'queued' || j.status === 'running',
-    ).length;
+    const pending = store
+      .listJobs()
+      .filter((j) => j.status === 'queued' || j.status === 'running').length;
     if (pending >= MAX_PENDING) {
       return { success: false, error: `Queue limit of ${MAX_PENDING} jobs reached` };
     }
     const job = store.createJob(request);
     log.info(`[bgScheduler] enqueued job ${job.id}`);
-    Promise.resolve().then(() => dispatchNext(state)).catch(() => {});
+    Promise.resolve()
+      .then(() => dispatchNext(state))
+      .catch(() => {});
     return { success: true, jobId: job.id };
   }
 
@@ -107,7 +113,10 @@ export function createJobScheduler(store: JobStore, opts: SchedulerOptions): Job
     return { jobs, runningCount: running, queuedCount: queued, maxConcurrent: opts.maxConcurrent };
   }
 
-  function dispose(): void { state.disposed = true; state.activeRunners.clear(); }
+  function dispose(): void {
+    state.disposed = true;
+    state.activeRunners.clear();
+  }
 
   return { enqueue, cancel: (id) => cancelRunner(state, id), list, dispose };
 }

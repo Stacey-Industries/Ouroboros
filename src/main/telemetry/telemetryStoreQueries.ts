@@ -43,7 +43,9 @@ function buildEventsQuery(
   const { sessionId, type, limit, offset } = opts;
   if (sessionId !== undefined && type !== undefined) {
     return db
-      .prepare('SELECT * FROM events WHERE session_id = ? AND type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?')
+      .prepare(
+        'SELECT * FROM events WHERE session_id = ? AND type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+      )
       .all(sessionId, type, limit, offset) as Record<string, unknown>[];
   }
   if (sessionId !== undefined) {
@@ -71,9 +73,10 @@ export function queryEvents(db: DatabaseType, opts: QueryEventsOpts): TelemetryE
 // ─── Outcomes ────────────────────────────────────────────────────────────────
 
 export function queryOutcomes(db: DatabaseType, eventId: string): OutcomeRow[] {
-  const rows = db
-    .prepare('SELECT * FROM outcomes WHERE event_id = ?')
-    .all(eventId) as Record<string, unknown>[];
+  const rows = db.prepare('SELECT * FROM outcomes WHERE event_id = ?').all(eventId) as Record<
+    string,
+    unknown
+  >[];
   return rows.map(rowToOutcome);
 }
 
@@ -81,20 +84,34 @@ export function queryOutcomes(db: DatabaseType, eventId: string): OutcomeRow[] {
 
 export function queryTraces(db: DatabaseType, sessionId: string, limit: number): TraceRow[] {
   const rows = db
-    .prepare('SELECT * FROM orchestration_traces WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?')
+    .prepare(
+      'SELECT * FROM orchestration_traces WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?',
+    )
     .all(sessionId, limit) as Record<string, unknown>[];
   return rows.map(rowToOrchestrationTrace);
 }
 
 // ─── Invocations ─────────────────────────────────────────────────────────────
 
-export function queryInvocations(db: DatabaseType, filter: QueryInvocationsFilter = {}): InvocationRow[] {
+export function queryInvocations(
+  db: DatabaseType,
+  filter: QueryInvocationsFilter = {},
+): InvocationRow[] {
   const { sessionId, since, until, limit = 500 } = filter;
   const clauses: string[] = [];
   const params: unknown[] = [];
-  if (sessionId !== undefined) { clauses.push('session_id = ?'); params.push(sessionId); }
-  if (since !== undefined) { clauses.push('timestamp >= ?'); params.push(since); }
-  if (until !== undefined) { clauses.push('timestamp <= ?'); params.push(until); }
+  if (sessionId !== undefined) {
+    clauses.push('session_id = ?');
+    params.push(sessionId);
+  }
+  if (since !== undefined) {
+    clauses.push('timestamp >= ?');
+    params.push(since);
+  }
+  if (until !== undefined) {
+    clauses.push('timestamp <= ?');
+    params.push(until);
+  }
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
   params.push(Math.min(limit, 2000));
   const rows = db

@@ -45,10 +45,14 @@ vi.mock('../logger', () => ({
 function makeAdaptor(initial: SessionFolder[] = []) {
   let stored: SessionFolder[] = [...initial];
   return {
-    get data(): SessionFolder[] { return stored; },
+    get data(): SessionFolder[] {
+      return stored;
+    },
     read: () => stored,
     // write receives a potentially-aliased array; snapshot it first
-    write: (folders: SessionFolder[]) => { stored = [...folders]; },
+    write: (folders: SessionFolder[]) => {
+      stored = [...folders];
+    },
   };
 }
 
@@ -134,7 +138,11 @@ describe('folderCrud IPC handlers', () => {
   it('folderCrud:moveSession moves session between folders', async () => {
     storeMock?.upsert(makeFolder({ id: 'fa', sessionIds: ['s1'] }));
     storeMock?.upsert(makeFolder({ id: 'fb', sessionIds: [] }));
-    const result = await call('folderCrud:moveSession', { fromId: 'fa', toId: 'fb', sessionId: 's1' });
+    const result = await call('folderCrud:moveSession', {
+      fromId: 'fa',
+      toId: 'fb',
+      sessionId: 's1',
+    });
     expect(result.success).toBe(true);
     const all = storeMock?.listAll() ?? [];
     expect(all.find((f) => f.id === 'fa')?.sessionIds).not.toContain('s1');

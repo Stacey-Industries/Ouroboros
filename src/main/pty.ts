@@ -24,10 +24,7 @@ import {
   spawnViaPtyHost,
   writeViaPtyHost,
 } from './ptyHost/ptyHostProxy';
-import {
-  startRecordingViaPtyHost,
-  stopRecordingViaPtyHost,
-} from './ptyHost/ptyHostProxyRecording';
+import { startRecordingViaPtyHost, stopRecordingViaPtyHost } from './ptyHost/ptyHostProxyRecording';
 import { terminalOutputBuffer } from './ptyOutputBuffer';
 import type { PtyPersistence } from './ptyPersistence';
 import { createPtyPersistence } from './ptyPersistence';
@@ -143,7 +140,9 @@ function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow):
     ptyBatcher.append(id, cleaned);
     terminalOutputBuffer.append(id, cleaned);
   });
-  const exitSub = proc.onExit(({ exitCode, signal }) => handleSessionExit(id, win, exitCode ?? 0, signal ?? 0));
+  const exitSub = proc.onExit(({ exitCode, signal }) =>
+    handleSessionExit(id, win, exitCode ?? 0, signal ?? 0),
+  );
   const session = sessions.get(id);
   if (session) session.disposables = [dataSub, exitSub];
 }
@@ -177,26 +176,27 @@ export function notifyTerminalCreated(id: string, cwd: string): void {
 export { escapePowerShellArg } from './ptyArgEscape';
 
 interface SpawnDirectOpts {
-  id: string; win: BrowserWindow; shell: string;
-  finalArgs: string[]; shellEnv: Record<string, string>;
-  cwd: string; cols: number; rows: number; startupCommand?: string;
+  id: string;
+  win: BrowserWindow;
+  shell: string;
+  finalArgs: string[];
+  shellEnv: Record<string, string>;
+  cwd: string;
+  cols: number;
+  rows: number;
+  startupCommand?: string;
 }
 
 function spawnDirect(opts: SpawnDirectOpts): { success: boolean; error?: string } {
   const { id, win, shell, finalArgs, shellEnv, cwd, cols, rows, startupCommand } = opts;
   try {
-    const proc = pty.spawn(shell, finalArgs, {
-      name: 'xterm-256color', cols, rows, cwd, env: shellEnv,
-    });
+    const proc = pty.spawn(shell, finalArgs, { name: 'xterm-256color', cols, rows, cwd, env: shellEnv });
     registerSession({ id, proc, cwd, shell, win });
     if (startupCommand) scheduleStartupCommand(id, proc, startupCommand);
     notifyTerminalCreated(id, cwd);
     const persistence = getPersistence();
     if (persistence.isEnabled()) {
-      persistence.saveSession({
-        id, cwd, shellPath: shell, shellArgs: finalArgs, cols, rows,
-        windowId: win.id, envHash: '', createdAt: Date.now(), lastSeenAt: Date.now(),
-      });
+      persistence.saveSession({ id, cwd, shellPath: shell, shellArgs: finalArgs, cols, rows, windowId: win.id, envHash: '', createdAt: Date.now(), lastSeenAt: Date.now() });
     }
     return { success: true };
   } catch (error) {
@@ -210,22 +210,15 @@ export function spawnPty(
   win: BrowserWindow,
   options: SpawnOptions = {},
 ): { success: boolean; error?: string } | Promise<{ success: boolean; error?: string }> {
-  if (sessions.has(id)) {
-    return { success: false, error: `Session ${id} already exists` };
-  }
+  if (sessions.has(id)) return { success: false, error: `Session ${id} already exists` };
   const shell = (getConfigValue('shell') as string) || getDefaultShell();
   const { cwd, cols, rows } = resolveSpawnOptions(options);
   const { env: shellEnv, shellArgs } = buildShellEnvWithIntegration(shell, options.env);
   const finalArgs = shellArgs ?? getDefaultArgs(shell);
-  if (ptyHostEnabled()) {
-    const inst = { id, shell, args: finalArgs, env: shellEnv, cwd, cols, rows, windowId: win.id,
-      ...(options.startupCommand ? { startupCommand: options.startupCommand } : {}) };
-    return spawnViaPtyHost(inst, win).then((res) => {
-      if (res.success) notifyTerminalCreated(id, cwd);
-      return res;
-    });
-  }
-  return spawnDirect({ id, win, shell, finalArgs, shellEnv, cwd, cols, rows, startupCommand: options.startupCommand });
+  const directOpts = { id, win, shell, finalArgs, shellEnv, cwd, cols, rows, startupCommand: options.startupCommand };
+  if (!ptyHostEnabled()) return spawnDirect(directOpts);
+  const inst = { id, shell, args: finalArgs, env: shellEnv, cwd, cols, rows, windowId: win.id, ...(options.startupCommand ? { startupCommand: options.startupCommand } : {}) };
+  return spawnViaPtyHost(inst, win).then((res) => { if (res.success) notifyTerminalCreated(id, cwd); return res; });
 }
 
 export function writeToPty(id: string, data: string): { success: boolean; error?: string } {
@@ -282,7 +275,11 @@ export function killPty(
 export function killAllPtySessions(): void | Promise<void> {
   if (ptyHostEnabled()) return killAllViaPtyHost();
   for (const [id, session] of sessions) {
-    try { session.process.kill(); } catch { /* ignore */ }
+    try {
+      session.process.kill();
+    } catch {
+      /* ignore */
+    }
     cleanupSession(id);
   }
 }
@@ -293,7 +290,11 @@ export function killPtySessionsForWindow(windowId: number): void | Promise<void>
     if (ownerWindowId !== windowId) continue;
     const session = sessions.get(sessionId);
     if (session) {
-      try { session.process.kill(); } catch { /* ignore */ }
+      try {
+        session.process.kill();
+      } catch {
+        /* ignore */
+      }
     }
     cleanupSession(sessionId);
   }
@@ -341,6 +342,6 @@ export function getShellState(id: string): ShellState | null {
   return getDirectShellState(id);
 }
 
-export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent'; 
-export { spawnAgentPty } from './ptyAgent'; 
+export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent';
+export { spawnAgentPty } from './ptyAgent';
 export { spawnClaudePty, spawnCodexPty } from './ptySpawn';

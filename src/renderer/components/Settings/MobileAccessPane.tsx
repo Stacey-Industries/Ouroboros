@@ -40,8 +40,8 @@ function EnableToggle({ enabled, onToggle }: EnableToggleProps): React.ReactElem
         <div>
           <SectionLabel>Enable Mobile Access</SectionLabel>
           <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
-            Allow paired mobile devices to connect over the local network.
-            When disabled, only the desktop&apos;s local connection is accepted.
+            Allow paired mobile devices to connect over the local network. When disabled, only the
+            desktop&apos;s local connection is accepted.
           </p>
         </div>
         <label aria-label="Enable mobile access" style={toggleLabelStyle}>
@@ -72,8 +72,8 @@ export function MobileAccessPane({ draft, onChange }: MobileAccessPaneProps): Re
       <div>
         <SectionLabel>Mobile Access</SectionLabel>
         <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
-          Pair mobile devices to access the IDE remotely. Pairing requires
-          scanning a QR code or entering a 6-digit code on the device.
+          Pair mobile devices to access the IDE remotely. Pairing requires scanning a QR code or
+          entering a 6-digit code on the device.
         </p>
       </div>
 

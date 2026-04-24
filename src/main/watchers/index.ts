@@ -1,8 +1,8 @@
-export { watchRecursive } from './nativeWatcher'
+export { watchRecursive } from './nativeWatcher';
 export type {
   WatchCallback,
   WatchEvent,
   WatchEventType,
   WatchOptions,
   WatchSubscription,
-} from './nativeWatcher.types'
+} from './nativeWatcher.types';

@@ -8,10 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  claudeSectionHeaderTextStyle,
-  claudeSectionRootStyle,
-} from './claudeSectionContentStyles';
+import { claudeSectionHeaderTextStyle, claudeSectionRootStyle } from './claudeSectionContentStyles';
 import { SectionLabel } from './settingsStyles';
 import { SystemPromptSessionPicker } from './SystemPromptSessionPicker';
 import { SystemPromptViewer } from './SystemPromptViewer';
@@ -54,8 +51,8 @@ function PaneHeader(): React.ReactElement {
     <div>
       <SectionLabel>System Prompt (read-only)</SectionLabel>
       <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
-        The resolved system prompt that Claude Code is using for the selected session.
-        Captured from the first stream-json event of the session.
+        The resolved system prompt that Claude Code is using for the selected session. Captured from
+        the first stream-json event of the session.
       </p>
     </div>
   );

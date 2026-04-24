@@ -41,15 +41,26 @@ interface OutlineItemProps {
 }
 
 const OUTLINE_ITEM_BUTTON_BASE: React.CSSProperties = {
-  background: 'none', fontFamily: 'var(--font-mono)', fontSize: '0.6875rem',
-  lineHeight: '1.5', textAlign: 'left', overflow: 'hidden',
-  whiteSpace: 'nowrap', textOverflow: 'ellipsis', minWidth: 0,
-  paddingRight: '8px', paddingTop: '2px', paddingBottom: '2px',
+  background: 'none',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.6875rem',
+  lineHeight: '1.5',
+  textAlign: 'left',
+  overflow: 'hidden',
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
+  minWidth: 0,
+  paddingRight: '8px',
+  paddingTop: '2px',
+  paddingBottom: '2px',
 };
 
 const OUTLINE_LINE_NUM_STYLE: React.CSSProperties = {
-  flexShrink: 0, fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
-  marginLeft: 'auto', paddingLeft: '4px',
+  flexShrink: 0,
+  fontSize: '0.6rem',
+  fontFamily: 'var(--font-mono)',
+  marginLeft: 'auto',
+  paddingLeft: '4px',
 };
 
 function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement {
@@ -70,7 +81,9 @@ function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement 
     >
       <span style={getOutlineIconStyle(KIND_COLOR[symbol.kind])}>{KIND_ICON[symbol.kind]}</span>
       <span style={OUTLINE_NAME_STYLE}>{symbol.name}</span>
-      <span className="text-text-semantic-faint" style={OUTLINE_LINE_NUM_STYLE}>{symbol.line + 1}</span>
+      <span className="text-text-semantic-faint" style={OUTLINE_LINE_NUM_STYLE}>
+        {symbol.line + 1}
+      </span>
     </button>
   );
 }

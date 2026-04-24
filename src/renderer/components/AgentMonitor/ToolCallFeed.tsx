@@ -10,9 +10,7 @@ import type { ConversationTurn, ToolCallEvent } from './types';
 
 // ─── Merged feed item type ────────────────────────────────────────────────────
 
-type FeedItem =
-  | { kind: 'tool'; item: ToolCallEvent }
-  | { kind: 'turn'; item: ConversationTurn };
+type FeedItem = { kind: 'tool'; item: ToolCallEvent } | { kind: 'turn'; item: ConversationTurn };
 
 export function buildFeedItems(
   toolCalls: ToolCallEvent[],
@@ -80,6 +78,7 @@ const FeedHeader = memo(function FeedHeader({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface ToolCallFeedProps {
+  sessionId: string;
   toolCalls: ToolCallEvent[];
   conversationTurns?: ConversationTurn[];
 }
@@ -131,12 +130,14 @@ function useAutoScrollToBottom(
 }
 
 function FeedBody({
+  sessionId,
   feedItems,
   expandedIds,
   onToggle,
   containerRef,
   bottomRef,
 }: {
+  sessionId: string;
   feedItems: FeedItem[];
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
@@ -154,6 +155,7 @@ function FeedBody({
           <ToolCallRow
             key={feedItemKey(fi, idx)}
             call={fi.item}
+            parentSessionId={sessionId}
             expanded={expandedIds.has(fi.item.id)}
             onToggle={onToggle}
           />
@@ -167,6 +169,7 @@ function FeedBody({
 }
 
 export const ToolCallFeed = memo(function ToolCallFeed({
+  sessionId,
   toolCalls,
   conversationTurns,
 }: ToolCallFeedProps): React.ReactElement<unknown> {
@@ -198,6 +201,7 @@ export const ToolCallFeed = memo(function ToolCallFeed({
         onCollapseAll={handleCollapseAll}
       />
       <FeedBody
+        sessionId={sessionId}
         feedItems={feedItems}
         expandedIds={expandedIds}
         onToggle={handleToggle}

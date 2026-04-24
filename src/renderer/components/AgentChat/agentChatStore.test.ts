@@ -48,6 +48,7 @@ describe('createAgentChatStore', () => {
     expect(state.defaultProvider).toBe('claude-code');
     expect(state.modelProviders).toEqual([]);
     expect(state.codexModels).toEqual([]);
+    expect(state.codexAppServerTransport).toBe(false);
   });
 
   it('creates a store with default queue and slash state', () => {
@@ -84,7 +85,9 @@ describe('createAgentChatStore', () => {
 
   it('actions can be replaced via setState', () => {
     const store = createAgentChatStore();
-    const newOnSend = async (): Promise<void> => { /* real impl */ };
+    const newOnSend = async (): Promise<void> => {
+      /* real impl */
+    };
     store.setState({ onSend: newOnSend });
     expect(store.getState().onSend).toBe(newOnSend);
   });

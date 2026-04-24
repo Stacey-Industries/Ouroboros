@@ -31,8 +31,16 @@ interface ModeOption {
 
 const MODE_OPTIONS: ModeOption[] = [
   { value: 'off', label: 'Off', title: 'Disable automatic research for this session' },
-  { value: 'conservative', label: 'Conservative', title: 'Research only when high confidence it will help' },
-  { value: 'aggressive', label: 'Aggressive', title: 'Research proactively before most tool calls' },
+  {
+    value: 'conservative',
+    label: 'Conservative',
+    title: 'Research only when high confidence it will help',
+  },
+  {
+    value: 'aggressive',
+    label: 'Aggressive',
+    title: 'Research proactively before most tool calls',
+  },
 ];
 
 const DEFAULT_MODE: ResearchMode = 'conservative';
@@ -44,31 +52,62 @@ interface ResearchModeState {
   setMode: (m: ResearchMode) => void;
 }
 
+function applyNoSessionMode(
+  pendingModeRef: React.MutableRefObject<ResearchMode | null>,
+  setModeState: (m: ResearchMode) => void,
+): void {
+  if (pendingModeRef.current) {
+    setModeState(pendingModeRef.current);
+    return;
+  }
+  window.electronAPI.research
+    .getGlobalDefault()
+    .then((res) => {
+      if (res.success) setModeState(res.defaultMode);
+    })
+    .catch(() => undefined);
+}
+
+function applySessionMode(
+  sessionId: string,
+  pendingModeRef: React.MutableRefObject<ResearchMode | null>,
+  setModeState: (m: ResearchMode) => void,
+): void {
+  if (pendingModeRef.current) {
+    const pendingMode = pendingModeRef.current;
+    pendingModeRef.current = null;
+    setModeState(pendingMode);
+    void window.electronAPI.research.setSessionMode(sessionId, pendingMode).catch(() => undefined);
+    return;
+  }
+  window.electronAPI.research
+    .getSessionMode(sessionId)
+    .then((res) => {
+      if (res.success) setModeState(res.mode);
+    })
+    .catch(() => undefined);
+}
+
 function useResearchMode(sessionId: string | null | undefined): ResearchModeState {
   const [mode, setModeState] = useState<ResearchMode>(DEFAULT_MODE);
+  const pendingModeRef = React.useRef<ResearchMode | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
-      window.electronAPI.research
-        .getGlobalDefault()
-        .then((res) => {
-          if (res.success) setModeState(res.defaultMode);
-        })
-        .catch(() => undefined);
+      applyNoSessionMode(pendingModeRef, setModeState);
       return;
     }
-    window.electronAPI.research
-      .getSessionMode(sessionId)
-      .then((res) => {
-        if (res.success) setModeState(res.mode);
-      })
-      .catch(() => undefined);
+    applySessionMode(sessionId, pendingModeRef, setModeState);
   }, [sessionId]);
 
   const setMode = useCallback(
     (m: ResearchMode) => {
       setModeState(m);
-      if (!sessionId) return;
+      if (!sessionId) {
+        pendingModeRef.current = m;
+        return;
+      }
+      pendingModeRef.current = null;
       void window.electronAPI.research.setSessionMode(sessionId, m).catch(() => undefined);
     },
     [sessionId],
@@ -87,12 +126,14 @@ interface ModeButtonProps {
   onClick: () => void;
 }
 
-function ModeButton({ option, active, isFirst, isLast, onClick }: ModeButtonProps): React.ReactElement {
-  const borderRadiusClass = isFirst
-    ? 'rounded-l'
-    : isLast
-      ? 'rounded-r'
-      : '';
+function ModeButton({
+  option,
+  active,
+  isFirst,
+  isLast,
+  onClick,
+}: ModeButtonProps): React.ReactElement {
+  const borderRadiusClass = isFirst ? 'rounded-l' : isLast ? 'rounded-r' : '';
 
   const activeClass = active
     ? 'bg-interactive-accent-subtle text-text-semantic-primary'
@@ -127,11 +168,7 @@ export function ResearchModeToggle({ sessionId }: ResearchModeToggleProps): Reac
   const { mode, setMode } = useResearchMode(sessionId);
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Research mode"
-      className="flex items-center"
-    >
+    <div role="radiogroup" aria-label="Research mode" className="flex items-center">
       {MODE_OPTIONS.map((option, i) => (
         <ModeButton
           key={option.value}

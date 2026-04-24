@@ -9,10 +9,7 @@ import {
 import { useExtensionThemes } from '../../hooks/useExtensionThemes';
 import { EXTENSION_THEMES_CHANGED_EVENT } from '../../hooks/useExtensionThemes';
 import { setActiveFileIconTheme, useFileIconThemes } from '../../hooks/useFileIconThemes';
-import {
-  setActiveProductIconTheme,
-  useProductIconThemes,
-} from '../../hooks/useProductIconThemes';
+import { setActiveProductIconTheme, useProductIconThemes } from '../../hooks/useProductIconThemes';
 import { useTheme } from '../../hooks/useTheme';
 import type { InstalledVsxExtension } from '../../types/electron';
 import { SectionLabel } from '../Settings/settingsStyles';

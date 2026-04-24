@@ -29,7 +29,10 @@ let workspaceRoot = '';
 // ── parentPort messaging ──
 
 declare const process: NodeJS.Process & {
-  parentPort?: { postMessage: (msg: unknown) => void; on: (e: 'message', cb: (m: unknown) => void) => void };
+  parentPort?: {
+    postMessage: (msg: unknown) => void;
+    on: (e: 'message', cb: (m: unknown) => void) => void;
+  };
 };
 
 function post(msg: McpHostOutbound): void {
@@ -43,8 +46,14 @@ function postError(requestId: string, err: unknown): void {
 
 // ── Pending main-bound requests (toolList / toolCall) ──
 
-interface PendingToolList { resolve: (tools: McpHostToolDef[]) => void; reject: (e: Error) => void }
-interface PendingToolCall { resolve: (r: { text: string; isError: boolean }) => void; reject: (e: Error) => void }
+interface PendingToolList {
+  resolve: (tools: McpHostToolDef[]) => void;
+  reject: (e: Error) => void;
+}
+interface PendingToolCall {
+  resolve: (r: { text: string; isError: boolean }) => void;
+  reject: (e: Error) => void;
+}
 
 const pendingToolLists = new Map<string, PendingToolList>();
 const pendingToolCalls = new Map<string, PendingToolCall>();
@@ -63,7 +72,10 @@ function requestToolList(): Promise<McpHostToolDef[]> {
   });
 }
 
-function requestToolCall(name: string, args: Record<string, unknown>): Promise<{ text: string; isError: boolean }> {
+function requestToolCall(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ text: string; isError: boolean }> {
   const callId = nextCallId();
   return new Promise((resolve, reject) => {
     pendingToolCalls.set(callId, { resolve, reject });
@@ -103,13 +115,16 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': '*',
   });
   res.write('data: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n');
   const heartbeat = setInterval(() => {
-    try { res.write(': heartbeat\n\n'); }
-    catch { clearInterval(heartbeat); }
+    try {
+      res.write(': heartbeat\n\n');
+    } catch {
+      clearInterval(heartbeat);
+    }
   }, 30_000);
   req.on('close', () => clearInterval(heartbeat));
 }
@@ -140,7 +155,10 @@ async function handleToolCall(rpc: JsonRpcRequest, id: string | number | null): 
   if (!toolName) return rpcError(id, -32602, 'Invalid params: missing tool name');
   try {
     const result = await requestToolCall(toolName, toolArgs);
-    return rpcSuccess(id, { content: [{ type: 'text', text: result.text }], isError: result.isError });
+    return rpcSuccess(id, {
+      content: [{ type: 'text', text: result.text }],
+      isError: result.isError,
+    });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     return rpcSuccess(id, { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true });
@@ -149,15 +167,17 @@ async function handleToolCall(rpc: JsonRpcRequest, id: string | number | null): 
 
 async function handleJsonRpc(req: IncomingMessage, res: ServerResponse): Promise<void> {
   let body: string;
-  try { body = await readBody(req); }
-  catch {
+  try {
+    body = await readBody(req);
+  } catch {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(rpcError(null, -32700, 'Parse error: could not read request body'));
     return;
   }
   let rpc: JsonRpcRequest;
-  try { rpc = JSON.parse(body) as JsonRpcRequest; }
-  catch {
+  try {
+    rpc = JSON.parse(body) as JsonRpcRequest;
+  } catch {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(rpcError(null, -32700, 'Parse error: invalid JSON'));
     return;
@@ -178,15 +198,26 @@ function buildRequestHandler(): (req: IncomingMessage, res: ServerResponse) => P
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-    if (req.method === 'GET' && req.url === '/sse') { handleSse(req, res); return; }
-    if (req.method === 'POST' && req.url === '/message') { await handleJsonRpc(req, res); return; }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === 'GET' && req.url === '/sse') {
+      handleSse(req, res);
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/message') {
+      await handleJsonRpc(req, res);
+      return;
+    }
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }));
       return;
     }
-    res.writeHead(404); res.end();
+    res.writeHead(404);
+    res.end();
   };
 }
 
@@ -250,18 +281,32 @@ function handleToolCallError(callId: string, message: string): void {
 
 export function dispatch(msg: McpHostRequest): void {
   switch (msg.type) {
-    case 'start': handleStart(msg.requestId, msg.workspaceRoot, msg.port); return;
-    case 'stop': handleStop(msg.requestId); return;
-    case 'toolListResponse': handleToolListResponse(msg.callId, msg.tools); return;
-    case 'toolCallResponse': handleToolCallResponse(msg.callId, msg.text, msg.isError); return;
-    case 'toolCallError': handleToolCallError(msg.callId, msg.message); return;
+    case 'start':
+      handleStart(msg.requestId, msg.workspaceRoot, msg.port);
+      return;
+    case 'stop':
+      handleStop(msg.requestId);
+      return;
+    case 'toolListResponse':
+      handleToolListResponse(msg.callId, msg.tools);
+      return;
+    case 'toolCallResponse':
+      handleToolCallResponse(msg.callId, msg.text, msg.isError);
+      return;
+    case 'toolCallError':
+      handleToolCallError(msg.callId, msg.message);
+      return;
   }
 }
 
 /** Reset all state — used by tests. */
 export function _resetForTests(): void {
   if (server) {
-    try { server.close(); } catch { /* ignore */ }
+    try {
+      server.close();
+    } catch {
+      /* ignore */
+    }
   }
   server = null;
   workspaceRoot = '';
@@ -276,8 +321,9 @@ function bootstrap(): void {
   process.parentPort.on('message', (raw: unknown) => {
     const data = (raw as { data?: unknown })?.data ?? raw;
     if (typeof data !== 'object' || data === null) return;
-    try { dispatch(data as McpHostRequest); }
-    catch (err) {
+    try {
+      dispatch(data as McpHostRequest);
+    } catch (err) {
       const requestId = (data as { requestId?: string }).requestId ?? 'unknown';
       postError(requestId, err);
     }
@@ -286,4 +332,4 @@ function bootstrap(): void {
 
 bootstrap();
 
-export type { McpHostEvent,McpHostRequest, McpHostResponse };
+export type { McpHostEvent, McpHostRequest, McpHostResponse };

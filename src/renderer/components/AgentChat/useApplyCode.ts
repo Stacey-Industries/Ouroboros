@@ -47,9 +47,10 @@ function buildLcsTable(oldLines: string[], newLines: string[]): number[][] {
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = oldLines[i - 1] === newLines[j - 1]
-        ? dp[i - 1][j - 1] + 1
-        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+      dp[i][j] =
+        oldLines[i - 1] === newLines[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1]);
     }
   }
   return dp;
@@ -106,7 +107,9 @@ function toErrorString(err: unknown, fallback: string): string {
 }
 
 function buildNewFileDiff(code: string): DiffLine[] {
-  return code.split('\n').map((line, idx) => ({ type: 'add' as const, text: line, lineNo: idx + 1 }));
+  return code
+    .split('\n')
+    .map((line, idx) => ({ type: 'add' as const, text: line, lineNo: idx + 1 }));
 }
 
 interface ApplyCodeState {
@@ -121,12 +124,13 @@ interface ApplyCodeRefs {
   revertTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }
 
-function useApplyCodeState(): ApplyCodeState & ApplyCodeRefs & {
-  setStatus: (s: ApplyCodeStatus) => void;
-  setErrorMessage: (e: string | null) => void;
-  setDiffLines: (d: DiffLine[]) => void;
-  setCanRevert: (c: boolean) => void;
-} {
+function useApplyCodeState(): ApplyCodeState &
+  ApplyCodeRefs & {
+    setStatus: (s: ApplyCodeStatus) => void;
+    setErrorMessage: (e: string | null) => void;
+    setDiffLines: (d: DiffLine[]) => void;
+    setCanRevert: (c: boolean) => void;
+  } {
   const [status, setStatus] = useState<ApplyCodeStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
@@ -136,13 +140,30 @@ function useApplyCodeState(): ApplyCodeState & ApplyCodeRefs & {
 
   useEffect(() => {
     const timerRef = revertTimerRef;
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
-  return { status, errorMessage, diffLines, canRevert, originalContentRef, revertTimerRef, setStatus, setErrorMessage, setDiffLines, setCanRevert };
+  return {
+    status,
+    errorMessage,
+    diffLines,
+    canRevert,
+    originalContentRef,
+    revertTimerRef,
+    setStatus,
+    setErrorMessage,
+    setDiffLines,
+    setCanRevert,
+  };
 }
 
-function useApplyAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+function useApplyAction(
+  code: string,
+  filePath: string | undefined,
+  state: ReturnType<typeof useApplyCodeState>,
+): () => Promise<void> {
   const { originalContentRef } = state;
   return useCallback(async () => {
     if (!filePath) {
@@ -152,10 +173,13 @@ function useApplyAction(code: string, filePath: string | undefined, state: Retur
     }
     try {
       const api = getFilesApi();
-      if (!api?.readFile) { state.setStatus('error'); state.setErrorMessage('File API not available.'); return; }
+      if (!api?.readFile) {
+        state.setStatus('error');
+        state.setErrorMessage('File API not available.');
+        return;
+      }
       const result = await api.readFile(filePath);
       if (!result.success) {
-        // eslint-disable-next-line react-compiler/react-compiler
         originalContentRef.current = '';
         state.setDiffLines(buildNewFileDiff(code));
         state.setStatus('previewing');
@@ -173,15 +197,27 @@ function useApplyAction(code: string, filePath: string | undefined, state: Retur
   }, [code, filePath, originalContentRef, state]);
 }
 
-function useAcceptAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+function useAcceptAction(
+  code: string,
+  filePath: string | undefined,
+  state: ReturnType<typeof useApplyCodeState>,
+): () => Promise<void> {
   const { revertTimerRef, originalContentRef } = state;
   return useCallback(async () => {
     if (!filePath) return;
     try {
       const api = getFilesApi();
-      if (!api?.saveFile) { state.setStatus('error'); state.setErrorMessage('File save API not available.'); return; }
+      if (!api?.saveFile) {
+        state.setStatus('error');
+        state.setErrorMessage('File save API not available.');
+        return;
+      }
       const result = await api.saveFile(filePath, code);
-      if (!result.success) { state.setStatus('error'); state.setErrorMessage(result.error ?? 'Failed to save file.'); return; }
+      if (!result.success) {
+        state.setStatus('error');
+        state.setErrorMessage(result.error ?? 'Failed to save file.');
+        return;
+      }
       state.setStatus('applied');
       state.setDiffLines([]);
       state.setErrorMessage(null);
@@ -189,7 +225,7 @@ function useAcceptAction(code: string, filePath: string | undefined, state: Retu
       if (revertTimerRef.current) clearTimeout(revertTimerRef.current);
       revertTimerRef.current = setTimeout(() => {
         state.setCanRevert(false);
-        // eslint-disable-next-line react-compiler/react-compiler
+
         originalContentRef.current = null;
         revertTimerRef.current = null;
       }, 30_000);
@@ -200,22 +236,36 @@ function useAcceptAction(code: string, filePath: string | undefined, state: Retu
   }, [code, filePath, originalContentRef, revertTimerRef, state]);
 }
 
-function useRevertAction(filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+function useRevertAction(
+  filePath: string | undefined,
+  state: ReturnType<typeof useApplyCodeState>,
+): () => Promise<void> {
   const { originalContentRef, revertTimerRef } = state;
   return useCallback(async () => {
     if (!filePath || originalContentRef.current === null) return;
     try {
       const api = getFilesApi();
-      if (!api?.saveFile) { state.setStatus('error'); state.setErrorMessage('File save API not available.'); return; }
+      if (!api?.saveFile) {
+        state.setStatus('error');
+        state.setErrorMessage('File save API not available.');
+        return;
+      }
       const result = await api.saveFile(filePath, originalContentRef.current);
-      if (!result.success) { state.setStatus('error'); state.setErrorMessage(result.error ?? 'Failed to revert file.'); return; }
+      if (!result.success) {
+        state.setStatus('error');
+        state.setErrorMessage(result.error ?? 'Failed to revert file.');
+        return;
+      }
       state.setStatus('idle');
       state.setCanRevert(false);
       state.setDiffLines([]);
       state.setErrorMessage(null);
-      // eslint-disable-next-line react-compiler/react-compiler
+
       originalContentRef.current = null;
-      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null; }
+      if (revertTimerRef.current) {
+        clearTimeout(revertTimerRef.current);
+        revertTimerRef.current = null;
+      }
     } catch (err) {
       state.setStatus('error');
       state.setErrorMessage(toErrorString(err, 'Failed to revert file.'));
@@ -226,7 +276,11 @@ function useRevertAction(filePath: string | undefined, state: ReturnType<typeof 
 /**
  * Hook for applying code blocks to files.
  */
-export function useApplyCode(code: string, _language: string, filePath?: string): UseApplyCodeResult {
+export function useApplyCode(
+  code: string,
+  _language: string,
+  filePath?: string,
+): UseApplyCodeResult {
   const state = useApplyCodeState();
   const apply = useApplyAction(code, filePath, state);
   const accept = useAcceptAction(code, filePath, state);
@@ -237,5 +291,14 @@ export function useApplyCode(code: string, _language: string, filePath?: string)
     state.setErrorMessage(null);
   }, [state]);
 
-  return { status: state.status, errorMessage: state.errorMessage, diffLines: state.diffLines, apply, accept, reject, revert, canRevert: state.canRevert };
+  return {
+    status: state.status,
+    errorMessage: state.errorMessage,
+    diffLines: state.diffLines,
+    apply,
+    accept,
+    reject,
+    revert,
+    canRevert: state.canRevert,
+  };
 }

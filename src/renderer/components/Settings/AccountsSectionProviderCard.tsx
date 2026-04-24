@@ -106,14 +106,38 @@ function ProviderLabel({
   );
 }
 
+function CliOnlyBadge(): React.ReactElement {
+  return (
+    <span
+      className="text-status-warning"
+      style={{
+        fontSize: '10px',
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        padding: '1px 5px',
+        borderRadius: '3px',
+        marginLeft: '6px',
+        background: 'var(--status-warning-subtle)',
+        border: '1px solid var(--status-warning)',
+        cursor: 'help',
+      }}
+      title="OAuth subscription tokens can only be used via the Claude Code CLI path. SDK-backed features (inline completion, commit-message generation, inline edits) require an Anthropic API key."
+    >
+      CLI-only
+    </span>
+  );
+}
+
 function StatusIndicator({ state }: { state: AuthState | undefined }): React.ReactElement {
   const status = state?.status ?? 'unauthenticated';
   const { color, label } = getStatusDisplay(status);
+  const showCliOnly = status === 'authenticated' && state?.credentialType === 'oauth';
 
   return (
     <div style={S.statusTextStyle}>
       <span style={S.statusDotStyle(color)} />
       <span className="text-text-semantic-muted">{label}</span>
+      {showCliOnly && <CliOnlyBadge />}
     </div>
   );
 }

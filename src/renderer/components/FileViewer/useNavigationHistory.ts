@@ -6,6 +6,7 @@
  * to the back stack (unless the change came from goBack/goForward itself).
  */
 
+import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { GO_BACK_EVENT, GO_FORWARD_EVENT } from '../../hooks/appEventNames';
@@ -34,7 +35,12 @@ function useMenuEventListeners(goBack: () => void, goForward: () => void): void 
 
 function navigateStack(
   setStack: React.Dispatch<React.SetStateAction<string[]>>,
-  opts: { pushOpposite: (p: string) => void; isNavigatingRef: React.MutableRefObject<boolean>; prevPathRef: React.MutableRefObject<string | null>; setActive: (f: string) => void },
+  opts: {
+    pushOpposite: (p: string) => void;
+    isNavigatingRef: React.MutableRefObject<boolean>;
+    prevPathRef: React.MutableRefObject<string | null>;
+    setActive: (f: string) => void;
+  },
 ): void {
   setStack((current) => {
     if (current.length === 0) return current;
@@ -47,6 +53,27 @@ function navigateStack(
   });
 }
 
+interface PathTrackerArgs {
+  activePath: string | null;
+  isNavigatingRef: React.MutableRefObject<boolean>;
+  prevPathRef: React.MutableRefObject<string | null>;
+  setBackStack: React.Dispatch<React.SetStateAction<string[]>>;
+  setForwardStack: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
+function usePathChangeTracker(args: PathTrackerArgs): void {
+  const { activePath, isNavigatingRef, prevPathRef, setBackStack, setForwardStack } = args;
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    prevPathRef.current = activePath;
+    if (isNavigatingRef.current) { isNavigatingRef.current = false; return; }
+    if (prev && prev !== activePath) {
+      setBackStack((s) => [...s.slice(-MAX_HISTORY + 1), prev]);
+      setForwardStack([]);
+    }
+  }, [activePath, isNavigatingRef, prevPathRef, setBackStack, setForwardStack]);
+}
+
 export function useNavigationHistory(
   activePath: string | null,
   setActive: (filePath: string) => void,
@@ -56,20 +83,11 @@ export function useNavigationHistory(
   const isNavigatingRef = useRef(false);
   const prevPathRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const prev = prevPathRef.current;
-    prevPathRef.current = activePath;
-    if (isNavigatingRef.current) { isNavigatingRef.current = false; return; }
-    if (prev && prev !== activePath) {
-      setBackStack((s) => [...s.slice(-MAX_HISTORY + 1), prev]);
-      setForwardStack([]);
-    }
-  }, [activePath]);
+  usePathChangeTracker({ activePath, isNavigatingRef, prevPathRef, setBackStack, setForwardStack });
 
   const goBack = useCallback(() => {
     navigateStack(setBackStack, { pushOpposite: (p) => setForwardStack((f) => [...f, p]), isNavigatingRef, prevPathRef, setActive });
   }, [setActive]);
-
   const goForward = useCallback(() => {
     navigateStack(setForwardStack, { pushOpposite: (p) => setBackStack((b) => [...b, p]), isNavigatingRef, prevPathRef, setActive });
   }, [setActive]);

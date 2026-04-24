@@ -302,9 +302,7 @@ export interface AppAPI {
   setTitleBarOverlay: (color: string, symbolColor: string) => Promise<IpcResult>;
   notify: (options: NotifyOptions) => Promise<NotifyResult>;
   /** Wave 22 Phase E — desktop notification on chat stream completion (unfocused-only). */
-  showStreamCompletionNotification: (
-    options: StreamCompletionNotifyOptions,
-  ) => Promise<IpcResult>;
+  showStreamCompletionNotification: (options: StreamCompletionNotifyOptions) => Promise<IpcResult>;
   rebuildAndRestart: () => Promise<IpcResult>;
   rebuildWeb: () => Promise<IpcResult>;
   onMenuEvent: (callback: (event: MenuEvent) => void) => () => void;
@@ -324,15 +322,22 @@ export interface AppAPI {
   /** Subscribe to startup failure notifications for critical services */
   onStartupWarning: (callback: (payload: { name: string; message: string }) => void) => () => void;
   /** Subscribe to thread:// permalink navigation events from main. */
-  onNavigateToPermalink: (callback: (payload: { threadId: string; messageId?: string }) => void) => () => void;
+  onNavigateToPermalink: (
+    callback: (payload: { threadId: string; messageId?: string }) => void,
+  ) => () => void;
   /** Wave 29 Phase B — open a native save dialog and write content to the chosen path. */
-  saveFileDialog: (defaultName: string, content: string) => Promise<IpcResult & { cancelled?: boolean; filePath?: string }>;
+  saveFileDialog: (
+    defaultName: string,
+    content: string,
+  ) => Promise<IpcResult & { cancelled?: boolean; filePath?: string }>;
   /**
    * Wave 34 Phase G — subscribe to WebSocket connection state changes.
    * Web mode only: fires 'connected' | 'connecting' | 'disconnected'.
    * In Electron mode this method does not exist on the API object.
    */
-  onConnectionState?: (callback: (state: 'connected' | 'connecting' | 'disconnected') => void) => () => void;
+  onConnectionState?: (
+    callback: (state: 'connected' | 'connecting' | 'disconnected') => void,
+  ) => () => void;
 }
 
 export interface ShellAPI {

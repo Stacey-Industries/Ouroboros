@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-Now I have a complete picture. Here's the CLAUDE.md:
-
 ```markdown
 # src/web/ — WebSocket IPC Shim for Web Mode
 
@@ -63,4 +61,5 @@ Used for APIs that have no meaningful web equivalent (e.g., native file picker d
 
 When adding a new IPC channel: add it to `electron.d.ts`, implement in `src/main/`, wire in `src/preload/`, and mirror in the appropriate `src/web/webPreloadApis*.ts` file.
 ```
+
 <!-- claude-md-auto:end -->

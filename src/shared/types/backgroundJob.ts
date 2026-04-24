@@ -6,12 +6,7 @@
  * surfaced to the renderer without a visible terminal.
  */
 
-export type BackgroundJobStatus =
-  | 'queued'
-  | 'running'
-  | 'done'
-  | 'error'
-  | 'cancelled';
+export type BackgroundJobStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
 
 export interface BackgroundJobRequest {
   projectRoot: string;

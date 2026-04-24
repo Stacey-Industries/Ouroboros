@@ -4,10 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  HEURISTIC_DENYLIST,
-  INTERNAL_PACKAGE_PREFIXES,
-} from './stalenessMatrixDenylist';
+import { HEURISTIC_DENYLIST, INTERNAL_PACKAGE_PREFIXES } from './stalenessMatrixDenylist';
 
 describe('HEURISTIC_DENYLIST', () => {
   it('is a non-empty readonly array', () => {

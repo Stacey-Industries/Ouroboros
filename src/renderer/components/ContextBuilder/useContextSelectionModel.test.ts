@@ -9,7 +9,9 @@ import {
   updateSelectionForIntent,
 } from './useContextSelectionModel';
 
-function createSelection(overrides: Partial<TaskRequestContextSelection> = {}): TaskRequestContextSelection {
+function createSelection(
+  overrides: Partial<TaskRequestContextSelection> = {},
+): TaskRequestContextSelection {
   return {
     userSelectedFiles: [],
     pinnedFiles: [],
@@ -21,10 +23,12 @@ function createSelection(overrides: Partial<TaskRequestContextSelection> = {}): 
 
 describe('useContextSelectionModel helpers', () => {
   it('normalizes slash styles, trims values, and removes duplicates', () => {
-    expect(normalizeSelection({
-      pinnedFiles: ['src\\one.ts', 'src/one.ts', '  src/two.ts  ', '', '   '],
-      includedFiles: ['README.md', 'README.md'],
-    })).toEqual({
+    expect(
+      normalizeSelection({
+        pinnedFiles: ['src\\one.ts', 'src/one.ts', '  src/two.ts  ', '', '   '],
+        includedFiles: ['README.md', 'README.md'],
+      }),
+    ).toEqual({
       userSelectedFiles: [],
       pinnedFiles: ['src/one.ts', 'src/two.ts'],
       includedFiles: ['README.md'],

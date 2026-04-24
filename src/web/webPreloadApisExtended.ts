@@ -44,8 +44,7 @@ export function buildResearchApi(t: WebSocketTransport) {
       success: false as const,
       error: 'research:invoke: Not available in web mode.',
     }),
-    getSessionMode: (sessionId: string) =>
-      t.invoke('research:getSessionMode', sessionId),
+    getSessionMode: (sessionId: string) => t.invoke('research:getSessionMode', sessionId),
     setSessionMode: (sessionId: string, mode: string) =>
       t.invoke('research:setSessionMode', sessionId, mode),
     getGlobalDefault: () => t.invoke('research:getGlobalDefault'),
@@ -61,18 +60,14 @@ export function buildResearchApi(t: WebSocketTransport) {
 
 export function buildAgentChatExtApi(t: WebSocketTransport) {
   return {
-    getThreadTags: (threadId: string) =>
-      t.invoke('agentChat:getThreadTags', threadId),
+    getThreadTags: (threadId: string) => t.invoke('agentChat:getThreadTags', threadId),
     setThreadTags: (threadId: string, tags: string[]) =>
       t.invoke('agentChat:setThreadTags', threadId, tags),
-    searchThreads: (payload: unknown) =>
-      t.invoke('agentChat:searchThreads', payload),
-    getThreadCostRollup: (request: unknown) =>
-      t.invoke('agentChat:getThreadCostRollup', request),
+    searchThreads: (payload: unknown) => t.invoke('agentChat:searchThreads', payload),
+    getThreadCostRollup: (request: unknown) => t.invoke('agentChat:getThreadCostRollup', request),
     pinThread: (threadId: string, pinned: boolean) =>
       t.invoke('agentChat:pinThread', threadId, pinned),
-    softDeleteThread: (threadId: string) =>
-      t.invoke('agentChat:softDeleteThread', threadId),
+    softDeleteThread: (threadId: string) => t.invoke('agentChat:softDeleteThread', threadId),
     restoreDeletedThread: (threadId: string) =>
       t.invoke('agentChat:restoreDeletedThread', threadId),
     exportThread: (threadId: string, format: string) =>
@@ -86,8 +81,7 @@ export function buildAgentChatExtApi(t: WebSocketTransport) {
 
 export function buildAgentConflictApi(t: WebSocketTransport) {
   return {
-    getReports: (projectRoot?: string) =>
-      t.invoke('agentConflict:getReports', projectRoot),
+    getReports: (projectRoot?: string) => t.invoke('agentConflict:getReports', projectRoot),
     dismiss: (sessionA: string, sessionB: string) =>
       t.invoke('agentConflict:dismiss', sessionA, sessionB),
     onChange: (cb: (snapshot: unknown) => void) =>

@@ -9,7 +9,9 @@ describe('keyEventToString', () => {
   });
 
   it('normalizes modifier order and printable keys', () => {
-    expect(keyEventToString({ key: 'p', ctrlKey: true, shiftKey: true } as KeyboardEvent)).toBe('Ctrl+Shift+P');
+    expect(keyEventToString({ key: 'p', ctrlKey: true, shiftKey: true } as KeyboardEvent)).toBe(
+      'Ctrl+Shift+P',
+    );
     expect(keyEventToString({ key: 'p', metaKey: true } as KeyboardEvent)).toBe('Ctrl+P');
   });
 
@@ -21,7 +23,9 @@ describe('keyEventToString', () => {
 
 describe('getEffectiveShortcut', () => {
   it('prefers user overrides', () => {
-    expect(getEffectiveShortcut('app:settings', { 'app:settings': 'Ctrl+Alt+S' })).toBe('Ctrl+Alt+S');
+    expect(getEffectiveShortcut('app:settings', { 'app:settings': 'Ctrl+Alt+S' })).toBe(
+      'Ctrl+Alt+S',
+    );
   });
 
   it('falls back to built-in defaults', () => {

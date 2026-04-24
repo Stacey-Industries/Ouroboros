@@ -233,8 +233,7 @@ export function validateTokenWithGrace(kind: 'tool' | 'hooks', token: string): b
   if (previousTokens) {
     const elapsed = Date.now() - previousTokens.generatedAt;
     if (elapsed <= GRACE_WINDOW_MS) {
-      const prev =
-        kind === 'tool' ? previousTokens.toolServerToken : previousTokens.hooksToken;
+      const prev = kind === 'tool' ? previousTokens.toolServerToken : previousTokens.hooksToken;
       if (safeTokenEqual(token, prev)) return true;
     }
   }

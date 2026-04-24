@@ -25,18 +25,23 @@ import type { RankedContextFile } from './types';
  * @param traceId       Router trace ID — guaranteed non-empty by Phase B.
  * @param selection     Full ranked file list from the context selector.
  * @param files         Files that made it into the packet (budget-pruned subset).
- * @param sessionId     Chat session / thread ID forwarded to the outcome observer.
- * @param workspaceRoot Absolute workspace root for fileId normalisation.
+ * @param ctx           Optional context: sessionId (chat thread) and workspaceRoot
+ *                      (used for fileId normalisation).
  */
-// eslint-disable-next-line max-params
+export interface EmitDecisionsContext {
+  sessionId?: string;
+  workspaceRoot?: string;
+}
+
 export function emitDecisionsForPacket(
   traceId: string | undefined,
   selection: ContextSelectionResult,
   files: RankedContextFile[],
-  sessionId = '',
-  workspaceRoot = '',
+  ctx: EmitDecisionsContext = {},
 ): void {
   if (!traceId) return;
+  const sessionId = ctx.sessionId ?? '';
+  const workspaceRoot = ctx.workspaceRoot ?? '';
 
   const includedPaths = new Set(files.map((f) => f.filePath));
   const allRanked = selection.rankedFiles;
@@ -62,5 +67,5 @@ export function emitDecisionsForPacket(
     fileId: normaliseFileId(f.filePath, workspaceRoot),
     path: f.filePath,
   }));
-  recordTurnStart(traceId, traceId, includedFiles, sessionId, workspaceRoot);
+  recordTurnStart(traceId, traceId, includedFiles, { sessionId, workspaceRoot });
 }

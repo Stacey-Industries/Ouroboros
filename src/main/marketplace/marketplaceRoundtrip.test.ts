@@ -17,7 +17,9 @@ const { keyRef } = vi.hoisted(() => ({
 }));
 
 vi.mock('./trustedKeys', () => ({
-  get TRUSTED_PUBLIC_KEY_BASE64() { return keyRef.value; },
+  get TRUSTED_PUBLIC_KEY_BASE64() {
+    return keyRef.value;
+  },
   MARKETPLACE_MANIFEST_URL: 'https://example.com/index.json',
   REVOKED_BUNDLES_URL: 'https://example.com/revoked.json',
 }));
@@ -45,8 +47,10 @@ const configStore: Record<string, unknown> = {};
 vi.mock('../config', () => ({
   // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
   getConfigValue: (k: string) => configStore[k] ?? null,
-  // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
-  setConfigValue: (k: string, v: unknown) => { configStore[k] = v; },
+  setConfigValue: (k: string, v: unknown) => {
+    // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
+    configStore[k] = v;
+  },
 }));
 
 // ── Logger ────────────────────────────────────────────────────────────────────
@@ -177,9 +181,7 @@ describe('marketplace round-trip — theme bundle', () => {
     mockFetchManifest.mockResolvedValue({ bundles: [entry] });
 
     // Stub httpsGet to return a revocation list that contains this ID
-    mockHttpsGet.mockResolvedValueOnce(
-      JSON.stringify({ ids: ['revoked-bundle'] }),
-    );
+    mockHttpsGet.mockResolvedValueOnce(JSON.stringify({ ids: ['revoked-bundle'] }));
 
     const result = await installById('revoked-bundle');
 
@@ -268,7 +270,7 @@ describe('marketplace round-trip — theme bundle', () => {
     mockFetchManifest.mockResolvedValue({ bundles: [entry] });
     mockFetchBundle.mockResolvedValue(bundleContent);
 
-    const result = await installById('bad-keys') as { success: boolean; error?: string };
+    const result = (await installById('bad-keys')) as { success: boolean; error?: string };
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('theme-key-invalid');

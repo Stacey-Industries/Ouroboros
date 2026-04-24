@@ -110,9 +110,7 @@ function isValidMetrics(m: unknown): m is ContextRankerMetrics {
   );
 }
 
-type ValidationResult =
-  | { ok: true; weights: ContextRankerWeights }
-  | { ok: false; reason: string };
+type ValidationResult = { ok: true; weights: ContextRankerWeights } | { ok: false; reason: string };
 
 const MISMATCH = { ok: false as const, reason: 'schema-mismatch' };
 
@@ -185,7 +183,9 @@ export async function reloadContextWeights(
 
   const result = validateWeights(parsed);
   if (!result.ok) {
-    console.warn(`[context-ranker] weights schema invalid (${result.reason}) — keeping current weights`);
+    console.warn(
+      `[context-ranker] weights schema invalid (${result.reason}) — keeping current weights`,
+    );
     return { loaded: false, version: activeWeights.version, reason: result.reason };
   }
 

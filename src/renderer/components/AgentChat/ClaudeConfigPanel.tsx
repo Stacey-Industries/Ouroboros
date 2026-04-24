@@ -28,9 +28,22 @@ function renderTabContent(
 ): React.ReactElement {
   switch (activeTab) {
     case 'commands':
-      return <CommandsTab commands={props.commands} onOpenFile={props.onOpenFile} projectRoot={props.projectRoot} />;
+      return (
+        <CommandsTab
+          commands={props.commands}
+          onOpenFile={props.onOpenFile}
+          projectRoot={props.projectRoot}
+        />
+      );
     case 'rules':
-      return <RulesTab rules={props.rules} onOpenFile={props.onOpenFile} onCreateRule={props.onCreateRule} projectRoot={props.projectRoot} />;
+      return (
+        <RulesTab
+          rules={props.rules}
+          onOpenFile={props.onOpenFile}
+          onCreateRule={props.onCreateRule}
+          projectRoot={props.projectRoot}
+        />
+      );
     case 'hooks':
       return <HooksTab projectRoot={props.projectRoot} />;
     case 'settings':
@@ -47,9 +60,13 @@ export function ClaudeConfigPanel(props: ClaudeConfigPanelProps): React.ReactEle
     <div className="flex flex-col h-full overflow-hidden bg-surface-panel">
       <ConfigTabBar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-        {props.isLoading
-          ? <div className="px-3 py-2 text-[10px] text-text-semantic-muted animate-pulse">Loading...</div>
-          : renderTabContent(activeTab, props)}
+        {props.isLoading ? (
+          <div className="px-3 py-2 text-[10px] text-text-semantic-muted animate-pulse">
+            Loading...
+          </div>
+        ) : (
+          renderTabContent(activeTab, props)
+        )}
       </div>
     </div>
   );

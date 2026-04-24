@@ -70,9 +70,7 @@ afterEach(() => {
 
 describe('MarketplacePanel — closed', () => {
   it('renders nothing when isOpen is false', () => {
-    const { container } = render(
-      <MarketplacePanel isOpen={false} onClose={vi.fn()} />,
-    );
+    const { container } = render(<MarketplacePanel isOpen={false} onClose={vi.fn()} />);
     expect(container.firstChild).toBeNull();
   });
 });
@@ -117,10 +115,7 @@ describe('MarketplacePanel — bundle list', () => {
 
     await waitFor(() => {
       expect(mockInstall).toHaveBeenCalledWith({ entryId: 'test-theme' });
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.stringContaining('installed'),
-        'success',
-      );
+      expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('installed'), 'success');
     });
   });
 
@@ -132,10 +127,7 @@ describe('MarketplacePanel — bundle list', () => {
     fireEvent.click(screen.getByRole('button', { name: /install/i }));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.stringContaining('Signature invalid'),
-        'error',
-      );
+      expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('Signature invalid'), 'error');
     });
   });
 

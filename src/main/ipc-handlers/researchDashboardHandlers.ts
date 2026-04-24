@@ -174,17 +174,29 @@ function incrementTriggerBucket(
 ): void {
   // Explicit switch avoids security/detect-object-injection on variable key
   switch (bucket) {
-    case 'hook': tally.hook++; break;
-    case 'fact-claim': tally['fact-claim']++; break;
-    case 'slash': tally.slash++; break;
-    case 'correction': tally.correction++; break;
-    default: tally.other++; break;
+    case 'hook':
+      tally.hook++;
+      break;
+    case 'fact-claim':
+      tally['fact-claim']++;
+      break;
+    case 'slash':
+      tally.slash++;
+      break;
+    case 'correction':
+      tally.correction++;
+      break;
+    default:
+      tally.other++;
+      break;
   }
 }
 
 // ─── Main aggregation ─────────────────────────────────────────────────────────
 
-async function aggregateInvocations(sinceMs: number): Promise<ResearchDashboardMetrics['invocations']> {
+async function aggregateInvocations(
+  sinceMs: number,
+): Promise<ResearchDashboardMetrics['invocations']> {
   const store = getTelemetryStore();
   const filter = sinceMs > 0 ? { since: sinceMs } : {};
   const rows = store?.queryInvocations(filter) ?? [];
@@ -216,9 +228,10 @@ async function aggregateOutcomes(
   sinceMs: number,
 ): Promise<ResearchDashboardMetrics['outcomes']> {
   const records = await readJsonlDir(dir, 'research-outcomes', sinceMs);
-  const filtered = sinceMs > 0
-    ? records.filter((r) => typeof r.timestamp === 'number' && r.timestamp >= sinceMs)
-    : records;
+  const filtered =
+    sinceMs > 0
+      ? records.filter((r) => typeof r.timestamp === 'number' && r.timestamp >= sinceMs)
+      : records;
 
   let accepted = 0;
   let reverted = 0;
@@ -246,7 +259,10 @@ interface CorrelatedInput {
   outcomes: ResearchDashboardMetrics['outcomes'];
 }
 
-function computeCorrelated({ invTotal, outcomes }: CorrelatedInput): ResearchDashboardMetrics['correlated'] {
+function computeCorrelated({
+  invTotal,
+  outcomes,
+}: CorrelatedInput): ResearchDashboardMetrics['correlated'] {
   const correlated = outcomes.accepted + outcomes.reverted;
   const fp = outcomes.reverted;
   return {
@@ -262,9 +278,10 @@ async function aggregateCorrections(
   sinceMs: number,
 ): Promise<ResearchDashboardMetrics['corrections']> {
   const records = await readJsonlDir(dir, 'corrections', sinceMs);
-  const filtered = sinceMs > 0
-    ? records.filter((r) => typeof r.timestamp === 'number' && r.timestamp >= sinceMs)
-    : records;
+  const filtered =
+    sinceMs > 0
+      ? records.filter((r) => typeof r.timestamp === 'number' && r.timestamp >= sinceMs)
+      : records;
 
   const libraries = new Set<string>();
   for (const r of filtered) {
@@ -317,9 +334,8 @@ export function registerResearchDashboardHandlers(): string[] {
 
   ipcMain.removeHandler('research:getDashboardMetrics');
   ipcMain.handle('research:getDashboardMetrics', async (_event, range: unknown) => {
-    const validRange = range === '7d' || range === '30d' || range === 'all'
-      ? (range as DashboardRange)
-      : '7d';
+    const validRange =
+      range === '7d' || range === '30d' || range === 'all' ? (range as DashboardRange) : '7d';
     try {
       const metrics = await getDashboardMetrics(validRange);
       return { success: true, metrics };

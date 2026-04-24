@@ -24,8 +24,15 @@ export interface AgentChatTabBarProps {
 
 function PlusIcon(): React.ReactElement {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
       <path d="M6 2v8M2 6h8" />
     </svg>
   );
@@ -33,34 +40,48 @@ function PlusIcon(): React.ReactElement {
 
 function ChevronDownIcon(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M2 3.5L5 6.5L8 3.5" />
     </svg>
   );
 }
 
-function DropdownToggleButton({ show, onClick }: { show: boolean; onClick: () => void }): React.ReactElement | null {
-  if (!show) return null;
-  return (
-    <button onClick={onClick}
-      className="flex h-full w-6 shrink-0 items-center justify-center text-text-semantic-muted transition-colors duration-100 hover:text-text-semantic-primary"
-      title="Chat history">
-      <ChevronDownIcon />
-    </button>
-  );
-}
-
-function TabBarDropdown({ dropdownOpen, dropdownRect, activeThreadId, threads, onCloseDropdown, onDeleteThread, onSelectThread }: {
-  dropdownOpen: boolean; dropdownRect: DOMRect | null; activeThreadId: string | null;
-  threads: AgentChatThreadRecord[]; onCloseDropdown: () => void;
-  onDeleteThread: (id: string) => void; onSelectThread: (id: string) => void;
+function TabBarDropdown({
+  dropdownOpen,
+  dropdownRect,
+  activeThreadId,
+  threads,
+  onCloseDropdown,
+  onDeleteThread,
+  onSelectThread,
+}: {
+  dropdownOpen: boolean;
+  dropdownRect: DOMRect | null;
+  activeThreadId: string | null;
+  threads: AgentChatThreadRecord[];
+  onCloseDropdown: () => void;
+  onDeleteThread: (id: string) => void;
+  onSelectThread: (id: string) => void;
 }): React.ReactElement | null {
   if (!dropdownOpen || !dropdownRect) return null;
   return (
-    <ThreadDropdown activeThreadId={activeThreadId} onClose={onCloseDropdown}
-      onDeleteThread={onDeleteThread} onSelectThread={onSelectThread}
-      threads={threads} triggerRect={dropdownRect} />
+    <ThreadDropdown
+      activeThreadId={activeThreadId}
+      onClose={onCloseDropdown}
+      onDeleteThread={onDeleteThread}
+      onSelectThread={onSelectThread}
+      threads={threads}
+      triggerRect={dropdownRect}
+    />
   );
 }
 
@@ -128,7 +149,6 @@ interface TabBarContentProps {
   threads: AgentChatThreadRecord[];
 }
 
-
 function TabBarActions({
   threads,
   onToggleDropdown,
@@ -148,7 +168,11 @@ function TabBarActions({
 }): React.ReactElement {
   return (
     <>
-      <DropdownToggleButton show={threads.length > 1} onClick={onToggleDropdown} />
+      {threads.length > 1 && (
+        <button onClick={onToggleDropdown} className="flex h-full w-6 shrink-0 items-center justify-center text-text-semantic-muted transition-colors duration-100 hover:text-text-semantic-primary" title="Chat history">
+          <ChevronDownIcon />
+        </button>
+      )}
       <BranchTreeButton
         rootThread={rootThread}
         activeThreadId={activeThreadId}
@@ -160,60 +184,51 @@ function TabBarActions({
   );
 }
 
-function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement {
+function TabBarScrollArea(props: TabBarContentProps): React.ReactElement {
+  const activeThreadModel =
+    props.threads.find((t) => t.id === props.activeThreadId)?.latestOrchestration?.model ?? null;
   return (
-    <button
-      onClick={onClick}
-      className="flex h-full w-7 shrink-0 items-center justify-center text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
-      title="New chat (Ctrl+L)"
-    >
-      <PlusIcon />
-    </button>
+    <>
+      <div ref={props.scrollRef} className="min-w-0 flex-1">
+        <ThreadTabs activeThreadId={props.activeThreadId} onDeleteThread={props.onDeleteThread}
+          onRenameThread={props.onRenameThread} onSelectThread={props.onSelectThread} threads={props.threads} />
+      </div>
+      <TabBarActions threads={props.threads} onToggleDropdown={props.onToggleDropdown}
+        rootThread={props.rootThread} activeThreadId={props.activeThreadId}
+        onSelectThread={props.onSelectThread} linkedSession={props.linkedSession} activeThreadModel={activeThreadModel} />
+      <TabBarDropdown dropdownOpen={props.dropdownOpen} dropdownRect={props.dropdownRect}
+        activeThreadId={props.activeThreadId} threads={props.threads}
+        onCloseDropdown={props.onCloseDropdown} onDeleteThread={props.onDeleteThread} onSelectThread={props.onSelectThread} />
+    </>
   );
 }
 
 function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement {
-  const activeThreadModel =
-    props.threads.find((t) => t.id === props.activeThreadId)?.latestOrchestration?.model ?? null;
   return (
-    <div
-      ref={props.barRef}
-      className="relative flex items-center border-b border-border-semantic bg-surface-panel"
-      style={{ minHeight: 32 }}
-    >
-      <NewChatButton onClick={props.onNewChat} />
-      <div ref={props.scrollRef} className="min-w-0 flex-1">
-        <ThreadTabs
-          activeThreadId={props.activeThreadId}
-          onDeleteThread={props.onDeleteThread}
-          onRenameThread={props.onRenameThread}
-          onSelectThread={props.onSelectThread}
-          threads={props.threads}
-        />
-      </div>
-      <TabBarActions
-        threads={props.threads}
-        onToggleDropdown={props.onToggleDropdown}
-        rootThread={props.rootThread}
-        activeThreadId={props.activeThreadId}
-        onSelectThread={props.onSelectThread}
-        linkedSession={props.linkedSession}
-        activeThreadModel={activeThreadModel}
-      />
-      <TabBarDropdown
-        dropdownOpen={props.dropdownOpen}
-        dropdownRect={props.dropdownRect}
-        activeThreadId={props.activeThreadId}
-        threads={props.threads}
-        onCloseDropdown={props.onCloseDropdown}
-        onDeleteThread={props.onDeleteThread}
-        onSelectThread={props.onSelectThread}
-      />
+    <div ref={props.barRef} className="relative flex items-center border-b border-border-semantic bg-surface-panel" style={{ minHeight: 32 }}>
+      <button onClick={props.onNewChat} className="flex h-full w-7 shrink-0 items-center justify-center text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent" title="New chat (Ctrl+L)">
+        <PlusIcon />
+      </button>
+      <TabBarScrollArea {...props} />
     </div>
   );
 }
 
-function useTabBarState(threads: AgentChatThreadRecord[], activeThreadId: string | null): {
+function useTabBarDropdown(barRef: React.RefObject<HTMLDivElement | null>) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [barRect, setBarRect] = useState<DOMRect | null>(null);
+  const handleCloseDropdown = useCallback(() => setDropdownOpen(false), []);
+  const handleToggleDropdown = useCallback(() => {
+    if (!dropdownOpen && barRef.current) setBarRect(barRef.current.getBoundingClientRect());
+    setDropdownOpen((previous) => !previous);
+  }, [dropdownOpen, barRef]);
+  return { dropdownOpen, barRect, handleCloseDropdown, handleToggleDropdown };
+}
+
+function useTabBarState(
+  threads: AgentChatThreadRecord[],
+  activeThreadId: string | null,
+): {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   barRef: React.RefObject<HTMLDivElement | null>;
   dropdownOpen: boolean;
@@ -228,8 +243,6 @@ function useTabBarState(threads: AgentChatThreadRecord[], activeThreadId: string
 } {
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [barRect, setBarRect] = useState<DOMRect | null>(null);
   const [renameTarget, setRenameTarget] = useState<AgentChatThreadRecord | null>(null);
   const activeThread = activeThreadId
     ? (threads.find((t) => t.id === activeThreadId) ?? null)
@@ -237,17 +250,10 @@ function useTabBarState(threads: AgentChatThreadRecord[], activeThreadId: string
   const rootThread = resolveRootThread(threads, activeThreadId);
   const linkedSession = useLinkedSessionId(activeThread);
   useScrollActiveThreadIntoView(scrollRef, activeThreadId);
-  const handleCloseDropdown = useCallback(() => setDropdownOpen(false), []);
-  const handleToggleDropdown = useCallback(() => {
-    if (!dropdownOpen && barRef.current) setBarRect(barRef.current.getBoundingClientRect());
-    setDropdownOpen((previous) => !previous);
-  }, [dropdownOpen]);
+  const dropdown = useTabBarDropdown(barRef);
   // Store refreshes via onThreadUpdate subscription after rename — no local state needed.
   const handleRenamed = useCallback(() => undefined, []);
-  return {
-    scrollRef, barRef, dropdownOpen, barRect, renameTarget, rootThread,
-    linkedSession, handleCloseDropdown, handleToggleDropdown, handleRenamed, setRenameTarget,
-  };
+  return { scrollRef, barRef, ...dropdown, renameTarget, rootThread, linkedSession, handleRenamed, setRenameTarget };
 }
 
 export function AgentChatTabBar({

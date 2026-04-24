@@ -7,8 +7,8 @@
  * completion order.
  */
 
-import os from 'os'
-import pLimit from 'p-limit'
+import os from 'os';
+import pLimit from 'p-limit';
 
 /**
  * Default concurrency for file I/O in the indexer. Clamped to [4, 16]:
@@ -16,7 +16,7 @@ import pLimit from 'p-limit'
  *   - Upper bound stays well below Windows' default per-process FD budget,
  *     even when other subsystems (log writer, watchers, PTY) hold handles.
  */
-export const defaultConcurrency: number = Math.max(4, Math.min(16, os.cpus().length * 2))
+export const defaultConcurrency: number = Math.max(4, Math.min(16, os.cpus().length * 2));
 
 /**
  * Run `fn` over `items` with at most `limit` operations in flight at once.
@@ -27,7 +27,7 @@ export function mapConcurrent<T, R>(
   fn: (item: T, index: number) => Promise<R>,
   limit: number = defaultConcurrency,
 ): Promise<R[]> {
-  if (items.length === 0) return Promise.resolve([])
-  const gate = pLimit(Math.max(1, limit))
-  return Promise.all(items.map((item, index) => gate(() => fn(item, index))))
+  if (items.length === 0) return Promise.resolve([]);
+  const gate = pLimit(Math.max(1, limit));
+  return Promise.all(items.map((item, index) => gate(() => fn(item, index))));
 }

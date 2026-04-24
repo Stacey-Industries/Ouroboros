@@ -73,7 +73,17 @@ export function useMcpSectionModel(): McpSectionModel {
   const globalServers = data.servers.filter((server) => server.scope === 'global');
   const projectServers = data.servers.filter((server) => server.scope === 'project');
 
-  return { ...data, ...editor, addServer, formHandlers, globalServers, projectServers, removeServer, toggleServer, updateServer };
+  return {
+    ...data,
+    ...editor,
+    addServer,
+    formHandlers,
+    globalServers,
+    projectServers,
+    removeServer,
+    toggleServer,
+    updateServer,
+  };
 }
 
 function useMcpServerData(): McpServerData {
@@ -97,7 +107,9 @@ function useMcpServerData(): McpServerData {
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   // Auto-refresh when MCP store installs/changes a server
   useEffect(() => {
@@ -156,12 +168,20 @@ function useMcpEditorState(): McpEditorState {
   };
 }
 
-function useAddServerAction(data: McpServerData, editor: McpEditorState): McpSectionModel['addServer'] {
+function useAddServerAction(
+  data: McpServerData,
+  editor: McpEditorState,
+): McpSectionModel['addServer'] {
   return async function addServer(): Promise<void> {
     if (!editor.form.name.trim()) return data.setActionError('Server name is required.');
-    if (!hasCommandOrUrl(editor.form)) return data.setActionError('Either command or URL is required.');
+    if (!hasCommandOrUrl(editor.form))
+      return data.setActionError('Either command or URL is required.');
     try {
-      const result = await window.electronAPI.mcp.addServer(editor.form.name.trim(), formToConfig(editor.form), editor.form.scope);
+      const result = await window.electronAPI.mcp.addServer(
+        editor.form.name.trim(),
+        formToConfig(editor.form),
+        editor.form.scope,
+      );
       if (!result.success) return data.setActionError(result.error ?? 'Failed to add server');
       editor.setIsAdding(false);
       editor.setForm(EMPTY_FORM);
@@ -172,12 +192,20 @@ function useAddServerAction(data: McpServerData, editor: McpEditorState): McpSec
   };
 }
 
-function useUpdateServerAction(data: McpServerData, editor: McpEditorState): McpSectionModel['updateServer'] {
+function useUpdateServerAction(
+  data: McpServerData,
+  editor: McpEditorState,
+): McpSectionModel['updateServer'] {
   return async function updateServer(): Promise<void> {
     if (!editor.editingServer) return;
-    if (!hasCommandOrUrl(editor.form)) return data.setActionError('Either command or URL is required.');
+    if (!hasCommandOrUrl(editor.form))
+      return data.setActionError('Either command or URL is required.');
     try {
-      const result = await window.electronAPI.mcp.updateServer(editor.editingServer, formToConfig(editor.form), editor.form.scope);
+      const result = await window.electronAPI.mcp.updateServer(
+        editor.editingServer,
+        formToConfig(editor.form),
+        editor.form.scope,
+      );
       if (!result.success) return data.setActionError(result.error ?? 'Failed to update server');
       editor.setEditingServer(null);
       editor.setForm(EMPTY_FORM);
@@ -191,7 +219,11 @@ function useUpdateServerAction(data: McpServerData, editor: McpEditorState): Mcp
 function useToggleServerAction(data: McpServerData): McpSectionModel['toggleServer'] {
   return async function toggleServer(server: McpServerEntry): Promise<void> {
     try {
-      const result = await window.electronAPI.mcp.toggleServer(server.name, !server.enabled, server.scope);
+      const result = await window.electronAPI.mcp.toggleServer(
+        server.name,
+        !server.enabled,
+        server.scope,
+      );
       if (!result.success) return data.setActionError(result.error ?? 'Failed to toggle');
       await data.refresh();
     } catch (err) {
@@ -200,7 +232,10 @@ function useToggleServerAction(data: McpServerData): McpSectionModel['toggleServ
   };
 }
 
-function useRemoveServerAction(data: McpServerData, editor: McpEditorState): McpSectionModel['removeServer'] {
+function useRemoveServerAction(
+  data: McpServerData,
+  editor: McpEditorState,
+): McpSectionModel['removeServer'] {
   return async function removeServer(name: string, scope: 'global' | 'project'): Promise<void> {
     try {
       const result = await window.electronAPI.mcp.removeServer(name, scope);
@@ -221,12 +256,20 @@ function buildFormHandlers(setForm: Dispatch<SetStateAction<ServerFormState>>): 
   return {
     onFieldChange: (field, value) => setForm((form) => ({ ...form, [field]: value })),
     onScopeChange: (scope) => setForm((form) => ({ ...form, scope })),
-    onAddEnvRow: () => setForm((form) => ({ ...form, envRows: [...form.envRows, { key: '', value: '' }] })),
-    onRemoveEnvRow: (idx) => setForm((form) => ({ ...form, envRows: form.envRows.filter((_, rowIndex) => rowIndex !== idx) })),
-    onUpdateEnvRow: (idx, field, val) => setForm((form) => ({
-      ...form,
-      envRows: form.envRows.map((row, rowIndex) => (rowIndex === idx ? { ...row, [field]: val } : row)),
-    })),
+    onAddEnvRow: () =>
+      setForm((form) => ({ ...form, envRows: [...form.envRows, { key: '', value: '' }] })),
+    onRemoveEnvRow: (idx) =>
+      setForm((form) => ({
+        ...form,
+        envRows: form.envRows.filter((_, rowIndex) => rowIndex !== idx),
+      })),
+    onUpdateEnvRow: (idx, field, val) =>
+      setForm((form) => ({
+        ...form,
+        envRows: form.envRows.map((row, rowIndex) =>
+          rowIndex === idx ? { ...row, [field]: val } : row,
+        ),
+      })),
   };
 }
 

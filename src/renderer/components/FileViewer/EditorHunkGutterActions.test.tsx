@@ -30,12 +30,7 @@ function makeHunk(
   };
 }
 
-function makeDec(
-  id: string,
-  fileIdx = 0,
-  hunkIdx = 0,
-  newStart = 5,
-): HunkDecoration {
+function makeDec(id: string, fileIdx = 0, hunkIdx = 0, newStart = 5): HunkDecoration {
   return {
     hunk: makeHunk(id, newStart),
     anchorLine: newStart,
@@ -44,9 +39,7 @@ function makeDec(
   };
 }
 
-function makeDiffReview(
-  overrides: Partial<DiffReviewContextValue> = {},
-): DiffReviewContextValue {
+function makeDiffReview(overrides: Partial<DiffReviewContextValue> = {}): DiffReviewContextValue {
   return {
     state: null,
     openReview: vi.fn(),
@@ -83,9 +76,7 @@ describe('EditorHunkGutterActions null guards', () => {
     const diffReview = null;
     const mockEditor = {};
 
-    const shouldRender = !(
-      !mockEditor || !diffReview || decorations.length === 0
-    );
+    const shouldRender = !(!mockEditor || !diffReview || decorations.length === 0);
     expect(shouldRender).toBe(false);
   });
 
@@ -94,9 +85,7 @@ describe('EditorHunkGutterActions null guards', () => {
     const diffReview = makeDiffReview();
     const mockEditor = {};
 
-    const shouldRender = !(
-      !mockEditor || !diffReview || decorations.length === 0
-    );
+    const shouldRender = !(!mockEditor || !diffReview || decorations.length === 0);
     expect(shouldRender).toBe(false);
   });
 
@@ -105,9 +94,7 @@ describe('EditorHunkGutterActions null guards', () => {
     const diffReview = makeDiffReview();
     const mockEditor = {};
 
-    const shouldRender = !(
-      !mockEditor || !diffReview || decorations.length === 0
-    );
+    const shouldRender = !(!mockEditor || !diffReview || decorations.length === 0);
     expect(shouldRender).toBe(true);
   });
 });
@@ -138,9 +125,7 @@ describe('HunkWidget callback wiring', () => {
     const acceptHunk = vi.fn();
     makeDiffReview({ acceptHunk });
     // Decorations only include pending hunks — resolved hunks never appear
-    const pendingOnly = [makeDec('h1'), makeDec('h2')].filter(
-      (d) => d.hunk.decision === 'pending',
-    );
+    const pendingOnly = [makeDec('h1'), makeDec('h2')].filter((d) => d.hunk.decision === 'pending');
     expect(pendingOnly).toHaveLength(2);
     expect(acceptHunk).not.toHaveBeenCalled();
   });

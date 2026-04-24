@@ -40,6 +40,7 @@ vi.mock('./useAgentChatWorkspace', () => ({
     defaultProvider: 'claude-code',
     modelProviders: [],
     codexModels: [],
+    codexAppServerTransport: false,
     attachments: [],
     setAttachments: vi.fn(),
     queuedMessages: [],

@@ -102,7 +102,9 @@ describe('registerAgentConflictHandlers', () => {
   });
 
   it('getReports returns error result when monitor throws', () => {
-    mockGetSnapshot.mockImplementationOnce(() => { throw new Error('store error'); });
+    mockGetSnapshot.mockImplementationOnce(() => {
+      throw new Error('store error');
+    });
     const handler = getHandler('agentConflict:getReports');
     const result = handler({}) as { success: boolean; error: string };
     expect(result.success).toBe(false);

@@ -32,9 +32,7 @@ function makeReport(overrides?: Partial<AgentConflictReport>): AgentConflictRepo
 
 describe('AgentConflictBanner', () => {
   it('renders file-level overlap message', () => {
-    render(
-      <AgentConflictBanner report={makeReport()} onDismiss={vi.fn()} />,
-    );
+    render(<AgentConflictBanner report={makeReport()} onDismiss={vi.fn()} />);
     expect(screen.getByRole('alert')).toBeDefined();
     expect(screen.getByText(/sessB/)).toBeDefined();
     expect(screen.getByText(/src\/foo\.ts/)).toBeDefined();
@@ -45,7 +43,13 @@ describe('AgentConflictBanner', () => {
       severity: 'blocking',
       fileOnly: false,
       overlappingSymbols: [
-        { id: 'src/foo.ts::fooBar', file: 'src/foo.ts', line: 10, kind: 'function', name: 'fooBar' },
+        {
+          id: 'src/foo.ts::fooBar',
+          file: 'src/foo.ts',
+          line: 10,
+          kind: 'function',
+          name: 'fooBar',
+        },
       ],
     });
     render(<AgentConflictBanner report={report} onDismiss={vi.fn()} />);
@@ -75,13 +79,17 @@ describe('AgentConflictBanner', () => {
   });
 
   it('applies warning severity CSS tokens', () => {
-    render(<AgentConflictBanner report={makeReport({ severity: 'warning' })} onDismiss={vi.fn()} />);
+    render(
+      <AgentConflictBanner report={makeReport({ severity: 'warning' })} onDismiss={vi.fn()} />,
+    );
     const alert = screen.getByRole('alert');
     expect(alert.className).toContain('bg-status-warning-subtle');
   });
 
   it('applies blocking severity CSS tokens', () => {
-    render(<AgentConflictBanner report={makeReport({ severity: 'blocking' })} onDismiss={vi.fn()} />);
+    render(
+      <AgentConflictBanner report={makeReport({ severity: 'blocking' })} onDismiss={vi.fn()} />,
+    );
     const alert = screen.getByRole('alert');
     expect(alert.className).toContain('bg-status-error-subtle');
   });

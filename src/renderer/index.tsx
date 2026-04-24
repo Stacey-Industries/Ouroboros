@@ -22,7 +22,7 @@ function mountPairingScreen(): void {
   if (!el) return;
   const host = window.__WEB_PAIRING_HOST__ ?? window.location.hostname;
   const rawPort = window.__WEB_PAIRING_PORT__;
-  const port = rawPort !== undefined ? rawPort : (Number(window.location.port) || 80);
+  const port = rawPort !== undefined ? rawPort : Number(window.location.port) || 80;
   document.getElementById('splash')?.remove();
   createRoot(el).render(
     <StrictMode>

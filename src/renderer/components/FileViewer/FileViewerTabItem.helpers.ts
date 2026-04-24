@@ -76,7 +76,9 @@ export function useHandleDialogAction(args: HandleDialogActionArgs) {
       });
       if (resolution.outcome !== 'close') {
         toast(
-          resolution.choice === 'save' ? (resolution.error ?? 'Save failed') : `Kept ${file.name} open`,
+          resolution.choice === 'save'
+            ? (resolution.error ?? 'Save failed')
+            : `Kept ${file.name} open`,
           resolution.choice === 'save' ? 'error' : 'info',
         );
         return;

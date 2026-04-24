@@ -28,9 +28,7 @@ export type RafBatchedChunks = {
 
 // ─── Pure factory (testable without React) ───────────────────────────────────
 
-export function makeBatcher(
-  onFlush: (chunks: AgentChatStreamChunk[]) => void,
-): RafBatchedChunks {
+export function makeBatcher(onFlush: (chunks: AgentChatStreamChunk[]) => void): RafBatchedChunks {
   let pending: AgentChatStreamChunk[] = [];
   let rafId: number | null = null;
 

@@ -118,10 +118,7 @@ describe('folderCrudApi', () => {
   it('onChanged() callback receives the payload (strips IpcRendererEvent)', () => {
     const cb = vi.fn();
     folderCrudApi.onChanged(cb);
-    const registeredHandler = mockOn.mock.calls[0][1] as (
-      event: unknown,
-      payload: unknown,
-    ) => void;
+    const registeredHandler = mockOn.mock.calls[0][1] as (event: unknown, payload: unknown) => void;
     const fakeFolders = [{ id: 'f-1', name: 'Alpha', sessionIds: [], createdAt: 1, order: 0 }];
     registeredHandler({} /* IpcRendererEvent */, fakeFolders);
     expect(cb).toHaveBeenCalledWith(fakeFolders);

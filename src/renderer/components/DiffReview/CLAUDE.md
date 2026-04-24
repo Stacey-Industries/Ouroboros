@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-The CLAUDE.md for this directory already exists and is comprehensive. Here it is:
-
----
-
 # DiffReview — Per-Hunk Accept/Reject UI for Agent Diffs
 
 Presents a code review interface for agent-generated changes: users can accept (stage) or reject (revert) individual hunks or entire files before committing.
@@ -80,6 +76,7 @@ All styling uses **inline `CSSProperties` objects with CSS vars** — no Tailwin
 - `window.electronAPI.git.revertHunk(projectRoot, rawPatch)` — reverts a single hunk
 
 All three return `{ success: boolean; error?: string }`. Type source: `src/renderer/types/electron.d.ts`.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

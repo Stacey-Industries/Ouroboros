@@ -53,9 +53,7 @@ describe('resolveRootThread', () => {
   });
 
   it('returns the deepest reachable ancestor when a parent is missing', () => {
-    const threads = [
-      makeThread({ id: 'child', parentThreadId: 'missing-parent' }),
-    ];
+    const threads = [makeThread({ id: 'child', parentThreadId: 'missing-parent' })];
     expect(resolveRootThread(threads, 'child')?.id).toBe('child');
   });
 });

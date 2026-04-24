@@ -58,10 +58,7 @@ function makeHunk(
 
 describe('buildHunkDecorations', () => {
   it('returns one decoration per pending hunk', () => {
-    const hunks: ReviewHunk[] = [
-      makeHunk('a', 5, 3),
-      makeHunk('b', 12, 2),
-    ];
+    const hunks: ReviewHunk[] = [makeHunk('a', 5, 3), makeHunk('b', 12, 2)];
     const decs = buildHunkDecorations(hunks);
     expect(decs).toHaveLength(2);
     expect(decs[0]?.hunk.id).toBe('a');
@@ -80,10 +77,7 @@ describe('buildHunkDecorations', () => {
   });
 
   it('returns empty array when all hunks are resolved', () => {
-    const hunks: ReviewHunk[] = [
-      makeHunk('a', 1, 2, 'accepted'),
-      makeHunk('b', 5, 3, 'rejected'),
-    ];
+    const hunks: ReviewHunk[] = [makeHunk('a', 1, 2, 'accepted'), makeHunk('b', 5, 3, 'rejected')];
     expect(buildHunkDecorations(hunks)).toHaveLength(0);
   });
 
@@ -144,7 +138,10 @@ describe('findHunkAtLine', () => {
 
 describe('decoration update logic (mocked editor)', () => {
   it('calls deltaDecorations with correct options for a pending hunk', () => {
-    const deltaDecorations = vi.fn((...args: unknown[]) => { void args; return ['dec-id-1']; });
+    const deltaDecorations = vi.fn((...args: unknown[]) => {
+      void args;
+      return ['dec-id-1'];
+    });
     const mockEditor = { deltaDecorations } as unknown as Parameters<
       typeof buildHunkDecorations
     >[0] extends unknown
@@ -156,7 +153,12 @@ describe('decoration update logic (mocked editor)', () => {
 
     // Simulate what the hook does: pass decoration specs to deltaDecorations
     const monacoSpecs = decs.map((d) => ({
-      range: { startLineNumber: d.anchorLine, endLineNumber: d.anchorLine, startColumn: 1, endColumn: 1 },
+      range: {
+        startLineNumber: d.anchorLine,
+        endLineNumber: d.anchorLine,
+        startColumn: 1,
+        endColumn: 1,
+      },
       options: {
         isWholeLine: true,
         glyphMarginClassName: 'ouroboros-hunk-gutter',
@@ -165,7 +167,8 @@ describe('decoration update logic (mocked editor)', () => {
     }));
 
     deltaDecorations([], monacoSpecs);
-    expect((mockEditor as { deltaDecorations: typeof deltaDecorations }).deltaDecorations)
-      .toHaveBeenCalledWith([], monacoSpecs);
+    expect(
+      (mockEditor as { deltaDecorations: typeof deltaDecorations }).deltaDecorations,
+    ).toHaveBeenCalledWith([], monacoSpecs);
   });
 });

@@ -14,7 +14,9 @@ const handlers = new Map<string, HandlerFn>();
 
 vi.mock('electron', () => ({
   ipcMain: {
-    handle: (channel: string, fn: HandlerFn) => { handlers.set(channel, fn); },
+    handle: (channel: string, fn: HandlerFn) => {
+      handlers.set(channel, fn);
+    },
   },
 }));
 
@@ -64,21 +66,21 @@ function invoke(channel: string, ...args: unknown[]): Promise<unknown> {
 describe('marketplace:listBundles', () => {
   it('returns success + bundles on manifest success', async () => {
     mockGetManifest.mockResolvedValue({ bundles: [ENTRY] });
-    const result = await invoke('marketplace:listBundles') as Record<string, unknown>;
+    const result = (await invoke('marketplace:listBundles')) as Record<string, unknown>;
     expect(result.success).toBe(true);
     expect(Array.isArray(result.bundles)).toBe(true);
   });
 
   it('returns success: false when manifest returns error', async () => {
     mockGetManifest.mockResolvedValue({ error: 'offline' });
-    const result = await invoke('marketplace:listBundles') as Record<string, unknown>;
+    const result = (await invoke('marketplace:listBundles')) as Record<string, unknown>;
     expect(result.success).toBe(false);
     expect(result.error).toBe('offline');
   });
 
   it('returns success: false when getManifest throws', async () => {
     mockGetManifest.mockRejectedValue(new Error('network failure'));
-    const result = await invoke('marketplace:listBundles') as Record<string, unknown>;
+    const result = (await invoke('marketplace:listBundles')) as Record<string, unknown>;
     expect(result.success).toBe(false);
     expect(String(result.error)).toContain('network failure');
   });
@@ -89,32 +91,47 @@ describe('marketplace:listBundles', () => {
 describe('marketplace:install', () => {
   it('calls installById with the entryId and returns success', async () => {
     mockInstallById.mockResolvedValue({ success: true });
-    const result = await invoke('marketplace:install', { entryId: 'my-theme' }) as Record<string, unknown>;
+    const result = (await invoke('marketplace:install', { entryId: 'my-theme' })) as Record<
+      string,
+      unknown
+    >;
     expect(mockInstallById).toHaveBeenCalledWith('my-theme');
     expect(result.success).toBe(true);
   });
 
   it('forwards install error (e.g. invalid-signature)', async () => {
     mockInstallById.mockResolvedValue({ success: false, error: 'invalid-signature' });
-    const result = await invoke('marketplace:install', { entryId: 'my-theme' }) as Record<string, unknown>;
+    const result = (await invoke('marketplace:install', { entryId: 'my-theme' })) as Record<
+      string,
+      unknown
+    >;
     expect(result.success).toBe(false);
     expect(result.error).toBe('invalid-signature');
   });
 
   it('returns error for missing entryId', async () => {
-    const result = await invoke('marketplace:install', { entryId: '' }) as Record<string, unknown>;
+    const result = (await invoke('marketplace:install', { entryId: '' })) as Record<
+      string,
+      unknown
+    >;
     expect(result.success).toBe(false);
     expect(String(result.error)).toContain('entryId');
   });
 
   it('returns error for non-string entryId', async () => {
-    const result = await invoke('marketplace:install', { entryId: 42 }) as Record<string, unknown>;
+    const result = (await invoke('marketplace:install', { entryId: 42 })) as Record<
+      string,
+      unknown
+    >;
     expect(result.success).toBe(false);
   });
 
   it('returns success: false when installById throws', async () => {
     mockInstallById.mockRejectedValue(new Error('store locked'));
-    const result = await invoke('marketplace:install', { entryId: 'my-theme' }) as Record<string, unknown>;
+    const result = (await invoke('marketplace:install', { entryId: 'my-theme' })) as Record<
+      string,
+      unknown
+    >;
     expect(result.success).toBe(false);
   });
 });
@@ -124,14 +141,14 @@ describe('marketplace:install', () => {
 describe('marketplace:revokedIds', () => {
   it('returns ids array on success', async () => {
     mockGetRevokedIds.mockResolvedValue({ ids: ['old-bundle', 'bad-bundle'] });
-    const result = await invoke('marketplace:revokedIds') as Record<string, unknown>;
+    const result = (await invoke('marketplace:revokedIds')) as Record<string, unknown>;
     expect(Array.isArray(result.ids)).toBe(true);
     expect(result.ids).toContain('old-bundle');
   });
 
   it('returns empty ids on failure (best-effort)', async () => {
     mockGetRevokedIds.mockRejectedValue(new Error('offline'));
-    const result = await invoke('marketplace:revokedIds') as Record<string, unknown>;
+    const result = (await invoke('marketplace:revokedIds')) as Record<string, unknown>;
     expect(Array.isArray(result.ids)).toBe(true);
     expect((result.ids as string[]).length).toBe(0);
   });

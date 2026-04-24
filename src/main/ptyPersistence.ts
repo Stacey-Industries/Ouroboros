@@ -156,12 +156,30 @@ class PtyPersistenceImpl implements PtyPersistence {
     const sets: string[] = [];
     const vals: unknown[] = [];
 
-    if (patch.cwd !== undefined) { sets.push('cwd = ?'); vals.push(patch.cwd); }
-    if (patch.cols !== undefined) { sets.push('cols = ?'); vals.push(patch.cols); }
-    if (patch.rows !== undefined) { sets.push('rows = ?'); vals.push(patch.rows); }
-    if (patch.lastSeenAt !== undefined) { sets.push('last_seen_at = ?'); vals.push(patch.lastSeenAt); }
-    if (patch.windowId !== undefined) { sets.push('window_id = ?'); vals.push(patch.windowId); }
-    if (patch.envHash !== undefined) { sets.push('env_hash = ?'); vals.push(patch.envHash); }
+    if (patch.cwd !== undefined) {
+      sets.push('cwd = ?');
+      vals.push(patch.cwd);
+    }
+    if (patch.cols !== undefined) {
+      sets.push('cols = ?');
+      vals.push(patch.cols);
+    }
+    if (patch.rows !== undefined) {
+      sets.push('rows = ?');
+      vals.push(patch.rows);
+    }
+    if (patch.lastSeenAt !== undefined) {
+      sets.push('last_seen_at = ?');
+      vals.push(patch.lastSeenAt);
+    }
+    if (patch.windowId !== undefined) {
+      sets.push('window_id = ?');
+      vals.push(patch.windowId);
+    }
+    if (patch.envHash !== undefined) {
+      sets.push('env_hash = ?');
+      vals.push(patch.envHash);
+    }
 
     if (sets.length === 0) return;
     vals.push(id);

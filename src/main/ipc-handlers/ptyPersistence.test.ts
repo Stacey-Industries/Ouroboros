@@ -146,7 +146,10 @@ describe('pty:restoreSession', () => {
     registerPtyPersistenceHandlers(makeSenderWindow(), store);
     const handler = registeredHandlers.get('pty:restoreSession')!;
     await handler(fakeEvent(), 'sess-1');
-    expect(store.updateSession).toHaveBeenCalledWith('sess-1', expect.objectContaining({ lastSeenAt: expect.any(Number) }));
+    expect(store.updateSession).toHaveBeenCalledWith(
+      'sess-1',
+      expect.objectContaining({ lastSeenAt: expect.any(Number) }),
+    );
   });
 
   it('does not touch lastSeenAt when spawnPty fails', async () => {

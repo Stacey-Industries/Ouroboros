@@ -1,9 +1,5 @@
 <!-- claude-md-auto:start -->
-The CLAUDE.md is written. A few things I surfaced that weren't obvious from the file headers alone:
 
-- The **split-file pairs** (`agentChat` ↔ `agentChatResults`, `orchestration` barrel ↔ three split files) look like independent modules but are logically one unit — always import from the top-level file, not the `*Results`/`Domain`/`Context`/`Provider` split.
-- The **main-process mirror files** (`src/main/agentChat/types.ts`, `src/main/auth/types.ts`) are pure re-exports — a rename here breaks them silently since TypeScript won't error until you check the main-process build.
-- `AgentChatThreadRecord` carries a `version: 1` schema field — there's migration logic downstream in `src/main/agentChat/` that depends on it, so it's not just decorative.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

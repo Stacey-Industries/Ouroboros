@@ -18,7 +18,7 @@ import {
   refreshFtsForThread,
   upsertFtsRow,
 } from './threadStoreSqliteFts';
-import { FTS_SCHEMA_SQL,SCHEMA_SQL } from './threadStoreSqliteHelpers';
+import { FTS_SCHEMA_SQL, SCHEMA_SQL } from './threadStoreSqliteHelpers';
 import type { AgentChatThreadRecord } from './types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -51,7 +51,10 @@ function seedMessage(db: Database, threadId: string, content: string): void {
   ).run(`msg-${clock}`, threadId, content, tick());
 }
 
-function makeThread(id: string, overrides: Partial<AgentChatThreadRecord> = {}): AgentChatThreadRecord {
+function makeThread(
+  id: string,
+  overrides: Partial<AgentChatThreadRecord> = {},
+): AgentChatThreadRecord {
   return {
     version: 1,
     id,
@@ -62,7 +65,7 @@ function makeThread(id: string, overrides: Partial<AgentChatThreadRecord> = {}):
     status: 'idle',
     messages: [],
     ...overrides,
-};
+  };
 }
 
 beforeEach(() => {

@@ -103,7 +103,12 @@ describe('ResearchSettings — global enabled toggle', () => {
 
 describe('ResearchSettings — default mode radio group', () => {
   it('checks the radio matching current defaultMode', () => {
-    render(<ResearchSettings draft={makeConfig({ globalEnabled: true, defaultMode: 'aggressive' })} onChange={vi.fn()} />);
+    render(
+      <ResearchSettings
+        draft={makeConfig({ globalEnabled: true, defaultMode: 'aggressive' })}
+        onChange={vi.fn()}
+      />,
+    );
     const radio = document.getElementById('research-mode-aggressive') as HTMLInputElement;
     expect(radio).toBeTruthy();
     expect(radio.checked).toBe(true);
@@ -123,7 +128,12 @@ describe('ResearchSettings — default mode radio group', () => {
 
   it('calls onChange with new defaultMode when a radio is selected', () => {
     const onChange = vi.fn();
-    render(<ResearchSettings draft={makeConfig({ globalEnabled: true, defaultMode: 'conservative' })} onChange={onChange} />);
+    render(
+      <ResearchSettings
+        draft={makeConfig({ globalEnabled: true, defaultMode: 'conservative' })}
+        onChange={onChange}
+      />,
+    );
     const offRadio = document.getElementById('research-mode-off') as HTMLInputElement;
     fireEvent.click(offRadio);
     expect(onChange).toHaveBeenCalledOnce();
@@ -134,7 +144,12 @@ describe('ResearchSettings — default mode radio group', () => {
 
   it('preserves globalEnabled when only defaultMode changes', () => {
     const onChange = vi.fn();
-    render(<ResearchSettings draft={makeConfig({ globalEnabled: true, defaultMode: 'conservative' })} onChange={onChange} />);
+    render(
+      <ResearchSettings
+        draft={makeConfig({ globalEnabled: true, defaultMode: 'conservative' })}
+        onChange={onChange}
+      />,
+    );
     const aggressiveRadio = document.getElementById('research-mode-aggressive') as HTMLInputElement;
     fireEvent.click(aggressiveRadio);
     const [, value] = onChange.mock.calls[0] as [string, AppConfig['researchSettings']];

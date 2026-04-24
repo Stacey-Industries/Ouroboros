@@ -49,7 +49,13 @@ export function reduceSkillEnd(state: AgentState, action: SkillEndAction): Agent
   return updateSession(state, action.sessionId, (session) => {
     const executions = (session.skillExecutions ?? []).map((rec) =>
       rec.agentId === action.agentId
-        ? { ...rec, completedAt: action.completedAt, durationMs: action.durationMs, status: action.status, lastMessage: action.lastMessage }
+        ? {
+            ...rec,
+            completedAt: action.completedAt,
+            durationMs: action.durationMs,
+            status: action.status,
+            lastMessage: action.lastMessage,
+          }
         : rec,
     );
     return { ...session, skillExecutions: executions };

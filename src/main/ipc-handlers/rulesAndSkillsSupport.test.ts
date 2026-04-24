@@ -37,8 +37,12 @@ function captureHandlers(): Record<string, HandlerFn> {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('registerClaudeSettingsHandlers', () => {
-  beforeEach(() => { vi.resetModules(); });
-  afterEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('registers all three claudeSettings channels', async () => {
     const { mod, ipcMain } = await loadModule();
@@ -48,8 +52,14 @@ describe('registerClaudeSettingsHandlers', () => {
     expect(channels).toContain('claudeSettings:read');
     expect(channels).toContain('claudeSettings:readKey');
     expect(channels).toContain('claudeSettings:writeKey');
-    expect((ipcMain.handle as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0])).toEqual(
-      expect.arrayContaining(['claudeSettings:read', 'claudeSettings:readKey', 'claudeSettings:writeKey']),
+    expect(
+      (ipcMain.handle as ReturnType<typeof vi.fn>).mock.calls.map((c: unknown[]) => c[0]),
+    ).toEqual(
+      expect.arrayContaining([
+        'claudeSettings:read',
+        'claudeSettings:readKey',
+        'claudeSettings:writeKey',
+      ]),
     );
   });
 
@@ -57,8 +67,10 @@ describe('registerClaudeSettingsHandlers', () => {
     const { mod, ipcMain } = await loadModule();
     const handlers = captureHandlers();
     (ipcMain.handle as ReturnType<typeof vi.fn>).mockImplementation(
-      // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
-      (ch: string, fn: HandlerFn) => { handlers[ch] = fn; },
+      (ch: string, fn: HandlerFn) => {
+        // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
+        handlers[ch] = fn;
+      },
     );
     mod.registerClaudeSettingsHandlers([]);
 
@@ -70,8 +82,10 @@ describe('registerClaudeSettingsHandlers', () => {
     const { mod, ipcMain } = await loadModule();
     const handlers = captureHandlers();
     (ipcMain.handle as ReturnType<typeof vi.fn>).mockImplementation(
-      // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
-      (ch: string, fn: HandlerFn) => { handlers[ch] = fn; },
+      (ch: string, fn: HandlerFn) => {
+        // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
+        handlers[ch] = fn;
+      },
     );
     mod.registerClaudeSettingsHandlers([]);
 
@@ -83,12 +97,17 @@ describe('registerClaudeSettingsHandlers', () => {
     const { mod, ipcMain } = await loadModule();
     const handlers = captureHandlers();
     (ipcMain.handle as ReturnType<typeof vi.fn>).mockImplementation(
-      // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
-      (ch: string, fn: HandlerFn) => { handlers[ch] = fn; },
+      (ch: string, fn: HandlerFn) => {
+        // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
+        handlers[ch] = fn;
+      },
     );
     mod.registerClaudeSettingsHandlers([]);
 
-    const result = await handlers['claudeSettings:writeKey']?.({}, { scope: 'global', key: 'theme', value: 'light' });
+    const result = await handlers['claudeSettings:writeKey']?.(
+      {},
+      { scope: 'global', key: 'theme', value: 'light' },
+    );
     expect(result).toEqual({ success: true });
   });
 
@@ -99,8 +118,10 @@ describe('registerClaudeSettingsHandlers', () => {
 
     const handlers = captureHandlers();
     (ipcMain.handle as ReturnType<typeof vi.fn>).mockImplementation(
-      // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
-      (ch: string, fn: HandlerFn) => { handlers[ch] = fn; },
+      (ch: string, fn: HandlerFn) => {
+        // eslint-disable-next-line security/detect-object-injection -- ch is an IPC channel name from test fixtures
+        handlers[ch] = fn;
+      },
     );
     mod.registerClaudeSettingsHandlers([]);
 

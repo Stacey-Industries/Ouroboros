@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-The existing CLAUDE.md is mostly accurate but missing the `Bridge*.ts` split files and several support modules. Here's the generated content:
-
----
-
 # `src/main/agentChat/` — Chat thread persistence, orchestration bridge, and session projection
 
 ## Summary
@@ -112,6 +108,7 @@ Renderer (IPC)  →  AgentChatService (index.ts)
 | **depends on** | `../storage/database` | SQLite helpers (`openDatabase`, `runTransaction`, `setSchemaVersion`) |
 | **depends on** | `@shared/types/agentChat` | All cross-boundary types (re-exported via `types.ts`) |
 | **consumed by** | `../ipc-handlers/agentChat.ts` | Registers all `agentChat:*` IPC handlers using `AgentChatService` |
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

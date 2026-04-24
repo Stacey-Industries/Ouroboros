@@ -23,12 +23,22 @@ const mocks = vi.hoisted(() => ({
   getDeviceFingerprint: vi.fn(async () => 'test-fingerprint-uuid'),
   getRefreshToken: vi.fn(async () => null as string | null),
   clearRefreshToken: vi.fn(async () => undefined),
-  readPairingQueryParams: vi.fn(() => null as null | {
-    host: string; port: string; code: string; fingerprint: string;
-  }),
+  readPairingQueryParams: vi.fn(
+    () =>
+      null as null | {
+        host: string;
+        port: string;
+        code: string;
+        fingerprint: string;
+      },
+  ),
   initDeepLinkListener: vi.fn(async () => () => undefined),
   isNative: vi.fn(() => false),
-  scanPairingQr: vi.fn(async (): Promise<import('../web/capacitor/qrScanner').ScanOutcome> => ({ kind: 'unsupported' })),
+  scanPairingQr: vi.fn(
+    async (): Promise<import('../web/capacitor/qrScanner').ScanOutcome> => ({
+      kind: 'unsupported',
+    }),
+  ),
 }));
 
 vi.mock('../web/tokenStorage', () => ({
@@ -59,9 +69,15 @@ vi.stubGlobal('fetch', mockFetch);
 const localStore: Record<string, string> = {};
 const mockLocalStorage = {
   getItem: vi.fn((k: string) => localStore[k] ?? null),
-  setItem: vi.fn((k: string, v: string) => { localStore[k] = v; }),
-  removeItem: vi.fn((k: string) => { delete localStore[k]; }),
-  clear: vi.fn(() => { for (const k of Object.keys(localStore)) delete localStore[k]; }),
+  setItem: vi.fn((k: string, v: string) => {
+    localStore[k] = v;
+  }),
+  removeItem: vi.fn((k: string) => {
+    delete localStore[k];
+  }),
+  clear: vi.fn(() => {
+    for (const k of Object.keys(localStore)) delete localStore[k];
+  }),
 };
 vi.stubGlobal('localStorage', mockLocalStorage);
 
@@ -340,7 +356,10 @@ describe('PairingScreen deep-link prefill (Wave 33b Phase E)', () => {
 
   it('prefills code from URL query params but does NOT auto-submit', async () => {
     mocks.readPairingQueryParams.mockReturnValue({
-      host: '192.168.1.50', port: '4173', code: '042819', fingerprint: 'fpX',
+      host: '192.168.1.50',
+      port: '4173',
+      code: '042819',
+      fingerprint: 'fpX',
     });
     renderPairing();
     await waitForFingerprintReady();
@@ -357,15 +376,22 @@ describe('PairingScreen deep-link prefill (Wave 33b Phase E)', () => {
     vi.useFakeTimers();
 
     mocks.readPairingQueryParams.mockReturnValue({
-      host: '192.168.1.50', port: '4173', code: '042819', fingerprint: 'fpX',
+      host: '192.168.1.50',
+      port: '4173',
+      code: '042819',
+      fingerprint: 'fpX',
     });
     // getDeviceFingerprint is already a resolved mock — flush with microtasks.
     mocks.getDeviceFingerprint.mockResolvedValue('test-fingerprint-uuid');
 
     renderPairing();
     // Flush React effects + microtask queue (no real timers needed).
-    await act(async () => { await Promise.resolve(); });
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
     expect(codeInput.value).toBe('042819');
@@ -374,7 +400,9 @@ describe('PairingScreen deep-link prefill (Wave 33b Phase E)', () => {
     expect(codeInput.style.border).toContain(accentRgb);
 
     // Advance past the 2-second highlight duration (registered in fake queue)
-    await act(async () => { vi.advanceTimersByTime(2100); });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
     expect(codeInput.style.border).not.toContain(accentRgb);
 
     vi.useRealTimers();

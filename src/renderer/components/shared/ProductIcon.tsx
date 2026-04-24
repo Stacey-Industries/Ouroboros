@@ -39,7 +39,13 @@ function IconImage({ objectUrl, size, style, className }: IconImageProps): React
       aria-hidden="true"
       src={objectUrl}
       className={className}
-      style={{ ...PRODUCT_ICON_STYLE, width: `${size}px`, height: `${size}px`, objectFit: 'contain', ...style }}
+      style={{
+        ...PRODUCT_ICON_STYLE,
+        width: `${size}px`,
+        height: `${size}px`,
+        objectFit: 'contain',
+        ...style,
+      }}
     />
   );
 }
@@ -53,12 +59,27 @@ interface IconGlyphProps {
   className?: string;
 }
 
-function IconGlyph({ glyph, fontFamily, fontColor, size, style, className }: IconGlyphProps): React.ReactElement {
+function IconGlyph({
+  glyph,
+  fontFamily,
+  fontColor,
+  size,
+  style,
+  className,
+}: IconGlyphProps): React.ReactElement {
   return (
     <span
       aria-hidden="true"
       className={className}
-      style={{ ...PRODUCT_ICON_STYLE, width: `${size}px`, height: `${size}px`, fontSize: `${size}px`, fontFamily, color: fontColor, ...style }}
+      style={{
+        ...PRODUCT_ICON_STYLE,
+        width: `${size}px`,
+        height: `${size}px`,
+        fontSize: `${size}px`,
+        fontFamily,
+        color: fontColor,
+        ...style,
+      }}
     >
       {glyph}
     </span>
@@ -72,7 +93,10 @@ type IconDefinition = {
   fontColor?: string;
 };
 
-function getDefinition(activeTheme: { iconDefinitions: Record<string, IconDefinition> } | null, iconId: string): IconDefinition | null {
+function getDefinition(
+  activeTheme: { iconDefinitions: Record<string, IconDefinition> } | null,
+  iconId: string,
+): IconDefinition | null {
   if (!activeTheme) return null;
   return activeTheme.iconDefinitions[iconId] ?? null;
 }
@@ -94,13 +118,28 @@ function useProductIconResolution(iconId: string) {
   return { objectUrl, fontFamily, glyph, fontColor };
 }
 
-export function ProductIcon({ iconId, fallback, size = 14, style, className }: ProductIconProps): React.ReactElement {
+export function ProductIcon({
+  iconId,
+  fallback,
+  size = 14,
+  style,
+  className,
+}: ProductIconProps): React.ReactElement {
   const { objectUrl, fontFamily, glyph, fontColor } = useProductIconResolution(iconId);
   if (objectUrl) {
     return <IconImage objectUrl={objectUrl} size={size} style={style} className={className} />;
   }
   if (glyph && fontFamily) {
-    return <IconGlyph glyph={glyph} fontFamily={fontFamily} fontColor={fontColor} size={size} style={style} className={className} />;
+    return (
+      <IconGlyph
+        glyph={glyph}
+        fontFamily={fontFamily}
+        fontColor={fontColor}
+        size={size}
+        style={style}
+        className={className}
+      />
+    );
   }
   return fallback;
 }

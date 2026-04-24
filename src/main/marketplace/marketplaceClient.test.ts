@@ -54,7 +54,11 @@ const ENTRY = {
   downloadUrl: 'https://example.com/test-bundle.json',
 };
 
-const BUNDLE_CONTENT = { id: 'test-bundle', kind: 'theme' as const, payload: { '--accent': 'blue' } };
+const BUNDLE_CONTENT = {
+  id: 'test-bundle',
+  kind: 'theme' as const,
+  payload: { '--accent': 'blue' },
+};
 
 // ── getManifest ───────────────────────────────────────────────────────────────
 

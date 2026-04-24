@@ -5,13 +5,13 @@
  * Called once from `mainStartup.ts` (or equivalent) before any session is spawned.
  */
 
-import { ClaudeSessionProvider } from './claudeSessionProvider'
-import { CodexSessionProvider } from './codexSessionProvider'
-import { GeminiSessionProvider } from './geminiSessionProvider'
-import { registerSessionProvider } from './providerRegistry'
+import { ClaudeSessionProvider } from './claudeSessionProvider';
+import { CodexSessionProvider } from './codexSessionProvider';
+import { GeminiSessionProvider } from './geminiSessionProvider';
+import { registerSessionProvider } from './providerRegistry';
 
 export function registerBuiltinProviders(): void {
-  registerSessionProvider(new ClaudeSessionProvider())
-  registerSessionProvider(new CodexSessionProvider())
-  registerSessionProvider(new GeminiSessionProvider())
+  registerSessionProvider(new ClaudeSessionProvider());
+  registerSessionProvider(new CodexSessionProvider());
+  registerSessionProvider(new GeminiSessionProvider());
 }

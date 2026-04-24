@@ -46,10 +46,7 @@ interface RecordSubagentToolAction {
   timestamp: number;
 }
 
-export function updateTokenUsage(
-  state: AgentState,
-  action: TokenUpdateAction,
-): AgentState {
+export function updateTokenUsage(state: AgentState, action: TokenUpdateAction): AgentState {
   const usageDeltas = getUsageDeltas(action.usage);
   return updateSession(state, action.sessionId, (session) => ({
     ...session,
@@ -61,28 +58,23 @@ export function updateTokenUsage(
   }));
 }
 
-export function updateSubTool(
-  state: AgentState,
-  action: SubToolUpdateAction,
-): AgentState {
+export function updateSubTool(state: AgentState, action: SubToolUpdateAction): AgentState {
   return updateSession(state, action.sessionId, (session) => {
     const toolCalls = session.toolCalls.map((tc) => {
       if (tc.id !== action.parentToolCallId) return tc;
       const existing = tc.subTools ?? [];
       const idx = existing.findIndex((s) => s.id === action.subTool.id);
-      const subTools = idx >= 0
-        ? existing.map((s, i) => i === idx ? { ...s, ...action.subTool } : s)
-        : [...existing, action.subTool];
+      const subTools =
+        idx >= 0
+          ? existing.map((s, i) => (i === idx ? { ...s, ...action.subTool } : s))
+          : [...existing, action.subTool];
       return { ...tc, subTools };
     });
     return { ...session, toolCalls };
   });
 }
 
-export function linkSubagent(
-  state: AgentState,
-  action: LinkSubagentAction,
-): AgentState {
+export function linkSubagent(state: AgentState, action: LinkSubagentAction): AgentState {
   if (hasSession(state.sessions, action.childSessionId)) {
     return updateSession(state, action.childSessionId, (session) => ({
       ...session,

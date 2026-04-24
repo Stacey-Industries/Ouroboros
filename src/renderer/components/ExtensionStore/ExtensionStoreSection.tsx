@@ -70,7 +70,6 @@ export function ExtensionStoreSection({
   );
 }
 
-
 function SourceToggle({
   source,
   onSelect,

@@ -124,10 +124,7 @@ export function EmptyConversationState({
       {/* Wave 38 Phase C — i18n empty-state prompt (persistent dismiss via config key).
           Wrapper constrains height so EmptyStateMessage doesn't collapse the prompt grid. */}
       <div style={{ position: 'relative', width: '100%', maxWidth: '440px' }}>
-        <EmptyStateMessage
-          messageKey="emptyState.chat.primary"
-          dismissKey="chat"
-        />
+        <EmptyStateMessage messageKey="emptyState.chat.primary" dismissKey="chat" />
       </div>
       <SuggestedPromptGrid onSelectPrompt={onSelectPrompt} />
     </div>

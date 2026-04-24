@@ -21,11 +21,17 @@ function makeStore(initial: Reaction[] = []): ReactionStore & { data: Reaction[]
     data: [...initial],
     // Stub implementation — parameters satisfy the interface signature but are unused.
     async getMessageReactions(messageId: string, threadId: string): Promise<Reaction[]> {
-      void messageId; void threadId;
+      void messageId;
+      void threadId;
       return [...store.data];
     },
-    async setMessageReactions(messageId: string, threadId: string, reactions: Reaction[]): Promise<void> {
-      void messageId; void threadId;
+    async setMessageReactions(
+      messageId: string,
+      threadId: string,
+      reactions: Reaction[],
+    ): Promise<void> {
+      void messageId;
+      void threadId;
       store.data = [...reactions];
     },
   };
@@ -50,18 +56,16 @@ describe('addReactionToList', () => {
   });
 
   it('allows different kinds', () => {
-    const list = addReactionToList(
-      [{ kind: '+1', at: 1000 }],
-      { kind: '-1', at: 2000 },
-    );
+    const list = addReactionToList([{ kind: '+1', at: 1000 }], { kind: '-1', at: 2000 });
     expect(list).toHaveLength(2);
   });
 
   it('allows same kind from different users', () => {
-    const list = addReactionToList(
-      [{ kind: '+1', by: 'user1', at: 1000 }],
-      { kind: '+1', by: 'user2', at: 2000 },
-    );
+    const list = addReactionToList([{ kind: '+1', by: 'user1', at: 1000 }], {
+      kind: '+1',
+      by: 'user2',
+      at: 2000,
+    });
     expect(list).toHaveLength(2);
   });
 
@@ -132,14 +136,23 @@ describe('addReaction', () => {
   });
 
   it('adds a +1 reaction', async () => {
-    const result = await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1' });
+    const result = await addReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '+1',
+    });
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('+1');
     expect(result[0].at).toBeGreaterThan(0);
   });
 
   it('adds a -1 reaction', async () => {
-    const result = await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '-1', by: 'user1' });
+    const result = await addReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '-1',
+      by: 'user1',
+    });
     expect(result[0].kind).toBe('-1');
     expect(result[0].by).toBe('user1');
   });
@@ -151,13 +164,23 @@ describe('addReaction', () => {
 
   it('is idempotent for same kind + by', async () => {
     await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
-    const result = await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
+    const result = await addReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '+1',
+      by: 'user1',
+    });
     expect(result).toHaveLength(1);
   });
 
   it('returns updated list', async () => {
     await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
-    const result = await addReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '-1', by: 'user2' });
+    const result = await addReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '-1',
+      by: 'user2',
+    });
     expect(result).toHaveLength(2);
   });
 });
@@ -165,13 +188,23 @@ describe('addReaction', () => {
 describe('removeReaction', () => {
   it('removes a reaction by kind', async () => {
     const store = makeStore([{ kind: '+1', by: 'user1', at: 1 }]);
-    const result = await removeReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
+    const result = await removeReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '+1',
+      by: 'user1',
+    });
     expect(result).toHaveLength(0);
   });
 
   it('persists the removal', async () => {
     const store = makeStore([{ kind: '+1', by: 'user1', at: 1 }]);
-    await removeReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
+    await removeReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '+1',
+      by: 'user1',
+    });
     expect(store.data).toHaveLength(0);
   });
 
@@ -180,14 +213,23 @@ describe('removeReaction', () => {
       { kind: '+1', by: 'user1', at: 1 },
       { kind: '-1', by: 'user1', at: 2 },
     ]);
-    const result = await removeReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: '+1', by: 'user1' });
+    const result = await removeReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: '+1',
+      by: 'user1',
+    });
     expect(result).toHaveLength(1);
     expect(result[0].kind).toBe('-1');
   });
 
   it('is a no-op when kind does not exist', async () => {
     const store = makeStore([{ kind: '+1', at: 1 }]);
-    const result = await removeReaction(store, { messageId: 'msg-1', threadId: 'thread-1', kind: 'heart' });
+    const result = await removeReaction(store, {
+      messageId: 'msg-1',
+      threadId: 'thread-1',
+      kind: 'heart',
+    });
     expect(result).toHaveLength(1);
   });
 });

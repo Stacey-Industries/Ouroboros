@@ -68,7 +68,15 @@ function makeCandidatesMap(paths: string[]): Map<string, MutableCandidate> {
 }
 
 function makeRankedFile(filePath: string, score = 10): RankedContextFile {
-  return { filePath, score, confidence: 'low', reasons: [], snippets: [], truncationNotes: [], pagerank_score: null };
+  return {
+    filePath,
+    score,
+    confidence: 'low',
+    reasons: [],
+    snippets: [],
+    truncationNotes: [],
+    pagerank_score: null,
+  };
 }
 
 // ─── classifierRankCandidates ────────────────────────────────────────────────
@@ -153,19 +161,19 @@ describe('runShadowMode', () => {
 
     runShadowMode(additiveRanked, candidates, makeRequest());
 
-    const call = vi.mocked(log.debug).mock.calls.find(
-      (c: unknown[]) => c[0] === '[context-ranker] shadow detail',
-    );
+    const call = vi
+      .mocked(log.debug)
+      .mock.calls.find((c: unknown[]) => c[0] === '[context-ranker] shadow detail');
     expect(call).toBeDefined();
     expect((call![1] as { overlap: number }).overlap).toBeGreaterThanOrEqual(0);
     expect((call![1] as { overlap: number }).overlap).toBeLessThanOrEqual(1);
   });
 
   it('does not throw when classifier throws', async () => {
-    const { computeFeatures } = vi.mocked(
-      await import('./contextSelectorFeatures'),
-    );
-    computeFeatures.mockImplementationOnce(() => { throw new Error('boom'); });
+    const { computeFeatures } = vi.mocked(await import('./contextSelectorFeatures'));
+    computeFeatures.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
 
     const additiveRanked = [makeRankedFile('/a.ts')];
     const candidates = makeCandidatesMap(['/a.ts']);
@@ -174,10 +182,10 @@ describe('runShadowMode', () => {
   });
 
   it('logs error only once per process when classifier throws repeatedly', async () => {
-    const { computeFeatures } = vi.mocked(
-      await import('./contextSelectorFeatures'),
-    );
-    computeFeatures.mockImplementation(() => { throw new Error('boom'); });
+    const { computeFeatures } = vi.mocked(await import('./contextSelectorFeatures'));
+    computeFeatures.mockImplementation(() => {
+      throw new Error('boom');
+    });
 
     const additiveRanked = [makeRankedFile('/a.ts')];
     const candidates = makeCandidatesMap(['/a.ts']);
@@ -186,9 +194,9 @@ describe('runShadowMode', () => {
     runShadowMode(additiveRanked, candidates, makeRequest());
     runShadowMode(additiveRanked, candidates, makeRequest());
 
-    const errorCalls = vi.mocked(log.info).mock.calls.filter(
-      (c: unknown[]) => String(c[0]).includes('shadow classifier error'),
-    );
+    const errorCalls = vi
+      .mocked(log.info)
+      .mock.calls.filter((c: unknown[]) => String(c[0]).includes('shadow classifier error'));
     expect(errorCalls.length).toBe(1);
 
     computeFeatures.mockReturnValue({ recencyScore: 0.5 });

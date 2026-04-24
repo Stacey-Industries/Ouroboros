@@ -17,8 +17,16 @@ import { assertPathAllowed } from './pathSecurity';
 
 // Directories always skipped during recursive walk
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', 'dist', 'out', 'build',
-  '.cache', '__pycache__', 'coverage', '.next', '.nuxt',
+  'node_modules',
+  '.git',
+  'dist',
+  'out',
+  'build',
+  '.cache',
+  '__pycache__',
+  'coverage',
+  '.next',
+  '.nuxt',
   '.context',
 ]);
 
@@ -31,10 +39,11 @@ const DEFAULT_MAX_RESULTS = 500;
 // Bytes to inspect for null-byte binary detection
 const BINARY_CHECK_BYTES = 512;
 
- 
 // eslint-disable-next-line security/detect-non-literal-regexp -- safe: built from static char codes to avoid no-control-regex violation
 const ANSI_RE = new RegExp(
-  '[' + String.fromCharCode(0x1b, 0x9b) + '][[()#;?]*(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-ORZcf-nqry=><]',
+  '[' +
+    String.fromCharCode(0x1b, 0x9b) +
+    '][[()#;?]*(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-ORZcf-nqry=><]',
   'g',
 );
 
@@ -96,7 +105,13 @@ function matchLine(
   do {
     m = pattern.exec(lineContent);
     if (m) {
-      items.push({ filePath, line: lineNum, column: m.index, lineContent, matchLength: m[0].length });
+      items.push({
+        filePath,
+        line: lineNum,
+        column: m.index,
+        lineContent,
+        matchLength: m[0].length,
+      });
     }
   } while (m !== null && pattern.global);
   return items;
@@ -192,11 +207,7 @@ interface WalkOpts {
 }
 
 /** Process a single directory entry during the walk. Returns true when limit hit. */
-async function processEntry(
-  entry: fs.Dirent,
-  dir: string,
-  opts: WalkOpts,
-): Promise<boolean> {
+async function processEntry(entry: fs.Dirent, dir: string, opts: WalkOpts): Promise<boolean> {
   const fullPath = path.join(dir, entry.name);
   if (entry.isDirectory()) {
     if (SKIP_DIRS.has(entry.name)) return false;
@@ -205,7 +216,12 @@ async function processEntry(
   if (!entry.isFile()) return false;
   if (!passesGlobFilter(fullPath, opts.includeGlob, opts.excludeGlob)) return false;
   if (await shouldSkipFile(fullPath)) return false;
-  return scanFile({ filePath: fullPath, pattern: opts.pattern, results: opts.results, maxResults: opts.maxResults });
+  return scanFile({
+    filePath: fullPath,
+    pattern: opts.pattern,
+    results: opts.results,
+    maxResults: opts.maxResults,
+  });
 }
 
 /** Recursively walk `dir`, scanning each eligible file. Returns true when limit hit. */

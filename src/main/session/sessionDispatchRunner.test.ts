@@ -123,7 +123,10 @@ describe('sessionDispatchRunner', () => {
   function makeCompletionCtrl(): CompletionControl {
     let resolve!: () => void;
     let reject!: (e: Error) => void;
-    const completion = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+    const completion = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
     mockSpawnAgentSession.mockResolvedValueOnce({ ptyId: 'pty-abc', completion });
     const ctrl = { resolve, reject };
     pendingCompletions.push(ctrl);
@@ -160,7 +163,12 @@ describe('sessionDispatchRunner', () => {
     cancelHooks = [];
     pendingCompletions = [];
     vi.resetAllMocks();
-    mockConfig.sessionDispatch = { enabled: true, maxConcurrent: 1, jobTimeoutMs: 10_000, queue: [] };
+    mockConfig.sessionDispatch = {
+      enabled: true,
+      maxConcurrent: 1,
+      jobTimeoutMs: 10_000,
+      queue: [],
+    };
     mockRegisterCancelHook.mockImplementation((fn: CancelHook) => cancelHooks.push(fn));
     mockNextQueued.mockReturnValue(null);
     mockWorktreeAdd.mockResolvedValue({ path: '/worktrees/wt1' });
@@ -181,16 +189,22 @@ describe('sessionDispatchRunner', () => {
     runner.startDispatchRunner();
     await runOneTick();
 
-    expect(mockUpdateJob).toHaveBeenCalledWith('job-1',
-      expect.objectContaining({ status: 'starting' }));
-    expect(mockUpdateJob).toHaveBeenCalledWith('job-1',
-      expect.objectContaining({ status: 'running', sessionId: 'pty-abc' }));
+    expect(mockUpdateJob).toHaveBeenCalledWith(
+      'job-1',
+      expect.objectContaining({ status: 'starting' }),
+    );
+    expect(mockUpdateJob).toHaveBeenCalledWith(
+      'job-1',
+      expect.objectContaining({ status: 'running', sessionId: 'pty-abc' }),
+    );
 
     ctrl.resolve();
     await flushMicrotasks();
 
-    expect(mockUpdateJob).toHaveBeenCalledWith('job-1',
-      expect.objectContaining({ status: 'completed' }));
+    expect(mockUpdateJob).toHaveBeenCalledWith(
+      'job-1',
+      expect.objectContaining({ status: 'completed' }),
+    );
   });
 
   it('broadcasts on every status transition', async () => {
@@ -214,10 +228,7 @@ describe('sessionDispatchRunner', () => {
   it('does not start a second job while one is active (cap=1)', async () => {
     const job1 = makeJob({ id: 'job-1' });
     const job2 = makeJob({ id: 'job-2' });
-    mockNextQueued
-      .mockReturnValueOnce(job1)
-      .mockReturnValueOnce(job2)
-      .mockReturnValue(null);
+    mockNextQueued.mockReturnValueOnce(job1).mockReturnValueOnce(job2).mockReturnValue(null);
     mockUpdateJob.mockImplementation((id, patch) => ({ id, ...patch }));
     makeCompletionCtrl(); // job1 — stays pending
 
@@ -240,10 +251,7 @@ describe('sessionDispatchRunner', () => {
 
     const job1 = makeJob({ id: 'j1' });
     const job2 = makeJob({ id: 'j2' });
-    mockNextQueued
-      .mockReturnValueOnce(job1)
-      .mockReturnValueOnce(job2)
-      .mockReturnValue(null);
+    mockNextQueued.mockReturnValueOnce(job1).mockReturnValueOnce(job2).mockReturnValue(null);
     mockUpdateJob.mockImplementation((id, patch) => ({ id, ...patch }));
     makeCompletionCtrl(); // j1 — stays pending
     makeCompletionCtrl(); // j2 — stays pending
@@ -303,7 +311,8 @@ describe('sessionDispatchRunner', () => {
     runner.startDispatchRunner();
     await runOneTick();
 
-    expect(mockUpdateJob).toHaveBeenCalledWith('job-1',
+    expect(mockUpdateJob).toHaveBeenCalledWith(
+      'job-1',
       expect.objectContaining({ status: 'failed', error: 'git error' }),
     );
     expect(mockSpawnAgentSession).not.toHaveBeenCalled();
@@ -325,7 +334,8 @@ describe('sessionDispatchRunner', () => {
     vi.advanceTimersByTime(5_001);
     await flushMicrotasks();
 
-    expect(mockUpdateJob).toHaveBeenCalledWith('job-1',
+    expect(mockUpdateJob).toHaveBeenCalledWith(
+      'job-1',
       expect.objectContaining({ status: 'failed', error: 'timeout' }),
     );
     expect(mockKillSession).toHaveBeenCalledWith('pty-abc');

@@ -27,10 +27,7 @@ export function useMonacoBlame(
     }
     const decs = blameLinesToDecorations(blameLines);
     const monacoDecs = blameDecorationsToMonaco(decs);
-    decorationIdsRef.current = editor.deltaDecorations(
-      decorationIdsRef.current,
-      monacoDecs,
-    );
+    decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, monacoDecs);
   }, [editorRef, enabled, blameLines]);
 
   // Clear on unmount or disable.

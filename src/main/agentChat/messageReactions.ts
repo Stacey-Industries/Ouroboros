@@ -18,7 +18,11 @@ import { enforceReactionCap } from './threadStoreSqliteReactions';
  */
 export interface ReactionStore {
   getMessageReactions: (messageId: string, threadId: string) => Promise<Reaction[]>;
-  setMessageReactions: (messageId: string, threadId: string, reactions: Reaction[]) => Promise<void>;
+  setMessageReactions: (
+    messageId: string,
+    threadId: string,
+    reactions: Reaction[],
+  ) => Promise<void>;
 }
 
 /**
@@ -39,9 +43,7 @@ export interface ReactionTarget {
  * pair already exists (idempotent add).
  */
 export function addReactionToList(reactions: Reaction[], reaction: Reaction): Reaction[] {
-  const exists = reactions.some(
-    (r) => r.kind === reaction.kind && r.by === reaction.by,
-  );
+  const exists = reactions.some((r) => r.kind === reaction.kind && r.by === reaction.by);
   if (exists) return reactions;
   return [...reactions, reaction];
 }
@@ -88,7 +90,11 @@ export async function addReaction(
   const { messageId, threadId, kind, by } = target;
   const current = await store.getMessageReactions(messageId, threadId);
   // kind is validated at the IPC boundary (agentChatReactions.ts allowlist); cast is safe.
-  const reaction: Reaction = { kind: kind as Reaction['kind'], at: Date.now(), ...(by !== undefined ? { by } : {}) };
+  const reaction: Reaction = {
+    kind: kind as Reaction['kind'],
+    at: Date.now(),
+    ...(by !== undefined ? { by } : {}),
+  };
   const appended = addReactionToList(current, reaction);
   const updated = enforceReactionCap(appended);
   await store.setMessageReactions(messageId, threadId, updated);

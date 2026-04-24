@@ -1,10 +1,10 @@
 import {
+  type ApprovalRequest,
+  type ApprovalResponse,
   cancelApprovalRequest,
   getPendingRequest,
   requestApproval,
   waitForResolution,
-  type ApprovalRequest,
-  type ApprovalResponse,
 } from '../../approvalManager';
 import log from '../../logger';
 
@@ -84,7 +84,8 @@ function buildToolInput(payload: CodexApprovalPayload): Record<string, unknown> 
   const input: Record<string, unknown> = {};
   if (typeof payload.command === 'string') input.command = payload.command;
   if (typeof payload.filePath === 'string') input.file_path = payload.filePath;
-  if (typeof payload.path === 'string' && typeof input.file_path !== 'string') input.path = payload.path;
+  if (typeof payload.path === 'string' && typeof input.file_path !== 'string')
+    input.path = payload.path;
   if (Object.keys(input).length > 0) return input;
   return { payload };
 }
@@ -147,7 +148,10 @@ export class CodexApprovalBridge {
     }
   }
 
-  cancelPendingApproval(requestId: string, reason = 'Codex session ended before approval resolved'): boolean {
+  cancelPendingApproval(
+    requestId: string,
+    reason = 'Codex session ended before approval resolved',
+  ): boolean {
     const pending = this.inflight.get(requestId);
     if (!pending) return false;
     pending.skipClientResponse = true;
@@ -173,9 +177,7 @@ export class CodexApprovalBridge {
     this.emitStatus(
       'info',
       requestId,
-      resolution.decision === 'approve'
-        ? 'Codex approval accepted.'
-        : 'Codex approval denied.',
+      resolution.decision === 'approve' ? 'Codex approval accepted.' : 'Codex approval denied.',
     );
     return resolution.decision;
   }
@@ -197,7 +199,11 @@ export class CodexApprovalBridge {
     return 'reject';
   }
 
-  private emitStatus(level: CodexApprovalStatusEvent['level'], requestId: string, message: string): void {
+  private emitStatus(
+    level: CodexApprovalStatusEvent['level'],
+    requestId: string,
+    message: string,
+  ): void {
     this.onStatus?.({ level, message, requestId });
   }
 }

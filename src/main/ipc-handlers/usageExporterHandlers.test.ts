@@ -113,7 +113,10 @@ describe('ecosystem:exportUsage', () => {
 
 describe('ecosystem:lastExportInfo', () => {
   it('returns null when no export has been recorded', async () => {
-    const result = await callHandler('ecosystem:lastExportInfo') as { success: boolean; info: unknown };
+    const result = (await callHandler('ecosystem:lastExportInfo')) as {
+      success: boolean;
+      info: unknown;
+    };
     expect(result.success).toBe(true);
     expect(result.info).toBeNull();
   });
@@ -127,7 +130,10 @@ describe('ecosystem:lastExportInfo', () => {
       outputPath: '/tmp/three.jsonl',
     });
 
-    const result = await callHandler('ecosystem:lastExportInfo') as { success: boolean; info: Record<string, unknown> };
+    const result = (await callHandler('ecosystem:lastExportInfo')) as {
+      success: boolean;
+      info: Record<string, unknown>;
+    };
     expect(result.success).toBe(true);
     expect(result.info?.path).toBe('/tmp/three.jsonl');
     expect(result.info?.rows).toBe(3);

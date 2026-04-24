@@ -70,7 +70,8 @@ function HeaderCell({ col, sortKey, sortDir, onSort }: HeaderCellProps): React.R
       onClick={() => onSort(col.key)}
       className="px-3 py-2 text-left text-xs font-medium text-text-semantic-muted uppercase tracking-wide cursor-pointer select-none hover:text-text-semantic-secondary"
     >
-      {col.label}{indicator}
+      {col.label}
+      {indicator}
     </th>
   );
 }
@@ -132,7 +133,13 @@ export function ThreadCostTable({ threads }: ThreadCostTableProps): React.ReactE
         <thead className="bg-surface-inset">
           <tr>
             {COLUMNS.map((col) => (
-              <HeaderCell key={col.key} col={col} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+              <HeaderCell
+                key={col.key}
+                col={col}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
             ))}
           </tr>
         </thead>

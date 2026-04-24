@@ -230,7 +230,8 @@ describe('computeFeatures — toolKindHint one-hot', () => {
   it('exactly one toolKindHint bit is set', () => {
     for (const mode of ['edit', 'review', 'plan'] as const) {
       const f = computeFeatures(makeCandidate(), makeCtx({ request: makeRequest(mode) }));
-      const sum = f.toolKindHint_read + f.toolKindHint_edit + f.toolKindHint_write + f.toolKindHint_other;
+      const sum =
+        f.toolKindHint_read + f.toolKindHint_edit + f.toolKindHint_write + f.toolKindHint_other;
       expect(sum, `mode=${mode}`).toBe(1);
     }
   });

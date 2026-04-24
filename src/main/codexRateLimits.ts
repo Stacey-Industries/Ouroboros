@@ -64,9 +64,10 @@ function parseRateLimitWindows(rateLimits: Record<string, unknown>): {
   planType: string | null;
   windows: CodexUsageWindow[];
 } | null {
-  const windows = [parseUsageWindow(rateLimits.primary), parseUsageWindow(rateLimits.secondary)].filter(
-    (window): window is CodexUsageWindow => window !== null,
-  );
+  const windows = [
+    parseUsageWindow(rateLimits.primary),
+    parseUsageWindow(rateLimits.secondary),
+  ].filter((window): window is CodexUsageWindow => window !== null);
   if (windows.length === 0) return null;
 
   return {

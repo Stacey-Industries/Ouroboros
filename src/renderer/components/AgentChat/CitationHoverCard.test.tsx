@@ -26,9 +26,7 @@ function makeAnchorRef(el: HTMLElement | null = null): React.RefObject<HTMLEleme
   return ref as React.RefObject<HTMLElement | null>;
 }
 
-function installReadFile(
-  result: { success: boolean; content?: string; error?: string },
-): void {
+function installReadFile(result: { success: boolean; content?: string; error?: string }): void {
   Object.defineProperty(window, 'electronAPI', {
     value: { files: { readFile: vi.fn().mockResolvedValue(result) } },
     writable: true,
@@ -50,12 +48,7 @@ describe('CitationHoverCard', () => {
     const anchor = document.createElement('button');
     document.body.appendChild(anchor);
 
-    render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} />);
 
     await waitFor(() =>
       expect(document.querySelector('[data-testid="citation-hover-card"]')).toBeTruthy(),
@@ -67,18 +60,22 @@ describe('CitationHoverCard', () => {
   it('shows loading state initially', () => {
     // Never resolves during this sync check
     Object.defineProperty(window, 'electronAPI', {
-      value: { files: { readFile: vi.fn(() => new Promise(() => { /* pending */ })) } },
+      value: {
+        files: {
+          readFile: vi.fn(
+            () =>
+              new Promise(() => {
+                /* pending */
+              }),
+          ),
+        },
+      },
       writable: true,
       configurable: true,
     });
 
     const anchor = document.createElement('button');
-    render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} />);
 
     expect(document.querySelector('[data-testid="citation-hover-card"]')).toBeTruthy();
     expect(document.body.textContent).toContain('Loading');
@@ -88,12 +85,7 @@ describe('CitationHoverCard', () => {
     installReadFile({ success: true, content: 'alpha\nbeta\ngamma' });
 
     const anchor = document.createElement('button');
-    render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} />);
 
     await waitFor(() => expect(document.body.textContent).toContain('alpha'));
     expect(document.body.textContent).toContain('beta');
@@ -104,16 +96,9 @@ describe('CitationHoverCard', () => {
     installReadFile({ success: false, error: 'Permission denied' });
 
     const anchor = document.createElement('button');
-    render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} />);
 
-    await waitFor(() =>
-      expect(document.body.textContent).toContain('Permission denied'),
-    );
+    await waitFor(() => expect(document.body.textContent).toContain('Permission denied'));
   });
 
   it('shows error when API is unavailable', async () => {
@@ -124,28 +109,16 @@ describe('CitationHoverCard', () => {
     });
 
     const anchor = document.createElement('button');
-    render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} />);
 
-    await waitFor(() =>
-      expect(document.body.textContent).toContain('unavailable'),
-    );
+    await waitFor(() => expect(document.body.textContent).toContain('unavailable'));
   });
 
   it('highlights the target line when fileRef.line is set', async () => {
     installReadFile({ success: true, content: 'a\nb\nc\nd\ne' });
 
     const anchor = document.createElement('button');
-    render(
-      <CitationHoverCard
-        fileRef={makeRef({ line: 3 })}
-        anchorRef={makeAnchorRef(anchor)}
-      />,
-    );
+    render(<CitationHoverCard fileRef={makeRef({ line: 3 })} anchorRef={makeAnchorRef(anchor)} />);
 
     await waitFor(() => expect(document.body.textContent).toContain('c'));
     // The highlighted row gets bg-interactive-selection class
@@ -157,11 +130,7 @@ describe('CitationHoverCard', () => {
     const onClose = vi.fn();
     const anchor = document.createElement('button');
     render(
-      <CitationHoverCard
-        fileRef={makeRef()}
-        anchorRef={makeAnchorRef(anchor)}
-        onClose={onClose}
-      />,
+      <CitationHoverCard fileRef={makeRef()} anchorRef={makeAnchorRef(anchor)} onClose={onClose} />,
     );
 
     await waitFor(() =>
@@ -175,7 +144,9 @@ describe('CitationHoverCard', () => {
   it('dispatches agent-ide:open-file and calls onClose when "Open in editor" clicked', async () => {
     const onClose = vi.fn();
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:open-file', handler);
 
     const anchor = document.createElement('button');
@@ -199,7 +170,9 @@ describe('CitationHoverCard', () => {
 
   it('resolves relative path against projectRoot', async () => {
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener('agent-ide:open-file', handler);
 
     const anchor = document.createElement('button');

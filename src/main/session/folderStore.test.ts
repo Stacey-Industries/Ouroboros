@@ -1,17 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FolderStoreAdaptor,SessionFolder } from './folderStore';
+import type { FolderStoreAdaptor, SessionFolder } from './folderStore';
 import { openFolderStore } from './folderStore';
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
-function makeAdaptor(initial: SessionFolder[] = []): FolderStoreAdaptor & { data: SessionFolder[] } {
+function makeAdaptor(
+  initial: SessionFolder[] = [],
+): FolderStoreAdaptor & { data: SessionFolder[] } {
   let stored: SessionFolder[] = [...initial];
   const proxy = {
-    get data(): SessionFolder[] { return stored; },
+    get data(): SessionFolder[] {
+      return stored;
+    },
     read: () => stored,
     // write receives a potentially-aliased array; snapshot it first
-    write: (folders: SessionFolder[]) => { stored = [...folders]; },
+    write: (folders: SessionFolder[]) => {
+      stored = [...folders];
+    },
   };
   return proxy;
 }

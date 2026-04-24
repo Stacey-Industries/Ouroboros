@@ -40,10 +40,18 @@ describe('BUILT_IN_PROFILES', () => {
   describe('Reviewer', () => {
     const reviewer = BUILT_IN_PROFILES.find((p) => p.id === 'builtin-reviewer')!;
 
-    it('exists', () => { expect(reviewer).toBeDefined(); });
-    it('uses opus model', () => { expect(reviewer.model).toBe('claude-opus-4-6'); });
-    it('effort is high', () => { expect(reviewer.effort).toBe('high'); });
-    it('permissionMode is plan', () => { expect(reviewer.permissionMode).toBe('plan'); });
+    it('exists', () => {
+      expect(reviewer).toBeDefined();
+    });
+    it('uses opus model', () => {
+      expect(reviewer.model).toBe('claude-opus-4-6');
+    });
+    it('effort is high', () => {
+      expect(reviewer.effort).toBe('high');
+    });
+    it('permissionMode is plan', () => {
+      expect(reviewer.permissionMode).toBe('plan');
+    });
     it('enabledTools are read-only', () => {
       expect(reviewer.enabledTools).toEqual(['Read', 'Grep', 'Glob']);
     });
@@ -52,10 +60,18 @@ describe('BUILT_IN_PROFILES', () => {
   describe('Scaffolder', () => {
     const scaffolder = BUILT_IN_PROFILES.find((p) => p.id === 'builtin-scaffolder')!;
 
-    it('exists', () => { expect(scaffolder).toBeDefined(); });
-    it('uses sonnet model', () => { expect(scaffolder.model).toBe('claude-sonnet-4-6'); });
-    it('effort is medium', () => { expect(scaffolder.effort).toBe('medium'); });
-    it('permissionMode is normal', () => { expect(scaffolder.permissionMode).toBe('normal'); });
+    it('exists', () => {
+      expect(scaffolder).toBeDefined();
+    });
+    it('uses sonnet model', () => {
+      expect(scaffolder.model).toBe('claude-sonnet-4-6');
+    });
+    it('effort is medium', () => {
+      expect(scaffolder.effort).toBe('medium');
+    });
+    it('permissionMode is normal', () => {
+      expect(scaffolder.permissionMode).toBe('normal');
+    });
     it('includes write tools', () => {
       expect(scaffolder.enabledTools).toContain('Write');
       expect(scaffolder.enabledTools).toContain('Edit');
@@ -67,11 +83,21 @@ describe('BUILT_IN_PROFILES', () => {
   describe('Explorer', () => {
     const explorer = BUILT_IN_PROFILES.find((p) => p.id === 'builtin-explorer')!;
 
-    it('exists', () => { expect(explorer).toBeDefined(); });
-    it('uses sonnet model', () => { expect(explorer.model).toBe('claude-sonnet-4-6'); });
-    it('effort is low', () => { expect(explorer.effort).toBe('low'); });
-    it('permissionMode is normal', () => { expect(explorer.permissionMode).toBe('normal'); });
-    it('includes WebSearch', () => { expect(explorer.enabledTools).toContain('WebSearch'); });
+    it('exists', () => {
+      expect(explorer).toBeDefined();
+    });
+    it('uses sonnet model', () => {
+      expect(explorer.model).toBe('claude-sonnet-4-6');
+    });
+    it('effort is low', () => {
+      expect(explorer.effort).toBe('low');
+    });
+    it('permissionMode is normal', () => {
+      expect(explorer.permissionMode).toBe('normal');
+    });
+    it('includes WebSearch', () => {
+      expect(explorer.enabledTools).toContain('WebSearch');
+    });
     it('does not include write tools', () => {
       expect(explorer.enabledTools).not.toContain('Write');
       expect(explorer.enabledTools).not.toContain('Edit');
@@ -81,10 +107,18 @@ describe('BUILT_IN_PROFILES', () => {
   describe('Debugger', () => {
     const debugger_ = BUILT_IN_PROFILES.find((p) => p.id === 'builtin-debugger')!;
 
-    it('exists', () => { expect(debugger_).toBeDefined(); });
-    it('uses opus model', () => { expect(debugger_.model).toBe('claude-opus-4-6'); });
-    it('effort is high', () => { expect(debugger_.effort).toBe('high'); });
-    it('permissionMode is normal', () => { expect(debugger_.permissionMode).toBe('normal'); });
+    it('exists', () => {
+      expect(debugger_).toBeDefined();
+    });
+    it('uses opus model', () => {
+      expect(debugger_.model).toBe('claude-opus-4-6');
+    });
+    it('effort is high', () => {
+      expect(debugger_.effort).toBe('high');
+    });
+    it('permissionMode is normal', () => {
+      expect(debugger_.permissionMode).toBe('normal');
+    });
     it('includes Bash and Edit but not Write', () => {
       expect(debugger_.enabledTools).toContain('Bash');
       expect(debugger_.enabledTools).toContain('Edit');

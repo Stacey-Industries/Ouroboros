@@ -8,9 +8,7 @@ interface ClaudeSectionContentProps {
   model: ClaudeSectionModel;
 }
 
-export function ClaudeSectionContent({
-  model,
-}: ClaudeSectionContentProps): React.ReactElement {
+export function ClaudeSectionContent({ model }: ClaudeSectionContentProps): React.ReactElement {
   return (
     <div style={claudeSectionRootStyle}>
       <ClaudeSectionBody model={model} />

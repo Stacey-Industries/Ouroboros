@@ -60,7 +60,7 @@ import { getTelemetryStore } from '../telemetry';
 import { detectFactClaims } from './factClaimDetector';
 import { maybePauseForFactClaim, resetInFlightForTests } from './factClaimPauseOrchestrator';
 import { getModelCutoffDate } from './modelTrainingCutoffs';
-import { cacheKey,getResearchCache } from './researchCache';
+import { cacheKey, getResearchCache } from './researchCache';
 import { getResearchMode } from './researchSessionState';
 import * as researchSubagent from './researchSubagent';
 import { isStale } from './stalenessMatrix';
@@ -75,7 +75,13 @@ function mockStaleLibrary(library = 'zod'): void {
   vi.mocked(isStale).mockReturnValue({
     library,
     stale: true,
-    entry: { kind: 'curated', library, cutoffVersion: '3.0.0', cutoffDate: '2024-01-01', confidence: 'high' },
+    entry: {
+      kind: 'curated',
+      library,
+      cutoffVersion: '3.0.0',
+      cutoffDate: '2024-01-01',
+      confidence: 'high',
+    },
     reason: 'curated-match',
   });
 }
@@ -107,12 +113,14 @@ function mockTelemetry() {
   return { recordTrace };
 }
 
-function baseSetup(opts: {
-  globalFlag?: boolean;
-  mode?: 'off' | 'conservative' | 'aggressive';
-  stale?: boolean;
-  cached?: boolean;
-} = {}) {
+function baseSetup(
+  opts: {
+    globalFlag?: boolean;
+    mode?: 'off' | 'conservative' | 'aggressive';
+    stale?: boolean;
+    cached?: boolean;
+  } = {},
+) {
   const { globalFlag = true, mode = 'conservative', stale = true, cached = false } = opts;
 
   vi.mocked(detectFactClaims).mockReturnValue([makeMatch()]);
@@ -157,9 +165,7 @@ describe('maybePauseForFactClaim', () => {
     expect(researchSubagent.runResearch).toHaveBeenCalledWith(
       expect.objectContaining({ library: 'zod', triggerReason: 'auto' }),
     );
-    expect(recordTrace).toHaveBeenCalledWith(
-      expect.objectContaining({ phase: 'fact-claim-fire' }),
-    );
+    expect(recordTrace).toHaveBeenCalledWith(expect.objectContaining({ phase: 'fact-claim-fire' }));
   });
 
   it('does not fire when library is cached', async () => {

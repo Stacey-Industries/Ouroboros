@@ -263,6 +263,7 @@ export { ComposerInput } from './AgentChatComposerInput';
 export type ComposerFooterProps = {
   chatOverrides?: ChatOverrides;
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   codexSettingsModel?: string;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   modelProviders?: ModelProvider[];
@@ -277,6 +278,7 @@ export type ComposerFooterProps = {
 export function buildComposerFooterProps(p: {
   chatOverrides?: ChatOverrides;
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   codexSettingsModel?: string;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   modelProviders?: ModelProvider[];
@@ -287,6 +289,7 @@ export function buildComposerFooterProps(p: {
   return {
     chatOverrides: p.chatOverrides,
     codexModels: p.codexModels,
+    codexAppServerTransport: p.codexAppServerTransport,
     codexSettingsModel: p.codexSettingsModel,
     defaultProvider: p.defaultProvider,
     modelProviders: p.modelProviders,
@@ -313,6 +316,7 @@ export function ComposerFooter(props: ComposerFooterProps): React.ReactElement |
           defaultProvider={props.defaultProvider}
           providers={props.modelProviders}
           codexModels={props.codexModels}
+          codexAppServerTransport={props.codexAppServerTransport}
           routedBy={props.routedBy}
         />
       </div>

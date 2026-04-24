@@ -34,15 +34,17 @@ const BASE_STATE: AgentState = {
 
 function makeStateWithSession(sessionId: string): AgentState {
   return {
-    sessions: [{
-      id: sessionId,
-      taskLabel: 'Test',
-      status: 'running' as const,
-      startedAt: 1000,
-      toolCalls: [],
-      inputTokens: 0,
-      outputTokens: 0,
-    }],
+    sessions: [
+      {
+        id: sessionId,
+        taskLabel: 'Test',
+        status: 'running' as const,
+        startedAt: 1000,
+        toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
+      },
+    ],
     pendingSubagentLinks: {},
     pendingSubagentTimestamps: [],
   };
@@ -213,10 +215,14 @@ describe('reduceNotification', () => {
   it('appends multiple notifications preserving order', () => {
     const state = makeStateWithSession('sess-1');
     const first = reduceNotification(state, {
-      type: 'NOTIFICATION', sessionId: 'sess-1', message: 'First',
+      type: 'NOTIFICATION',
+      sessionId: 'sess-1',
+      message: 'First',
     });
     const second = reduceNotification(first, {
-      type: 'NOTIFICATION', sessionId: 'sess-1', message: 'Second',
+      type: 'NOTIFICATION',
+      sessionId: 'sess-1',
+      message: 'Second',
     });
     expect(second.sessions[0].notifications).toEqual(['First', 'Second']);
   });

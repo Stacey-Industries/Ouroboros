@@ -27,7 +27,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
 
 vi.mock('../../../contexts/ProjectContext', () => ({
-  useProject: () => ({ projectRoot: '/test/project', projectName: 'project', projectRoots: ['/test/project'] }),
+  useProject: () => ({
+    projectRoot: '/test/project',
+    projectName: 'project',
+    projectRoots: ['/test/project'],
+  }),
 }));
 
 const approvalContextMock = vi.hoisted(() => ({
@@ -42,6 +46,10 @@ vi.mock('./ChatOnlyHeaderControls', () => ({
 
 afterEach(() => cleanup());
 
+function renderTitleBar(props: Partial<React.ComponentProps<typeof ChatOnlyTitleBar>> = {}) {
+  return render(<ChatOnlyTitleBar {...defaultProps} {...props} />);
+}
+
 const defaultProps = {
   onToggleDrawer: vi.fn(),
   onCycleSidebarMode: vi.fn(),
@@ -51,40 +59,40 @@ const defaultProps = {
 describe('ChatOnlyTitleBar', () => {
   it('does not show the approval pill when there are no pending approvals', () => {
     approvalContextMock.useApprovalContext.mockReturnValue({ pendingCount: 0, requests: [] });
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.queryByTestId('chat-approval-pill')).toBeNull();
   });
 
   it('shows the approval pill when approvals are pending', () => {
     approvalContextMock.useApprovalContext.mockReturnValue({ pendingCount: 2, requests: [] });
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.getByTestId('chat-approval-pill').textContent).toContain('2 approvals');
   });
 
   it('renders without throwing', () => {
-    const { container } = render(<ChatOnlyTitleBar {...defaultProps} />);
+    const { container } = renderTitleBar();
     expect(container).toBeDefined();
   });
 
   it('calls onCycleSidebarMode when sidebar cycle button is clicked', () => {
     const onCycleSidebarMode = vi.fn();
-    render(<ChatOnlyTitleBar {...defaultProps} onCycleSidebarMode={onCycleSidebarMode} />);
+    renderTitleBar({ onCycleSidebarMode });
     fireEvent.click(screen.getByTestId('sidebar-cycle-button'));
     expect(onCycleSidebarMode).toHaveBeenCalledOnce();
   });
 
   it('shows project name', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.getByText('project')).toBeDefined();
   });
 
   it('does NOT show Chat Mode badge (removed in Wave 43 Phase C)', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.queryByText('Chat Mode')).toBeNull();
   });
 
   it('shows Exit chat mode icon button (restored in Wave 44 Phase A)', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.getByTitle('Exit chat mode')).toBeDefined();
   });
 
@@ -95,49 +103,49 @@ describe('ChatOnlyTitleBar', () => {
       dispatched.push(evt.type);
       return origDispatch(evt);
     });
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     fireEvent.click(screen.getByTitle('Exit chat mode'));
     expect(dispatched).toContain('agent-ide:toggle-immersive-chat');
     vi.restoreAllMocks();
   });
 
   it('Exit chat mode button has no visible text label (icon-only)', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     const btn = screen.getByTitle('Exit chat mode');
     expect(btn.textContent?.trim()).toBe('');
   });
 
   it('does NOT mount ChatOnlyHeaderControls in title bar (Wave 44 Phase D)', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     expect(screen.queryByTestId('header-controls-stub')).toBeNull();
   });
 
   it('has no border-b class on the header element', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     const header = screen.getByTestId('chat-only-title-bar');
     expect(header.className).not.toContain('border-b');
   });
 
   it('header element carries the titlebar-drag class (drag surface matches IDE titlebar)', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} />);
+    renderTitleBar();
     const header = screen.getByTestId('chat-only-title-bar');
     expect(header.className).toContain('titlebar-drag');
   });
 
   it('sidebar cycle button tooltip reflects pinned mode', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="pinned" />);
+    renderTitleBar({ sidebarMode: 'pinned' });
     const btn = screen.getByTestId('sidebar-cycle-button');
     expect(btn.getAttribute('title')).toContain('pinned');
   });
 
   it('sidebar cycle button tooltip reflects collapsed mode', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="collapsed" />);
+    renderTitleBar({ sidebarMode: 'collapsed' });
     const btn = screen.getByTestId('sidebar-cycle-button');
     expect(btn.getAttribute('title')).toContain('collapsed');
   });
 
   it('sidebar cycle button tooltip reflects hidden mode', () => {
-    render(<ChatOnlyTitleBar {...defaultProps} sidebarMode="hidden" />);
+    renderTitleBar({ sidebarMode: 'hidden' });
     const btn = screen.getByTestId('sidebar-cycle-button');
     expect(btn.getAttribute('title')).toContain('hidden');
   });

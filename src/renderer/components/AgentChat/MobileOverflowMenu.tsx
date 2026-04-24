@@ -43,8 +43,7 @@ function usePopoverDismiss(
     function handlePointerDown(e: PointerEvent): void {
       const target = e.target as Node;
       const outside =
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target);
+        !triggerRef.current?.contains(target) && !popoverRef.current?.contains(target);
       if (outside) onClose();
     }
     function handleKey(e: KeyboardEvent): void {
@@ -62,34 +61,62 @@ function usePopoverDismiss(
 // ── Popover ───────────────────────────────────────────────────────────────────
 
 const POPOVER_STYLE: React.CSSProperties = {
-  position: 'fixed', minWidth: 140, zIndex: 9999,
+  position: 'fixed',
+  minWidth: 140,
+  zIndex: 9999,
   backgroundColor: 'var(--surface-overlay)',
-  border: '1px solid var(--border-subtle)', borderRadius: 8,
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 8,
   boxShadow: '0 4px 16px color-mix(in srgb, var(--surface-base) 40%, transparent)',
   padding: '4px 0',
 };
 
 function actionItemStyle(danger?: boolean): React.CSSProperties {
   return {
-    display: 'flex', width: '100%', alignItems: 'center',
-    padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', textAlign: 'left', gap: 8,
+    display: 'flex',
+    width: '100%',
+    alignItems: 'center',
+    padding: '8px 14px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '0.8125rem',
+    fontFamily: 'var(--font-ui)',
+    textAlign: 'left',
+    gap: 8,
     color: danger ? 'var(--status-error)' : 'var(--text-primary)',
   };
 }
 
-function OverflowPopover({ popoverRef, rect, actions, onClose }: {
+function OverflowPopover({
+  popoverRef,
+  rect,
+  actions,
+  onClose,
+}: {
   popoverRef: React.RefObject<HTMLDivElement | null>;
-  rect: DOMRect; actions: OverflowAction[]; onClose: () => void;
+  rect: DOMRect;
+  actions: OverflowAction[];
+  onClose: () => void;
 }): React.ReactElement {
   return createPortal(
-    <div ref={popoverRef} role="menu"
-      style={{ ...POPOVER_STYLE, top: rect.bottom + 4, right: window.innerWidth - rect.right }}>
+    <div
+      ref={popoverRef}
+      role="menu"
+      style={{ ...POPOVER_STYLE, top: rect.bottom + 4, right: window.innerWidth - rect.right }}
+    >
       {actions.map((action) => (
-        <button key={action.label} role="menuitem" type="button"
+        <button
+          key={action.label}
+          role="menuitem"
+          type="button"
           title={action.title ?? action.label}
-          onClick={() => { action.onClick(); onClose(); }}
-          style={actionItemStyle(action.danger)}>
+          onClick={() => {
+            action.onClick();
+            onClose();
+          }}
+          style={actionItemStyle(action.danger)}
+        >
           {action.label}
         </button>
       ))}

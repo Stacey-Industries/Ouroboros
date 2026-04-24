@@ -57,8 +57,10 @@ function isValidProfile(value: unknown): value is Profile {
   if (!value || typeof value !== 'object') return false;
   const p = value as Record<string, unknown>;
   return (
-    typeof p['id'] === 'string' && p['id'].length > 0 &&
-    typeof p['name'] === 'string' && p['name'].length > 0 &&
+    typeof p['id'] === 'string' &&
+    p['id'].length > 0 &&
+    typeof p['name'] === 'string' &&
+    p['name'].length > 0 &&
     typeof p['createdAt'] === 'number' &&
     typeof p['updatedAt'] === 'number'
   );
@@ -74,7 +76,9 @@ function handleList(): HandlerResult<{ profiles: Profile[] }> {
 
 function handleUpsert(
   args: unknown,
-): HandlerResult<{ profile: Profile }> | { success: false; error: 'profile-lint-errors'; lintItems: ProfileLint[] } {
+):
+  | HandlerResult<{ profile: Profile }>
+  | { success: false; error: 'profile-lint-errors'; lintItems: ProfileLint[] } {
   const { profile } = (args ?? {}) as { profile?: unknown };
   if (!isValidProfile(profile)) return fail('profile is missing required fields (id, name)');
   const store = getProfileStore();

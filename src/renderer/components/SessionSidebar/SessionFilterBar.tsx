@@ -44,7 +44,10 @@ interface SegmentProps<T extends string> {
 }
 
 function SegmentedControl<T extends string>({
-  options, value, onChange, label,
+  options,
+  value,
+  onChange,
+  label,
 }: SegmentProps<T>): React.ReactElement {
   const activeCls = 'bg-interactive-accent text-text-on-accent';
   const inactiveCls = 'bg-surface-inset text-text-semantic-muted hover:bg-surface-hover';
@@ -89,9 +92,7 @@ function ProjectInput({ value, onChange }: ProjectInputProps): React.ReactElemen
 
 // ─── SessionFilterBar ─────────────────────────────────────────────────────────
 
-export function SessionFilterBar({
-  filters, onChange,
-}: SessionFilterBarProps): React.ReactElement {
+export function SessionFilterBar({ filters, onChange }: SessionFilterBarProps): React.ReactElement {
   const setStatus = useCallback(
     (status: StatusFilter) => onChange({ ...filters, status }),
     [filters, onChange],
@@ -105,10 +106,23 @@ export function SessionFilterBar({
     [filters, onChange],
   );
   return (
-    <div className="flex flex-col gap-1.5 px-3 py-2 border-b border-border-subtle" aria-label="Session filters">
-      <SegmentedControl label="Filter by status" options={STATUS_OPTIONS} value={filters.status} onChange={setStatus} />
+    <div
+      className="flex flex-col gap-1.5 px-3 py-2 border-b border-border-subtle"
+      aria-label="Session filters"
+    >
+      <SegmentedControl
+        label="Filter by status"
+        options={STATUS_OPTIONS}
+        value={filters.status}
+        onChange={setStatus}
+      />
       <ProjectInput value={filters.project} onChange={setProject} />
-      <SegmentedControl label="Filter by worktree" options={WORKTREE_OPTIONS} value={filters.worktree} onChange={setWorktree} />
+      <SegmentedControl
+        label="Filter by worktree"
+        options={WORKTREE_OPTIONS}
+        value={filters.worktree}
+        onChange={setWorktree}
+      />
     </div>
   );
 }

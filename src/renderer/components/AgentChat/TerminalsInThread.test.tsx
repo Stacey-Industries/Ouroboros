@@ -19,7 +19,9 @@ const mockOnChanged = vi.fn();
 beforeEach(() => {
   mockGetLinkedTerminals.mockResolvedValue({ success: true, sessionIds: [] });
   mockGetShellState.mockResolvedValue({ success: false });
-  mockOnChanged.mockReturnValue(() => { /* cleanup noop */ });
+  mockOnChanged.mockReturnValue(() => {
+    /* cleanup noop */
+  });
 
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,

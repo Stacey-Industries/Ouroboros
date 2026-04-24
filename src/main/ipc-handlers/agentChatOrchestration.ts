@@ -57,8 +57,21 @@ function buildEmptyRepoFacts(workspaceRoots: string[], now: number): ContextPack
   return {
     workspaceRoots,
     roots: [],
-    gitDiff: { changedFiles: [], totalAdditions: 0, totalDeletions: 0, changedFileCount: 0, generatedAt: now },
-    diagnostics: { files: [], totalErrors: 0, totalWarnings: 0, totalInfos: 0, totalHints: 0, generatedAt: now },
+    gitDiff: {
+      changedFiles: [],
+      totalAdditions: 0,
+      totalDeletions: 0,
+      changedFileCount: 0,
+      generatedAt: now,
+    },
+    diagnostics: {
+      files: [],
+      totalErrors: 0,
+      totalWarnings: 0,
+      totalInfos: 0,
+      totalHints: 0,
+      generatedAt: now,
+    },
     recentEdits: { files: [], generatedAt: now },
   };
 }
@@ -77,7 +90,13 @@ function buildEmptyContextPacket(request: TaskRequest): ContextPacket {
       verificationProfile: 'fast',
     },
     repoFacts: buildEmptyRepoFacts(request.workspaceRoots, now),
-    liveIdeState: { selectedFiles: [], openFiles: [], dirtyFiles: [], dirtyBuffers: [], collectedAt: now },
+    liveIdeState: {
+      selectedFiles: [],
+      openFiles: [],
+      dirtyFiles: [],
+      dirtyBuffers: [],
+      collectedAt: now,
+    },
     files: [],
     omittedCandidates: [],
     budget: { estimatedBytes: 0, estimatedTokens: 0, droppedContentNotes: [] },
@@ -135,11 +154,7 @@ async function createTask(
     contextPacket.skillInstructions = request.skillExpansion;
   // Wave 25 Phase D: inject pinned context for this chat session (thread ID).
   if (contextPacket && request.sessionId) {
-    contextPacket = injectPinnedContext(
-      contextPacket,
-      request.sessionId,
-      contextPacket.budget,
-    );
+    contextPacket = injectPinnedContext(contextPacket, request.sessionId, contextPacket.budget);
   }
 
   const session: TaskSessionRecord = {

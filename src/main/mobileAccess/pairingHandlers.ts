@@ -106,7 +106,13 @@ async function handleGeneratePairingCode() {
     const fingerprint = getOrCreateFingerprint();
     const qrPayload = await buildQrPayload(ticket.code, fingerprint);
     const qrPairingUrl = buildQrPairingUrl(qrPayload);
-    return { success: true, code: ticket.code, expiresAt: ticket.expiresAt, qrPayload, qrPairingUrl };
+    return {
+      success: true,
+      code: ticket.code,
+      expiresAt: ticket.expiresAt,
+      qrPayload,
+      qrPairingUrl,
+    };
   } catch (err) {
     log.error('[pairing] generatePairingCode error:', err);
     return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -155,11 +161,7 @@ async function handleRevokePairedDevice(_event: unknown, deviceId: string) {
 type ConsumeError = { error: 'invalid' | 'expired' | 'consumed' | 'rate-limited' };
 type ConsumeSuccess = { device: PairedDevice; refreshToken: string };
 
-function buildDevice(
-  label: string,
-  clientFingerprint: string,
-  tokenHash: string,
-): PairedDevice {
+function buildDevice(label: string, clientFingerprint: string, tokenHash: string): PairedDevice {
   const now = new Date().toISOString();
   return {
     id: uuidv4(),

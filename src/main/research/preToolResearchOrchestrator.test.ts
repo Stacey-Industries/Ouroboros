@@ -132,7 +132,9 @@ describe('_runOrchestration', () => {
   });
 
   it('propagates runResearch rejection — maybeFireResearchForPreTool is the swallow boundary', async () => {
-    const runResearch = vi.fn(async () => { throw new Error('network error'); });
+    const runResearch = vi.fn(async () => {
+      throw new Error('network error');
+    });
     // _runOrchestration itself propagates; the public wrapper catches it.
     // Verify the rejection propagates out of _runOrchestration.
     await expect(
@@ -259,9 +261,7 @@ describe('_runOrchestration Phase E — correction store merge', () => {
     );
 
     expect(result).toBe(artifact);
-    expect(runResearch).toHaveBeenCalledWith(
-      expect.objectContaining({ library: 'react-query' }),
-    );
+    expect(runResearch).toHaveBeenCalledWith(expect.objectContaining({ library: 'react-query' }));
   });
 
   it('does not fire for a library that has no correction and no staleness match when globalFlag=true', async () => {
@@ -288,8 +288,7 @@ describe('_runOrchestration Phase E — correction store merge', () => {
     const runResearch = vi.fn();
     // Store stub returns corrections only for a DIFFERENT session
     const correctionStore = {
-      getLibraries: (sid: string) =>
-        sid === 'sess-other' ? new Set(['zod']) : new Set<string>(),
+      getLibraries: (sid: string) => (sid === 'sess-other' ? new Set(['zod']) : new Set<string>()),
     };
 
     const result = await _runOrchestration(
@@ -368,9 +367,7 @@ describe('_runOrchestration Phase I — dryRunOnly', () => {
     });
     // If trigger fires, runResearch should be called
     if (result !== null) {
-      expect(runResearch).toHaveBeenCalledWith(
-        expect.objectContaining({ triggerReason: 'hook' }),
-      );
+      expect(runResearch).toHaveBeenCalledWith(expect.objectContaining({ triggerReason: 'hook' }));
     }
   });
 

@@ -109,25 +109,40 @@ export async function searchExtensions(
   query: string,
   offset: number,
 ): Promise<{ extensions: VsxExtensionSummary[]; totalSize: number; offset: number }> {
-  const params = new URLSearchParams({ query, size: '20', offset: String(offset), sortBy: 'downloadCount' });
+  const params = new URLSearchParams({
+    query,
+    size: '20',
+    offset: String(offset),
+    sortBy: 'downloadCount',
+  });
   const response = await fetch(`${OPENVSX_BASE}/-/search?${params.toString()}`);
   if (!response.ok)
     throw new Error(`Open VSX search failed: ${response.status} ${response.statusText}`);
   const data = (await response.json()) as VsxSearchApiResponse;
-  return { extensions: (data.extensions ?? []).map(toSummary), totalSize: data.totalSize ?? 0, offset: data.offset ?? 0 };
+  return {
+    extensions: (data.extensions ?? []).map(toSummary),
+    totalSize: data.totalSize ?? 0,
+    offset: data.offset ?? 0,
+  };
 }
 
 export async function getExtensionDetails(
   namespace: string,
   name: string,
 ): Promise<{ extension: VsxExtensionDetail }> {
-  const response = await fetch(`${OPENVSX_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`);
+  const response = await fetch(
+    `${OPENVSX_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
+  );
   if (!response.ok)
     throw new Error(`Open VSX detail fetch failed: ${response.status} ${response.statusText}`);
   return { extension: toDetail((await response.json()) as VsxDetailApiResponse) };
 }
 
-async function fetchVsixDetail(namespace: string, name: string, version?: string): Promise<VsxDetailApiResponse> {
+async function fetchVsixDetail(
+  namespace: string,
+  name: string,
+  version?: string,
+): Promise<VsxDetailApiResponse> {
   const url = version
     ? `${OPENVSX_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}/${encodeURIComponent(version)}`
     : `${OPENVSX_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`;
@@ -137,7 +152,10 @@ async function fetchVsixDetail(namespace: string, name: string, version?: string
   return (await resp.json()) as VsxDetailApiResponse;
 }
 
-async function downloadVsix(downloadUrl: string, extensionId: string): Promise<{ buffer: Buffer; tempPath: string }> {
+async function downloadVsix(
+  downloadUrl: string,
+  extensionId: string,
+): Promise<{ buffer: Buffer; tempPath: string }> {
   const vsixResponse = await fetch(downloadUrl);
   if (!vsixResponse.ok)
     throw new Error(`Failed to download VSIX: ${vsixResponse.status} ${vsixResponse.statusText}`);
@@ -162,8 +180,15 @@ export async function installExtension(
   const { buffer, tempPath } = await downloadVsix(String(downloadUrl), extensionId);
   return {
     installed: await installExtensionFromBuffer({
-      buffer, tempPath, extensionId, namespace, name,
-      version: detail.version, displayName: detail.displayName, description: detail.description, existing,
+      buffer,
+      tempPath,
+      extensionId,
+      namespace,
+      name,
+      version: detail.version,
+      displayName: detail.displayName,
+      description: detail.description,
+      existing,
     }),
   };
 }

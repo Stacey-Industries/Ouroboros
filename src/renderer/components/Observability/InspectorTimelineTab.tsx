@@ -133,9 +133,7 @@ function useExpandToggle(): { expandedIds: Set<string>; handleToggle: (id: strin
   return { expandedIds, handleToggle };
 }
 
-export function InspectorTimelineTab({
-  sessionId,
-}: InspectorTimelineTabProps): React.ReactElement {
+export function InspectorTimelineTab({ sessionId }: InspectorTimelineTabProps): React.ReactElement {
   const { events, loading } = useEventQuery(sessionId);
   const { expandedIds, handleToggle } = useExpandToggle();
 

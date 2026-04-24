@@ -147,20 +147,12 @@ function ModelMenuGroup({
   );
 }
 
-export function ClaudeModelMenu({
-  anchorRef,
-  onSelect,
-  onClose,
-}: {
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
-  onSelect: (value: string) => void;
-  onClose: () => void;
-}): React.ReactElement {
-  const menuRef = useRef<HTMLDivElement>(null);
+function useModelMenuPosition(
+  anchorRef: React.RefObject<HTMLButtonElement | null>,
+  menuRef: React.RefObject<HTMLDivElement | null>,
+  onClose: () => void,
+): { left: number; top: number; width: number } | null {
   const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
-  const models = useModelMenuData();
-  const groups = groupByName(models);
-
   const updateMenuPos = useCallback(() => {
     const rect = anchorRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -170,19 +162,20 @@ export function ClaudeModelMenu({
   useEffect(() => {
     updateMenuPos();
   }, [updateMenuPos]);
+  return menuPos;
+}
 
-  const handleSelect = useCallback(
-    (value: string) => {
-      onSelect(value);
-      onClose();
-    },
-    [onSelect, onClose],
-  );
-
-  if (!menuPos) {
-    return <></>;
-  }
-
+function ModelMenuPanel({
+  menuRef,
+  menuPos,
+  groups,
+  onSelect,
+}: {
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  menuPos: { left: number; top: number; width: number };
+  groups: Map<string, ModelOption[]>;
+  onSelect: (value: string) => void;
+}): React.ReactElement {
   return createPortal(
     <div
       ref={menuRef}
@@ -203,9 +196,35 @@ export function ClaudeModelMenu({
         Select model
       </div>
       {Array.from(groups.entries()).map(([group, items]) => (
-        <ModelMenuGroup key={group} group={group} items={items} onSelect={handleSelect} />
+        <ModelMenuGroup key={group} group={group} items={items} onSelect={onSelect} />
       ))}
     </div>,
     document.body,
+  );
+}
+
+export function ClaudeModelMenu({
+  anchorRef,
+  onSelect,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  onSelect: (value: string) => void;
+  onClose: () => void;
+}): React.ReactElement {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const models = useModelMenuData();
+  const groups = groupByName(models);
+  const menuPos = useModelMenuPosition(anchorRef, menuRef, onClose);
+  const handleSelect = useCallback(
+    (value: string) => {
+      onSelect(value);
+      onClose();
+    },
+    [onSelect, onClose],
+  );
+  if (!menuPos) return <></>;
+  return (
+    <ModelMenuPanel menuRef={menuRef} menuPos={menuPos} groups={groups} onSelect={handleSelect} />
   );
 }

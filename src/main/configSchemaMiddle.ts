@@ -108,7 +108,11 @@ export const middleSchema: Record<string, unknown> = {
     additionalProperties: false,
     properties: {
       globalEnabled: { type: 'boolean', default: false },
-      defaultMode: { type: 'string', enum: ['off', 'conservative', 'aggressive'], default: 'conservative' },
+      defaultMode: {
+        type: 'string',
+        enum: ['off', 'conservative', 'aggressive'],
+        default: 'conservative',
+      },
       /** Staleness confidence floor (0.0–1.0). Curated entries whose confidence maps below this
        *  value are treated as not-stale. 0.0 = include all (default). */
       stalenessConfidenceFloor: { type: 'number', minimum: 0, maximum: 1, default: 0.0 },

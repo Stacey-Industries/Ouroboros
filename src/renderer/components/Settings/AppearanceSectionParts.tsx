@@ -71,38 +71,42 @@ export function AppearanceSectionContent({
   );
 }
 
-function GlassOpacitySlider({ draft, onChange }: {
+function GlassOpacitySlider({
+  draft,
+  onChange,
+}: {
   draft: AppConfig;
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }): React.ReactElement {
   const { setGlassOpacity } = useTheme();
-  const handleChange = useCallback((value: number) => {
-    onChange('glassOpacity', value);
-    setGlassOpacity(value);
-  }, [onChange, setGlassOpacity]);
-
-  return (
-    <GlassOpacitySection
-      value={draft.glassOpacity ?? 0}
-      onChange={handleChange}
-    />
+  const handleChange = useCallback(
+    (value: number) => {
+      onChange('glassOpacity', value);
+      setGlassOpacity(value);
+    },
+    [onChange, setGlassOpacity],
   );
+
+  return <GlassOpacitySection value={draft.glassOpacity ?? 0} onChange={handleChange} />;
 }
 
-function MaterialVariantControl({ draft, onChange }: {
+function MaterialVariantControl({
+  draft,
+  onChange,
+}: {
   draft: AppConfig;
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }): React.ReactElement {
   const { setMaterialVariant } = useTheme();
-  const handleChange = useCallback((value: 'vapor' | 'prism' | 'warp') => {
-    onChange('materialVariant', value);
-    setMaterialVariant(value);
-  }, [onChange, setMaterialVariant]);
+  const handleChange = useCallback(
+    (value: 'vapor' | 'prism' | 'warp') => {
+      onChange('materialVariant', value);
+      setMaterialVariant(value);
+    },
+    [onChange, setMaterialVariant],
+  );
 
   return (
-    <MaterialVariantSection
-      value={draft.materialVariant ?? 'vapor'}
-      onChange={handleChange}
-    />
+    <MaterialVariantSection value={draft.materialVariant ?? 'vapor'} onChange={handleChange} />
   );
 }

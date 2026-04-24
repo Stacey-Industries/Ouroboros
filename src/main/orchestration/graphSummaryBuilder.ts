@@ -87,7 +87,9 @@ export async function buildGraphSummary(): Promise<GraphSummary> {
     const blastRadius = changes ? extractBlastRadius(changes as any) : [];
 
     const result = { hotspots, blastRadius, builtAt: Date.now() };
-    log.info(`[trace:buildGraphSummary] done in ${Date.now() - t0}ms hotspots=${hotspots.length} blast=${blastRadius.length}`);
+    log.info(
+      `[trace:buildGraphSummary] done in ${Date.now() - t0}ms hotspots=${hotspots.length} blast=${blastRadius.length}`,
+    );
     return result;
   } catch (err) {
     log.warn('Failed to build graph summary:', err);

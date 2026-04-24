@@ -20,43 +20,65 @@ describe('useAwesomeFilter', () => {
 
   it('filters by title substring (case-insensitive)', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setQuery('slack'); });
+    act(() => {
+      result.current.setQuery('slack');
+    });
     const titles = result.current.filtered.map((e) => e.title.toLowerCase());
-    expect(titles.every((t) => t.includes('slack') || result.current.filtered.some(
-      (e) => e.description.toLowerCase().includes('slack') || e.tags?.some((tag) => tag.includes('slack')),
-    ))).toBe(true);
+    expect(
+      titles.every(
+        (t) =>
+          t.includes('slack') ||
+          result.current.filtered.some(
+            (e) =>
+              e.description.toLowerCase().includes('slack') ||
+              e.tags?.some((tag) => tag.includes('slack')),
+          ),
+      ),
+    ).toBe(true);
     expect(result.current.filtered.length).toBeGreaterThan(0);
   });
 
   it('filters by description text', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setQuery('prettier'); });
+    act(() => {
+      result.current.setQuery('prettier');
+    });
     expect(result.current.filtered.length).toBeGreaterThan(0);
     for (const entry of result.current.filtered) {
-      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])].join(' ').toLowerCase();
+      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])]
+        .join(' ')
+        .toLowerCase();
       expect(haystack).toContain('prettier');
     }
   });
 
   it('filters by tag', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setQuery('security'); });
+    act(() => {
+      result.current.setQuery('security');
+    });
     expect(result.current.filtered.length).toBeGreaterThan(0);
     for (const entry of result.current.filtered) {
-      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])].join(' ').toLowerCase();
+      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])]
+        .join(' ')
+        .toLowerCase();
       expect(haystack).toContain('security');
     }
   });
 
   it('returns empty when query matches nothing', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setQuery('zzz-no-match-xyzzy'); });
+    act(() => {
+      result.current.setQuery('zzz-no-match-xyzzy');
+    });
     expect(result.current.filtered.length).toBe(0);
   });
 
   it('filters by category', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setCategory('hooks'); });
+    act(() => {
+      result.current.setCategory('hooks');
+    });
     expect(result.current.filtered.length).toBeGreaterThan(0);
     for (const entry of result.current.filtered) {
       expect(entry.category).toBe('hooks');
@@ -72,29 +94,41 @@ describe('useAwesomeFilter', () => {
     expect(result.current.filtered.length).toBeGreaterThan(0);
     for (const entry of result.current.filtered) {
       expect(entry.category).toBe('rules');
-      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])].join(' ').toLowerCase();
+      const haystack = [entry.title, entry.description, ...(entry.tags ?? [])]
+        .join(' ')
+        .toLowerCase();
       expect(haystack).toContain('secret');
     }
   });
 
   it('resetting query to empty restores category-only filter', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setCategory('skills'); });
+    act(() => {
+      result.current.setCategory('skills');
+    });
     const skillsCount = result.current.filtered.length;
 
-    act(() => { result.current.setQuery('zzzz'); });
+    act(() => {
+      result.current.setQuery('zzzz');
+    });
     expect(result.current.filtered.length).toBe(0);
 
-    act(() => { result.current.setQuery(''); });
+    act(() => {
+      result.current.setQuery('');
+    });
     expect(result.current.filtered.length).toBe(skillsCount);
   });
 
   it('switching category to all restores full list when query is empty', () => {
     const { result } = renderHook(() => useAwesomeFilter());
-    act(() => { result.current.setCategory('mcp-configs'); });
+    act(() => {
+      result.current.setCategory('mcp-configs');
+    });
     expect(result.current.filtered.length).toBeLessThan(AWESOME_ENTRIES.length);
 
-    act(() => { result.current.setCategory('all'); });
+    act(() => {
+      result.current.setCategory('all');
+    });
     expect(result.current.filtered.length).toBe(AWESOME_ENTRIES.length);
   });
 });

@@ -23,7 +23,13 @@ const MS_H = 60 * 60 * 1000;
 const MS_D = 24 * MS_H;
 
 const HIGH_VELOCITY_LIBS = new Set([
-  'next', 'next.js', 'react', 'vercel-ai-sdk', '@ai-sdk', 'shadcn', 'shadcn-ui',
+  'next',
+  'next.js',
+  'react',
+  'vercel-ai-sdk',
+  '@ai-sdk',
+  'shadcn',
+  'shadcn-ui',
 ]);
 const MID_LIBS = new Set(['prisma', 'tailwind', 'tailwindcss']);
 const STABLE_LIBS = new Set(['lodash', 'express']);
@@ -75,7 +81,8 @@ export function cacheKey(library: string, topic: string, version?: string): stri
 function ensureSchema(db: Database): void {
   if (getSchemaVersion(db) >= 1) return;
   runTransaction(db, () => {
-    db.prepare(`
+    db.prepare(
+      `
       CREATE TABLE IF NOT EXISTS research_cache (
         key       TEXT PRIMARY KEY,
         library   TEXT NOT NULL DEFAULT '',
@@ -85,7 +92,8 @@ function ensureSchema(db: Database): void {
         createdAt INTEGER NOT NULL,
         ttlMs     INTEGER NOT NULL
       )
-    `).run();
+    `,
+    ).run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_rc_createdAt ON research_cache(createdAt)').run();
     setSchemaVersion(db, 1);
   });
@@ -116,11 +124,13 @@ export class ResearchCache {
 
   put(key: string, artifact: ResearchArtifact, ttlMs: number): void {
     this.db
-      .prepare(`
+      .prepare(
+        `
         INSERT OR REPLACE INTO research_cache
           (key, library, topic, version, artifact, createdAt, ttlMs)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `)
+      `,
+      )
       .run(
         key,
         artifact.library ?? '',
@@ -141,7 +151,11 @@ export class ResearchCache {
   }
 
   close(): void {
-    try { this.db.close(); } catch { /* already closed */ }
+    try {
+      this.db.close();
+    } catch {
+      /* already closed */
+    }
   }
 }
 
@@ -155,5 +169,8 @@ export function getResearchCache(dbPath: string): ResearchCache {
 }
 
 export function resetResearchCacheForTests(): void {
-  if (_cache) { _cache.close(); _cache = null; }
+  if (_cache) {
+    _cache.close();
+    _cache = null;
+  }
 }

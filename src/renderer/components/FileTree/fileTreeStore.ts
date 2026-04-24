@@ -169,55 +169,56 @@ const INITIAL_STATE = {
  * The persist middleware needs JSON-serializable state. Sets and Maps are
  * converted to/from arrays during serialization.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fileTreeStateCreator = immer((set: any) => ({ ...INITIAL_STATE, ...createFileTreeActions(set) })) as any;
+type ImmerSet = Parameters<Parameters<typeof immer>[0]>[0];
+
+const fileTreeStateCreator = immer((set: ImmerSet) => ({
+  ...INITIAL_STATE,
+  ...createFileTreeActions(set as Parameters<typeof createFileTreeActions>[0]),
+})) as ReturnType<typeof immer>;
 
 export const useFileTreeStore = create<FileTreeState>()(
-  persist(
-    fileTreeStateCreator,
-    {
-      name: 'file-tree-store',
-      /**
-       * Only persist UI preferences — not ephemeral data like tree nodes,
-       * git status, selection, or edit state.
-       */
-      partialize: (state) => ({
-        expandedPaths: state.expandedPaths,
-        sortMode: state.sortMode,
-        filter: state.filter,
-        bookmarks: state.bookmarks,
-        nestingEnabled: state.nestingEnabled,
-      }),
-      storage: {
-        getItem: (name) => {
-          const raw = localStorage.getItem(name);
-          if (!raw) return null;
-          try {
-            const parsed = JSON.parse(raw);
-            // Rehydrate expandedPaths from array to Set
-            if (parsed?.state?.expandedPaths && Array.isArray(parsed.state.expandedPaths)) {
-              parsed.state.expandedPaths = new Set(parsed.state.expandedPaths);
-            }
-            return parsed;
-          } catch {
-            return null;
+  persist(fileTreeStateCreator, {
+    name: 'file-tree-store',
+    /**
+     * Only persist UI preferences — not ephemeral data like tree nodes,
+     * git status, selection, or edit state.
+     */
+    partialize: (state) => ({
+      expandedPaths: state.expandedPaths,
+      sortMode: state.sortMode,
+      filter: state.filter,
+      bookmarks: state.bookmarks,
+      nestingEnabled: state.nestingEnabled,
+    }),
+    storage: {
+      getItem: (name) => {
+        const raw = localStorage.getItem(name);
+        if (!raw) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          // Rehydrate expandedPaths from array to Set
+          if (parsed?.state?.expandedPaths && Array.isArray(parsed.state.expandedPaths)) {
+            parsed.state.expandedPaths = new Set(parsed.state.expandedPaths);
           }
-        },
-        setItem: (name, value) => {
-          // Serialize expandedPaths Set to array for JSON storage
-          const serializable = { ...value };
-          if (serializable.state?.expandedPaths instanceof Set) {
-            serializable.state = {
-              ...serializable.state,
-              expandedPaths: Array.from(serializable.state.expandedPaths) as unknown as Set<string>,
-            };
-          }
-          localStorage.setItem(name, JSON.stringify(serializable));
-        },
-        removeItem: (name) => localStorage.removeItem(name),
+          return parsed;
+        } catch {
+          return null;
+        }
       },
+      setItem: (name, value) => {
+        // Serialize expandedPaths Set to array for JSON storage
+        const serializable = { ...value };
+        if (serializable.state?.expandedPaths instanceof Set) {
+          serializable.state = {
+            ...serializable.state,
+            expandedPaths: Array.from(serializable.state.expandedPaths) as unknown as Set<string>,
+          };
+        }
+        localStorage.setItem(name, JSON.stringify(serializable));
+      },
+      removeItem: (name) => localStorage.removeItem(name),
     },
-  ),
+  }),
 );
 
 // ─── Selector hooks ──────────────────────────────────────────────────────────

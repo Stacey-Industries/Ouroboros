@@ -23,49 +23,58 @@ import type {
 /* ── Group selectors ──────────────────────────────── */
 
 export function useAgentChatThread(): AgentChatThreadState {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    activeThread: s.activeThread,
-    threads: s.threads,
-    canSend: s.canSend,
-    draft: s.draft,
-    error: s.error,
-    hasProject: s.hasProject,
-    isLoading: s.isLoading,
-    isSending: s.isSending,
-    pendingUserMessage: s.pendingUserMessage,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      activeThread: s.activeThread,
+      threads: s.threads,
+      canSend: s.canSend,
+      draft: s.draft,
+      error: s.error,
+      hasProject: s.hasProject,
+      isLoading: s.isLoading,
+      isSending: s.isSending,
+      pendingUserMessage: s.pendingUserMessage,
+    })),
+  );
 }
 
 export function useAgentChatDetails(): AgentChatDetailsState {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    isDetailsOpen: s.isDetailsOpen,
-    details: s.details,
-    detailsError: s.detailsError,
-    detailsIsLoading: s.detailsIsLoading,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      isDetailsOpen: s.isDetailsOpen,
+      details: s.details,
+      detailsError: s.detailsError,
+      detailsIsLoading: s.detailsIsLoading,
+    })),
+  );
 }
 
 export function useAgentChatContextFiles(): AgentChatContextFilesState {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    pinnedFiles: s.pinnedFiles,
-    contextSummary: s.contextSummary,
-    autocompleteResults: s.autocompleteResults,
-    isAutocompleteOpen: s.isAutocompleteOpen,
-    mentions: s.mentions,
-    allFiles: s.allFiles,
-    attachments: s.attachments,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      pinnedFiles: s.pinnedFiles,
+      contextSummary: s.contextSummary,
+      autocompleteResults: s.autocompleteResults,
+      isAutocompleteOpen: s.isAutocompleteOpen,
+      mentions: s.mentions,
+      allFiles: s.allFiles,
+      attachments: s.attachments,
+    })),
+  );
 }
 
 export function useAgentChatModel(): AgentChatModelState {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    chatOverrides: s.chatOverrides,
-    settingsModel: s.settingsModel,
-    codexSettingsModel: s.codexSettingsModel,
-    defaultProvider: s.defaultProvider,
-    modelProviders: s.modelProviders,
-    codexModels: s.codexModels,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      chatOverrides: s.chatOverrides,
+      settingsModel: s.settingsModel,
+      codexSettingsModel: s.codexSettingsModel,
+      defaultProvider: s.defaultProvider,
+      modelProviders: s.modelProviders,
+      codexModels: s.codexModels,
+      codexAppServerTransport: s.codexAppServerTransport,
+    })),
+  );
 }
 
 export function useAgentChatQueue(): AgentChatQueueState {
@@ -73,58 +82,56 @@ export function useAgentChatQueue(): AgentChatQueueState {
 }
 
 export function useAgentChatSlash(): AgentChatSlashState {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    slashCommandContext: s.slashCommandContext,
-    activeSessionId: s.activeSessionId,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      slashCommandContext: s.slashCommandContext,
+      activeSessionId: s.activeSessionId,
+    })),
+  );
 }
 
 /** Actions selector — action refs in zustand are stable, so this never causes re-renders. */
 export function useAgentChatActions(): AgentChatActions {
-  return useAgentChatStoreContext(useShallow((s) => ({
-    onDraftChange: s.onDraftChange,
-    onEdit: s.onEdit,
-    onRetry: s.onRetry,
-    onBranch: s.onBranch,
-    onRevert: s.onRevert,
-    onRerunSuccess: s.onRerunSuccess,
-    onOpenLinkedDetails: s.onOpenLinkedDetails,
-    onOpenLinkedTask: s.onOpenLinkedTask,
-    onSend: s.onSend,
-    onStop: s.onStop,
-    closeDetails: s.closeDetails,
-    onRemoveFile: s.onRemoveFile,
-    onAutocompleteQuery: s.onAutocompleteQuery,
-    onSelectFile: s.onSelectFile,
-    onCloseAutocomplete: s.onCloseAutocomplete,
-    onOpenAutocomplete: s.onOpenAutocomplete,
-    onAddMention: s.onAddMention,
-    onRemoveMention: s.onRemoveMention,
-    onAttachmentsChange: s.onAttachmentsChange,
-    onChatOverridesChange: s.onChatOverridesChange,
-    onSelectThread: s.onSelectThread,
-    onEditQueuedMessage: s.onEditQueuedMessage,
-    onDeleteQueuedMessage: s.onDeleteQueuedMessage,
-    onSendQueuedMessageNow: s.onSendQueuedMessageNow,
-  })));
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      onDraftChange: s.onDraftChange,
+      onEdit: s.onEdit,
+      onRetry: s.onRetry,
+      onBranch: s.onBranch,
+      onRevert: s.onRevert,
+      onRerunSuccess: s.onRerunSuccess,
+      onOpenLinkedDetails: s.onOpenLinkedDetails,
+      onOpenLinkedTask: s.onOpenLinkedTask,
+      onSend: s.onSend,
+      onStop: s.onStop,
+      closeDetails: s.closeDetails,
+      onRemoveFile: s.onRemoveFile,
+      onAutocompleteQuery: s.onAutocompleteQuery,
+      onSelectFile: s.onSelectFile,
+      onCloseAutocomplete: s.onCloseAutocomplete,
+      onOpenAutocomplete: s.onOpenAutocomplete,
+      onAddMention: s.onAddMention,
+      onRemoveMention: s.onRemoveMention,
+      onAttachmentsChange: s.onAttachmentsChange,
+      onChatOverridesChange: s.onChatOverridesChange,
+      onSelectThread: s.onSelectThread,
+      onEditQueuedMessage: s.onEditQueuedMessage,
+      onDeleteQueuedMessage: s.onDeleteQueuedMessage,
+      onSendQueuedMessageNow: s.onSendQueuedMessageNow,
+    })),
+  );
 }
 
 /* ── Fine-grained selectors (hot path) ───────────── */
 
-export const useChatDraft = (): string =>
-  useAgentChatStoreContext((s) => s.draft);
+export const useChatDraft = (): string => useAgentChatStoreContext((s) => s.draft);
 
-export const useChatIsSending = (): boolean =>
-  useAgentChatStoreContext((s) => s.isSending);
+export const useChatIsSending = (): boolean => useAgentChatStoreContext((s) => s.isSending);
 
-export const useChatCanSend = (): boolean =>
-  useAgentChatStoreContext((s) => s.canSend);
+export const useChatCanSend = (): boolean => useAgentChatStoreContext((s) => s.canSend);
 
-export const useChatActiveThread = () =>
-  useAgentChatStoreContext((s) => s.activeThread);
+export const useChatActiveThread = () => useAgentChatStoreContext((s) => s.activeThread);
 
-export const useChatIsDetailsOpen = (): boolean =>
-  useAgentChatStoreContext((s) => s.isDetailsOpen);
+export const useChatIsDetailsOpen = (): boolean => useAgentChatStoreContext((s) => s.isDetailsOpen);
 
-export const useChatHasProject = (): boolean =>
-  useAgentChatStoreContext((s) => s.hasProject);
+export const useChatHasProject = (): boolean => useAgentChatStoreContext((s) => s.hasProject);

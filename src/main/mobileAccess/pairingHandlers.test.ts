@@ -110,7 +110,16 @@ describe('detectLocalIp', () => {
 
   it('throws NO_LAN_INTERFACE when only loopback interfaces exist', () => {
     vi.spyOn(os, 'networkInterfaces').mockReturnValue({
-      lo: [{ family: 'IPv4', address: '127.0.0.1', internal: true, netmask: '255.0.0.0', mac: '00:00:00:00:00:00', cidr: '127.0.0.1/8' }],
+      lo: [
+        {
+          family: 'IPv4',
+          address: '127.0.0.1',
+          internal: true,
+          netmask: '255.0.0.0',
+          mac: '00:00:00:00:00:00',
+          cidr: '127.0.0.1/8',
+        },
+      ],
     });
     expect(() => detectLocalIp()).toThrow('NO_LAN_INTERFACE');
   });
@@ -119,8 +128,26 @@ describe('detectLocalIp', () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     vi.spyOn(os, 'networkInterfaces').mockReturnValue({
-      'vEthernet (WSL)': [{ family: 'IPv4', address: '172.24.0.1', internal: false, netmask: '255.255.240.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '172.24.0.1/20' }],
-      'Wi-Fi': [{ family: 'IPv4', address: '192.168.1.50', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '192.168.1.50/24' }],
+      'vEthernet (WSL)': [
+        {
+          family: 'IPv4',
+          address: '172.24.0.1',
+          internal: false,
+          netmask: '255.255.240.0',
+          mac: 'aa:bb:cc:dd:ee:ff',
+          cidr: '172.24.0.1/20',
+        },
+      ],
+      'Wi-Fi': [
+        {
+          family: 'IPv4',
+          address: '192.168.1.50',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: '11:22:33:44:55:66',
+          cidr: '192.168.1.50/24',
+        },
+      ],
     });
     expect(detectLocalIp()).toBe('192.168.1.50');
     if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
@@ -128,8 +155,26 @@ describe('detectLocalIp', () => {
 
   it('picks the first non-internal interface when two real interfaces exist', () => {
     vi.spyOn(os, 'networkInterfaces').mockReturnValue({
-      Ethernet: [{ family: 'IPv4', address: '10.0.0.5', internal: false, netmask: '255.255.255.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '10.0.0.5/24' }],
-      'Ethernet 2': [{ family: 'IPv4', address: '10.0.0.6', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '10.0.0.6/24' }],
+      Ethernet: [
+        {
+          family: 'IPv4',
+          address: '10.0.0.5',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: 'aa:bb:cc:dd:ee:ff',
+          cidr: '10.0.0.5/24',
+        },
+      ],
+      'Ethernet 2': [
+        {
+          family: 'IPv4',
+          address: '10.0.0.6',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: '11:22:33:44:55:66',
+          cidr: '10.0.0.6/24',
+        },
+      ],
     });
     expect(detectLocalIp()).toBe('10.0.0.5');
   });
@@ -138,8 +183,26 @@ describe('detectLocalIp', () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     vi.spyOn(os, 'networkInterfaces').mockReturnValue({
-      Tailscale: [{ family: 'IPv4', address: '100.64.0.1', internal: false, netmask: '255.192.0.0', mac: 'aa:bb:cc:dd:ee:ff', cidr: '100.64.0.1/10' }],
-      Ethernet: [{ family: 'IPv4', address: '192.168.0.100', internal: false, netmask: '255.255.255.0', mac: '11:22:33:44:55:66', cidr: '192.168.0.100/24' }],
+      Tailscale: [
+        {
+          family: 'IPv4',
+          address: '100.64.0.1',
+          internal: false,
+          netmask: '255.192.0.0',
+          mac: 'aa:bb:cc:dd:ee:ff',
+          cidr: '100.64.0.1/10',
+        },
+      ],
+      Ethernet: [
+        {
+          family: 'IPv4',
+          address: '192.168.0.100',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: '11:22:33:44:55:66',
+          cidr: '192.168.0.100/24',
+        },
+      ],
     });
     expect(detectLocalIp()).toBe('192.168.0.100');
     if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
@@ -215,13 +278,17 @@ describe('generatePairingCode handler', () => {
     const { whenWebServerReady } = await import('../web/webServer');
     let resolveReady!: () => void;
     vi.mocked(whenWebServerReady).mockReturnValueOnce(
-      new Promise<void>((r) => { resolveReady = r; }),
+      new Promise<void>((r) => {
+        resolveReady = r;
+      }),
     );
     registerPairingHandlers();
     const handler = captureHandler('mobileAccess:generatePairingCode');
 
     let done = false;
-    const pending = handler?.().then(() => { done = true; });
+    const pending = handler?.().then(() => {
+      done = true;
+    });
     // Should not be done yet — server isn't ready
     await Promise.resolve();
     expect(done).toBe(false);
@@ -287,7 +354,10 @@ describe('revokePairedDevice handler', () => {
     mockedRemove.mockReturnValue(false);
     registerPairingHandlers();
     const handler = captureHandler('mobileAccess:revokePairedDevice');
-    const result = (await handler?.(undefined, 'unknown-dev')) as { success: boolean; error: string };
+    const result = (await handler?.(undefined, 'unknown-dev')) as {
+      success: boolean;
+      error: string;
+    };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/not found/i);
   });
@@ -352,7 +422,9 @@ describe('consumePairingTicket', () => {
     expect(result.refreshToken.length).toBeGreaterThan(0);
     // The raw refresh token must NOT be stored — only its hash
     expect(mockedAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ refreshTokenHash: expect.not.stringContaining(result.refreshToken) }),
+      expect.objectContaining({
+        refreshTokenHash: expect.not.stringContaining(result.refreshToken),
+      }),
     );
   });
 

@@ -101,7 +101,10 @@ function useFrameTimeTracker(active: boolean): React.MutableRefObject<number[]> 
     }
 
     rafHandleRef.current = requestAnimationFrame(onFrame);
-    return () => { alive = false; if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current); };
+    return () => {
+      alive = false;
+      if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current);
+    };
   }, [active]);
 
   return frameTimesRef;
@@ -123,7 +126,11 @@ export function usePerformance(active = true): PerformanceSnapshot {
       setSnapshot(buildSnapshot(metrics, Math.round(avg * 10) / 10, ipcLatencyMs));
     });
 
-    return () => { alive = false; cleanup(); void window.electronAPI.perf.unsubscribe(); };
+    return () => {
+      alive = false;
+      cleanup();
+      void window.electronAPI.perf.unsubscribe();
+    };
   }, [active, frameTimesRef]);
 
   return snapshot;

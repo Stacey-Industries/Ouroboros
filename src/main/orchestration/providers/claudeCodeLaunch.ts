@@ -35,19 +35,14 @@ function resolveTaskCwd(root: string, sessionId: string | undefined): string {
   try {
     const wt = getSessionStore()?.getById(sessionId);
     return wt?.worktree && wt.worktreePath ? wt.worktreePath : root;
-  } catch { return root; }
+  } catch {
+    return root;
+  }
 }
 
-export function resolveEffectiveSettings(
-  context: ProviderLaunchContext | ProviderResumeContext,
-  settings: ClaudeCliSettings,
-): {
-  resolvedModel: string | undefined;
-  effort: string | undefined;
-  effectiveSettings: ClaudeCliSettings;
-  providerEnv: Record<string, string>;
-  isProviderRouted: boolean;
-} {
+export type ResolvedSettings = { resolvedModel: string | undefined; effort: string | undefined; effectiveSettings: ClaudeCliSettings; providerEnv: Record<string, string>; isProviderRouted: boolean };
+
+export function resolveEffectiveSettings(context: ProviderLaunchContext | ProviderResumeContext, settings: ClaudeCliSettings): ResolvedSettings {
   const resolvedModel = pickLaunchValue(context.request.model, settings.model);
   const effort = pickLaunchValue(context.request.effort, settings.effort);
   const permissionMode =
@@ -128,8 +123,7 @@ export function scheduleClaudeLaunch(
       Boolean(resumeId),
       args.resolvedModel ?? '',
     );
-    const continueSession =
-      'providerSession' in args.context && !resumeId ? true : undefined;
+    const continueSession = 'providerSession' in args.context && !resumeId ? true : undefined;
     return launchHeadless({
       context: args.context,
       prompt,
@@ -144,21 +138,6 @@ export function scheduleClaudeLaunch(
       eventHandler: args.eventHandler,
     }).result;
   })();
-}
-
-interface BuildCompletionArgsOptions {
-  context: ProviderLaunchContext | ProviderResumeContext;
-  sessionRef: ReturnType<typeof createProviderSessionReference>;
-  sink: ProviderProgressSink;
-  resolvedModel: string | undefined;
-  invocationTempPaths: string[];
-  getNextGlobalBlockIndex: () => number;
-  getCumulativeUsage: () => { inputTokens: number; outputTokens: number };
-}
-
-function buildCompletionArgs(opts: BuildCompletionArgsOptions): CompletionArgs {
-  const { context, sessionRef, sink, invocationTempPaths, resolvedModel, getNextGlobalBlockIndex, getCumulativeUsage } = opts;
-  return { taskId: context.taskId, sessionRef, sink, invocationTempPaths, resolvedModel, getNextGlobalBlockIndex, getCumulativeUsage };
 }
 
 function setupLaunchSession(
@@ -184,7 +163,7 @@ interface BuildLaunchScheduleArgsOpts {
   cwd: string;
   sessionRef: ReturnType<typeof createProviderSessionReference>;
   sink: ProviderProgressSink;
-  resolved: ReturnType<typeof resolveEffectiveSettings>;
+  resolved: ResolvedSettings;
   effectiveResumeSessionId: string | undefined;
   eventHandler: (event: StreamJsonEvent) => void;
   getCancelledBeforeLaunch: () => boolean;
@@ -192,29 +171,68 @@ interface BuildLaunchScheduleArgsOpts {
 }
 
 function buildLaunchScheduleArgs(opts: BuildLaunchScheduleArgsOpts): ScheduleClaudeLaunchArgs {
-  const { context, cwd, sessionRef, sink, resolved, effectiveResumeSessionId, eventHandler, getCancelledBeforeLaunch, invocationTempPaths } = opts;
+  const {
+    context,
+    cwd,
+    sessionRef,
+    sink,
+    resolved,
+    effectiveResumeSessionId,
+    eventHandler,
+    getCancelledBeforeLaunch,
+    invocationTempPaths,
+  } = opts;
   return {
-    context, cwd, sessionRef, sink, invocationTempPaths,
-    resolvedModel: resolved.resolvedModel, effectiveResumeSessionId,
-    effectiveSettings: resolved.effectiveSettings, eventHandler,
-    effort: resolved.effort, providerEnv: resolved.providerEnv,
-    isProviderRouted: resolved.isProviderRouted, getCancelledBeforeLaunch,
+    context,
+    cwd,
+    sessionRef,
+    sink,
+    invocationTempPaths,
+    resolvedModel: resolved.resolvedModel,
+    effectiveResumeSessionId,
+    effectiveSettings: resolved.effectiveSettings,
+    eventHandler,
+    effort: resolved.effort,
+    providerEnv: resolved.providerEnv,
+    isProviderRouted: resolved.isProviderRouted,
+    getCancelledBeforeLaunch,
   };
 }
 
 function emitLaunchQueued(sink: ProviderProgressSink): void {
-  sink.emit({ provider: 'claude-code', status: 'queued', message: 'Launching Claude Code session', timestamp: Date.now() });
+  sink.emit({
+    provider: 'claude-code',
+    status: 'queued',
+    message: 'Launching Claude Code session',
+    timestamp: Date.now(),
+  });
 }
 
-function buildLaunchResult(sessionRef: ReturnType<typeof createProviderSessionReference>): ProviderLaunchResult {
+function buildLaunchResult(
+  sessionRef: ReturnType<typeof createProviderSessionReference>,
+): ProviderLaunchResult {
   return {
     session: sessionRef,
-    artifact: createProviderArtifact({ provider: 'claude-code', status: 'streaming', session: sessionRef, submittedAt: Date.now() }),
+    artifact: createProviderArtifact({
+      provider: 'claude-code',
+      status: 'streaming',
+      session: sessionRef,
+      submittedAt: Date.now(),
+    }),
   };
 }
 
-function emitLaunchStarted(sink: ProviderProgressSink, sessionRef: ReturnType<typeof createProviderSessionReference>): void {
-  sink.emit({ provider: 'claude-code', status: 'queued', message: 'Claude Code session started', timestamp: Date.now(), session: sessionRef });
+function emitLaunchStarted(
+  sink: ProviderProgressSink,
+  sessionRef: ReturnType<typeof createProviderSessionReference>,
+): void {
+  sink.emit({
+    provider: 'claude-code',
+    status: 'queued',
+    message: 'Claude Code session started',
+    timestamp: Date.now(),
+    session: sessionRef,
+  });
 }
 
 interface ScheduleLaunchOpts {
@@ -222,7 +240,7 @@ interface ScheduleLaunchOpts {
   sessionRef: ReturnType<typeof createProviderSessionReference>;
   sink: ProviderProgressSink;
   cwd: string;
-  resolved: ReturnType<typeof resolveEffectiveSettings>;
+  resolved: ResolvedSettings;
   effectiveResumeSessionId: string | undefined;
   eventHandler: (event: StreamJsonEvent) => void;
   getCancelledBeforeLaunch: () => boolean;
@@ -232,15 +250,15 @@ interface ScheduleLaunchOpts {
 
 function scheduleLaunch(opts: ScheduleLaunchOpts): void {
   const invocationTempPaths: string[] = [];
-  const completionArgs = buildCompletionArgs({
-    context: opts.context,
+  const completionArgs: CompletionArgs = {
+    taskId: opts.context.taskId,
     sessionRef: opts.sessionRef,
     sink: opts.sink,
-    resolvedModel: opts.resolved.resolvedModel,
     invocationTempPaths,
+    resolvedModel: opts.resolved.resolvedModel,
     getNextGlobalBlockIndex: opts.getNextGlobalBlockIndex,
     getCumulativeUsage: opts.getCumulativeUsage,
-  });
+  };
   const launchArgs = buildLaunchScheduleArgs({
     context: opts.context,
     cwd: opts.cwd,

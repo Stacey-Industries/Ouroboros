@@ -13,22 +13,21 @@ import {
   CURATED_STALENESS_ENTRIES,
   TRAINING_CUTOFF_DATE,
 } from './stalenessMatrixData';
-import {
-  HEURISTIC_DENYLIST,
-  INTERNAL_PACKAGE_PREFIXES,
-} from './stalenessMatrixDenylist';
+import { HEURISTIC_DENYLIST, INTERNAL_PACKAGE_PREFIXES } from './stalenessMatrixDenylist';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type StalenessEntry =
-  | { kind: 'curated'; library: string; cutoffVersion: string; cutoffDate: string; confidence: 'high' }
+  | {
+      kind: 'curated';
+      library: string;
+      cutoffVersion: string;
+      cutoffDate: string;
+      confidence: 'high';
+    }
   | { kind: 'heuristic'; library: string; releasedAfter: string; confidence: 'medium' };
 
-export type StalenessReason =
-  | 'curated-match'
-  | 'heuristic-match'
-  | 'denylist'
-  | 'no-data';
+export type StalenessReason = 'curated-match' | 'heuristic-match' | 'denylist' | 'no-data';
 
 export interface StalenessLookup {
   library: string;
@@ -51,9 +50,7 @@ function findCuratedEntry(library: string): StalenessEntry | null {
   if (exact !== undefined) {
     return exact;
   }
-  const matchedPrefix = CURATED_STALE_PREFIXES.find((p) =>
-    library.startsWith(p)
-  );
+  const matchedPrefix = CURATED_STALE_PREFIXES.find((p) => library.startsWith(p));
   if (matchedPrefix === undefined) {
     return null;
   }

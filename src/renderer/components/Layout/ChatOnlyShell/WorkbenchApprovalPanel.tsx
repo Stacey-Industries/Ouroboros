@@ -24,61 +24,79 @@ function EmptyApprovals(): React.ReactElement {
   );
 }
 
-function ApprovalActions({
-  request,
-}: {
-  request: ApprovalRequest;
-}): React.ReactElement {
-  const [busyAction, setBusyAction] = useState<'approve' | 'reject' | 'remember' | null>(null);
+interface ApprovalButtonsProps {
+  busy: boolean;
+  onApprove: () => void;
+  onAllowAlways: () => void;
+  onDeny: () => void;
+}
 
-  async function handleDecision(decision: 'approve' | 'reject'): Promise<void> {
-    setBusyAction(decision);
-    try {
-      await window.electronAPI.approval.respond(request.requestId, decision);
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  async function handleAllowAlways(): Promise<void> {
-    setBusyAction('remember');
-    try {
-      await Promise.all([
-        window.electronAPI.approval.respond(request.requestId, 'approve'),
-        window.electronAPI.approval.remember(request.toolName, getRequestKey(request), 'allow'),
-      ]);
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
+function ApprovalButtons({
+  busy,
+  onApprove,
+  onAllowAlways,
+  onDeny,
+}: ApprovalButtonsProps): React.ReactElement {
   return (
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
         className="rounded-full bg-interactive-accent px-3 py-1 text-xs font-semibold text-text-on-accent disabled:opacity-60"
-        disabled={busyAction !== null}
-        onClick={() => { void handleDecision('approve'); }}
+        disabled={busy}
+        onClick={onApprove}
       >
         Allow once
       </button>
       <button
         type="button"
         className="rounded-full border border-stroke-default bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary disabled:opacity-60"
-        disabled={busyAction !== null}
-        onClick={() => { void handleAllowAlways(); }}
+        disabled={busy}
+        onClick={onAllowAlways}
       >
         Allow always
       </button>
       <button
         type="button"
         className="rounded-full border border-status-error bg-status-error-subtle px-3 py-1 text-xs font-semibold text-status-error disabled:opacity-60"
-        disabled={busyAction !== null}
-        onClick={() => { void handleDecision('reject'); }}
+        disabled={busy}
+        onClick={onDeny}
       >
         Deny
       </button>
     </div>
+  );
+}
+
+function ApprovalActions({ request }: { request: ApprovalRequest }): React.ReactElement {
+  const [busyAction, setBusyAction] = useState<'approve' | 'reject' | 'remember' | null>(null);
+
+  const handleDecision = (decision: 'approve' | 'reject'): void => {
+    setBusyAction(decision);
+    void window.electronAPI.approval.respond(request.requestId, decision).finally(() => {
+      setBusyAction(null);
+    });
+  };
+  const handleAllowAlways = (): void => {
+    setBusyAction('remember');
+    void Promise.all([
+      window.electronAPI.approval.respond(request.requestId, 'approve'),
+      window.electronAPI.approval.remember(request.toolName, getRequestKey(request), 'allow'),
+    ]).finally(() => {
+      setBusyAction(null);
+    });
+  };
+
+  return (
+    <ApprovalButtons
+      busy={busyAction !== null}
+      onApprove={() => {
+        handleDecision('approve');
+      }}
+      onAllowAlways={handleAllowAlways}
+      onDeny={() => {
+        handleDecision('reject');
+      }}
+    />
   );
 }
 
@@ -117,7 +135,10 @@ export function WorkbenchApprovalPanel(): React.ReactElement {
   if (requests.length === 0) return <EmptyApprovals />;
 
   return (
-    <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3" data-testid="workbench-approval-panel">
+    <div
+      className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-3"
+      data-testid="workbench-approval-panel"
+    >
       {requests.map((request, index) => (
         <ApprovalCard
           key={request.requestId}

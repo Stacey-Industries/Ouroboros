@@ -3,12 +3,13 @@
  * for the SQLite-backed thread store runtime.
  */
 
-import type BetterSqlite3 from 'better-sqlite3';
-
 import log from '../logger';
-import type { Database } from '../storage/database';
-import { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle } from './chatTitleDerivation';
-import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
+import {
+  findFirstMeaningfulLine,
+  isDecorativeLine,
+  summarizeForTitle,
+} from './chatTitleDerivation';
+import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -243,149 +244,14 @@ export function titleMatchesUserMessage(title: string, content: string): boolean
   return trimmed.length > 79 && title === `${firstLine.slice(0, 79).trimEnd()}\u2026`;
 }
 
-// ── Write helpers (used by ThreadStoreSqliteRuntime) ─────────────────────────
+// ── Write helpers ────────────────────────────────────────────────────────────
 
-const UPSERT_THREAD_SQL = `
-  INSERT INTO threads
-    (id, workspaceRoot, createdAt, updatedAt, title, status,
-     latestOrchestration, branchInfo, tags, pinned, deletedAt,
-     branchName, forkOfMessageId, parentThreadId, isSideChat)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  ON CONFLICT(id) DO UPDATE SET
-    workspaceRoot = excluded.workspaceRoot,
-    createdAt = excluded.createdAt,
-    updatedAt = excluded.updatedAt,
-    title = excluded.title,
-    status = excluded.status,
-    latestOrchestration = excluded.latestOrchestration,
-    branchInfo = excluded.branchInfo,
-    tags = excluded.tags,
-    pinned = excluded.pinned,
-    deletedAt = excluded.deletedAt,
-    branchName = excluded.branchName,
-    forkOfMessageId = excluded.forkOfMessageId,
-    parentThreadId = excluded.parentThreadId,
-    isSideChat = excluded.isSideChat`;
+export {
+  prepareInsertMessage,
+  runInsertMessage,
+  upsertThreadRow,
+} from './threadStoreSqliteWriters';
 
-function threadRowJsonFields(t: AgentChatThreadRecord): unknown[] {
-  return [
-    t.latestOrchestration ? JSON.stringify(t.latestOrchestration) : null,
-    t.branchInfo ? JSON.stringify(t.branchInfo) : null,
-    t.tags && t.tags.length > 0 ? JSON.stringify(t.tags) : null,
-  ];
-}
+// ── Column migrations ────────────────────────────────────────────────────────
 
-function threadRowParams(t: AgentChatThreadRecord): unknown[] {
-  return [
-    t.id, t.workspaceRoot, t.createdAt, t.updatedAt, t.title, t.status,
-    ...threadRowJsonFields(t),
-    t.pinned ? 1 : 0,
-    t.deletedAt ?? null,
-    t.branchName ?? null,
-    t.forkOfMessageId ?? null,
-    t.parentThreadId ?? null,
-    t.isSideChat ? 1 : 0,
-  ];
-}
-
-export function upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
-  db.prepare(UPSERT_THREAD_SQL).run(...threadRowParams(thread));
-}
-
-const INSERT_MESSAGE_SQL = `
-  INSERT OR REPLACE INTO messages
-    (id, threadId, role, content, createdAt, statusKind, orchestration,
-     contextSummary, verificationPreview, error, toolsSummary, costSummary,
-     durationSummary, tokenUsage, blocks, model, checkpointCommit,
-     reactions, collapsedByDefault)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-export function prepareInsertMessage(db: Database): BetterSqlite3.Statement {
-  return db.prepare(INSERT_MESSAGE_SQL);
-}
-
-export function runInsertMessage(
-  stmt: BetterSqlite3.Statement,
-  threadId: string,
-  msg: AgentChatMessageRecord,
-): void {
-  const s = (v: unknown) => (v ? JSON.stringify(v) : null);
-  stmt.run(
-    msg.id, threadId, msg.role, msg.content, msg.createdAt,
-    msg.statusKind ?? null, s(msg.orchestration), s(msg.contextSummary),
-    s(msg.verificationPreview), s(msg.error),
-    msg.toolsSummary ?? null, msg.costSummary ?? null, msg.durationSummary ?? null,
-    s(msg.tokenUsage), s(msg.blocks), msg.model ?? null, msg.checkpointCommit ?? null,
-    msg.reactions && msg.reactions.length > 0 ? JSON.stringify(msg.reactions) : null,
-    msg.collapsedByDefault ? 1 : null,
-  );
-}
-
-// ── Column migrations (Wave v1→v7) ───────────────────────────────────────────
-
-type ColList = { name: string }[];
-function msgCols(db: Database): ColList { return db.pragma('table_info(messages)') as ColList; }
-function thdCols(db: Database): ColList { return db.pragma('table_info(threads)') as ColList; }
-function hasCol(cols: ColList, n: string): boolean { return cols.some((c) => c.name === n); }
-
-function migrateV1(db: Database): void {
-  const c = msgCols(db);
-  if (!hasCol(c, 'model')) db.exec('ALTER TABLE messages ADD COLUMN model TEXT');
-}
-
-function migrateV2(db: Database): void {
-  const c = msgCols(db);
-  if (!hasCol(c, 'checkpointCommit')) db.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
-}
-
-function migrateV3(db: Database): void {
-  const c = thdCols(db);
-  if (!hasCol(c, 'tags')) db.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
-}
-
-function migrateV5(db: Database): void {
-  const c = thdCols(db);
-  if (!hasCol(c, 'pinned')) db.exec('ALTER TABLE threads ADD COLUMN pinned INTEGER DEFAULT 0');
-  if (!hasCol(c, 'deletedAt')) db.exec('ALTER TABLE threads ADD COLUMN deletedAt INTEGER');
-}
-
-function migrateV6(db: Database): void {
-  const c = msgCols(db);
-  if (!hasCol(c, 'reactions')) db.exec('ALTER TABLE messages ADD COLUMN reactions TEXT');
-  if (!hasCol(c, 'collapsedByDefault')) {
-    db.exec('ALTER TABLE messages ADD COLUMN collapsedByDefault INTEGER DEFAULT 0');
-  }
-}
-
-function migrateV8(db: Database): void {
-  const c = thdCols(db);
-  if (!hasCol(c, 'branchName')) db.exec('ALTER TABLE threads ADD COLUMN branchName TEXT');
-  if (!hasCol(c, 'forkOfMessageId')) db.exec('ALTER TABLE threads ADD COLUMN forkOfMessageId TEXT');
-  if (!hasCol(c, 'parentThreadId')) db.exec('ALTER TABLE threads ADD COLUMN parentThreadId TEXT');
-  if (!hasCol(c, 'isSideChat')) {
-    db.exec('ALTER TABLE threads ADD COLUMN isSideChat INTEGER DEFAULT 0');
-  }
-}
-
-/**
- * Apply all stepwise ALTER TABLE migrations. Version-gating is intentionally
- * omitted — every `migrateVN` is idempotent (guarded internally by `hasCol`),
- * and we cannot trust `currentVersion` because an earlier buggy release used
- * inverted conditions (`currentVersion >= N`) that stamped DBs as v8 without
- * actually applying the v5/v6/v8 ALTERs. Those DBs have `user_version = 8`
- * but no `pinned` column, so any gating keyed off `currentVersion` leaves
- * them broken. Running every migration every boot is cheap and self-healing.
- *
- * The `currentVersion` parameter is kept in the signature for call-site
- * compatibility and for future use (e.g. data backfills that truly must only
- * run once, which belong in a separate runner, not here).
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function applyColumnMigrations(db: Database, _currentVersion: number): void {
-  migrateV1(db);
-  migrateV2(db);
-  migrateV3(db);
-  migrateV5(db);
-  migrateV6(db);
-  migrateV8(db);
-}
+export { applyColumnMigrations } from './threadStoreSqliteMigrations';

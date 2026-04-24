@@ -14,7 +14,7 @@
  * resolveGrammarPath(). wasmFile values here use canonical underscore names.
  */
 
-import type { LanguageConfig } from './treeSitterTypes'
+import type { LanguageConfig } from './treeSitterTypes';
 
 // ─── TypeScript ──────────────────────────────────────────────────────────────
 
@@ -23,32 +23,32 @@ export const typescriptConfig: LanguageConfig = {
   wasmFile: 'tree-sitter-typescript.wasm',
   extensions: ['ts', 'mts', 'cts'],
   functionNodes: [
-    'function_declaration',           // function foo() {}
+    'function_declaration', // function foo() {}
     'generator_function_declaration', // function* foo() {}
   ],
   classNodes: [
-    'class_declaration',              // class Foo {}
-    'abstract_class_declaration',     // abstract class Foo {}
+    'class_declaration', // class Foo {}
+    'abstract_class_declaration', // abstract class Foo {}
   ],
   interfaceNodes: [
-    'interface_declaration',          // interface IFoo {}
+    'interface_declaration', // interface IFoo {}
   ],
   typeNodes: [
-    'type_alias_declaration',         // type Foo = ...
+    'type_alias_declaration', // type Foo = ...
   ],
   enumNodes: [
-    'enum_declaration',               // enum Foo {}
+    'enum_declaration', // enum Foo {}
   ],
   methodNodes: [
-    'method_definition',              // class body method
-    'public_field_definition',        // class property (check if arrow fn)
+    'method_definition', // class body method
+    'public_field_definition', // class property (check if arrow fn)
   ],
   importNodes: [
-    'import_statement',               // import { x } from 'y'
+    'import_statement', // import { x } from 'y'
   ],
   callNodes: [
-    'call_expression',                // foo()
-    'new_expression',                 // new Foo()
+    'call_expression', // foo()
+    'new_expression', // new Foo()
   ],
   exportKeyword: 'export_statement',
   routePatterns: [
@@ -71,14 +71,14 @@ export const typescriptConfig: LanguageConfig = {
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 export const tsxConfig: LanguageConfig = {
   ...typescriptConfig,
   id: 'tsx',
   wasmFile: 'tree-sitter-tsx.wasm',
   extensions: ['tsx'],
-}
+};
 
 // ─── JavaScript ──────────────────────────────────────────────────────────────
 
@@ -87,10 +87,10 @@ export const javascriptConfig: LanguageConfig = {
   id: 'javascript',
   wasmFile: 'tree-sitter-javascript.wasm',
   extensions: ['js', 'mjs', 'cjs', 'jsx'],
-  interfaceNodes: [],   // No interfaces in JS
-  typeNodes: [],         // No type aliases in JS
-  enumNodes: [],         // No enums in JS
-}
+  interfaceNodes: [], // No interfaces in JS
+  typeNodes: [], // No type aliases in JS
+  enumNodes: [], // No enums in JS
+};
 
 // ─── Python ──────────────────────────────────────────────────────────────────
 
@@ -100,13 +100,13 @@ export const pythonConfig: LanguageConfig = {
   extensions: ['py', 'pyi'],
   functionNodes: ['function_definition'],
   classNodes: ['class_definition'],
-  interfaceNodes: [],    // Python uses ABC/Protocol but they parse as classes
+  interfaceNodes: [], // Python uses ABC/Protocol but they parse as classes
   typeNodes: [],
   enumNodes: [],
-  methodNodes: [],       // Python methods are function_definition inside class
+  methodNodes: [], // Python methods are function_definition inside class
   importNodes: ['import_statement', 'import_from_statement'],
   callNodes: ['call'],
-  exportKeyword: null,   // Python exports via __all__ or convention
+  exportKeyword: null, // Python exports via __all__ or convention
   routePatterns: [
     {
       framework: 'fastapi',
@@ -123,11 +123,11 @@ export const pythonConfig: LanguageConfig = {
     {
       framework: 'django',
       receiverNames: ['path', 'url', 're_path'],
-      methodNames: [],  // path() is a function, not a method
+      methodNames: [], // path() is a function, not a method
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 // ─── Go ──────────────────────────────────────────────────────────────────────
 
@@ -136,14 +136,14 @@ export const goConfig: LanguageConfig = {
   wasmFile: 'tree-sitter-go.wasm',
   extensions: ['go'],
   functionNodes: ['function_declaration'],
-  classNodes: [],       // Go has no classes
-  interfaceNodes: [],   // Go interfaces are type_spec with interface_type
-  typeNodes: ['type_declaration'],  // type Foo struct{} / type Foo interface{}
-  enumNodes: [],        // Go has no enums (const iota blocks)
+  classNodes: [], // Go has no classes
+  interfaceNodes: [], // Go interfaces are type_spec with interface_type
+  typeNodes: ['type_declaration'], // type Foo struct{} / type Foo interface{}
+  enumNodes: [], // Go has no enums (const iota blocks)
   methodNodes: ['method_declaration'],
   importNodes: ['import_declaration'],
   callNodes: ['call_expression'],
-  exportKeyword: null,  // Go exports via uppercase first letter
+  exportKeyword: null, // Go exports via uppercase first letter
   routePatterns: [
     {
       framework: 'gin',
@@ -164,7 +164,7 @@ export const goConfig: LanguageConfig = {
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 // ─── Rust ─────────────────────────────────────────────────────────────────────
 
@@ -177,10 +177,10 @@ export const rustConfig: LanguageConfig = {
   interfaceNodes: ['trait_item'],
   typeNodes: ['type_item', 'struct_item'],
   enumNodes: ['enum_item'],
-  methodNodes: [],  // Rust methods are function_item inside impl_item
+  methodNodes: [], // Rust methods are function_item inside impl_item
   importNodes: ['use_declaration'],
   callNodes: ['call_expression'],
-  exportKeyword: null,  // Rust exports via `pub`
+  exportKeyword: null, // Rust exports via `pub`
   routePatterns: [
     {
       framework: 'actix',
@@ -195,7 +195,7 @@ export const rustConfig: LanguageConfig = {
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 // ─── Java ─────────────────────────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ export const javaConfig: LanguageConfig = {
   id: 'java',
   wasmFile: 'tree-sitter-java.wasm',
   extensions: ['java'],
-  functionNodes: [],    // Java only has methods
+  functionNodes: [], // Java only has methods
   classNodes: ['class_declaration'],
   interfaceNodes: ['interface_declaration'],
   typeNodes: [],
@@ -211,16 +211,16 @@ export const javaConfig: LanguageConfig = {
   methodNodes: ['method_declaration', 'constructor_declaration'],
   importNodes: ['import_declaration'],
   callNodes: ['method_invocation', 'object_creation_expression'],
-  exportKeyword: null,  // Java exports via `public`
+  exportKeyword: null, // Java exports via `public`
   routePatterns: [
     {
       framework: 'spring',
-      receiverNames: [],  // Spring uses annotations, not method calls
+      receiverNames: [], // Spring uses annotations, not method calls
       methodNames: [],
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 // ─── C / C++ ──────────────────────────────────────────────────────────────────
 
@@ -238,7 +238,7 @@ export const cConfig: LanguageConfig = {
   callNodes: ['call_expression'],
   exportKeyword: null,
   routePatterns: [],
-}
+};
 
 export const cppConfig: LanguageConfig = {
   ...cConfig,
@@ -246,8 +246,8 @@ export const cppConfig: LanguageConfig = {
   wasmFile: 'tree-sitter-cpp.wasm',
   extensions: ['cpp', 'cc', 'cxx', 'hpp', 'hh', 'hxx'],
   classNodes: ['class_specifier'],
-  methodNodes: ['function_definition'],  // Inside class scope
-}
+  methodNodes: ['function_definition'], // Inside class scope
+};
 
 // ─── Other languages (minimal configs for structure + definition extraction) ─
 
@@ -265,7 +265,7 @@ export const csharpConfig: LanguageConfig = {
   callNodes: ['invocation_expression', 'object_creation_expression'],
   exportKeyword: null,
   routePatterns: [],
-}
+};
 
 export const rubyConfig: LanguageConfig = {
   id: 'ruby',
@@ -277,7 +277,7 @@ export const rubyConfig: LanguageConfig = {
   typeNodes: [],
   enumNodes: [],
   methodNodes: ['method', 'singleton_method'],
-  importNodes: ['call'],  // require/require_relative are calls
+  importNodes: ['call'], // require/require_relative are calls
   callNodes: ['call', 'method_call'],
   exportKeyword: null,
   routePatterns: [
@@ -288,7 +288,7 @@ export const rubyConfig: LanguageConfig = {
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 export const phpConfig: LanguageConfig = {
   id: 'php',
@@ -311,20 +311,29 @@ export const phpConfig: LanguageConfig = {
       pathArgIndex: 0,
     },
   ],
-}
+};
 
 // ─── Extension -> Config mapping ─────────────────────────────────────────────
 
 const allConfigs: LanguageConfig[] = [
-  typescriptConfig, tsxConfig, javascriptConfig,
-  pythonConfig, goConfig, rustConfig, javaConfig,
-  cConfig, cppConfig, csharpConfig, rubyConfig, phpConfig,
-]
+  typescriptConfig,
+  tsxConfig,
+  javascriptConfig,
+  pythonConfig,
+  goConfig,
+  rustConfig,
+  javaConfig,
+  cConfig,
+  cppConfig,
+  csharpConfig,
+  rubyConfig,
+  phpConfig,
+];
 
-const extensionMap = new Map<string, LanguageConfig>()
+const extensionMap = new Map<string, LanguageConfig>();
 for (const config of allConfigs) {
   for (const ext of config.extensions) {
-    extensionMap.set(ext, config)
+    extensionMap.set(ext, config);
   }
 }
 
@@ -334,7 +343,7 @@ for (const config of allConfigs) {
  * Returns null for unsupported extensions.
  */
 export function getLanguageConfig(fileExtension: string): LanguageConfig | null {
-  return extensionMap.get(fileExtension.replace(/^\./, '')) ?? null
+  return extensionMap.get(fileExtension.replace(/^\./, '')) ?? null;
 }
 
 /**
@@ -342,7 +351,7 @@ export function getLanguageConfig(fileExtension: string): LanguageConfig | null 
  * Returns extensions without leading dots (e.g. 'ts', 'py', 'go').
  */
 export function getSupportedExtensions(): string[] {
-  return Array.from(extensionMap.keys())
+  return Array.from(extensionMap.keys());
 }
 
-export { allConfigs }
+export { allConfigs };

@@ -1,7 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-This directory is notably large (~90 files) but follows a rigorous decomposition pattern that keeps each file under 304 lines. The split is: `Section.tsx` (thin orchestrator) → `SectionParts.tsx` (presentational) → `*Styles.ts` (style objects) → `useSection.ts` (business logic). Understanding this split is the key to navigating the directory without reading every file.
-`─────────────────────────────────────────────────`
 # Settings — Modal UI & Section Components
 
 Full settings modal for the Electron IDE. Two-level tab navigation, full-text search, draft/save lifecycle, and ~15 discrete setting sections.
@@ -103,6 +100,7 @@ Do not add Tailwind classes to existing settings components — it will mix para
 - `../../types/electron-claude-md` — `ClaudeMdGenerationStatus`
 - `../../../shared/` — shared utility types
 - IPC: sections call `window.electronAPI.*` directly for live operations (hook status, CodeMode toggle, etc.) — they do not go through `onChange`
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

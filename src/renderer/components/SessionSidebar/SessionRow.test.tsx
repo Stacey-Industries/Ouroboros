@@ -6,7 +6,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-afterEach(() => { cleanup(); });
+afterEach(() => {
+  cleanup();
+});
 
 import type { SessionRecord } from '../../types/electron';
 import { SessionRow } from './SessionRow';
@@ -81,12 +83,16 @@ describe('SessionRow', () => {
   });
 
   it('shows worktree badge when session.worktree is true', () => {
-    render(<SessionRow session={makeSession({ worktree: true })} isActive={false} onClick={vi.fn()} />);
+    render(
+      <SessionRow session={makeSession({ worktree: true })} isActive={false} onClick={vi.fn()} />,
+    );
     expect(screen.getByText('worktree')).toBeTruthy();
   });
 
   it('hides worktree badge when session.worktree is false', () => {
-    render(<SessionRow session={makeSession({ worktree: false })} isActive={false} onClick={vi.fn()} />);
+    render(
+      <SessionRow session={makeSession({ worktree: false })} isActive={false} onClick={vi.fn()} />,
+    );
     expect(screen.queryByText('worktree')).toBeNull();
   });
 

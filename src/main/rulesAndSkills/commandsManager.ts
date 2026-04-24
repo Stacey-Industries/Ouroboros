@@ -13,10 +13,7 @@ const CLAUDE_DIR = '.claude';
 const COMMANDS_DIR = 'commands';
 const MD_EXT = '.md';
 
-function resolveCommandsDir(
-  scope: ClaudeConfigScope,
-  projectRoot?: string,
-): string {
+function resolveCommandsDir(scope: ClaudeConfigScope, projectRoot?: string): string {
   if (scope === 'global') {
     return path.join(os.homedir(), CLAUDE_DIR, COMMANDS_DIR);
   }
@@ -24,11 +21,7 @@ function resolveCommandsDir(
   return path.join(projectRoot, CLAUDE_DIR, COMMANDS_DIR);
 }
 
-function resolveCommandPath(
-  scope: ClaudeConfigScope,
-  name: string,
-  projectRoot?: string,
-): string {
+function resolveCommandPath(scope: ClaudeConfigScope, name: string, projectRoot?: string): string {
   const dir = resolveCommandsDir(scope, projectRoot);
   const safeName = path.basename(name).replace(/[^a-zA-Z0-9_-]/g, '-');
   return path.join(dir, safeName + MD_EXT);

@@ -11,16 +11,8 @@ export {
   removeJob,
   updateJob,
 } from './sessionDispatchQueue';
-export {
-  getRunnerState,
-  startDispatchRunner,
-  stopDispatchRunner,
-} from './sessionDispatchRunner';
-export {
-  emitSessionActivated,
-  emitSessionArchived,
-  emitSessionCreated,
-} from './sessionLifecycle';
+export { getRunnerState, startDispatchRunner, stopDispatchRunner } from './sessionDispatchRunner';
+export { emitSessionActivated, emitSessionArchived, emitSessionCreated } from './sessionLifecycle';
 export { migrateWindowSessionsToSessions } from './sessionMigration';
 export type { SessionStore } from './sessionStore';
 export {

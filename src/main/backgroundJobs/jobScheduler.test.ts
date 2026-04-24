@@ -18,14 +18,20 @@ beforeEach(() => {
 afterEach(() => {
   vi.resetModules();
   // Delay cleanup on Windows to allow SQLite file handles to release
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* Windows file lock race */ }
+  try {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock race */
+  }
 });
 
 function makeDbPath() {
   return path.join(tmpDir, `jobs-${Date.now()}.db`);
 }
 
-async function importWithMockedRunner(mockImpl: () => { start: () => Promise<void>; cancel: () => Promise<void> }) {
+async function importWithMockedRunner(
+  mockImpl: () => { start: () => Promise<void>; cancel: () => Promise<void> },
+) {
   vi.doMock('./jobRunner', () => ({
     createJobRunner: vi.fn().mockImplementation(mockImpl),
   }));
@@ -61,7 +67,10 @@ describe('jobScheduler', () => {
     const startCalls: string[] = [];
 
     const { createJobScheduler, createJobStore } = await importWithMockedRunner(() => ({
-      start: vi.fn(async () => { startCalls.push('started'); await new Promise<void>(() => {}); }),
+      start: vi.fn(async () => {
+        startCalls.push('started');
+        await new Promise<void>(() => {});
+      }),
       cancel: vi.fn().mockResolvedValue(undefined),
     }));
 

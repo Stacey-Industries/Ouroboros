@@ -34,7 +34,8 @@ vi.mock('../logger', () => ({
 const mockRunResearch = vi.fn<() => Promise<ResearchArtifact>>();
 
 vi.mock('../research/researchSubagent', () => ({
-  runResearch: (...args: unknown[]) => mockRunResearch(...args as Parameters<typeof mockRunResearch>),
+  runResearch: (...args: unknown[]) =>
+    mockRunResearch(...(args as Parameters<typeof mockRunResearch>)),
 }));
 
 // ─── Test artifact ────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ describe('research:invoke handler', () => {
   it('returns success:true with artifact on valid topic', async () => {
     const artifact = makeArtifact();
     mockRunResearch.mockResolvedValue(artifact);
-    const result = await invoke('research:invoke', { topic: 'app router' }) as {
+    const result = (await invoke('research:invoke', { topic: 'app router' })) as {
       success: boolean;
       artifact?: ResearchArtifact;
     };
@@ -109,13 +110,13 @@ describe('research:invoke handler', () => {
   });
 
   it('returns success:false when topic is missing', async () => {
-    const result = await invoke('research:invoke', {}) as { success: boolean; error?: string };
+    const result = (await invoke('research:invoke', {})) as { success: boolean; error?: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/topic/i);
   });
 
   it('returns success:false when topic is empty string', async () => {
-    const result = await invoke('research:invoke', { topic: '   ' }) as {
+    const result = (await invoke('research:invoke', { topic: '   ' })) as {
       success: boolean;
       error?: string;
     };
@@ -123,14 +124,14 @@ describe('research:invoke handler', () => {
   });
 
   it('returns success:false when args is null', async () => {
-    const result = await invoke('research:invoke', null) as { success: boolean };
+    const result = (await invoke('research:invoke', null)) as { success: boolean };
     expect(result.success).toBe(false);
   });
 
   it('forwards the full artifact returned by runResearch', async () => {
     const artifact = makeArtifact({ confidenceHint: 'low', cached: true });
     mockRunResearch.mockResolvedValue(artifact);
-    const result = await invoke('research:invoke', { topic: 'routing' }) as {
+    const result = (await invoke('research:invoke', { topic: 'routing' })) as {
       success: boolean;
       artifact?: ResearchArtifact;
     };
@@ -140,7 +141,7 @@ describe('research:invoke handler', () => {
 
   it('returns success:false and does not throw when runResearch rejects', async () => {
     mockRunResearch.mockRejectedValue(new Error('unexpected spawn failure'));
-    const result = await invoke('research:invoke', { topic: 'routing' }) as {
+    const result = (await invoke('research:invoke', { topic: 'routing' })) as {
       success: boolean;
       error?: string;
     };

@@ -59,7 +59,9 @@ function makeAdaptor(initial: SessionFolder[] = []) {
   let stored: SessionFolder[] = [...initial];
   return {
     read: () => stored,
-    write: (folders: SessionFolder[]) => { stored = [...folders]; },
+    write: (folders: SessionFolder[]) => {
+      stored = [...folders];
+    },
   };
 }
 

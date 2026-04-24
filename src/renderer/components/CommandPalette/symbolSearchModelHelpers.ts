@@ -129,19 +129,27 @@ function useQueryChange(
   setQuery: React.Dispatch<React.SetStateAction<string>>,
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
 ): (value: string) => void {
-  return useCallback((value: string) => {
-    setQuery(value);
-    setSelectedIndex(0);
-  }, [setQuery, setSelectedIndex]);
+  return useCallback(
+    (value: string) => {
+      setQuery(value);
+      setSelectedIndex(0);
+    },
+    [setQuery, setSelectedIndex],
+  );
 }
 
 function useSymbolSelect(onClose: () => void): (entry: SymbolEntry) => void {
-  return useCallback((entry: SymbolEntry) => {
-    onClose();
-    window.dispatchEvent(new CustomEvent('agent-ide:open-file', {
-      detail: { filePath: entry.filePath, line: entry.line },
-    }));
-  }, [onClose]);
+  return useCallback(
+    (entry: SymbolEntry) => {
+      onClose();
+      window.dispatchEvent(
+        new CustomEvent('agent-ide:open-file', {
+          detail: { filePath: entry.filePath, line: entry.line },
+        }),
+      );
+    },
+    [onClose],
+  );
 }
 
 function usePickerKeyboard({
@@ -157,23 +165,26 @@ function usePickerKeyboard({
   selectedIndex: number;
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
 }): (event: React.KeyboardEvent<HTMLInputElement>) => void {
-  return useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    const handler = getKeyboardHandler({
-      eventKey: event.key,
-      handleSelect,
-      matches,
-      onClose,
-      selectedIndex,
-      setSelectedIndex,
-    });
+  return useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      const handler = getKeyboardHandler({
+        eventKey: event.key,
+        handleSelect,
+        matches,
+        onClose,
+        selectedIndex,
+        setSelectedIndex,
+      });
 
-    if (!handler) {
-      return;
-    }
+      if (!handler) {
+        return;
+      }
 
-    event.preventDefault();
-    handler();
-  }, [handleSelect, matches, onClose, selectedIndex, setSelectedIndex]);
+      event.preventDefault();
+      handler();
+    },
+    [handleSelect, matches, onClose, selectedIndex, setSelectedIndex],
+  );
 }
 
 function getKeyboardHandler({

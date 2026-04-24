@@ -21,7 +21,10 @@ import { TimelineSection } from './TimelineSection';
 
 // ── Persisted state hook ──────────────────────────────────────────────────────
 
-function usePersistedState<T>(key: string, defaultValue: T): [T, (value: T | ((prev: T) => T)) => void] {
+function usePersistedState<T>(
+  key: string,
+  defaultValue: T,
+): [T, (value: T | ((prev: T) => T)) => void] {
   const [state, setState] = useState<T>(() => {
     try {
       const stored = localStorage.getItem(key);
@@ -72,42 +75,30 @@ interface SidebarResizeDividerProps {
 
 function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProps): React.ReactElement {
   const startYRef = useRef(0);
-
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      startYRef.current = e.clientY;
-
-      const handlePointerMove = (ev: PointerEvent): void => {
-        const container = containerRef.current;
-        if (!container) return;
-        const containerHeight = container.clientHeight;
-        if (containerHeight <= 0) return;
-        const deltaY = ev.clientY - startYRef.current;
-        startYRef.current = ev.clientY;
-        onDrag(deltaY / containerHeight);
-      };
-
-      const handlePointerUp = (): void => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-      };
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    },
-    [containerRef, onDrag],
-  );
-
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    startYRef.current = e.clientY;
+    const handlePointerMove = (ev: PointerEvent): void => {
+      const container = containerRef.current;
+      if (!container) return;
+      const containerHeight = container.clientHeight;
+      if (containerHeight <= 0) return;
+      const deltaY = ev.clientY - startYRef.current;
+      startYRef.current = ev.clientY;
+      onDrag(deltaY / containerHeight);
+    };
+    const handlePointerUp = (): void => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  }, [containerRef, onDrag]);
   return (
-    <div
-      className="group relative flex-shrink-0 cursor-row-resize w-full select-none z-10"
-      style={{ height: '3px', touchAction: 'none' }}
-      onPointerDown={handlePointerDown}
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize sections"
+    <div className="group relative flex-shrink-0 cursor-row-resize w-full select-none z-10"
+      style={{ height: '3px', touchAction: 'none' }} onPointerDown={handlePointerDown}
+      role="separator" aria-orientation="horizontal" aria-label="Resize sections"
     >
       <div className="absolute inset-x-0 -top-1 -bottom-1" />
       <div className="absolute inset-x-0 top-[1px] h-[1px] bg-border-semantic opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-interactive-accent group-active:opacity-100 group-active:bg-interactive-accent" />
@@ -118,9 +109,12 @@ function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProp
 // ── Toggle helpers ────────────────────────────────────────────────────────────
 
 function useSectionToggles(setCollapsed: (fn: (prev: CollapseState) => CollapseState) => void) {
-  const toggle = useCallback((key: keyof CollapseState) => {
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
-  }, [setCollapsed]);
+  const toggle = useCallback(
+    (key: keyof CollapseState) => {
+      setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+    },
+    [setCollapsed],
+  );
   return {
     toggleExplorer: useCallback(() => toggle('explorer'), [toggle]),
     toggleSearch: useCallback(() => toggle('search'), [toggle]),
@@ -132,29 +126,32 @@ function useSectionToggles(setCollapsed: (fn: (prev: CollapseState) => CollapseS
 
 // ── Sections JSX ──────────────────────────────────────────────────────────────
 
-function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivider, handleDrag,
-  containerRef, symbolCount, bookmarkCount, toggles, projectRoot }: {
+interface SidebarSectionsLayoutProps {
   collapsed: CollapseState; explorerFlex: number; outlineFlex: number; showDivider: boolean;
   handleDrag: (dr: number) => void; containerRef: React.RefObject<HTMLDivElement | null>;
-  symbolCount: number; bookmarkCount: number;
-  toggles: ReturnType<typeof useSectionToggles>;
-  projectRoot: string | null;
-}): React.ReactElement {
+  symbolCount: number; bookmarkCount: number; toggles: ReturnType<typeof useSectionToggles>; projectRoot: string | null;
+}
+
+function SidebarUpperSections({ collapsed, explorerFlex, showDivider, handleDrag, containerRef, toggles, projectRoot }: Pick<SidebarSectionsLayoutProps, 'collapsed' | 'explorerFlex' | 'showDivider' | 'handleDrag' | 'containerRef' | 'toggles' | 'projectRoot'>): React.ReactElement {
   return (
-    <div ref={containerRef as React.RefObject<HTMLDivElement | null>} className="flex flex-col h-full overflow-hidden">
-      <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer}
-        style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
+    <>
+      <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer} style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
         <SidebarFileTree />
       </SidebarSection>
-      <SidebarSection title="Search" collapsed={collapsed.search} onToggle={toggles.toggleSearch}
-        style={{ minHeight: collapsed.search ? undefined : 160 }}>
+      <SidebarSection title="Search" collapsed={collapsed.search} onToggle={toggles.toggleSearch} style={{ minHeight: collapsed.search ? undefined : 160 }}>
         <React.Suspense fallback={<LazyPanelFallback />}>
           <SearchPanel projectRoot={projectRoot ?? ''} />
         </React.Suspense>
       </SidebarSection>
       {showDivider && <SidebarResizeDivider onDrag={handleDrag} containerRef={containerRef} />}
-      <SidebarSection title="Outline" collapsed={collapsed.outline} onToggle={toggles.toggleOutline}
-        badge={symbolCount} style={{ flex: outlineFlex, minHeight: collapsed.outline ? undefined : 80 }}>
+    </>
+  );
+}
+
+function SidebarLowerSections({ collapsed, outlineFlex, symbolCount, bookmarkCount, toggles }: Pick<SidebarSectionsLayoutProps, 'collapsed' | 'outlineFlex' | 'symbolCount' | 'bookmarkCount' | 'toggles'>): React.ReactElement {
+  return (
+    <>
+      <SidebarSection title="Outline" collapsed={collapsed.outline} onToggle={toggles.toggleOutline} badge={symbolCount} style={{ flex: outlineFlex, minHeight: collapsed.outline ? undefined : 80 }}>
         <OutlineSection />
       </SidebarSection>
       <SidebarSection title="Timeline" collapsed={collapsed.timeline} onToggle={toggles.toggleTimeline}>
@@ -163,6 +160,15 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
       <SidebarSection title="Bookmarks" collapsed={collapsed.bookmarks} onToggle={toggles.toggleBookmarks} badge={bookmarkCount}>
         <BookmarksSection />
       </SidebarSection>
+    </>
+  );
+}
+
+function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivider, handleDrag, containerRef, symbolCount, bookmarkCount, toggles, projectRoot }: SidebarSectionsLayoutProps): React.ReactElement {
+  return (
+    <div ref={containerRef as React.RefObject<HTMLDivElement | null>} className="flex flex-col h-full overflow-hidden">
+      <SidebarUpperSections collapsed={collapsed} explorerFlex={explorerFlex} showDivider={showDivider} handleDrag={handleDrag} containerRef={containerRef} toggles={toggles} projectRoot={projectRoot} />
+      <SidebarLowerSections collapsed={collapsed} outlineFlex={outlineFlex} symbolCount={symbolCount} bookmarkCount={bookmarkCount} toggles={toggles} />
     </div>
   );
 }
@@ -193,27 +199,41 @@ function useSearchShortcut(
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function SidebarSections(): React.ReactElement {
-  const [collapsed, setCollapsed] = usePersistedState<CollapseState>('agent-ide:sidebar-sections', DEFAULT_COLLAPSE);
-  const [explorerRatio, setExplorerRatio] = usePersistedState<number>('agent-ide:sidebar-explorer-ratio', 0.6);
+  const [collapsed, setCollapsed] = usePersistedState<CollapseState>(
+    'agent-ide:sidebar-sections',
+    DEFAULT_COLLAPSE,
+  );
+  const [explorerRatio, setExplorerRatio] = usePersistedState<number>(
+    'agent-ide:sidebar-explorer-ratio',
+    0.6,
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const symbolCount = useOutlineSymbolCount();
   const bookmarkCount = useBookmarkCount();
   const toggles = useSectionToggles(setCollapsed);
   const { projectRoot } = useProject();
 
-  const handleDrag = useCallback((deltaRatio: number) => {
-    setExplorerRatio((prev) => Math.min(0.85, Math.max(0.15, prev + deltaRatio)));
-  }, [setExplorerRatio]);
+  const handleDrag = useCallback(
+    (deltaRatio: number) => {
+      setExplorerRatio((prev) => Math.min(0.85, Math.max(0.15, prev + deltaRatio)));
+    },
+    [setExplorerRatio],
+  );
 
   useSearchShortcut(setCollapsed);
 
   return (
-    <SidebarSectionsLayout collapsed={collapsed}
+    <SidebarSectionsLayout
+      collapsed={collapsed}
       explorerFlex={collapsed.outline ? 1 : explorerRatio}
       outlineFlex={collapsed.explorer ? 1 : 1 - explorerRatio}
       showDivider={!collapsed.explorer && !collapsed.outline}
-      handleDrag={handleDrag} containerRef={containerRef}
-      symbolCount={symbolCount} bookmarkCount={bookmarkCount}
-      toggles={toggles} projectRoot={projectRoot} />
+      handleDrag={handleDrag}
+      containerRef={containerRef}
+      symbolCount={symbolCount}
+      bookmarkCount={bookmarkCount}
+      toggles={toggles}
+      projectRoot={projectRoot}
+    />
   );
 }

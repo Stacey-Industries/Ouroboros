@@ -62,9 +62,7 @@ export function MonacoMobileEditable({
         autoCorrect="off"
         data-monaco-fallback="editable"
       />
-      <div style={chipStyle}>
-        Phone edit mode — syntax highlighting disabled
-      </div>
+      <div style={chipStyle}>Phone edit mode — syntax highlighting disabled</div>
     </div>
   );
 }

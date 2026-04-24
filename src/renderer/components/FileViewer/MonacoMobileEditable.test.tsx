@@ -11,9 +11,7 @@ import { MonacoMobileEditable } from './MonacoMobileEditable';
 
 describe('MonacoMobileEditable', () => {
   it('renders a textarea with data-monaco-fallback="editable"', () => {
-    const { container } = render(
-      <MonacoMobileEditable content="const x = 1;" />,
-    );
+    const { container } = render(<MonacoMobileEditable content="const x = 1;" />);
     const ta = container.querySelector('textarea[data-monaco-fallback="editable"]');
     expect(ta).not.toBeNull();
   });

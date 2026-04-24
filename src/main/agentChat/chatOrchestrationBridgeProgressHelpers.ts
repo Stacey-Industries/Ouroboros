@@ -5,13 +5,20 @@
 
 import log from '../logger';
 import type { ProviderProgressEvent } from '../orchestration/types';
+import { emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 
 export function logFirstChunk(ctx: ActiveStreamContext): void {
   if (ctx.firstChunkLogged) return;
   ctx.firstChunkLogged = true;
   if (typeof ctx.sendStartedAt === 'number') {
-    log.info('[chat-perf] time-to-first-chunk:', Date.now() - ctx.sendStartedAt, 'ms', 'thread:', ctx.threadId);
+    log.info(
+      '[chat-perf] time-to-first-chunk:',
+      Date.now() - ctx.sendStartedAt,
+      'ms',
+      'thread:',
+      ctx.threadId,
+    );
   }
 }
 
@@ -29,4 +36,40 @@ export function findContextForProgress(
     }
   }
   return undefined;
+}
+
+export type ProgressToolActivity = NonNullable<
+  NonNullable<ProviderProgressEvent['contentBlock']>['toolActivity']
+>;
+
+interface EmitToolActivityArgs {
+  listeners: AgentChatBridgeRuntime['streamChunkListeners'];
+  ctx: ActiveStreamContext;
+  blockIndex: number;
+  toolActivity: ProgressToolActivity;
+  now: number;
+}
+
+export function emitToolActivityChunk(args: EmitToolActivityArgs): void {
+  const { listeners, ctx, blockIndex, toolActivity, now } = args;
+  emitStreamChunk(
+    listeners,
+    {
+      threadId: ctx.threadId,
+      messageId: ctx.assistantMessageId,
+      type: 'tool_activity',
+      blockIndex,
+      toolActivity: {
+        name: toolActivity.name,
+        status: toolActivity.status,
+        filePath: toolActivity.filePath,
+        inputSummary: toolActivity.inputSummary,
+        editSummary: toolActivity.editSummary,
+        output: toolActivity.output,
+      },
+      timestamp: now,
+      tokenUsage: ctx.tokenUsage,
+    },
+    ctx,
+  );
 }

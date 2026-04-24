@@ -1,4 +1,4 @@
-import type { SessionMemoryEntry } from './sessionMemory'
+import type { SessionMemoryEntry } from './sessionMemory';
 
 const EXTRACTION_PROMPT_TEMPLATE = `Extract persistent facts, decisions, patterns, and preferences from this session that would be useful in future sessions on this codebase.
 
@@ -16,26 +16,26 @@ Do NOT extract: debugging details, file contents, or things obvious from reading
 Respond with a JSON array of objects, each with:
 - "type": one of "decision", "pattern", "fact", "preference", "error_resolution"
 - "content": the memory text (be specific — include file paths, function names)
-- "relevantFiles": array of file paths this relates to`
+- "relevantFiles": array of file paths this relates to`;
 
-type PartialMemoryEntry = Omit<SessionMemoryEntry, 'id' | 'timestamp' | 'sessionId' | 'confidence'>
+type PartialMemoryEntry = Omit<SessionMemoryEntry, 'id' | 'timestamp' | 'sessionId' | 'confidence'>;
 
-const VALID_TYPES = new Set(['decision', 'pattern', 'fact', 'preference', 'error_resolution'])
+const VALID_TYPES = new Set(['decision', 'pattern', 'fact', 'preference', 'error_resolution']);
 
 export function buildMemoryExtractionPrompt(sessionSummary: string): string {
-  return EXTRACTION_PROMPT_TEMPLATE.replace('{SESSION_SUMMARY}', sessionSummary)
+  return EXTRACTION_PROMPT_TEMPLATE.replace('{SESSION_SUMMARY}', sessionSummary);
 }
 
 export function parseMemoryExtractionResponse(response: string): PartialMemoryEntry[] | null {
   try {
-    let text = response.trim()
-    const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/)
-    if (fenceMatch) text = fenceMatch[1].trim()
+    let text = response.trim();
+    const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+    if (fenceMatch) text = fenceMatch[1].trim();
 
-    const parsed = JSON.parse(text)
-    if (!Array.isArray(parsed)) return null
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) return null;
 
-    const valid: PartialMemoryEntry[] = []
+    const valid: PartialMemoryEntry[] = [];
     for (const item of parsed) {
       if (
         typeof item.content === 'string' &&
@@ -47,25 +47,23 @@ export function parseMemoryExtractionResponse(response: string): PartialMemoryEn
           type: item.type,
           content: item.content,
           relevantFiles: item.relevantFiles.filter((f: unknown) => typeof f === 'string'),
-        })
+        });
       }
     }
 
-    return valid.length > 0 ? valid : null
+    return valid.length > 0 ? valid : null;
   } catch {
-    return null
+    return null;
   }
 }
 
 export function formatMemoriesForContext(memories: SessionMemoryEntry[]): string {
-  if (memories.length === 0) return ''
+  if (memories.length === 0) return '';
 
-  const lines = ['## Session Memory (from prior sessions)']
+  const lines = ['## Session Memory (from prior sessions)'];
   for (const m of memories) {
-    const files = m.relevantFiles.length > 0
-      ? ` (relevant: ${m.relevantFiles.join(', ')})`
-      : ''
-    lines.push(`- [${m.type}] ${m.content}${files}`)
+    const files = m.relevantFiles.length > 0 ? ` (relevant: ${m.relevantFiles.join(', ')})` : '';
+    lines.push(`- [${m.type}] ${m.content}${files}`);
   }
-  return lines.join('\n')
+  return lines.join('\n');
 }

@@ -68,9 +68,7 @@ vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
 
 // ChatOnlyHeaderControls — stub so we can assert its presence.
 vi.mock('./ChatOnlyHeaderControls', () => ({
-  ChatOnlyHeaderControls: () => (
-    <div data-testid="header-controls">HeaderControls</div>
-  ),
+  ChatOnlyHeaderControls: () => <div data-testid="header-controls">HeaderControls</div>,
 }));
 
 vi.mock('./ChatOnlySessionDrawer', () => ({

@@ -158,7 +158,11 @@ function trySendUsage(state: PtySessionState, clean: string, term: pty.IPty): vo
 }
 
 function safeWrite(term: pty.IPty, payload: string): void {
-  try { term.write(payload); } catch { /* term already exited */ }
+  try {
+    term.write(payload);
+  } catch {
+    /* term already exited */
+  }
 }
 
 function tryDismissUsageTui(state: PtySessionState, clean: string, term: pty.IPty): void {
@@ -216,9 +220,20 @@ function handleExit(refs: HandlerRefs, exitCode: number, ctx: HandlerContext): v
 
 function handleTimeout(term: pty.IPty, refs: HandlerRefs, ctx: HandlerContext): void {
   const { state, lastParseRef, finish } = ctx;
-  log.warn('[claude-usage-poller] timeout — trust:', state.confirmedTrust, 'usage:', state.sentUsage, 'exit:', state.sentExit);
+  log.warn(
+    '[claude-usage-poller] timeout — trust:',
+    state.confirmedTrust,
+    'usage:',
+    state.sentUsage,
+    'exit:',
+    state.sentExit,
+  );
   if (!refs.exited) {
-    try { term.kill(); } catch { /* already dead */ }
+    try {
+      term.kill();
+    } catch {
+      /* already dead */
+    }
   }
   const staleResult = lastParseRef.value ? { ...lastParseRef.value, stale: true } : null;
   finish(staleResult, 'timeout');

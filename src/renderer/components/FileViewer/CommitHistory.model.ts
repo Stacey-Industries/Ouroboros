@@ -49,24 +49,27 @@ function useCommitList(projectRoot: string, filePath: string): CommitListState {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCommits = useCallback(async (offset: number) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await window.electronAPI.git.log(projectRoot, filePath, offset);
-      if (!result.success) {
-        setError(result.error ?? 'Failed to load commit history');
-        return;
+  const loadCommits = useCallback(
+    async (offset: number) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await window.electronAPI.git.log(projectRoot, filePath, offset);
+        if (!result.success) {
+          setError(result.error ?? 'Failed to load commit history');
+          return;
+        }
+        const incoming = result.commits ?? [];
+        setCommits((previous) => (offset === 0 ? incoming : [...previous, ...incoming]));
+        setHasMore(incoming.length === 50);
+      } catch (error) {
+        setError(getErrorMessage(error, 'Failed to load commit history'));
+      } finally {
+        setIsLoading(false);
       }
-      const incoming = result.commits ?? [];
-      setCommits((previous) => (offset === 0 ? incoming : [...previous, ...incoming]));
-      setHasMore(incoming.length === 50);
-    } catch (error) {
-      setError(getErrorMessage(error, 'Failed to load commit history'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filePath, projectRoot]);
+    },
+    [filePath, projectRoot],
+  );
 
   const reset = useCallback(() => {
     setCommits([]);
@@ -84,24 +87,27 @@ function useCommitPatch(projectRoot: string, filePath: string): CommitPatchState
   const [patchLoading, setPatchLoading] = useState(false);
   const [patchError, setPatchError] = useState<string | null>(null);
 
-  const selectCommit = useCallback(async (hash: string) => {
-    setSelectedHash(hash);
-    setPatch(null);
-    setPatchError(null);
-    setPatchLoading(true);
-    try {
-      const result = await window.electronAPI.git.show(projectRoot, hash, filePath);
-      if (!result.success) {
-        setPatchError(result.error ?? 'Failed to load diff');
-        return;
+  const selectCommit = useCallback(
+    async (hash: string) => {
+      setSelectedHash(hash);
+      setPatch(null);
+      setPatchError(null);
+      setPatchLoading(true);
+      try {
+        const result = await window.electronAPI.git.show(projectRoot, hash, filePath);
+        if (!result.success) {
+          setPatchError(result.error ?? 'Failed to load diff');
+          return;
+        }
+        setPatch(result.patch ?? '');
+      } catch (error) {
+        setPatchError(getErrorMessage(error, 'Failed to load diff'));
+      } finally {
+        setPatchLoading(false);
       }
-      setPatch(result.patch ?? '');
-    } catch (error) {
-      setPatchError(getErrorMessage(error, 'Failed to load diff'));
-    } finally {
-      setPatchLoading(false);
-    }
-  }, [filePath, projectRoot]);
+    },
+    [filePath, projectRoot],
+  );
 
   const reset = useCallback(() => {
     setSelectedHash(null);
@@ -117,8 +123,22 @@ export function useCommitHistoryModel({
   filePath,
   projectRoot,
 }: CommitHistoryModelArgs): CommitHistoryViewModel {
-  const { commits, error, hasMore, isLoading, loadCommits, reset: resetList } = useCommitList(projectRoot, filePath);
-  const { patch, patchError, patchLoading, reset: resetPatch, selectCommit, selectedHash } = useCommitPatch(projectRoot, filePath);
+  const {
+    commits,
+    error,
+    hasMore,
+    isLoading,
+    loadCommits,
+    reset: resetList,
+  } = useCommitList(projectRoot, filePath);
+  const {
+    patch,
+    patchError,
+    patchLoading,
+    reset: resetPatch,
+    selectCommit,
+    selectedHash,
+  } = useCommitPatch(projectRoot, filePath);
 
   useEffect(() => {
     resetList();

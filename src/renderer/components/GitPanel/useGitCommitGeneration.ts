@@ -13,17 +13,19 @@ function fileDiffsToText(
     .join('\n\n');
 }
 
-async function fetchDiffAndCommits(
-  root: string,
-): Promise<{ diff: string; recent?: string }> {
+async function fetchDiffAndCommits(root: string): Promise<{ diff: string; recent?: string }> {
   const [diffRes, logRes] = await Promise.all([
     window.electronAPI.git.diffCached(root, 'HEAD'),
     window.electronAPI.git.log(root, '', 0),
   ]);
   const diff = diffRes.success && diffRes.files ? fileDiffsToText(diffRes.files) : '';
-  const recent = logRes.success && logRes.commits
-    ? logRes.commits.slice(0, 5).map((c) => c.message).join('\n')
-    : undefined;
+  const recent =
+    logRes.success && logRes.commits
+      ? logRes.commits
+          .slice(0, 5)
+          .map((c) => c.message)
+          .join('\n')
+      : undefined;
   return { diff, recent };
 }
 
@@ -40,8 +42,14 @@ export function useGenerateCommitMessage(
     setIsGenerating(true);
     try {
       const { diff, recent } = await fetchDiffAndCommits(projectRoot);
-      if (!diff) { setError('No staged diff found'); return; }
-      const result = await window.electronAPI.ai.generateCommitMessage({ diff, recentCommits: recent });
+      if (!diff) {
+        setError('No staged diff found');
+        return;
+      }
+      const result = await window.electronAPI.ai.generateCommitMessage({
+        diff,
+        recentCommits: recent,
+      });
       if (result.success && result.message) setCommitMessage(result.message);
       else if (result.error) setError(result.error);
     } catch (err) {

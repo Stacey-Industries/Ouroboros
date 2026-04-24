@@ -273,8 +273,12 @@ export function buildProjectBadges(
   return [
     { label: context.language },
     ...(context.framework ? [{ label: context.framework, color: 'var(--palette-purple)' }] : []),
-    ...(context.packageManager ? [{ label: context.packageManager, color: 'var(--interactive-accent)' }] : []),
-    ...(context.testFramework ? [{ label: context.testFramework, color: 'var(--status-info)' }] : []),
+    ...(context.packageManager
+      ? [{ label: context.packageManager, color: 'var(--interactive-accent)' }]
+      : []),
+    ...(context.testFramework
+      ? [{ label: context.testFramework, color: 'var(--status-info)' }]
+      : []),
     ...context.detectedPatterns.map((pattern) => ({ label: pattern, color: 'var(--text-muted)' })),
   ];
 }

@@ -43,7 +43,8 @@ export interface ReactionHandlerDeps {
 function makeGetHandler(svc: AgentChatService, rs: RequireStringFn) {
   return async (messageId: unknown, threadId: unknown) => {
     const reactions = await svc.threadStore.getMessageReactions(
-      rs(messageId, 'messageId'), rs(threadId, 'threadId'),
+      rs(messageId, 'messageId'),
+      rs(threadId, 'threadId'),
     );
     return { success: true, reactions };
   };
@@ -80,7 +81,9 @@ function makeRemoveHandler(svc: AgentChatService, rs: RequireStringFn) {
 function makeCollapseHandler(svc: AgentChatService, rs: RequireStringFn) {
   return async (messageId: unknown, threadId: unknown, collapsed: unknown) => {
     await svc.threadStore.setMessageCollapsed(
-      rs(messageId, 'messageId'), rs(threadId, 'threadId'), Boolean(collapsed),
+      rs(messageId, 'messageId'),
+      rs(threadId, 'threadId'),
+      Boolean(collapsed),
     );
     return { success: true };
   };

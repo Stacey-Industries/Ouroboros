@@ -37,9 +37,7 @@ describe('SystemPromptSessionPicker', () => {
   it('renders the session dropdown when sessions exist', async () => {
     mockListSessions.mockResolvedValue(SESSIONS);
     await act(async () => {
-      render(
-        <SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />,
-      );
+      render(<SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />);
     });
     expect(screen.getByRole('combobox')).toBeDefined();
   });
@@ -47,9 +45,7 @@ describe('SystemPromptSessionPicker', () => {
   it('shows all sessions as options', async () => {
     mockListSessions.mockResolvedValue(SESSIONS);
     await act(async () => {
-      render(
-        <SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />,
-      );
+      render(<SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />);
     });
     const options = screen.getAllByRole('option');
     expect(options).toHaveLength(2);
@@ -68,9 +64,7 @@ describe('SystemPromptSessionPicker', () => {
     mockListSessions.mockResolvedValue(SESSIONS);
     const onSelect = vi.fn();
     await act(async () => {
-      render(
-        <SystemPromptSessionPicker onSelect={onSelect} selectedId={SESSIONS[0].id} />,
-      );
+      render(<SystemPromptSessionPicker onSelect={onSelect} selectedId={SESSIONS[0].id} />);
     });
     await act(async () => {
       fireEvent.change(screen.getByRole('combobox'), {
@@ -99,9 +93,7 @@ describe('SystemPromptSessionPicker', () => {
   it('shows refresh button (↺) alongside dropdown when sessions exist', async () => {
     mockListSessions.mockResolvedValue(SESSIONS);
     await act(async () => {
-      render(
-        <SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />,
-      );
+      render(<SystemPromptSessionPicker onSelect={vi.fn()} selectedId={SESSIONS[0].id} />);
     });
     expect(screen.getByRole('button', { name: /refresh session list/i })).toBeDefined();
   });

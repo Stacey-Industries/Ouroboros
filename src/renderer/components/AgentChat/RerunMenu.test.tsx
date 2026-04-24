@@ -26,7 +26,11 @@ function setElectronAPI(api: unknown): void {
 }
 
 function deleteElectronAPI(): void {
-  Object.defineProperty(window, 'electronAPI', { value: undefined, configurable: true, writable: true });
+  Object.defineProperty(window, 'electronAPI', {
+    value: undefined,
+    configurable: true,
+    writable: true,
+  });
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

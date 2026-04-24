@@ -31,15 +31,49 @@ import { subagentApi } from './preloadSupplementalSubagentApis';
 import { workspaceReadListApi } from './preloadSupplementalWorkspaceReadListApis';
 
 type SupplementalApiKey =
-  | 'approval' | 'sessions' | 'cost' | 'usage' | 'shellHistory'
-  | 'updater' | 'crash' | 'perf' | 'symbol' | 'lsp'
-  | 'window' | 'extensions' | 'mcp' | 'mcpStore' | 'extensionStore'
-  | 'context' | 'ideTools' | 'codemode' | 'agentChat' | 'orchestration'
-  | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
-  | 'ai' | 'embedding' | 'telemetry' | 'observability'
-  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
-  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess'
-  | 'compareProviders' | 'ecosystem' | 'marketplace';
+  | 'approval'
+  | 'sessions'
+  | 'cost'
+  | 'usage'
+  | 'shellHistory'
+  | 'updater'
+  | 'crash'
+  | 'perf'
+  | 'symbol'
+  | 'lsp'
+  | 'window'
+  | 'extensions'
+  | 'mcp'
+  | 'mcpStore'
+  | 'extensionStore'
+  | 'context'
+  | 'ideTools'
+  | 'codemode'
+  | 'agentChat'
+  | 'orchestration'
+  | 'contextLayer'
+  | 'claudeMd'
+  | 'router'
+  | 'rulesAndSkills'
+  | 'ai'
+  | 'embedding'
+  | 'telemetry'
+  | 'observability'
+  | 'workspace'
+  | 'system2'
+  | 'sessionCrud'
+  | 'folderCrud'
+  | 'pinnedContext'
+  | 'profileCrud'
+  | 'research'
+  | 'workspaceReadList'
+  | 'subagent'
+  | 'layout'
+  | 'graph'
+  | 'mobileAccess'
+  | 'compareProviders'
+  | 'ecosystem'
+  | 'marketplace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -81,7 +115,10 @@ export const supplementalApis: SupplementalApis = {
       ),
     onDispatchNotification: (callback) =>
       onChannel<{
-        jobId: string; title: string; body: string; status: 'completed' | 'failed';
+        jobId: string;
+        title: string;
+        body: string;
+        status: 'completed' | 'failed';
       }>('sessionDispatch:notification', callback),
   },
 

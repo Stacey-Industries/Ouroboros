@@ -28,13 +28,23 @@ describe('AgentContextPacketSection', () => {
   });
 
   it('marks Full button as pressed when packetMode is full', () => {
-    render(<AgentContextPacketSection contextSettings={makeSettings({ packetMode: 'full' })} updateContext={vi.fn()} />);
+    render(
+      <AgentContextPacketSection
+        contextSettings={makeSettings({ packetMode: 'full' })}
+        updateContext={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Full').getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('Lean').getAttribute('aria-pressed')).toBe('false');
   });
 
   it('marks Lean button as pressed when packetMode is lean', () => {
-    render(<AgentContextPacketSection contextSettings={makeSettings({ packetMode: 'lean' })} updateContext={vi.fn()} />);
+    render(
+      <AgentContextPacketSection
+        contextSettings={makeSettings({ packetMode: 'lean' })}
+        updateContext={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Lean').getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('Full').getAttribute('aria-pressed')).toBe('false');
   });
@@ -48,14 +58,21 @@ describe('AgentContextPacketSection', () => {
 
   it('calls updateContext with lean when Lean is clicked', () => {
     const updateContext = vi.fn();
-    render(<AgentContextPacketSection contextSettings={makeSettings()} updateContext={updateContext} />);
+    render(
+      <AgentContextPacketSection contextSettings={makeSettings()} updateContext={updateContext} />,
+    );
     fireEvent.click(screen.getByText('Lean'));
     expect(updateContext).toHaveBeenCalledWith('packetMode', 'lean');
   });
 
   it('calls updateContext with full when Full is clicked', () => {
     const updateContext = vi.fn();
-    render(<AgentContextPacketSection contextSettings={makeSettings({ packetMode: 'lean' })} updateContext={updateContext} />);
+    render(
+      <AgentContextPacketSection
+        contextSettings={makeSettings({ packetMode: 'lean' })}
+        updateContext={updateContext}
+      />,
+    );
     fireEvent.click(screen.getByText('Full'));
     expect(updateContext).toHaveBeenCalledWith('packetMode', 'full');
   });

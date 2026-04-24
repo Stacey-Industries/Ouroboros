@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const approvalBridgeMocks = vi.hoisted(() => ({
+  queueApproval: vi.fn(async (payload: { id?: string }) => {
+    void payload;
+    return 'approve' as const;
+  }),
+}));
+
 vi.mock('./codexApprovalBridge', () => ({
   CodexApprovalBridge: class {
     private readonly client: {
@@ -21,6 +28,7 @@ vi.mock('./codexApprovalBridge', () => ({
     }
 
     async queueApproval(payload: { id?: string }): Promise<'approve'> {
+      approvalBridgeMocks.queueApproval(payload);
       await this.client.respondToApproval(payload.id ?? 'missing-id', { decision: 'approve' });
       return 'approve';
     }
@@ -31,22 +39,27 @@ vi.mock('./codexApprovalBridge', () => ({
   },
 }));
 
-import {
-  runCodexAppServerTurn,
-  setCodexAppServerRuntimeForTests,
-} from './codexAppServerRunner';
-import { createProviderSessionReference, type ProviderProgressSink } from './providerAdapter';
 import type { ProviderProgressEvent } from '../types';
+import { runCodexAppServerTurn, setCodexAppServerRuntimeForTests } from './codexAppServerRunner';
 import type { ProviderLaunchContext } from './providerAdapter';
+import { createProviderSessionReference, type ProviderProgressSink } from './providerAdapter';
 
 class FakeClient {
   readonly requests: Array<{ method: string; params?: Record<string, unknown> }> = [];
   readonly responses: Array<{ id: number | string; result: Record<string, unknown> }> = [];
   private notificationListener:
-    | ((message: { id?: number | string; method?: string; params?: Record<string, unknown> }) => void)
+    | ((message: {
+        id?: number | string;
+        method?: string;
+        params?: Record<string, unknown>;
+      }) => void)
     | null = null;
   private serverRequestListener:
-    | ((message: { id?: number | string; method?: string; params?: Record<string, unknown> }) => void)
+    | ((message: {
+        id?: number | string;
+        method?: string;
+        params?: Record<string, unknown>;
+      }) => void)
     | null = null;
 
   emit(message: { id?: number | string; method?: string; params?: Record<string, unknown> }): void {
@@ -58,7 +71,11 @@ class FakeClient {
   }
 
   onNotification(
-    handler: (message: { id?: number | string; method?: string; params?: Record<string, unknown> }) => void,
+    handler: (message: {
+      id?: number | string;
+      method?: string;
+      params?: Record<string, unknown>;
+    }) => void,
   ): () => void {
     this.notificationListener = handler;
     return () => {
@@ -67,7 +84,11 @@ class FakeClient {
   }
 
   onServerRequest(
-    handler: (message: { id?: number | string; method?: string; params?: Record<string, unknown> }) => void,
+    handler: (message: {
+      id?: number | string;
+      method?: string;
+      params?: Record<string, unknown>;
+    }) => void,
   ): () => void {
     this.serverRequestListener = handler;
     return () => {
@@ -83,7 +104,10 @@ class FakeClient {
     if (method === 'turn/start') {
       queueMicrotask(() => {
         this.emit({ method: 'thread/started', params: { thread: { id: 'thr-123' } } });
-        this.emit({ method: 'item/agentMessage/delta', params: { itemId: 'msg-1', delta: 'Hello from Codex' } });
+        this.emit({
+          method: 'item/agentMessage/delta',
+          params: { itemId: 'msg-1', delta: 'Hello from Codex' },
+        });
         this.emit({
           id: 61,
           method: 'item/permissions/requestApproval',
@@ -137,11 +161,30 @@ function makeContext(): ProviderLaunchContext {
       repoFacts: {
         workspaceRoots: ['C:/repo'],
         roots: [],
-        gitDiff: { changedFiles: [], totalAdditions: 0, totalDeletions: 0, changedFileCount: 0, generatedAt: 1 },
-        diagnostics: { files: [], totalErrors: 0, totalWarnings: 0, totalInfos: 0, totalHints: 0, generatedAt: 1 },
+        gitDiff: {
+          changedFiles: [],
+          totalAdditions: 0,
+          totalDeletions: 0,
+          changedFileCount: 0,
+          generatedAt: 1,
+        },
+        diagnostics: {
+          files: [],
+          totalErrors: 0,
+          totalWarnings: 0,
+          totalInfos: 0,
+          totalHints: 0,
+          generatedAt: 1,
+        },
         recentEdits: { files: [], generatedAt: 1 },
       },
-      liveIdeState: { selectedFiles: [], openFiles: [], dirtyFiles: [], dirtyBuffers: [], collectedAt: 1 },
+      liveIdeState: {
+        selectedFiles: [],
+        openFiles: [],
+        dirtyFiles: [],
+        dirtyBuffers: [],
+        collectedAt: 1,
+      },
       files: [],
       omittedCandidates: [],
       budget: { estimatedBytes: 0, estimatedTokens: 0, droppedContentNotes: [] },
@@ -151,6 +194,7 @@ function makeContext(): ProviderLaunchContext {
 
 describe('codexAppServerRunner', () => {
   afterEach(() => {
+    approvalBridgeMocks.queueApproval.mockClear();
     setCodexAppServerRuntimeForTests(null);
   });
 
@@ -184,8 +228,40 @@ describe('codexAppServerRunner', () => {
 
     const completed = await result;
     expect(completed.threadId).toBe('thr-123');
-    expect(completed.usage).toEqual({ inputTokens: 50, outputTokens: 5 });
+    expect(completed.usage).toEqual({ inputTokens: 40, outputTokens: 5 });
     expect(events.some((event) => event.status === 'streaming')).toBe(true);
+    expect(approvalBridgeMocks.queueApproval).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '61' }),
+    );
+    expect(client.responses).toEqual([{ id: 61, result: { permissions: {}, scope: 'turn' } }]);
+  });
+
+  it('auto-approves app-server approval requests without queueing UI approvals when bypass is enabled', async () => {
+    const client = new FakeClient();
+    setCodexAppServerRuntimeForTests({ ensureClient: async () => client });
+
+    const { result } = await runCodexAppServerTurn({
+      context: makeContext(),
+      cwd: 'C:/repo',
+      model: 'gpt-5.4',
+      resumeThreadId: undefined,
+      sessionRef: createProviderSessionReference('codex', { requestId: 'req-1' }),
+      settings: {
+        model: 'gpt-5.4',
+        reasoningEffort: 'medium',
+        sandbox: 'workspace-write',
+        approvalPolicy: 'on-request',
+        profile: '',
+        addDirs: [],
+        search: false,
+        skipGitRepoCheck: false,
+        dangerouslyBypassApprovalsAndSandbox: true,
+      },
+      sink: { emit: () => undefined },
+    });
+
+    await result;
+    expect(approvalBridgeMocks.queueApproval).not.toHaveBeenCalled();
     expect(client.responses).toEqual([{ id: 61, result: { permissions: {}, scope: 'turn' } }]);
   });
 
@@ -229,5 +305,57 @@ describe('codexAppServerRunner', () => {
       method: 'turn/interrupt',
       params: { threadId: 'thr-123', turnId: 'turn-9' },
     });
+  });
+
+  it('falls back to starting a new thread when thread/resume reports no rollout', async () => {
+    const client = new FakeClient();
+    client.request = async (method: string, params?: Record<string, unknown>): Promise<unknown> => {
+      client.requests.push({ method, params });
+      if (method === 'initialize') return {};
+      if (method === 'thread/resume') {
+        throw new Error('thread/resume failed: no rollout found for thread id thr-stale');
+      }
+      if (method === 'thread/start') return { thread: { id: 'thr-fresh' } };
+      if (method === 'turn/start') {
+        queueMicrotask(() => {
+          client.emit({ method: 'thread/started', params: { thread: { id: 'thr-fresh' } } });
+          client.emit({ method: 'turn/completed', params: {} });
+        });
+        return { turn: { id: 'turn-2' } };
+      }
+      return {};
+    };
+    setCodexAppServerRuntimeForTests({
+      ensureClient: async () => client,
+    });
+
+    const { result } = await runCodexAppServerTurn({
+      context: makeContext(),
+      cwd: 'C:/repo',
+      model: 'gpt-5.4',
+      resumeThreadId: 'thr-stale',
+      sessionRef: createProviderSessionReference('codex', { requestId: 'req-1' }),
+      settings: {
+        model: 'gpt-5.4',
+        reasoningEffort: 'medium',
+        sandbox: 'workspace-write',
+        approvalPolicy: 'on-request',
+        profile: '',
+        addDirs: [],
+        search: false,
+        skipGitRepoCheck: false,
+        dangerouslyBypassApprovalsAndSandbox: false,
+      },
+      sink: { emit: () => undefined },
+    });
+
+    const completed = await result;
+    expect(completed.threadId).toBe('thr-fresh');
+    expect(client.requests).toEqual(
+      expect.arrayContaining([
+        { method: 'thread/resume', params: { threadId: 'thr-stale' } },
+        { method: 'thread/start', params: { cwd: 'C:/repo' } },
+      ]),
+    );
   });
 });

@@ -24,12 +24,30 @@ interface DiffReviewLayoutProps {
   setFileRef: (idx: number, element: HTMLDivElement | null) => void;
 }
 
-const panelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--surface-base)' };
-const headerStyle: React.CSSProperties = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--surface-panel)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', userSelect: 'none' };
+const panelStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  overflow: 'hidden',
+  backgroundColor: 'var(--surface-base)',
+};
+const headerStyle: React.CSSProperties = {
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '6px 12px',
+  borderBottom: '1px solid var(--border-default)',
+  backgroundColor: 'var(--surface-panel)',
+  fontSize: '0.8125rem',
+  fontFamily: 'var(--font-ui)',
+  userSelect: 'none',
+};
 export function DiffReviewLayout(props: DiffReviewLayoutProps): React.ReactElement {
   const { files, selectedFileIdx, stats, canRollback, enhancedEnabled, focusedHunkId } = props;
   const { onClose, onAcceptAll, onRejectAll, onRollback } = props;
-  const { onAcceptAllFile, onRejectAllFile, onSelectFile, onAcceptHunk, onRejectHunk, setFileRef } = props;
+  const { onAcceptAllFile, onRejectAllFile, onSelectFile, onAcceptHunk, onRejectHunk, setFileRef } =
+    props;
   return (
     <div style={panelStyle}>
       <DiffReviewHeader
@@ -58,7 +76,16 @@ export function DiffReviewLayout(props: DiffReviewLayoutProps): React.ReactEleme
   );
 }
 
-type DiffReviewBodyProps = Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll' | 'canRollback' | 'enhancedEnabled' | 'onRollback'>;
+type DiffReviewBodyProps = Omit<
+  DiffReviewLayoutProps,
+  | 'stats'
+  | 'onClose'
+  | 'onAcceptAll'
+  | 'onRejectAll'
+  | 'canRollback'
+  | 'enhancedEnabled'
+  | 'onRollback'
+>;
 
 function DiffReviewBody({
   files,
@@ -84,7 +111,7 @@ function DiffReviewBody({
         {files.map((file, fileIdx) => (
           <FileSection
             key={file.filePath}
-            ref={element => {
+            ref={(element) => {
               setFileRef(fileIdx, element);
             }}
             file={file}
@@ -163,7 +190,11 @@ function ReviewStat({
   label: string;
 }): React.ReactElement | null {
   if (count === 0) return null;
-  return <span style={{ color, fontSize: '0.75rem' }}>{count} {label}</span>;
+  return (
+    <span style={{ color, fontSize: '0.75rem' }}>
+      {count} {label}
+    </span>
+  );
 }
 
 interface FileSectionProps {
@@ -176,9 +207,15 @@ interface FileSectionProps {
   ref?: React.Ref<HTMLDivElement>;
 }
 
-function FileSection(
-  { file, fileIdx, focusedHunkId, isSelected, onAcceptHunk, onRejectHunk, ref }: FileSectionProps,
-): React.ReactElement {
+function FileSection({
+  file,
+  fileIdx,
+  focusedHunkId,
+  isSelected,
+  onAcceptHunk,
+  onRejectHunk,
+  ref,
+}: FileSectionProps): React.ReactElement {
   return (
     <div ref={ref} style={{ borderBottom: '2px solid var(--border-default)' }}>
       <FileSectionHeader file={file} isSelected={isSelected} />
@@ -222,7 +259,11 @@ function FileSectionHeader({
     >
       <StatusIcon status={file.status} />
       <span style={{ fontWeight: 500 }}>{file.relativePath}</span>
-      {file.oldPath && <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>(was {file.oldPath})</span>}
+      {file.oldPath && (
+        <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>
+          (was {file.oldPath})
+        </span>
+      )}
       <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem', marginLeft: 'auto' }}>
         {file.hunks.length} hunk{file.hunks.length !== 1 ? 's' : ''}
       </span>
@@ -259,4 +300,3 @@ function getStatusMeta(status: ReviewFile['status']): { color: string; label: st
   if (status === 'renamed') return { color: 'var(--interactive-accent)', label: 'R' };
   return { color: 'var(--status-warning)', label: 'M' };
 }
-

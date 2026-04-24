@@ -122,11 +122,7 @@ export function AppearanceSectionVsCodeImport(): React.ReactElement {
             >
               Reset overrides
             </button>
-            <button
-              onClick={() => setModalOpen(true)}
-              style={importButtonStyle()}
-              type="button"
-            >
+            <button onClick={() => setModalOpen(true)} style={importButtonStyle()} type="button">
               Import VS Code theme
             </button>
           </div>

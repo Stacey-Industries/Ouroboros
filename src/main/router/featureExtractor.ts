@@ -12,31 +12,48 @@ import { type FeatureName } from './routerTypes';
 /* ── Word / phrase lists ──────────────────────────────────────────────── */
 
 const JUDGMENT_WORDS = [
-  'think', 'should', 'recommend', 'evaluate', 'opinion',
-  'approach', 'better', 'improve', 'review', 'assess',
+  'think',
+  'should',
+  'recommend',
+  'evaluate',
+  'opinion',
+  'approach',
+  'better',
+  'improve',
+  'review',
+  'assess',
 ];
 
 const PLANNING_WORDS = [
-  'plan', 'architect', 'design', 'spec', 'scope',
-  'strategy', 'roadmap', 'phase',
+  'plan',
+  'architect',
+  'design',
+  'spec',
+  'scope',
+  'strategy',
+  'roadmap',
+  'phase',
 ];
 
 const IMPLEMENTATION_WORDS = [
-  'add', 'fix', 'change', 'implement', 'create',
-  'build', 'update', 'remove', 'delete', 'refactor', 'move',
+  'add',
+  'fix',
+  'change',
+  'implement',
+  'create',
+  'build',
+  'update',
+  'remove',
+  'delete',
+  'refactor',
+  'move',
 ];
 
-const LOOKUP_PHRASES = [
-  'what is', 'where is', 'show me', 'how does', 'explain', 'what does',
-];
+const LOOKUP_PHRASES = ['what is', 'where is', 'show me', 'how does', 'explain', 'what does'];
 
-const AMBIGUITY_WORDS = [
-  ' or ', 'maybe', 'not sure', 'might', 'could', 'alternative', 'either',
-];
+const AMBIGUITY_WORDS = [' or ', 'maybe', 'not sure', 'might', 'could', 'alternative', 'either'];
 
-const SCOPE_WORDS = [
-  'entire', 'whole', ' all ', 'across', 'everything', 'system', 'codebase',
-];
+const SCOPE_WORDS = ['entire', 'whole', ' all ', 'across', 'everything', 'system', 'codebase'];
 
 /* ── Regex helpers ────────────────────────────────────────────────────── */
 
@@ -68,10 +85,7 @@ function bucketPrevLength(len: number): number {
 function isPlan(msg: string): number {
   if (msg.length <= 500) return 0;
   const hasStructure =
-    msg.includes('|') ||
-    msg.includes('##') ||
-    /\d+\./.test(msg) ||
-    /^- /m.test(msg);
+    msg.includes('|') || msg.includes('##') || /\d+\./.test(msg) || /^- /m.test(msg);
   return hasStructure ? 1 : 0;
 }
 

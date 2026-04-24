@@ -3,7 +3,9 @@ import { useMemo } from 'react';
 import type { OrchestrationStateStore } from '../useOrchestrationModel.helpers';
 import type { OrchestrationStore, OrchestrationStoreState } from './useOrchestrationStore';
 
-export function buildOrchestrationSetters(setters: OrchestrationStateStore): OrchestrationStateStore {
+export function buildOrchestrationSetters(
+  setters: OrchestrationStateStore,
+): OrchestrationStateStore {
   return {
     setLoading: setters.setLoading,
     setRefreshing: setters.setRefreshing,
@@ -19,7 +21,10 @@ export function buildOrchestrationSetters(setters: OrchestrationStateStore): Orc
   };
 }
 
-export function buildOrchestrationStore(values: OrchestrationStoreState, setters: OrchestrationStateStore): OrchestrationStore {
+export function buildOrchestrationStore(
+  values: OrchestrationStoreState,
+  setters: OrchestrationStateStore,
+): OrchestrationStore {
   return {
     loading: values.loading,
     refreshing: values.refreshing,
@@ -36,7 +41,9 @@ export function buildOrchestrationStore(values: OrchestrationStoreState, setters
   };
 }
 
-export function useStableOrchestrationSetters(setters: OrchestrationStateStore): OrchestrationStateStore {
+export function useStableOrchestrationSetters(
+  setters: OrchestrationStateStore,
+): OrchestrationStateStore {
   const {
     setActionError,
     setActionMessage,
@@ -50,29 +57,33 @@ export function useStableOrchestrationSetters(setters: OrchestrationStateStore):
     setSessions,
     setState,
   } = setters;
-  return useMemo(() => buildOrchestrationSetters({
-    setLoading,
-    setRefreshing,
-    setError,
-    setActionError,
-    setActionMessage,
-    setState,
-    setSessions,
-    setSelectedSessionId,
-    setProviderEvent,
-    setLatestVerificationSummary,
-    setLatestResult,
-  }), [
-    setActionError,
-    setActionMessage,
-    setError,
-    setLatestResult,
-    setLatestVerificationSummary,
-    setLoading,
-    setProviderEvent,
-    setRefreshing,
-    setSelectedSessionId,
-    setSessions,
-    setState,
-  ]);
+  return useMemo(
+    () =>
+      buildOrchestrationSetters({
+        setLoading,
+        setRefreshing,
+        setError,
+        setActionError,
+        setActionMessage,
+        setState,
+        setSessions,
+        setSelectedSessionId,
+        setProviderEvent,
+        setLatestVerificationSummary,
+        setLatestResult,
+      }),
+    [
+      setActionError,
+      setActionMessage,
+      setError,
+      setLatestResult,
+      setLatestVerificationSummary,
+      setLoading,
+      setProviderEvent,
+      setRefreshing,
+      setSelectedSessionId,
+      setSessions,
+      setState,
+    ],
+  );
 }

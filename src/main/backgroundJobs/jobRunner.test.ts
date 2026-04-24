@@ -69,18 +69,20 @@ beforeEach(() => {
 
   // Bridge mock — captures callbacks and exposes them for tests to drive
   vi.doMock('../ptyAgentBridge', () => ({
-    createAgentBridge: vi.fn((opts: {
-      sessionId: string;
-      onEvent: (e: unknown) => void;
-      onComplete: (res: { result?: string } | null, exitCode: number) => void;
-    }) => {
-      bridgeOnComplete = opts.onComplete;
-      bridgeOnEvent = opts.onEvent;
-      return {
-        feed: vi.fn(),
-        handleExit: (code: number) => opts.onComplete(null, code),
-      };
-    }),
+    createAgentBridge: vi.fn(
+      (opts: {
+        sessionId: string;
+        onEvent: (e: unknown) => void;
+        onComplete: (res: { result?: string } | null, exitCode: number) => void;
+      }) => {
+        bridgeOnComplete = opts.onComplete;
+        bridgeOnEvent = opts.onEvent;
+        return {
+          feed: vi.fn(),
+          handleExit: (code: number) => opts.onComplete(null, code),
+        };
+      },
+    ),
   }));
 });
 
@@ -90,7 +92,11 @@ afterEach(() => {
     Object.defineProperty(process, 'platform', originalPlatform);
   }
   vi.resetModules();
-  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* Windows file lock */ }
+  try {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  } catch {
+    /* Windows file lock */
+  }
 });
 
 describe('createJobRunner', () => {

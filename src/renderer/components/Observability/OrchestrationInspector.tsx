@@ -98,8 +98,7 @@ export function OrchestrationInspector({
   const [activeTab, setActiveTab] = useState<TabId>('traffic');
   const { currentSessions } = useAgentEventsContext();
 
-  const sessionId =
-    propSessionId ?? currentSessions[0]?.id ?? '';
+  const sessionId = propSessionId ?? currentSessions[0]?.id ?? '';
 
   const handleExport = (): void => {
     if (!sessionId) return;

@@ -22,7 +22,11 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   error: { label: 'Error', color: 'var(--status-error)' },
 };
 
-export const Tooltip = memo(function Tooltip({ data }: { data: TooltipData }): React.ReactElement<unknown> {
+export const Tooltip = memo(function Tooltip({
+  data,
+}: {
+  data: TooltipData;
+}): React.ReactElement<unknown> {
   const { label: statusLabel, color: statusColor } = STATUS_MAP[data.status] ?? STATUS_MAP.error;
 
   return (

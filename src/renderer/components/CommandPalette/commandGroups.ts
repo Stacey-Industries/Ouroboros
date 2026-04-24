@@ -40,7 +40,9 @@ function createWindowCommand(): Command {
     category: 'app',
     shortcut: 'Ctrl+Shift+N',
     icon: '+',
-    action: () => { void window.electronAPI.window.create(); },
+    action: () => {
+      void window.electronAPI.window.create();
+    },
   };
 }
 
@@ -91,6 +93,38 @@ function viewCommands(): Command[] {
   ];
 }
 
+const TERMINAL_CHILDREN: Command[] = [
+  {
+    id: 'terminal:new-tab',
+    label: 'New Tab',
+    category: 'terminal',
+    shortcut: 'Ctrl+Shift+`',
+    icon: '+',
+    action: () => {
+      dispatchIdeEvent('agent-ide:new-terminal');
+    },
+  },
+  {
+    id: 'terminal:close-tab',
+    label: 'Close Tab',
+    category: 'terminal',
+    icon: 'Ã—',
+    action: () => {
+      dispatchIdeEvent('agent-ide:close-terminal');
+    },
+  },
+  {
+    id: 'terminal:toggle',
+    label: 'Toggle Panel',
+    category: 'terminal',
+    shortcut: 'Ctrl+J',
+    icon: 'â¬›',
+    action: () => {
+      dispatchIdeEvent('agent-ide:toggle-terminal');
+    },
+  },
+];
+
 /** Terminal submenu commands. */
 function terminalCommands(): Command {
   return {
@@ -98,38 +132,10 @@ function terminalCommands(): Command {
     label: 'Terminal',
     category: 'terminal',
     icon: '>_',
-    action: () => { /* submenu */ },
-    children: [
-      {
-        id: 'terminal:new-tab',
-        label: 'New Tab',
-        category: 'terminal',
-        shortcut: 'Ctrl+Shift+`',
-        icon: '+',
-        action: () => {
-          dispatchIdeEvent('agent-ide:new-terminal');
-        },
-      },
-      {
-        id: 'terminal:close-tab',
-        label: 'Close Tab',
-        category: 'terminal',
-        icon: 'Ã—',
-        action: () => {
-          dispatchIdeEvent('agent-ide:close-terminal');
-        },
-      },
-      {
-        id: 'terminal:toggle',
-        label: 'Toggle Panel',
-        category: 'terminal',
-        shortcut: 'Ctrl+J',
-        icon: 'â¬›',
-        action: () => {
-          dispatchIdeEvent('agent-ide:toggle-terminal');
-        },
-      },
-    ],
+    action: () => {
+      /* submenu */
+    },
+    children: TERMINAL_CHILDREN,
   };
 }
 

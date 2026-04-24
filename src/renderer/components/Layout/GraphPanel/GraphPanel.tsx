@@ -19,8 +19,15 @@ import { useGraphViewport } from './useGraphViewport';
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
-interface GraphData { nodes: RawGraphNode[]; edges: RawGraphEdge[] }
-type FetchState = { status: 'loading' } | { status: 'ready'; data: GraphData } | { status: 'empty' } | { status: 'error' };
+interface GraphData {
+  nodes: RawGraphNode[];
+  edges: RawGraphEdge[];
+}
+type FetchState =
+  | { status: 'loading' }
+  | { status: 'ready'; data: GraphData }
+  | { status: 'empty' }
+  | { status: 'error' };
 
 async function fetchGraphData(): Promise<GraphData | null> {
   const arch = await window.electronAPI.graph.getArchitecture();
@@ -38,8 +45,12 @@ function useGraphData(): FetchState {
       .then((data) => {
         if (!cancelled) setState(data ? { status: 'ready', data } : { status: 'empty' });
       })
-      .catch(() => { if (!cancelled) setState({ status: 'error' }); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return state;
 }
@@ -68,13 +79,23 @@ function dispatchZoom(container: HTMLDivElement | null, deltaY: number): void {
   const canvas = container?.querySelector('canvas');
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
-  canvas.dispatchEvent(new WheelEvent('wheel', {
-    deltaY, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2,
-    bubbles: true, cancelable: true,
-  }));
+  canvas.dispatchEvent(
+    new WheelEvent('wheel', {
+      deltaY,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+
+function filterNodes(state: FetchState, filter: string): RawGraphNode[] {
+  if (state.status !== 'ready') return [];
+  return filter === '' ? state.data.nodes : state.data.nodes.filter((n) => n.name.toLowerCase().includes(filter.toLowerCase()));
+}
 
 export function GraphPanel(): React.ReactElement {
   const fetchState = useGraphData();
@@ -82,31 +103,24 @@ export function GraphPanel(): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { w, h } = useContainerSize(containerRef);
-
-  const rawNodes = fetchState.status === 'ready'
-    ? fetchState.data.nodes.filter((n) => filter === '' || n.name.toLowerCase().includes(filter.toLowerCase()))
-    : [];
+  const rawNodes = filterNodes(fetchState, filter);
   const rawEdges = fetchState.status === 'ready' ? fetchState.data.edges : [];
-
   const { nodes, edges } = useGraphLayout(rawNodes, rawEdges);
   const { transform, onWheel, onPointerDown, onPointerMove, onPointerUp, resetView } = useGraphViewport();
-
   const handleZoomIn = useCallback(() => dispatchZoom(containerRef.current, -120), []);
   const handleZoomOut = useCallback(() => dispatchZoom(containerRef.current, 120), []);
-
   const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, transform.scale));
   const isLoading = fetchState.status === 'loading';
   const isEmpty = fetchState.status === 'empty' || fetchState.status === 'error';
-
   return (
     <div className="flex h-full w-full flex-col bg-surface-raised">
-      <GraphPanelHeader scale={clampedScale} filter={filter} onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut} onResetView={resetView} onFilterChange={setFilter} />
+      <GraphPanelHeader scale={clampedScale} filter={filter} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={resetView} onFilterChange={setFilter} />
       <div ref={containerRef} className="relative flex-1 overflow-hidden">
-        {(isLoading || isEmpty) ? <GraphPanelEmpty loading={isLoading} /> : (
+        {isLoading || isEmpty ? <GraphPanelEmpty loading={isLoading} /> : (
           <GraphCanvas nodes={nodes} edges={edges} transform={transform} selectedId={selectedId}
             width={w} height={h} onWheel={onWheel} onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove} onPointerUp={onPointerUp} onNodeClick={setSelectedId} />
+            onPointerMove={onPointerMove} onPointerUp={onPointerUp} onNodeClick={setSelectedId}
+          />
         )}
       </div>
     </div>

@@ -52,9 +52,13 @@ async function loadLatestSessionForCommand(args: {
     args.toast(args.missingSessionMessage, 'info');
     return null;
   } catch (error) {
-    args.toast(`${args.loadErrorPrefix}: ${error instanceof Error ? error.message : String(error)}`, 'error', {
-      duration: 7000,
-    });
+    args.toast(
+      `${args.loadErrorPrefix}: ${error instanceof Error ? error.message : String(error)}`,
+      'error',
+      {
+        duration: 7000,
+      },
+    );
     return null;
   }
 }
@@ -110,15 +114,25 @@ export async function resumeLatestOrchestrationTask(args: {
     emitOrchestrationOpen(latestSession.id);
     const result = await window.electronAPI.orchestration.resumeTask(latestSession.id);
     if (!result.success) {
-      args.toast(`Unable to resume orchestration: ${result.error ?? 'unknown error'}`, 'error', { duration: 7000 });
+      args.toast(`Unable to resume orchestration: ${result.error ?? 'unknown error'}`, 'error', {
+        duration: 7000,
+      });
       return;
     }
 
     const sessionId = result.session?.id ?? latestSession.id;
     emitOrchestrationOpen(sessionId);
-    args.toast('Resumed latest orchestration task.', 'success', createOrchestrationActionOptions(sessionId));
+    args.toast(
+      'Resumed latest orchestration task.',
+      'success',
+      createOrchestrationActionOptions(sessionId),
+    );
   } catch (error) {
-    args.toast(`Unable to resume orchestration: ${error instanceof Error ? error.message : String(error)}`, 'error', { duration: 7000 });
+    args.toast(
+      `Unable to resume orchestration: ${error instanceof Error ? error.message : String(error)}`,
+      'error',
+      { duration: 7000 },
+    );
   }
 }
 
@@ -145,14 +159,22 @@ export async function rerunLatestOrchestrationVerification(args: {
       latestSession.request.verificationProfile,
     );
     if (!result.success) {
-      args.toast(`Unable to rerun orchestration verification: ${result.error ?? 'unknown error'}`, 'error', { duration: 7000 });
+      args.toast(
+        `Unable to rerun orchestration verification: ${result.error ?? 'unknown error'}`,
+        'error',
+        { duration: 7000 },
+      );
       return;
     }
 
     notifyVerificationRerunSuccess(args, latestSession, result);
   } catch (error) {
-    args.toast(`Unable to rerun orchestration verification: ${error instanceof Error ? error.message : String(error)}`, 'error', {
-      duration: 7000,
-    });
+    args.toast(
+      `Unable to rerun orchestration verification: ${error instanceof Error ? error.message : String(error)}`,
+      'error',
+      {
+        duration: 7000,
+      },
+    );
   }
 }

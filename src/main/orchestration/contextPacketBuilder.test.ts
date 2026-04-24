@@ -179,7 +179,14 @@ describe('contextPacketBuilder', () => {
         verificationProfile: 'fast',
         budget: { maxFiles: 10, maxBytes: 200_000, maxTokens: 50_000 },
         contextSelection: {
-          includedFiles: ['src/large.ts', 'src/small1.ts', 'src/small2.ts', 'src/small3.ts', 'src/small4.ts', 'src/small5.ts'],
+          includedFiles: [
+            'src/large.ts',
+            'src/small1.ts',
+            'src/small2.ts',
+            'src/small3.ts',
+            'src/small4.ts',
+            'src/small5.ts',
+          ],
         },
       },
       repoFacts: createRepoFacts(root),
@@ -367,8 +374,8 @@ describe('contextPacketBuilder', () => {
     const paths = result.packet.files.map((f) => f.filePath);
     expect(paths).toContain(file1);
     expect(paths).toContain(file2);
-    expect(result.packet.omittedCandidates.filter((c) =>
-      c.filePath === file1 || c.filePath === file2,
-    )).toHaveLength(0);
+    expect(
+      result.packet.omittedCandidates.filter((c) => c.filePath === file1 || c.filePath === file2),
+    ).toHaveLength(0);
   });
 });

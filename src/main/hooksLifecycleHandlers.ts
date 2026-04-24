@@ -112,9 +112,10 @@ export function handleCwdChanged(
  * that files may have changed on disk (lighter signal than onGitCommit).
  * Also marks user edits for provenance tracking when no recent agent edit exists.
  */
-export function handleFileChanged(
-  payload: { internal?: boolean; data?: Record<string, unknown> },
-): void {
+export function handleFileChanged(payload: {
+  internal?: boolean;
+  data?: Record<string, unknown>;
+}): void {
   if (payload.internal) return;
   getContextLayerController()?.onFileChanged?.();
   getGraphController()?.onFileChange?.([]);

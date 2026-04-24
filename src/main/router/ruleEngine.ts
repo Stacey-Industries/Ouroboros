@@ -60,10 +60,7 @@ function matchHaikuRules(
 }
 
 /** H1 — User directly answers a question the assistant just asked. */
-function matchH1(
-  prompt: string,
-  prevAssistant?: string,
-): RuleEngineResult | null {
+function matchH1(prompt: string, prevAssistant?: string): RuleEngineResult | null {
   if (!prevAssistant) return null;
   if (!prevAssistant.trimEnd().endsWith('?')) return null;
   // Short direct answer — not a new topic or bug report
@@ -93,9 +90,16 @@ function matchH2(lower: string): RuleEngineResult | null {
 /** H3 — Factual question with a definite answer. */
 function matchH3(lower: string): RuleEngineResult | null {
   const factualPhrases = [
-    'what does', 'what is', 'where is', 'how does',
-    'does it load', 'does claude', 'which one is',
-    'what are the', 'how many', 'how do i',
+    'what does',
+    'what is',
+    'where is',
+    'how does',
+    'does it load',
+    'does claude',
+    'which one is',
+    'what are the',
+    'how many',
+    'how do i',
   ];
   if (!factualPhrases.some((ph) => lower.includes(ph))) return null;
   // Exclude questions that need investigation (long or multi-sentence)
@@ -122,10 +126,7 @@ function matchH4(prompt: string): RuleEngineResult | null {
 }
 
 /** H5 — Simple continuation in a predefined sequence. */
-function matchH5(
-  lower: string,
-  prevAssistant?: string,
-): RuleEngineResult | null {
+function matchH5(lower: string, prevAssistant?: string): RuleEngineResult | null {
   if (lower.length > 40) return null;
   const navPatterns = [
     /^(next|continue|keep going|move on)\.?$/,
@@ -143,12 +144,7 @@ function matchH5(
 
 function matchOpusRules(lower: string): RuleEngineResult | null {
   return (
-    matchO1(lower) ??
-    matchO2(lower) ??
-    matchO3(lower) ??
-    matchO4(lower) ??
-    matchO5(lower) ??
-    null
+    matchO1(lower) ?? matchO2(lower) ?? matchO3(lower) ?? matchO4(lower) ?? matchO5(lower) ?? null
   );
 }
 
@@ -175,9 +171,11 @@ function matchO1(lower: string): RuleEngineResult | null {
 
 /** O2 — Planning or architecture at system scope. */
 function matchO2(lower: string): RuleEngineResult | null {
-  const planningVerbs = /\b(create a plan|design|architect|spec out|build a (?:detailed |thorough )?plan)\b/;
+  const planningVerbs =
+    /\b(create a plan|design|architect|spec out|build a (?:detailed |thorough )?plan)\b/;
   if (!planningVerbs.test(lower)) return null;
-  const scopeSignals = /\b(entire|whole|all|across|system|codebase|end[- ]to[- ]end|backend.+frontend|frontend.+backend)\b/;
+  const scopeSignals =
+    /\b(entire|whole|all|across|system|codebase|end[- ]to[- ]end|backend.+frontend|frontend.+backend)\b/;
   if (!scopeSignals.test(lower)) return null;
   return opus('O2');
 }
@@ -185,10 +183,16 @@ function matchO2(lower: string): RuleEngineResult | null {
 /** O3 — Competitive/comparative design references. */
 function matchO3(lower: string): RuleEngineResult | null {
   const competitors = [
-    'like cursor', 'like windsurf', 'like vs code',
-    'like vscode', 'similar to cursor', 'similar to windsurf',
-    'industry standard', 'best practice',
-    'like copilot', 'like kiro',
+    'like cursor',
+    'like windsurf',
+    'like vs code',
+    'like vscode',
+    'similar to cursor',
+    'similar to windsurf',
+    'industry standard',
+    'best practice',
+    'like copilot',
+    'like kiro',
   ];
   if (!competitors.some((c) => lower.includes(c))) return null;
   return opus('O3');
@@ -197,8 +201,12 @@ function matchO3(lower: string): RuleEngineResult | null {
 /** O4 — Multiple unrelated concerns needing prioritization. */
 function matchO4(lower: string): RuleEngineResult | null {
   const issueMarkers = [
-    'additionally', 'also,', 'second,', 'third,',
-    'on top of that', 'another thing',
+    'additionally',
+    'also,',
+    'second,',
+    'third,',
+    'on top of that',
+    'another thing',
   ];
   const matchCount = issueMarkers.filter((m) => lower.includes(m)).length;
   // Need 2+ distinct concern markers
@@ -232,11 +240,7 @@ function matchSonnetConfirmation(
   lower: string,
   prevAssistant?: string,
 ): RuleEngineResult | null {
-  return (
-    matchS1(lower) ??
-    matchS3(lower, prevAssistant) ??
-    null
-  );
+  return matchS1(lower) ?? matchS3(lower, prevAssistant) ?? null;
 }
 
 /** S1 — Pasted-only prompt with no readable instruction. */
@@ -246,10 +250,7 @@ function matchS1(lower: string): RuleEngineResult | null {
 }
 
 /** S3 — "Go ahead" after assistant presented a plan. */
-function matchS3(
-  lower: string,
-  prevAssistant?: string,
-): RuleEngineResult | null {
+function matchS3(lower: string, prevAssistant?: string): RuleEngineResult | null {
   if (!prevAssistant || prevAssistant.length < 300) return null;
   const goAheadPatterns = /^(go ahead|proceed|execute|make those changes|do it|yes.{0,20}go ahead)/;
   if (!goAheadPatterns.test(lower)) return null;
@@ -274,17 +275,32 @@ function opus(rule: RuleCode): RuleEngineResult {
 function hasNewObservationSignal(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   const signals = [
-    'but now', 'also ', 'still ', 'another ',
-    'it shows', 'it says', 'i see', 'i notice',
-    'error', 'crash', 'broken', 'not working',
+    'but now',
+    'also ',
+    'still ',
+    'another ',
+    'it shows',
+    'it says',
+    'i see',
+    'i notice',
+    'error',
+    'crash',
+    'broken',
+    'not working',
   ];
   return signals.some((s) => lower.includes(s));
 }
 
 function hasJudgmentSignal(lower: string): boolean {
   const signals = [
-    'think', 'should', 'recommend', 'evaluate',
-    'improve', 'best', 'better', 'worth',
+    'think',
+    'should',
+    'recommend',
+    'evaluate',
+    'improve',
+    'best',
+    'better',
+    'worth',
   ];
   return signals.some((s) => lower.includes(s));
 }

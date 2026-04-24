@@ -116,7 +116,7 @@ describe('PAT_WRONG_API', () => {
   });
 
   it('matches "old way in React" — high confidence', () => {
-    const hit = detectCorrection("createClass is the old way in React");
+    const hit = detectCorrection('createClass is the old way in React');
     expect(hit).not.toBeNull();
     expect(hit?.library).toBe('React');
     expect(hit?.confidence).toBe('high');
@@ -140,7 +140,7 @@ describe('PAT_DONT_USE (low confidence)', () => {
     expect(hit?.library).toBe('React');
   });
 
-  it('returns null when no library present alongside don\'t use', () => {
+  it("returns null when no library present alongside don't use", () => {
     const hit = detectCorrection("don't use that pattern here");
     expect(hit).toBeNull();
   });
@@ -150,12 +150,12 @@ describe('PAT_DONT_USE (low confidence)', () => {
 
 describe('library extraction from curated list', () => {
   it('finds TypeScript (case-insensitive match: "typescript")', () => {
-    const hit = detectCorrection("that is wrong, typescript strict mode changed this");
+    const hit = detectCorrection('that is wrong, typescript strict mode changed this');
     expect(hit?.library).toBe('TypeScript');
   });
 
   it('finds Zustand when mentioned alongside a correction phrase', () => {
-    const hit = detectCorrection("that is wrong — Zustand changed its selector API in v5");
+    const hit = detectCorrection('that is wrong — Zustand changed its selector API in v5');
     expect(hit?.library).toBe('Zustand');
   });
 
@@ -174,7 +174,7 @@ describe('confidence ladder', () => {
   });
 
   it('medium: correction keyword + library found via list scan', () => {
-    const hit = detectCorrection("that is wrong, the React API changed");
+    const hit = detectCorrection('that is wrong, the React API changed');
     expect(hit?.confidence).toBe('medium');
   });
 

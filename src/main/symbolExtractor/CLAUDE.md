@@ -1,13 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-**Regex vs AST trade-off here**: This module deliberately avoids AST parsing (no `@typescript-eslint/parser`, no `ts-morph`). That makes it fast and dependency-free but means it can only handle the *textual* shape of exports — it can't resolve `export * from` chains or infer `kind` for re-exports. The `kind: 'unknown'` on re-exports is the visible seam of this trade-off.
 
-**Comment stripping preserves line numbers**: Instead of removing comment text, `stripComments` replaces each non-newline character with a space. This means line N in the stripped source still corresponds to line N in the original — critical for the `line` field on `ExtractedSymbol` to be accurate.
-
-**The `MULTILINE_LOOKAHEAD = 5` cap is load-bearing**: Without a cap, a pathological file with no closing paren would cause the inner loop to scan the entire file for every function definition. The fixed window keeps worst-case behavior linear in file size.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md covers: the no-AST design, all six symbol kinds and their edge cases (especially `const` arrow functions), the two silent-skip conditions (`.d.ts` and >500KB), the multiline lookahead mechanism, every consumer module, and the `SymbolIndex` API including the destructive `build()` behavior.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

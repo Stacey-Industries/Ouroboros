@@ -1,13 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The `credentialStore` uses a write-through cache pattern (`cache = store` at the end of `writeStore`) rather than invalidating on write. This means reads after writes are always served from the in-process object — zero disk I/O after the first load. The trade-off is that two processes can't share this store safely, which is fine here since only the main process touches it.
-`─────────────────────────────────────────────────`
 
-Key corrections from the previous version:
-
-- **`tokenRefreshManager` description fixed** — it was documented as "proactively refreshes Anthropic OAuth" but the code explicitly skips Anthropic (`if (provider === 'anthropic') return false`) because CLI-managed tokens are refreshed by the CLI itself. The manager currently does nothing at runtime.
-- **`gitCredentials.ts` role clarified** — the old description implied it did env injection; it only logs. The actual injection is `pty.ts` calling `getGitHubToken()` directly.
-- Everything else (atomic writes, PKCE ephemeral port, `safeStorage` silent fallback, orchestration duplicate) was accurate and retained.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

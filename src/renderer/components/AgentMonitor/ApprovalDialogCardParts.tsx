@@ -122,9 +122,7 @@ export function PreviewPanel({ request }: { request: ApprovalRequest }): React.R
       style={{ backgroundColor: 'var(--bg-deeper, rgba(0,0,0,0.2))' }}
     >
       <ToolInputPreview toolName={request.toolName} input={request.toolInput} />
-      {request.permissionContext && (
-        <PermissionContextBadge context={request.permissionContext} />
-      )}
+      {request.permissionContext && <PermissionContextBadge context={request.permissionContext} />}
     </div>
   );
 }

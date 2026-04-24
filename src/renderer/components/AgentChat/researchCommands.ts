@@ -9,10 +9,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ResearchCommandId =
-  | 'research'
-  | 'spec-with-research'
-  | 'implement-with-research';
+export type ResearchCommandId = 'research' | 'spec-with-research' | 'implement-with-research';
 
 export interface ParsedResearchCommand {
   cmd: ResearchCommandId;
@@ -27,8 +24,7 @@ export interface RunResearchResult {
 
 // ─── Parse ────────────────────────────────────────────────────────────────────
 
-const RESEARCH_CMD_RE =
-  /^\/(research|spec-with-research|implement-with-research)\s+([\s\S]+)/i;
+const RESEARCH_CMD_RE = /^\/(research|spec-with-research|implement-with-research)\s+([\s\S]+)/i;
 
 /**
  * Parse a composer draft into a research command + topic.

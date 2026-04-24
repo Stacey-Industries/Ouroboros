@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SearchBarProps, SearchMatch } from './SearchBar';
-import { clearHighlights, getMatchLabel, searchInContainer, syncActiveMatch } from './SearchBar.search';
+import {
+  clearHighlights,
+  getMatchLabel,
+  searchInContainer,
+  syncActiveMatch,
+} from './SearchBar.search';
 
 interface SearchState {
   query: string;
@@ -68,13 +73,16 @@ function useResetResults(
   setActiveMatchIndex: React.Dispatch<React.SetStateAction<number>>,
   onMatchLinesChange?: (lines: number[]) => void,
 ): (notifyLines: boolean) => void {
-  return useCallback((notifyLines: boolean) => {
-    setMatches([]);
-    setActiveMatchIndex(0);
-    if (notifyLines) {
-      onMatchLinesChange?.([]);
-    }
-  }, [onMatchLinesChange, setActiveMatchIndex, setMatches]);
+  return useCallback(
+    (notifyLines: boolean) => {
+      setMatches([]);
+      setActiveMatchIndex(0);
+      if (notifyLines) {
+        onMatchLinesChange?.([]);
+      }
+    },
+    [onMatchLinesChange, setActiveMatchIndex, setMatches],
+  );
 }
 
 function useSearchRunner(params: SearchRunnerParams): () => void {
@@ -103,10 +111,22 @@ function useSearchRunner(params: SearchRunnerParams): () => void {
     setMatches(result.matches);
     setActiveMatchIndex(0);
     onMatchLinesChange?.(result.lineNumbers);
-  }, [caseSensitive, codeContainer, onMatchLinesChange, query, resetResults, setActiveMatchIndex, setMatches, useRegex]);
+  }, [
+    caseSensitive,
+    codeContainer,
+    onMatchLinesChange,
+    query,
+    resetResults,
+    setActiveMatchIndex,
+    setMatches,
+    useRegex,
+  ]);
 }
 
-function useFocusOnOpen(visible: boolean, inputRef: React.RefObject<HTMLInputElement | null>): void {
+function useFocusOnOpen(
+  visible: boolean,
+  inputRef: React.RefObject<HTMLInputElement | null>,
+): void {
   useEffect(() => {
     if (!visible || !inputRef.current) {
       return;
@@ -133,7 +153,11 @@ function useDebouncedSearch(performSearch: () => void): void {
   }, [performSearch]);
 }
 
-function useActiveMatchSync(codeContainer: HTMLElement | null, activeMatchIndex: number, matchCount: number): void {
+function useActiveMatchSync(
+  codeContainer: HTMLElement | null,
+  activeMatchIndex: number,
+  matchCount: number,
+): void {
   useEffect(() => {
     syncActiveMatch(codeContainer, activeMatchIndex);
   }, [activeMatchIndex, codeContainer, matchCount]);
@@ -187,23 +211,51 @@ function useCloseSearch(
 }
 
 function useSearchKeyDown(handleClose: () => void, goToPrev: () => void, goToNext: () => void) {
-  return useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      handleClose();
-      return;
-    }
-    if (event.key === 'Enter' && event.shiftKey) {
-      event.preventDefault();
-      goToPrev();
-      return;
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      goToNext();
-    }
-  }, [goToNext, goToPrev, handleClose]);
+  return useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleClose();
+        return;
+      }
+      if (event.key === 'Enter' && event.shiftKey) {
+        event.preventDefault();
+        goToPrev();
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        goToNext();
+      }
+    },
+    [goToNext, goToPrev, handleClose],
+  );
+}
+
+interface SearchControllerParts {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  state: ReturnType<typeof useSearchState>;
+  goToNext: () => void;
+  goToPrev: () => void;
+  handleClose: () => void;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+}
+
+function buildSearchController(parts: SearchControllerParts): SearchBarController {
+  const { inputRef, state, goToNext, goToPrev, handleClose, handleKeyDown } = parts;
+  return {
+    inputRef,
+    query: state.query,
+    setQuery: state.setQuery,
+    caseSensitive: state.caseSensitive,
+    toggleCaseSensitive: () => state.setCaseSensitive((v) => !v),
+    useRegex: state.useRegex,
+    toggleRegex: () => state.setUseRegex((v) => !v),
+    matchLabel: getMatchLabel(state.query, state.matches.length, state.activeMatchIndex),
+    canNavigate: state.matches.length > 0,
+    goToPrev, goToNext, handleClose, handleKeyDown,
+  };
 }
 
 export function useSearchBarController(props: SearchBarProps): SearchBarController {
@@ -212,14 +264,9 @@ export function useSearchBarController(props: SearchBarProps): SearchBarControll
   const state = useSearchState();
   const resetResults = useResetResults(state.setMatches, state.setActiveMatchIndex, onMatchLinesChange);
   const performSearch = useSearchRunner({
-    codeContainer,
-    query: state.query,
-    caseSensitive: state.caseSensitive,
-    useRegex: state.useRegex,
-    resetResults,
-    setMatches: state.setMatches,
-    setActiveMatchIndex: state.setActiveMatchIndex,
-    onMatchLinesChange,
+    codeContainer, query: state.query, caseSensitive: state.caseSensitive,
+    useRegex: state.useRegex, resetResults, setMatches: state.setMatches,
+    setActiveMatchIndex: state.setActiveMatchIndex, onMatchLinesChange,
   });
   useFocusOnOpen(visible, inputRef);
   useDebouncedSearch(performSearch);
@@ -228,19 +275,5 @@ export function useSearchBarController(props: SearchBarProps): SearchBarControll
   const { goToNext, goToPrev } = useMatchNavigation(state.matches.length, state.setActiveMatchIndex);
   const handleClose = useCloseSearch(codeContainer, onClose, state.setMatches, state.setActiveMatchIndex);
   const handleKeyDown = useSearchKeyDown(handleClose, goToPrev, goToNext);
-  return {
-    inputRef,
-    query: state.query,
-    setQuery: state.setQuery,
-    caseSensitive: state.caseSensitive,
-    toggleCaseSensitive: () => state.setCaseSensitive((value) => !value),
-    useRegex: state.useRegex,
-    toggleRegex: () => state.setUseRegex((value) => !value),
-    matchLabel: getMatchLabel(state.query, state.matches.length, state.activeMatchIndex),
-    canNavigate: state.matches.length > 0,
-    goToPrev,
-    goToNext,
-    handleClose,
-    handleKeyDown,
-  };
+  return buildSearchController({ inputRef, state, goToNext, goToPrev, handleClose, handleKeyDown });
 }

@@ -30,7 +30,6 @@ vi.mock('../../hooks/useDispatchJobs', () => ({
   }),
 }));
 
-
 vi.mock('../../contexts/ProjectContext', () => ({
   useProject: () => ({
     projectRoots: ['/projects/alpha', '/projects/beta'],
@@ -44,7 +43,9 @@ vi.mock('../../contexts/ProjectContext', () => ({
 
 const mockDispatchTask = vi.fn();
 
-afterEach(() => { cleanup(); });
+afterEach(() => {
+  cleanup();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -77,7 +78,9 @@ describe('DispatchScreen', () => {
     render(<DispatchScreen />);
 
     fireEvent.change(screen.getByTestId('dispatch-title-input'), { target: { value: 'My Task' } });
-    fireEvent.change(screen.getByTestId('dispatch-prompt-input'), { target: { value: 'Do something useful' } });
+    fireEvent.change(screen.getByTestId('dispatch-prompt-input'), {
+      target: { value: 'Do something useful' },
+    });
 
     await act(async () => {
       fireEvent.submit(screen.getByTestId('dispatch-form'));

@@ -1,11 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getConfigValue, type AppConfig } from '../../config';
+import { type AppConfig, getConfigValue } from '../../config';
 import {
   getCodexTransportDecision,
-  resolveCodexSettings,
   resetCodexAppServerCapabilityCacheForTests,
+  resolveCodexSettings,
   setCodexAppServerCapabilityProbeForTests,
+  shouldRetryCodexWithoutResume,
   supportsCodexChatPermissionMode,
 } from './codexAdapterHelpers';
 import type { ProviderLaunchContext } from './providerAdapter';
@@ -47,11 +48,30 @@ function makeContext(permissionMode?: string): ProviderLaunchContext {
       repoFacts: {
         workspaceRoots: ['C:/repo'],
         roots: [],
-        gitDiff: { changedFiles: [], totalAdditions: 0, totalDeletions: 0, changedFileCount: 0, generatedAt: 1 },
-        diagnostics: { files: [], totalErrors: 0, totalWarnings: 0, totalInfos: 0, totalHints: 0, generatedAt: 1 },
+        gitDiff: {
+          changedFiles: [],
+          totalAdditions: 0,
+          totalDeletions: 0,
+          changedFileCount: 0,
+          generatedAt: 1,
+        },
+        diagnostics: {
+          files: [],
+          totalErrors: 0,
+          totalWarnings: 0,
+          totalInfos: 0,
+          totalHints: 0,
+          generatedAt: 1,
+        },
         recentEdits: { files: [], generatedAt: 1 },
       },
-      liveIdeState: { selectedFiles: [], openFiles: [], dirtyFiles: [], dirtyBuffers: [], collectedAt: 1 },
+      liveIdeState: {
+        selectedFiles: [],
+        openFiles: [],
+        dirtyFiles: [],
+        dirtyBuffers: [],
+        collectedAt: 1,
+      },
       files: [],
       omittedCandidates: [],
       budget: { estimatedBytes: 0, estimatedTokens: 0, droppedContentNotes: [] },
@@ -156,11 +176,11 @@ describe('codexAdapterHelpers', () => {
     expect(() => resolveCodexSettings(makeContext('bypassPermissions'))).not.toThrow();
   });
 
-  it('keeps exec transport and skips probing when the flag is off', () => {
+  it('uses app-server as the primary transport even when the legacy flag is off', () => {
     const probe = vi.fn(() => ({ available: true, version: '0.122.0' }));
     setCodexAppServerCapabilityProbeForTests(probe);
 
-    expect(getCodexTransportDecision(makeContext('auto')).transport).toBe('exec');
+    expect(getCodexTransportDecision(makeContext('auto')).transport).toBe('app-server');
     expect(probe).not.toHaveBeenCalled();
   });
 
@@ -184,7 +204,7 @@ describe('codexAdapterHelpers', () => {
     expect(getCodexTransportDecision(makeContext('auto')).transport).toBe('app-server');
   });
 
-  it('falls back to exec with a warning when capability is missing', () => {
+  it('keeps app-server primary when capability probing would fail', () => {
     getConfigValueMock.mockImplementation((key: keyof AppConfig) => {
       if (key === 'ecosystem') return { codexAppServerTransport: true } as AppConfig['ecosystem'];
       return {
@@ -206,7 +226,16 @@ describe('codexAdapterHelpers', () => {
     }));
 
     const decision = getCodexTransportDecision(makeContext('plan'));
-    expect(decision.transport).toBe('exec');
-    expect(decision.warning).toContain('app-server transport unavailable');
+    expect(decision.transport).toBe('app-server');
+    expect(decision.warning).toBeUndefined();
+  });
+
+  it('retries without resume only for missing-rollout resume failures', () => {
+    expect(
+      shouldRetryCodexWithoutResume(
+        new Error('thread/resume failed: no rollout found for thread id 123'),
+      ),
+    ).toBe(true);
+    expect(shouldRetryCodexWithoutResume(new Error('something else failed'))).toBe(false);
   });
 });

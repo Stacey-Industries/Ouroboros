@@ -85,10 +85,7 @@ function makeThread(
 }
 
 /** Build an assistant message record with an optional preSnapshotHash. */
-function makeMessage(
-  id: string,
-  preSnapshotHash?: string,
-): AgentChatThreadRecord['messages'][0] {
+function makeMessage(id: string, preSnapshotHash?: string): AgentChatThreadRecord['messages'][0] {
   return {
     id,
     role: 'assistant',
@@ -231,11 +228,13 @@ describe('revertToSnapshotWithBridge — guard conditions', () => {
       ['send-1', { threadId: 'thread-OTHER' } as ActiveStreamContext],
     ]);
     // No diff output → no files changed, so it completes without needing unlink
-    execFileMock.mockImplementation(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileMock.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (_cmd: any, _args: any, _opts: any, cb: any) => {
-      cb(null, '', ''); // empty diff output
-      return {} as ReturnType<typeof execFile>;
-    });
+        cb(null, '', ''); // empty diff output
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
     const result = await revertToSnapshotWithBridge(store, activeSends, 'thread-1', 'msg-1');
     expect(result.success).toBe(true);
   });
@@ -267,11 +266,13 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
 
   it('returns success with empty revertedFiles when diff output is empty', async () => {
     const { store, activeSends } = setupThread();
-    execFileMock.mockImplementation(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileMock.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (_cmd: any, _args: any, _opts: any, cb: any) => {
-      cb(null, '', '');
-      return {} as ReturnType<typeof execFile>;
-    });
+        cb(null, '', '');
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
     const result = await revertToSnapshotWithBridge(store, activeSends, 'thread-1', 'msg-1');
     expect(result.success).toBe(true);
     expect(result.revertedFiles).toEqual([]);
@@ -429,9 +430,7 @@ describe('revertToSnapshotWithBridge — multiple file changes', () => {
   it('batches large numbers of files in groups of 50', async () => {
     const BATCH_SIZE = 50;
     const fileCount = 120; // should produce 3 batches: 50, 50, 20
-    const diffLines = Array.from({ length: fileCount }, (_, i) => `M\tsrc/file${i}.ts`).join(
-      '\n',
-    );
+    const diffLines = Array.from({ length: fileCount }, (_, i) => `M\tsrc/file${i}.ts`).join('\n');
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
 
@@ -549,7 +548,9 @@ describe('registerRevertListener — revert hook fires with reverted paths', () 
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
     const received: string[][] = [];
-    const unregister = registerRevertListener((paths) => { received.push(paths); });
+    const unregister = registerRevertListener((paths) => {
+      received.push(paths);
+    });
 
     execFileMock.mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -572,7 +573,9 @@ describe('registerRevertListener — revert hook fires with reverted paths', () 
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
     const received: string[][] = [];
-    const unregister = registerRevertListener((paths) => { received.push(paths); });
+    const unregister = registerRevertListener((paths) => {
+      received.push(paths);
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
@@ -590,7 +593,9 @@ describe('registerRevertListener — revert hook fires with reverted paths', () 
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
     const received: string[][] = [];
-    const unregister = registerRevertListener((paths) => { received.push(paths); });
+    const unregister = registerRevertListener((paths) => {
+      received.push(paths);
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
@@ -609,7 +614,9 @@ describe('registerRevertListener — revert hook fires with reverted paths', () 
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
     const received: string[][] = [];
-    const unregister = registerRevertListener((paths) => { received.push(paths); });
+    const unregister = registerRevertListener((paths) => {
+      received.push(paths);
+    });
     unregister(); // unregister immediately
 
     execFileMock.mockImplementation(

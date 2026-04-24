@@ -21,7 +21,9 @@ vi.mock('../../../hooks/useGitBranch', () => ({
   useGitBranch: () => mockBranch,
 }));
 
-const mockSessions = { currentSessions: [] as Array<{ status: string; inputTokens: number; outputTokens: number }> };
+const mockSessions = {
+  currentSessions: [] as Array<{ status: string; inputTokens: number; outputTokens: number }>,
+};
 
 vi.mock('../../../contexts/AgentEventsContext', () => ({
   useAgentEventsContext: () => mockSessions,
@@ -51,9 +53,7 @@ vi.mock('../../DiffReview/DiffReviewManager', () => ({
 
 function makeFiles(pendingPerFile: number[]): Array<{ hunks: Array<{ decision: string }> }> {
   return pendingPerFile.map((count) => ({
-    hunks: [
-      ...Array.from({ length: count }, () => ({ decision: 'pending' })),
-    ],
+    hunks: [...Array.from({ length: count }, () => ({ decision: 'pending' }))],
   }));
 }
 

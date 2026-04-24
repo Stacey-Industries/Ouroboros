@@ -34,13 +34,11 @@ export function executeAcceptHunk(
   const hunkId = hunk.id ?? '';
   dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'accepted' });
   dispatch({ type: 'CAPTURE_BATCH', hunkIds: hunkId ? [hunkId] : [] });
-  void window.electronAPI.git
-    .stageHunk(state.projectRoot, hunk.rawPatch)
-    .catch((error) => {
-      log.error('Failed to stage hunk:', error);
-      dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
-      dispatch({ type: 'CAPTURE_BATCH', hunkIds: [] });
-    });
+  void window.electronAPI.git.stageHunk(state.projectRoot, hunk.rawPatch).catch((error) => {
+    log.error('Failed to stage hunk:', error);
+    dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
+    dispatch({ type: 'CAPTURE_BATCH', hunkIds: [] });
+  });
 }
 
 export function executeRejectHunk(
@@ -53,12 +51,10 @@ export function executeRejectHunk(
   if (!hunk || hunk.decision !== 'pending') return;
   dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'rejected' });
   dispatch({ type: 'CAPTURE_BATCH', hunkIds: [] });
-  void window.electronAPI.git
-    .revertHunk(state.projectRoot, hunk.rawPatch)
-    .catch((error) => {
-      log.error('Failed to revert hunk:', error);
-      dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
-    });
+  void window.electronAPI.git.revertHunk(state.projectRoot, hunk.rawPatch).catch((error) => {
+    log.error('Failed to revert hunk:', error);
+    dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
+  });
 }
 
 /**
@@ -94,10 +90,7 @@ export function useConfirmStaleOp(
  * Re-subscribes only when the tracked file set changes (i.e. after LOADED),
  * so this does not cause excessive re-renders during user interaction.
  */
-export function useStaleFileWatcher(
-  state: DiffReviewState | null,
-  dispatch: ReviewDispatch,
-): void {
+export function useStaleFileWatcher(state: DiffReviewState | null, dispatch: ReviewDispatch): void {
   useEffect(() => {
     if (!state || !window.electronAPI?.files?.onFileChange) return;
     const trackedPaths = new Set(state.files.map((f) => f.filePath));
@@ -107,7 +100,7 @@ export function useStaleFileWatcher(
       if (file) dispatch({ type: 'MARK_STALE', relativePath: file.relativePath });
     });
     return cleanup;
-  // Intentional: re-subscribe only when the file list changes, not on every state update.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentional: re-subscribe only when the file list changes, not on every state update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.files, dispatch]);
 }

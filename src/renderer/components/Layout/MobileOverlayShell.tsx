@@ -30,13 +30,22 @@ export function useFocusTrap(ref: React.RefObject<HTMLElement | null>, isOpen: b
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key !== 'Tab' || !ref.current) return;
       const items = getFocusable(ref.current);
-      if (items.length === 0) { e.preventDefault(); return; }
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     }
 
@@ -55,7 +64,9 @@ export function useBodyScrollLock(isOpen: boolean): void {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [isOpen]);
 }
 
@@ -73,14 +84,7 @@ interface ScrimProps {
 }
 
 export function Scrim({ onClose }: ScrimProps): React.ReactElement {
-  return (
-    <div
-      role="presentation"
-      style={SCRIM_STYLE}
-      onClick={onClose}
-      aria-hidden="true"
-    />
-  );
+  return <div role="presentation" style={SCRIM_STYLE} onClick={onClose} aria-hidden="true" />;
 }
 
 // ── Escape key handler ────────────────────────────────────────────────────────

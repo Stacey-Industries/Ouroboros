@@ -48,7 +48,9 @@ vi.mock('http', () => ({
 beforeEach(() => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (process as any).parentPort = {
-    postMessage: (msg: Record<string, unknown>) => { postedMessages.push(msg); },
+    postMessage: (msg: Record<string, unknown>) => {
+      postedMessages.push(msg);
+    },
     on: vi.fn(),
   };
   postedMessages.length = 0;
@@ -142,7 +144,10 @@ describe('mcpHostMain dispatcher', () => {
     it('toolCallResponse for unknown callId is silent', async () => {
       const dispatch = await importDispatcher();
       dispatch({
-        type: 'toolCallResponse', callId: 'unknown', text: 'ok', isError: false,
+        type: 'toolCallResponse',
+        callId: 'unknown',
+        text: 'ok',
+        isError: false,
       });
       expect(true).toBe(true);
     });

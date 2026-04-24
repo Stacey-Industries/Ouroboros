@@ -1,4 +1,4 @@
-import React, { memo,useCallback, useRef, useState } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
 import {
@@ -38,7 +38,7 @@ export const SemanticScrollbar = memo(function SemanticScrollbar({
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) =>
       updateTooltipPosition(event, barRef.current, setTooltip),
-    []
+    [],
   );
   const handleMouseLeave = useCallback(() => {
     setTooltip(HIDDEN_TOOLTIP);

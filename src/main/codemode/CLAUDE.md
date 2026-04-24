@@ -1,13 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The VM sandbox in `executor.ts` uses `codeGeneration: { strings: false, wasm: false }` — this blocks `eval()` and `new Function()` even if the LLM tries to generate them. This is a subtle but important security layer: without it, LLM-generated code could escape the sandbox whitelist by constructing a function from a string.
-`─────────────────────────────────────────────────`
 
-Done. The CLAUDE.md for `src/main/codemode/` is now clean. Key things documented:
-
-- **Two-process model diagram** — the most non-obvious architectural fact: `proxyServer.ts` is spawned by Claude Code CLI (not Electron), and the settings file is the only coordination mechanism between them
-- **Enable/disable flow** with the 6 module-level state vars in `codemodeManager.ts`
-- **Critical gotchas**: stdout corruption risk, VM sandbox whitelist, SSE transport gap, and crash recovery gap where `disabledByUs` is lost if Electron crashes while Code Mode is active
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

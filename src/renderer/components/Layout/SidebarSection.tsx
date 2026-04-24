@@ -62,13 +62,29 @@ function SectionBadge({ value }: { value: string | number }): React.ReactElement
 }
 
 const SECTION_TITLE_STYLE: React.CSSProperties = {
-  fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em',
-  textTransform: 'uppercase', fontFamily: 'var(--font-ui)', lineHeight: '24px',
-  flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  fontSize: '10px',
+  fontWeight: 600,
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  fontFamily: 'var(--font-ui)',
+  lineHeight: '24px',
+  flex: 1,
+  textAlign: 'left',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
-function SectionHeader({ title, collapsed, onToggle, badge }: {
-  title: string; collapsed: boolean; onToggle: () => void; badge?: string | number;
+function SectionHeader({
+  title,
+  collapsed,
+  onToggle,
+  badge,
+}: {
+  title: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  badge?: string | number;
 }): React.ReactElement {
   return (
     <button
@@ -79,16 +95,27 @@ function SectionHeader({ title, collapsed, onToggle, badge }: {
       aria-expanded={!collapsed}
     >
       <ChevronIcon collapsed={collapsed} />
-      <span className="text-text-semantic-muted" style={SECTION_TITLE_STYLE}>{title}</span>
+      <span className="text-text-semantic-muted" style={SECTION_TITLE_STYLE}>
+        {title}
+      </span>
       {badge != null && badge !== 0 && <SectionBadge value={badge} />}
     </button>
   );
 }
 
-export function SidebarSection({ title, collapsed, onToggle, badge, children, style }: SidebarSectionProps): React.ReactElement {
+export function SidebarSection({
+  title,
+  collapsed,
+  onToggle,
+  badge,
+  children,
+  style,
+}: SidebarSectionProps): React.ReactElement {
   return (
-    <div className="flex flex-col overflow-hidden"
-      style={{ ...style, ...(collapsed ? { flex: 'none', minHeight: 0 } : {}) }}>
+    <div
+      className="flex flex-col overflow-hidden"
+      style={{ ...style, ...(collapsed ? { flex: 'none', minHeight: 0 } : {}) }}
+    >
       <SectionHeader title={title} collapsed={collapsed} onToggle={onToggle} badge={badge} />
       {!collapsed && (
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">{children}</div>

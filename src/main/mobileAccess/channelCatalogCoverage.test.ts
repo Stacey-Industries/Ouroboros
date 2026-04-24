@@ -55,21 +55,21 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'agentChat:message',
   'agentChat:event',
   'agentConflict:change',
-  'app:navigateToPermalink',    // webContents.send push — notifications.ts / protocolHandler.ts
+  'app:navigateToPermalink', // webContents.send push — notifications.ts / protocolHandler.ts
   'app:rebuilding',
-  'app:startupWarning',          // webContents.send push — main.ts
-  'approval:memoryChanged',      // webContents.send push — approvalMemory.ts
+  'app:startupWarning', // webContents.send push — main.ts
+  'approval:memoryChanged', // webContents.send push — approvalMemory.ts
   'approval:request',
   'approval:resolved',
   'auth:loginEvent',
   'auth:stateChanged',
   'backgroundJobs:update',
   'checkpoint:change',
-  'claudeMd:statusChange',       // webContents.send push — claudeMdGenerator.ts
+  'claudeMd:statusChange', // webContents.send push — claudeMdGenerator.ts
   // compareProviders:event is push-only (main → renderer via webContents.send).
   // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
   'compareProviders:event',
-  'config:externalChange',       // webContents.send push — config.ts settings watcher
+  'config:externalChange', // webContents.send push — config.ts settings watcher
   'contextLayer:progress',
   // ecosystem:promptDiff is push-only — documented as such in ecosystemHandlers.ts.
   // No ipcMain.handle exists; cannot be invoked by a client. Wave 41 Phase A.
@@ -77,23 +77,23 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'extensionStore:contributionsChanged',
   'extensionStore:installed',
   'extensionStore:uninstalled',
-  'extensions:notification',     // webContents.send push — extensionsApi.ts
+  'extensions:notification', // webContents.send push — extensionsApi.ts
   'files:change',
   'folderCrud:changed',
-  'hooks:event',                  // webContents.send push — hooks.ts
-  'ide:query',                    // webContents.send push — ideToolServer.ts reverse channel
-  'auth:state-changed',           // broadcast push — tokenRefreshManager.ts (hyphenated form)
-  'lsp:statusChange',             // webContents.send push — lspHandlers.ts
-  'main:uncaughtException',       // webContents.send push — main.ts error handler
-  'main:unhandledRejection',      // webContents.send push — main.ts error handler
-  'menu:command-palette',         // webContents.send push — menu.ts
-  'menu:new-terminal',            // webContents.send push — menu.ts
+  'hooks:event', // webContents.send push — hooks.ts
+  'ide:query', // webContents.send push — ideToolServer.ts reverse channel
+  'auth:state-changed', // broadcast push — tokenRefreshManager.ts (hyphenated form)
+  'lsp:statusChange', // webContents.send push — lspHandlers.ts
+  'main:uncaughtException', // webContents.send push — main.ts error handler
+  'main:unhandledRejection', // webContents.send push — main.ts error handler
+  'menu:command-palette', // webContents.send push — menu.ts
+  'menu:new-terminal', // webContents.send push — menu.ts
   'menu:open-chat-window-no-session', // webContents.send push — menu.ts
-  'menu:open-folder',             // webContents.send push — menu.ts
-  'menu:settings',                // webContents.send push — menu.ts
-  'menu:toggle-side-chat',        // webContents.send push — menu.ts
-  'pair:result',                  // WebSocket-level push in webServer.ts pairing flow
-  'perf:indexer-completed',       // webContents.send push — perfMetrics.ts
+  'menu:open-folder', // webContents.send push — menu.ts
+  'menu:settings', // webContents.send push — menu.ts
+  'menu:toggle-side-chat', // webContents.send push — menu.ts
+  'pair:result', // WebSocket-level push in webServer.ts pairing flow
+  'perf:indexer-completed', // webContents.send push — perfMetrics.ts
   'perf:metrics',
   'pinnedContext:changed',
   'profileCrud:changed',
@@ -139,7 +139,7 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'node:path',
   'node:readline',
   'provider:model',
-  'commands:list',    // listed in catalog under rulesAndSkills — alias
+  'commands:list', // listed in catalog under rulesAndSkills — alias
   'commands:read',
 ]);
 
@@ -156,7 +156,7 @@ describe('channel catalog coverage', () => {
       const list = unclassified.map((ch) => `  - ${ch}`).join('\n');
       throw new Error(
         `${unclassified.length} channel(s) are missing from CHANNEL_CATALOG.\n` +
-        `Add them to the appropriate channelCatalog.*.ts sub-module:\n${list}`,
+          `Add them to the appropriate channelCatalog.*.ts sub-module:\n${list}`,
       );
     }
 
@@ -167,7 +167,9 @@ describe('channel catalog coverage', () => {
     const overlap = scannedChannels.filter(
       (ch) => CATALOG_LOOKUP.has(ch) && UNCLASSIFIED_ALLOWLIST.has(ch),
     );
-    expect(overlap, `Channels in both catalog and allowlist: ${overlap.join(', ')}`).toHaveLength(0);
+    expect(overlap, `Channels in both catalog and allowlist: ${overlap.join(', ')}`).toHaveLength(
+      0,
+    );
   });
 
   it('every catalog entry appears in the scanned source (no phantom entries)', () => {
@@ -180,7 +182,7 @@ describe('channel catalog coverage', () => {
       const list = phantoms.map((ch) => `  - ${ch}`).join('\n');
       throw new Error(
         `${phantoms.length} catalog entry/entries have no matching source string.\n` +
-        `These are likely phantom entries — remove them from the catalog:\n${list}`,
+          `These are likely phantom entries — remove them from the catalog:\n${list}`,
       );
     }
 

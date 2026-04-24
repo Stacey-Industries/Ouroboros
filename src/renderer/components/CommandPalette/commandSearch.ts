@@ -144,11 +144,13 @@ function tagsScore(tags: readonly string[] | undefined, query: string): number {
   return best;
 }
 
-export function rankCommands<T extends {
-  label: string;
-  description?: string;
-  tags?: readonly string[];
-}>(commands: readonly T[], query: string): RankedCommand<T>[] {
+export function rankCommands<
+  T extends {
+    label: string;
+    description?: string;
+    tags?: readonly string[];
+  },
+>(commands: readonly T[], query: string): RankedCommand<T>[] {
   const q = query.trim();
   if (q === '') {
     return commands.map((command) => ({ command, score: 0, matchedField: 'name' as const }));

@@ -15,13 +15,7 @@ export function CheckpointBadge(): React.ReactElement {
       className="inline-flex items-center gap-1 text-status-info"
       title="Checkpoint captured — you can restore to this point"
     >
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        aria-hidden="true"
-      >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <circle cx="12" cy="12" r="6" />
       </svg>
     </span>
@@ -71,10 +65,7 @@ interface UseRestoreSnapshotArgs {
   snapshotHash: string;
 }
 
-export function useRestoreSnapshot({
-  projectRoot,
-  snapshotHash,
-}: UseRestoreSnapshotArgs): {
+export function useRestoreSnapshot({ projectRoot, snapshotHash }: UseRestoreSnapshotArgs): {
   isConfirming: boolean;
   isRestoring: boolean;
   startConfirm: () => void;

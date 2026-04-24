@@ -86,5 +86,7 @@ export async function initDeepLinkListener(
     if (payload) onPair(payload);
   });
 
-  return () => { void handle.remove(); };
+  return () => {
+    void handle.remove();
+  };
 }

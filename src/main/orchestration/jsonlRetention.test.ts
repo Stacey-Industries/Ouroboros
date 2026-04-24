@@ -37,11 +37,7 @@ async function listDir(dir: string): Promise<string[]> {
 /** Return a Date that is `daysAgo` days before today at UTC midnight. */
 function utcDate(daysAgo: number): Date {
   const now = new Date();
-  return new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() - daysAgo,
-  ));
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo));
 }
 
 // ─── buildDatedFilename ───────────────────────────────────────────────────────
@@ -75,8 +71,12 @@ describe('buildDatedFilename', () => {
 describe('purgeOlderThan', () => {
   let tmpDir: string;
 
-  beforeEach(async () => { tmpDir = await makeTmpDir(); });
-  afterEach(async () => { await fs.rm(tmpDir, { recursive: true, force: true }); });
+  beforeEach(async () => {
+    tmpDir = await makeTmpDir();
+  });
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
 
   it('removes files older than the cutoff and leaves newer ones', async () => {
     const old = buildDatedFilename('context-decisions', utcDate(31));
@@ -160,8 +160,12 @@ describe('purgeOlderThan', () => {
 describe('migrateLegacyJsonl', () => {
   let tmpDir: string;
 
-  beforeEach(async () => { tmpDir = await makeTmpDir(); });
-  afterEach(async () => { await fs.rm(tmpDir, { recursive: true, force: true }); });
+  beforeEach(async () => {
+    tmpDir = await makeTmpDir();
+  });
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
 
   it('renames the legacy file to a dated name using mtime UTC date', async () => {
     const legacyPath = path.join(tmpDir, 'context-decisions.jsonl');

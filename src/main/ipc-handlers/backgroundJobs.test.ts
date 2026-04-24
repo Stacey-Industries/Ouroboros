@@ -23,14 +23,23 @@ vi.mock('electron', () => ({
 
 const mockEnqueue = vi.fn().mockResolvedValue({ success: true, jobId: 'j1' });
 const mockCancel = vi.fn().mockResolvedValue({ success: true });
-const mockList = vi.fn().mockReturnValue({ jobs: [], runningCount: 0, queuedCount: 0, maxConcurrent: 2 });
+const mockList = vi
+  .fn()
+  .mockReturnValue({ jobs: [], runningCount: 0, queuedCount: 0, maxConcurrent: 2 });
 const mockDeleteCompleted = vi.fn();
 const mockReconcile = vi.fn();
 const mockSubscribeChanges = vi.fn().mockReturnValue(() => {});
 
 vi.mock('../backgroundJobs/jobScheduler', () => ({
   getJobScheduler: () => ({ enqueue: mockEnqueue, cancel: mockCancel, list: mockList }),
-  initJobScheduler: vi.fn().mockReturnValue({ enqueue: mockEnqueue, cancel: mockCancel, list: mockList, dispose: vi.fn() }),
+  initJobScheduler: vi
+    .fn()
+    .mockReturnValue({
+      enqueue: mockEnqueue,
+      cancel: mockCancel,
+      list: mockList,
+      dispose: vi.fn(),
+    }),
 }));
 
 vi.mock('../backgroundJobs/jobStore', () => ({
@@ -95,7 +104,7 @@ describe('registerBackgroundJobsHandlers', () => {
 
   it('list returns snapshot', async () => {
     const handler = getHandler('backgroundJobs:list');
-    const result = await handler({}, undefined) as { success: boolean; snapshot: unknown };
+    const result = (await handler({}, undefined)) as { success: boolean; snapshot: unknown };
     expect(result.success).toBe(true);
     expect(result.snapshot).toBeDefined();
   });
@@ -110,7 +119,10 @@ describe('registerBackgroundJobsHandlers', () => {
   it('returns error result when scheduler throws', async () => {
     mockEnqueue.mockRejectedValueOnce(new Error('boom'));
     const handler = getHandler('backgroundJobs:enqueue');
-    const result = await handler({}, { projectRoot: '/p', prompt: 'x' }) as { success: boolean; error: string };
+    const result = (await handler({}, { projectRoot: '/p', prompt: 'x' })) as {
+      success: boolean;
+      error: string;
+    };
     expect(result.success).toBe(false);
     expect(result.error).toContain('boom');
   });

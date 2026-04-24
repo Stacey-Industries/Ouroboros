@@ -1,10 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-- These passes run **after** the core tree-sitter parsing pipeline completes — they operate on the already-populated `GraphDatabase`, adding cross-cutting edges that require whole-graph context (all files indexed) rather than per-file analysis.
-- `gitCoChangePass` is the only pass that calls an external process (`execSync git log`) and can silently return `null` when git isn't available — it must never throw, so all callers are safe without try/catch.
-- The `CO_CHANGE_THRESHOLD = 3` and `MAX_FILES_PER_COMMIT = 20` constants in `gitCoChangePass` are the two most impactful tuning levers: lower threshold = noisier graph, higher max = bulk commits pollute co-change signal.
-`─────────────────────────────────────────────────`
-
 # passes/ — Post-indexing enrichment passes
 
 Supplementary graph passes that run after the core tree-sitter indexing pipeline. Each pass receives an already-populated `GraphDatabase` and adds additional edges or updates node properties.
@@ -50,4 +44,5 @@ export function xyzPass(db: GraphDatabase, projectName: string, projectRoot?: st
 - **Consumed by**: `graphIndexing.ts` / `graphController.ts` — passes are called at the end of each full or incremental index run, after `resolveEdgeReferences()` has linked cross-file edges.
 - **Reads from**: `GraphDatabase` nodes and edges already in the store.
 - **External dependency**: `gitCoChangePass` only — `child_process.execSync` for `git log`.
+
 <!-- claude-md-auto:end -->

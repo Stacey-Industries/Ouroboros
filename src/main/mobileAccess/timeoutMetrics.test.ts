@@ -10,18 +10,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./channelCatalog', () => ({
   CATALOG_LOOKUP: new Map([
-    ['perf:ping',            { class: 'always',       timeoutClass: 'short'  }],
-    ['config:get',           { class: 'always',       timeoutClass: 'short'  }],
-    ['files:readFile',       { class: 'paired-read',  timeoutClass: 'normal' }],
-    ['agentChat:sendMessage',{ class: 'paired-write', timeoutClass: 'long'   }],
+    ['perf:ping', { class: 'always', timeoutClass: 'short' }],
+    ['config:get', { class: 'always', timeoutClass: 'short' }],
+    ['files:readFile', { class: 'paired-read', timeoutClass: 'normal' }],
+    ['agentChat:sendMessage', { class: 'paired-write', timeoutClass: 'long' }],
   ]),
 }));
 
-import {
-  getTimeoutStats,
-  incrementTimeout,
-  resetTimeoutStats,
-} from './timeoutMetrics';
+import { getTimeoutStats, incrementTimeout, resetTimeoutStats } from './timeoutMetrics';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,9 +70,9 @@ describe('incrementTimeout', () => {
   });
 
   it('accumulates independently across all three classes', () => {
-    incrementTimeout('perf:ping');            // short
-    incrementTimeout('perf:ping');            // short
-    incrementTimeout('files:readFile');        // normal
+    incrementTimeout('perf:ping'); // short
+    incrementTimeout('perf:ping'); // short
+    incrementTimeout('files:readFile'); // normal
     incrementTimeout('agentChat:sendMessage'); // long
     incrementTimeout('agentChat:sendMessage'); // long
     incrementTimeout('agentChat:sendMessage'); // long

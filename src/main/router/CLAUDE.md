@@ -1,17 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The retrain pipeline is a closed self-improvement loop running entirely within the Electron process: collect signals → export → spawn Python → validate → hot-reload. This avoids any external training infrastructure, but means the ML model quality is bounded by however much real usage accumulates. The 50-sample threshold in `DEFAULT_MIN_SAMPLES` is a tuning knob — too low and you get noisy retrains, too high and improvements lag behind usage patterns.
-`─────────────────────────────────────────────────`
 
-Generated `src/main/router/CLAUDE.md`. Key things captured:
-
-- **Three-layer cascade architecture** with latencies and fallback behavior
-- **`FEATURE_NAMES` ordering constraint** — the most dangerous silent failure mode (TS + Python must stay in sync)
-- **Shadow routing vs active routing** distinction — easy to conflate
-- **Layer 3 not wired** into the sync path (architectural debt worth knowing)
-- **Hot-reload mechanism** and startup weight resolution order
-- **Full data flow** from prompt → training pipeline → weight swap
-- Security lint workarounds (`.at(i)` pattern) so future editors don't "clean them up"
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

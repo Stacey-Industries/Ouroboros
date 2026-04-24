@@ -36,31 +36,43 @@ export function useChatSidebarMode(): UseChatSidebarModeReturn {
   // Load persisted mode from config on mount.
   useEffect(() => {
     let cancelled = false;
-    window.electronAPI?.config?.getAll?.().then((cfg) => {
-      if (cancelled) return;
-      const persisted = cfg?.layout?.chatSidebarMode;
-      if (persisted === 'pinned' || persisted === 'collapsed' || persisted === 'hidden') {
-        setMode(persisted);
-      }
-    }).catch(() => { /* ignore */ });
-    return () => { cancelled = true; };
+    window.electronAPI?.config
+      ?.getAll?.()
+      .then((cfg) => {
+        if (cancelled) return;
+        const persisted = cfg?.layout?.chatSidebarMode;
+        if (persisted === 'pinned' || persisted === 'collapsed' || persisted === 'hidden') {
+          setMode(persisted);
+        }
+      })
+      .catch(() => {
+        /* ignore */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const cycleMode = useCallback((): void => {
     setMode((current) => {
       const next = nextMode(current);
       // Persist async; optimistic update already applied via setMode.
-      window.electronAPI?.config?.set?.('layout', { chatSidebarMode: next } as never)
-        .catch(() => { /* ignore persistence failure */ });
+      window.electronAPI?.config?.set?.('layout', { chatSidebarMode: next } as never).catch(() => {
+        /* ignore persistence failure */
+      });
       return next;
     });
   }, []);
 
   // Subscribe to DOM event for keyboard / title-bar button trigger.
   useEffect(() => {
-    const handler = (): void => { cycleMode(); };
+    const handler = (): void => {
+      cycleMode();
+    };
     window.addEventListener(CYCLE_CHAT_SIDEBAR_MODE_EVENT, handler);
-    return () => { window.removeEventListener(CYCLE_CHAT_SIDEBAR_MODE_EVENT, handler); };
+    return () => {
+      window.removeEventListener(CYCLE_CHAT_SIDEBAR_MODE_EVENT, handler);
+    };
   }, [cycleMode]);
 
   return { mode, cycleMode };

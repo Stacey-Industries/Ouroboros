@@ -19,9 +19,7 @@ interface ClaudeSectionBodyProps {
   model: ClaudeSectionModel;
 }
 
-export function ClaudeSectionBody({
-  model,
-}: ClaudeSectionBodyProps): React.ReactElement {
+export function ClaudeSectionBody({ model }: ClaudeSectionBodyProps): React.ReactElement {
   return (
     <>
       <HeaderSection />
@@ -33,9 +31,7 @@ export function ClaudeSectionBody({
   );
 }
 
-function ClaudeSectionBasics({
-  model,
-}: ClaudeSectionBodyProps): React.ReactElement {
+function ClaudeSectionBasics({ model }: ClaudeSectionBodyProps): React.ReactElement {
   return (
     <>
       <ToggleSection
@@ -60,9 +56,7 @@ function ClaudeSectionBasics({
   );
 }
 
-function ClaudeSectionTools({
-  model,
-}: ClaudeSectionBodyProps): React.ReactElement {
+function ClaudeSectionTools({ model }: ClaudeSectionBodyProps): React.ReactElement {
   return (
     <>
       <TextInputSection
@@ -87,9 +81,7 @@ function ClaudeSectionTools({
   );
 }
 
-function ClaudeSectionWorkspace({
-  model,
-}: ClaudeSectionBodyProps): React.ReactElement {
+function ClaudeSectionWorkspace({ model }: ClaudeSectionBodyProps): React.ReactElement {
   return (
     <>
       <ToggleSection

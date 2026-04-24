@@ -31,8 +31,10 @@ export function useThemeEditorModel({
   onChange,
   onSaveAsCustom,
 }: ThemeEditorInput): ThemeEditorModel {
-  const { getEffectiveColor, isOverridden, overrides, setOverrides } =
-    useThemeEditorOverrides(activeThemeId, draft.customThemeColors);
+  const { getEffectiveColor, isOverridden, overrides, setOverrides } = useThemeEditorOverrides(
+    activeThemeId,
+    draft.customThemeColors,
+  );
   const actions = useThemeEditorActions({
     activeThemeId,
     customThemeColors: draft.customThemeColors,

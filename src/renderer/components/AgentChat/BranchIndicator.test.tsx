@@ -59,16 +59,12 @@ describe('BranchIndicator', () => {
   });
 
   it('shows "N branches" label when multiple forks', () => {
-    render(
-      <BranchIndicator forks={FORKS} currentThreadId="other" onSelect={vi.fn()} />,
-    );
+    render(<BranchIndicator forks={FORKS} currentThreadId="other" onSelect={vi.fn()} />);
     expect(screen.getByText('2 branches')).toBeTruthy();
   });
 
   it('opens dropdown on click when multiple forks', () => {
-    render(
-      <BranchIndicator forks={FORKS} currentThreadId="other" onSelect={vi.fn()} />,
-    );
+    render(<BranchIndicator forks={FORKS} currentThreadId="other" onSelect={vi.fn()} />);
     fireEvent.click(screen.getByText('2 branches'));
     expect(screen.getByText('Branch A')).toBeTruthy();
     expect(screen.getByText('Branch B')).toBeTruthy();
@@ -76,9 +72,7 @@ describe('BranchIndicator', () => {
 
   it('calls onSelect and closes dropdown when dropdown item is clicked', () => {
     const onSelect = vi.fn();
-    render(
-      <BranchIndicator forks={FORKS} currentThreadId="other" onSelect={onSelect} />,
-    );
+    render(<BranchIndicator forks={FORKS} currentThreadId="other" onSelect={onSelect} />);
     fireEvent.click(screen.getByText('2 branches'));
     fireEvent.click(screen.getByText('Branch A'));
     expect(onSelect).toHaveBeenCalledWith('thread-a');
@@ -91,9 +85,7 @@ describe('BranchIndicator', () => {
       { threadId: 'current', branchName: 'This thread' },
       { threadId: 'other', branchName: 'Other' },
     ];
-    render(
-      <BranchIndicator forks={forks} currentThreadId="current" onSelect={vi.fn()} />,
-    );
+    render(<BranchIndicator forks={forks} currentThreadId="current" onSelect={vi.fn()} />);
     // Only one fork visible, so shows single-branch label
     expect(screen.getByText('Other')).toBeTruthy();
     expect(screen.queryByText('This thread')).toBeNull();

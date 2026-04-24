@@ -29,7 +29,11 @@ vi.mock('../../../renderer/types/electron', () => ({}));
 
 import { useCustomLayoutPersistence } from './useCustomLayoutPersistence';
 
-const TREE_A = { kind: 'leaf' as const, slotName: 'editorContent', component: { componentKey: 'editorContent' } };
+const TREE_A = {
+  kind: 'leaf' as const,
+  slotName: 'editorContent',
+  component: { componentKey: 'editorContent' },
+};
 
 beforeEach(() => {
   mockGetCustomLayout.mockResolvedValue({ success: true, tree: null });
@@ -66,7 +70,9 @@ describe('useCustomLayoutPersistence', () => {
     const { result } = renderHook(() => useCustomLayoutPersistence('session-abc'));
     await waitFor(() => expect(mockGetCustomLayout).toHaveBeenCalled());
 
-    act(() => { result.current.save(TREE_A); });
+    act(() => {
+      result.current.save(TREE_A);
+    });
     expect(mockSetCustomLayout).not.toHaveBeenCalled();
 
     await flush();
@@ -91,7 +97,9 @@ describe('useCustomLayoutPersistence', () => {
     const { result } = renderHook(() => useCustomLayoutPersistence('session-abc'));
     await waitFor(() => expect(result.current.savedTree).toEqual(TREE_A));
 
-    act(() => { result.current.clear(); });
+    act(() => {
+      result.current.clear();
+    });
     await waitFor(() => expect(mockDeleteCustomLayout).toHaveBeenCalledWith('session-abc'));
     expect(result.current.savedTree).toBeNull();
   });
@@ -100,7 +108,9 @@ describe('useCustomLayoutPersistence', () => {
     const { result, unmount } = renderHook(() => useCustomLayoutPersistence('session-abc'));
     await waitFor(() => expect(mockGetCustomLayout).toHaveBeenCalled());
 
-    act(() => { result.current.save(TREE_A); });
+    act(() => {
+      result.current.save(TREE_A);
+    });
     unmount();
     await flush();
     expect(mockSetCustomLayout).not.toHaveBeenCalled();
@@ -111,7 +121,9 @@ describe('useCustomLayoutPersistence', () => {
     expect(result.current.savedTree).toBeNull();
     expect(mockGetCustomLayout).not.toHaveBeenCalled();
 
-    act(() => { result.current.save(TREE_A); });
+    act(() => {
+      result.current.save(TREE_A);
+    });
     await flush();
     expect(mockSetCustomLayout).not.toHaveBeenCalled();
   });

@@ -41,6 +41,8 @@ vi.mock('child_process', async (importOriginal) => {
 import {
   buildCodexAppServerArgs,
   ensureCodexAppServerProcess,
+  resetCodexAppServerProcessesForTests,
+  shutdownCodexAppServerProcesses,
   spawnCodexAppServerProcess,
 } from './codexAppServerProcess';
 
@@ -54,6 +56,7 @@ describe('spawnCodexAppServerProcess', () => {
   });
 
   afterEach(() => {
+    resetCodexAppServerProcessesForTests();
     vi.restoreAllMocks();
     spawnMock.mockReset();
     execMock.mockReset();
@@ -78,7 +81,11 @@ describe('spawnCodexAppServerProcess', () => {
   it('writes NDJSON to stdin and closes gracefully', () => {
     const handle = spawnCodexAppServerProcess({ cwd: 'C:\\repo' });
 
-    handle.send({ id: 1, method: 'initialize', params: { clientInfo: { name: 'ide', version: '1.0.0' }, capabilities: null } });
+    handle.send({
+      id: 1,
+      method: 'initialize',
+      params: { clientInfo: { name: 'ide', version: '1.0.0' }, capabilities: null },
+    });
     handle.close();
 
     expect((child.stdin as FakeWritable).writes[0]).toContain('"method":"initialize"');
@@ -115,5 +122,35 @@ describe('spawnCodexAppServerProcess', () => {
 
     expect(first).toBe(second);
     expect(spawnMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shuts down all registered app-server processes', async () => {
+    const first = await ensureCodexAppServerProcess({ cwd: 'C:\\repo', sessionKey: 'session-1' });
+
+    const secondChild = new FakeChildProcess();
+    spawnMock.mockReturnValueOnce(secondChild);
+    const second = await ensureCodexAppServerProcess({ cwd: 'C:\\repo', sessionKey: 'session-2' });
+
+    const firstClose = first.closed;
+    const secondClose = second.closed;
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    const shutdown = shutdownCodexAppServerProcesses();
+
+    child.emit('close', 0, null);
+    secondChild.emit('close', 0, null);
+    try {
+      await shutdown;
+      await Promise.all([firstClose, secondClose]);
+
+      expect((child.stdin as FakeWritable).destroyed).toBe(true);
+      expect((secondChild.stdin as FakeWritable).destroyed).toBe(true);
+      expect(child.kill).toHaveBeenCalled();
+      expect(secondChild.kill).toHaveBeenCalled();
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
   });
 });

@@ -36,7 +36,10 @@ describe('useTheme helpers', () => {
     };
 
     vi.stubGlobal('document', { documentElement });
-    vi.stubGlobal('window', { dispatchEvent: vi.fn(), electronAPI: { app: { setTitleBarOverlay: vi.fn() } } });
+    vi.stubGlobal('window', {
+      dispatchEvent: vi.fn(),
+      electronAPI: { app: { setTitleBarOverlay: vi.fn() } },
+    });
     customTheme.colors.bg = originalCustomBg;
     customTheme.colors.text = originalCustomText;
   });

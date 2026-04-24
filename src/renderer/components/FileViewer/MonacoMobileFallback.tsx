@@ -46,11 +46,7 @@ export function MonacoMobileFallback({
     <div style={containerStyle}>
       <MonacoMobileChrome />
       {readOnly ? (
-        <MonacoMobileReadonly
-          content={content}
-          language={language}
-          monacoTheme={OUROBOROS_THEME}
-        />
+        <MonacoMobileReadonly content={content} language={language} monacoTheme={OUROBOROS_THEME} />
       ) : (
         <MonacoMobileEditable content={content} onChange={onChange} />
       )}

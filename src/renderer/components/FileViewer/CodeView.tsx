@@ -59,11 +59,14 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
   const lineHeight = getEditorLineHeight();
   const handleScrollToLine = useCallback(
     (line: number) => scrollToLine(props.scrollRef, line, lineHeight),
-    [props.scrollRef, lineHeight]
+    [props.scrollRef, lineHeight],
   );
 
   return (
-    <div ref={props.scrollRef as React.RefObject<HTMLDivElement | null>} style={scrollContainerStyle}>
+    <div
+      ref={props.scrollRef as React.RefObject<HTMLDivElement | null>}
+      style={scrollContainerStyle}
+    >
       {renderSearchAndNavigation(props)}
       {renderMapOverlays(props, lineHeight, handleScrollToLine)}
       {renderViewport(props)}
@@ -178,7 +181,7 @@ function getEditorLineHeight(): number {
 function scrollToLine(
   scrollRef: RefObject<HTMLDivElement | null>,
   line: number,
-  lineHeight: number
+  lineHeight: number,
 ): void {
   const el = scrollRef.current;
   if (!el) return;

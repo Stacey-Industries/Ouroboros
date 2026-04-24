@@ -26,7 +26,10 @@ function makeSession(overrides: Partial<PersistedSessionInfo> = {}): PersistedSe
 }
 
 const defaultProps = {
-  sessions: [makeSession({ id: 'a', cwd: '/home/user/alpha' }), makeSession({ id: 'b', cwd: '/home/user/beta' })],
+  sessions: [
+    makeSession({ id: 'a', cwd: '/home/user/alpha' }),
+    makeSession({ id: 'b', cwd: '/home/user/beta' }),
+  ],
   onRestoreAll: vi.fn(),
   onRestoreSelected: vi.fn(),
   onDiscard: vi.fn(),

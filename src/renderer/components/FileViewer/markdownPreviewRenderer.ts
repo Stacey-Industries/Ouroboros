@@ -10,16 +10,14 @@ function escapeHtml(str: string): string {
 function renderInline(text: string): string {
   let nextText = text.replace(
     /!\[([^\]]*)\]\(([^)]+)\)/g,
-    (_, alt, url) => `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width:100%;" />`,
+    (_, alt, url) =>
+      `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width:100%;" />`,
   );
 
-  nextText = nextText.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_, label, url) => {
-      const safeUrl = /^(https?:|mailto:|#)/.test(url) ? escapeHtml(url) : '#';
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
-    },
-  );
+  nextText = nextText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    const safeUrl = /^(https?:|mailto:|#)/.test(url) ? escapeHtml(url) : '#';
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+  });
 
   nextText = nextText.replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`);
   nextText = nextText.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -108,29 +106,26 @@ function renderParagraph(lines: string[], startIndex: number): [string, number] 
 type BlockRenderer = (lines: string[], startIndex: number) => [string, number] | null;
 
 const BLOCK_RENDERERS: BlockRenderer[] = [
-  (lines, startIndex) => (/^```/.test(lines[startIndex]) ? renderCodeBlock(lines, startIndex) : null),
-  (lines, startIndex) => (
-    /^(?:---+|===+|\*\*\*+)\s*$/.test(lines[startIndex])
-      ? ['<hr />\n', startIndex + 1]
-      : null
-  ),
+  (lines, startIndex) =>
+    /^```/.test(lines[startIndex]) ? renderCodeBlock(lines, startIndex) : null,
+  (lines, startIndex) =>
+    /^(?:---+|===+|\*\*\*+)\s*$/.test(lines[startIndex]) ? ['<hr />\n', startIndex + 1] : null,
   (lines, startIndex) => {
     const headingMatch = lines[startIndex].match(/^(#{1,6})\s+(.+)/);
     if (!headingMatch) return null;
     const level = headingMatch[1].length;
     return [`<h${level}>${renderInline(headingMatch[2])}</h${level}>\n`, startIndex + 1];
   },
-  (lines, startIndex) => (/^>\s?/.test(lines[startIndex]) ? renderBlockquote(lines, startIndex) : null),
-  (lines, startIndex) => (
+  (lines, startIndex) =>
+    /^>\s?/.test(lines[startIndex]) ? renderBlockquote(lines, startIndex) : null,
+  (lines, startIndex) =>
     /^(\s*[-*+]\s+)/.test(lines[startIndex])
       ? renderMatchingList(lines, startIndex, /^(\s*[-*+]\s+)/, false)
-      : null
-  ),
-  (lines, startIndex) => (
+      : null,
+  (lines, startIndex) =>
     /^\s*\d+\.\s+/.test(lines[startIndex])
       ? renderMatchingList(lines, startIndex, /^\s*\d+\.\s+/, true)
-      : null
-  ),
+      : null,
   (lines, startIndex) => (lines[startIndex].trim() === '' ? ['', startIndex + 1] : null),
 ];
 

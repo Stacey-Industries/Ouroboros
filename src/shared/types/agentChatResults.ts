@@ -235,12 +235,14 @@ export interface AgentChatAPI {
   /** Full-text search across thread messages, tags, and file paths. */
   searchThreads: (
     payload: AgentChatSearchPayload,
-  ) => Promise<{ success: boolean; results?: AgentChatSearchResult[]; hasMore?: boolean; error?: string }>;
+  ) => Promise<{
+    success: boolean;
+    results?: AgentChatSearchResult[];
+    hasMore?: boolean;
+    error?: string;
+  }>;
   /** Wave 21 Phase C — toggle pinned state for a thread. */
-  pinThread: (
-    threadId: string,
-    pinned: boolean,
-  ) => Promise<{ success: boolean; error?: string }>;
+  pinThread: (threadId: string, pinned: boolean) => Promise<{ success: boolean; error?: string }>;
   /** Wave 21 Phase C — soft-delete a thread (sets deletedAt; 30-day grace). */
   softDeleteThread: (threadId: string) => Promise<{ success: boolean; error?: string }>;
   /** Wave 21 Phase C — restore a soft-deleted thread (clears deletedAt). */
@@ -256,21 +258,25 @@ export interface AgentChatAPI {
     format: 'json' | 'transcript',
   ) => Promise<{ success: boolean; threadId?: string; error?: string }>;
   /** Wave 21 Phase F — per-thread token/cost rollup. */
-  getThreadCostRollup: (
-    payload: AgentChatCostRollupRequest,
-  ) => Promise<AgentChatThreadCostResult>;
+  getThreadCostRollup: (payload: AgentChatCostRollupRequest) => Promise<AgentChatThreadCostResult>;
   /** Wave 21 Phase F — global cost rollup across all threads, with optional time range. */
-  getGlobalCostRollup: (
-    payload?: AgentChatGlobalCostRequest,
-  ) => Promise<AgentChatGlobalCostResult>;
+  getGlobalCostRollup: (payload?: AgentChatGlobalCostRequest) => Promise<AgentChatGlobalCostResult>;
   /** Wave 21 Phase G — return PTY session IDs linked to this thread. */
   getLinkedTerminals: (threadId: string) => Promise<AgentChatLinkedTerminalsResult>;
   /** Wave 22 Phase A — get current reactions for a message. */
   getMessageReactions: (messageId: string, threadId: string) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — add a reaction; returns updated list. */
-  addMessageReaction: (messageId: string, threadId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  addMessageReaction: (
+    messageId: string,
+    threadId: string,
+    kind: string,
+  ) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — remove a reaction; returns updated list. */
-  removeMessageReaction: (messageId: string, threadId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  removeMessageReaction: (
+    messageId: string,
+    threadId: string,
+    kind: string,
+  ) => Promise<AgentChatReactionsResult>;
   /** Wave 22 Phase A — set collapsedByDefault flag for a message. */
   setMessageCollapsed: (
     messageId: string,
@@ -295,19 +301,19 @@ export interface AgentChatAPI {
    */
   forkThread: (request: AgentChatForkThreadRequest) => Promise<AgentChatThreadResult>;
   /** Wave 23 Phase A — set a user-visible label for a branch thread. */
-  renameBranch: (
-    threadId: string,
-    name: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  renameBranch: (threadId: string, name: string) => Promise<{ success: boolean; error?: string }>;
   /** Wave 23 Phase A — list the branch tree rooted at rootThreadId. */
   listBranches: (rootThreadId: string) => Promise<AgentChatBranchesResult>;
   /**
    * Wave 23 Phase D — append a system-role summary message from a side chat into the main thread.
    * Multiple merges are allowed; each call appends a new system message.
    */
-  mergeSideChat: (
-    request: AgentChatMergeSideChatRequest,
-  ) => Promise<AgentChatMergeSideChatResult>;
+  mergeSideChat: (request: AgentChatMergeSideChatRequest) => Promise<AgentChatMergeSideChatResult>;
+  /**
+   * Inject a user message into the active warm process stdin mid-turn.
+   * No-op (returns success: false) when no warm process exists for taskId.
+   */
+  injectMidTurn: (taskId: string, content: string) => Promise<{ success: boolean; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

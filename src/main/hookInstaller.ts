@@ -226,7 +226,6 @@ async function installHookFile(
   const srcPath = path.join(assetsDir, entry.src);
   const destPath = path.join(hooksDir, entry.dest);
 
-   
   const srcExists = await fsPromises
     .access(srcPath)
     .then(() => true)
@@ -236,7 +235,6 @@ async function installHookFile(
     return;
   }
 
-   
   await fsPromises.copyFile(srcPath, destPath);
 
   if (entry.executable && process.platform !== 'win32') {

@@ -32,7 +32,12 @@ function makeDecision(overrides: Partial<ContextDecision> = {}): ContextDecision
     id: 'dec-1',
     traceId: 'trace-abc',
     fileId: 'src/main/hooks.ts',
-    features: { score: 56, reasons: [{ kind: 'git_diff', weight: 56 }], pagerank_score: null, included: true },
+    features: {
+      score: 56,
+      reasons: [{ kind: 'git_diff', weight: 56 }],
+      pagerank_score: null,
+      included: true,
+    },
     score: 56,
     included: true,
     ...overrides,
@@ -44,7 +49,10 @@ const TODAY = '2026-04-16';
 const DATED_FILENAME = `context-decisions-${TODAY}.jsonl`;
 const DATED_PATH = path.join(TEST_DIR, DATED_FILENAME);
 
-function makeDeps(fileSize = 0, stamp = TODAY): {
+function makeDeps(
+  fileSize = 0,
+  stamp = TODAY,
+): {
   deps: DecisionWriterDeps;
   appended: Array<{ fp: string; line: string }>;
   rotated: string[][];
@@ -57,9 +65,15 @@ function makeDeps(fileSize = 0, stamp = TODAY): {
   const deps: DecisionWriterDeps = {
     getDir: () => TEST_DIR,
     readSize: vi.fn(async () => fileSize),
-    appendLine: vi.fn(async (fp, line) => { appended.push({ fp, line }); }),
-    rotate: vi.fn(async (src, dst) => { rotated.push([src, dst]); }),
-    unlink: vi.fn(async (fp) => { unlinked.push(fp); }),
+    appendLine: vi.fn(async (fp, line) => {
+      appended.push({ fp, line });
+    }),
+    rotate: vi.fn(async (src, dst) => {
+      rotated.push([src, dst]);
+    }),
+    unlink: vi.fn(async (fp) => {
+      unlinked.push(fp);
+    }),
     todayStamp: () => stamp,
   };
 
@@ -69,8 +83,12 @@ function makeDeps(fileSize = 0, stamp = TODAY): {
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('createDecisionWriter — flush timer', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('batches multiple decisions in one appendLine call after 50 ms', async () => {
     const { deps, appended } = makeDeps();
@@ -103,8 +121,12 @@ describe('createDecisionWriter — flush timer', () => {
 });
 
 describe('createDecisionWriter — flushPendingWrites', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('force-flushes before timer fires', async () => {
     const { deps, appended } = makeDeps();
@@ -128,8 +150,12 @@ describe('createDecisionWriter — flushPendingWrites', () => {
 });
 
 describe('createDecisionWriter — closeDecisionWriter', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('flushes pending queue on close', async () => {
     const { deps, appended } = makeDeps();
@@ -155,8 +181,12 @@ describe('createDecisionWriter — closeDecisionWriter', () => {
 });
 
 describe('createDecisionWriter — date-stamped filename (Phase G)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('writes to the date-stamped path, not the legacy undated path', async () => {
     const { deps, appended } = makeDeps();
@@ -185,8 +215,12 @@ describe('createDecisionWriter — date-stamped filename (Phase G)', () => {
 });
 
 describe('createDecisionWriter — rotation (intraday)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('does not rotate when file is under 10 MB', async () => {
     const { deps, rotated } = makeDeps(1024);
@@ -207,16 +241,19 @@ describe('createDecisionWriter — rotation (intraday)', () => {
 
     const hasPrimaryRotation = rotated.some(
       ([src, dst]) =>
-        src === DATED_PATH &&
-        dst === path.join(TEST_DIR, `context-decisions-${TODAY}.1.jsonl`),
+        src === DATED_PATH && dst === path.join(TEST_DIR, `context-decisions-${TODAY}.1.jsonl`),
     );
     expect(hasPrimaryRotation).toBe(true);
   });
 });
 
 describe('createDecisionWriter — decision shape', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('writes traceId, fileId, score, included, and features fields', async () => {
     const { deps, appended } = makeDeps();

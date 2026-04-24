@@ -3,18 +3,18 @@ import { app } from 'electron';
 import * as path from 'path';
 import { isMainThread } from 'worker_threads';
 
-import { mergeSideChatIntoMain, type MergeSideChatParams, type MergeSideChatResult } from './mergeSideChat';
+import {
+  mergeSideChatIntoMain,
+  type MergeSideChatParams,
+  type MergeSideChatResult,
+} from './mergeSideChat';
 import {
   forkThreadImpl,
   type ForkThreadParams,
   listBranchesOfThreadImpl,
   renameBranchImpl,
 } from './threadStoreFork';
-import {
-  appendMessageToThread,
-  updateThreadMessage,
-  updateThreadRecord,
-} from './threadStoreOps';
+import { appendMessageToThread, updateThreadMessage, updateThreadRecord } from './threadStoreOps';
 import { branchThreadFrom, reRunFromMessageImpl } from './threadStoreRerun';
 import type { SearchOptions, SearchResponse } from './threadStoreSearch';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
@@ -104,7 +104,11 @@ export interface AgentChatThreadStore {
   /** Wave 22 Phase A / Wave 41 E.2 — get reactions for a message (scoped by threadId). */
   getMessageReactions: (messageId: string, threadId: string) => Promise<Reaction[]>;
   /** Wave 22 Phase A / Wave 41 E.2 — persist reactions for a message (scoped by threadId). */
-  setMessageReactions: (messageId: string, threadId: string, reactions: Reaction[]) => Promise<void>;
+  setMessageReactions: (
+    messageId: string,
+    threadId: string,
+    reactions: Reaction[],
+  ) => Promise<void>;
   /** Wave 22 Phase A / Wave 41 E.2 — set collapsedByDefault flag (scoped by threadId). */
   setMessageCollapsed: (messageId: string, threadId: string, collapsed: boolean) => Promise<void>;
   /** Wave 23 Phase A — fork a thread, optionally carrying history. */
@@ -178,21 +182,34 @@ async function loadLatestThreadRecord(
   return threads[0] ?? null;
 }
 
-type StoreApiArgs = { createId: () => string; now: () => number; runtime: ThreadStoreSqliteRuntime };
+type StoreApiArgs = {
+  createId: () => string;
+  now: () => number;
+  runtime: ThreadStoreSqliteRuntime;
+};
 
-function buildCoreApi(args: StoreApiArgs): Pick<
+type CoreApi = Pick<
   AgentChatThreadStore,
-  | 'createThread' | 'deleteThread' | 'loadThread' | 'listThreads' | 'loadLatestThread'
-  | 'updateThread' | 'appendMessage' | 'updateMessage' | 'updateTitleFromResponse'
-  | 'branchThread' | 'reRunFromMessage' | 'getStorageDirectory'
+  | 'createThread'
+  | 'deleteThread'
+  | 'loadThread'
+  | 'listThreads'
+  | 'loadLatestThread'
+  | 'updateThread'
+  | 'appendMessage'
+  | 'updateMessage'
+  | 'updateTitleFromResponse'
+  | 'branchThread'
+  | 'reRunFromMessage'
+  | 'getStorageDirectory'
+>;
+
+function buildMutationMethods(args: StoreApiArgs): Pick<CoreApi,
+  'updateThread' | 'appendMessage' | 'updateMessage' | 'updateTitleFromResponse' |
+  'branchThread' | 'reRunFromMessage'
 > {
   const { runtime, now, createId } = args;
   return {
-    createThread: createThreadMethod(args),
-    deleteThread: (id) => runtime.runMutation(() => runtime.deleteThread(id)),
-    loadThread: (id) => runtime.readThread(id),
-    listThreads: (ws) => listThreadRecords(runtime, ws),
-    loadLatestThread: (ws) => loadLatestThreadRecord(runtime, ws),
     updateThread: (id, patch) =>
       runtime.runMutation(() => updateThreadRecord({ now, patch, runtime, threadId: id })),
     appendMessage: (id, msg) =>
@@ -213,7 +230,19 @@ function buildCoreApi(args: StoreApiArgs): Pick<
       runtime.runMutation(() =>
         reRunFromMessageImpl({ createId, now, runtime, threadId: id, messageId: mid }),
       ),
+  };
+}
+
+function buildCoreApi(args: StoreApiArgs): CoreApi {
+  const { runtime } = args;
+  return {
+    createThread: createThreadMethod(args),
+    deleteThread: (id) => runtime.runMutation(() => runtime.deleteThread(id)),
+    loadThread: (id) => runtime.readThread(id),
+    listThreads: (ws) => listThreadRecords(runtime, ws),
+    loadLatestThread: (ws) => loadLatestThreadRecord(runtime, ws),
     getStorageDirectory: () => runtime.getStorageDirectory(),
+    ...buildMutationMethods(args),
   };
 }
 
@@ -231,16 +260,12 @@ function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
     setMessageReactions: (mid, tid, reactions) => runtime.setMessageReactions(mid, tid, reactions),
     setMessageCollapsed: (mid, tid, collapsed) => runtime.setMessageCollapsed(mid, tid, collapsed),
     forkThread: (params) =>
-      runtime.runMutation(() =>
-        forkThreadImpl({ createId, now, params, runtime }),
-      ),
+      runtime.runMutation(() => forkThreadImpl({ createId, now, params, runtime })),
     renameBranch: (id, name) =>
       runtime.runMutation(async () => renameBranchImpl(runtime, id, name)),
     listBranches: (rootThreadId) => listBranchesOfThreadImpl(runtime, rootThreadId),
     mergeSideChat: (params) =>
-      runtime.runMutation(() =>
-        mergeSideChatIntoMain(params, runtime, { createId, now }),
-      ),
+      runtime.runMutation(() => mergeSideChatIntoMain(params, runtime, { createId, now })),
   };
 }
 
@@ -266,11 +291,13 @@ export function createAgentChatThreadStore(
 // into this anyway, it just needs the module to load cleanly.
 export const agentChatThreadStore: AgentChatThreadStore = isMainThread
   ? createAgentChatThreadStore()
-  : (new Proxy({} as AgentChatThreadStore, {
+  : new Proxy({} as AgentChatThreadStore, {
       get() {
-        throw new Error('agentChatThreadStore is main-process-only and was accessed from a worker thread');
+        throw new Error(
+          'agentChatThreadStore is main-process-only and was accessed from a worker thread',
+        );
       },
-    }));
+    });
 
 /** Close the thread store's SQLite connection. Call during app shutdown. */
 export function closeThreadStore(): void {

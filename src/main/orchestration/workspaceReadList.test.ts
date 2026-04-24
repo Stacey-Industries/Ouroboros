@@ -9,8 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const configStore = new Map<string, unknown>();
 
 vi.mock('../config', () => ({
-  getConfigValue: (key: string) => (key === 'workspaceReadLists' ? configStore.get(key) ?? {} : undefined),
-  setConfigValue: (key: string, value: unknown) => { configStore.set(key, value); },
+  getConfigValue: (key: string) =>
+    key === 'workspaceReadLists' ? (configStore.get(key) ?? {}) : undefined,
+  setConfigValue: (key: string, value: unknown) => {
+    configStore.set(key, value);
+  },
 }));
 
 const addedPins: Array<{ sessionId: string; item: unknown }> = [];
@@ -18,8 +21,15 @@ const existingPins: Array<{ source: string; dismissed?: boolean }> = [];
 
 vi.mock('./pinnedContextStore', () => ({
   getPinnedContextStore: () => ({
-    list: (sessionId: string, opts: unknown) => { void sessionId; void opts; return existingPins; },
-    add: (sessionId: string, item: unknown) => { addedPins.push({ sessionId, item }); return item; },
+    list: (sessionId: string, opts: unknown) => {
+      void sessionId;
+      void opts;
+      return existingPins;
+    },
+    add: (sessionId: string, item: unknown) => {
+      addedPins.push({ sessionId, item });
+      return item;
+    },
   }),
 }));
 
@@ -118,7 +128,13 @@ describe('applyToSession', () => {
     expect(addedPins).toHaveLength(2);
     expect(addedPins[0]).toMatchObject({
       sessionId: 'session-1',
-      item: { type: 'user-file', source: FILE_A, title: 'main.ts', content: '(not yet loaded)', tokens: 0 },
+      item: {
+        type: 'user-file',
+        source: FILE_A,
+        title: 'main.ts',
+        content: '(not yet loaded)',
+        tokens: 0,
+      },
     });
     expect(addedPins[1]).toMatchObject({
       sessionId: 'session-1',

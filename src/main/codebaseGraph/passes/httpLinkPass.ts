@@ -7,9 +7,9 @@
  * (0.0 -- 1.0) based on method match and caller-name / route-path similarity.
  */
 
-import type { GraphDatabase } from '../graphDatabase'
-import type { GraphEdge, GraphNode } from '../graphDatabaseTypes'
-import type { IndexedFile } from './passTypes'
+import type { GraphDatabase } from '../graphDatabase';
+import type { GraphEdge, GraphNode } from '../graphDatabaseTypes';
+import type { IndexedFile } from './passTypes';
 
 // ─── HTTP call-site patterns ─────────────────────────────────────────────────
 // Maps a function/method name to the HTTP methods it can represent.
@@ -45,27 +45,32 @@ const HTTP_CALL_PATTERNS: Record<string, string[]> = {
   'http.Get': ['GET'],
   'http.Post': ['POST'],
   'http.NewRequest': ['*'],
-}
+};
 
 // ─── Helper: look up HTTP methods for a call site ────────────────────────────
 
 function resolveHttpMethods(calleeName: string, receiverName?: string): string[] | null {
-  const fullCallName = receiverName ? `${receiverName}.${calleeName}` : calleeName
+  const fullCallName = receiverName ? `${receiverName}.${calleeName}` : calleeName;
   // eslint-disable-next-line security/detect-object-injection -- keys are Cypher-extracted call names matched against a static allowlist
-  return HTTP_CALL_PATTERNS[fullCallName] ?? HTTP_CALL_PATTERNS[calleeName] ?? null
+  return HTTP_CALL_PATTERNS[fullCallName] ?? HTTP_CALL_PATTERNS[calleeName] ?? null;
 }
 
 // ─── Helper: score a route match ─────────────────────────────────────────────
 
-function scoreRouteMatch(callerName: string, routeMethod: string, routePath: string, methods: string[]): number {
-  if (!methods.includes('*') && !methods.includes(routeMethod)) return 0
+function scoreRouteMatch(
+  callerName: string,
+  routeMethod: string,
+  routePath: string,
+  methods: string[],
+): number {
+  if (!methods.includes('*') && !methods.includes(routeMethod)) return 0;
 
-  let confidence = 0.3
-  const callerLower = callerName.toLowerCase()
+  let confidence = 0.3;
+  const callerLower = callerName.toLowerCase();
   for (const part of routePath.split('/').filter(Boolean)) {
-    if (!part.startsWith(':') && callerLower.includes(part.toLowerCase())) confidence += 0.2
+    if (!part.startsWith(':') && callerLower.includes(part.toLowerCase())) confidence += 0.2;
   }
-  return Math.min(confidence, 1.0)
+  return Math.min(confidence, 1.0);
 }
 
 // ─── Helper: process one file's calls ────────────────────────────────────────
@@ -76,48 +81,66 @@ function processFileHttpCalls(
   projectName: string,
   routes: GraphNode[],
 ): Omit<GraphEdge, 'id'>[] {
-  if (!file.parsed) return []
-  const edges: Omit<GraphEdge, 'id'>[] = []
-  const enclosingDefs = file.parsed.definitions.filter((d) => d.kind === 'Function' || d.kind === 'Method')
+  if (!file.parsed) return [];
+  const edges: Omit<GraphEdge, 'id'>[] = [];
+  const enclosingDefs = file.parsed.definitions.filter(
+    (d) => d.kind === 'Function' || d.kind === 'Method',
+  );
 
   for (const call of file.parsed.calls) {
-    const methods = resolveHttpMethods(call.calleeName, call.receiverName ?? undefined)
-    if (!methods) continue
+    const methods = resolveHttpMethods(call.calleeName, call.receiverName ?? undefined);
+    if (!methods) continue;
 
-    const enclosingDef = enclosingDefs.find((d) => call.startLine >= d.startLine && call.startLine <= d.endLine)
-    if (!enclosingDef) continue
-    const callerQn = `${fileQn}.${enclosingDef.name}`
+    const enclosingDef = enclosingDefs.find(
+      (d) => call.startLine >= d.startLine && call.startLine <= d.endLine,
+    );
+    if (!enclosingDef) continue;
+    const callerQn = `${fileQn}.${enclosingDef.name}`;
 
     for (const route of routes) {
-      const routeProps = route.props as Record<string, string>
-      const confidence = scoreRouteMatch(enclosingDef.name, routeProps.method, routeProps.path, methods)
+      const routeProps = route.props as Record<string, string>;
+      const confidence = scoreRouteMatch(
+        enclosingDef.name,
+        routeProps.method,
+        routeProps.path,
+        methods,
+      );
       if (confidence >= 0.3) {
-        edges.push({ project: projectName, source_id: callerQn, target_id: route.id, type: 'HTTP_CALLS',
-          props: { confidence, url_path: routeProps.path, http_method: routeProps.method } })
+        edges.push({
+          project: projectName,
+          source_id: callerQn,
+          target_id: route.id,
+          type: 'HTTP_CALLS',
+          props: { confidence, url_path: routeProps.path, http_method: routeProps.method },
+        });
       }
     }
   }
-  return edges
+  return edges;
 }
 
 // ─── Pass implementation ─────────────────────────────────────────────────────
 
-export function httpLinkPass(db: GraphDatabase, projectName: string, indexedFiles: IndexedFile[]): void {
-  const routes = db.getNodesByLabel(projectName, 'Route')
-  if (routes.length === 0) return
+export function httpLinkPass(
+  db: GraphDatabase,
+  projectName: string,
+  indexedFiles: IndexedFile[],
+): void {
+  const routes = db.getNodesByLabel(projectName, 'Route');
+  if (routes.length === 0) return;
 
-  const allEdges: Omit<GraphEdge, 'id'>[] = []
+  const allEdges: Omit<GraphEdge, 'id'>[] = [];
   for (const file of indexedFiles) {
-    const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
-    allEdges.push(...processFileHttpCalls(file, fileQn, projectName, routes))
+    const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`;
+    allEdges.push(...processFileHttpCalls(file, fileQn, projectName, routes));
   }
 
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   const unique = allEdges.filter((e) => {
-    const key = `${e.source_id}|${e.target_id}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-  if (unique.length > 0) db.insertEdges(unique)
+    const key = `${e.source_id}|${e.target_id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (unique.length > 0) db.insertEdges(unique);
 }

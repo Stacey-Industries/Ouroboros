@@ -156,7 +156,13 @@ interface FilePaneViewProps {
   onClick: () => void;
 }
 
-function FilePaneView({ view, projectRoot, actions, isActive, onClick }: FilePaneViewProps): React.ReactElement {
+function FilePaneView({
+  view,
+  projectRoot,
+  actions,
+  isActive,
+  onClick,
+}: FilePaneViewProps): React.ReactElement {
   return (
     <div
       style={{ ...SPLIT_PANE_STYLE, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}

@@ -9,8 +9,7 @@ import type { WebSocketTransport } from './webPreloadTransport';
 
 function buildRulesApi(t: WebSocketTransport) {
   return {
-    listRules: (projectRoot: string) =>
-      t.invoke('rules:list', projectRoot),
+    listRules: (projectRoot: string) => t.invoke('rules:list', projectRoot),
     readRule: (projectRoot: string, type: 'claude-md' | 'agents-md') =>
       t.invoke('rules:read', projectRoot, type),
     createRule: (projectRoot: string, type: 'claude-md' | 'agents-md') =>
@@ -47,22 +46,13 @@ function buildRulesApi(t: WebSocketTransport) {
 
 function buildCommandsApi(t: WebSocketTransport) {
   return {
-    listCommands: (projectRoot?: string) =>
-      t.invoke('commands:list', projectRoot),
-    createCommand: (args: {
-      scope: string;
-      name: string;
-      content: string;
-      projectRoot?: string;
-    }) => t.invoke('commands:create', args),
+    listCommands: (projectRoot?: string) => t.invoke('commands:list', projectRoot),
+    createCommand: (args: { scope: string; name: string; content: string; projectRoot?: string }) =>
+      t.invoke('commands:create', args),
     readCommand: (args: { scope: string; name: string; projectRoot?: string }) =>
       t.invoke('commands:read', args),
-    updateCommand: (args: {
-      scope: string;
-      name: string;
-      content: string;
-      projectRoot?: string;
-    }) => t.invoke('commands:update', args),
+    updateCommand: (args: { scope: string; name: string; content: string; projectRoot?: string }) =>
+      t.invoke('commands:update', args),
     deleteCommand: (args: { scope: string; name: string; projectRoot?: string }) =>
       t.invoke('commands:delete', args),
   };
@@ -72,8 +62,7 @@ function buildCommandsApi(t: WebSocketTransport) {
 
 function buildRulesDirApi(t: WebSocketTransport) {
   return {
-    listRuleFiles: (projectRoot?: string) =>
-      t.invoke('rulesDir:list', projectRoot),
+    listRuleFiles: (projectRoot?: string) => t.invoke('rulesDir:list', projectRoot),
     createRuleFile: (args: {
       scope: string;
       name: string;
@@ -90,8 +79,7 @@ function buildRulesDirApi(t: WebSocketTransport) {
     }) => t.invoke('rulesDir:update', args),
     deleteRuleFile: (args: { scope: string; name: string; projectRoot?: string }) =>
       t.invoke('rulesDir:delete', args),
-    startWatcher: (projectRoot: string) =>
-      t.invoke('rulesAndSkills:startWatcher', projectRoot),
+    startWatcher: (projectRoot: string) => t.invoke('rulesAndSkills:startWatcher', projectRoot),
     onChanged: (callback: () => void): (() => void) =>
       t.on('rulesAndSkills:changed', callback as (v: unknown) => void),
   };

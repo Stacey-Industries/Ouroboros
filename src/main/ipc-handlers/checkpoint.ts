@@ -20,10 +20,7 @@ import type {
   CheckpointCreateRequest,
   CheckpointCreateResult,
 } from '../../renderer/types/electron-checkpoint';
-import {
-  captureHeadHash,
-  createCheckpointCommit,
-} from '../agentChat/chatOrchestrationBridgeGit';
+import { captureHeadHash, createCheckpointCommit } from '../agentChat/chatOrchestrationBridgeGit';
 import { CheckpointStore } from '../agentChat/checkpointStore';
 import log from '../logger';
 import { openDatabase } from '../storage/database';
@@ -65,7 +62,11 @@ function notifyChange(threadId: string): void {
 async function handleList(
   event: IpcMainInvokeEvent,
   request: CheckpointListRequest,
-): Promise<{ success: boolean; checkpoints?: ReturnType<CheckpointStore['list']>; error?: string }> {
+): Promise<{
+  success: boolean;
+  checkpoints?: ReturnType<CheckpointStore['list']>;
+  error?: string;
+}> {
   const denied = assertPathAllowed(event, request.projectRoot);
   if (denied) return denied;
   return checkpointListRecords(getStore(), request.threadId);

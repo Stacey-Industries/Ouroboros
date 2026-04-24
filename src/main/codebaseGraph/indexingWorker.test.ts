@@ -7,7 +7,7 @@
  * This file only verifies the module can be imported without throwing.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest';
 
 // Stub worker_threads before the module is loaded so parentPort.on() does not
 // blow up outside an actual worker context.
@@ -17,16 +17,16 @@ vi.mock('worker_threads', () => ({
     postMessage: vi.fn(),
   },
   workerData: {},
-}))
+}));
 
 // Stub heavy native deps so the module graph resolves in vitest.
 vi.mock('./graphDatabase', () => ({
   GraphDatabase: vi.fn().mockImplementation(() => ({})),
-}))
+}));
 
 vi.mock('./treeSitterParser', () => ({
   TreeSitterParser: vi.fn().mockImplementation(() => ({})),
-}))
+}));
 
 vi.mock('./indexingPipeline', () => ({
   IndexingPipeline: vi.fn().mockImplementation(() => ({
@@ -42,16 +42,16 @@ vi.mock('./indexingPipeline', () => ({
       incremental: false,
     }),
   })),
-}))
+}));
 
 describe('indexingWorker module', () => {
   it('imports without throwing', async () => {
     // Dynamic import so vi.mock() stubs are in place first.
-    await expect(import('./indexingWorker')).resolves.toBeDefined()
-  })
+    await expect(import('./indexingWorker')).resolves.toBeDefined();
+  });
 
   it('registers a message listener on parentPort', async () => {
-    const { parentPort } = await import('worker_threads')
-    expect(parentPort?.on).toHaveBeenCalledWith('message', expect.any(Function))
-  })
-})
+    const { parentPort } = await import('worker_threads');
+    expect(parentPort?.on).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+});

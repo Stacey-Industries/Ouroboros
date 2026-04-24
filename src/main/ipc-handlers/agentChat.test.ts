@@ -107,6 +107,10 @@ vi.mock('./agentChatOrchestration', () => ({
   })),
 }));
 
+vi.mock('../orchestration/providers/claudeWarmProcessManager', () => ({
+  injectWarmUserMessage: vi.fn(),
+}));
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('registerAgentChatHandlers', () => {
@@ -156,11 +160,18 @@ describe('cleanupAgentChatHandlers', () => {
   it('runs without throwing', async () => {
     const { registerAgentChatHandlers, cleanupAgentChatHandlers } = await import('./agentChat');
     registerAgentChatHandlers();
-    expect(() => cleanupAgentChatHandlers()).not.toThrow();
+    await expect(cleanupAgentChatHandlers()).resolves.toBeUndefined();
   });
 
   it('can be called before registration without throwing', async () => {
     const { cleanupAgentChatHandlers } = await import('./agentChat');
-    expect(() => cleanupAgentChatHandlers()).not.toThrow();
+    await expect(cleanupAgentChatHandlers()).resolves.toBeUndefined();
   });
 });
+
+// injectMidTurn handler behavior is covered in agentChatMidTurn.test.ts —
+// that file exercises the handler through its actual registrar signature
+// (register callback + requireValidString), which mirrors how agentChat.ts
+// wires it up. Testing it here via the ipcMain.handle mock would duplicate
+// coverage and depends on indirection through the shared `register` wrapper.
+// Keep this file focused on the top-level registrar contract only.

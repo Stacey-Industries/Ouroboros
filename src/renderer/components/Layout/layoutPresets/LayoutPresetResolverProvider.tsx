@@ -68,7 +68,10 @@ function usePhaseDAux({
   setSlotTree,
   persistence,
   undoStack,
-}: PhaseDParams): Pick<LayoutPresetContextValue, 'undoLayout' | 'canUndo' | 'resetLayout' | 'promoteToGlobal'> {
+}: PhaseDParams): Pick<
+  LayoutPresetContextValue,
+  'undoLayout' | 'canUndo' | 'resetLayout' | 'promoteToGlobal'
+> {
   const undoLayout = useCallback(() => {
     const prev = undoStack.pop();
     if (prev === null) return;
@@ -82,10 +85,13 @@ function usePhaseDAux({
     persistence.clear();
   }, [basePreset.slots, setSlotTree, persistence]);
 
-  const promoteToGlobal = useCallback((name: string) => {
-    if (!name || typeof window === 'undefined' || !('electronAPI' in window)) return;
-    void window.electronAPI.layout.promoteToGlobal(name, slotTree as SerializedSlotNode);
-  }, [slotTree]);
+  const promoteToGlobal = useCallback(
+    (name: string) => {
+      if (!name || typeof window === 'undefined' || !('electronAPI' in window)) return;
+      void window.electronAPI.layout.promoteToGlobal(name, slotTree as SerializedSlotNode);
+    },
+    [slotTree],
+  );
 
   return { undoLayout, canUndo: undoStack.canUndo, resetLayout, promoteToGlobal };
 }
@@ -103,7 +109,11 @@ const DEFAULT_LEAF: SlotNode = {
 interface ProviderCore {
   basePreset: LayoutPreset;
   preset: LayoutPreset;
-  setSlotOverrides: React.Dispatch<React.SetStateAction<Partial<Record<import('./types').SlotName, import('./types').ComponentDescriptor>>>>;
+  setSlotOverrides: React.Dispatch<
+    React.SetStateAction<
+      Partial<Record<import('./types').SlotName, import('./types').ComponentDescriptor>>
+    >
+  >;
   slotTree: SlotNode;
   setSlotTree: React.Dispatch<React.SetStateAction<SlotNode>>;
   persistence: ReturnType<typeof useCustomLayoutPersistence>;
@@ -118,8 +128,16 @@ function useProviderCore(
   const flagOn = usePresetsFlag();
   const mobilePrimaryOn = useMobilePrimaryFlag();
   const breakpoint = useViewportBreakpoint();
-  const effectiveForcePresetId = resolveMobileForcePreset(mobilePrimaryOn, breakpoint, forcePresetId);
-  const [basePreset, preset, setSlotOverrides] = useResolvedPreset(flagOn, sessionPresetId, effectiveForcePresetId);
+  const effectiveForcePresetId = resolveMobileForcePreset(
+    mobilePrimaryOn,
+    breakpoint,
+    forcePresetId,
+  );
+  const [basePreset, preset, setSlotOverrides] = useResolvedPreset(
+    flagOn,
+    sessionPresetId,
+    effectiveForcePresetId,
+  );
   const [slotTree, setSlotTree] = useState<SlotNode>(DEFAULT_LEAF);
   const persistence = useCustomLayoutPersistence(sessionId);
   const undoStack = useLayoutUndoStack();
@@ -129,7 +147,7 @@ function useProviderCore(
     } else {
       setSlotTree((prev) => (isSplit(prev) ? prev : buildInitialTree(basePreset.slots)));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePreset]);
   return { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack };
 }
@@ -147,18 +165,26 @@ export function LayoutPresetResolverProvider({
   const { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack } =
     useProviderCore(sessionPresetId, forcePresetId, sessionId);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ProviderState.persistence uses unknown for covariant compatibility
-  const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree, persistence: persistence as any };
+  const state: ProviderState = {
+    preset,
+    slotTree,
+    setSlotOverrides,
+    setSlotTree,
+    persistence,
+  };
 
-  const swapSlots = useCallback((a: import('./types').SlotName, b: import('./types').SlotName) => {
-    undoStack.push(slotTree as SerializedSlotNode);
-    setSlotOverrides((prev) => buildSwapOverrides(preset.slots, prev, a, b));
-    setSlotTree((prev) => {
-      const next = applySwapToTree(prev, a, b, preset.slots);
-      persistence.save(next as SerializedSlotNode);
-      return next;
-    });
-  }, [preset.slots, setSlotOverrides, slotTree, undoStack, persistence]);
+  const swapSlots = useCallback(
+    (a: import('./types').SlotName, b: import('./types').SlotName) => {
+      undoStack.push(slotTree as SerializedSlotNode);
+      setSlotOverrides((prev) => buildSwapOverrides(preset.slots, prev, a, b));
+      setSlotTree((prev) => {
+        const next = applySwapToTree(prev, a, b, preset.slots);
+        persistence.save(next as SerializedSlotNode);
+        return next;
+      });
+    },
+    [persistence, preset.slots, setSlotOverrides, setSlotTree, slotTree, undoStack],
+  );
 
   const splitSlot = useSplitSlotCallback(state);
   const aux = usePhaseDAux({ basePreset, slotTree, setSlotTree, persistence, undoStack });
@@ -168,9 +194,5 @@ export function LayoutPresetResolverProvider({
     [preset, slotTree, swapSlots, splitSlot, aux],
   );
 
-  return (
-    <LayoutPresetContext.Provider value={value}>
-      {children}
-    </LayoutPresetContext.Provider>
-  );
+  return <LayoutPresetContext.Provider value={value}>{children}</LayoutPresetContext.Provider>;
 }

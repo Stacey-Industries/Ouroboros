@@ -101,6 +101,7 @@ export function loadPersistedContextCache(): void {
 // ── Context worker management ─────────────────────────────────────────
 
 let contextWorker: Worker | null = null;
+const terminatingContextWorkers = new WeakSet<Worker>();
 
 function getWorkerPath(): string {
   const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
@@ -111,17 +112,19 @@ function ensureContextWorker(): Worker | null {
   if (contextWorker) return contextWorker;
   const workerPath = getWorkerPath();
   try {
-    contextWorker = new Worker(workerPath, { workerData: buildWorkerPipeAuthSeed() });
-    contextWorker.on('message', handleContextWorkerMessage);
-    contextWorker.on('error', (err) => {
+    const worker = new Worker(workerPath, { workerData: buildWorkerPipeAuthSeed() });
+    contextWorker = worker;
+    worker.on('message', handleContextWorkerMessage);
+    worker.on('error', (err) => {
       log.warn('context worker error:', err);
-      contextWorker = null;
+      if (contextWorker === worker) contextWorker = null;
     });
-    contextWorker.on('exit', (code) => {
-      if (code !== 0) log.warn('context worker exited with code', code);
-      contextWorker = null;
+    worker.on('exit', (code) => {
+      if (code !== 0 && !terminatingContextWorkers.has(worker))
+        log.warn('context worker exited with code', code);
+      if (contextWorker === worker) contextWorker = null;
     });
-    return contextWorker;
+    return worker;
   } catch (err) {
     log.warn('Failed to create context worker:', err);
     return null;
@@ -199,10 +202,16 @@ export function warmSnapshotCache(roots: string[]): void {
 }
 
 /** Terminate the context worker (call on app shutdown). */
-export function terminateContextWorker(): void {
-  if (contextWorker) {
-    contextWorker.terminate().catch(() => {});
-    contextWorker = null;
+export async function terminateContextWorker(): Promise<void> {
+  const worker = contextWorker;
+  if (!worker) return;
+  terminatingContextWorkers.add(worker);
+  contextWorker = null;
+  contextBuildInFlight.clear();
+  try {
+    await worker.terminate();
+  } catch {
+    /* already gone */
   }
 }
 

@@ -45,7 +45,10 @@ function applyNestExpansionState(nodes: TreeNode[], expandedPaths: Set<string>):
   });
 }
 
-export function buildDisplayItems(flatRows: TreeNode[], editState: EditState | null): Array<{ node: TreeNode }> {
+export function buildDisplayItems(
+  flatRows: TreeNode[],
+  editState: EditState | null,
+): Array<{ node: TreeNode }> {
   const base = flatRows.map((node) => ({ node }));
   if (!editState || editState.mode === 'rename') return base;
 
@@ -64,7 +67,10 @@ export function buildDisplayItems(flatRows: TreeNode[], editState: EditState | n
   return [...base.slice(0, index + 1), { node: placeholder }, ...base.slice(index + 1)];
 }
 
-export function useDisplayItems(rootNodes: TreeNode[], editState: EditState | null): Array<{ node: TreeNode }> {
+export function useDisplayItems(
+  rootNodes: TreeNode[],
+  editState: EditState | null,
+): Array<{ node: TreeNode }> {
   const nestingEnabled = useFileTreeStore((s) => s.nestingEnabled);
   const nestExpandedPaths = useFileTreeStore((s) => s.nestExpandedPaths);
 

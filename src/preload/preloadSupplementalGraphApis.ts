@@ -16,6 +16,5 @@ export const graphApi: GraphAPI = {
   getStatus: () => ipcRenderer.invoke('graph:getStatus'),
   getNeighbourhood: (symbolId, depth) =>
     ipcRenderer.invoke('graph:getNeighbourhood', symbolId, depth),
-  getBlastRadius: (symbolId, depth) =>
-    ipcRenderer.invoke('graph:getBlastRadius', symbolId, depth),
+  getBlastRadius: (symbolId, depth) => ipcRenderer.invoke('graph:getBlastRadius', symbolId, depth),
 };

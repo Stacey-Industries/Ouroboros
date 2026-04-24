@@ -4,11 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  forkThreadImpl,
-  listBranchesOfThreadImpl,
-  renameBranchImpl,
-} from './threadStoreFork';
+import { forkThreadImpl, listBranchesOfThreadImpl, renameBranchImpl } from './threadStoreFork';
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -49,9 +45,7 @@ function makeRuntime(threads: AgentChatThreadRecord[]) {
       if (!t) return Promise.reject(new Error(`Thread not found: ${id}`));
       return Promise.resolve(t);
     }),
-    writeThread: vi.fn().mockImplementation((t: AgentChatThreadRecord) =>
-      Promise.resolve(t),
-    ),
+    writeThread: vi.fn().mockImplementation((t: AgentChatThreadRecord) => Promise.resolve(t)),
     loadAllThreads: vi.fn().mockResolvedValue(threads),
     renameBranchSql: vi.fn(),
   };
@@ -155,7 +149,11 @@ describe('forkThreadImpl', () => {
 
   it('copies tags from source thread', async () => {
     const u1 = makeMsg({ id: 'u1' });
-    const src = makeThread({ id: 'thread-src', messages: [u1], tags: ['auto:typescript', 'important'] });
+    const src = makeThread({
+      id: 'thread-src',
+      messages: [u1],
+      tags: ['auto:typescript', 'important'],
+    });
     const runtime = makeRuntime([src]);
 
     const result = await forkThreadImpl({
@@ -226,7 +224,12 @@ describe('listBranchesOfThreadImpl', () => {
   it('returns direct children of the root thread', async () => {
     const root = makeThread({ id: 'root' });
     const child1 = makeThread({ id: 'child1', parentThreadId: 'root', forkOfMessageId: 'm1' });
-    const child2 = makeThread({ id: 'child2', parentThreadId: 'root', forkOfMessageId: 'm2', isSideChat: true });
+    const child2 = makeThread({
+      id: 'child2',
+      parentThreadId: 'root',
+      forkOfMessageId: 'm2',
+      isSideChat: true,
+    });
     const runtime = makeRuntime([root, child1, child2]);
 
     const branches = await listBranchesOfThreadImpl(runtime as never, 'root');

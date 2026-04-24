@@ -32,7 +32,11 @@ function buildOverviewProps(model: UseOrchestrationModelReturn, currentStep: str
     session: model.session,
     status: pickString('idle', model.state?.status, model.session?.status),
     provider: pickString('—', model.state?.provider, model.session?.request.provider),
-    verificationProfile: pickString('No verification profile', model.state?.verificationProfile, model.session?.request.verificationProfile),
+    verificationProfile: pickString(
+      'No verification profile',
+      model.state?.verificationProfile,
+      model.session?.request.verificationProfile,
+    ),
     currentStep,
     actionMessage: model.actionMessage,
     actionError: model.actionError,
@@ -59,7 +63,9 @@ function HistoryTabPane({ model }: { model: UseOrchestrationModelReturn }): Reac
     <TaskSessionHistory
       sessions={model.sessions}
       selectedSessionId={model.selectedSessionId}
-      onSelectSession={(sessionId) => { void model.selectSession(sessionId); }}
+      onSelectSession={(sessionId) => {
+        void model.selectSession(sessionId);
+      }}
     />
   );
 }
@@ -74,32 +80,64 @@ interface RenderOrchestrationTabArgs {
 
 export function renderOrchestrationTab(args: RenderOrchestrationTabArgs): React.ReactElement {
   const contentByTab: Record<OrchestrationTab, React.ReactElement> = {
-    overview: <OverviewTabPane model={args.model} currentStep={args.currentStep} projectRoot={args.projectRoot} onTaskReady={args.onTaskReady} />,
+    overview: (
+      <OverviewTabPane
+        model={args.model}
+        currentStep={args.currentStep}
+        projectRoot={args.projectRoot}
+        onTaskReady={args.onTaskReady}
+      />
+    ),
     context: <ContextPreview session={args.model.session} latestResult={args.model.latestResult} />,
-    verification: <VerificationSummary summary={args.model.verificationSummary} providerEvent={args.model.providerEvent} />,
+    verification: (
+      <VerificationSummary
+        summary={args.model.verificationSummary}
+        providerEvent={args.model.providerEvent}
+      />
+    ),
     history: <HistoryTabPane model={args.model} />,
   };
 
   return contentByTab[args.activeTab];
 }
 
-function buildHeaderProps(model: UseOrchestrationModelReturn, projectRoot: string, onClose: () => void) {
+function buildHeaderProps(
+  model: UseOrchestrationModelReturn,
+  projectRoot: string,
+  onClose: () => void,
+) {
   return {
     projectRoot,
     sessionCount: model.sessions.length,
-    verificationProfile: pickString('No verification profile', model.session?.request.verificationProfile),
+    verificationProfile: pickString(
+      'No verification profile',
+      model.session?.request.verificationProfile,
+    ),
     provider: pickNullableString(model.session?.request.provider),
     status: pickString('idle', model.state?.status, model.session?.status),
     refreshing: model.refreshing,
     canResume: Boolean(model.latestSession),
     canRerunVerification: Boolean(model.session),
     canPause: pickBoolean(Boolean(model.state?.activeTaskId), Boolean(model.latestSession?.taskId)),
-    canCancel: pickBoolean(Boolean(model.state?.activeTaskId), Boolean(model.latestSession?.taskId)),
-    onRefresh: () => { void model.refresh(); },
-    onResumeLatest: () => { void model.resumeLatest(); },
-    onRerunVerification: () => { void model.rerunVerification(); },
-    onPauseActive: () => { void model.pauseActive(); },
-    onCancelActive: () => { void model.cancelActive(); },
+    canCancel: pickBoolean(
+      Boolean(model.state?.activeTaskId),
+      Boolean(model.latestSession?.taskId),
+    ),
+    onRefresh: () => {
+      void model.refresh();
+    },
+    onResumeLatest: () => {
+      void model.resumeLatest();
+    },
+    onRerunVerification: () => {
+      void model.rerunVerification();
+    },
+    onPauseActive: () => {
+      void model.pauseActive();
+    },
+    onCancelActive: () => {
+      void model.cancelActive();
+    },
     onClose,
   };
 }
@@ -115,20 +153,30 @@ export function OrchestrationPanelLoaded(props: {
 }): React.ReactElement {
   const headerProps = buildHeaderProps(props.model, props.projectRoot, props.onClose);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--bg)',
+        fontFamily: 'var(--font-ui)',
+      }}
+    >
       <OrchestrationHeader {...headerProps} />
       <OrchestrationTabBar activeTab={props.activeTab} onSelect={props.onSelectTab} />
       <ErrorBanner message={props.model.error} />
       <div className="flex-1 overflow-y-auto px-5 py-5">
-        {props.model.loading
-          ? <LoadingState />
-          : renderOrchestrationTab({
+        {props.model.loading ? (
+          <LoadingState />
+        ) : (
+          renderOrchestrationTab({
             activeTab: props.activeTab,
             currentStep: props.currentStep,
             model: props.model,
             projectRoot: props.projectRoot,
             onTaskReady: props.onTaskReady,
-          })}
+          })
+        )}
       </div>
     </div>
   );

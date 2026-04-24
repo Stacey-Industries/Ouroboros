@@ -12,7 +12,12 @@ export interface ResizeDividerProps {
   label: string;
 }
 
-export function ResizeDivider({ direction, onPointerDown, onDoubleClick, label }: ResizeDividerProps): React.ReactElement {
+export function ResizeDivider({
+  direction,
+  onPointerDown,
+  onDoubleClick,
+  label,
+}: ResizeDividerProps): React.ReactElement {
   const isVertical = direction === 'vertical';
   return (
     <div
@@ -25,7 +30,9 @@ export function ResizeDivider({ direction, onPointerDown, onDoubleClick, label }
       aria-label={label}
       style={{ touchAction: 'none' }}
     >
-      <div className={`absolute ${isVertical ? 'inset-y-0 -left-1 -right-1' : 'inset-x-0 -top-1 -bottom-1'}`} />
+      <div
+        className={`absolute ${isVertical ? 'inset-y-0 -left-1 -right-1' : 'inset-x-0 -top-1 -bottom-1'}`}
+      />
       <div
         data-layout="resize-handle-line"
         className={`absolute ${isVertical ? 'inset-y-0 left-[2px] w-[1px]' : 'inset-x-0 top-[2px] h-[1px]'} bg-border-semantic opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-interactive-accent group-active:opacity-100 group-active:bg-interactive-accent`}

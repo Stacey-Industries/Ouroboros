@@ -58,11 +58,16 @@ export function parseConflictBlocks(lines: string[]): ConflictBlock[] {
   return blocks;
 }
 
-export function resolveConflictBlock(lines: string[], block: ConflictBlock, choice: ConflictChoice): string[] {
-  const replacement = choice === 'ours'
-    ? block.oursLines
-    : choice === 'theirs'
-      ? block.theirsLines
-      : [...block.oursLines, ...block.theirsLines];
+export function resolveConflictBlock(
+  lines: string[],
+  block: ConflictBlock,
+  choice: ConflictChoice,
+): string[] {
+  const replacement =
+    choice === 'ours'
+      ? block.oursLines
+      : choice === 'theirs'
+        ? block.theirsLines
+        : [...block.oursLines, ...block.theirsLines];
   return [...lines.slice(0, block.startLine), ...replacement, ...lines.slice(block.endLine + 1)];
 }

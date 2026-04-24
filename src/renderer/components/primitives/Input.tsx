@@ -11,7 +11,13 @@ const BASE =
 
 const sizeClass = { sm: 'px-2 py-1 text-xs', md: 'px-2.5 py-1.5 text-sm' };
 
-export function Input({ inputSize = 'md', error = false, className, ref, ...rest }: InputProps): React.ReactElement {
+export function Input({
+  inputSize = 'md',
+  error = false,
+  className,
+  ref,
+  ...rest
+}: InputProps): React.ReactElement {
   const errorClass = error ? 'border-status-error' : '';
   const classes = `${BASE} ${sizeClass[inputSize]} ${errorClass} ${className ?? ''}`;
   return <input ref={ref} className={classes} {...rest} />;

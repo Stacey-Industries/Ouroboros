@@ -20,12 +20,8 @@ interface StatCardProps {
 function StatCard({ title, value }: StatCardProps): React.ReactElement {
   return (
     <div className="bg-surface-panel border border-border-subtle rounded-lg p-4 flex flex-col gap-1 min-w-0">
-      <span className="text-xs text-text-semantic-muted uppercase tracking-wide">
-        {title}
-      </span>
-      <span className="text-2xl font-semibold text-text-semantic-primary truncate">
-        {value}
-      </span>
+      <span className="text-xs text-text-semantic-muted uppercase tracking-wide">{title}</span>
+      <span className="text-2xl font-semibold text-text-semantic-primary truncate">{value}</span>
     </div>
   );
 }
@@ -36,9 +32,7 @@ interface UsageSummaryCardsProps {
   rollup: GlobalCostRollupRecord | null;
 }
 
-export function UsageSummaryCards({
-  rollup,
-}: UsageSummaryCardsProps): React.ReactElement {
+export function UsageSummaryCards({ rollup }: UsageSummaryCardsProps): React.ReactElement {
   const cost = rollup !== null ? formatCost(rollup.totalUsd) : '—';
   const input = rollup !== null ? formatTokenCount(rollup.totalInputTokens) : '—';
   const output = rollup !== null ? formatTokenCount(rollup.totalOutputTokens) : '—';

@@ -48,7 +48,11 @@ function down(by?: string): Reaction {
   return { kind: '-1', at: 1000, ...(by ? { by } : {}) };
 }
 
-function render_(reactions: Reaction[] = [], id = 'msg-1', threadId = 'thread-1'): ReturnType<typeof render> {
+function render_(
+  reactions: Reaction[] = [],
+  id = 'msg-1',
+  threadId = 'thread-1',
+): ReturnType<typeof render> {
   return render(<ReactionBar messageId={id} threadId={threadId} reactions={reactions} />);
 }
 

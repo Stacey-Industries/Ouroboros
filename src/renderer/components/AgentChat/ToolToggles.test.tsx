@@ -42,9 +42,7 @@ function makeProfile(enabledTools?: string[]): Profile {
 
 describe('ToolToggles — tool groups rendered', () => {
   it('renders all group labels', () => {
-    render(
-      <ToolToggles sessionId="s1" onChange={() => undefined} />,
-    );
+    render(<ToolToggles sessionId="s1" onChange={() => undefined} />);
     for (const group of TOOL_GROUPS) {
       // Use exact match to avoid 'Search' matching 'WebSearch' as well.
       expect(screen.getAllByText(group.label, { exact: true }).length).toBeGreaterThan(0);
@@ -52,9 +50,7 @@ describe('ToolToggles — tool groups rendered', () => {
   });
 
   it('renders a checkbox for every known tool', () => {
-    render(
-      <ToolToggles sessionId="s1" onChange={() => undefined} />,
-    );
+    render(<ToolToggles sessionId="s1" onChange={() => undefined} />);
     const checkboxes = screen.getAllByRole('checkbox');
     expect(checkboxes).toHaveLength(ALL_KNOWN_TOOLS.length);
   });
@@ -63,14 +59,12 @@ describe('ToolToggles — tool groups rendered', () => {
 describe('ToolToggles — initial state from toolOverrides', () => {
   it('checks only overridden tools when toolOverrides is provided', () => {
     render(
-      <ToolToggles
-        sessionId="s1"
-        toolOverrides={['Read', 'Grep']}
-        onChange={() => undefined}
-      />,
+      <ToolToggles sessionId="s1" toolOverrides={['Read', 'Grep']} onChange={() => undefined} />,
     );
     const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
-    const checked = checkboxes.filter((c) => c.checked).map((c) => c.closest('label')?.textContent?.trim());
+    const checked = checkboxes
+      .filter((c) => c.checked)
+      .map((c) => c.closest('label')?.textContent?.trim());
     expect(checked).toContain('Read');
     expect(checked).toContain('Grep');
     // Bash should be unchecked
@@ -81,21 +75,21 @@ describe('ToolToggles — initial state from toolOverrides', () => {
 
   it('uses profile enabledTools when no toolOverrides present', () => {
     const profile = makeProfile(['Write', 'Edit']);
-    render(
-      <ToolToggles sessionId="s1" profile={profile} onChange={() => undefined} />,
-    );
-    const writeCb = screen.getByText('Write').closest('label')
+    render(<ToolToggles sessionId="s1" profile={profile} onChange={() => undefined} />);
+    const writeCb = screen
+      .getByText('Write')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
-    const readCb = screen.getByText('Read').closest('label')
+    const readCb = screen
+      .getByText('Read')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     expect(writeCb?.checked).toBe(true);
     expect(readCb?.checked).toBe(false);
   });
 
   it('enables all tools when neither toolOverrides nor profile.enabledTools is set', () => {
-    render(
-      <ToolToggles sessionId="s1" onChange={() => undefined} />,
-    );
+    render(<ToolToggles sessionId="s1" onChange={() => undefined} />);
     const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
     expect(checkboxes.every((c) => c.checked)).toBe(true);
   });
@@ -104,14 +98,10 @@ describe('ToolToggles — initial state from toolOverrides', () => {
 describe('ToolToggles — toggle behaviour', () => {
   it('calls setToolOverrides and onChange when a tool is toggled off', async () => {
     const onChange = vi.fn();
-    render(
-      <ToolToggles
-        sessionId="s1"
-        toolOverrides={['Read', 'Bash']}
-        onChange={onChange}
-      />,
-    );
-    const readCb = screen.getByText('Read').closest('label')
+    render(<ToolToggles sessionId="s1" toolOverrides={['Read', 'Bash']} onChange={onChange} />);
+    const readCb = screen
+      .getByText('Read')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(readCb);
     expect(onChange).toHaveBeenCalledWith(['Bash']);
@@ -120,14 +110,10 @@ describe('ToolToggles — toggle behaviour', () => {
 
   it('adds a tool when toggled on', () => {
     const onChange = vi.fn();
-    render(
-      <ToolToggles
-        sessionId="s1"
-        toolOverrides={['Read']}
-        onChange={onChange}
-      />,
-    );
-    const bashCb = screen.getByText('Bash').closest('label')
+    render(<ToolToggles sessionId="s1" toolOverrides={['Read']} onChange={onChange} />);
+    const bashCb = screen
+      .getByText('Bash')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(bashCb);
     expect(onChange).toHaveBeenCalledWith(expect.arrayContaining(['Read', 'Bash']));
@@ -139,13 +125,11 @@ describe('ToolToggles — toggle behaviour', () => {
 
   it('passes the correct sessionId to setToolOverrides', () => {
     render(
-      <ToolToggles
-        sessionId="my-session-42"
-        toolOverrides={['Grep']}
-        onChange={() => undefined}
-      />,
+      <ToolToggles sessionId="my-session-42" toolOverrides={['Grep']} onChange={() => undefined} />,
     );
-    const grepCb = screen.getByText('Grep').closest('label')
+    const grepCb = screen
+      .getByText('Grep')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     fireEvent.click(grepCb);
     expect(mockSetToolOverrides).toHaveBeenCalledWith('my-session-42', []);
@@ -160,9 +144,13 @@ describe('ToolToggles — re-sync on prop change', () => {
     rerender(
       <ToolToggles sessionId="s1" toolOverrides={['Bash', 'Grep']} onChange={() => undefined} />,
     );
-    const bashCb = screen.getByText('Bash').closest('label')
+    const bashCb = screen
+      .getByText('Bash')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
-    const readCb = screen.getByText('Read').closest('label')
+    const readCb = screen
+      .getByText('Read')
+      .closest('label')
       ?.querySelector('input') as HTMLInputElement;
     expect(bashCb?.checked).toBe(true);
     expect(readCb?.checked).toBe(false);

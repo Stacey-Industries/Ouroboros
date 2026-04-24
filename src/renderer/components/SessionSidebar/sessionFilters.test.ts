@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SessionRecord } from '../../types/electron';
 import type { FilterState } from './sessionFilters';
-import { applyFilters,DEFAULT_FILTER_STATE } from './sessionFilters';
+import { applyFilters, DEFAULT_FILTER_STATE } from './sessionFilters';
 
 // ─── Fixture factory ──────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ describe('applyFilters — status filter', () => {
 
 describe('applyFilters — project filter', () => {
   const alpha = makeSession({ id: 'p1', projectRoot: '/work/my-alpha-project' });
-  const beta  = makeSession({ id: 'p2', projectRoot: '/work/beta' });
+  const beta = makeSession({ id: 'p2', projectRoot: '/work/beta' });
 
   it('empty project string matches all sessions', () => {
     expect(applyFilters([alpha, beta], filters({ project: '' }))).toHaveLength(2);
@@ -105,7 +105,7 @@ describe('applyFilters — project filter', () => {
 });
 
 describe('applyFilters — worktree filter', () => {
-  const plain    = makeSession({ id: 'w1', worktree: false });
+  const plain = makeSession({ id: 'w1', worktree: false });
   const worktree = makeSession({ id: 'w2', worktree: true });
 
   it('worktree:all returns both', () => {
@@ -127,11 +127,13 @@ describe('applyFilters — worktree filter', () => {
 
 describe('applyFilters — AND composition', () => {
   const archWorktree = makeSession({
-    id: 'aw', projectRoot: '/work/alpha', worktree: true,
+    id: 'aw',
+    projectRoot: '/work/alpha',
+    worktree: true,
     archivedAt: '2026-01-01T00:00:00.000Z',
   });
   const activeNoTree = makeSession({ id: 'an', projectRoot: '/work/alpha', worktree: false });
-  const activeBeta   = makeSession({ id: 'ab', projectRoot: '/work/beta', worktree: false });
+  const activeBeta = makeSession({ id: 'ab', projectRoot: '/work/beta', worktree: false });
 
   it('status:archived AND worktree:worktree narrows correctly', () => {
     const result = applyFilters(
@@ -177,7 +179,9 @@ describe('applyFilters — pinned filter', () => {
 
   it('status:archived does NOT sort pinned to top', () => {
     const archivedPinned = makeSession({
-      id: 'ap', pinned: true, archivedAt: '2026-01-01T00:00:00.000Z',
+      id: 'ap',
+      pinned: true,
+      archivedAt: '2026-01-01T00:00:00.000Z',
     });
     const archivedPlain = makeSession({ id: 'apl', archivedAt: '2026-01-01T00:00:00.000Z' });
     const result = applyFilters([archivedPlain, archivedPinned], filters({ status: 'archived' }));
@@ -190,7 +194,9 @@ describe('applyFilters — deleted filter', () => {
   const active = makeSession({ id: 'a' });
   const deleted = makeSession({ id: 'd', deletedAt: 1_700_000_000_000 });
   const archivedDeleted = makeSession({
-    id: 'ad', archivedAt: '2026-01-01T00:00:00.000Z', deletedAt: 1_700_000_000_000,
+    id: 'ad',
+    archivedAt: '2026-01-01T00:00:00.000Z',
+    deletedAt: 1_700_000_000_000,
   });
 
   it('status:deleted returns sessions with deletedAt set', () => {

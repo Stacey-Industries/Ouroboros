@@ -17,7 +17,11 @@ export interface RulesTabProps {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function hasAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && 'rulesAndSkills' in window.electronAPI;
+  return (
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'rulesAndSkills' in window.electronAPI
+  );
 }
 
 const SCOPE_BADGE: Record<string, string> = { global: '\u25C8', project: '\u25A3' };
@@ -27,7 +31,10 @@ const DEFAULT_RULE_CONTENT = (name: string): string =>
 
 // ── IPC hooks ──────────────────────────────────────────────────────────────
 
-function useRuleFiles(scope: ScopeValue, projectRoot: string | null): {
+function useRuleFiles(
+  scope: ScopeValue,
+  projectRoot: string | null,
+): {
   ruleFiles: RuleDefinition[];
   reload: () => void;
 } {
@@ -35,19 +42,19 @@ function useRuleFiles(scope: ScopeValue, projectRoot: string | null): {
 
   const reload = useCallback(() => {
     if (!hasAPI() || !projectRoot) return;
-    void window.electronAPI.rulesAndSkills
-      .listRuleFiles(projectRoot)
-      .then((result) => {
-        if (result.success && result.ruleFiles) {
-          setRuleFiles(result.ruleFiles.filter((r) => r.scope === scope));
-        }
-      });
+    void window.electronAPI.rulesAndSkills.listRuleFiles(projectRoot).then((result) => {
+      if (result.success && result.ruleFiles) {
+        setRuleFiles(result.ruleFiles.filter((r) => r.scope === scope));
+      }
+    });
   }, [scope, projectRoot]);
 
   useEffect(() => {
     if (!hasAPI()) return;
     reload();
-    return window.electronAPI.rulesAndSkills.onChanged(() => { reload(); });
+    return window.electronAPI.rulesAndSkills.onChanged(() => {
+      reload();
+    });
   }, [reload]);
 
   return { ruleFiles, reload };
@@ -112,8 +119,12 @@ function RuleFileActionButtons({
       <button
         className="text-[10px] text-interactive-accent px-1.5 py-0.5 rounded transition-colors duration-75"
         onClick={() => onOpen(filePath)}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.75'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '0.75';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '1';
+        }}
       >
         Open
       </button>
@@ -129,6 +140,13 @@ function RuleFileActionButtons({
 
 // ── RuleFileItem ───────────────────────────────────────────────────────────
 
+const handleRuleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
+  e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
+};
+const handleRuleMouseLeave = (e: React.MouseEvent<HTMLDivElement>): void => {
+  e.currentTarget.style.backgroundColor = 'transparent';
+};
+
 function RuleFileItem({
   rule,
   onOpen,
@@ -142,8 +160,8 @@ function RuleFileItem({
     <div
       className="group flex items-center gap-2 w-full px-3 py-1.5 transition-colors duration-75"
       style={{ backgroundColor: 'transparent' }}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--surface-raised)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onMouseEnter={handleRuleMouseEnter}
+      onMouseLeave={handleRuleMouseLeave}
     >
       <span className="text-[10px] text-text-semantic-muted flex-shrink-0" title={rule.scope}>
         {SCOPE_BADGE[rule.scope] ?? '?'}
@@ -186,7 +204,12 @@ function RuleFileList({
   return (
     <>
       {ruleFiles.map((rule) => (
-        <RuleFileItem key={`${rule.scope}:${rule.id}`} rule={rule} onOpen={onOpen} onDelete={onDelete} />
+        <RuleFileItem
+          key={`${rule.scope}:${rule.id}`}
+          rule={rule}
+          onOpen={onOpen}
+          onDelete={onDelete}
+        />
       ))}
     </>
   );
@@ -206,10 +229,7 @@ export function RulesTab({
   const handleCreate = useRuleCreate(scope, projectRoot, onOpenFile);
   const handleDelete = useRuleDelete(scope, projectRoot);
 
-  const onDelete = useCallback(
-    (id: string) => handleDelete(id),
-    [handleDelete],
-  );
+  const onDelete = useCallback((id: string) => handleDelete(id), [handleDelete]);
 
   return (
     <div className="flex flex-col gap-0">

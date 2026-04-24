@@ -98,24 +98,37 @@ function useToolTogglesState(
   onChange: (tools: string[]) => void,
 ): { enabled: string[]; toggle: (tool: string) => void } {
   const [enabled, setEnabled] = useState<string[]>(() => resolveInitial(toolOverrides, profile));
-  useEffect(() => { setEnabled(resolveInitial(toolOverrides, profile)); }, [toolOverrides, profile]);
-  const toggle = useCallback((tool: string) => {
-    setEnabled((prev) => {
-      const next = prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool];
-      void window.electronAPI.sessionCrud.setToolOverrides(sessionId, next).catch(() => undefined);
-      onChange(next);
-      return next;
-    });
-  }, [sessionId, onChange]);
+  useEffect(() => {
+    setEnabled(resolveInitial(toolOverrides, profile));
+  }, [toolOverrides, profile]);
+  const toggle = useCallback(
+    (tool: string) => {
+      setEnabled((prev) => {
+        const next = prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool];
+        void window.electronAPI.sessionCrud
+          .setToolOverrides(sessionId, next)
+          .catch(() => undefined);
+        onChange(next);
+        return next;
+      });
+    },
+    [sessionId, onChange],
+  );
   return { enabled, toggle };
 }
 
-interface ToolGroupProps { group: typeof TOOL_GROUPS[number]; enabled: string[]; toggle: (tool: string) => void }
+interface ToolGroupProps {
+  group: (typeof TOOL_GROUPS)[number];
+  enabled: string[];
+  toggle: (tool: string) => void;
+}
 
 function ToolGroup({ group, enabled, toggle }: ToolGroupProps): React.ReactElement {
   return (
     <div style={groupStyle}>
-      <div style={groupLabelStyle} className="text-text-semantic-muted">{group.label}</div>
+      <div style={groupLabelStyle} className="text-text-semantic-muted">
+        {group.label}
+      </div>
       <div style={toolRowStyle}>
         {group.tools.map((tool) => (
           <label key={tool} style={checkItemStyle} className="text-text-semantic-secondary">
@@ -128,7 +141,12 @@ function ToolGroup({ group, enabled, toggle }: ToolGroupProps): React.ReactEleme
   );
 }
 
-export function ToolToggles({ sessionId, profile, toolOverrides, onChange }: ToolTogglesProps): React.ReactElement {
+export function ToolToggles({
+  sessionId,
+  profile,
+  toolOverrides,
+  onChange,
+}: ToolTogglesProps): React.ReactElement {
   const { enabled, toggle } = useToolTogglesState(sessionId, profile, toolOverrides, onChange);
   return (
     <div style={wrapStyle}>

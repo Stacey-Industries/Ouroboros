@@ -1,6 +1,10 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
-import type { AgentChatActions, AgentChatStore, AgentChatThreadState } from './agentChatStore.types';
+import type {
+  AgentChatActions,
+  AgentChatStore,
+  AgentChatThreadState,
+} from './agentChatStore.types';
 
 describe('agentChatStore.types', () => {
   it('AgentChatStore includes thread state fields', () => {

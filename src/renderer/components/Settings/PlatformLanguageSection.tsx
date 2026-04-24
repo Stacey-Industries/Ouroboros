@@ -30,7 +30,12 @@ interface LanguageOptionProps {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function LanguageOption({ value, label, selected, onSelect }: LanguageOptionProps): React.ReactElement {
+function LanguageOption({
+  value,
+  label,
+  selected,
+  onSelect,
+}: LanguageOptionProps): React.ReactElement {
   const id = `lang-${value}`;
   return (
     <label htmlFor={id} style={radioLabelStyle}>
@@ -82,6 +87,14 @@ export function PlatformLanguageSection(): React.ReactElement {
 
 const sectionStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px' };
 const radioGroupStyle: React.CSSProperties = { display: 'flex', gap: '20px', paddingTop: '4px' };
-const radioLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' };
-const radioInputStyle: React.CSSProperties = { accentColor: 'var(--interactive-accent)', cursor: 'pointer' };
+const radioLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  cursor: 'pointer',
+};
+const radioInputStyle: React.CSSProperties = {
+  accentColor: 'var(--interactive-accent)',
+  cursor: 'pointer',
+};
 const radioTextStyle: React.CSSProperties = { fontSize: '13px', color: 'var(--text-primary)' };

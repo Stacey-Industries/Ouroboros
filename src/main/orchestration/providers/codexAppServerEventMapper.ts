@@ -1,5 +1,27 @@
-import log from '../../logger';
-import type { ProviderProgressSink, createProviderSessionReference } from './providerAdapter';
+import {
+  emitChildCommand,
+  emitChildFileChanges,
+  emitCollabTool,
+  emitFileChanges,
+  handleThreadStarted,
+} from './codexAppServerEventMapperCollab';
+import {
+  type CodexEmitCtx,
+  emitChildTranscriptFromText,
+  emitRootTranscriptFromText,
+  emitTextBlock,
+  resolveParentForThread,
+  resolveRootThreadId,
+} from './codexAppServerEventMapperCtx';
+import {
+  asRecord,
+  asString,
+  extractItem,
+  extractItemId,
+  extractItemType,
+  extractThreadId,
+} from './codexAppServerEventMapperShared';
+import type { createProviderSessionReference, ProviderProgressSink } from './providerAdapter';
 
 type SessionRef = ReturnType<typeof createProviderSessionReference>;
 
@@ -9,203 +31,273 @@ export interface CodexAppServerMessage {
   params?: Record<string, unknown>;
 }
 
-interface CodexEmitCtx {
-  sink: ProviderProgressSink;
-  sessionRef: SessionRef;
-  blockIndexRef: { value: number };
-  commandBlocks: Map<string, number>;
-  textBlocks: Map<string, number>;
-  thinkingBlocks: Map<string, number>;
+// ─── emitCommand (root-thread Bash) ──────────────────────────────────────────
+
+function resolveCommandBlockIndex(ctx: CodexEmitCtx, itemId: string, running: boolean): number {
+  if (!running) {
+    const existing = ctx.commandBlocks.get(itemId);
+    if (existing !== undefined) return existing;
+  }
+  return ctx.blockIndexRef.value++;
 }
 
-function nextBlockIndex(ctx: CodexEmitCtx): number {
-  const value = ctx.blockIndexRef.value;
-  ctx.blockIndexRef.value += 1;
-  return value;
-}
-
-function emitTextBlock(
-  ctx: CodexEmitCtx,
-  blockType: 'text' | 'thinking',
-  key: string,
-  delta: string,
-): void {
-  const blockMap = blockType === 'thinking' ? ctx.thinkingBlocks : ctx.textBlocks;
-  const blockIndex = blockMap.get(key) ?? nextBlockIndex(ctx);
-  blockMap.set(key, blockIndex);
+function emitCommand(ctx: CodexEmitCtx, itemId: string, status: 'complete' | 'running', command: string | undefined): void {
+  const inputSummary = command && command.length > 200 ? `${command.slice(0, 197)}...` : command;
+  const blockIndex = resolveCommandBlockIndex(ctx, itemId, status === 'running');
+  if (status === 'running') ctx.commandBlocks.set(itemId, blockIndex);
+  else ctx.commandBlocks.delete(itemId);
   ctx.sink.emit({
-    provider: 'codex',
-    status: 'streaming',
-    message: delta,
-    timestamp: Date.now(),
+    provider: 'codex', status: 'streaming', message: '', timestamp: Date.now(),
     session: ctx.sessionRef,
-    contentBlock: { blockIndex, blockType, textDelta: delta },
+    contentBlock: { blockIndex, blockType: 'tool_use', toolActivity: { name: 'Bash', status, inputSummary } },
   });
 }
 
-function summarizeCommand(command: string | undefined): string | undefined {
-  if (!command) return undefined;
-  return command.length > 200 ? `${command.slice(0, 197)}...` : command;
-}
-
-function mapFileChangeKindToTool(kind: string | undefined): 'Edit' | 'Write' {
-  return kind === 'add' || kind === 'create' || kind === 'write' ? 'Write' : 'Edit';
-}
-
-function summarizeFileChange(kind: string | undefined): string | undefined {
-  switch (kind) {
-    case 'add':
-    case 'create':
-      return 'Created file';
-    case 'delete':
-    case 'remove':
-      return 'Deleted file';
-    case 'rename':
-      return 'Renamed file';
-    case 'write':
-      return 'Wrote file';
-    case 'modify':
-    case 'update':
-      return 'Updated file';
-    default:
-      return undefined;
-  }
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function extractItem(params: Record<string, unknown> | undefined): Record<string, unknown> | null {
-  return asRecord(params?.item);
-}
-
-function extractItemId(item: Record<string, unknown> | null, params?: Record<string, unknown>): string {
-  return (
-    asString(item?.id) ||
-    asString(params?.itemId) ||
-    asString(params?.callId) ||
-    asString(params?.id) ||
-    'unknown-item'
+function emitApprovalPlaceholder(
+  method: string,
+  params: Record<string, unknown> | undefined,
+  ctx: CodexEmitCtx,
+): void {
+  const reason = asString(params?.reason);
+  const summary = reason ? ` (${reason})` : '';
+  emitTextBlock(
+    ctx,
+    'text',
+    `approval-${method}-${ctx.blockIndexRef.value}`,
+    `\n\n---\nCodex approval bridge is not wired for ${method}${summary}.`,
   );
 }
 
-function extractItemType(item: Record<string, unknown> | null): string | undefined {
-  return asString(item?.type);
+// ─── handleItemStarted ────────────────────────────────────────────────────────
+
+interface ItemCompletedCtx {
+  ctx: CodexEmitCtx;
+  childParent: { parentBlockIndex: number; parentToolName: string } | undefined;
+  threadId: string | undefined;
+  itemId: string;
+  item: Record<string, unknown> | null;
 }
 
-function emitCommand(
-  ctx: CodexEmitCtx,
-  itemId: string,
-  status: 'complete' | 'running',
-  command: string | undefined,
-): void {
-  const blockIndex = status === 'running'
-    ? nextBlockIndex(ctx)
-    : ctx.commandBlocks.get(itemId) ?? nextBlockIndex(ctx);
-  if (status === 'running') ctx.commandBlocks.set(itemId, blockIndex);
-  if (status === 'complete') ctx.commandBlocks.delete(itemId);
-  ctx.sink.emit({
-    provider: 'codex',
-    status: 'streaming',
-    message: '',
-    timestamp: Date.now(),
-    session: ctx.sessionRef,
-    contentBlock: {
-      blockIndex,
-      blockType: 'tool_use',
-      toolActivity: { name: 'Bash', status, inputSummary: summarizeCommand(command) },
-    },
-  });
-}
-
-function emitFileChanges(ctx: CodexEmitCtx, item: Record<string, unknown>): void {
-  const changes = Array.isArray(item.changes) ? item.changes : [];
-  for (const change of changes) {
-    const record = asRecord(change);
-    const filePath = asString(record?.path);
-    if (!filePath) continue;
-    const inputSummary = summarizeFileChange(asString(record?.kind));
-    const name = mapFileChangeKindToTool(asString(record?.kind));
-    const blockIndex = nextBlockIndex(ctx);
-    const base = {
-      provider: 'codex' as const,
-      status: 'streaming' as const,
-      message: '',
-      timestamp: Date.now(),
-      session: ctx.sessionRef,
-    };
-    ctx.sink.emit({
-      ...base,
-      contentBlock: {
-        blockIndex,
-        blockType: 'tool_use',
-        toolActivity: { name, status: 'running', filePath, inputSummary },
-      },
+function handleCommandStarted(args: ItemCompletedCtx): void {
+  const { ctx, childParent, threadId, itemId, item } = args;
+  const command = asString(item?.command) || asString(item?.commandLine);
+  if (childParent) {
+    emitChildCommand({
+      ctx,
+      parent: childParent,
+      itemKey: `${threadId}:${itemId}`,
+      status: 'running',
+      command,
     });
-    ctx.sink.emit({
-      ...base,
-      contentBlock: {
-        blockIndex,
-        blockType: 'tool_use',
-        toolActivity: { name, status: 'complete', filePath, inputSummary },
-      },
-    });
+    return;
   }
+  emitCommand(ctx, itemId, 'running', command);
 }
 
-function handleThreadStarted(params: Record<string, unknown> | undefined, sessionRef: SessionRef): void {
-  const thread = asRecord(params?.thread);
-  const threadId = asString(thread?.id) || asString(params?.threadId);
-  if (!threadId) return;
-  sessionRef.sessionId = threadId;
-  log.info(`[codex-diag] thread/started → captured thread_id=${threadId}`);
-}
-
-function handleItemStarted(params: Record<string, unknown> | undefined, ctx: CodexEmitCtx): void {
+export function handleItemStarted(
+  params: Record<string, unknown> | undefined,
+  ctx: CodexEmitCtx,
+): void {
   const item = extractItem(params);
   const itemType = extractItemType(item);
   if (!itemType) return;
-  const itemId = extractItemId(item, params);
+  const threadId = extractThreadId(params);
+  const childParent = resolveParentForThread(ctx, threadId);
+  if (itemType === 'collabAgentToolCall' && item) {
+    emitCollabTool(ctx, item, 'running', threadId);
+    return;
+  }
   if (itemType === 'commandExecution') {
-    emitCommand(ctx, itemId, 'running', asString(item?.command) || asString(item?.commandLine));
+    handleCommandStarted({ ctx, childParent, threadId, itemId: extractItemId(item, params), item });
   }
 }
 
-function handleItemCompleted(params: Record<string, unknown> | undefined, ctx: CodexEmitCtx): void {
+// ─── handleItemCompleted helpers ──────────────────────────────────────────────
+
+function handleTranscriptCompleted(args: ItemCompletedCtx, kind: 'text' | 'thinking'): void {
+  const { ctx, childParent, threadId, itemId, item } = args;
+  const text = asString(item?.text);
+  if (childParent && threadId && text) {
+    emitChildTranscriptFromText({ ctx, parent: childParent, threadId, itemId, kind, text });
+    return;
+  }
+  if (threadId && resolveRootThreadId(ctx) && threadId !== resolveRootThreadId(ctx)) return;
+  if (text) emitRootTranscriptFromText({ ctx, blockType: kind, itemId, text });
+}
+
+function handleCommandCompleted(args: ItemCompletedCtx): void {
+  const { ctx, childParent, threadId, itemId, item } = args;
+  const cmd = asString(item?.command) || asString(item?.commandLine);
+  if (childParent) {
+    emitChildCommand({
+      ctx,
+      parent: childParent,
+      itemKey: `${threadId}:${itemId}`,
+      status: 'complete',
+      command: cmd,
+      output: asString(item?.aggregatedOutput),
+    });
+    return;
+  }
+  emitCommand(ctx, itemId, 'complete', cmd);
+}
+
+function handleFileChangeCompleted(args: ItemCompletedCtx): void {
+  const { ctx, childParent, threadId, itemId, item } = args;
+  if (!item) return;
+  if (childParent) emitChildFileChanges(ctx, childParent, `${threadId}:${itemId}`, item);
+  else emitFileChanges(ctx, item);
+}
+
+export function handleItemCompleted(params: Record<string, unknown> | undefined, ctx: CodexEmitCtx): void {
   const item = extractItem(params);
   const itemType = extractItemType(item);
-  const itemId = extractItemId(item, params);
-  if (itemType === 'agentMessage') {
-    const text = asString(item?.text);
-    if (text) emitTextBlock(ctx, 'text', itemId, text);
-    return;
-  }
-  if (itemType === 'reasoning') {
-    const text = asString(item?.text);
-    if (text) emitTextBlock(ctx, 'thinking', itemId, text);
-    return;
-  }
-  if (itemType === 'commandExecution') {
-    emitCommand(ctx, itemId, 'complete', asString(item?.command) || asString(item?.commandLine));
-    return;
-  }
-  if (itemType === 'fileChange' && item) emitFileChanges(ctx, item);
+  const threadId = extractThreadId(params);
+  const childParent = resolveParentForThread(ctx, threadId);
+  const args: ItemCompletedCtx = { ctx, childParent, threadId, itemId: extractItemId(item, params), item };
+  if (itemType === 'agentMessage') { handleTranscriptCompleted(args, 'text'); return; }
+  if (itemType === 'reasoning') { handleTranscriptCompleted(args, 'thinking'); return; }
+  if (itemType === 'collabAgentToolCall' && item) { emitCollabTool(ctx, item, 'complete', threadId); return; }
+  if (itemType === 'commandExecution') { handleCommandCompleted(args); return; }
+  if (itemType === 'fileChange') handleFileChangeCompleted(args);
 }
 
-function handleTextDelta(
+// ─── handleTextDelta ──────────────────────────────────────────────────────────
+
+interface ChildTextDeltaArgs {
+  ctx: CodexEmitCtx;
+  parent: { parentBlockIndex: number; parentToolName: string };
+  threadId: string;
+  params: Record<string, unknown>;
+  blockType: 'text' | 'thinking';
+}
+
+function handleChildTextDelta(args: ChildTextDeltaArgs): void {
+  const { ctx, parent, threadId, params, blockType } = args;
+  const itemId = asString(params.itemId) || 'stream-item';
+  const delta = asString(params.delta) || asString(params.text);
+  if (!delta) return;
+  emitChildTranscriptFromText({
+    ctx,
+    parent,
+    threadId,
+    itemId,
+    kind: blockType,
+    text: delta,
+    incremental: true,
+    contentIndex: typeof params.contentIndex === 'number' ? params.contentIndex : undefined,
+  });
+}
+
+function isNonRootThread(ctx: CodexEmitCtx, threadId: string | undefined): boolean {
+  if (!threadId) return false;
+  const rootId = resolveRootThreadId(ctx);
+  return Boolean(rootId) && threadId !== rootId;
+}
+
+function extractDelta(params: Record<string, unknown> | undefined): string | undefined {
+  return asString(params?.delta) ?? asString(params?.text);
+}
+
+export function handleTextDelta(
   params: Record<string, unknown> | undefined,
   ctx: CodexEmitCtx,
   blockType: 'text' | 'thinking',
 ): void {
-  const itemId = asString(params?.itemId) || 'stream-item';
-  const delta = asString(params?.delta) || asString(params?.text);
+  const threadId = extractThreadId(params);
+  const childParent = resolveParentForThread(ctx, threadId);
+  const delta = extractDelta(params);
   if (!delta) return;
-  emitTextBlock(ctx, blockType, itemId, delta);
+  if (childParent && threadId) {
+    handleChildTextDelta({ ctx, parent: childParent, threadId, params: params ?? {}, blockType });
+    return;
+  }
+  if (isNonRootThread(ctx, threadId)) return;
+  const itemId = asString(params?.itemId) ?? 'stream-item';
+  emitRootTranscriptFromText({ ctx, blockType, itemId, text: delta, incremental: true });
+}
+
+// ─── buildCodexAppServerEventMapper ──────────────────────────────────────────
+
+function buildCtx(sink: ProviderProgressSink, sessionRef: SessionRef): CodexEmitCtx {
+  return {
+    sink, sessionRef, blockIndexRef: { value: 0 }, rootThreadId: sessionRef.sessionId,
+    commandBlocks: new Map(), collabBlocks: new Map(), childThreadParents: new Map(),
+    childCommandBlocks: new Map(), childTranscriptLengths: new Map(),
+    rootTranscriptLengths: new Map(), textBlocks: new Map(), thinkingBlocks: new Map(),
+  };
+}
+
+function handleTurnCompleted(
+  params: Record<string, unknown> | undefined,
+): { inputTokens: number; outputTokens: number } | undefined {
+  const turn = asRecord(params?.turn);
+  const usage = asRecord(params?.usage) || asRecord(turn?.usage);
+  if (!usage) return undefined;
+  return {
+    inputTokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : 0,
+    outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0,
+  };
+}
+
+function dispatchTextDelta(message: CodexAppServerMessage, ctx: CodexEmitCtx): boolean {
+  if (message.method === 'item/agentMessage/delta') {
+    handleTextDelta(message.params, ctx, 'text');
+    return true;
+  }
+  if (message.method === 'item/reasoning/delta' || message.method === 'item/reasoning/textDelta') {
+    handleTextDelta(message.params, ctx, 'thinking');
+    return true;
+  }
+  return false;
+}
+
+function handleThreadStartedMsg(
+  message: CodexAppServerMessage,
+  ctx: CodexEmitCtx,
+  sessionRef: SessionRef,
+): void {
+  ctx.rootThreadId ??= sessionRef.sessionId;
+  handleThreadStarted(message.params, sessionRef);
+  ctx.rootThreadId ??= sessionRef.sessionId;
+}
+
+function dispatchMessage(
+  message: CodexAppServerMessage,
+  ctx: CodexEmitCtx,
+  sessionRef: SessionRef,
+  setUsage: (u: { inputTokens: number; outputTokens: number }) => void,
+): void {
+  if (!message.method) return;
+  if (message.method === 'thread/started') {
+    handleThreadStartedMsg(message, ctx, sessionRef);
+    return;
+  }
+  if (message.method === 'item/started') {
+    handleItemStarted(message.params, ctx);
+    return;
+  }
+  if (message.method === 'item/completed') {
+    handleItemCompleted(message.params, ctx);
+    return;
+  }
+  if (dispatchTextDelta(message, ctx)) return;
+  if (message.method.endsWith('/requestApproval')) {
+    emitApprovalPlaceholder(message.method, message.params, ctx);
+    return;
+  }
+  if (message.method === 'turn/completed') {
+    const usage = handleTurnCompleted(message.params);
+    if (usage) setUsage(usage);
+  }
+}
+
+function makeHandle(
+  ctx: CodexEmitCtx,
+  sessionRef: SessionRef,
+  setUsage: (u: { inputTokens: number; outputTokens: number }) => void,
+): (message: CodexAppServerMessage) => void {
+  return (msg: CodexAppServerMessage): void => dispatchMessage(msg, ctx, sessionRef, setUsage);
 }
 
 export function buildCodexAppServerEventMapper(
@@ -216,53 +308,11 @@ export function buildCodexAppServerEventMapper(
   getUsage: () => { inputTokens: number; outputTokens: number } | undefined;
   handle: (message: CodexAppServerMessage) => void;
 } {
-  const ctx: CodexEmitCtx = {
-    sink,
-    sessionRef,
-    blockIndexRef: { value: 0 },
-    commandBlocks: new Map(),
-    textBlocks: new Map(),
-    thinkingBlocks: new Map(),
-  };
+  const ctx = buildCtx(sink, sessionRef);
   let lastUsage: { inputTokens: number; outputTokens: number } | undefined;
-
-  const handle = (message: CodexAppServerMessage): void => {
-    if (!message.method) return;
-    if (message.method === 'thread/started') {
-      handleThreadStarted(message.params, sessionRef);
-      return;
-    }
-    if (message.method === 'item/started') {
-      handleItemStarted(message.params, ctx);
-      return;
-    }
-    if (message.method === 'item/completed') {
-      handleItemCompleted(message.params, ctx);
-      return;
-    }
-    if (message.method === 'item/agentMessage/delta') {
-      handleTextDelta(message.params, ctx, 'text');
-      return;
-    }
-    if (message.method === 'item/reasoning/delta') {
-      handleTextDelta(message.params, ctx, 'thinking');
-      return;
-    }
-    if (message.method === 'turn/completed') {
-      const turn = asRecord(message.params?.turn);
-      const usage = asRecord(message.params?.usage) || asRecord(turn?.usage);
-      if (usage) {
-        lastUsage = {
-          inputTokens:
-            (typeof usage.input_tokens === 'number' ? usage.input_tokens : 0) +
-            (typeof usage.cached_input_tokens === 'number' ? usage.cached_input_tokens : 0),
-          outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0,
-        };
-      }
-      return;
-    }
-  };
-
+  const handle = makeHandle(ctx, sessionRef, (u) => {
+    lastUsage = u;
+  });
   return {
     getNextBlockIndex: () => ctx.blockIndexRef.value,
     getUsage: () => lastUsage,

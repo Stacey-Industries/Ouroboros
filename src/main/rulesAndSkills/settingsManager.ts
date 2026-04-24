@@ -16,10 +16,7 @@ const PROJECT_SETTINGS = 'settings.local.json';
 
 // ─── Path resolution ─────────────────────────────────────────────────────────
 
-export function getClaudeSettingsPath(
-  scope: ClaudeConfigScope,
-  projectRoot?: string,
-): string {
+export function getClaudeSettingsPath(scope: ClaudeConfigScope, projectRoot?: string): string {
   if (scope === 'global') {
     return path.join(os.homedir(), CLAUDE_DIR, GLOBAL_SETTINGS);
   }
@@ -40,9 +37,7 @@ export async function readClaudeSettings(
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from getClaudeSettingsPath (known safe: homedir or projectRoot)
     const raw = await fs.readFile(settingsPath, 'utf8');
     const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null
-      ? (parsed as Record<string, unknown>)
-      : {};
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
   } catch {
     return {};
   }

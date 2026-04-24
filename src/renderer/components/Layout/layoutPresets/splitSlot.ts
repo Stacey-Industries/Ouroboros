@@ -73,8 +73,7 @@ export function splitLeafWith(opts: SplitLeafOptions): SlotNode {
 
   if (isLeaf(tree)) {
     if (tree.slotName !== targetSlot) return tree;
-    const children: [SlotNode, SlotNode] =
-      position === 'start' ? [source, tree] : [tree, source];
+    const children: [SlotNode, SlotNode] = position === 'start' ? [source, tree] : [tree, source];
     const split: SplitNode = { kind: 'split', direction, children };
     return split;
   }
@@ -142,8 +141,8 @@ export function edgeToSplitParams(edge: EdgeDirection): SplitParams {
   const map: Record<EdgeDirection, SplitParams> = {
     north: { direction: 'horizontal', position: 'start' },
     south: { direction: 'horizontal', position: 'end' },
-    west:  { direction: 'vertical',   position: 'start' },
-    east:  { direction: 'vertical',   position: 'end' },
+    west: { direction: 'vertical', position: 'start' },
+    east: { direction: 'vertical', position: 'end' },
   };
   return map[edge];
 }

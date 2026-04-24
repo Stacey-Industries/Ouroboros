@@ -25,7 +25,11 @@ function makeContext(overrides: Partial<ReturnType<typeof useLayoutPreset>> = {}
   const promoteToGlobal = vi.fn();
   mockUseLayoutPreset.mockReturnValue({
     preset: { id: 'ide-primary', name: 'IDE', slots: {}, panelSizes: {}, visiblePanels: {} },
-    slotTree: { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } },
+    slotTree: {
+      kind: 'leaf',
+      slotName: 'editorContent',
+      component: { componentKey: 'editorContent' },
+    },
     swapSlots: vi.fn(),
     splitSlot: vi.fn(),
     undoLayout,
@@ -37,8 +41,12 @@ function makeContext(overrides: Partial<ReturnType<typeof useLayoutPreset>> = {}
   return { undoLayout, resetLayout, promoteToGlobal };
 }
 
-beforeEach(() => { vi.clearAllMocks(); });
-afterEach(() => { cleanup(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+afterEach(() => {
+  cleanup();
+});
 
 describe('LayoutActionsFooter', () => {
   it('renders Undo, Reset, and Save as buttons', () => {

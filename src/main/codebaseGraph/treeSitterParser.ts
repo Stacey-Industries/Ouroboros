@@ -8,12 +8,12 @@
  * (no retry noise) and parseFile returns null for those files.
  */
 
-import path from 'path'
-import Parser from 'web-tree-sitter'
+import path from 'path';
+import Parser from 'web-tree-sitter';
 
-import log from '../logger'
-import { getLanguageConfig } from './treeSitterLanguageConfigs'
-import { extractSingleDefinition } from './treeSitterParserDefs'
+import log from '../logger';
+import { getLanguageConfig } from './treeSitterLanguageConfigs';
+import { extractSingleDefinition } from './treeSitterParserDefs';
 import {
   buildNodeTypeToLabelMap,
   collectDefaultImport,
@@ -27,125 +27,139 @@ import {
   extractHandlerName,
   extractRouteCandidate,
   extractTopLevelNames,
-} from './treeSitterParserSupport'
+} from './treeSitterParserSupport';
 import type {
-  ExtractedCall, ExtractedDefinition, ExtractedImport,
-  ExtractedRoute, ImportSpecifier, LanguageConfig, LanguageId, NodeLabel, ParsedFileResult,
-} from './treeSitterTypes'
+  ExtractedCall,
+  ExtractedDefinition,
+  ExtractedImport,
+  ExtractedRoute,
+  ImportSpecifier,
+  LanguageConfig,
+  LanguageId,
+  NodeLabel,
+  ParsedFileResult,
+} from './treeSitterTypes';
 
 /** Maximum length for extracted signatures before truncation. */
-const MAX_SIGNATURE_LENGTH = 200
+const MAX_SIGNATURE_LENGTH = 200;
 
-const TS_JS_LANGUAGES = new Set<LanguageId>(['typescript', 'tsx', 'javascript', 'jsx'])
+const TS_JS_LANGUAGES = new Set<LanguageId>(['typescript', 'tsx', 'javascript', 'jsx']);
 
 /**
  * Resolve grammar WASM path. Prefers @vscode/tree-sitter-wasm; falls back to
  * tree-sitter-wasms for grammars not present in the vscode package (e.g. C).
  */
 function resolveGrammarPath(wasmFile: string): string {
-  const vscodeWasmFile = wasmFile.replace('tree-sitter-c_sharp', 'tree-sitter-c-sharp')
+  const vscodeWasmFile = wasmFile.replace('tree-sitter-c_sharp', 'tree-sitter-c-sharp');
   try {
-    const vscodeDir = path.dirname(require.resolve('@vscode/tree-sitter-wasm/package.json'))
-    const candidate = path.join(vscodeDir, 'wasm', vscodeWasmFile)
+    const vscodeDir = path.dirname(require.resolve('@vscode/tree-sitter-wasm/package.json'));
+    const candidate = path.join(vscodeDir, 'wasm', vscodeWasmFile);
     // require.resolve only works for JS modules, not .wasm files.
     // Use a synchronous existence check via the fs module loaded at call-time.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require('fs') as typeof import('fs')
-    if (fs.existsSync(candidate)) return candidate
-  } catch { /* package not installed */ }
+    const fs = require('fs') as typeof import('fs');
+    if (fs.existsSync(candidate)) return candidate;
+  } catch {
+    /* package not installed */
+  }
 
   // Fallback: tree-sitter-wasms (System 1 source, always present)
-  const fallbackDir = path.dirname(require.resolve('tree-sitter-wasms/package.json'))
-  return path.join(fallbackDir, 'out', wasmFile)
+  const fallbackDir = path.dirname(require.resolve('tree-sitter-wasms/package.json'));
+  return path.join(fallbackDir, 'out', wasmFile);
 }
 
 export class TreeSitterParser {
-  private parser: Parser | null = null
-  private languages = new Map<LanguageId, Parser.Language>()
-  private pendingLanguageLoads = new Map<LanguageId, Promise<Parser.Language | null>>()
-  private unsupportedLanguages = new Set<LanguageId>()
-  private initialized = false
+  private parser: Parser | null = null;
+  private languages = new Map<LanguageId, Parser.Language>();
+  private pendingLanguageLoads = new Map<LanguageId, Promise<Parser.Language | null>>();
+  private unsupportedLanguages = new Set<LanguageId>();
+  private initialized = false;
 
   // ─── Initialization ──────────────────────────────────────────────────────
 
   async init(): Promise<void> {
-    if (this.initialized) return
+    if (this.initialized) return;
 
     await Parser.init({
       locateFile(scriptName: string) {
         try {
-          const webTsPath = require.resolve('web-tree-sitter')
-          return path.join(path.dirname(webTsPath), scriptName)
+          const webTsPath = require.resolve('web-tree-sitter');
+          return path.join(path.dirname(webTsPath), scriptName);
         } catch {
-          return scriptName
+          return scriptName;
         }
       },
-    })
+    });
 
-    this.parser = new Parser()
-    this.initialized = true
+    this.parser = new Parser();
+    this.initialized = true;
   }
 
   // ─── Language loading ─────────────────────────────────────────────────────
 
   private async loadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
-    const cached = this.languages.get(config.id)
-    if (cached) return cached
-    if (this.unsupportedLanguages.has(config.id)) return null
+    const cached = this.languages.get(config.id);
+    if (cached) return cached;
+    if (this.unsupportedLanguages.has(config.id)) return null;
 
     // Dedup: if a load is already in-flight for this language, await it.
-    const pending = this.pendingLanguageLoads.get(config.id)
-    if (pending) return pending
+    const pending = this.pendingLanguageLoads.get(config.id);
+    if (pending) return pending;
 
-    const load = this.doLoadLanguage(config)
-    this.pendingLanguageLoads.set(config.id, load)
-    return load
+    const load = this.doLoadLanguage(config);
+    this.pendingLanguageLoads.set(config.id, load);
+    return load;
   }
 
   private async doLoadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
     try {
-      const wasmPath = resolveGrammarPath(config.wasmFile)
-      const language = await Parser.Language.load(wasmPath)
-      this.languages.set(config.id, language)
-      return language
+      const wasmPath = resolveGrammarPath(config.wasmFile);
+      const language = await Parser.Language.load(wasmPath);
+      this.languages.set(config.id, language);
+      return language;
     } catch (err) {
-      log.debug(`[treeSitterParser] grammar load failed for ${config.id}:`, err)
-      this.unsupportedLanguages.add(config.id)
-      return null
+      log.debug(`[treeSitterParser] grammar load failed for ${config.id}:`, err);
+      this.unsupportedLanguages.add(config.id);
+      return null;
     } finally {
-      this.pendingLanguageLoads.delete(config.id)
+      this.pendingLanguageLoads.delete(config.id);
     }
   }
 
   // ─── Main entry point ────────────────────────────────────────────────────
 
   async parseFile(relativePath: string, source: string): Promise<ParsedFileResult | null> {
-    if (!this.parser) throw new Error('TreeSitterParser not initialized — call init() first')
+    if (!this.parser) throw new Error('TreeSitterParser not initialized — call init() first');
 
-    const ext = path.extname(relativePath).slice(1)
-    const config = getLanguageConfig(ext)
-    if (!config) return null
+    const ext = path.extname(relativePath).slice(1);
+    const config = getLanguageConfig(ext);
+    if (!config) return null;
 
-    const language = await this.loadLanguage(config)
-    if (!language) return null
-    this.parser.setLanguage(language)
-    const tree = this.parser.parse(source)
-    if (!tree) return null
+    const language = await this.loadLanguage(config);
+    if (!language) return null;
+    this.parser.setLanguage(language);
+    const tree = this.parser.parse(source);
+    if (!tree) return null;
 
     try {
-      const definitions = this.extractDefinitions(tree.rootNode, config)
-      const imports = this.extractImports(tree.rootNode, config)
-      const calls = this.extractCalls(tree.rootNode, config)
-      const routes = this.extractRoutes(tree.rootNode, config)
-      const exportedNames = this.extractExportedNames(tree.rootNode, config)
+      const definitions = this.extractDefinitions(tree.rootNode, config);
+      const imports = this.extractImports(tree.rootNode, config);
+      const calls = this.extractCalls(tree.rootNode, config);
+      const routes = this.extractRoutes(tree.rootNode, config);
+      const exportedNames = this.extractExportedNames(tree.rootNode, config);
 
       return {
-        filePath: relativePath, language: config.id,
+        filePath: relativePath,
+        language: config.id,
         lineCount: tree.rootNode.endPosition.row + 1,
-        definitions, imports, calls, routes, exportedNames,
-      }
+        definitions,
+        imports,
+        calls,
+        routes,
+        exportedNames,
+      };
     } finally {
-      tree.delete()
+      tree.delete();
     }
   }
 
@@ -155,102 +169,103 @@ export class TreeSitterParser {
     rootNode: Parser.SyntaxNode,
     config: LanguageConfig,
   ): ExtractedDefinition[] {
-    const definitions: ExtractedDefinition[] = []
-    const nodeTypeToLabel = buildNodeTypeToLabelMap(config) as Map<string, NodeLabel>
+    const definitions: ExtractedDefinition[] = [];
+    const nodeTypeToLabel = buildNodeTypeToLabelMap(config) as Map<string, NodeLabel>;
 
     this.walkTree(rootNode, (node) => {
-      const label = nodeTypeToLabel.get(node.type)
-      if (!label) return
-      const def = extractSingleDefinition(node, label, config)
-      if (def) definitions.push(def)
-    })
+      const label = nodeTypeToLabel.get(node.type);
+      if (!label) return;
+      const def = extractSingleDefinition(node, label, config);
+      if (def) definitions.push(def);
+    });
 
     if (TS_JS_LANGUAGES.has(config.id)) {
-      this.extractArrowFunctionExports(rootNode, definitions)
+      this.extractArrowFunctionExports(rootNode, definitions);
     }
 
-    return definitions
+    return definitions;
   }
 
   private extractArrowFunctionExports(
     rootNode: Parser.SyntaxNode,
     definitions: ExtractedDefinition[],
   ): void {
-    const existingNames = new Set(definitions.map((d) => d.name))
+    const existingNames = new Set(definitions.map((d) => d.name));
 
     this.walkTree(rootNode, (node) => {
-      if (node.type !== 'export_statement') return
-      const declaration = node.namedChildren.find((c) =>
-        c.type === 'lexical_declaration' || c.type === 'variable_declaration'
-      )
-      if (!declaration) return
+      if (node.type !== 'export_statement') return;
+      const declaration = node.namedChildren.find(
+        (c) => c.type === 'lexical_declaration' || c.type === 'variable_declaration',
+      );
+      if (!declaration) return;
       for (const declarator of declaration.namedChildren) {
-        extractArrowDeclarator(node, declarator, existingNames, definitions)
+        extractArrowDeclarator(node, declarator, existingNames, definitions);
       }
-    })
+    });
   }
 
   // ─── Import extraction ───────────────────────────────────────────────────
 
-  private extractImports(
-    rootNode: Parser.SyntaxNode,
-    config: LanguageConfig,
-  ): ExtractedImport[] {
-    const imports: ExtractedImport[] = []
+  private extractImports(rootNode: Parser.SyntaxNode, config: LanguageConfig): ExtractedImport[] {
+    const imports: ExtractedImport[] = [];
 
     this.walkTree(rootNode, (node) => {
-      if (!config.importNodes.includes(node.type)) return
-      const result = this.dispatchImportExtractor(node, config)
+      if (!config.importNodes.includes(node.type)) return;
+      const result = this.dispatchImportExtractor(node, config);
       if (Array.isArray(result)) {
-        for (const imp of result) imports.push(imp)
+        for (const imp of result) imports.push(imp);
       } else if (result) {
-        imports.push(result)
+        imports.push(result);
       }
-    })
+    });
 
-    return imports
+    return imports;
   }
 
   private dispatchImportExtractor(
     node: Parser.SyntaxNode,
     config: LanguageConfig,
   ): ExtractedImport | ExtractedImport[] | null {
-    if (TS_JS_LANGUAGES.has(config.id)) return this.extractTsJsImport(node)
-    return dispatchNonTsImport(node, config)
+    if (TS_JS_LANGUAGES.has(config.id)) return this.extractTsJsImport(node);
+    return dispatchNonTsImport(node, config);
   }
 
   private extractTsJsImport(node: Parser.SyntaxNode): ExtractedImport | null {
-    const sourceNode = node.childForFieldName('source')
-    if (!sourceNode) return null
+    const sourceNode = node.childForFieldName('source');
+    if (!sourceNode) return null;
 
-    const importSource = sourceNode.text.replace(/['"]/g, '')
-    const specifiers: ImportSpecifier[] = []
-    const isTypeOnly = detectTypeOnlyImport(node)
+    const importSource = sourceNode.text.replace(/['"]/g, '');
+    const specifiers: ImportSpecifier[] = [];
+    const isTypeOnly = detectTypeOnlyImport(node);
 
-    collectNamedImports(node, specifiers)
-    collectDefaultImport(node, specifiers)
-    collectNamespaceImports(node, specifiers)
+    collectNamedImports(node, specifiers);
+    collectDefaultImport(node, specifiers);
+    collectNamespaceImports(node, specifiers);
 
-    return { source: importSource, specifiers, isTypeOnly, startLine: node.startPosition.row + 1, endLine: node.endPosition.row + 1 }
+    return {
+      source: importSource,
+      specifiers,
+      isTypeOnly,
+      startLine: node.startPosition.row + 1,
+      endLine: node.endPosition.row + 1,
+    };
   }
 
   // ─── Call extraction ─────────────────────────────────────────────────────
 
-  private extractCalls(
-    rootNode: Parser.SyntaxNode,
-    config: LanguageConfig,
-  ): ExtractedCall[] {
-    const calls: ExtractedCall[] = []
+  private extractCalls(rootNode: Parser.SyntaxNode, config: LanguageConfig): ExtractedCall[] {
+    const calls: ExtractedCall[] = [];
 
     this.walkTree(rootNode, (node) => {
-      if (!config.callNodes.includes(node.type)) return
+      if (!config.callNodes.includes(node.type)) return;
 
-      const info = extractCallNodeInfo(node, MAX_SIGNATURE_LENGTH)
-      if (!info || !info.calleeName) return
+      const info = extractCallNodeInfo(node, MAX_SIGNATURE_LENGTH);
+      if (!info || !info.calleeName) return;
 
-      const argsNode = node.childForFieldName('arguments')
-        ?? node.namedChildren.find((c) => c.type === 'arguments' || c.type === 'argument_list')
-      const argCount = argsNode?.namedChildCount ?? 0
+      const argsNode =
+        node.childForFieldName('arguments') ??
+        node.namedChildren.find((c) => c.type === 'arguments' || c.type === 'argument_list');
+      const argCount = argsNode?.namedChildCount ?? 0;
 
       calls.push({
         calleeName: info.calleeName,
@@ -258,10 +273,10 @@ export class TreeSitterParser {
         startLine: node.startPosition.row + 1,
         isAsync: info.isAsync,
         arguments: argCount,
-      })
-    })
+      });
+    });
 
-    return calls
+    return calls;
   }
 
   // ─── Route extraction ────────────────────────────────────────────────────
@@ -272,17 +287,19 @@ export class TreeSitterParser {
     config: LanguageConfig,
     routes: ExtractedRoute[],
   ): void {
-    const { objectText, methodText } = candidate
+    const { objectText, methodText } = candidate;
     for (const pattern of config.routePatterns) {
-      const receiverMatch = pattern.receiverNames.length === 0 || pattern.receiverNames.includes(objectText)
-      if (!receiverMatch || !pattern.methodNames.includes(methodText)) continue
+      const receiverMatch =
+        pattern.receiverNames.length === 0 || pattern.receiverNames.includes(objectText);
+      if (!receiverMatch || !pattern.methodNames.includes(methodText)) continue;
 
-      const argsNode = node.childForFieldName('arguments')
-        ?? node.namedChildren.find((c) => c.type === 'arguments' || c.type === 'argument_list')
-      if (!argsNode) continue
+      const argsNode =
+        node.childForFieldName('arguments') ??
+        node.namedChildren.find((c) => c.type === 'arguments' || c.type === 'argument_list');
+      if (!argsNode) continue;
 
-      const pathArg = argsNode.namedChildren[pattern.pathArgIndex]
-      if (!pathArg) continue
+      const pathArg = argsNode.namedChildren[pattern.pathArgIndex];
+      if (!pathArg) continue;
 
       routes.push({
         method: methodText.toUpperCase(),
@@ -290,67 +307,69 @@ export class TreeSitterParser {
         handlerName: extractHandlerName(argsNode, pattern.pathArgIndex),
         framework: pattern.framework,
         startLine: node.startPosition.row + 1,
-      })
+      });
     }
   }
 
-  private extractRoutes(
-    rootNode: Parser.SyntaxNode,
-    config: LanguageConfig,
-  ): ExtractedRoute[] {
-    if (config.routePatterns.length === 0) return []
+  private extractRoutes(rootNode: Parser.SyntaxNode, config: LanguageConfig): ExtractedRoute[] {
+    if (config.routePatterns.length === 0) return [];
 
-    const routes: ExtractedRoute[] = []
+    const routes: ExtractedRoute[] = [];
 
     this.walkTree(rootNode, (node) => {
-      if (!config.callNodes.includes(node.type)) return
-      const candidate = extractRouteCandidate(node)
-      if (!candidate.objectText || !candidate.methodText) return
-      this.matchRoutePattern(node, { objectText: candidate.objectText, methodText: candidate.methodText }, config, routes)
-    })
+      if (!config.callNodes.includes(node.type)) return;
+      const candidate = extractRouteCandidate(node);
+      if (!candidate.objectText || !candidate.methodText) return;
+      this.matchRoutePattern(
+        node,
+        { objectText: candidate.objectText, methodText: candidate.methodText },
+        config,
+        routes,
+      );
+    });
 
-    return routes
+    return routes;
   }
 
   // ─── Helper methods ──────────────────────────────────────────────────────
 
   private walkTree(node: Parser.SyntaxNode, callback: (node: Parser.SyntaxNode) => void): void {
-    const stack: Parser.SyntaxNode[] = [node]
+    const stack: Parser.SyntaxNode[] = [node];
     while (stack.length > 0) {
-      const current = stack.pop()!
-      callback(current)
-      const childCount = current.childCount
+      const current = stack.pop()!;
+      callback(current);
+      const childCount = current.childCount;
       for (let i = childCount - 1; i >= 0; i--) {
-        const child = current.child(i)
-        if (child) stack.push(child)
+        const child = current.child(i);
+        if (child) stack.push(child);
       }
     }
   }
 
   private extractExportedNames(rootNode: Parser.SyntaxNode, config: LanguageConfig): string[] {
-    if (!config.exportKeyword) return extractTopLevelNames(rootNode, config)
+    if (!config.exportKeyword) return extractTopLevelNames(rootNode, config);
 
-    const names = new Set<string>()
+    const names = new Set<string>();
     this.walkTree(rootNode, (node) => {
-      if (node.type !== config.exportKeyword) return
-      collectExportedIdentifiers(node, this.walkTree.bind(this), names)
-    })
-    return Array.from(names)
+      if (node.type !== config.exportKeyword) return;
+      collectExportedIdentifiers(node, this.walkTree.bind(this), names);
+    });
+    return Array.from(names);
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────
 
   dispose(): void {
     if (this.parser) {
-      this.parser.delete()
-      this.parser = null
+      this.parser.delete();
+      this.parser = null;
     }
-    this.languages.clear()
-    this.pendingLanguageLoads.clear()
-    this.unsupportedLanguages.clear()
-    this.initialized = false
+    this.languages.clear();
+    this.pendingLanguageLoads.clear();
+    this.unsupportedLanguages.clear();
+    this.initialized = false;
   }
 }
 
 // Re-export for type compatibility
-export type { ImportSpecifier }
+export type { ImportSpecifier };

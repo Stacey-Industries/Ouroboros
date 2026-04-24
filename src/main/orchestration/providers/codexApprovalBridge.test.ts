@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApprovalResponse } from '../../approvalManager';
-import {
-  CodexApprovalBridge,
-  normalizeCodexApprovalRequest,
-} from './codexApprovalBridge';
+import { CodexApprovalBridge, normalizeCodexApprovalRequest } from './codexApprovalBridge';
 
 const {
   requestApprovalMock,

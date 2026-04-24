@@ -58,7 +58,11 @@ function handleCodexStdout(chunk: Buffer, args: CodexStdoutArgs): void {
     reject(
       new Error('Codex exec stdout buffer exceeded maximum allowed size (100 MB). Process killed.'),
     );
-    try { child.kill(); } catch { /* already dead */ }
+    try {
+      child.kill();
+    } catch {
+      /* already dead */
+    }
     return;
   }
   let newlineIdx: number;
@@ -97,7 +101,8 @@ function handleCodexClose(code: number | null, args: CodexCloseArgs): void {
   const { state, startedAt, onEvent, resolve, reject } = args;
   applyCodexTrailingBuf(state, onEvent);
   if (code !== 0 && code !== null) {
-    const reason = state.failureMessage ?? state.stderrBuf.trim() ?? `Codex exited with code ${code}`;
+    const reason =
+      state.failureMessage ?? state.stderrBuf.trim() ?? `Codex exited with code ${code}`;
     reject(new Error(`Codex exec exited with code ${code}: ${reason}`));
     return;
   }
@@ -108,6 +113,19 @@ function handleCodexClose(code: number | null, args: CodexCloseArgs): void {
   resolve({ threadId: state.threadId, usage: state.lastUsage, durationMs: Date.now() - startedAt });
 }
 
+type CodexAttachCtx = { child: ChildProcess; state: CodexSessionState; startedAt: number; options: CodexExecSpawnOptions; resolve: (r: CodexExecResult) => void; reject: (err: Error) => void };
+
+function attachCodexListeners({ child, state, startedAt, options, resolve, reject }: CodexAttachCtx): void {
+  const stdoutArgs: CodexStdoutArgs = { state, child, onEvent: options.onEvent, reject };
+  child.stdout?.on('data', (chunk: Buffer) => handleCodexStdout(chunk, stdoutArgs));
+  child.stderr?.on('data', (chunk: Buffer) => {
+    state.stderrBuf += chunk.toString();
+    if (state.stderrBuf.length > MAX_BUFFER_BYTES) state.stderrBuf = state.stderrBuf.slice(-MAX_BUFFER_BYTES);
+  });
+  child.on('close', (code) => handleCodexClose(code, { state, startedAt, onEvent: options.onEvent, resolve, reject }));
+  child.on('error', (error) => reject(error));
+}
+
 export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExecProcessHandle {
   const { command, args } = buildCodexExecArgs(options);
   const startedAt = Date.now();
@@ -116,17 +134,9 @@ export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExec
     env: buildProcessEnv(options.env),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
-  if (child.stdin) {
-    child.stdin.write(options.prompt);
-    child.stdin.end();
-  }
+  if (child.stdin) { child.stdin.write(options.prompt); child.stdin.end(); }
   const state: CodexSessionState = {
-    threadId: null,
-    lastUsage: undefined,
-    failureMessage: null,
-    sawFailureEvent: false,
-    stdoutBuf: '',
-    stderrBuf: '',
+    threadId: null, lastUsage: undefined, failureMessage: null, sawFailureEvent: false, stdoutBuf: '', stderrBuf: '',
   };
   const handle: CodexExecProcessHandle = {
     result: null as unknown as Promise<CodexExecResult>,
@@ -135,16 +145,7 @@ export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExec
     get threadId() { return state.threadId; },
   };
   handle.result = new Promise<CodexExecResult>((resolve, reject) => {
-    const stdoutArgs: CodexStdoutArgs = { state, child, onEvent: options.onEvent, reject };
-    child.stdout?.on('data', (chunk: Buffer) => handleCodexStdout(chunk, stdoutArgs));
-    child.stderr?.on('data', (chunk: Buffer) => {
-      state.stderrBuf += chunk.toString();
-      if (state.stderrBuf.length > MAX_BUFFER_BYTES)
-        state.stderrBuf = state.stderrBuf.slice(-MAX_BUFFER_BYTES);
-    });
-    const closeArgs: CodexCloseArgs = { state, startedAt, onEvent: options.onEvent, resolve, reject };
-    child.on('close', (code) => handleCodexClose(code, closeArgs));
-    child.on('error', (error) => reject(error));
+    attachCodexListeners({ child, state, startedAt, options, resolve, reject });
   });
   return handle;
 }

@@ -1,6 +1,7 @@
 import { type ChildProcess, exec } from 'child_process';
 
 import log from '../../logger';
+import { withStableWindowsShellEnv } from './codexWindowsShellEnv';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -161,12 +162,12 @@ export function buildCodexExecArgs(options: CodexExecSpawnOptions): CodexExecArg
 }
 
 export function buildProcessEnv(extraEnv?: Record<string, string>): Record<string, string> {
-  return {
+  return withStableWindowsShellEnv({
     ...process.env,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     ...extraEnv,
-  } as Record<string, string>;
+  } as Record<string, string>);
 }
 
 // ---------------------------------------------------------------------------

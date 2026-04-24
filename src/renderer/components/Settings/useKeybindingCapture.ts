@@ -2,10 +2,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
-import {
-  findConflict,
-  keyEventToString,
-} from './keybindingsData';
+import { findConflict, keyEventToString } from './keybindingsData';
 
 export interface CaptureModel {
   capturedKeys: string;
@@ -76,9 +73,25 @@ export function useKeybindingCapture(
     setConflictId(null);
   }, []);
 
-  useCaptureEffect({ captureRef, capturingId, cancelCapture, commitShortcut, keybindings, setCapturedKeys, setConflictId });
+  useCaptureEffect({
+    captureRef,
+    capturingId,
+    cancelCapture,
+    commitShortcut,
+    keybindings,
+    setCapturedKeys,
+    setConflictId,
+  });
 
-  return { capturedKeys, capturingId, conflictId, cancelCapture, commitShortcut, resetToDefault, startCapture };
+  return {
+    capturedKeys,
+    capturingId,
+    conflictId,
+    cancelCapture,
+    commitShortcut,
+    resetToDefault,
+    startCapture,
+  };
 }
 
 function useCaptureSnapshot(
@@ -86,7 +99,11 @@ function useCaptureSnapshot(
   capturedKeys: string,
   conflictId: string | null,
 ): MutableRefObject<CaptureSnapshot> {
-  const captureRef = useRef<CaptureSnapshot>({ capturingId: null, capturedKeys: '', conflictId: null });
+  const captureRef = useRef<CaptureSnapshot>({
+    capturingId: null,
+    capturedKeys: '',
+    conflictId: null,
+  });
 
   useEffect(() => {
     captureRef.current = { capturingId, capturedKeys, conflictId };
@@ -111,13 +128,22 @@ function useCaptureEffect({
       if (!snapshot) return;
       const nextState = resolveCaptureKeyEvent(event, snapshot, keybindings, cancelCapture);
       if (!nextState) return;
-      if (nextState.type === 'commit') return commitShortcut(nextState.actionId, nextState.shortcut);
+      if (nextState.type === 'commit')
+        return commitShortcut(nextState.actionId, nextState.shortcut);
       setCapturedKeys(nextState.shortcut);
       setConflictId(nextState.conflictId);
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [cancelCapture, captureRef, capturingId, commitShortcut, keybindings, setCapturedKeys, setConflictId]);
+  }, [
+    cancelCapture,
+    captureRef,
+    capturingId,
+    commitShortcut,
+    keybindings,
+    setCapturedKeys,
+    setConflictId,
+  ]);
 }
 
 function resolveCaptureKeyEvent(
@@ -134,10 +160,7 @@ function resolveCaptureKeyEvent(
   return previewCaptureEvent(event, snapshot.capturingId, keybindings);
 }
 
-function cancelCaptureEvent(
-  event: KeyboardEvent,
-  cancelCapture: () => void,
-): CaptureResolution {
+function cancelCaptureEvent(event: KeyboardEvent, cancelCapture: () => void): CaptureResolution {
   event.preventDefault();
   event.stopPropagation();
   cancelCapture();

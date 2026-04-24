@@ -202,10 +202,9 @@ export function getPermissionModes(
   provider: ChatControlProvider,
   options?: { codexAppServerTransport?: boolean },
 ): ReadonlyArray<OptionItem> {
+  void options;
   if (provider !== 'codex') return CLAUDE_PERMISSION_MODES;
-  return options?.codexAppServerTransport
-    ? CODEX_APP_SERVER_PERMISSION_MODES
-    : CODEX_PERMISSION_MODES;
+  return CODEX_APP_SERVER_PERMISSION_MODES;
 }
 
 export function getSelectedModelLabel(
@@ -229,18 +228,34 @@ export function getSelectedOptionLabel(value: string, options: ReadonlyArray<Opt
   return match?.label ?? options[0]?.label ?? value;
 }
 
+function isCodexUsageMessage(message: AgentChatMessageRecord): boolean {
+  return (
+    message.orchestration?.provider === 'codex' ||
+    Boolean(message.model && /^(gpt-|o\d|codex)/i.test(message.model))
+  );
+}
+
 export function buildThreadModelUsage(
   messages: AgentChatMessageRecord[] | null | undefined,
 ): ModelUsageEntry[] | undefined {
   if (!messages?.length) return undefined;
 
-  const maxByModel = new Map<string, ModelUsageEntry>();
+  const usageByModel = new Map<string, ModelUsageEntry>();
   for (const message of messages) {
     if (!message.tokenUsage) continue;
     const key = message.model || '';
-    const existing = maxByModel.get(key);
+    const nextEntry = {
+      model: key,
+      inputTokens: message.tokenUsage.inputTokens,
+      outputTokens: message.tokenUsage.outputTokens,
+    };
+    if (isCodexUsageMessage(message)) {
+      usageByModel.set(key, nextEntry);
+      continue;
+    }
+    const existing = usageByModel.get(key);
     if (!existing || message.tokenUsage.inputTokens > existing.inputTokens) {
-      maxByModel.set(key, {
+      usageByModel.set(key, {
         model: key,
         inputTokens: message.tokenUsage.inputTokens,
         outputTokens: message.tokenUsage.outputTokens,
@@ -248,8 +263,8 @@ export function buildThreadModelUsage(
     }
   }
 
-  if (maxByModel.size === 0) return undefined;
-  return Array.from(maxByModel.values());
+  if (usageByModel.size === 0) return undefined;
+  return Array.from(usageByModel.values());
 }
 
 export function getContextLimit(modelId: string, codexModels?: CodexModelOption[]): number {
@@ -283,7 +298,9 @@ export function resolveActiveModel(args: {
   }
   return (
     args.selectedModel ||
-    (args.activeProvider === 'codex' ? (args.codexSettingsModel ?? '') : (args.settingsModel ?? '')) ||
+    (args.activeProvider === 'codex'
+      ? (args.codexSettingsModel ?? '')
+      : (args.settingsModel ?? '')) ||
     'sonnet'
   );
 }

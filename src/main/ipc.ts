@@ -317,18 +317,18 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   markStartup('ipc-ready');
 
   return () => {
-    cleanupIpcHandlers();
+    void cleanupIpcHandlers();
   };
 }
 
-export function cleanupIpcHandlers(): void {
+export async function cleanupIpcHandlers(): Promise<void> {
   // Close all file watchers
   cleanupFileWatchers();
 
   // Close settings file watcher
   cleanupConfigWatcher();
 
-  cleanupAgentChatHandlers();
+  await cleanupAgentChatHandlers();
   cleanupCompareProvidersHandlers();
   cleanupSessionCrudHandlers();
   cleanupFolderCrudHandlers();

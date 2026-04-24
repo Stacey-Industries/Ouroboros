@@ -3,7 +3,7 @@ import React, { memo } from 'react';
 
 import type { ClaudeMdEditorModel } from './ClaudeMdEditor.model';
 import { ClaudeMdOutlineSidebar, ClaudeMdTemplateLibrary } from './ClaudeMdEditor.sidebar';
-import { type ClaudeMdStats,formatBytes } from './ClaudeMdEditor.utils';
+import { type ClaudeMdStats, formatBytes } from './ClaudeMdEditor.utils';
 import { InlineEditor } from './InlineEditor';
 
 interface ClaudeMdEditorChromeProps {
@@ -54,15 +54,30 @@ const ActionButton = memo(function ActionButton({
   onClick: () => void;
   title: string;
 }): React.ReactElement {
-  const activeStyle = active ? { borderColor: 'var(--interactive-accent)', backgroundColor: 'var(--interactive-accent)', color: 'var(--text-on-accent)' } : null;
+  const activeStyle = active
+    ? {
+        borderColor: 'var(--interactive-accent)',
+        backgroundColor: 'var(--interactive-accent)',
+        color: 'var(--text-on-accent)',
+      }
+    : null;
   return (
-    <button onClick={onClick} title={title} className="text-text-semantic-muted" style={activeStyle ? { ...buttonStyle, ...activeStyle } : buttonStyle}>
+    <button
+      onClick={onClick}
+      title={title}
+      className="text-text-semantic-muted"
+      style={activeStyle ? { ...buttonStyle, ...activeStyle } : buttonStyle}
+    >
       {children}
     </button>
   );
 });
 
-const TokenSummary = memo(function TokenSummary({ stats }: { stats: ClaudeMdStats }): React.ReactElement {
+const TokenSummary = memo(function TokenSummary({
+  stats,
+}: {
+  stats: ClaudeMdStats;
+}): React.ReactElement {
   return (
     <span title="Estimated token count (~4 chars/token)">
       <span
@@ -80,11 +95,20 @@ const TokenSummary = memo(function TokenSummary({ stats }: { stats: ClaudeMdStat
   );
 });
 
-const BudgetBadge = memo(function BudgetBadge({ stats }: { stats: ClaudeMdStats }): React.ReactElement {
+const BudgetBadge = memo(function BudgetBadge({
+  stats,
+}: {
+  stats: ClaudeMdStats;
+}): React.ReactElement {
   return (
     <span
       title="Token budget: CLAUDE.md typically uses 1-5K of ~200K context"
-      style={{ padding: '1px 6px', borderRadius: '3px', backgroundColor: stats.tone.backgroundColor, color: stats.tone.color }}
+      style={{
+        padding: '1px 6px',
+        borderRadius: '3px',
+        backgroundColor: stats.tone.backgroundColor,
+        color: stats.tone.color,
+      }}
     >
       {stats.tone.label}
     </span>
@@ -104,44 +128,70 @@ const ClaudeMdTopBar = memo(function ClaudeMdTopBar({
 }): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={topBarStyle}>
-      <span className="text-interactive-accent" style={{ fontWeight: 600 }}>CLAUDE.md Editor</span>
+      <span className="text-interactive-accent" style={{ fontWeight: 600 }}>
+        CLAUDE.md Editor
+      </span>
       <span style={{ marginLeft: 'auto' }} />
       <TokenSummary stats={stats} />
       <span title="File size on disk">{formatBytes(stats.fileSize)}</span>
       <BudgetBadge stats={stats} />
-      <ActionButton onClick={onFormat} title="Normalize headings and whitespace">Format</ActionButton>
-      <ActionButton active={showTemplates} onClick={onToggleTemplates} title="Toggle template library">Templates</ActionButton>
+      <ActionButton onClick={onFormat} title="Normalize headings and whitespace">
+        Format
+      </ActionButton>
+      <ActionButton
+        active={showTemplates}
+        onClick={onToggleTemplates}
+        title="Toggle template library"
+      >
+        Templates
+      </ActionButton>
     </div>
   );
 });
 
-export const ClaudeMdEditorChrome = memo(function ClaudeMdEditorChrome({
-  content,
-  filePath,
-  model,
-  projectRoot,
-  themeId,
+function EditorBody({
+  content, filePath, model, projectRoot, themeId,
 }: ClaudeMdEditorChromeProps): React.ReactElement {
   return (
-    <div style={frameStyle}>
-      <ClaudeMdTopBar onFormat={model.handleFormat} onToggleTemplates={model.toggleTemplates} showTemplates={model.showTemplates} stats={model.stats} />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
-        <ClaudeMdOutlineSidebar onInsertTemplate={model.handleInsertTemplate} onSelectSection={model.handleScrollToSection} sections={model.sections} />
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          <InlineEditor
-            ref={model.editorRef as Ref<import('./InlineEditor').InlineEditorHandle>}
-            content={content}
-            savedContent={model.savedContent}
-            filePath={filePath}
-            themeId={themeId}
-            projectRoot={projectRoot}
-            onSave={model.handleSave}
-            onContentChange={model.handleContentChange}
-            onDirtyChange={() => { }}
-          />
-        </div>
-        {model.showTemplates ? <ClaudeMdTemplateLibrary onInsertTemplate={model.handleInsertTemplate} /> : null}
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+      <ClaudeMdOutlineSidebar
+        onInsertTemplate={model.handleInsertTemplate}
+        onSelectSection={model.handleScrollToSection}
+        sections={model.sections}
+      />
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <InlineEditor
+          ref={model.editorRef as Ref<import('./InlineEditor').InlineEditorHandle>}
+          content={content}
+          savedContent={model.savedContent}
+          filePath={filePath}
+          themeId={themeId}
+          projectRoot={projectRoot}
+          onSave={model.handleSave}
+          onContentChange={model.handleContentChange}
+          onDirtyChange={() => {}}
+        />
       </div>
+      {model.showTemplates ? (
+        <ClaudeMdTemplateLibrary onInsertTemplate={model.handleInsertTemplate} />
+      ) : null}
+    </div>
+  );
+}
+
+export const ClaudeMdEditorChrome = memo(function ClaudeMdEditorChrome(
+  props: ClaudeMdEditorChromeProps,
+): React.ReactElement {
+  const { model } = props;
+  return (
+    <div style={frameStyle}>
+      <ClaudeMdTopBar
+        onFormat={model.handleFormat}
+        onToggleTemplates={model.toggleTemplates}
+        showTemplates={model.showTemplates}
+        stats={model.stats}
+      />
+      <EditorBody {...props} />
     </div>
   );
 });

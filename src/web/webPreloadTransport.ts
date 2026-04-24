@@ -16,67 +16,67 @@
  *    { resumed, lost }. Lost tokens are rejected with ECONNLOST.
  */
 
-import { hideConnectionOverlay, showConnectionOverlay } from './webPreloadOverlay'
+import { hideConnectionOverlay, showConnectionOverlay } from './webPreloadOverlay';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface PendingRequest {
-  resolve: (value: unknown) => void
-  reject: (reason: Error) => void
-  timer: number
+  resolve: (value: unknown) => void;
+  reject: (reason: Error) => void;
+  timer: number;
 }
 
 interface ResumableRequest {
-  channel: string
-  resumeToken: string
-  resolve: (value: unknown) => void
-  reject: (reason: Error) => void
-  timer: ReturnType<typeof setTimeout>
+  channel: string;
+  resumeToken: string;
+  resolve: (value: unknown) => void;
+  reject: (reason: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
 }
 
 interface JsonRpcResponse {
-  id?: number
-  error?: { message?: string }
-  result?: unknown
-  method?: string
-  params?: { channel: string; payload: unknown }
-  meta?: { resumeToken: string }
+  id?: number;
+  error?: { message?: string };
+  result?: unknown;
+  method?: string;
+  params?: { channel: string; payload: unknown };
+  meta?: { resumeToken: string };
 }
 
-type EventCallback = (...args: unknown[]) => void
+type EventCallback = (...args: unknown[]) => void;
 
 // ── Connection State ──────────────────────────────────────────────────────────
 
 /** Public connection state type shared with the renderer hook. */
-export type ConnectionState = 'connected' | 'connecting' | 'disconnected' | 'electron'
+export type ConnectionState = 'connected' | 'connecting' | 'disconnected' | 'electron';
 
 // ─── Binary Deserialization ──────────────────────────────────────────────────
 
 interface BinaryEnvelope {
-  __binary: boolean
-  data: string
+  __binary: boolean;
+  data: string;
 }
 
 function isBinaryEnvelope(value: unknown): value is BinaryEnvelope {
-  return typeof value === 'object' && value !== null && (value as BinaryEnvelope).__binary === true
+  return typeof value === 'object' && value !== null && (value as BinaryEnvelope).__binary === true;
 }
 
 function deserializeResult(result: unknown): unknown {
   if (isBinaryEnvelope(result)) {
-    const binaryStr = atob(result.data)
-    const bytes = new Uint8Array(binaryStr.length)
+    const binaryStr = atob(result.data);
+    const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i)
+      bytes[i] = binaryStr.charCodeAt(i);
     }
-    return bytes
+    return bytes;
   }
-  return result
+  return result;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 /** Client-side TTL for resumable requests while disconnected (matches server default). */
-const RESUME_TTL_MS = 5 * 60 * 1000
+const RESUME_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Per-call-class invoke timeout budgets (ms).
@@ -92,21 +92,21 @@ const RESUME_TTL_MS = 5 * 60 * 1000
  * caps the wall time; the invoke-level timer acts as an earlier catch for
  * channels whose budget is shorter than the disconnect window.
  */
-type TimeoutClass = 'short' | 'normal' | 'long'
+type TimeoutClass = 'short' | 'normal' | 'long';
 
 const CALL_TIMEOUTS: Record<TimeoutClass, number> = {
-  short:  10_000,
+  short: 10_000,
   normal: 30_000,
-  long:   120_000,
-}
+  long: 120_000,
+};
 
 /** Short-class pattern — health pings, config reads, metadata-only. */
 const SHORT_PATTERN =
-  /^(health|config:get|config:getAll|app:getVersion|app:getPlatform|app:getSystemInfo|app:ping|perf:ping|mobileAccess:listPairedDevices|providers:list|providers:getSlots|theme:get)$/
+  /^(health|config:get|config:getAll|app:getVersion|app:getPlatform|app:getSystemInfo|app:ping|perf:ping|mobileAccess:listPairedDevices|providers:list|providers:getSlots|theme:get)$/;
 
 /** Long-class pattern — streaming chat, spec scaffold, retrain, heavy compute. */
 const LONG_PATTERN =
-  /(?:[Cc]hat|spec:|retrain|sessions:dispatchTask|orchestration:buildContextPacket|pty:spawn(?:Claude|Codex)?$|observability:exportTrace)/
+  /(?:[Cc]hat|spec:|retrain|sessions:dispatchTask|orchestration:buildContextPacket|pty:spawn(?:Claude|Codex)?$|observability:exportTrace)/;
 
 /**
  * Derive the timeout class for a channel using the same conventions as
@@ -115,140 +115,146 @@ const LONG_PATTERN =
  * Wave 33a Phase F.
  */
 export function channelTimeoutClass(channel: string): TimeoutClass {
-  if (SHORT_PATTERN.test(channel)) return 'short'
-  if (LONG_PATTERN.test(channel)) return 'long'
-  return 'normal'
+  if (SHORT_PATTERN.test(channel)) return 'short';
+  if (LONG_PATTERN.test(channel)) return 'long';
+  return 'normal';
 }
 
 // ─── Transport Class ─────────────────────────────────────────────────────────
 
 export class WebSocketTransport {
-  private ws: WebSocket | null = null
-  private requestId = 0
-  private pendingRequests = new Map<number, PendingRequest>()
-  private resumableRequests = new Map<number, ResumableRequest>()
-  private eventListeners = new Map<string, Set<EventCallback>>()
-  private reconnectAttempts = 0
-  private maxReconnectDelay = 30000
-  private connected = false
-  private connectPromise: Promise<void> | null = null
-  private ticketFetcher: (() => Promise<string | null>) | null = null
-  private connectionStateListeners = new Set<(s: ConnectionState) => void>()
+  private ws: WebSocket | null = null;
+  private requestId = 0;
+  private pendingRequests = new Map<number, PendingRequest>();
+  private resumableRequests = new Map<number, ResumableRequest>();
+  private eventListeners = new Map<string, Set<EventCallback>>();
+  private reconnectAttempts = 0;
+  private maxReconnectDelay = 30000;
+  private connected = false;
+  private connectPromise: Promise<void> | null = null;
+  private ticketFetcher: (() => Promise<string | null>) | null = null;
+  private connectionStateListeners = new Set<(s: ConnectionState) => void>();
 
   constructor(
     private url: string,
-    private authToken?: string
+    private authToken?: string,
   ) {}
 
   setTicketFetcher(fetcher: () => Promise<string | null>): void {
-    this.ticketFetcher = fetcher
+    this.ticketFetcher = fetcher;
   }
 
   connect(): Promise<void> {
-    if (this.connectPromise) return this.connectPromise
-    this.connectPromise = this.doConnect()
-    return this.connectPromise
+    if (this.connectPromise) return this.connectPromise;
+    this.connectPromise = this.doConnect();
+    return this.connectPromise;
   }
 
   connectWithTicket(ticket: string): Promise<void> {
-    if (this.connectPromise) return this.connectPromise
-    this.connectPromise = this.doConnect(ticket)
-    return this.connectPromise
+    if (this.connectPromise) return this.connectPromise;
+    this.connectPromise = this.doConnect(ticket);
+    return this.connectPromise;
   }
 
   private doConnect(ticket?: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
-        const param = ticket ? `?ticket=${ticket}` : this.authToken ? `?token=${this.authToken}` : ''
-        this.ws = new WebSocket(`${this.url}${param}`)
-        this.ws.onopen = () => this.handleOpen(resolve)
-        this.ws.onmessage = (event) => this.handleMessage(event.data as string)
-        this.ws.onclose = () => this.handleClose()
-        this.ws.onerror = () => this.handleError(reject)
+        const param = ticket
+          ? `?ticket=${ticket}`
+          : this.authToken
+            ? `?token=${this.authToken}`
+            : '';
+        this.ws = new WebSocket(`${this.url}${param}`);
+        this.ws.onopen = () => this.handleOpen(resolve);
+        this.ws.onmessage = (event) => this.handleMessage(event.data as string);
+        this.ws.onclose = () => this.handleClose();
+        this.ws.onerror = () => this.handleError(reject);
       } catch (err) {
-        this.connectPromise = null
-        reject(err)
+        this.connectPromise = null;
+        reject(err);
       }
-    })
+    });
   }
 
   private handleOpen(resolve: () => void): void {
-    this.connected = true
-    this.reconnectAttempts = 0
-    this.connectPromise = null
-    hideConnectionOverlay()
-    this.emitConnectionState('connected')
-    this.sendResumeFrame()
-    resolve()
+    this.connected = true;
+    this.reconnectAttempts = 0;
+    this.connectPromise = null;
+    hideConnectionOverlay();
+    this.emitConnectionState('connected');
+    this.sendResumeFrame();
+    resolve();
   }
 
   /** Send resume handshake as the FIRST frame on (re)connect. */
   private sendResumeFrame(): void {
-    if (this.resumableRequests.size === 0) return
-    const tokens = Array.from(this.resumableRequests.values()).map((r) => r.resumeToken)
-    const id = ++this.requestId
-    this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: 'resume', params: { tokens } }))
+    if (this.resumableRequests.size === 0) return;
+    const tokens = Array.from(this.resumableRequests.values()).map((r) => r.resumeToken);
+    const id = ++this.requestId;
+    this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: 'resume', params: { tokens } }));
   }
 
   private handleClose(): void {
-    this.connected = false
-    this.connectPromise = null
-    showConnectionOverlay('Disconnected — reconnecting...')
-    this.emitConnectionState('disconnected')
-    this.rejectNonResumable()
-    this.startResumableTimers()
-    this.scheduleReconnect()
+    this.connected = false;
+    this.connectPromise = null;
+    showConnectionOverlay('Disconnected — reconnecting...');
+    this.emitConnectionState('disconnected');
+    this.rejectNonResumable();
+    this.startResumableTimers();
+    this.scheduleReconnect();
   }
 
   private handleError(reject: (err: Error) => void): void {
-    this.connectPromise = null
-    if (!this.connected) reject(new Error('WebSocket connection failed'))
+    this.connectPromise = null;
+    if (!this.connected) reject(new Error('WebSocket connection failed'));
   }
 
   /** Reject everything in pendingRequests (non-resumable or pre-meta). */
   private rejectNonResumable(): void {
     for (const [id, pending] of this.pendingRequests) {
-      clearTimeout(pending.timer)
-      pending.reject(new Error('WebSocket connection closed'))
-      this.pendingRequests.delete(id)
+      clearTimeout(pending.timer);
+      pending.reject(new Error('WebSocket connection closed'));
+      this.pendingRequests.delete(id);
     }
   }
 
   /** Start client-side TTL timers for all resumable requests while offline. */
   private startResumableTimers(): void {
     for (const [id, req] of this.resumableRequests) {
-      clearTimeout(req.timer)
+      clearTimeout(req.timer);
       req.timer = setTimeout(() => {
-        this.resumableRequests.delete(id)
-        req.reject(new Error('ECONNLOST'))
-      }, RESUME_TTL_MS)
+        this.resumableRequests.delete(id);
+        req.reject(new Error('ECONNLOST'));
+      }, RESUME_TTL_MS);
     }
   }
 
   async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      await this.connect()
+      await this.connect();
     }
-    const id = ++this.requestId
+    const id = ++this.requestId;
     return new Promise<unknown>((resolve, reject) => {
-      const budgetMs = CALL_TIMEOUTS[channelTimeoutClass(channel)]
+      const budgetMs = CALL_TIMEOUTS[channelTimeoutClass(channel)];
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
-          this.pendingRequests.delete(id)
-          reject(new Error(`IPC timeout: ${channel}`))
+          this.pendingRequests.delete(id);
+          reject(new Error(`IPC timeout: ${channel}`));
         }
-      }, budgetMs) as unknown as number
-      this.pendingRequests.set(id, { resolve, reject, timer })
-      this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: channel, params: args }))
-    })
+      }, budgetMs) as unknown as number;
+      this.pendingRequests.set(id, { resolve, reject, timer });
+      this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: channel, params: args }));
+    });
   }
 
   on(channel: string, callback: EventCallback): () => void {
     if (!this.eventListeners.has(channel)) {
-      this.eventListeners.set(channel, new Set())
+      this.eventListeners.set(channel, new Set());
     }
-    this.eventListeners.get(channel)!.add(callback)
-    return () => { this.eventListeners.get(channel)?.delete(callback) }
+    this.eventListeners.get(channel)!.add(callback);
+    return () => {
+      this.eventListeners.get(channel)?.delete(callback);
+    };
   }
 
   /**
@@ -257,58 +263,64 @@ export class WebSocketTransport {
    * Returns a cleanup function.
    */
   subscribeConnectionState(listener: (s: ConnectionState) => void): () => void {
-    this.connectionStateListeners.add(listener)
-    return () => { this.connectionStateListeners.delete(listener) }
+    this.connectionStateListeners.add(listener);
+    return () => {
+      this.connectionStateListeners.delete(listener);
+    };
   }
 
   private emitConnectionState(state: ConnectionState): void {
     for (const listener of this.connectionStateListeners) {
-      try { listener(state) } catch { /* ignore handler errors */ }
+      try {
+        listener(state);
+      } catch {
+        /* ignore handler errors */
+      }
     }
   }
 
   private handleMessage(data: string): void {
-    let msg: JsonRpcResponse
+    let msg: JsonRpcResponse;
     try {
-      msg = JSON.parse(data) as JsonRpcResponse
+      msg = JSON.parse(data) as JsonRpcResponse;
     } catch {
-      console.warn('[webPreload] Failed to parse WS message:', data)
-      return
+      console.warn('[webPreload] Failed to parse WS message:', data);
+      return;
     }
     if (msg.id !== undefined) {
-      this.dispatchResponse(msg)
-      return
+      this.dispatchResponse(msg);
+      return;
     }
     if (msg.method === 'event' && msg.params) {
-      this.dispatchEvent(msg.params.channel, msg.params.payload)
+      this.dispatchEvent(msg.params.channel, msg.params.payload);
     }
   }
 
   private dispatchResponse(msg: JsonRpcResponse): void {
     // Meta frame — promote pending request to resumable
     if (msg.meta?.resumeToken) {
-      this.promoteToResumable(msg.id!, msg.meta.resumeToken)
-      return
+      this.promoteToResumable(msg.id!, msg.meta.resumeToken);
+      return;
     }
     // Resume handshake ack — { result: { resumed, lost } }
     if (this.isResumeAck(msg)) {
-      this.handleResumeAck(msg)
-      return
+      this.handleResumeAck(msg);
+      return;
     }
     if (this.resumableRequests.has(msg.id!)) {
-      this.resolveResumable(msg)
-      return
+      this.resolveResumable(msg);
+      return;
     }
     if (this.pendingRequests.has(msg.id!)) {
-      this.resolveRequest(msg)
+      this.resolveRequest(msg);
     }
   }
 
   private promoteToResumable(id: number, resumeToken: string): void {
-    const pending = this.pendingRequests.get(id)
-    if (!pending) return
-    clearTimeout(pending.timer)
-    this.pendingRequests.delete(id)
+    const pending = this.pendingRequests.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pendingRequests.delete(id);
     // No timer while online — startResumableTimers() arms it on disconnect.
     const resumable: ResumableRequest = {
       channel: resumeToken,
@@ -316,81 +328,77 @@ export class WebSocketTransport {
       resolve: pending.resolve,
       reject: pending.reject,
       timer: 0 as unknown as ReturnType<typeof setTimeout>,
-    }
-    this.resumableRequests.set(id, resumable)
+    };
+    this.resumableRequests.set(id, resumable);
   }
 
   private isResumeAck(msg: JsonRpcResponse): boolean {
-    const r = msg.result as Record<string, unknown> | undefined
-    return (
-      r !== undefined &&
-      Array.isArray(r['resumed']) &&
-      Array.isArray(r['lost'])
-    )
+    const r = msg.result as Record<string, unknown> | undefined;
+    return r !== undefined && Array.isArray(r['resumed']) && Array.isArray(r['lost']);
   }
 
   private handleResumeAck(msg: JsonRpcResponse): void {
-    const r = msg.result as { resumed: string[]; lost: string[] }
+    const r = msg.result as { resumed: string[]; lost: string[] };
     for (const [id, req] of this.resumableRequests) {
       if (r.lost.includes(req.resumeToken)) {
-        clearTimeout(req.timer)
-        this.resumableRequests.delete(id)
-        req.reject(new Error('ECONNLOST'))
+        clearTimeout(req.timer);
+        this.resumableRequests.delete(id);
+        req.reject(new Error('ECONNLOST'));
       } else if (r.resumed.includes(req.resumeToken)) {
         // Still waiting — clear the offline TTL, server will deliver result
-        clearTimeout(req.timer)
+        clearTimeout(req.timer);
         req.timer = setTimeout(() => {
-          this.resumableRequests.delete(id)
-          req.reject(new Error('ECONNLOST'))
-        }, RESUME_TTL_MS)
+          this.resumableRequests.delete(id);
+          req.reject(new Error('ECONNLOST'));
+        }, RESUME_TTL_MS);
       }
     }
   }
 
   private resolveRequest(msg: JsonRpcResponse): void {
-    const pending = this.pendingRequests.get(msg.id!)!
-    this.pendingRequests.delete(msg.id!)
-    clearTimeout(pending.timer)
+    const pending = this.pendingRequests.get(msg.id!)!;
+    this.pendingRequests.delete(msg.id!);
+    clearTimeout(pending.timer);
     if (msg.error) {
-      pending.reject(new Error(msg.error.message || 'Unknown RPC error'))
+      pending.reject(new Error(msg.error.message || 'Unknown RPC error'));
     } else {
-      pending.resolve(deserializeResult(msg.result))
+      pending.resolve(deserializeResult(msg.result));
     }
   }
 
   private resolveResumable(msg: JsonRpcResponse): void {
-    const req = this.resumableRequests.get(msg.id!)!
-    this.resumableRequests.delete(msg.id!)
-    clearTimeout(req.timer)
+    const req = this.resumableRequests.get(msg.id!)!;
+    this.resumableRequests.delete(msg.id!);
+    clearTimeout(req.timer);
     if (msg.error) {
-      req.reject(new Error(msg.error.message || 'Unknown RPC error'))
+      req.reject(new Error(msg.error.message || 'Unknown RPC error'));
     } else {
-      req.resolve(deserializeResult(msg.result))
+      req.resolve(deserializeResult(msg.result));
     }
   }
 
   private dispatchEvent(channel: string, payload: unknown): void {
-    const listeners = this.eventListeners.get(channel)
-    if (!listeners) return
+    const listeners = this.eventListeners.get(channel);
+    if (!listeners) return;
     for (const cb of listeners) {
       try {
-        cb(payload)
+        cb(payload);
       } catch (err) {
-        console.error(`[webPreload] Event handler error on ${channel}:`, err)
+        console.error(`[webPreload] Event handler error on ${channel}:`, err);
       }
     }
   }
 
   private scheduleReconnect(): void {
-    const delay = Math.min(1000 * 2 ** this.reconnectAttempts, this.maxReconnectDelay)
-    this.reconnectAttempts++
-    this.emitConnectionState('connecting')
+    const delay = Math.min(1000 * 2 ** this.reconnectAttempts, this.maxReconnectDelay);
+    this.reconnectAttempts++;
+    this.emitConnectionState('connecting');
     const reconnect = () => {
-      if (!this.ticketFetcher) return this.connect().catch(() => {})
+      if (!this.ticketFetcher) return this.connect().catch(() => {});
       return this.ticketFetcher()
         .then((t) => (t ? this.connectWithTicket(t) : this.connect()))
-        .catch(() => {})
-    }
-    setTimeout(reconnect, delay)
+        .catch(() => {});
+    };
+    setTimeout(reconnect, delay);
   }
 }

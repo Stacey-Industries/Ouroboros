@@ -9,7 +9,7 @@ import { AGENT_CHAT_INVOKE_CHANNELS } from '@shared/ipc/agentChatChannels';
 import type { Reaction } from '@shared/types/agentChat';
 import { describe, expect, it } from 'vitest';
 
-import { type ReactionHandlerDeps,registerReactionHandlers } from './agentChatReactions';
+import { type ReactionHandlerDeps, registerReactionHandlers } from './agentChatReactions';
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -25,10 +25,16 @@ function makeStubs(initial: Reaction[] = []) {
     data: [...initial],
     collapsedState: new Map(),
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async getMessageReactions(_id: string, _threadId: string) { return [...store.data]; },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async setMessageReactions(_id: string, _threadId: string, r: Reaction[]) { store.data = [...r]; },
-    async setMessageCollapsed(id: string, _threadId: string, c: boolean) { store.collapsedState.set(id, c); },
+    async getMessageReactions(_id: string, _threadId: string) {
+      return [...store.data];
+    },
+
+    async setMessageReactions(_id: string, _threadId: string, r: Reaction[]) {
+      store.data = [...r];
+    },
+    async setMessageCollapsed(id: string, _threadId: string, c: boolean) {
+      store.collapsedState.set(id, c);
+    },
   };
 
   const handlers = new Map<string, HandlerFn>();
@@ -72,15 +78,23 @@ describe('registerReactionHandlers', () => {
   describe('getMessageReactions', () => {
     it('returns empty list when no reactions', async () => {
       const { handlers } = makeStubs();
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.getMessageReactions, 'msg-1', 'thread-1');
+      const result = await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.getMessageReactions,
+        'msg-1',
+        'thread-1',
+      );
       expect(result).toEqual({ success: true, reactions: [] });
     });
 
     it('returns existing reactions', async () => {
       const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.getMessageReactions, 'msg-1', 'thread-1',
-      ) as { success: boolean; reactions: Reaction[] };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.getMessageReactions,
+        'msg-1',
+        'thread-1',
+      )) as { success: boolean; reactions: Reaction[] };
       expect(result.success).toBe(true);
       expect(result.reactions).toHaveLength(1);
     });
@@ -103,9 +117,13 @@ describe('registerReactionHandlers', () => {
   describe('addMessageReaction', () => {
     it('adds a +1 reaction and returns updated list', async () => {
       const { handlers } = makeStubs();
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', '+1',
-      ) as { success: boolean; reactions: Reaction[] };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction,
+        'msg-1',
+        'thread-1',
+        '+1',
+      )) as { success: boolean; reactions: Reaction[] };
       expect(result.success).toBe(true);
       expect(result.reactions).toHaveLength(1);
       expect(result.reactions[0].kind).toBe('+1');
@@ -113,29 +131,47 @@ describe('registerReactionHandlers', () => {
 
     it('adds a -1 reaction', async () => {
       const { handlers } = makeStubs();
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', '-1',
-      ) as { success: boolean; reactions: Reaction[] };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction,
+        'msg-1',
+        'thread-1',
+        '-1',
+      )) as { success: boolean; reactions: Reaction[] };
       expect(result.reactions[0].kind).toBe('-1');
     });
 
     it('persists via the store', async () => {
       const { handlers, store } = makeStubs();
-      await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', '+1');
+      await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction,
+        'msg-1',
+        'thread-1',
+        '+1',
+      );
       expect(store.data).toHaveLength(1);
     });
 
     it('rejects missing or non-allowlisted kind', async () => {
       const { handlers } = makeStubs();
-      const emptyResult = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', '',
-      ) as { success: boolean; error?: string };
+      const emptyResult = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction,
+        'msg-1',
+        'thread-1',
+        '',
+      )) as { success: boolean; error?: string };
       expect(emptyResult.success).toBe(false);
       expect(emptyResult.error).toBe('invalid-reaction-kind');
 
-      const unknownResult = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction, 'msg-1', 'thread-1', 'heart',
-      ) as { success: boolean; error?: string };
+      const unknownResult = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.addMessageReaction,
+        'msg-1',
+        'thread-1',
+        'heart',
+      )) as { success: boolean; error?: string };
       expect(unknownResult.success).toBe(false);
       expect(unknownResult.error).toBe('invalid-reaction-kind');
     });
@@ -144,9 +180,13 @@ describe('registerReactionHandlers', () => {
   describe('removeMessageReaction', () => {
     it('removes a reaction and returns updated list', async () => {
       const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, 'msg-1', 'thread-1', '+1',
-      ) as { success: boolean; reactions: Reaction[] };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction,
+        'msg-1',
+        'thread-1',
+        '+1',
+      )) as { success: boolean; reactions: Reaction[] };
       expect(result.success).toBe(true);
       expect(result.reactions).toHaveLength(0);
     });
@@ -156,18 +196,26 @@ describe('registerReactionHandlers', () => {
       // removed; targeting an allowlisted kind that isn't present is a no-op that
       // still returns success + the unchanged reactions list.
       const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, 'msg-1', 'thread-1', '-1',
-      ) as { success: boolean; reactions: Reaction[] };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction,
+        'msg-1',
+        'thread-1',
+        '-1',
+      )) as { success: boolean; reactions: Reaction[] };
       expect(result.success).toBe(true);
       expect(result.reactions).toHaveLength(1);
     });
 
     it('rejects a non-allowlisted kind on remove', async () => {
       const { handlers } = makeStubs([{ kind: '+1', at: 1000 }]);
-      const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, 'msg-1', 'thread-1', 'heart',
-      ) as { success: boolean; error?: string };
+      const result = (await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction,
+        'msg-1',
+        'thread-1',
+        'heart',
+      )) as { success: boolean; error?: string };
       expect(result.success).toBe(false);
       expect(result.error).toBe('invalid-reaction-kind');
     });
@@ -177,7 +225,11 @@ describe('registerReactionHandlers', () => {
     it('sets collapsed = true', async () => {
       const { handlers, store } = makeStubs();
       const result = await call(
-        handlers, AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed, 'msg-1', 'thread-1', true,
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed,
+        'msg-1',
+        'thread-1',
+        true,
       );
       expect(result).toEqual({ success: true });
       expect(store.collapsedState.get('msg-1')).toBe(true);
@@ -185,7 +237,13 @@ describe('registerReactionHandlers', () => {
 
     it('sets collapsed = false', async () => {
       const { handlers, store } = makeStubs();
-      await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed, 'msg-1', 'thread-1', false);
+      await call(
+        handlers,
+        AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed,
+        'msg-1',
+        'thread-1',
+        false,
+      );
       expect(store.collapsedState.get('msg-1')).toBe(false);
     });
 

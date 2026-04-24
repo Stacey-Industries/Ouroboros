@@ -4,7 +4,7 @@ import type { CodeRow } from './codeViewTypes';
 import { EmptyState } from './EmptyState';
 import { ErrorDisplay } from './ErrorDisplay';
 import { FileViewerChrome } from './FileViewerChrome';
-import { computeVisibleLines,parseShikiLines } from './fileViewerUtils';
+import { computeVisibleLines, parseShikiLines } from './fileViewerUtils';
 import { HexViewer } from './HexViewer';
 import { ImageViewer } from './ImageViewer';
 import { injectLinks } from './linkDetector';
@@ -37,9 +37,7 @@ export interface FileViewerProps {
 /**
  * FileViewer — read-only syntax-highlighted code viewer.
  */
-export const FileViewer = memo(function FileViewer(
-  props: FileViewerProps
-): React.ReactElement {
+export const FileViewer = memo(function FileViewer(props: FileViewerProps): React.ReactElement {
   return <FileViewerInner {...props} />;
 });
 
@@ -55,7 +53,11 @@ function renderInitialViewerState(props: FileViewerProps): React.ReactElement | 
   return null;
 }
 
-function renderMediaViewer(filePath: string, isVideo?: boolean, isAudio?: boolean): React.ReactElement | null {
+function renderMediaViewer(
+  filePath: string,
+  isVideo?: boolean,
+  isAudio?: boolean,
+): React.ReactElement | null {
   if (!isAudio && !isVideo) return null;
   return <MediaViewer filePath={filePath} mediaType={isVideo ? 'video' : 'audio'} />;
 }
@@ -79,21 +81,19 @@ function renderSpecialViewer(props: FileViewerProps): React.ReactElement | null 
   return renderInitialViewerState(props) ?? renderFileTypeViewer(props);
 }
 
-const FileViewerInner = memo(function FileViewerInner(
-  props: FileViewerProps
-): React.ReactElement {
+const FileViewerInner = memo(function FileViewerInner(props: FileViewerProps): React.ReactElement {
   const s = useFileViewerState(props);
   const specialViewer = renderSpecialViewer(props);
   if (specialViewer) return specialViewer;
 
   const { content } = props;
-  const shikiLines = s.highlightedHtml
-    ? parseShikiLines(injectLinks(s.highlightedHtml))
-    : null;
+  const shikiLines = s.highlightedHtml ? parseShikiLines(injectLinks(s.highlightedHtml)) : null;
   const lines = (content ?? '').split('\n');
   const lineCount = lines.length;
   const { visible, foldedCounts } = computeVisibleLines(
-    lineCount, s.collapsedFolds, s.foldableLines
+    lineCount,
+    s.collapsedFolds,
+    s.foldableLines,
   );
   const rows = buildRows(lineCount, visible, foldedCounts);
   const gutterWidth = Math.max(3, String(lineCount).length) * 9 + 16;
@@ -114,7 +114,7 @@ const FileViewerInner = memo(function FileViewerInner(
 function buildRows(
   lineCount: number,
   visible: Set<number>,
-  foldedCounts: Map<number, number>
+  foldedCounts: Map<number, number>,
 ): CodeRow[] {
   const rows: CodeRow[] = [];
   for (let i = 0; i < lineCount; i++) {

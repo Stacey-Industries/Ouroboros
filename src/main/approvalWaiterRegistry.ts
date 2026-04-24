@@ -66,30 +66,28 @@ export function notifyWaiters(requestId: string, response: ApprovalResponse): vo
  * Cleanup: callers must invoke the returned `cancel` function when the pipe
  * connection drops to prevent a waiter leak.
  */
-export function waitForResolution(
+function removeWaiterFromSet(requestId: string, waiterRef: ApprovalWaiter): void {
+  const waiterSet = waiters.get(requestId);
+  if (waiterSet) {
+    waiterSet.delete(waiterRef);
+    if (waiterSet.size === 0) waiters.delete(requestId);
+  }
+}
+
+function makeWaiterPromise(
   requestId: string,
   timeoutMs: number,
-): { promise: Promise<ApprovalResponse>; cancel: () => void } {
-  const cached = recentResolutions.get(requestId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return {
-      promise: Promise.resolve(cached.response),
-      cancel: () => { /* no-op — already resolved */ },
-    };
-  }
-
-  let waiterRef: ApprovalWaiter | null = null;
-
-  const promise = new Promise<ApprovalResponse>((resolve, reject) => {
+  getRef: () => ApprovalWaiter | null,
+  setRef: (w: ApprovalWaiter) => void,
+): Promise<ApprovalResponse> {
+  return new Promise<ApprovalResponse>((resolve, reject) => {
     const timer = setTimeout(() => {
-      const waiterSet = waiters.get(requestId);
-      if (waiterSet && waiterRef) waiterSet.delete(waiterRef);
-      if (waiterSet?.size === 0) waiters.delete(requestId);
+      const ref = getRef();
+      if (ref) removeWaiterFromSet(requestId, ref);
       reject(new Error(`approval.wait timed out after ${timeoutMs}ms for ${requestId}`));
     }, timeoutMs);
-
-    waiterRef = { resolve, reject, timer };
-
+    const waiterRef: ApprovalWaiter = { resolve, reject, timer };
+    setRef(waiterRef);
     let waiterSet = waiters.get(requestId);
     if (!waiterSet) {
       waiterSet = new Set();
@@ -97,15 +95,29 @@ export function waitForResolution(
     }
     waiterSet.add(waiterRef);
   });
+}
+
+export function waitForResolution(
+  requestId: string,
+  timeoutMs: number,
+): { promise: Promise<ApprovalResponse>; cancel: () => void } {
+  const cached = recentResolutions.get(requestId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { promise: Promise.resolve(cached.response), cancel: () => { /* already resolved */ } };
+  }
+
+  let waiterRef: ApprovalWaiter | null = null;
+  const promise = makeWaiterPromise(
+    requestId,
+    timeoutMs,
+    () => waiterRef,
+    (w) => { waiterRef = w; },
+  );
 
   const cancel = (): void => {
     if (!waiterRef) return;
     clearTimeout(waiterRef.timer);
-    const waiterSet = waiters.get(requestId);
-    if (waiterSet) {
-      waiterSet.delete(waiterRef);
-      if (waiterSet.size === 0) waiters.delete(requestId);
-    }
+    removeWaiterFromSet(requestId, waiterRef);
     log.info(`[approval.wait] waiter cancelled for ${requestId} (connection dropped)`);
     waiterRef = null;
   };

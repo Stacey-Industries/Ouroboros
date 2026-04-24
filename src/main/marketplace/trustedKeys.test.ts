@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { MARKETPLACE_MANIFEST_URL, REVOKED_BUNDLES_URL, TRUSTED_PUBLIC_KEY_BASE64 } from './trustedKeys';
+import {
+  MARKETPLACE_MANIFEST_URL,
+  REVOKED_BUNDLES_URL,
+  TRUSTED_PUBLIC_KEY_BASE64,
+} from './trustedKeys';
 
 describe('trustedKeys', () => {
   it('exports TRUSTED_PUBLIC_KEY_BASE64 as the placeholder sentinel', () => {

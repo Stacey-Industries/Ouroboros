@@ -66,9 +66,7 @@ function RootSections({
           activeFilePath={activeFilePath}
           onFileSelect={onFileSelect}
           onFileOpen={onFileOpen}
-          onRemove={
-            roots.length > 1 && onRemoveRoot ? () => onRemoveRoot(root) : undefined
-          }
+          onRemove={roots.length > 1 && onRemoveRoot ? () => onRemoveRoot(root) : undefined}
           bookmarks={bookmarks}
           extraIgnorePatterns={extraIgnorePatterns}
           getHeatLevel={getHeatLevel}
@@ -78,12 +76,20 @@ function RootSections({
   );
 }
 
-type NormalTreeViewProps = Omit<FileTreeBodyProps, 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'>;
+type NormalTreeViewProps = Omit<
+  FileTreeBodyProps,
+  'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'
+>;
 
 function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
   return (
     <>
-      <PinnedSection bookmarks={p.bookmarks} activeFilePath={p.activeFilePath} onFileSelect={p.onFileSelect} onUnpin={p.onUnpin} />
+      <PinnedSection
+        bookmarks={p.bookmarks}
+        activeFilePath={p.activeFilePath}
+        onFileSelect={p.onFileSelect}
+        onUnpin={p.onUnpin}
+      />
       <RootSections
         roots={p.roots}
         expandedRoots={p.expandedRoots}
@@ -97,7 +103,13 @@ function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
         getHeatLevel={p.getHeatLevel}
       />
       {p.query.trim().length > 0 && (
-        <SearchOverlay roots={p.roots} extraIgnorePatterns={p.extraIgnorePatterns} query={p.query} activeFilePath={p.activeFilePath} onFileSelect={p.onSearchSelect} />
+        <SearchOverlay
+          roots={p.roots}
+          extraIgnorePatterns={p.extraIgnorePatterns}
+          query={p.query}
+          activeFilePath={p.activeFilePath}
+          onFileSelect={p.onSearchSelect}
+        />
       )}
     </>
   );
@@ -109,13 +121,26 @@ export function FileTreeBody(p: FileTreeBodyProps): React.ReactElement {
   return (
     <div style={treeBodyStyle}>
       {isFiltered && p.projectRoot && p.gitDetailedStatus ? (
-        <GitFilteredView status={p.gitDetailedStatus} projectRoot={p.projectRoot} onFileSelect={p.onFileSelect} />
+        <GitFilteredView
+          status={p.gitDetailedStatus}
+          projectRoot={p.projectRoot}
+          onFileSelect={p.onFileSelect}
+        />
       ) : (
         <NormalTreeView
-          query={p.query} roots={p.roots} activeFilePath={p.activeFilePath}
-          bookmarks={p.bookmarks} expandedRoots={p.expandedRoots} extraIgnorePatterns={p.extraIgnorePatterns}
-          onFileSelect={p.onFileSelect} onFileOpen={p.onFileOpen} onToggleRoot={p.onToggleRoot}
-          onRemoveRoot={p.onRemoveRoot} onSearchSelect={p.onSearchSelect} onUnpin={p.onUnpin} getHeatLevel={p.getHeatLevel}
+          query={p.query}
+          roots={p.roots}
+          activeFilePath={p.activeFilePath}
+          bookmarks={p.bookmarks}
+          expandedRoots={p.expandedRoots}
+          extraIgnorePatterns={p.extraIgnorePatterns}
+          onFileSelect={p.onFileSelect}
+          onFileOpen={p.onFileOpen}
+          onToggleRoot={p.onToggleRoot}
+          onRemoveRoot={p.onRemoveRoot}
+          onSearchSelect={p.onSearchSelect}
+          onUnpin={p.onUnpin}
+          getHeatLevel={p.getHeatLevel}
         />
       )}
     </div>

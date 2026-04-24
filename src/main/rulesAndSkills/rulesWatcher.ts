@@ -13,10 +13,7 @@ const CLAUDE_DIR = '.claude';
 
 /** Direct file paths (no glob needed — exact files). */
 function buildDirectFilePaths(projectRoot: string): string[] {
-  return [
-    path.join(projectRoot, 'CLAUDE.md'),
-    path.join(projectRoot, 'AGENTS.md'),
-  ];
+  return [path.join(projectRoot, 'CLAUDE.md'), path.join(projectRoot, 'AGENTS.md')];
 }
 
 /** Directories containing .md rules/commands (watched recursively). */
@@ -63,10 +60,7 @@ async function subscribeMdDir(
 }
 
 /** Watch a single file with fs.watch; skip silently if file does not exist. */
-function watchSingleFile(
-  filePath: string,
-  debounced: () => void,
-): fs.FSWatcher | null {
+function watchSingleFile(filePath: string, debounced: () => void): fs.FSWatcher | null {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot
     return fs.watch(filePath, debounced);
@@ -78,10 +72,7 @@ function watchSingleFile(
   }
 }
 
-export function startRulesWatcher(
-  projectRoot: string,
-  onChange: () => void,
-): () => void {
+export function startRulesWatcher(projectRoot: string, onChange: () => void): () => void {
   const debounced = createDebouncedCallback(onChange);
   const mdDirs = buildMdDirectories(projectRoot);
   const directFiles = buildDirectFilePaths(projectRoot);
@@ -91,11 +82,11 @@ export function startRulesWatcher(
 
   // Start all directory subscriptions in parallel, but track the pending promise
   // so the cleanup function can await them properly.
-  const subscribePromise = Promise.all(
-    mdDirs.map((dir) => subscribeMdDir(dir, debounced)),
-  ).then((subs) => {
-    subscriptions.push(...subs);
-  });
+  const subscribePromise = Promise.all(mdDirs.map((dir) => subscribeMdDir(dir, debounced))).then(
+    (subs) => {
+      subscriptions.push(...subs);
+    },
+  );
 
   // Set up single-file fs.watch handles (synchronous, may return null for ENOENT)
   for (const filePath of directFiles) {
@@ -105,9 +96,7 @@ export function startRulesWatcher(
   return () => {
     // Await subscription setup before closing, then close all non-null subscriptions.
     void subscribePromise.then(async () => {
-      await Promise.all(
-        subscriptions.map((sub) => (sub ? sub.close() : Promise.resolve())),
-      );
+      await Promise.all(subscriptions.map((sub) => (sub ? sub.close() : Promise.resolve())));
     });
 
     for (const w of fsWatchers) {

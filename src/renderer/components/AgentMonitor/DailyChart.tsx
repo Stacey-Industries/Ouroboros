@@ -55,7 +55,13 @@ function DailyBar({
   );
 }
 
-function ChartHeader({ days, maxCost }: { days: number; maxCost: number }): React.ReactElement<unknown> {
+function ChartHeader({
+  days,
+  maxCost,
+}: {
+  days: number;
+  maxCost: number;
+}): React.ReactElement<unknown> {
   return (
     <div className="flex items-center gap-2 mb-2">
       <span className="text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">

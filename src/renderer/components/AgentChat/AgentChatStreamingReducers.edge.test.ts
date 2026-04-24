@@ -37,7 +37,10 @@ describe('empty textDelta', () => {
 
   it('does not accumulate whitespace when delta is empty on an existing text block', () => {
     // Build state with 'hello' already in a block.
-    const state1 = applyChunk(INITIAL_STATE, makeTextChunk({ textDelta: 'hello', timestamp: undefined }))!;
+    const state1 = applyChunk(
+      INITIAL_STATE,
+      makeTextChunk({ textDelta: 'hello', timestamp: undefined }),
+    )!;
     const state2 = applyChunk(state1, makeTextChunk({ textDelta: '', timestamp: undefined }))!;
     const block = state2.blocks[state2.blocks.length - 1];
     expect((block as { kind: 'text'; content: string }).content).toBe('hello');
@@ -96,7 +99,9 @@ describe('duplicate chunk guard', () => {
   it('clears seen IDs on complete so replay can re-deliver the same chunks', () => {
     const delta = makeTextChunk({ timestamp: 6000 });
     const complete: AgentChatStreamChunk = {
-      type: 'complete', messageId: 'm1', timestamp: 6100,
+      type: 'complete',
+      messageId: 'm1',
+      timestamp: 6100,
     };
     const s1 = applyChunk(INITIAL_STATE, delta)!;
     const s2 = applyChunk(s1, complete)!;

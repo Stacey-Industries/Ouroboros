@@ -47,9 +47,7 @@ function computeTopFeatures(
 export function getRankerDashboard(): ContextRankerDashboard {
   const w = getActiveWeights();
   const isBundled = w.version === 'bundled-1';
-  const auc = isBundled || w.metrics.heldOutAuc === 0
-    ? null
-    : w.metrics.heldOutAuc;
+  const auc = isBundled || w.metrics.heldOutAuc === 0 ? null : w.metrics.heldOutAuc;
 
   return {
     version: w.version,

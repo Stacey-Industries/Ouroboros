@@ -96,7 +96,11 @@ export function initClaudeMdGenerator(): void {
   log.info('Generator initialized');
 }
 
-async function spawnClaudeWithRetry(prompt: string, model: string, cwd?: string): Promise<string | undefined> {
+async function spawnClaudeWithRetry(
+  prompt: string,
+  model: string,
+  cwd?: string,
+): Promise<string | undefined> {
   let lastErr: string | undefined;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {

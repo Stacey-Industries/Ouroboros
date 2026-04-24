@@ -6,12 +6,12 @@
  * mainStartup.ts under the 300-line ESLint limit.
  */
 
-import log from './logger'
-import { ClaudeSessionProvider } from './providers/claudeSessionProvider'
-import { registerSessionProvider } from './providers/providerRegistry'
+import log from './logger';
+import { ClaudeSessionProvider } from './providers/claudeSessionProvider';
+import { registerSessionProvider } from './providers/providerRegistry';
 
 /** Register all built-in SessionProviders. Call once during app startup. */
 export function registerBuiltinProviders(): void {
-  registerSessionProvider(new ClaudeSessionProvider())
-  log.info('[providers] ClaudeSessionProvider registered')
+  registerSessionProvider(new ClaudeSessionProvider());
+  log.info('[providers] ClaudeSessionProvider registered');
 }

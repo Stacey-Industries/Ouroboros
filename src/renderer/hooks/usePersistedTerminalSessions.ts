@@ -29,7 +29,10 @@ export interface UsePersistedTerminalSessionsResult {
 
 type SetSessions = React.Dispatch<React.SetStateAction<PersistedSessionInfo[]>>;
 
-async function loadSessions(setSessions: SetSessions, setIsLoading: (v: boolean) => void): Promise<void> {
+async function loadSessions(
+  setSessions: SetSessions,
+  setIsLoading: (v: boolean) => void,
+): Promise<void> {
   try {
     const all = await window.electronAPI.pty.listPersistedSessions();
     const recent = all.filter(isRecent);
@@ -52,7 +55,10 @@ export function usePersistedTerminalSessions(): UsePersistedTerminalSessionsResu
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasElectronAPI()) { setIsLoading(false); return; }
+    if (!hasElectronAPI()) {
+      setIsLoading(false);
+      return;
+    }
     void loadSessions(setSessions, setIsLoading);
   }, []);
 

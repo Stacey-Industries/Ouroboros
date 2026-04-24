@@ -98,4 +98,54 @@ describe('ComposerInput', () => {
     expect(onCloseSlashMenu).toHaveBeenCalledOnce();
     vi.useRealTimers();
   });
+
+  it('shows queue-send button instead of stop when busy and draft can be queued', () => {
+    const { getByTitle, queryByLabelText } = render(
+      <ComposerInput
+        canSend={true}
+        disabled={false}
+        draft="queue this"
+        handleChange={vi.fn()}
+        handleDragLeave={vi.fn()}
+        handleDragOver={vi.fn()}
+        handleDrop={vi.fn()}
+        handleKeyDown={vi.fn()}
+        handlePaste={vi.fn()}
+        isSending={false}
+        onStop={vi.fn(async () => undefined)}
+        onSubmit={vi.fn(async () => undefined)}
+        threadIsBusy={true}
+        textareaRef={{ current: null }}
+        useMentionSystem={true}
+      />,
+    );
+
+    expect(getByTitle('Queue message')).toBeDefined();
+    expect(queryByLabelText('Stop the agent')).toBeNull();
+  });
+
+  it('shows stop button when busy and there is nothing to queue', () => {
+    const { getByLabelText, queryByTitle } = render(
+      <ComposerInput
+        canSend={false}
+        disabled={false}
+        draft=""
+        handleChange={vi.fn()}
+        handleDragLeave={vi.fn()}
+        handleDragOver={vi.fn()}
+        handleDrop={vi.fn()}
+        handleKeyDown={vi.fn()}
+        handlePaste={vi.fn()}
+        isSending={false}
+        onStop={vi.fn(async () => undefined)}
+        onSubmit={vi.fn(async () => undefined)}
+        threadIsBusy={true}
+        textareaRef={{ current: null }}
+        useMentionSystem={true}
+      />,
+    );
+
+    expect(getByLabelText('Stop the agent')).toBeDefined();
+    expect(queryByTitle('Queue message')).toBeNull();
+  });
 });

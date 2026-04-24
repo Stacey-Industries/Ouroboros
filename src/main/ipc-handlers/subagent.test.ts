@@ -27,7 +27,9 @@ vi.mock('../logger', () => ({
 const mockKillPty = vi.fn();
 const mockSessions = new Map<string, unknown>();
 vi.mock('../pty', () => ({
-  get sessions() { return mockSessions; },
+  get sessions() {
+    return mockSessions;
+  },
   killPty: (id: string) => mockKillPty(id),
 }));
 
@@ -51,10 +53,11 @@ type AnyFn = (...args: any[]) => any;
 async function getHandlers(): Promise<Map<string, IpcHandler>> {
   const { ipcMain } = await import('electron');
   const captured = new Map<string, IpcHandler>();
-  (vi.mocked(ipcMain.handle) as unknown as { mockImplementation: (fn: AnyFn) => void })
-    .mockImplementation((channel: string, fn: IpcHandler) => {
-      captured.set(channel as string, fn);
-    });
+  (
+    vi.mocked(ipcMain.handle) as unknown as { mockImplementation: (fn: AnyFn) => void }
+  ).mockImplementation((channel: string, fn: IpcHandler) => {
+    captured.set(channel as string, fn);
+  });
   registerSubagentHandlers();
   return captured;
 }
@@ -76,7 +79,10 @@ describe('subagent:list', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:list')!;
-    const result = await handler(null, { parentSessionId: 'p1' }) as { success: boolean; records: unknown[] };
+    const result = (await handler(null, { parentSessionId: 'p1' })) as {
+      success: boolean;
+      records: unknown[];
+    };
     expect(result.success).toBe(true);
     expect(result.records).toHaveLength(2);
   });
@@ -84,7 +90,7 @@ describe('subagent:list', () => {
   it('fails when parentSessionId is missing', async () => {
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:list')!;
-    const result = await handler(null, {}) as { success: boolean; error: string };
+    const result = (await handler(null, {})) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/parentSessionId/);
   });
@@ -97,7 +103,10 @@ describe('subagent:get', () => {
     recordStart({ id: 'sub-x', parentSessionId: 'p1' });
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:get')!;
-    const result = await handler(null, { subagentId: 'sub-x' }) as { success: boolean; record: { id: string } | null };
+    const result = (await handler(null, { subagentId: 'sub-x' })) as {
+      success: boolean;
+      record: { id: string } | null;
+    };
     expect(result.success).toBe(true);
     expect(result.record?.id).toBe('sub-x');
   });
@@ -105,7 +114,10 @@ describe('subagent:get', () => {
   it('returns null record when not found', async () => {
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:get')!;
-    const result = await handler(null, { subagentId: 'missing' }) as { success: boolean; record: null };
+    const result = (await handler(null, { subagentId: 'missing' })) as {
+      success: boolean;
+      record: null;
+    };
     expect(result.success).toBe(true);
     expect(result.record).toBeNull();
   });
@@ -113,7 +125,7 @@ describe('subagent:get', () => {
   it('fails when subagentId is missing', async () => {
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:get')!;
-    const result = await handler(null, {}) as { success: boolean };
+    const result = (await handler(null, {})) as { success: boolean };
     expect(result.success).toBe(false);
   });
 });
@@ -128,7 +140,10 @@ describe('subagent:liveCount', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:liveCount')!;
-    const result = await handler(null, { parentSessionId: 'p1' }) as { success: boolean; count: number };
+    const result = (await handler(null, { parentSessionId: 'p1' })) as {
+      success: boolean;
+      count: number;
+    };
     expect(result.success).toBe(true);
     expect(result.count).toBe(1);
   });
@@ -145,7 +160,7 @@ describe('subagent:costRollup', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:costRollup')!;
-    const result = await handler(null, { parentSessionId: 'p1' }) as {
+    const result = (await handler(null, { parentSessionId: 'p1' })) as {
       success: boolean;
       rollup: { inputTokens: number; outputTokens: number; usdCost: number; childCount: number };
     };
@@ -164,7 +179,7 @@ describe('subagent:cancel', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:cancel')!;
-    const result = await handler(null, { subagentId: 'can-1' }) as { success: boolean };
+    const result = (await handler(null, { subagentId: 'can-1' })) as { success: boolean };
     expect(result.success).toBe(true);
     expect(get('can-1')?.status).toBe('cancelled');
     expect(mockKillPty).not.toHaveBeenCalled();
@@ -178,7 +193,7 @@ describe('subagent:cancel', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:cancel')!;
-    const result = await handler(null, { subagentId: 'can-pty-1' }) as { success: boolean };
+    const result = (await handler(null, { subagentId: 'can-pty-1' })) as { success: boolean };
     expect(result.success).toBe(true);
     expect(mockKillPty).toHaveBeenCalledWith('pty-session-abc');
     expect(get('can-pty-1')?.status).toBe('cancelled');
@@ -191,7 +206,7 @@ describe('subagent:cancel', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:cancel')!;
-    const result = await handler(null, { subagentId: 'can-pty-2' }) as { success: boolean };
+    const result = (await handler(null, { subagentId: 'can-pty-2' })) as { success: boolean };
     expect(result.success).toBe(true);
     expect(get('can-pty-2')?.status).toBe('cancelled');
   });
@@ -202,7 +217,7 @@ describe('subagent:cancel', () => {
 
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:cancel')!;
-    const result = await handler(null, { subagentId: 'can-2' }) as { success: boolean };
+    const result = (await handler(null, { subagentId: 'can-2' })) as { success: boolean };
     expect(result.success).toBe(true);
     expect(get('can-2')?.status).toBe('completed'); // unchanged
   });
@@ -210,7 +225,7 @@ describe('subagent:cancel', () => {
   it('fails when subagent does not exist', async () => {
     const handlers = await getHandlers();
     const handler = handlers.get('subagent:cancel')!;
-    const result = await handler(null, { subagentId: 'ghost' }) as { success: boolean };
+    const result = (await handler(null, { subagentId: 'ghost' })) as { success: boolean };
     expect(result.success).toBe(false);
   });
 });

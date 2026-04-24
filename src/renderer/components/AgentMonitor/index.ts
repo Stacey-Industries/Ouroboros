@@ -13,9 +13,4 @@ export { SubagentPanelHost } from './SubagentPanelHost';
 export { SubagentStatusChip } from './SubagentStatusChip';
 export { ToolCallFeed } from './ToolCallFeed';
 export { ToolCallTimeline } from './ToolCallTimeline';
-export type {
-  AgentSession,
-  AgentStatus,
-  HookPayload,
-  ToolCallEvent,
-} from './types';
+export type { AgentSession, AgentStatus, HookPayload, ToolCallEvent } from './types';

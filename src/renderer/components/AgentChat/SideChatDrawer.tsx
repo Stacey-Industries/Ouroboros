@@ -37,41 +37,50 @@ interface TabBarProps {
   onCloseTab: (threadId: string) => void;
 }
 
-function SideChatTabBar({ sideChats, activeSideChatId, onSelect, onCloseTab }: TabBarProps): React.ReactElement {
+function SideChatTab({
+  id,
+  index,
+  isActive,
+  onSelect,
+  onCloseTab,
+}: {
+  id: string;
+  index: number;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+  onCloseTab: (id: string) => void;
+}): React.ReactElement {
+  const label = buildTabLabel(id, index);
   return (
     <div
-      className="flex items-center overflow-x-auto border-b border-border-semantic flex-shrink-0"
-      role="tablist"
-      aria-label="Side chat tabs"
+      role="tab"
+      aria-selected={isActive}
+      className={[
+        'flex items-center gap-1.5 px-3 py-2 text-xs cursor-pointer whitespace-nowrap flex-shrink-0',
+        'border-b-2 transition-colors',
+        isActive
+          ? 'border-interactive-accent text-text-semantic-primary'
+          : 'border-transparent text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover',
+      ].join(' ')}
+      onClick={() => onSelect(id)}
     >
-      {sideChats.map((id, index) => {
-        const isActive = id === activeSideChatId;
-        return (
-          <div
-            key={id}
-            role="tab"
-            aria-selected={isActive}
-            className={[
-              'flex items-center gap-1.5 px-3 py-2 text-xs cursor-pointer whitespace-nowrap flex-shrink-0',
-              'border-b-2 transition-colors',
-              isActive
-                ? 'border-interactive-accent text-text-semantic-primary'
-                : 'border-transparent text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover',
-            ].join(' ')}
-            onClick={() => onSelect(id)}
-          >
-            <span>{buildTabLabel(id, index)}</span>
-            <button
-              type="button"
-              className="ml-1 rounded p-0.5 text-text-semantic-faint hover:text-text-semantic-primary hover:bg-surface-inset"
-              aria-label={`Close ${buildTabLabel(id, index)}`}
-              onClick={(e) => { e.stopPropagation(); onCloseTab(id); }}
-            >
-              ✕
-            </button>
-          </div>
-        );
-      })}
+      <span>{label}</span>
+      <button
+        type="button"
+        className="ml-1 rounded p-0.5 text-text-semantic-faint hover:text-text-semantic-primary hover:bg-surface-inset"
+        aria-label={`Close ${label}`}
+        onClick={(e) => { e.stopPropagation(); onCloseTab(id); }}
+      >✕</button>
+    </div>
+  );
+}
+
+function SideChatTabBar({ sideChats, activeSideChatId, onSelect, onCloseTab }: TabBarProps): React.ReactElement {
+  return (
+    <div className="flex items-center overflow-x-auto border-b border-border-semantic flex-shrink-0" role="tablist" aria-label="Side chat tabs">
+      {sideChats.map((id, index) => (
+        <SideChatTab key={id} id={id} index={index} isActive={id === activeSideChatId} onSelect={onSelect} onCloseTab={onCloseTab} />
+      ))}
     </div>
   );
 }
@@ -93,7 +102,9 @@ function SideChatDrawerBody({ hasChats }: EmptyBodyProps): React.ReactElement {
 
 // ── Backdrop ──────────────────────────────────────────────────────────────────
 
-interface BackdropProps { onClose: () => void }
+interface BackdropProps {
+  onClose: () => void;
+}
 
 function SideChatBackdrop({ onClose }: BackdropProps): React.ReactElement {
   return (
@@ -145,9 +156,7 @@ function SideChatDrawerHeader({ onClose, canMerge, onMerge }: HeaderProps): Reac
 // ── Per-tab store singleton map ───────────────────────────────────────────────
 // We keep one store per side-chat ID so each conversation is independent.
 
-function usePerTabStore(
-  threadId: string | null,
-): ReturnType<typeof createAgentChatStore> | null {
+function usePerTabStore(threadId: string | null): ReturnType<typeof createAgentChatStore> | null {
   const storesRef = useRef<Map<string, ReturnType<typeof createAgentChatStore>>>(new Map());
   if (!threadId) return null;
   if (!storesRef.current.has(threadId)) {
@@ -197,7 +206,9 @@ function SideChatDrawerContent({
       )}
       {activeStore ? (
         <AgentChatStoreContext.Provider value={activeStore}>{body}</AgentChatStoreContext.Provider>
-      ) : body}
+      ) : (
+        body
+      )}
     </>
   );
 }
@@ -225,13 +236,17 @@ interface DrawerPanelProps extends SideChatDrawerProps {
   closeMerge: () => void;
 }
 
-function DrawerPanel({
-  onClose, sideChats, activeSideChatId, parentThreadId,
-  onSelect, onCloseTab, activeStore, canMerge, mergeOpen, openMerge, closeMerge,
-}: DrawerPanelProps): React.ReactElement {
+function DrawerMergeDialog({
+  canMerge, mergeOpen, activeSideChatId, parentThreadId, closeMerge,
+}: Pick<DrawerPanelProps, 'canMerge' | 'mergeOpen' | 'activeSideChatId' | 'parentThreadId' | 'closeMerge'>): React.ReactElement | null {
+  if (!canMerge || !mergeOpen || !activeSideChatId || !parentThreadId) return null;
+  return <MergeToMainDialog sideChatId={activeSideChatId} parentThreadId={parentThreadId} isOpen={mergeOpen} onClose={closeMerge} />;
+}
+
+function DrawerPanel(p: DrawerPanelProps): React.ReactElement {
   return (
     <>
-      <SideChatBackdrop onClose={onClose} />
+      <SideChatBackdrop onClose={p.onClose} />
       <div
         role="dialog"
         aria-label="Side chat drawer"
@@ -239,23 +254,22 @@ function DrawerPanel({
         className="fixed right-0 top-0 z-50 flex h-full flex-col bg-surface-panel shadow-xl"
         style={{ width: '480px', borderLeft: '1px solid var(--border-semantic)' }}
       >
-        <SideChatDrawerHeader onClose={onClose} canMerge={canMerge} onMerge={openMerge} />
+        <SideChatDrawerHeader onClose={p.onClose} canMerge={p.canMerge} onMerge={p.openMerge} />
         <SideChatDrawerContent
-          sideChats={sideChats}
-          activeSideChatId={activeSideChatId}
-          activeStore={activeStore}
-          onSelect={onSelect}
-          onCloseTab={onCloseTab}
+          sideChats={p.sideChats}
+          activeSideChatId={p.activeSideChatId}
+          activeStore={p.activeStore}
+          onSelect={p.onSelect}
+          onCloseTab={p.onCloseTab}
         />
       </div>
-      {canMerge && mergeOpen && activeSideChatId && parentThreadId && (
-        <MergeToMainDialog
-          sideChatId={activeSideChatId}
-          parentThreadId={parentThreadId}
-          isOpen={mergeOpen}
-          onClose={closeMerge}
-        />
-      )}
+      <DrawerMergeDialog
+        canMerge={p.canMerge}
+        mergeOpen={p.mergeOpen}
+        activeSideChatId={p.activeSideChatId}
+        parentThreadId={p.parentThreadId}
+        closeMerge={p.closeMerge}
+      />
     </>
   );
 }
@@ -266,7 +280,8 @@ export function SideChatDrawer(props: SideChatDrawerProps): React.ReactElement |
   const { isOpen, onClose, activeSideChatId, parentThreadId } = props;
   const activeStore = usePerTabStore(activeSideChatId);
   const { canMerge, mergeOpen, openMerge, closeMerge } = useMergeDialogState(
-    activeSideChatId, parentThreadId ?? null,
+    activeSideChatId,
+    parentThreadId ?? null,
   );
   useEscapeToDismiss(isOpen, onClose);
 

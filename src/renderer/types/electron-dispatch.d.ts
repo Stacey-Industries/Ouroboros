@@ -82,9 +82,7 @@ export type ListDispatchJobsResult =
   | { success: true; jobs: DispatchJob[] }
   | { success: false; error: string };
 
-export type CancelDispatchJobResult =
-  | { success: true }
-  | { success: false; reason?: string };
+export type CancelDispatchJobResult = { success: true } | { success: false; reason?: string };
 
 // ── SystemPromptResult (Wave 37 Phase A) ─────────────────────────────────────
 
@@ -100,10 +98,7 @@ export interface SessionsAPI {
   delete: (sessionId: string) => Promise<IpcResult>;
   export: (session: unknown, format: 'json' | 'markdown') => Promise<ExportSessionResult>;
   /** Wave 34 Phase B — cross-device session dispatch. */
-  dispatchTask: (
-    request: DispatchRequest,
-    deviceId?: string,
-  ) => Promise<DispatchTaskResult>;
+  dispatchTask: (request: DispatchRequest, deviceId?: string) => Promise<DispatchTaskResult>;
   listDispatchJobs: () => Promise<ListDispatchJobsResult>;
   cancelDispatchJob: (jobId: string) => Promise<CancelDispatchJobResult>;
   /** Wave 37 Phase A — resolved system prompt for a PTY session. */
@@ -111,10 +106,12 @@ export interface SessionsAPI {
   /** Wave 34 Phase D — live status push. Returns cleanup function. */
   onDispatchStatus: (callback: (job: DispatchJob) => void) => () => void;
   /** Wave 34 Phase F — in-app banner fallback when FCM is not configured. Returns cleanup fn. */
-  onDispatchNotification: (callback: (payload: {
-    jobId: string;
-    title: string;
-    body: string;
-    status: 'completed' | 'failed';
-  }) => void) => () => void;
+  onDispatchNotification: (
+    callback: (payload: {
+      jobId: string;
+      title: string;
+      body: string;
+      status: 'completed' | 'failed';
+    }) => void,
+  ) => () => void;
 }

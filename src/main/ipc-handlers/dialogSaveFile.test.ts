@@ -28,7 +28,9 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   dialog: { showSaveDialog: mockShowSaveDialog },
   shell: { openPath: vi.fn(), showItemInFolder: vi.fn(), openExternal: vi.fn() },
-  Notification: class { show = vi.fn(); },
+  Notification: class {
+    show = vi.fn();
+  },
 }));
 
 // ── Mock fs/promises ──────────────────────────────────────────────────────────
@@ -78,7 +80,10 @@ describe('handleSaveFileDialog', () => {
     expect(mockShowSaveDialog).toHaveBeenCalledOnce();
     const callArgs = mockShowSaveDialog.mock.calls[0] as unknown[];
     // With a window, args are (win, opts)
-    const opts = callArgs[1] as { defaultPath: string; filters: Array<{ name: string; extensions: string[] }> };
+    const opts = callArgs[1] as {
+      defaultPath: string;
+      filters: Array<{ name: string; extensions: string[] }>;
+    };
     expect(opts.defaultPath).toBe('pr-description.md');
     expect(opts.filters[0].name).toBe('Markdown');
     expect(opts.filters[0].extensions).toContain('md');

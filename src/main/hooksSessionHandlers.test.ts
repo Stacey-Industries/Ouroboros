@@ -84,11 +84,15 @@ function makePayload(overrides: Partial<HookPayload> = {}): HookPayload {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('handleSessionStart', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('dispatches activation event', () => {
     handleSessionStart(makePayload());
-    expect(mockDispatchActivation).toHaveBeenCalledWith('onSessionStart', { sessionId: 'test-session' });
+    expect(mockDispatchActivation).toHaveBeenCalledWith('onSessionStart', {
+      sessionId: 'test-session',
+    });
   });
 
   it('notifies context layer and graph for external sessions', () => {
@@ -105,16 +109,22 @@ describe('handleSessionStart', () => {
 });
 
 describe('handleSessionEnd', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('dispatches onSessionEnd activation event', () => {
     handleSessionEnd(makePayload({ type: 'session_end' }));
-    expect(mockDispatchActivation).toHaveBeenCalledWith('onSessionEnd', { sessionId: 'test-session' });
+    expect(mockDispatchActivation).toHaveBeenCalledWith('onSessionEnd', {
+      sessionId: 'test-session',
+    });
   });
 });
 
 describe('handleSessionStop', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('notifies context layer, graph, and invalidates cache for external sessions', () => {
     mockGetConfigValue.mockReturnValue(undefined);
@@ -134,7 +144,9 @@ describe('handleSessionStop', () => {
 });
 
 describe('triggerClaudeMdGeneration', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('skips when config is disabled', () => {
     mockGetConfigValue.mockReturnValue({ enabled: false, triggerMode: 'post-session' });

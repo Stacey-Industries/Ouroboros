@@ -5,11 +5,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  addEnhancedLibrary,
-  getResearchMode,
-  resetAllForTests,
-} from './researchSessionState';
+import { addEnhancedLibrary, getResearchMode, resetAllForTests } from './researchSessionState';
 import { handleResearchSlashCommand } from './researchSlashCommands';
 
 afterEach(() => {

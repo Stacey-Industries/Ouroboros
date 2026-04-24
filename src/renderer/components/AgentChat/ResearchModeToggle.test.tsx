@@ -151,4 +151,18 @@ describe('ResearchModeToggle — click interactions', () => {
     fireEvent.click(getButtonByLabel('Aggressive'));
     expect(mockSetSessionMode).not.toHaveBeenCalled();
   });
+
+  it('replays a pre-session choice once a real sessionId becomes available', async () => {
+    const { rerender } = render(<ResearchModeToggle sessionId={null} />);
+    await waitFor(() => expect(mockGetGlobalDefault).toHaveBeenCalled());
+
+    fireEvent.click(getButtonByLabel('Aggressive'));
+    expect(mockSetSessionMode).not.toHaveBeenCalled();
+
+    rerender(<ResearchModeToggle sessionId="sess-2" />);
+
+    await waitFor(() => expect(mockSetSessionMode).toHaveBeenCalledWith('sess-2', 'aggressive'));
+    expect(mockGetSessionMode).not.toHaveBeenCalledWith('sess-2');
+    expect(getButtonByLabel('Aggressive').getAttribute('aria-checked')).toBe('true');
+  });
 });

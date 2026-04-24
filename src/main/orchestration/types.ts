@@ -8,6 +8,6 @@
  *
  * Import from this file as before — all types remain available here.
  */
-export type * from './typesContext'
-export type * from './typesDomain'
-export type * from './typesProvider'
+export type * from './typesContext';
+export type * from './typesDomain';
+export type * from './typesProvider';

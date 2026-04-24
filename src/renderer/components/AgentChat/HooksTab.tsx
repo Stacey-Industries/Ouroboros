@@ -16,20 +16,25 @@ const HOOK_EVENT_CATEGORIES: { label: string; events: HookEventType[] }[] = [
   { label: 'Tools', events: ['PreToolUse', 'PostToolUse', 'PostToolUseFailure'] },
   { label: 'Agents', events: ['SubagentStart', 'SubagentStop', 'TeammateIdle'] },
   { label: 'Tasks', events: ['TaskCreated', 'TaskCompleted'] },
-  { label: 'Conversation', events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'] },
-  { label: 'Workspace', events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'] },
+  {
+    label: 'Conversation',
+    events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'],
+  },
+  {
+    label: 'Workspace',
+    events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'],
+  },
   { label: 'Context', events: ['PreCompact', 'PostCompact', 'InstructionsLoaded'] },
   { label: 'Permissions', events: ['PermissionRequest', 'PermissionDenied'] },
 ];
-
 
 // ── API guard ────────────────────────────────────────────────────────────────
 
 function hasAPI(): boolean {
   return (
-    typeof window !== 'undefined'
-    && 'electronAPI' in window
-    && 'rulesAndSkills' in window.electronAPI
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'rulesAndSkills' in window.electronAPI
   );
 }
 
@@ -40,38 +45,65 @@ function AddHookToggle({ onClick }: { onClick: () => void }): React.ReactElement
     <button
       className="text-[10px] text-text-semantic-muted mt-1 transition-colors duration-75"
       onClick={onClick}
-      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--interactive-accent)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = 'var(--interactive-accent)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = '';
+      }}
     >
       + Add Hook
     </button>
   );
 }
 
-const INPUT_CLS = 'bg-surface-inset text-[11px] text-text-semantic-primary font-mono px-2 py-0.5 rounded border border-border-semantic outline-hidden';
+const INPUT_CLS =
+  'bg-surface-inset text-[11px] text-text-semantic-primary font-mono px-2 py-0.5 rounded border border-border-semantic outline-hidden';
 
-function AddHookFormFields(props: {
-  command: string; matcher: string;
-  setCommand: (v: string) => void; setMatcher: (v: string) => void;
-  onSubmit: () => void; onCancel: () => void;
-}): React.ReactElement {
-  const handleKey = (e: React.KeyboardEvent): void => {
-    if (e.key === 'Enter') { e.preventDefault(); props.onSubmit(); }
-    if (e.key === 'Escape') props.onCancel();
+interface AddHookFormFieldsProps {
+  command: string;
+  matcher: string;
+  setCommand: (v: string) => void;
+  setMatcher: (v: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}
+
+function makeHookFormKeyHandler(onSubmit: () => void, onCancel: () => void) {
+  return (e: React.KeyboardEvent): void => {
+    if (e.key === 'Enter') { e.preventDefault(); onSubmit(); }
+    if (e.key === 'Escape') onCancel();
   };
+}
+
+function AddHookFormFields(p: AddHookFormFieldsProps): React.ReactElement {
+  const handleKey = makeHookFormKeyHandler(p.onSubmit, p.onCancel);
   return (
     <div className="flex flex-col gap-1 mt-1">
-      <input type="text" value={props.command} onChange={(e) => props.setCommand(e.target.value)} onKeyDown={handleKey} placeholder="Shell command..." className={INPUT_CLS} autoFocus />
-      <input type="text" value={props.matcher} onChange={(e) => props.setMatcher(e.target.value)} onKeyDown={handleKey} placeholder="Matcher (optional)..." className={INPUT_CLS} />
+      <input type="text" value={p.command} onChange={(e) => p.setCommand(e.target.value)}
+        onKeyDown={handleKey} placeholder="Shell command..." className={INPUT_CLS} autoFocus />
+      <input type="text" value={p.matcher} onChange={(e) => p.setMatcher(e.target.value)}
+        onKeyDown={handleKey} placeholder="Matcher (optional)..." className={INPUT_CLS} />
       <div className="flex gap-1">
-        <button className="text-[10px] text-interactive-accent px-1.5 py-0.5 rounded border border-border-semantic transition-colors duration-75" onClick={props.onSubmit} disabled={!props.command.trim()}>Add</button>
-        <button className="text-[10px] text-text-semantic-muted px-1 py-0.5" onClick={props.onCancel}>Cancel</button>
+        <button
+          className="text-[10px] text-interactive-accent px-1.5 py-0.5 rounded border border-border-semantic transition-colors duration-75"
+          onClick={p.onSubmit} disabled={!p.command.trim()}
+        >
+          Add
+        </button>
+        <button className="text-[10px] text-text-semantic-muted px-1 py-0.5" onClick={p.onCancel}>
+          Cancel
+        </button>
       </div>
     </div>
   );
 }
 
-function AddHookForm({ onAdd }: { onAdd: (command: string, matcher?: string) => void }): React.ReactElement {
+function AddHookForm({
+  onAdd,
+}: {
+  onAdd: (command: string, matcher?: string) => void;
+}): React.ReactElement {
   const [command, setCommand] = useState('');
   const [matcher, setMatcher] = useState('');
   const [open, setOpen] = useState(false);
@@ -89,9 +121,12 @@ function AddHookForm({ onAdd }: { onAdd: (command: string, matcher?: string) => 
 
   return (
     <AddHookFormFields
-      command={command} matcher={matcher}
-      setCommand={setCommand} setMatcher={setMatcher}
-      onSubmit={handleSubmit} onCancel={() => setOpen(false)}
+      command={command}
+      matcher={matcher}
+      setCommand={setCommand}
+      setMatcher={setMatcher}
+      onSubmit={handleSubmit}
+      onCancel={() => setOpen(false)}
     />
   );
 }
@@ -131,9 +166,15 @@ function HookEntryRow({
 // ── EventTypeSection ─────────────────────────────────────────────────────────
 
 function EventTypeSectionBody({
-  entries, hookCount, eventType, onAdd, onRemove,
+  entries,
+  hookCount,
+  eventType,
+  onAdd,
+  onRemove,
 }: {
-  entries: HooksConfig[string]; hookCount: number; eventType: string;
+  entries: HooksConfig[string];
+  hookCount: number;
+  eventType: string;
   onAdd: (eventType: string, command: string, matcher?: string) => void;
   onRemove: (eventType: string, index: number) => void;
 }): React.ReactElement {
@@ -144,7 +185,12 @@ function EventTypeSectionBody({
       ) : (
         entries.flatMap((matcher, mi) =>
           (matcher.hooks ?? []).map((hook, hi) => (
-            <HookEntryRow key={`${mi}-${hi}`} command={hook.command} matcherLabel={matcher.matcher} onRemove={() => onRemove(eventType, mi)} />
+            <HookEntryRow
+              key={`${mi}-${hi}`}
+              command={hook.command}
+              matcherLabel={matcher.matcher}
+              onRemove={() => onRemove(eventType, mi)}
+            />
           )),
         )
       )}
@@ -154,7 +200,10 @@ function EventTypeSectionBody({
 }
 
 function EventTypeSection({
-  eventType, matchers, onAdd, onRemove,
+  eventType,
+  matchers,
+  onAdd,
+  onRemove,
 }: {
   eventType: string;
   matchers: HooksConfig[string] | undefined;
@@ -176,7 +225,15 @@ function EventTypeSection({
         <span className="text-[10px] text-text-semantic-muted mr-1">{hookCount}</span>
         <span className="text-[9px]">{isOpen ? '\u25B2' : '\u25BC'}</span>
       </button>
-      {isOpen && <EventTypeSectionBody entries={entries} hookCount={hookCount} eventType={eventType} onAdd={onAdd} onRemove={onRemove} />}
+      {isOpen && (
+        <EventTypeSectionBody
+          entries={entries}
+          hookCount={hookCount}
+          eventType={eventType}
+          onAdd={onAdd}
+          onRemove={onRemove}
+        />
+      )}
     </div>
   );
 }
@@ -187,46 +244,41 @@ export interface HooksTabProps {
   projectRoot: string | null;
 }
 
+async function reloadHooks(scope: ScopeValue, projectRoot: string | null, setHooks: (h: HooksConfig) => void, setLoading: (v: boolean) => void): Promise<void> {
+  if (!hasAPI()) return;
+  setLoading(true);
+  try {
+    const result = await window.electronAPI.rulesAndSkills.getHooksConfig(scope, projectRoot ?? undefined);
+    setHooks(result.success && result.hooks ? result.hooks : {});
+  } finally { setLoading(false); }
+}
+
 function useHooksData(scope: ScopeValue, projectRoot: string | null) {
   const [hooks, setHooks] = useState<HooksConfig>({});
   const [loading, setLoading] = useState(false);
-
-  const reload = useCallback(async (): Promise<void> => {
-    if (!hasAPI()) return;
-    setLoading(true);
-    try {
-      const result = await window.electronAPI.rulesAndSkills.getHooksConfig(scope, projectRoot ?? undefined);
-      setHooks(result.success && result.hooks ? result.hooks : {});
-    } finally {
-      setLoading(false);
-    }
-  }, [scope, projectRoot]);
-
+  const reload = useCallback(async (): Promise<void> => reloadHooks(scope, projectRoot, setHooks, setLoading), [scope, projectRoot]);
   useEffect(() => { void reload(); }, [reload]);
-
-  const handleAdd = useCallback(
-    async (eventType: string, command: string, matcher?: string): Promise<void> => {
-      if (!hasAPI()) return;
-      await window.electronAPI.rulesAndSkills.addHook({ scope, eventType, command, matcher, projectRoot: projectRoot ?? undefined });
-      await reload();
-    },
-    [scope, projectRoot, reload],
-  );
-
-  const handleRemove = useCallback(
-    async (eventType: string, index: number): Promise<void> => {
-      if (!hasAPI()) return;
-      await window.electronAPI.rulesAndSkills.removeHook({ scope, eventType, index, projectRoot: projectRoot ?? undefined });
-      await reload();
-    },
-    [scope, projectRoot, reload],
-  );
-
+  const handleAdd = useCallback(async (eventType: string, command: string, matcher?: string): Promise<void> => {
+    if (!hasAPI()) return;
+    await window.electronAPI.rulesAndSkills.addHook({ scope, eventType, command, matcher, projectRoot: projectRoot ?? undefined });
+    await reload();
+  }, [scope, projectRoot, reload]);
+  const handleRemove = useCallback(async (eventType: string, index: number): Promise<void> => {
+    if (!hasAPI()) return;
+    await window.electronAPI.rulesAndSkills.removeHook({ scope, eventType, index, projectRoot: projectRoot ?? undefined });
+    await reload();
+  }, [scope, projectRoot, reload]);
   return { hooks, loading, handleAdd, handleRemove };
 }
 
-function HooksTabBody({ hooks, handleAdd, handleRemove }: {
-  hooks: HooksConfig; handleAdd: (et: string, cmd: string, m?: string) => void; handleRemove: (et: string, i: number) => void;
+function HooksTabBody({
+  hooks,
+  handleAdd,
+  handleRemove,
+}: {
+  hooks: HooksConfig;
+  handleAdd: (et: string, cmd: string, m?: string) => void;
+  handleRemove: (et: string, i: number) => void;
 }): React.ReactElement {
   return (
     <>
@@ -235,9 +287,17 @@ function HooksTabBody({ hooks, handleAdd, handleRemove }: {
       </p>
       {HOOK_EVENT_CATEGORIES.map((category, ci) => (
         <div key={category.label} className={ci > 0 ? 'mt-3' : undefined}>
-          <p className="text-[10px] text-text-semantic-muted uppercase tracking-wider mb-1">{category.label}</p>
+          <p className="text-[10px] text-text-semantic-muted uppercase tracking-wider mb-1">
+            {category.label}
+          </p>
           {category.events.map((eventType) => (
-            <EventTypeSection key={eventType} eventType={eventType} matchers={hooks[eventType]} onAdd={handleAdd} onRemove={handleRemove} />
+            <EventTypeSection
+              key={eventType}
+              eventType={eventType}
+              matchers={hooks[eventType]}
+              onAdd={handleAdd}
+              onRemove={handleRemove}
+            />
           ))}
         </div>
       ))}
@@ -253,9 +313,13 @@ export function HooksTab({ projectRoot }: HooksTabProps): React.ReactElement {
     <div className="flex flex-col gap-0">
       <ScopeToggle scope={scope} onScopeChange={setScope} />
       <div className="px-3 pb-2">
-        {loading
-          ? <div className="text-[10px] text-text-semantic-muted animate-pulse py-1">Loading hooks...</div>
-          : <HooksTabBody hooks={hooks} handleAdd={handleAdd} handleRemove={handleRemove} />}
+        {loading ? (
+          <div className="text-[10px] text-text-semantic-muted animate-pulse py-1">
+            Loading hooks...
+          </div>
+        ) : (
+          <HooksTabBody hooks={hooks} handleAdd={handleAdd} handleRemove={handleRemove} />
+        )}
       </div>
     </div>
   );

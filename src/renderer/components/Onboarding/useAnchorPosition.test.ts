@@ -18,7 +18,17 @@ function makeDomRect(rect: Partial<DOMRect>): DOMRect {
   const left = rect.left ?? 50;
   const width = rect.width ?? 200;
   const height = rect.height ?? 40;
-  return { top, left, width, height, bottom: top + height, right: left + width, x: left, y: top, toJSON: () => ({}) };
+  return {
+    top,
+    left,
+    width,
+    height,
+    bottom: top + height,
+    right: left + width,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  };
 }
 
 function addAnchor(name: string, rect: Partial<DOMRect> = {}): HTMLElement {
@@ -67,7 +77,7 @@ describe('useAnchorPosition', () => {
   it('returns centered fallback when anchor is absent', () => {
     const { result } = renderHook(() => useAnchorPosition('no-such-anchor'));
     expect(result.current.isCentered).toBe(true);
-    expect(result.current.top).toBe(400);  // innerHeight / 2
+    expect(result.current.top).toBe(400); // innerHeight / 2
     expect(result.current.left).toBe(640); // innerWidth / 2
     expect(result.current.width).toBe(0);
     expect(result.current.height).toBe(0);
@@ -81,8 +91,15 @@ describe('useAnchorPosition', () => {
     // Simulate resize — anchor getBoundingClientRect returns updated values
     const el = document.querySelector('[data-tour-anchor="settings-trigger"]') as HTMLElement;
     el.getBoundingClientRect = () => ({
-      top: 20, left: 20, width: 100, height: 20,
-      bottom: 40, right: 120, x: 20, y: 20, toJSON: () => ({}),
+      top: 20,
+      left: 20,
+      width: 100,
+      height: 20,
+      bottom: 40,
+      right: 120,
+      x: 20,
+      y: 20,
+      toJSON: () => ({}),
     });
 
     act(() => {
@@ -102,7 +119,9 @@ describe('useAnchorPosition', () => {
     );
     expect(result.current.top).toBe(50);
 
-    act(() => { rerender({ name: 'settings-trigger' }); });
+    act(() => {
+      rerender({ name: 'settings-trigger' });
+    });
     expect(result.current.top).toBe(750);
     expect(result.current.isCentered).toBe(false);
   });

@@ -139,6 +139,7 @@ function createCoreHandlers(): ConfigHandlerEntry[] {
         try {
           const safeValue = interceptSecrets(key as string, value);
           setConfigValue(key as keyof AppConfig, safeValue as AppConfig[keyof AppConfig]);
+          notifyExternalConfigChange(getConfig());
           // Notify context layer controller on config change
           if (key === 'contextLayer') {
             import('../contextLayer/contextLayerController')

@@ -96,10 +96,12 @@ function useExportHandler(
     if (!window.electronAPI) return;
     setState('busy');
     const result = await window.electronAPI.agentChat.exportThread(threadId, format);
-    if (!result.success || !result.content) { setState('error'); return; }
+    if (!result.success || !result.content) {
+      setState('error');
+      return;
+    }
     const mime =
-      format === 'html' ? 'text/html' :
-      format === 'json' ? 'application/json' : 'text/markdown';
+      format === 'html' ? 'text/html' : format === 'json' ? 'application/json' : 'text/markdown';
     const slug = title.replace(/[^a-z0-9]/gi, '-').slice(0, 40) || threadId.slice(0, 8);
     downloadBlob(result.content, `${slug}.${FORMAT_EXT[format]}`, mime);
     setState('done');
@@ -139,25 +141,33 @@ function ThreadExportRow({ thread }: { thread: AgentChatThreadRecord }): React.R
 
 // ─── Import action ────────────────────────────────────────────────────────────
 
-interface ImportRowProps { onImported?: (threadId: string) => void }
+interface ImportRowProps {
+  onImported?: (threadId: string) => void;
+}
 
 function ThreadImportRow({ onImported }: ImportRowProps): React.ReactElement {
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !window.electronAPI) return;
-    setState('busy');
-    const text = await file.text();
-    const fmt = file.name.endsWith('.json') ? 'json' : 'transcript';
-    const result = await window.electronAPI.agentChat.importThread(text, fmt);
-    if (!result.success || !result.threadId) { setState('error'); return; }
-    setState('done');
-    onImported?.(result.threadId);
-    setTimeout(() => setState('idle'), 2000);
-    if (inputRef.current) inputRef.current.value = '';
-  }, [onImported]);
+  const handleFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !window.electronAPI) return;
+      setState('busy');
+      const text = await file.text();
+      const fmt = file.name.endsWith('.json') ? 'json' : 'transcript';
+      const result = await window.electronAPI.agentChat.importThread(text, fmt);
+      if (!result.success || !result.threadId) {
+        setState('error');
+        return;
+      }
+      setState('done');
+      onImported?.(result.threadId);
+      setTimeout(() => setState('idle'), 2000);
+      if (inputRef.current) inputRef.current.value = '';
+    },
+    [onImported],
+  );
 
   const label = state === 'busy' ? 'Importing…' : state === 'done' ? 'Imported ✓' : 'Import';
 
@@ -226,7 +236,10 @@ function ThreadListItem(props: {
         width: `calc(100% - ${props.depth * 16}px)`,
       }}
     >
-      <button onClick={() => props.onSelectThread(props.thread.id)} className="w-full px-3 py-2 text-left">
+      <button
+        onClick={() => props.onSelectThread(props.thread.id)}
+        className="w-full px-3 py-2 text-left"
+      >
         <ThreadItemBody thread={props.thread} isBranch={props.depth > 0} />
       </button>
       {isActive && (

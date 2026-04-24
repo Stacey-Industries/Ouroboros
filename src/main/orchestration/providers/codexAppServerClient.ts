@@ -23,20 +23,26 @@ export interface CodexAppServerClientOptions {
 }
 
 interface PendingRequest {
-  resolve: (value: any) => void;
+  resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
   timeout: NodeJS.Timeout;
 }
 
-function isSuccessResponse(message: CodexAppServerIncomingMessage): message is CodexAppServerJsonRpcSuccess {
+function isSuccessResponse(
+  message: CodexAppServerIncomingMessage,
+): message is CodexAppServerJsonRpcSuccess {
   return 'id' in message && 'result' in message;
 }
 
-function isFailureResponse(message: CodexAppServerIncomingMessage): message is CodexAppServerJsonRpcFailure {
+function isFailureResponse(
+  message: CodexAppServerIncomingMessage,
+): message is CodexAppServerJsonRpcFailure {
   return 'id' in message && 'error' in message;
 }
 
-function isServerRequest(message: CodexAppServerIncomingMessage): message is CodexAppServerServerRequest {
+function isServerRequest(
+  message: CodexAppServerIncomingMessage,
+): message is CodexAppServerServerRequest {
   return 'id' in message && 'method' in message;
 }
 
@@ -53,7 +59,10 @@ export class CodexAppServerClient {
   >();
   private nextRequestId = 1;
 
-  public constructor(transport: CodexAppServerTransport, options: CodexAppServerClientOptions = {}) {
+  public constructor(
+    transport: CodexAppServerTransport,
+    options: CodexAppServerClientOptions = {},
+  ) {
     this.transport = transport;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 10_000;
     this.transport.onMessage((message) => this.handleMessage(message));
@@ -70,11 +79,14 @@ export class CodexAppServerClient {
   ): Promise<CodexAppServerMethodMap[M]['result']> {
     const id = this.nextRequestId++;
     const response = await new Promise<CodexAppServerMethodMap[M]['result']>((resolve, reject) => {
+      const resolvePending = (value: unknown): void => {
+        resolve(value as CodexAppServerMethodMap[M]['result']);
+      };
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Codex app-server request timed out for ${method}.`));
       }, this.requestTimeoutMs);
-      this.pending.set(id, { resolve, reject, timeout });
+      this.pending.set(id, { resolve: resolvePending, reject, timeout });
       this.transport.send({ id, method, params } as CodexAppServerOutgoingMessage);
     });
     return response;
@@ -99,9 +111,7 @@ export class CodexAppServerClient {
     };
   }
 
-  public onNotification(
-    listener: (message: CodexAppServerServerNotification) => void,
-  ): () => void {
+  public onNotification(listener: (message: CodexAppServerServerNotification) => void): () => void {
     this.notificationListeners.add(listener);
     return () => {
       this.notificationListeners.delete(listener);

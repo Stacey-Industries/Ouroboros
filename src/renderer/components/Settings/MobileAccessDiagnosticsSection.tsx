@@ -45,9 +45,20 @@ function useDiagnosticsStats() {
 
 function StatRow({ label, value }: { label: string; value: number }): React.ReactElement {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px' }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '6px 0',
+        borderBottom: '1px solid var(--border-subtle)',
+        fontSize: '12px',
+      }}
+    >
       <span className="text-text-semantic-muted">{label}</span>
-      <span className={value > 0 ? 'text-status-warning' : 'text-text-semantic-primary'} style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+      <span
+        className={value > 0 ? 'text-status-warning' : 'text-text-semantic-primary'}
+        style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+      >
         {value}
       </span>
     </div>
@@ -63,14 +74,27 @@ interface DiagnosticsBodyProps {
   onRefresh: () => void;
 }
 
-function DiagnosticsBody({ stats, loading, error, onRefresh }: DiagnosticsBodyProps): React.ReactElement {
+function DiagnosticsBody({
+  stats,
+  loading,
+  error,
+  onRefresh,
+}: DiagnosticsBodyProps): React.ReactElement {
   return (
     <div style={{ marginTop: '12px' }}>
       <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginBottom: '8px' }}>
         Timeout events per call class since process start (Phase F counters).
       </p>
-      {loading && <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Loading…</p>}
-      {error && <p className="text-status-error" style={{ fontSize: '12px' }}>{error}</p>}
+      {loading && (
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+          Loading…
+        </p>
+      )}
+      {error && (
+        <p className="text-status-error" style={{ fontSize: '12px' }}>
+          {error}
+        </p>
+      )}
       {stats && !loading && (
         <>
           <StatRow label="Short (10 s)" value={stats.short} />
@@ -100,11 +124,26 @@ export function MobileAccessDiagnosticsSection(): React.ReactElement {
 
   return (
     <section>
-      <button aria-expanded={open} aria-labelledby="diag-section-label" onClick={handleToggle} style={disclosureBtnStyle} type="button">
-        <span id="diag-section-label"><SectionLabel style={{ marginBottom: 0 }}>Diagnostics</SectionLabel></span>
+      <button
+        aria-expanded={open}
+        aria-labelledby="diag-section-label"
+        onClick={handleToggle}
+        style={disclosureBtnStyle}
+        type="button"
+      >
+        <span id="diag-section-label">
+          <SectionLabel style={{ marginBottom: 0 }}>Diagnostics</SectionLabel>
+        </span>
         <span style={{ fontSize: '10px', marginLeft: '8px' }}>{open ? '▲' : '▼'}</span>
       </button>
-      {open && <DiagnosticsBody error={error} loading={loading} stats={stats} onRefresh={() => void fetchStats()} />}
+      {open && (
+        <DiagnosticsBody
+          error={error}
+          loading={loading}
+          stats={stats}
+          onRefresh={() => void fetchStats()}
+        />
+      )}
     </section>
   );
 }

@@ -205,7 +205,13 @@ Generate concise, useful CLAUDE.md content for this directory. Include:
 5. Dependencies and relationships with other parts of the codebase
 
 Keep it practical and concise. No boilerplate. No generic advice.
-Output ONLY the markdown content — no wrapping fences, no preamble.`;
+
+CRITICAL OUTPUT RULES:
+- Your FIRST character must be \`#\` (a markdown heading) or \`<!--\` (an HTML comment).
+- Do NOT preface the output with "Here's the corrected content:", "The existing file is missing X:", "Here's what changed:", or any similar prose.
+- Do NOT include \`★ Insight\` blocks describing what you noticed about the file — that is meta-commentary, not content.
+- Do NOT wrap the output in markdown fences.
+- The file content you emit will be used verbatim. Anything before the first heading is treated as a bug.`;
 }
 
 export async function buildPrompt(dirPath: string, projectRoot: string): Promise<string> {
@@ -288,12 +294,36 @@ async function writeContent(filePath: string, content: string): Promise<void> {
   await fs.writeFile(filePath, content, 'utf-8');
 }
 
+// Strip preamble prose and ★ Insight blocks the model sometimes emits ahead
+// of the actual CLAUDE.md content despite the "no preamble" instruction.
+// These bloat every file read that walks this directory in context.
+export function sanitizeGeneratedContent(raw: string): string {
+  let text = raw.trimStart();
+  // Drop ★ Insight ... ───── blocks (any number, at the start).
+  while (text.startsWith('`★')) {
+    const end = text.indexOf('`', 2);
+    if (end === -1) break;
+    text = text.slice(end + 1).trimStart();
+  }
+  // Drop any leading lines that aren't a markdown heading or HTML comment —
+  // this kills "Here's the corrected content:", "The existing file is missing X:",
+  // "Here's what changed:", etc.
+  const lines = text.split('\n');
+  const firstRealLine = lines.findIndex((line) => {
+    const t = line.trim();
+    return t.startsWith('#') || t.startsWith('<!--') || t.startsWith('```');
+  });
+  if (firstRealLine === -1) return '';
+  return lines.slice(firstRealLine).join('\n').trimStart();
+}
+
 export async function writeClaudeMd(
   filePath: string,
   generatedContent: string,
 ): Promise<'created' | 'updated'> {
   const existingContent = await readExistingContent(filePath);
-  const autoBlock = `${AUTO_START_MARKER}\n${generatedContent}\n${AUTO_END_MARKER}`;
+  const cleaned = sanitizeGeneratedContent(generatedContent);
+  const autoBlock = `${AUTO_START_MARKER}\n${cleaned}\n${AUTO_END_MARKER}`;
 
   if (existingContent === null) {
     await writeContent(filePath, autoBlock + '\n');

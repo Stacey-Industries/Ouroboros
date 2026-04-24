@@ -42,16 +42,11 @@ export interface PinnedContextAPI {
   dismiss(sessionId: string, itemId: string): Promise<IpcResult>;
 
   /** List pins for a session. Excludes dismissed unless includeDismissed is true. */
-  list(
-    sessionId: string,
-    includeDismissed?: boolean,
-  ): Promise<PinnedContextListResult>;
+  list(sessionId: string, includeDismissed?: boolean): Promise<PinnedContextListResult>;
 
   /**
    * Subscribe to store mutation events. Fires whenever add/remove/dismiss runs.
    * Returns a cleanup function — call it to unsubscribe.
    */
-  onChanged(
-    callback: (payload: PinnedContextChangedPayload) => void,
-  ): () => void;
+  onChanged(callback: (payload: PinnedContextChangedPayload) => void): () => void;
 }

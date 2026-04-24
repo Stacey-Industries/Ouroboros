@@ -19,11 +19,7 @@ import {
 } from '../storage/database';
 import type { SearchOptions, SearchResponse } from './threadStoreSearch';
 import { searchThreads } from './threadStoreSearch';
-import {
-  applyFtsMigration,
-  ensureFtsTable,
-  refreshFtsForThread,
-} from './threadStoreSqliteFts';
+import { applyFtsMigration, ensureFtsTable, refreshFtsForThread } from './threadStoreSqliteFts';
 import {
   applyColumnMigrations,
   parseJsonField,
@@ -257,17 +253,13 @@ export class ThreadStoreSqliteRuntime {
   }
 
   async restoreDeletedThread(threadId: string): Promise<void> {
-    this.getDb()
-      .prepare('UPDATE threads SET deletedAt = NULL WHERE id = ?')
-      .run(threadId);
+    this.getDb().prepare('UPDATE threads SET deletedAt = NULL WHERE id = ?').run(threadId);
   }
 
   // ── Wave 23 Phase A — branch rename ─────────────────────────────────────
 
   renameBranchSql(threadId: string, name: string | null): void {
-    this.getDb()
-      .prepare('UPDATE threads SET branchName = ? WHERE id = ?')
-      .run(name, threadId);
+    this.getDb().prepare('UPDATE threads SET branchName = ? WHERE id = ?').run(name, threadId);
   }
 
   // ── Wave 22 Phase A — reactions + collapsedByDefault ────────────────────

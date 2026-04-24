@@ -73,20 +73,12 @@ function ItemIcon({
   if (productIconId) {
     return (
       <span style={style}>
-        <ProductIcon
-          iconId={productIconId}
-          size={12}
-          fallback={<span>{icon ?? '•'}</span>}
-        />
+        <ProductIcon iconId={productIconId} size={12} fallback={<span>{icon ?? '•'}</span>} />
       </span>
     );
   }
 
-  return (
-    <span style={style}>
-      {icon}
-    </span>
-  );
+  return <span style={style}>{icon}</span>;
 }
 
 function ItemLabel({

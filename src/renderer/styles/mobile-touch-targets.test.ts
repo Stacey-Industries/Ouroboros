@@ -48,8 +48,7 @@ function toRelative(absPath: string, repoRoot: string): string {
  * where N < 32. Captures things like height: '28px', height: '16px', height: 16.
  * Does NOT fire on computed/variable heights (e.g. height: cellHeight).
  */
-const INLINE_HEIGHT_RE =
-  /\bheight\s*:\s*['"]?(\d+)(?:px)?['"]?/g;
+const INLINE_HEIGHT_RE = /\bheight\s*:\s*['"]?(\d+)(?:px)?['"]?/g;
 
 /**
  * Tailwind h-N class where N is 1–7 (4px–28px, all below 32px).

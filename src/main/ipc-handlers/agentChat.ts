@@ -34,6 +34,7 @@ import { registerEventForwarders } from './agentChatEventForwarders';
 import { registerExportImportHandlers } from './agentChatExportImport';
 import { registerForkHandlers } from './agentChatFork';
 import { registerMergeHandlers } from './agentChatMerge';
+import { registerMidTurnHandlers } from './agentChatMidTurn';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
 import { registerReactionHandlers } from './agentChatReactions';
 
@@ -147,12 +148,15 @@ function castRerunOverrides(v: unknown): RerunOv | undefined {
 }
 
 function registerReRunHandler(channels: string[], svc: AgentChatService): void {
-  register(channels, AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage,
-    (threadId: unknown, messageId: unknown, overrides: unknown) => svc.reRunFromMessage(
-      requireValidString(threadId, 'threadId'),
-      requireValidString(messageId, 'messageId'),
-      castRerunOverrides(overrides),
-    ),
+  register(
+    channels,
+    AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage,
+    (threadId: unknown, messageId: unknown, overrides: unknown) =>
+      svc.reRunFromMessage(
+        requireValidString(threadId, 'threadId'),
+        requireValidString(messageId, 'messageId'),
+        castRerunOverrides(overrides),
+      ),
   );
 }
 
@@ -189,7 +193,8 @@ function registerMessageHandlers(channels: string[], svc: AgentChatService): voi
 }
 
 function extractLinkFields(link: AgentChatOrchestrationLink | null | undefined) {
-  if (!link) return { provider: null, claudeSessionId: null, codexThreadId: null, linkedTerminalId: null };
+  if (!link)
+    return { provider: null, claudeSessionId: null, codexThreadId: null, linkedTerminalId: null };
   return {
     provider: link.provider ?? null,
     claudeSessionId: link.claudeSessionId ?? null,
@@ -275,47 +280,31 @@ function registerTagHandlers(channels: string[], svc: AgentChatService): void {
 }
 
 function registerPinDeleteHandlers(channels: string[], svc: AgentChatService): void {
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.pinThread,
-    async (payload: unknown) => {
-      const obj = requireValidObject(payload, 'pinThread payload');
-      const id = requireValidString(obj.threadId, 'threadId');
-      const pinned = Boolean(obj.pinned);
-      await svc.threadStore.pinThread(id, pinned);
-      return { success: true };
-    },
-  );
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.softDeleteThread,
-    async (payload: unknown) => {
-      const obj = requireValidObject(payload, 'softDeleteThread payload');
-      const id = requireValidString(obj.threadId, 'threadId');
-      await svc.threadStore.softDeleteThread(id);
-      return { success: true };
-    },
-  );
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.restoreDeletedThread,
-    async (payload: unknown) => {
-      const obj = requireValidObject(payload, 'restoreDeletedThread payload');
-      const id = requireValidString(obj.threadId, 'threadId');
-      await svc.threadStore.restoreDeletedThread(id);
-      return { success: true };
-    },
-  );
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.pinThread, async (payload: unknown) => {
+    const obj = requireValidObject(payload, 'pinThread payload');
+    const id = requireValidString(obj.threadId, 'threadId');
+    const pinned = Boolean(obj.pinned);
+    await svc.threadStore.pinThread(id, pinned);
+    return { success: true };
+  });
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.softDeleteThread, async (payload: unknown) => {
+    const obj = requireValidObject(payload, 'softDeleteThread payload');
+    const id = requireValidString(obj.threadId, 'threadId');
+    await svc.threadStore.softDeleteThread(id);
+    return { success: true };
+  });
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.restoreDeletedThread, async (payload: unknown) => {
+    const obj = requireValidObject(payload, 'restoreDeletedThread payload');
+    const id = requireValidString(obj.threadId, 'threadId');
+    await svc.threadStore.restoreDeletedThread(id);
+    return { success: true };
+  });
 }
 
 // ─── Main registration entry point ───────────────────────────────────────────
 
 export function registerAgentChatHandlers(): string[] {
-  if (cleanupFns.length > 0) {
-    for (const fn of cleanupFns) fn();
-    cleanupFns.length = 0;
-  }
-
+  if (cleanupFns.length > 0) { for (const fn of cleanupFns) fn(); cleanupFns.length = 0; }
   const channels: string[] = [];
   const svc = getService();
 
@@ -324,26 +313,32 @@ export function registerAgentChatHandlers(): string[] {
   registerMemoryHandlers(channels);
   registerTagHandlers(channels, svc);
   registerPinDeleteHandlers(channels, svc);
+  registerMidTurnHandlers(channels, register, requireValidString);
   registerCostRollupHandlers({ channels, svc, register, requireValidString, requireValidObject });
   registerReactionHandlers({ channels, svc, register, requireValidString });
   registerForkHandlers({ channels, svc, register, requireValidString, requireValidObject });
   registerMergeHandlers({ channels, svc, register, requireValidString, requireValidObject });
-  registerExportImportHandlers({ channels, svc, register, requireValidString, exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread, importChannel: AGENT_CHAT_INVOKE_CHANNELS.importThread });
+  registerExportImportHandlers({
+    channels,
+    svc,
+    register,
+    requireValidString,
+    exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread,
+    importChannel: AGENT_CHAT_INVOKE_CHANNELS.importThread,
+  });
   registerEventForwarders(svc, getOrchestration(), cleanupFns);
 
   registeredChannels = channels;
   return channels;
 }
 
-export function cleanupAgentChatHandlers(): void {
+export async function cleanupAgentChatHandlers(): Promise<void> {
   for (const fn of cleanupFns) fn();
   cleanupFns.length = 0;
   for (const channel of registeredChannels) ipcMain.removeHandler(channel);
   registeredChannels = [];
   stopContextRefreshTimer();
-  terminateContextWorker();
-  // NOTE: service and orchestration are intentionally preserved across window
-  // close/reopen to keep the bridge's buffered stream chunks + onProviderEvent
-  // subscription alive. registerAgentChatHandlers re-attaches IPC forwarders on
-  // reopen; the renderer replays buffered chunks via getBufferedChunks().
+  await terminateContextWorker();
+  // service and orchestration are intentionally preserved across window close/reopen —
+  // bridge keeps buffered chunks + onProviderEvent alive; forwarders re-attach on reopen.
 }

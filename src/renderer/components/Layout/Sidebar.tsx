@@ -12,14 +12,10 @@ export interface SidebarProps {
   onFocus?: () => void;
 }
 
-function SidebarHeader({
-  header,
-}: Pick<SidebarProps, 'header'>): React.ReactElement {
+function SidebarHeader({ header }: Pick<SidebarProps, 'header'>): React.ReactElement {
   return (
     <div className="flex-shrink-0 flex items-center justify-between h-9 px-3 border-b border-border-semantic">
-      <div className="flex-1 min-w-0">
-        {header}
-      </div>
+      <div className="flex-1 min-w-0">{header}</div>
     </div>
   );
 }
@@ -50,17 +46,13 @@ export function Sidebar({
       onClick={onFocus}
     >
       {/* Collapsed indicator strip — shown when collapsed via absolute overlay trick */}
-      {collapsed && (
-        <div className="w-0 overflow-hidden" aria-hidden="true" />
-      )}
+      {collapsed && <div className="w-0 overflow-hidden" aria-hidden="true" />}
 
       {/* Header: project picker slot */}
       <SidebarHeader header={header} />
 
       {/* Content — children manage their own scrolling */}
-      <div className="flex-1 overflow-hidden min-h-0">
-        {children}
-      </div>
+      <div className="flex-1 overflow-hidden min-h-0">{children}</div>
     </div>
   );
 }

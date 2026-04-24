@@ -28,17 +28,19 @@ function formatElapsed(ms: number): string {
 type StatusConfig = { label: string; bg: string; text: string };
 
 const STATUS_MAP: Record<BackgroundJob['status'], StatusConfig> = {
-  queued:    { label: 'Queued',    bg: 'bg-status-info-subtle',    text: 'text-status-info' },
-  running:   { label: 'Running',   bg: 'bg-status-warning-subtle', text: 'text-status-warning' },
-  done:      { label: 'Done',      bg: 'bg-status-success-subtle', text: 'text-status-success' },
-  error:     { label: 'Error',     bg: 'bg-status-error-subtle',   text: 'text-status-error' },
-  cancelled: { label: 'Cancelled', bg: 'bg-surface-inset',         text: 'text-text-semantic-muted' },
+  queued: { label: 'Queued', bg: 'bg-status-info-subtle', text: 'text-status-info' },
+  running: { label: 'Running', bg: 'bg-status-warning-subtle', text: 'text-status-warning' },
+  done: { label: 'Done', bg: 'bg-status-success-subtle', text: 'text-status-success' },
+  error: { label: 'Error', bg: 'bg-status-error-subtle', text: 'text-status-error' },
+  cancelled: { label: 'Cancelled', bg: 'bg-surface-inset', text: 'text-text-semantic-muted' },
 };
 
 function StatusPill({ status }: { status: BackgroundJob['status'] }): React.ReactElement {
   const cfg = STATUS_MAP[status] ?? STATUS_MAP.queued;
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.text}`}>
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.text}`}
+    >
       {cfg.label}
     </span>
   );
@@ -52,7 +54,9 @@ function useActiveTick(status: BackgroundJob['status']): void {
   useEffect(() => {
     if (status !== 'running' && status !== 'queued') return;
     timerRef.current = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [status]);
 }
 

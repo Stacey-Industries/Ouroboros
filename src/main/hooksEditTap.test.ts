@@ -103,7 +103,9 @@ describe('tapConflictMonitor', () => {
   });
 
   it('does not throw when recordEdit throws', () => {
-    mockRecordEdit.mockImplementation(() => { throw new Error('db error'); });
+    mockRecordEdit.mockImplementation(() => {
+      throw new Error('db error');
+    });
     tapConflictMonitor(makePayload(), cwdMap);
     expect(() => vi.runAllTimers()).not.toThrow();
   });
@@ -150,7 +152,9 @@ describe('tapEditProvenance', () => {
   });
 
   it('does not throw when markAgentEdit throws', () => {
-    mockMarkAgentEdit.mockImplementation(() => { throw new Error('provenance error'); });
+    mockMarkAgentEdit.mockImplementation(() => {
+      throw new Error('provenance error');
+    });
     tapEditProvenance(makePayload());
     expect(() => vi.runAllTimers()).not.toThrow();
   });

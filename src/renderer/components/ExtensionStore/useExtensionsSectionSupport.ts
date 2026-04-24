@@ -126,58 +126,67 @@ function useToggleExtensionAction(
   state: ExtensionsState,
   fetchExtensions: () => Promise<void>,
 ): (name: string, currentlyEnabled: boolean) => Promise<void> {
-  return useCallback(async (name: string, currentlyEnabled: boolean) => {
-    if (!hasElectronApi()) return;
-    state.setActionError(null);
-    try {
-      const result = currentlyEnabled
-        ? await window.electronAPI.extensions.disable(name)
-        : await window.electronAPI.extensions.enable(name);
-      if (!result.success) state.setActionError(result.error ?? 'Operation failed');
-      await fetchExtensions();
-    } catch (errorValue) {
-      state.setActionError(getErrorMessage(errorValue, 'Operation failed'));
-    }
-  }, [fetchExtensions, state]);
+  return useCallback(
+    async (name: string, currentlyEnabled: boolean) => {
+      if (!hasElectronApi()) return;
+      state.setActionError(null);
+      try {
+        const result = currentlyEnabled
+          ? await window.electronAPI.extensions.disable(name)
+          : await window.electronAPI.extensions.enable(name);
+        if (!result.success) state.setActionError(result.error ?? 'Operation failed');
+        await fetchExtensions();
+      } catch (errorValue) {
+        state.setActionError(getErrorMessage(errorValue, 'Operation failed'));
+      }
+    },
+    [fetchExtensions, state],
+  );
 }
 
 function useForceActivateAction(
   state: ExtensionsState,
   loaders: ExtensionLoaders,
 ): (name: string) => Promise<void> {
-  return useCallback(async (name: string) => {
-    if (!hasElectronApi()) return;
-    state.setActionError(null);
-    try {
-      const result = await window.electronAPI.extensions.activate(name);
-      if (!result.success) state.setActionError(result.error ?? 'Failed to activate');
-      await loaders.fetchExtensions();
-      if (state.selectedExtensionName === name) await loaders.fetchLog(name);
-    } catch (errorValue) {
-      state.setActionError(getErrorMessage(errorValue, 'Failed to activate'));
-    }
-  }, [loaders, state]);
+  return useCallback(
+    async (name: string) => {
+      if (!hasElectronApi()) return;
+      state.setActionError(null);
+      try {
+        const result = await window.electronAPI.extensions.activate(name);
+        if (!result.success) state.setActionError(result.error ?? 'Failed to activate');
+        await loaders.fetchExtensions();
+        if (state.selectedExtensionName === name) await loaders.fetchLog(name);
+      } catch (errorValue) {
+        state.setActionError(getErrorMessage(errorValue, 'Failed to activate'));
+      }
+    },
+    [loaders, state],
+  );
 }
 
 function useUninstallExtensionAction(
   state: ExtensionsState,
   fetchExtensions: () => Promise<void>,
 ): (name: string) => Promise<void> {
-  return useCallback(async (name: string) => {
-    if (!hasElectronApi()) return;
-    if (!window.confirm(`Uninstall extension "${name}"? This will delete its files.`)) return;
-    state.setActionError(null);
-    try {
-      const result = await window.electronAPI.extensions.uninstall(name);
-      if (!result.success) state.setActionError(result.error ?? 'Failed to uninstall');
-      if (state.selectedExtensionName === name) {
-        clearSelectedExtension(state.setSelectedExtensionName, state.setExtLog);
+  return useCallback(
+    async (name: string) => {
+      if (!hasElectronApi()) return;
+      if (!window.confirm(`Uninstall extension "${name}"? This will delete its files.`)) return;
+      state.setActionError(null);
+      try {
+        const result = await window.electronAPI.extensions.uninstall(name);
+        if (!result.success) state.setActionError(result.error ?? 'Failed to uninstall');
+        if (state.selectedExtensionName === name) {
+          clearSelectedExtension(state.setSelectedExtensionName, state.setExtLog);
+        }
+        await fetchExtensions();
+      } catch (errorValue) {
+        state.setActionError(getErrorMessage(errorValue, 'Failed to uninstall'));
       }
-      await fetchExtensions();
-    } catch (errorValue) {
-      state.setActionError(getErrorMessage(errorValue, 'Failed to uninstall'));
-    }
-  }, [fetchExtensions, state]);
+    },
+    [fetchExtensions, state],
+  );
 }
 
 function useInstallFromFolderAction(
@@ -202,9 +211,7 @@ function useInstallFromFolderAction(
   }, [fetchExtensions, state]);
 }
 
-function useOpenExtensionsFolderAction(
-  state: ExtensionsState,
-): () => Promise<void> {
+function useOpenExtensionsFolderAction(state: ExtensionsState): () => Promise<void> {
   return useCallback(async () => {
     if (!hasElectronApi()) return;
     state.setIsOpening(true);
@@ -225,14 +232,15 @@ function useOpenExtensionsFolderAction(
 function useSelectExtensionAction(
   setSelectedExtensionName: Dispatch<SetStateAction<string | null>>,
 ): (name: string) => void {
-  return useCallback((name: string) => {
-    setSelectedExtensionName((currentName) => (currentName === name ? null : name));
-  }, [setSelectedExtensionName]);
+  return useCallback(
+    (name: string) => {
+      setSelectedExtensionName((currentName) => (currentName === name ? null : name));
+    },
+    [setSelectedExtensionName],
+  );
 }
 
-function useToggleSnippetAction(
-  setIsSnippetOpen: Dispatch<SetStateAction<boolean>>,
-): () => void {
+function useToggleSnippetAction(setIsSnippetOpen: Dispatch<SetStateAction<boolean>>): () => void {
   return useCallback(() => {
     setIsSnippetOpen((currentValue) => !currentValue);
   }, [setIsSnippetOpen]);

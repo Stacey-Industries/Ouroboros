@@ -10,10 +10,7 @@ import { useRef, useState } from 'react';
 
 import type { AppLayoutProps } from '../components/Layout/AppLayout';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
-import {
-  type ClaudeSessionOptions,
-  useSessionManagerActions,
-} from './useSessionManager.helpers';
+import { type ClaudeSessionOptions, useSessionManagerActions } from './useSessionManager.helpers';
 
 export interface SessionManagerResult {
   sessions: TerminalSession[];
@@ -57,7 +54,8 @@ function buildTerminalControl(args: {
     onActivate: setActiveSessionId,
     onClose: handleTerminalClose,
     onNew: () => void spawnSession(),
-    onNewClaude: (providerModel?: string) => void spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
+    onNewClaude: (providerModel?: string) =>
+      void spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
     onNewCodex: () => void spawnSession(),
     onReorder: handleTerminalReorder,
   };
@@ -69,7 +67,16 @@ export function useSessionManager(): SessionManagerResult {
   const [recordingSessions, setRecordingSessions] = useState<Set<string>>(new Set());
   const spawnCountRef = useRef(0);
   const killTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>[]>>(new Map());
-  const actions = useSessionManagerActions({ sessions, setSessions, activeSessionId, setActiveSessionId, recordingSessions, setRecordingSessions, spawnCountRef, killTimersRef });
+  const actions = useSessionManagerActions({
+    sessions,
+    setSessions,
+    activeSessionId,
+    setActiveSessionId,
+    recordingSessions,
+    setRecordingSessions,
+    spawnCountRef,
+    killTimersRef,
+  });
   const terminalControl = buildTerminalControl({
     sessions,
     activeSessionId,

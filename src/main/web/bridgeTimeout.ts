@@ -71,7 +71,9 @@ export function withTimeout<T>(promise: Promise<T>, channel: string): Promise<T>
           }
           return result;
         },
-        () => { /* discard late errors too */ },
+        () => {
+          /* discard late errors too */
+        },
       );
     }, budgetMs);
 

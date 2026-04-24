@@ -20,10 +20,7 @@ function getPlatform(draft: AppConfig): PlatformConfig {
   return draft.platform ?? {};
 }
 
-function patchPlatform(
-  draft: AppConfig,
-  patch: Partial<PlatformConfig>,
-): PlatformConfig {
+function patchPlatform(draft: AppConfig, patch: Partial<PlatformConfig>): PlatformConfig {
   return { ...getPlatform(draft), ...patch };
 }
 
@@ -43,8 +40,8 @@ function UpdateChannelSubsection({ draft, onChange }: Props): React.ReactElement
     <section style={sectionStyle}>
       <SectionLabel>Update channel</SectionLabel>
       <p style={descStyle}>
-        Stable receives production releases. Beta receives pre-release builds which may be
-        less polished.
+        Stable receives production releases. Beta receives pre-release builds which may be less
+        polished.
       </p>
       <div style={radioGroupStyle} role="radiogroup" aria-label="Update channel">
         <ChannelRadio
@@ -74,7 +71,13 @@ interface ChannelRadioProps {
   onChange: (value: 'stable' | 'beta') => void;
 }
 
-function ChannelRadio({ id, value, label, checked, onChange }: ChannelRadioProps): React.ReactElement {
+function ChannelRadio({
+  id,
+  value,
+  label,
+  checked,
+  onChange,
+}: ChannelRadioProps): React.ReactElement {
   return (
     <label htmlFor={id} style={radioLabelStyle}>
       <input
@@ -103,7 +106,9 @@ interface WebhookInputProps {
 function WebhookInput({ value, onChange }: WebhookInputProps): React.ReactElement {
   return (
     <div style={webhookContainerStyle}>
-      <label htmlFor="crash-webhook-url" style={webhookLabelStyle}>Webhook URL</label>
+      <label htmlFor="crash-webhook-url" style={webhookLabelStyle}>
+        Webhook URL
+      </label>
       <input
         id="crash-webhook-url"
         type="url"
@@ -127,7 +132,10 @@ function CrashReporterSubsection({ draft, onChange }: Props): React.ReactElement
   }
 
   function handleWebhookChange(e: React.ChangeEvent<HTMLInputElement>): void {
-    onChange('platform', patchPlatform(draft, { crashReports: { ...crashCfg, webhookUrl: e.target.value } }));
+    onChange(
+      'platform',
+      patchPlatform(draft, { crashReports: { ...crashCfg, webhookUrl: e.target.value } }),
+    );
   }
 
   return (
@@ -140,11 +148,16 @@ function CrashReporterSubsection({ draft, onChange }: Props): React.ReactElement
         description="Send anonymous crash reports to a webhook you control."
       />
       {enabled && <WebhookInput value={webhookUrl} onChange={handleWebhookChange} />}
-      <button type="button" onClick={() => void window.electronAPI.crash.openCrashReportsDir()} style={folderButtonStyle}>
+      <button
+        type="button"
+        onClick={() => void window.electronAPI.crash.openCrashReportsDir()}
+        style={folderButtonStyle}
+      >
         Show crash reports folder
       </button>
       <p style={warningStyle}>
-        Crash reports include stack traces with paths redacted. Chat content and config values are never included.
+        Crash reports include stack traces with paths redacted. Chat content and config values are
+        never included.
       </p>
     </section>
   );
@@ -172,10 +185,22 @@ const rootStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column
 const sectionStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '10px' };
 const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', margin: 0 };
 const radioGroupStyle: React.CSSProperties = { display: 'flex', gap: '20px', paddingTop: '4px' };
-const radioLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' };
-const radioInputStyle: React.CSSProperties = { accentColor: 'var(--interactive-accent)', cursor: 'pointer' };
+const radioLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  cursor: 'pointer',
+};
+const radioInputStyle: React.CSSProperties = {
+  accentColor: 'var(--interactive-accent)',
+  cursor: 'pointer',
+};
 const radioTextStyle: React.CSSProperties = { fontSize: '13px', color: 'var(--text-primary)' };
-const webhookContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px' };
+const webhookContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+};
 const webhookLabelStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-secondary)' };
 
 const webhookInputStyle: React.CSSProperties = {

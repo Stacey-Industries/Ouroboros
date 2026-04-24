@@ -16,15 +16,17 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { broadcastApprovalRequest, scheduleAutoApproveTimeout } from './approvalManagerHelpers';
+import {
+  broadcastApprovalRequest,
+  getCommandKey,
+  notifyApprovalResolved,
+  scheduleAutoApproveTimeout,
+  toolRequiresApprovalFromConfig,
+} from './approvalManagerHelpers';
 import { check as checkMemory } from './approvalMemory';
-import { notifyWaiters } from './approvalWaiterRegistry';
-import { getConfigValue } from './config';
 import { describeFdPressure } from './fdPressureDiagnostics';
 import { getPermissionContext } from './hooksLifecycleHandlers';
 import log from './logger';
-import { broadcastToWebClients } from './web/webServer';
-import { getAllActiveWindows } from './windowManager';
 
 export { waitForResolution } from './approvalWaiterRegistry';
 
@@ -147,32 +149,11 @@ export function stopApprovalManagerCleanup(): void {
  * Check if a tool requires approval based on config and session-scoped rules.
  */
 export function toolRequiresApproval(toolName: string, sessionId: string): boolean {
-  // Check session-scoped "always allow" rules
-  if (alwaysAllowRules.has(`${sessionId}:${toolName}`)) {
-    return false;
-  }
-
-  const approvalRequired = getConfigValue('approvalRequired') as string[] | undefined;
-  if (!approvalRequired || !Array.isArray(approvalRequired) || approvalRequired.length === 0) {
-    return false;
-  }
-
-  return approvalRequired.some((pattern) => {
-    // Exact match or case-insensitive match
-    return pattern.toLowerCase() === toolName.toLowerCase();
-  });
+  if (alwaysAllowRules.has(`${sessionId}:${toolName}`)) return false;
+  return toolRequiresApprovalFromConfig(toolName);
 }
 
-/**
- * Derive a stable command key from a tool-input record.
- * Used as the identity for approval-memory hashing.
- */
-export function getCommandKey(toolName: string, toolInput: Record<string, unknown>): string {
-  if (toolName === 'Bash') return String(toolInput.command ?? '');
-  // Write, Edit, MultiEdit — use file_path; fallback to stable JSON
-  const filePath = toolInput.file_path ?? toolInput.path;
-  return filePath !== undefined ? String(filePath) : JSON.stringify(toolInput);
-}
+export { getCommandKey };
 
 /** Apply memory check: auto-respond if a remembered decision exists. Returns true if handled. */
 function applyMemoryCheck(request: ApprovalRequest): boolean {
@@ -243,25 +224,6 @@ async function prepareResponseFilePath(requestId: string): Promise<string | null
   }
 }
 
-function notifyApprovalResolved(requestId: string, decision: string): void {
-  const windows = getAllActiveWindows();
-  for (const win of windows) {
-    if (!win.isDestroyed()) {
-      try {
-        // Use mainFrame.send directly — webContents.send logs internally before
-        // rethrowing when the render frame is disposed during HMR/navigation.
-        win.webContents.mainFrame.send('approval:resolved', { requestId, decision });
-      } catch {
-        // Render frame disposed — silently skip this window
-      }
-    }
-  }
-  broadcastToWebClients('approval:resolved', { requestId, decision });
-
-  // Resolve any pipe waiters blocked on approval.wait for this requestId.
-  notifyWaiters(requestId, { decision: decision as 'approve' | 'reject' });
-}
-
 function isRetryableError(err: unknown): boolean {
   const c = (err as NodeJS.ErrnoException).code;
   return c === 'EMFILE' || c === 'ENFILE';
@@ -277,7 +239,9 @@ function clearQueuedResponseWrite(requestId: string): void {
 function logApprovalEmfile(requestId: string, attempt: number): void {
   if (Date.now() - lastApprovalEmfileLogAt < EMFILE_LOG_THROTTLE_MS) return;
   lastApprovalEmfileLogAt = Date.now();
-  log.warn(`[approval] EMFILE while writing ${requestId} (attempt ${attempt}) — ${describeFdPressure()}`);
+  log.warn(
+    `[approval] EMFILE while writing ${requestId} (attempt ${attempt}) — ${describeFdPressure()}`,
+  );
 }
 
 interface WriteScheduleOptions {

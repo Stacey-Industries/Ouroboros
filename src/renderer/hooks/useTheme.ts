@@ -1,13 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
-import {
-  customTheme,
-  defaultThemeId,
-  getTheme,
-  type Theme,
-  themeList,
-  themes,
-} from '../themes';
+import { customTheme, defaultThemeId, getTheme, type Theme, themeList, themes } from '../themes';
 import {
   DEFAULT_MATERIAL_VARIANT,
   getMaterialVariant,
@@ -33,7 +26,12 @@ function resolveTheme(themeId: string, materialVariant: MaterialVariant): Theme 
 }
 import type { AppConfig, AppTheme } from '../types/electron';
 import { useThemeActions } from './useTheme.actions';
-import { applyFontConfig, applyThemeToDom, loadExtensionThemesIntoRegistry, updateTitleBarOverlay } from './useTheme.tokens';
+import {
+  applyFontConfig,
+  applyThemeToDom,
+  loadExtensionThemesIntoRegistry,
+  updateTitleBarOverlay,
+} from './useTheme.tokens';
 
 export { applyFontConfig, brightenIfDark } from './useTheme.tokens';
 
@@ -317,7 +315,7 @@ export function useTheme(): UseThemeReturn {
     const extThemes = Object.values(themes).filter((t) => t.id.startsWith('ext:'));
     return [...themeList, ...extThemes];
     // Re-derive when the theme ID changes (triggers after extension install/uninstall)
-    // eslint-disable-next-line react-compiler/react-compiler
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.themeId, snapshot.hydrated]);
 

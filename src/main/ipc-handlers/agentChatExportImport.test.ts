@@ -34,8 +34,7 @@ function makeMsg(overrides: Partial<AgentChatMessageRecord> = {}): AgentChatMess
 
 /** Minimal requireValidString stub — throws on empty, returns string otherwise. */
 function requireStr(value: unknown, name: string): string {
-  if (typeof value !== 'string' || value.trim() === '')
-    throw new Error(`Invalid ${name}`);
+  if (typeof value !== 'string' || value.trim() === '') throw new Error(`Invalid ${name}`);
   return value.trim();
 }
 
@@ -63,11 +62,11 @@ function makeSvc(
   thread: AgentChatThreadRecord | null = makeThread(),
 ): Pick<AgentChatService, 'loadThread' | 'threadStore'> {
   return {
-    loadThread: vi.fn().mockResolvedValue(
-      thread
-        ? { success: true, thread }
-        : { success: false, error: 'Thread not found' },
-    ),
+    loadThread: vi
+      .fn()
+      .mockResolvedValue(
+        thread ? { success: true, thread } : { success: false, error: 'Thread not found' },
+      ),
     threadStore: {
       createThread: vi.fn().mockResolvedValue(makeThread({ id: 'new-thread-id' })),
       setTags: vi.fn().mockResolvedValue(undefined),
@@ -82,8 +81,12 @@ describe('registerExportImportHandlers', () => {
     const { register } = makeRegisterCapture();
     const channels: string[] = [];
     registerExportImportHandlers({
-      channels, svc: makeSvc() as AgentChatService, register, requireValidString: requireStr,
-      exportChannel: 'agentChat:exportThread', importChannel: 'agentChat:importThread',
+      channels,
+      svc: makeSvc() as AgentChatService,
+      register,
+      requireValidString: requireStr,
+      exportChannel: 'agentChat:exportThread',
+      importChannel: 'agentChat:importThread',
     });
     expect(channels).toContain('agentChat:exportThread');
     expect(channels).toContain('agentChat:importThread');
@@ -98,9 +101,12 @@ describe('exportThread handler', () => {
     const channels: string[] = [];
     const svc = makeSvc(thread);
     registerExportImportHandlers({
-      channels, svc: svc as AgentChatService, register: cap.register,
+      channels,
+      svc: svc as AgentChatService,
+      register: cap.register,
       requireValidString: requireStr,
-      exportChannel: 'agentChat:exportThread', importChannel: 'agentChat:importThread',
+      exportChannel: 'agentChat:exportThread',
+      importChannel: 'agentChat:importThread',
     });
     const invoke = (...args: unknown[]) => cap.invoke('agentChat:exportThread', ...args);
     return { invoke, svc };
@@ -108,14 +114,14 @@ describe('exportThread handler', () => {
 
   it('returns success:false for invalid format', async () => {
     const { invoke } = setup();
-    const r = await invoke('thread-1', 'pdf') as { success: boolean; error: string };
+    const r = (await invoke('thread-1', 'pdf')) as { success: boolean; error: string };
     expect(r.success).toBe(false);
     expect(r.error).toContain('Invalid format');
   });
 
   it('returns success:false when thread not found', async () => {
     const { invoke } = setup(null);
-    const r = await invoke('thread-1', 'markdown') as { success: boolean; error: string };
+    const r = (await invoke('thread-1', 'markdown')) as { success: boolean; error: string };
     expect(r.success).toBe(false);
     expect(r.error).toBeTruthy();
   });
@@ -123,7 +129,7 @@ describe('exportThread handler', () => {
   it('returns markdown content for markdown format', async () => {
     const thread = makeThread({ messages: [makeMsg()] });
     const { invoke } = setup(thread);
-    const r = await invoke('thread-1', 'markdown') as { success: boolean; content: string };
+    const r = (await invoke('thread-1', 'markdown')) as { success: boolean; content: string };
     expect(r.success).toBe(true);
     expect(r.content).toContain('# Thread:');
   });
@@ -131,7 +137,7 @@ describe('exportThread handler', () => {
   it('returns JSON content for json format', async () => {
     const thread = makeThread({ messages: [makeMsg()] });
     const { invoke } = setup(thread);
-    const r = await invoke('thread-1', 'json') as { success: boolean; content: string };
+    const r = (await invoke('thread-1', 'json')) as { success: boolean; content: string };
     expect(r.success).toBe(true);
     expect(() => JSON.parse(r.content)).not.toThrow();
     expect(JSON.parse(r.content).thread.title).toBe('Export Test');
@@ -140,7 +146,7 @@ describe('exportThread handler', () => {
   it('returns HTML content for html format', async () => {
     const thread = makeThread({ messages: [makeMsg()] });
     const { invoke } = setup(thread);
-    const r = await invoke('thread-1', 'html') as { success: boolean; content: string };
+    const r = (await invoke('thread-1', 'html')) as { success: boolean; content: string };
     expect(r.success).toBe(true);
     expect(r.content).toContain('<!DOCTYPE html>');
   });
@@ -159,9 +165,12 @@ describe('importThread handler', () => {
     const channels: string[] = [];
     const svc = makeSvc();
     registerExportImportHandlers({
-      channels, svc: svc as AgentChatService, register: cap.register,
+      channels,
+      svc: svc as AgentChatService,
+      register: cap.register,
       requireValidString: requireStr,
-      exportChannel: 'agentChat:exportThread', importChannel: 'agentChat:importThread',
+      exportChannel: 'agentChat:exportThread',
+      importChannel: 'agentChat:importThread',
     });
     const invoke = (...args: unknown[]) => cap.invoke('agentChat:importThread', ...args);
     return { invoke, svc };
@@ -169,21 +178,21 @@ describe('importThread handler', () => {
 
   it('returns success:false for invalid format', async () => {
     const { invoke } = setup();
-    const r = await invoke('{}', 'csv') as { success: boolean; error: string };
+    const r = (await invoke('{}', 'csv')) as { success: boolean; error: string };
     expect(r.success).toBe(false);
     expect(r.error).toContain('Invalid format');
   });
 
   it('returns success:false for malformed JSON', async () => {
     const { invoke } = setup();
-    const r = await invoke('not-json', 'json') as { success: boolean; error: string };
+    const r = (await invoke('not-json', 'json')) as { success: boolean; error: string };
     expect(r.success).toBe(false);
     expect(r.error).toBeTruthy();
   });
 
   it('returns success:false for transcript with no role markers', async () => {
     const { invoke } = setup();
-    const r = await invoke('plain text no markers', 'transcript') as { success: boolean };
+    const r = (await invoke('plain text no markers', 'transcript')) as { success: boolean };
     expect(r.success).toBe(false);
   });
 
@@ -193,7 +202,7 @@ describe('importThread handler', () => {
       thread: { id: 'orig', title: 'Imported' },
       messages: [{ role: 'user', content: 'hi' }],
     });
-    const r = await invoke(validJson, 'json') as { success: boolean; threadId: string };
+    const r = (await invoke(validJson, 'json')) as { success: boolean; threadId: string };
     expect(r.success).toBe(true);
     expect(typeof r.threadId).toBe('string');
     expect(r.threadId).toBeTruthy();
@@ -207,7 +216,7 @@ describe('importThread handler', () => {
       '## [assistant] at 2023-01-01T00:00:01Z',
       'Hi back',
     ].join('\n');
-    const r = await invoke(transcript, 'transcript') as { success: boolean; threadId: string };
+    const r = (await invoke(transcript, 'transcript')) as { success: boolean; threadId: string };
     expect(r.success).toBe(true);
     expect(r.threadId).toBeTruthy();
   });
@@ -219,10 +228,10 @@ describe('importThread handler', () => {
       messages: [],
     });
     await invoke(validJson, 'json');
-    expect(svc.threadStore.setTags).toHaveBeenCalledWith(
-      'new-thread-id',
-      ['typescript', 'refactor'],
-    );
+    expect(svc.threadStore.setTags).toHaveBeenCalledWith('new-thread-id', [
+      'typescript',
+      'refactor',
+    ]);
   });
 
   it('skips setTags when imported thread has no tags', async () => {

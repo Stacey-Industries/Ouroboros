@@ -105,9 +105,11 @@ function isNonEmptyString(v: unknown): v is string {
 function validateRequest(req: unknown): req is DispatchRequest {
   if (!req || typeof req !== 'object') return false;
   const r = req as Record<string, unknown>;
-  return isNonEmptyString(r['title'])
-    && isNonEmptyString(r['prompt'])
-    && isNonEmptyString(r['projectPath']);
+  return (
+    isNonEmptyString(r['title']) &&
+    isNonEmptyString(r['prompt']) &&
+    isNonEmptyString(r['projectPath'])
+  );
 }
 
 // ── Handler implementations ───────────────────────────────────────────────────
@@ -129,7 +131,10 @@ async function handleDispatchTask(
   deviceId?: string,
 ): Promise<DispatchResult> {
   if (!validateRequest(request)) {
-    return { success: false, error: 'invalid-request: title, prompt, and projectPath are required non-empty strings' };
+    return {
+      success: false,
+      error: 'invalid-request: title, prompt, and projectPath are required non-empty strings',
+    };
   }
 
   if (request.clientRequestId) {
@@ -174,9 +179,7 @@ async function handleCancelDispatchJob(
 
   try {
     const result = cancelJob(jobId);
-    return result.ok
-      ? { success: true }
-      : { success: false, reason: result.reason };
+    return result.ok ? { success: true } : { success: false, reason: result.reason };
   } catch (err) {
     log.error('[dispatch] cancelJob error:', err);
     return { success: false, reason: err instanceof Error ? err.message : String(err) };

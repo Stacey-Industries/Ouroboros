@@ -36,7 +36,9 @@ function makeMockChild(): MockChild {
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
   child.stdin = {
-    write: vi.fn((_data: unknown, _enc: unknown, cb?: () => void) => { cb?.(); }),
+    write: vi.fn((_data: unknown, _enc: unknown, cb?: () => void) => {
+      cb?.();
+    }),
     end: vi.fn(),
   };
   child.kill = vi.fn();
@@ -84,7 +86,9 @@ describe('spawnHaikuForRerank — success path', () => {
 
     const resultP = spawnHaikuForRerank('prompt', 500, { spawnFn, platform: 'linux' });
     child.emit('close', 0);
-    resultP.catch(() => {/* ignore empty output */});
+    resultP.catch(() => {
+      /* ignore empty output */
+    });
 
     const [cmd, args] = spawnFn.mock.calls[0] as [string, string[]];
     expect(cmd).toBe('claude');
@@ -99,7 +103,9 @@ describe('spawnHaikuForRerank — success path', () => {
 
     const resultP = spawnHaikuForRerank('prompt', 500, { spawnFn, platform: 'win32' });
     child.emit('close', 0);
-    resultP.catch(() => {/* ignore empty output */});
+    resultP.catch(() => {
+      /* ignore empty output */
+    });
 
     const [cmd, args] = spawnFn.mock.calls[0] as [string, string[]];
     expect(cmd).toBe('powershell.exe');
@@ -111,8 +117,12 @@ describe('spawnHaikuForRerank — success path', () => {
 });
 
 describe('spawnHaikuForRerank — failure paths', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('returns success:false on non-zero exit code', async () => {
     const child = makeMockChild();

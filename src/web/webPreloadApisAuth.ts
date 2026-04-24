@@ -14,8 +14,7 @@ function buildAuthInvokeApi(t: WebSocketTransport) {
     startLogin: (provider: string) => t.invoke('auth:startLogin', provider),
     cancelLogin: (provider: string) => t.invoke('auth:cancelLogin', provider),
     logout: (provider: string) => t.invoke('auth:logout', provider),
-    setApiKey: (provider: string, apiKey: string) =>
-      t.invoke('auth:setApiKey', provider, apiKey),
+    setApiKey: (provider: string, apiKey: string) => t.invoke('auth:setApiKey', provider, apiKey),
     importCliCreds: (provider: string) => t.invoke('auth:importCliCreds', provider),
     detectCliCreds: () => t.invoke('auth:detectCliCreds'),
     openExternal: (url: string) => {

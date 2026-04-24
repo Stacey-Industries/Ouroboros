@@ -53,10 +53,10 @@ export async function getCompletion(
   }
 
   try {
-    const result = await server.instance.connection.sendRequest(LSP_COMPLETION, {
+    const result = (await server.instance.connection.sendRequest(LSP_COMPLETION, {
       textDocument: { uri: filePathToUri(filePath) },
       position: { line, character },
-    }) as ProtocolCompletionItem[] | CompletionList | null;
+    })) as ProtocolCompletionItem[] | CompletionList | null;
     return {
       success: true,
       items: normalizeCompletionResult(result),
@@ -78,13 +78,15 @@ export async function getHover(
   }
 
   try {
-    const result = await server.instance.connection.sendRequest(LSP_HOVER, {
+    const result = (await server.instance.connection.sendRequest(LSP_HOVER, {
       textDocument: { uri: filePathToUri(filePath) },
       position: { line, character },
-    }) as Hover | null;
+    })) as Hover | null;
     return {
       success: true,
-      contents: result ? normalizeHoverContents(result.contents as Parameters<typeof normalizeHoverContents>[0]) : '',
+      contents: result
+        ? normalizeHoverContents(result.contents as Parameters<typeof normalizeHoverContents>[0])
+        : '',
     };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -103,10 +105,10 @@ export async function getDefinition(
   }
 
   try {
-    const result = await server.instance.connection.sendRequest(LSP_DEFINITION, {
+    const result = (await server.instance.connection.sendRequest(LSP_DEFINITION, {
       textDocument: { uri: filePathToUri(filePath) },
       position: { line, character },
-    }) as Definition | DefinitionLink[] | null;
+    })) as Definition | DefinitionLink[] | null;
     const location = getFirstLocation(result ?? null);
     if (!location) {
       return { success: true };

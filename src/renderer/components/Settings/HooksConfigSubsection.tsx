@@ -15,8 +15,14 @@ const HOOK_EVENT_CATEGORIES: { label: string; events: string[] }[] = [
   { label: 'Tools', events: ['PreToolUse', 'PostToolUse', 'PostToolUseFailure'] },
   { label: 'Agents', events: ['SubagentStart', 'SubagentStop', 'TeammateIdle'] },
   { label: 'Tasks', events: ['TaskCreated', 'TaskCompleted'] },
-  { label: 'Conversation', events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'] },
-  { label: 'Workspace', events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'] },
+  {
+    label: 'Conversation',
+    events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'],
+  },
+  {
+    label: 'Workspace',
+    events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'],
+  },
   { label: 'Context', events: ['PreCompact', 'PostCompact', 'InstructionsLoaded'] },
   { label: 'Permissions', events: ['PermissionRequest', 'PermissionDenied'] },
 ];
@@ -26,7 +32,11 @@ interface HooksConfigSubsectionProps {
 }
 
 function hasRulesAndSkillsAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && 'rulesAndSkills' in window.electronAPI;
+  return (
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'rulesAndSkills' in window.electronAPI
+  );
 }
 
 async function fetchHooks(scope: HookScope, projectRoot: string | undefined): Promise<HooksConfig> {
@@ -35,7 +45,13 @@ async function fetchHooks(scope: HookScope, projectRoot: string | undefined): Pr
   return result.success && result.hooks ? result.hooks : {};
 }
 
-function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange: (s: HookScope) => void }): React.ReactElement {
+function ScopeToggle({
+  scope,
+  onScopeChange,
+}: {
+  scope: HookScope;
+  onScopeChange: (s: HookScope) => void;
+}): React.ReactElement {
   return (
     <div style={scopeToggleStyle}>
       {(['global', 'project'] as const).map((s) => (
@@ -55,18 +71,35 @@ function AddHookRow({ onAdd }: { onAdd: (command: string) => Promise<void> }): R
     const cmd = value.trim();
     if (!cmd) return;
     setIsAdding(true);
-    try { await onAdd(cmd); setValue(''); } finally { setIsAdding(false); }
+    try {
+      await onAdd(cmd);
+      setValue('');
+    } finally {
+      setIsAdding(false);
+    }
   }
 
   return (
     <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
       <input
-        type="text" value={value}
+        type="text"
+        value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAdd(); } }}
-        placeholder="Shell command..." className="text-text-semantic-primary" style={addInputStyle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            void handleAdd();
+          }
+        }}
+        placeholder="Shell command..."
+        className="text-text-semantic-primary"
+        style={addInputStyle}
       />
-      <button onClick={() => void handleAdd()} disabled={!value.trim() || isAdding} style={addBtnStyle(!value.trim() || isAdding)}>
+      <button
+        onClick={() => void handleAdd()}
+        disabled={!value.trim() || isAdding}
+        style={addBtnStyle(!value.trim() || isAdding)}
+      >
         Add
       </button>
     </div>
@@ -79,17 +112,33 @@ interface HookEntriesListProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEntriesList({ eventType, matchers, onRemove }: HookEntriesListProps): React.ReactElement {
+function HookEntriesList({
+  eventType,
+  matchers,
+  onRemove,
+}: HookEntriesListProps): React.ReactElement {
   if (!matchers.length) {
-    return <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: '4px 0' }}>No hooks registered.</p>;
+    return (
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: '4px 0' }}>
+        No hooks registered.
+      </p>
+    );
   }
   return (
     <>
       {matchers.map((matcher, mi) =>
         (matcher.hooks ?? []).map((hook, hi) => (
           <div key={`${mi}-${hi}`} style={hookRowStyle}>
-            <span className="text-text-semantic-secondary" style={hookCmdStyle}>{hook.command}</span>
-            <button onClick={() => void onRemove(eventType, mi)} aria-label="Remove hook" style={removeBtnStyle}>✕</button>
+            <span className="text-text-semantic-secondary" style={hookCmdStyle}>
+              {hook.command}
+            </span>
+            <button
+              onClick={() => void onRemove(eventType, mi)}
+              aria-label="Remove hook"
+              style={removeBtnStyle}
+            >
+              ✕
+            </button>
           </div>
         )),
       )}
@@ -104,7 +153,12 @@ interface HookEventSectionProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectionProps): React.ReactElement {
+function HookEventSection({
+  eventType,
+  hooks,
+  onAdd,
+  onRemove,
+}: HookEventSectionProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const matchers = hooks[eventType] ?? [];
   const hookCount = matchers.reduce((sum, m) => sum + (m.hooks?.length ?? 0), 0);
@@ -112,7 +166,9 @@ function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectio
     <div style={eventSectionStyle}>
       <button onClick={() => setIsOpen((v) => !v)} style={eventHeaderStyle} aria-expanded={isOpen}>
         <span style={{ flex: 1, textAlign: 'left' }}>{eventType}</span>
-        <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>{hookCount} hook{hookCount !== 1 ? 's' : ''}</span>
+        <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
+          {hookCount} hook{hookCount !== 1 ? 's' : ''}
+        </span>
         <span style={{ marginLeft: '8px', fontSize: '10px' }}>{isOpen ? '▲' : '▼'}</span>
       </button>
       {isOpen && (
@@ -139,31 +195,49 @@ function useHooksSubsection(projectRoot: string | undefined): HooksSubsectionMod
   const scopeRef = useRef(scope);
   const projectRootRef = useRef(projectRoot);
 
-  useEffect(() => { scopeRef.current = scope; }, [scope]);
-  useEffect(() => { projectRootRef.current = projectRoot; }, [projectRoot]);
+  useEffect(() => {
+    scopeRef.current = scope;
+  }, [scope]);
+  useEffect(() => {
+    projectRootRef.current = projectRoot;
+  }, [projectRoot]);
 
   const reload = useCallback(async (): Promise<void> => {
     setHooks(await fetchHooks(scopeRef.current, projectRootRef.current));
   }, []);
 
-  useEffect(() => { void reload(); }, [reload, scope, projectRoot]);
+  useEffect(() => {
+    void reload();
+  }, [reload, scope, projectRoot]);
 
-  const handleAdd = useCallback(async (eventType: string, command: string): Promise<void> => {
-    if (!hasRulesAndSkillsAPI()) return;
-    await window.electronAPI.rulesAndSkills.addHook({ scope, eventType, command, projectRoot });
-    await reload();
-  }, [scope, projectRoot, reload]);
+  const handleAdd = useCallback(
+    async (eventType: string, command: string): Promise<void> => {
+      if (!hasRulesAndSkillsAPI()) return;
+      await window.electronAPI.rulesAndSkills.addHook({ scope, eventType, command, projectRoot });
+      await reload();
+    },
+    [scope, projectRoot, reload],
+  );
 
-  const handleRemove = useCallback(async (eventType: string, index: number): Promise<void> => {
-    if (!hasRulesAndSkillsAPI()) return;
-    await window.electronAPI.rulesAndSkills.removeHook({ scope, eventType, index, projectRoot });
-    await reload();
-  }, [scope, projectRoot, reload]);
+  const handleRemove = useCallback(
+    async (eventType: string, index: number): Promise<void> => {
+      if (!hasRulesAndSkillsAPI()) return;
+      await window.electronAPI.rulesAndSkills.removeHook({ scope, eventType, index, projectRoot });
+      await reload();
+    },
+    [scope, projectRoot, reload],
+  );
 
   return { scope, hooks, setScope, handleAdd, handleRemove };
 }
 
-function HooksSubsectionView({ scope, hooks, setScope, handleAdd, handleRemove }: HooksSubsectionModel): React.ReactElement {
+function HooksSubsectionView({
+  scope,
+  hooks,
+  setScope,
+  handleAdd,
+  handleRemove,
+}: HooksSubsectionModel): React.ReactElement {
   return (
     <section>
       <SectionLabel>Hook Commands</SectionLabel>
@@ -174,9 +248,17 @@ function HooksSubsectionView({ scope, hooks, setScope, handleAdd, handleRemove }
       <div style={{ marginTop: '12px' }}>
         {HOOK_EVENT_CATEGORIES.map((category, ci) => (
           <div key={category.label} style={ci > 0 ? { marginTop: '12px' } : undefined}>
-            <p className="text-text-semantic-muted" style={categoryLabelStyle}>{category.label}</p>
+            <p className="text-text-semantic-muted" style={categoryLabelStyle}>
+              {category.label}
+            </p>
             {category.events.map((eventType) => (
-              <HookEventSection key={eventType} eventType={eventType} hooks={hooks} onAdd={handleAdd} onRemove={handleRemove} />
+              <HookEventSection
+                key={eventType}
+                eventType={eventType}
+                hooks={hooks}
+                onAdd={handleAdd}
+                onRemove={handleRemove}
+              />
             ))}
           </div>
         ))}
@@ -185,7 +267,9 @@ function HooksSubsectionView({ scope, hooks, setScope, handleAdd, handleRemove }
   );
 }
 
-export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksConfigSubsectionProps): React.ReactElement {
+export function HooksConfigSubsection({
+  projectRoot: projectRootProp,
+}: HooksConfigSubsectionProps): React.ReactElement {
   const { projectRoot: contextRoot } = useProject();
   const projectRoot = projectRootProp ?? contextRoot ?? undefined;
   const model = useHooksSubsection(projectRoot);
@@ -194,20 +278,97 @@ export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksCon
 
 /* ---------- Styles ---------- */
 
-const categoryLabelStyle: React.CSSProperties = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' };
-const scopeToggleStyle: React.CSSProperties = { display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--border-default)', overflow: 'hidden' };
-const eventSectionStyle: React.CSSProperties = { borderRadius: '6px', border: '1px solid var(--border-default)', marginBottom: '6px', overflow: 'hidden' };
-const eventBodyStyle: React.CSSProperties = { padding: '8px 12px 10px', background: 'var(--surface-base)', borderTop: '1px solid var(--border-default)' };
-const hookRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' };
-const hookCmdStyle: React.CSSProperties = { flex: 1, fontSize: '12px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-const removeBtnStyle: React.CSSProperties = { flexShrink: 0, padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer' };
-const addInputStyle: React.CSSProperties = { flex: 1, padding: '5px 8px', borderRadius: '5px', border: '1px solid var(--border-default)', background: 'var(--surface-raised)', fontSize: '12px', fontFamily: 'var(--font-mono)', outline: 'none' };
-const eventHeaderStyle: React.CSSProperties = { width: '100%', display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'var(--surface-raised)', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' };
+const categoryLabelStyle: React.CSSProperties = {
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  marginBottom: '4px',
+};
+const scopeToggleStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  overflow: 'hidden',
+};
+const eventSectionStyle: React.CSSProperties = {
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  marginBottom: '6px',
+  overflow: 'hidden',
+};
+const eventBodyStyle: React.CSSProperties = {
+  padding: '8px 12px 10px',
+  background: 'var(--surface-base)',
+  borderTop: '1px solid var(--border-default)',
+};
+const hookRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '4px 0',
+};
+const hookCmdStyle: React.CSSProperties = {
+  flex: 1,
+  fontSize: '12px',
+  fontFamily: 'var(--font-mono)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+const removeBtnStyle: React.CSSProperties = {
+  flexShrink: 0,
+  padding: '2px 6px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-default)',
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  fontSize: '11px',
+  cursor: 'pointer',
+};
+const addInputStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '5px 8px',
+  borderRadius: '5px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '12px',
+  fontFamily: 'var(--font-mono)',
+  outline: 'none',
+};
+const eventHeaderStyle: React.CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  padding: '8px 12px',
+  background: 'var(--surface-raised)',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '12px',
+  fontWeight: 500,
+  color: 'var(--text-primary)',
+};
 
 function scopeButtonStyle(active: boolean): React.CSSProperties {
-  return { padding: '5px 14px', background: active ? 'var(--interactive-accent)' : 'transparent', color: active ? 'var(--text-on-accent)' : 'var(--text-muted)', border: 'none', fontSize: '12px', cursor: 'pointer', fontWeight: active ? 600 : 400, transition: 'all 0.15s' };
+  return {
+    padding: '5px 14px',
+    background: active ? 'var(--interactive-accent)' : 'transparent',
+    color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
+    border: 'none',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: active ? 600 : 400,
+    transition: 'all 0.15s',
+  };
 }
 
 function addBtnStyle(disabled: boolean): React.CSSProperties {
-  return { padding: '5px 12px', borderRadius: '5px', border: '1px solid var(--border-default)', background: 'var(--surface-raised)', color: disabled ? 'var(--text-muted)' : 'var(--text-primary)', fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer' };
+  return {
+    padding: '5px 12px',
+    borderRadius: '5px',
+    border: '1px solid var(--border-default)',
+    background: 'var(--surface-raised)',
+    color: disabled ? 'var(--text-muted)' : 'var(--text-primary)',
+    fontSize: '12px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  };
 }

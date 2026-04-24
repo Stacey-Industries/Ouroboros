@@ -17,28 +17,28 @@
 // If no OSC 133 sequences arrive within OSC133_GRACE_MS of first output the
 // feature disables itself silently.
 
-export const OSC133_GRACE_MS = 3000
+export const OSC133_GRACE_MS = 3000;
 // eslint-disable-next-line no-control-regex
-export const OSC133_RE = /\x1b\]133;([A-D])(?:;(\d+))?\x07/g
+export const OSC133_RE = /\x1b\]133;([A-D])(?:;(\d+))?\x07/g;
 
 export interface CommandBlock {
   /** Buffer row where the prompt started */
-  promptRow: number
+  promptRow: number;
   /** Buffer row where the command output started */
-  outputRow: number | null
+  outputRow: number | null;
   /** Exit code, -1 if still running */
-  exitCode: number
+  exitCode: number;
   /** Whether this block is complete (133;D received) */
-  complete: boolean
+  complete: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function getCssVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-export type XtermTheme = ReturnType<typeof buildXtermTheme>
+export type XtermTheme = ReturnType<typeof buildXtermTheme>;
 
 /** Default ANSI 16 color palette for xterm */
 const ANSI_COLORS = {
@@ -58,15 +58,17 @@ const ANSI_COLORS = {
   brightMagenta: '#ff55ff',
   brightCyan: '#55ffff',
   brightWhite: '#ffffff',
-} as const
+} as const;
 
 export function buildXtermTheme(): typeof ANSI_COLORS & {
-  background: string; foreground: string
-  cursor: string; cursorAccent: string
-  selectionBackground: string
+  background: string;
+  foreground: string;
+  cursor: string;
+  cursorAccent: string;
+  selectionBackground: string;
 } {
-  const bg = getCssVar('--term-bg') || '#0d0d0d'
-  const fg = getCssVar('--term-fg') || '#e0e0e0'
+  const bg = getCssVar('--term-bg') || '#0d0d0d';
+  const fg = getCssVar('--term-fg') || '#e0e0e0';
 
   return {
     background: bg,
@@ -75,5 +77,5 @@ export function buildXtermTheme(): typeof ANSI_COLORS & {
     cursorAccent: bg,
     selectionBackground: getCssVar('--term-selection') || 'rgba(255,255,255,0.2)',
     ...ANSI_COLORS,
-  }
+  };
 }

@@ -80,10 +80,24 @@ interface ProviderSelectProps {
   disabled: boolean;
 }
 
-function ProviderSelect({ label, value, providers, onChange, disabled }: ProviderSelectProps): React.ReactElement {
+function ProviderSelect({
+  label,
+  value,
+  providers,
+  onChange,
+  disabled,
+}: ProviderSelectProps): React.ReactElement {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
-      color: 'var(--text-semantic-secondary)', flexShrink: 0 }}>
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '12px',
+        color: 'var(--text-semantic-secondary)',
+        flexShrink: 0,
+      }}
+    >
       {label}
       <select
         value={value}
@@ -93,7 +107,9 @@ function ProviderSelect({ label, value, providers, onChange, disabled }: Provide
       >
         <option value="">Select…</option>
         {providers.map((p) => (
-          <option key={p.id} value={p.id}>{p.label}</option>
+          <option key={p.id} value={p.id}>
+            {p.label}
+          </option>
         ))}
       </select>
     </label>
@@ -102,43 +118,28 @@ function ProviderSelect({ label, value, providers, onChange, disabled }: Provide
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+function RunOrCancelButton({ isRunning, canRun, onRun, onCancel }: { isRunning: boolean; canRun: boolean; onRun: () => void; onCancel: () => void }): React.ReactElement {
+  if (isRunning) {
+    return <button onClick={onCancel} style={{ ...BTN_BASE, background: 'var(--interactive-muted)', color: 'var(--text-semantic-primary)' }}>Cancel</button>;
+  }
+  return (
+    <button onClick={onRun} disabled={!canRun} style={{ ...BTN_BASE, background: canRun ? 'var(--interactive-accent)' : 'var(--interactive-muted)', color: 'var(--text-on-accent)', opacity: canRun ? 1 : 0.5, cursor: canRun ? 'pointer' : 'not-allowed' }}>
+      Run
+    </button>
+  );
+}
+
 export function CompareProvidersHeader({
-  prompt, onPromptChange,
-  providerIdA, providerIdB,
-  onProviderAChange, onProviderBChange,
+  prompt, onPromptChange, providerIdA, providerIdB, onProviderAChange, onProviderBChange,
   providers, isRunning, onRun, onCancel,
 }: CompareProvidersHeaderProps): React.ReactElement {
   const canRun = prompt.trim().length > 0 && providerIdA !== '' && providerIdB !== '';
-
   return (
     <div style={HEADER_STYLE}>
-      <input
-        type="text"
-        value={prompt}
-        onChange={(e) => onPromptChange(e.target.value)}
-        placeholder="Enter prompt…"
-        disabled={isRunning}
-        style={INPUT_STYLE}
-        aria-label="Prompt"
-      />
-      <ProviderSelect label="A:" value={providerIdA} providers={providers}
-        onChange={onProviderAChange} disabled={isRunning} />
-      <ProviderSelect label="B:" value={providerIdB} providers={providers}
-        onChange={onProviderBChange} disabled={isRunning} />
-      {isRunning ? (
-        <button onClick={onCancel} style={{ ...BTN_BASE,
-          background: 'var(--interactive-muted)', color: 'var(--text-semantic-primary)' }}>
-          Cancel
-        </button>
-      ) : (
-        <button onClick={onRun} disabled={!canRun} style={{ ...BTN_BASE,
-          background: canRun ? 'var(--interactive-accent)' : 'var(--interactive-muted)',
-          color: 'var(--text-on-accent)',
-          opacity: canRun ? 1 : 0.5,
-          cursor: canRun ? 'pointer' : 'not-allowed' }}>
-          Run
-        </button>
-      )}
+      <input type="text" value={prompt} onChange={(e) => onPromptChange(e.target.value)} placeholder="Enter prompt…" disabled={isRunning} style={INPUT_STYLE} aria-label="Prompt" />
+      <ProviderSelect label="A:" value={providerIdA} providers={providers} onChange={onProviderAChange} disabled={isRunning} />
+      <ProviderSelect label="B:" value={providerIdB} providers={providers} onChange={onProviderBChange} disabled={isRunning} />
+      <RunOrCancelButton isRunning={isRunning} canRun={canRun} onRun={onRun} onCancel={onCancel} />
     </div>
   );
 }

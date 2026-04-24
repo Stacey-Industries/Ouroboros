@@ -12,12 +12,7 @@ import fsPromises from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ContextFeatureVec, ContextRankerWeights } from './contextClassifier';
-import {
-  getActiveWeights,
-  reloadContextWeights,
-  resetForTests,
-  score,
-} from './contextClassifier';
+import { getActiveWeights, reloadContextWeights, resetForTests, score } from './contextClassifier';
 import { BUNDLED_CONTEXT_WEIGHTS } from './contextClassifierDefaults';
 
 // Mock logger before importing classifier
@@ -108,9 +103,7 @@ describe('score()', () => {
     score({}, w);
     score({}, w);
 
-    const calls = warnSpy.mock.calls.filter((c) =>
-      String(c[0]).includes('missingFeat'),
-    );
+    const calls = warnSpy.mock.calls.filter((c) => String(c[0]).includes('missingFeat'));
     expect(calls.length).toBe(1);
     warnSpy.mockRestore();
   });
@@ -162,9 +155,7 @@ describe('reloadContextWeights()', () => {
 
     await reloadContextWeights('/fake/weights.json');
 
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('v-log-test'),
-    );
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('v-log-test'));
   });
 
   it('returns { loaded: false, reason: file-missing } when file not found', async () => {
@@ -211,7 +202,8 @@ describe('reloadContextWeights()', () => {
 
   it('rejects Infinity in weights array', async () => {
     // JSON.stringify converts Infinity → null, so we patch the raw string
-    const raw = '{"version":"v1","featureOrder":["a","b"],"weights":[1e999,0.5],"bias":0,"metrics":{"samples":1,"syntheticNegatives":0,"heldOutAuc":0.5,"trainedAt":"2026-01-01T00:00:00Z","belowMinSamples":false,"classBalance":{"pos":1,"neg":0}}}';
+    const raw =
+      '{"version":"v1","featureOrder":["a","b"],"weights":[1e999,0.5],"bias":0,"metrics":{"samples":1,"syntheticNegatives":0,"heldOutAuc":0.5,"trainedAt":"2026-01-01T00:00:00Z","belowMinSamples":false,"classBalance":{"pos":1,"neg":0}}}';
     mockReadFile.mockResolvedValueOnce(raw as never);
 
     const result = await reloadContextWeights('/fake/inf.json');
@@ -271,9 +263,7 @@ describe('resetForTests()', () => {
     resetForTests();
     score({}, w); // should warn again after reset
 
-    const calls = warnSpy.mock.calls.filter((c) =>
-      String(c[0]).includes('resetFeat'),
-    );
+    const calls = warnSpy.mock.calls.filter((c) => String(c[0]).includes('resetFeat'));
     expect(calls.length).toBe(2);
     warnSpy.mockRestore();
   });

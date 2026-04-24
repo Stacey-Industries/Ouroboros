@@ -31,14 +31,7 @@ vi.mock('./web/webServer', () => ({
 
 // ─── Import SUT after mocks ───────────────────────────────────────────────────
 
-import {
-  check,
-  forget,
-  hashPattern,
-  listAll,
-  rememberAllow,
-  rememberDeny,
-} from './approvalMemory';
+import { check, forget, hashPattern, listAll, rememberAllow, rememberDeny } from './approvalMemory';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

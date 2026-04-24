@@ -7,14 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { LeafSlot, SlotNode, SplitNode } from './slotTree';
-import {
-  collectLeaves,
-  findLeaf,
-  isLeaf,
-  isSplit,
-  mapTree,
-  traverseLeaves,
-} from './slotTree';
+import { collectLeaves, findLeaf, isLeaf, isSplit, mapTree, traverseLeaves } from './slotTree';
 
 // ---------------------------------------------------------------------------
 // Fixtures

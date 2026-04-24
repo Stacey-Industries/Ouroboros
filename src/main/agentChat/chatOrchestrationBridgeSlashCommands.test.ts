@@ -93,7 +93,10 @@ describe('dispatchSlashCommand — /research status', () => {
 
   it('reply contains current mode', () => {
     dispatchSlashCommand('/research aggressive', ctx);
-    const result = dispatchSlashCommand('/research status', ctx) as unknown as Record<string, unknown>;
+    const result = dispatchSlashCommand('/research status', ctx) as unknown as Record<
+      string,
+      unknown
+    >;
     expect(result?.slashCommandReply).toMatch(/aggressive/i);
   });
 

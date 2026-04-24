@@ -200,22 +200,12 @@ interface TabListProps {
   onCloseToRight?: (filePath: string) => void;
   onCloseAll?: () => void;
 }
-function TabList({
-  sortedFiles,
-  activeIndex,
-  activeTabRef,
-  scrollRef,
-  onActivate,
-  onClose,
-  onPin,
-  onUnpin,
-  onTogglePin,
-  onCloseOthers,
-  onCloseToRight,
-  onCloseAll,
-}: TabListProps): React.ReactElement {
+function TabItems({
+  sortedFiles, activeIndex, activeTabRef,
+  onActivate, onClose, onPin, onUnpin, onTogglePin, onCloseOthers, onCloseToRight, onCloseAll,
+}: Omit<TabListProps, 'scrollRef'>): React.ReactElement {
   return (
-    <div ref={scrollRef as React.RefObject<HTMLDivElement | null>} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
+    <>
       {sortedFiles.map(({ file, originalIndex }) => (
         <FileViewerTabItem
           key={file.path}
@@ -232,6 +222,14 @@ function TabList({
           tabRef={originalIndex === activeIndex ? (activeTabRef as React.RefObject<HTMLDivElement | null>) : undefined}
         />
       ))}
+    </>
+  );
+}
+
+function TabList({ scrollRef, ...rest }: TabListProps): React.ReactElement {
+  return (
+    <div ref={scrollRef as React.RefObject<HTMLDivElement | null>} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
+      <TabItems {...rest} />
     </div>
   );
 }

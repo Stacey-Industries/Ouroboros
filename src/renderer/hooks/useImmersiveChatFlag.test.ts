@@ -24,11 +24,9 @@ const { readFlag } = __testing;
 function makeElectronAPI(immersiveChat?: boolean) {
   return {
     config: {
-      getAll: vi.fn().mockResolvedValue(
-        immersiveChat === undefined
-          ? {}
-          : { layout: { immersiveChat } },
-      ),
+      getAll: vi
+        .fn()
+        .mockResolvedValue(immersiveChat === undefined ? {} : { layout: { immersiveChat } }),
       set: vi.fn().mockResolvedValue({ success: true }),
     },
   };
@@ -95,7 +93,9 @@ describe('useImmersiveChatFlag', () => {
       configurable: true,
     });
     const { result } = renderHook(() => useImmersiveChatFlag());
-    await act(async () => { /* flush promises */ });
+    await act(async () => {
+      /* flush promises */
+    });
     expect(result.current).toBe(false);
   });
 
@@ -106,7 +106,9 @@ describe('useImmersiveChatFlag', () => {
       configurable: true,
     });
     const { result } = renderHook(() => useImmersiveChatFlag());
-    await act(async () => { /* flush promises */ });
+    await act(async () => {
+      /* flush promises */
+    });
     expect(result.current).toBe(true);
   });
 
@@ -117,24 +119,34 @@ describe('useImmersiveChatFlag', () => {
       configurable: true,
     });
     const { result } = renderHook(() => useImmersiveChatFlag());
-    await act(async () => { /* flush initial read */ });
+    await act(async () => {
+      /* flush initial read */
+    });
     expect(result.current).toBe(false);
 
-    act(() => { window.dispatchEvent(new CustomEvent(TOGGLE_EVENT)); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent(TOGGLE_EVENT));
+    });
     expect(result.current).toBe(true);
 
-    act(() => { window.dispatchEvent(new CustomEvent(TOGGLE_EVENT)); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent(TOGGLE_EVENT));
+    });
     expect(result.current).toBe(false);
   });
 
   it('removes event listener on unmount', async () => {
     const { result, unmount } = renderHook(() => useImmersiveChatFlag());
-    await act(async () => { /* flush */ });
+    await act(async () => {
+      /* flush */
+    });
 
     unmount();
 
     // Firing event after unmount must not update the (now-dead) hook.
-    act(() => { window.dispatchEvent(new CustomEvent(TOGGLE_EVENT)); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent(TOGGLE_EVENT));
+    });
     expect(result.current).toBe(false);
   });
 });

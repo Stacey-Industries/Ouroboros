@@ -1,6 +1,4 @@
-import {
-  buildSnippetList,
-} from './contextPacketBuilderSnippets';
+import { buildSnippetList } from './contextPacketBuilderSnippets';
 import {
   buildBudgetSummary,
   DEFAULT_FULL_FILE_LINE_LIMIT,

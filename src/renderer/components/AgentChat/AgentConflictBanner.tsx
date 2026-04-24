@@ -49,9 +49,10 @@ function useSeverityClasses(severity: AgentConflictReport['severity']): {
 function buildDescription(report: AgentConflictReport, otherSession: string): string {
   if (report.overlappingSymbols.length > 0) {
     const sym = report.overlappingSymbols[0];
-    const extra = report.overlappingSymbols.length > 1
-      ? ` (+${report.overlappingSymbols.length - 1} more)`
-      : '';
+    const extra =
+      report.overlappingSymbols.length > 1
+        ? ` (+${report.overlappingSymbols.length - 1} more)`
+        : '';
     return `Session ${otherSession} is editing \`${sym.name}\` in ${sym.file}${extra}`;
   }
   const files = report.overlappingFiles;

@@ -1,14 +1,14 @@
-import fs from 'fs/promises'
-import path from 'path'
+import fs from 'fs/promises';
+import path from 'path';
 
-import log from '../logger'
+import log from '../logger';
 
 // ---------------------------------------------------------------------------
 // Path helper
 // ---------------------------------------------------------------------------
 
 function settingsPath(projectRoot: string): string {
-  return path.join(projectRoot, '.claude', 'settings.json')
+  return path.join(projectRoot, '.claude', 'settings.json');
 }
 
 // ---------------------------------------------------------------------------
@@ -16,18 +16,22 @@ function settingsPath(projectRoot: string): string {
 // ---------------------------------------------------------------------------
 
 async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
-  const tmpPath = `${filePath}.tmp`
-  const content = JSON.stringify(data, null, 2)
+  const tmpPath = `${filePath}.tmp`;
+  const content = JSON.stringify(data, null, 2);
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
-  await fs.writeFile(tmpPath, content, 'utf-8')
+  await fs.writeFile(tmpPath, content, 'utf-8');
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
-    await fs.rename(tmpPath, filePath)
+    await fs.rename(tmpPath, filePath);
   } catch (renameErr) {
     // Best effort: clean up .tmp file
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- cleanup of tmp file at the same validated path
-    try { await fs.unlink(tmpPath) } catch { /* ignore */ }
-    throw renameErr
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- cleanup of tmp file at the same validated path
+      await fs.unlink(tmpPath);
+    } catch {
+      /* ignore */
+    }
+    throw renameErr;
   }
 }
 
@@ -35,29 +39,32 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 // Read settings file — returns null if file invalid JSON (do not overwrite)
 // ---------------------------------------------------------------------------
 
-type SettingsRecord = Record<string, unknown>
-type ServerMap = Record<string, { url?: string; command?: string; args?: string[]; env?: Record<string, string> }>
+type SettingsRecord = Record<string, unknown>;
+type ServerMap = Record<
+  string,
+  { url?: string; command?: string; args?: string[]; env?: Record<string, string> }
+>;
 
 async function readSettings(filePath: string): Promise<SettingsRecord | null> {
-  let raw: string
+  let raw: string;
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
-    raw = await fs.readFile(filePath, 'utf-8')
+    raw = await fs.readFile(filePath, 'utf-8');
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code
+    const code = (err as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
       // File does not exist — treat as empty object
-      return {}
+      return {};
     }
-    throw err
+    throw err;
   }
 
   // File exists — try to parse
   try {
-    return JSON.parse(raw) as SettingsRecord
+    return JSON.parse(raw) as SettingsRecord;
   } catch {
-    log.warn('[internal-mcp] .claude/settings.json exists but is not valid JSON — not overwriting')
-    throw new Error('.claude/settings.json exists but contains invalid JSON')
+    log.warn('[internal-mcp] .claude/settings.json exists but is not valid JSON — not overwriting');
+    throw new Error('.claude/settings.json exists but contains invalid JSON');
   }
 }
 
@@ -72,39 +79,39 @@ export async function injectIntoProjectSettings(
   projectRoot: string,
   serverPort: number,
 ): Promise<void> {
-  const filePath = settingsPath(projectRoot)
+  const filePath = settingsPath(projectRoot);
 
   // Ensure the .claude/ directory exists
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated projectRoot
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
 
-  const settings = await readSettings(filePath)
+  const settings = await readSettings(filePath);
   if (settings === null) {
     // Should not happen given the logic above, but guard anyway
-    throw new Error('Could not read settings file')
+    throw new Error('Could not read settings file');
   }
 
   // Upsert mcpServers.ouroboros — use 127.0.0.1 explicitly (not localhost)
-  const mcpServers = ((settings.mcpServers as ServerMap | undefined) ?? {}) as ServerMap
-  mcpServers['ouroboros'] = { url: `http://127.0.0.1:${serverPort}/sse` }
+  const mcpServers = ((settings.mcpServers as ServerMap | undefined) ?? {}) as ServerMap;
+  mcpServers['ouroboros'] = { url: `http://127.0.0.1:${serverPort}/sse` };
 
   // Remove external codebase-memory-mcp if present (now redundant)
-  delete mcpServers['codebase-memory-mcp']
-  delete mcpServers['codebase-memory']
+  delete mcpServers['codebase-memory-mcp'];
+  delete mcpServers['codebase-memory'];
 
   // Also clean from disabled servers
-  const disabledMcp = ((settings.disabledMcpServers as ServerMap | undefined) ?? {}) as ServerMap
-  delete disabledMcp['codebase-memory-mcp']
-  delete disabledMcp['codebase-memory']
+  const disabledMcp = ((settings.disabledMcpServers as ServerMap | undefined) ?? {}) as ServerMap;
+  delete disabledMcp['codebase-memory-mcp'];
+  delete disabledMcp['codebase-memory'];
   if (Object.keys(disabledMcp).length > 0) {
-    settings.disabledMcpServers = disabledMcp
+    settings.disabledMcpServers = disabledMcp;
   } else {
-    delete settings.disabledMcpServers
+    delete settings.disabledMcpServers;
   }
 
-  settings.mcpServers = mcpServers
+  settings.mcpServers = mcpServers;
 
-  await atomicWriteJson(filePath, settings)
+  await atomicWriteJson(filePath, settings);
 }
 
 // ---------------------------------------------------------------------------
@@ -112,45 +119,45 @@ export async function injectIntoProjectSettings(
 // ---------------------------------------------------------------------------
 
 export async function removeFromProjectSettings(projectRoot: string): Promise<void> {
-  const filePath = settingsPath(projectRoot)
+  const filePath = settingsPath(projectRoot);
 
-  let settings: SettingsRecord
+  let settings: SettingsRecord;
   try {
-    const result = await readSettings(filePath)
-    if (result === null) return  // Invalid JSON — don't touch
-    settings = result
+    const result = await readSettings(filePath);
+    if (result === null) return; // Invalid JSON — don't touch
+    settings = result;
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code
-    if (code === 'ENOENT') return  // File doesn't exist — nothing to do
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') return; // File doesn't exist — nothing to do
     // If the file is invalid JSON, readSettings throws without ENOENT code
     // Log the warning but don't fail the caller
-    log.warn('[internal-mcp] removeFromProjectSettings: could not read settings file:', err)
-    return
+    log.warn('[internal-mcp] removeFromProjectSettings: could not read settings file:', err);
+    return;
   }
 
   // Remove ouroboros from mcpServers
-  const mcpServers = (settings.mcpServers ?? {}) as ServerMap
+  const mcpServers = (settings.mcpServers ?? {}) as ServerMap;
   if ('ouroboros' in mcpServers) {
-    delete mcpServers['ouroboros']
+    delete mcpServers['ouroboros'];
   }
 
   // Clean up empty mcpServers object
   if (Object.keys(mcpServers).length === 0) {
-    delete settings.mcpServers
+    delete settings.mcpServers;
   } else {
-    settings.mcpServers = mcpServers
+    settings.mcpServers = mcpServers;
   }
 
   // Remove ouroboros from disabledMcpServers if present
-  const disabledServers = (settings.disabledMcpServers ?? {}) as ServerMap
+  const disabledServers = (settings.disabledMcpServers ?? {}) as ServerMap;
   if ('ouroboros' in disabledServers) {
-    delete disabledServers['ouroboros']
+    delete disabledServers['ouroboros'];
     if (Object.keys(disabledServers).length === 0) {
-      delete settings.disabledMcpServers
+      delete settings.disabledMcpServers;
     } else {
-      settings.disabledMcpServers = disabledServers
+      settings.disabledMcpServers = disabledServers;
     }
   }
 
-  await atomicWriteJson(filePath, settings)
+  await atomicWriteJson(filePath, settings);
 }

@@ -66,7 +66,12 @@ describe('reduceTaskCreated', () => {
 describe('reduceTaskCompleted', () => {
   const stateWithTask: AgentState = {
     ...BASE_STATE,
-    sessions: [{ ...BASE_SESSION, tasks: [{ id: 'task-1', description: 'Do something', status: 'pending', createdAt: 1000 }] }],
+    sessions: [
+      {
+        ...BASE_SESSION,
+        tasks: [{ id: 'task-1', description: 'Do something', status: 'pending', createdAt: 1000 }],
+      },
+    ],
   };
 
   it('marks task as completed with timestamp', () => {
@@ -84,16 +89,21 @@ describe('reduceTaskCompleted', () => {
   it('leaves other tasks unchanged', () => {
     const multiTaskState: AgentState = {
       ...BASE_STATE,
-      sessions: [{
-        ...BASE_SESSION,
-        tasks: [
-          { id: 'task-1', description: 'A', status: 'pending', createdAt: 1000 },
-          { id: 'task-2', description: 'B', status: 'pending', createdAt: 1001 },
-        ],
-      }],
+      sessions: [
+        {
+          ...BASE_SESSION,
+          tasks: [
+            { id: 'task-1', description: 'A', status: 'pending', createdAt: 1000 },
+            { id: 'task-2', description: 'B', status: 'pending', createdAt: 1001 },
+          ],
+        },
+      ],
     };
     const action: TaskCompletedAction = {
-      type: 'TASK_COMPLETED', sessionId: 'sess-1', taskId: 'task-1', timestamp: 9000,
+      type: 'TASK_COMPLETED',
+      sessionId: 'sess-1',
+      taskId: 'task-1',
+      timestamp: 9000,
     };
     const next = reduceTaskCompleted(multiTaskState, action);
     expect(next.sessions[0].tasks?.[1].status).toBe('pending');

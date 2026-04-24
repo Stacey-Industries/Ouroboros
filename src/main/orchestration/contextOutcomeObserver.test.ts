@@ -28,7 +28,9 @@ import type { ContextOutcome } from './contextTypes';
 function makeMockWriter(): { writer: ContextOutcomeWriter; recorded: ContextOutcome[] } {
   const recorded: ContextOutcome[] = [];
   const writer: ContextOutcomeWriter = {
-    recordOutcome: vi.fn((o: ContextOutcome) => { recorded.push(o); }),
+    recordOutcome: vi.fn((o: ContextOutcome) => {
+      recorded.push(o);
+    }),
     flushPendingWrites: vi.fn(async () => {}),
     closeOutcomeWriter: vi.fn(async () => {}),
   };
@@ -141,8 +143,8 @@ describe('outcome kinds — used / unused / missed', () => {
     initContextOutcomeObserver(writer);
 
     recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts', 'src/b.ts']));
-    observeToolCall('t', 'Read', { path: 'src/a.ts' });   // used
-    observeToolCall('t', 'Write', { path: 'src/c.ts' });  // missed (not in packet)
+    observeToolCall('t', 'Read', { path: 'src/a.ts' }); // used
+    observeToolCall('t', 'Write', { path: 'src/c.ts' }); // missed (not in packet)
     // src/b.ts never touched → unused
     const outcomes = recordTurnEnd('t');
 
@@ -156,7 +158,7 @@ describe('new required fields — traceId, fileId, sessionId, timestamp, toolKin
     const { writer } = makeMockWriter();
     initContextOutcomeObserver(writer);
 
-    recordTurnStart('t', 'trace-999', makeIncludedFiles(['src/a.ts']), 'sess-1');
+    recordTurnStart('t', 'trace-999', makeIncludedFiles(['src/a.ts']), { sessionId: 'sess-1' });
     observeToolCall('t', 'Read', { path: 'src/a.ts' });
     const outcomes = recordTurnEnd('t');
 
@@ -167,7 +169,7 @@ describe('new required fields — traceId, fileId, sessionId, timestamp, toolKin
     const { writer } = makeMockWriter();
     initContextOutcomeObserver(writer);
 
-    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']), 'sess-42');
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']), { sessionId: 'sess-42' });
     const outcomes = recordTurnEnd('t');
 
     expect(outcomes[0].sessionId).toBe('sess-42');
@@ -248,7 +250,7 @@ describe('fileId normalisation — symmetric across used / unused / missed', () 
     const { writer } = makeMockWriter();
     initContextOutcomeObserver(writer);
 
-    recordTurnStart('t', 'tr', makeIncludedFiles(['src/A.ts']), '', '');
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/A.ts']));
     observeToolCall('t', 'Read', { path: 'SRC\\A.ts' });
     const outcomes = recordTurnEnd('t');
 
@@ -260,7 +262,7 @@ describe('fileId normalisation — symmetric across used / unused / missed', () 
     const { writer } = makeMockWriter();
     initContextOutcomeObserver(writer);
 
-    recordTurnStart('t', 'tr', makeIncludedFiles(['src/B.ts']), '', '');
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/B.ts']));
     const outcomes = recordTurnEnd('t');
 
     expect(outcomes[0].kind).toBe('unused');
@@ -271,7 +273,7 @@ describe('fileId normalisation — symmetric across used / unused / missed', () 
     const { writer } = makeMockWriter();
     initContextOutcomeObserver(writer);
 
-    recordTurnStart('t', 'tr', makeIncludedFiles(['src/known.ts']), '', '');
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/known.ts']));
     observeToolCall('t', 'Read', { path: 'src/UNKNOWN.ts' });
     const outcomes = recordTurnEnd('t');
 
@@ -285,13 +287,7 @@ describe('fileId normalisation — symmetric across used / unused / missed', () 
 
     // included: src/A.ts, src/B.ts
     // touched: src/A.ts (used), src/C.ts (missed); src/B.ts → unused
-    recordTurnStart(
-      't',
-      'tr',
-      makeIncludedFiles(['src/A.ts', 'src/B.ts']),
-      'sess',
-      '',
-    );
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/A.ts', 'src/B.ts']), { sessionId: 'sess' });
     observeToolCall('t', 'Edit', { path: 'SRC\\A.ts' });
     observeToolCall('t', 'Read', { path: 'SRC\\C.ts' });
     const outcomes = recordTurnEnd('t');
@@ -358,7 +354,16 @@ describe('tool normalisation — argument field variants', () => {
   });
 
   it('recognises all aliased file-touching tool names', () => {
-    const tools = ['Read', 'read_file', 'view_file', 'Edit', 'edit_file', 'Write', 'write_file', 'MultiEdit'];
+    const tools = [
+      'Read',
+      'read_file',
+      'view_file',
+      'Edit',
+      'edit_file',
+      'Write',
+      'write_file',
+      'MultiEdit',
+    ];
     for (const tool of tools) {
       _resetContextOutcomeObserverForTests();
       _setFlagGetterForTests(() => true);
@@ -477,7 +482,7 @@ describe('join symmetry — (traceId, fileId) tuple matches across decision and 
     const decisionFileId = 'src/foo.ts';
 
     // Observer receives the raw path; must normalise to the same form
-    recordTurnStart('t', 'trace-join', makeIncludedFiles(['src/Foo.ts']), 'sess', '');
+    recordTurnStart('t', 'trace-join', makeIncludedFiles(['src/Foo.ts']), { sessionId: 'sess' });
     observeToolCall('t', 'Edit', { path: 'src\\Foo.ts' });
     const outcomes = recordTurnEnd('t');
 

@@ -9,7 +9,9 @@ import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-function makeThread(overrides: Partial<AgentChatThreadRecord> & { id: string }): AgentChatThreadRecord {
+function makeThread(
+  overrides: Partial<AgentChatThreadRecord> & { id: string },
+): AgentChatThreadRecord {
   return {
     version: 1,
     workspaceRoot: '/work',
@@ -22,7 +24,9 @@ function makeThread(overrides: Partial<AgentChatThreadRecord> & { id: string }):
   } as AgentChatThreadRecord;
 }
 
-function makeMsg(overrides: Partial<AgentChatMessageRecord> & { id: string }): AgentChatMessageRecord {
+function makeMsg(
+  overrides: Partial<AgentChatMessageRecord> & { id: string },
+): AgentChatMessageRecord {
   return {
     threadId: 'thread-1',
     role: 'user',

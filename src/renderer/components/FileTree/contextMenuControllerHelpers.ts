@@ -48,14 +48,19 @@ function addCreateItems(items: MenuItem[], handlers: ContextMenuHandlers): void 
 function addNodeItems(
   items: MenuItem[],
   handlers: ContextMenuHandlers,
-  { confirmingDelete, isRoot, selectedCount }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'isRoot' | 'selectedCount'>,
+  {
+    confirmingDelete,
+    isRoot,
+    selectedCount,
+  }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'isRoot' | 'selectedCount'>,
 ): void {
   if (isRoot) {
     return;
   }
 
   items.push({ label: 'Rename', shortcut: 'F2', action: handlers.handleRename, separator: true });
-  const deleteBase = selectedCount && selectedCount > 1 ? `Delete ${selectedCount} Items` : 'Delete';
+  const deleteBase =
+    selectedCount && selectedCount > 1 ? `Delete ${selectedCount} Items` : 'Delete';
   items.push({
     label: confirmingDelete ? 'Confirm Delete?' : deleteBase,
     shortcut: 'Del',
@@ -69,7 +74,11 @@ function addClipboardItems(items: MenuItem[], handlers: ContextMenuHandlers): vo
   items.push({ label: 'Copy Path', action: handlers.handleCopyPath, separator: true });
   items.push({ label: 'Copy Relative Path', action: handlers.handleCopyRelativePath });
   items.push({ label: 'Open in Terminal', action: handlers.handleOpenInTerminal, separator: true });
-  items.push({ label: 'Reveal in File Manager', action: handlers.handleRevealInFileManager, separator: true });
+  items.push({
+    label: 'Reveal in File Manager',
+    action: handlers.handleRevealInFileManager,
+    separator: true,
+  });
 }
 
 function addBookmarkItem(
@@ -90,7 +99,11 @@ function addBookmarkItem(
 function addGitItems(
   items: MenuItem[],
   handlers: ContextMenuHandlers,
-  { gitStatus, onStage, onUnstage }: Pick<MenuBuilderOptions, 'gitStatus' | 'onStage' | 'onUnstage'>,
+  {
+    gitStatus,
+    onStage,
+    onUnstage,
+  }: Pick<MenuBuilderOptions, 'gitStatus' | 'onStage' | 'onUnstage'>,
 ): void {
   if (gitStatus && onStage) {
     items.push({ label: 'Stage file', action: handlers.handleStage, separator: true });
@@ -105,10 +118,18 @@ function addBulkItems(
   items: MenuItem[],
   count: number,
   bulkHandlers: BulkMenuHandlers,
-  { confirmingDelete, onStage, onUnstage }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'onStage' | 'onUnstage'>,
+  {
+    confirmingDelete,
+    onStage,
+    onUnstage,
+  }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'onStage' | 'onUnstage'>,
 ): void {
   items.push({ label: `Open ${count} files`, action: bulkHandlers.handleBulkOpen });
-  items.push({ label: `Copy ${count} paths`, action: bulkHandlers.handleBulkCopyPaths, separator: true });
+  items.push({
+    label: `Copy ${count} paths`,
+    action: bulkHandlers.handleBulkCopyPaths,
+    separator: true,
+  });
   items.push({
     label: confirmingDelete ? `Confirm delete ${count} items?` : `Delete ${count} items`,
     action: bulkHandlers.handleBulkDelete,
@@ -116,10 +137,18 @@ function addBulkItems(
     separator: true,
   });
   if (onStage) {
-    items.push({ label: `Stage ${count} files`, action: bulkHandlers.handleBulkStage, separator: true });
+    items.push({
+      label: `Stage ${count} files`,
+      action: bulkHandlers.handleBulkStage,
+      separator: true,
+    });
   }
   if (onUnstage) {
-    items.push({ label: `Unstage ${count} files`, action: bulkHandlers.handleBulkUnstage, separator: !onStage });
+    items.push({
+      label: `Unstage ${count} files`,
+      action: bulkHandlers.handleBulkUnstage,
+      separator: !onStage,
+    });
   }
 }
 

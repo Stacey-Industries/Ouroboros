@@ -10,10 +10,7 @@
 import React, { useCallback, useMemo } from 'react';
 
 import { useConfig } from '../../hooks/useConfig';
-import {
-  DEFAULT_SPINNER_CHARS,
-  DEFAULT_THINKING_VERBS,
-} from '../../themes/thinkingDefaults';
+import { DEFAULT_SPINNER_CHARS, DEFAULT_THINKING_VERBS } from '../../themes/thinkingDefaults';
 import type { AppConfig } from '../../types/electron';
 import { SpinnerPresetPicker } from './SpinnerPresetPicker';
 import { ThinkingVerbList } from './ThinkingVerbList';
@@ -21,34 +18,57 @@ import { ThinkingVerbList } from './ThinkingVerbList';
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 600, textTransform: 'uppercase',
-  letterSpacing: '0.06em', marginBottom: '12px', color: 'var(--text-text-semantic-muted)',
+  fontSize: '11px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  marginBottom: '12px',
+  color: 'var(--text-text-semantic-muted)',
 };
 
 const panelStyle: React.CSSProperties = {
-  padding: '12px 14px', borderRadius: '8px', background: 'var(--surface-panel)',
-  border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '14px',
+  padding: '12px 14px',
+  borderRadius: '8px',
+  background: 'var(--surface-panel)',
+  border: '1px solid var(--border-subtle)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '14px',
 };
 
 const subsectionLabelStyle: React.CSSProperties = {
-  fontSize: '12px', fontWeight: 600,
-  color: 'var(--text-text-semantic-primary)', marginBottom: '6px',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: 'var(--text-text-semantic-primary)',
+  marginBottom: '6px',
 };
 
 const overrideRowStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '8px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
 };
 
 const overrideInputStyle: React.CSSProperties = {
-  flex: 1, padding: '5px 8px', borderRadius: '6px',
-  border: '1px solid var(--border-subtle)', background: 'var(--surface-inset)',
-  color: 'var(--text-text-semantic-primary)', fontSize: '12px',
+  flex: 1,
+  padding: '5px 8px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-subtle)',
+  background: 'var(--surface-inset)',
+  color: 'var(--text-text-semantic-primary)',
+  fontSize: '12px',
 };
 
 const resetButtonStyle: React.CSSProperties = {
-  padding: '5px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)',
-  background: 'transparent', color: 'var(--text-text-semantic-primary)',
-  fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap', alignSelf: 'flex-end',
+  padding: '5px 12px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-subtle)',
+  background: 'transparent',
+  color: 'var(--text-text-semantic-primary)',
+  fontSize: '12px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  alignSelf: 'flex-end',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -76,22 +96,34 @@ function useThinkingVerbPickerModel() {
   const hasOverride = verbOverride.trim().length > 0;
   const spinnerChars = theming?.spinnerChars ?? DEFAULT_SPINNER_CHARS;
 
-  const handleVerbsChange = useCallback((next: string[]) => {
-    patchTheming(set, theming, { thinkingVerbs: next });
-  }, [set, theming]);
+  const handleVerbsChange = useCallback(
+    (next: string[]) => {
+      patchTheming(set, theming, { thinkingVerbs: next });
+    },
+    [set, theming],
+  );
 
-  const handleOverrideToggle = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const override = e.target.checked ? (verbs[0] ?? DEFAULT_THINKING_VERBS[0]) : '';
-    patchTheming(set, theming, { verbOverride: override });
-  }, [set, theming, verbs]);
+  const handleOverrideToggle = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const override = e.target.checked ? (verbs[0] ?? DEFAULT_THINKING_VERBS[0]) : '';
+      patchTheming(set, theming, { verbOverride: override });
+    },
+    [set, theming, verbs],
+  );
 
-  const handleOverrideInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    patchTheming(set, theming, { verbOverride: e.target.value });
-  }, [set, theming]);
+  const handleOverrideInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      patchTheming(set, theming, { verbOverride: e.target.value });
+    },
+    [set, theming],
+  );
 
-  const handleSpinnerChange = useCallback((chars: string) => {
-    patchTheming(set, theming, { spinnerChars: chars });
-  }, [set, theming]);
+  const handleSpinnerChange = useCallback(
+    (chars: string) => {
+      patchTheming(set, theming, { spinnerChars: chars });
+    },
+    [set, theming],
+  );
 
   const handleReset = useCallback(() => {
     void set('theming', {
@@ -103,9 +135,15 @@ function useThinkingVerbPickerModel() {
   }, [set, theming]);
 
   return {
-    verbs, verbOverride, hasOverride, spinnerChars,
-    handleVerbsChange, handleOverrideToggle, handleOverrideInput,
-    handleSpinnerChange, handleReset,
+    verbs,
+    verbOverride,
+    hasOverride,
+    spinnerChars,
+    handleVerbsChange,
+    handleOverrideToggle,
+    handleOverrideInput,
+    handleSpinnerChange,
+    handleReset,
   };
 }
 
@@ -120,12 +158,17 @@ export function ThinkingVerbPicker(): React.ReactElement {
       <div style={panelStyle}>
         <VerbsSubsection verbs={m.verbs} onVerbsChange={m.handleVerbsChange} />
         <OverrideSubsection
-          hasOverride={m.hasOverride} verbOverride={m.verbOverride}
-          onToggle={m.handleOverrideToggle} onInput={m.handleOverrideInput}
+          hasOverride={m.hasOverride}
+          verbOverride={m.verbOverride}
+          onToggle={m.handleOverrideToggle}
+          onInput={m.handleOverrideInput}
         />
         <SpinnerSubsection spinnerChars={m.spinnerChars} onSpinnerChange={m.handleSpinnerChange} />
-        <button type="button" style={resetButtonStyle}
-          onClick={m.handleReset} data-testid="thinking-reset-btn"
+        <button
+          type="button"
+          style={resetButtonStyle}
+          onClick={m.handleReset}
+          data-testid="thinking-reset-btn"
         >
           Reset to defaults
         </button>
@@ -136,7 +179,10 @@ export function ThinkingVerbPicker(): React.ReactElement {
 
 // ── Sub-sections ──────────────────────────────────────────────────────────────
 
-function VerbsSubsection({ verbs, onVerbsChange }: {
+function VerbsSubsection({
+  verbs,
+  onVerbsChange,
+}: {
   verbs: string[];
   onVerbsChange: (v: string[]) => void;
 }): React.ReactElement {
@@ -148,7 +194,12 @@ function VerbsSubsection({ verbs, onVerbsChange }: {
   );
 }
 
-function OverrideSubsection({ hasOverride, verbOverride, onToggle, onInput }: {
+function OverrideSubsection({
+  hasOverride,
+  verbOverride,
+  onToggle,
+  onInput,
+}: {
   hasOverride: boolean;
   verbOverride: string;
   onToggle: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -158,15 +209,25 @@ function OverrideSubsection({ hasOverride, verbOverride, onToggle, onInput }: {
     <div>
       <div style={subsectionLabelStyle}>Single-verb override</div>
       <div style={overrideRowStyle}>
-        <input type="checkbox" id="verb-override-toggle" checked={hasOverride}
-          onChange={onToggle} data-testid="override-toggle"
+        <input
+          type="checkbox"
+          id="verb-override-toggle"
+          checked={hasOverride}
+          onChange={onToggle}
+          data-testid="override-toggle"
         />
         <label htmlFor="verb-override-toggle" style={{ fontSize: '12px' }}>
           Always use one verb
         </label>
         {hasOverride && (
-          <input type="text" style={overrideInputStyle} value={verbOverride} onChange={onInput}
-            placeholder="e.g. ruminating" aria-label="Override verb" data-testid="override-input"
+          <input
+            type="text"
+            style={overrideInputStyle}
+            value={verbOverride}
+            onChange={onInput}
+            placeholder="e.g. ruminating"
+            aria-label="Override verb"
+            data-testid="override-input"
           />
         )}
       </div>
@@ -174,7 +235,10 @@ function OverrideSubsection({ hasOverride, verbOverride, onToggle, onInput }: {
   );
 }
 
-function SpinnerSubsection({ spinnerChars, onSpinnerChange }: {
+function SpinnerSubsection({
+  spinnerChars,
+  onSpinnerChange,
+}: {
   spinnerChars: string;
   onSpinnerChange: (chars: string) => void;
 }): React.ReactElement {

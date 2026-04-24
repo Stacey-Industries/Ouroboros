@@ -2,7 +2,7 @@ import Fuse from 'fuse.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
-import type { MatchRange,TreeNode } from './FileTreeItem';
+import type { MatchRange, TreeNode } from './FileTreeItem';
 import { FileTreeItem } from './FileTreeItem';
 
 export interface SearchOverlayProps {
@@ -61,9 +61,7 @@ function collectMatchRanges(matches?: readonly SearchMatch[]): MatchRange[] {
 
   return matches
     .filter((match) => match.key === 'name' && !!match.indices)
-    .flatMap((match) => (
-      match.indices ?? []
-    ).map(([start, end]) => ({ start, end: end + 1 })));
+    .flatMap((match) => (match.indices ?? []).map(([start, end]) => ({ start, end: end + 1 })));
 }
 
 function buildSearchResults(fuse: Fuse<TreeNode>, query: string): SearchResult[] {
@@ -72,22 +70,33 @@ function buildSearchResults(fuse: Fuse<TreeNode>, query: string): SearchResult[]
     return [];
   }
 
-  return fuse.search(trimmed).slice(0, 50).map((result) => ({
-    node: result.item,
-    ranges: collectMatchRanges(result.matches),
-  }));
+  return fuse
+    .search(trimmed)
+    .slice(0, 50)
+    .map((result) => ({
+      node: result.item,
+      ranges: collectMatchRanges(result.matches),
+    }));
 }
 
-function useSearchResults(roots: string[], _extraIgnorePatterns: string[], query: string): { isLoading: boolean; searchResults: SearchResult[] } {
+function useSearchResults(
+  roots: string[],
+  _extraIgnorePatterns: string[],
+  query: string,
+): { isLoading: boolean; searchResults: SearchResult[] } {
   const { allFiles, isIndexing } = useProjectFileIndex({ roots, enabled: query.trim().length > 0 });
   const isLoading = isIndexing;
   const searchNodes = useMemo(() => allFiles.map((file) => toSearchNode(file)), [allFiles]);
-  const fuse = useMemo(() => new Fuse(searchNodes, {
-    keys: ['relativePath', 'name'],
-    threshold: 0.4,
-    includeMatches: true,
-    minMatchCharLength: 1,
-  }), [searchNodes]);
+  const fuse = useMemo(
+    () =>
+      new Fuse(searchNodes, {
+        keys: ['relativePath', 'name'],
+        threshold: 0.4,
+        includeMatches: true,
+        minMatchCharLength: 1,
+      }),
+    [searchNodes],
+  );
 
   const searchResults = useMemo(() => buildSearchResults(fuse, query), [fuse, query]);
 
@@ -95,26 +104,82 @@ function useSearchResults(roots: string[], _extraIgnorePatterns: string[], query
 }
 
 function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement {
-  return <div className="text-text-semantic-faint" style={EMPTY_STATE_STYLE}>{label}</div>;
+  return (
+    <div className="text-text-semantic-faint" style={EMPTY_STATE_STYLE}>
+      {label}
+    </div>
+  );
 }
 
 const ROW_HEIGHT = 28;
 const V_OVERSCAN = 5;
 
-function useOverlayScroll(ref: React.RefObject<HTMLDivElement | null>): { scrollTop: number; viewHeight: number } {
+function useOverlayScroll(ref: React.RefObject<HTMLDivElement | null>): {
+  scrollTop: number;
+  viewHeight: number;
+} {
   const [scrollTop, setScrollTop] = useState(0);
   const [viewHeight, setViewHeight] = useState(400);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const onScroll = (): void => { setScrollTop(el.scrollTop); };
-    const ro = new ResizeObserver(() => { setViewHeight(el.clientHeight); setScrollTop(el.scrollTop); });
+    const onScroll = (): void => {
+      setScrollTop(el.scrollTop);
+    };
+    const ro = new ResizeObserver(() => {
+      setViewHeight(el.clientHeight);
+      setScrollTop(el.scrollTop);
+    });
     el.addEventListener('scroll', onScroll, { passive: true });
     ro.observe(el);
     setViewHeight(el.clientHeight);
-    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+    };
   }, [ref]);
   return { scrollTop, viewHeight };
+}
+
+function SearchResultRow({
+  node,
+  ranges,
+  rowIndex,
+  startIndex,
+  activeFilePath,
+  onFileSelect,
+}: {
+  node: SearchResult['node'];
+  ranges: SearchResult['ranges'];
+  rowIndex: number;
+  startIndex: number;
+  activeFilePath: string | null;
+  onFileSelect: (path: string) => void;
+}): React.ReactElement {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: (startIndex + rowIndex) * ROW_HEIGHT,
+        left: 0,
+        right: 0,
+        height: ROW_HEIGHT,
+      }}
+    >
+      <FileTreeItem
+        node={node}
+        depth={0}
+        isActive={node.path === activeFilePath}
+        isFocused={false}
+        searchMode={true}
+        matchRanges={ranges}
+        isBookmarked={false}
+        isEditing={false}
+        onClick={(item) => onFileSelect(item.path)}
+        onContextMenu={() => {}}
+      />
+    </div>
+  );
 }
 
 function SearchOverlayResults({
@@ -129,19 +194,23 @@ function SearchOverlayResults({
   const ref = useRef<HTMLDivElement>(null);
   const { scrollTop, viewHeight } = useOverlayScroll(ref);
   const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - V_OVERSCAN);
-  const end = Math.min(searchResults.length, Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + V_OVERSCAN);
-
+  const end = Math.min(
+    searchResults.length,
+    Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + V_OVERSCAN,
+  );
   return (
     <div ref={ref} style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
       <div style={{ height: searchResults.length * ROW_HEIGHT, position: 'relative' }}>
         {searchResults.slice(start, end).map(({ node, ranges }, i) => (
-          <div key={node.path} style={{ position: 'absolute', top: (start + i) * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }}>
-            <FileTreeItem
-              node={node} depth={0} isActive={node.path === activeFilePath} isFocused={false}
-              searchMode={true} matchRanges={ranges} isBookmarked={false} isEditing={false}
-              onClick={(item) => onFileSelect(item.path)} onContextMenu={() => { }}
-            />
-          </div>
+          <SearchResultRow
+            key={node.path}
+            node={node}
+            ranges={ranges}
+            rowIndex={i}
+            startIndex={start}
+            activeFilePath={activeFilePath}
+            onFileSelect={onFileSelect}
+          />
         ))}
       </div>
     </div>
@@ -157,8 +226,18 @@ export function SearchOverlay({
 }: SearchOverlayProps): React.ReactElement {
   const { isLoading, searchResults } = useSearchResults(roots, extraIgnorePatterns, query);
   if (searchResults.length === 0) {
-    return <SearchOverlayEmptyState label={isLoading ? 'Indexing project files...' : `No files match "${query}"`} />;
+    return (
+      <SearchOverlayEmptyState
+        label={isLoading ? 'Indexing project files...' : `No files match "${query}"`}
+      />
+    );
   }
 
-  return <SearchOverlayResults searchResults={searchResults} activeFilePath={activeFilePath} onFileSelect={onFileSelect} />;
+  return (
+    <SearchOverlayResults
+      searchResults={searchResults}
+      activeFilePath={activeFilePath}
+      onFileSelect={onFileSelect}
+    />
+  );
 }

@@ -1,6 +1,7 @@
 import type { AgentChatSettings } from '@shared/types/agentChat';
 
 import type { ClaudeMdSettings } from './electron-claude-md';
+import type { ContextLayerConfig, PlatformConfig } from './electron-config-slices';
 
 export type AppTheme =
   | 'retro'
@@ -236,7 +237,14 @@ export interface AppConfig {
    *  Wave 43 — chatPrimary retired; use immersiveChat instead
    *  Wave 44 — chatSidebarMode: chat history sidebar pin/collapse/hidden mode
    *  Wave 46 — chatWorkbench: workstation scaffold inside immersive chat */
-  layout?: { presets?: { v2?: boolean }; dragAndDrop?: boolean; mobilePrimary?: boolean; immersiveChat?: boolean; chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden'; chatWorkbench?: boolean };
+  layout?: {
+    presets?: { v2?: boolean };
+    dragAndDrop?: boolean;
+    mobilePrimary?: boolean;
+    immersiveChat?: boolean;
+    chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden';
+    chatWorkbench?: boolean;
+  };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
   chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */
@@ -246,34 +254,82 @@ export interface AppConfig {
   /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
   review?: { enhanced?: boolean };
   /** Wave 30 Phases G+I — research auto-firing defaults + threshold knobs. */
-  researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
+  researchSettings?: {
+    globalEnabled?: boolean;
+    defaultMode?: 'off' | 'conservative' | 'aggressive';
+    stalenessConfidenceFloor?: number;
+    factClaimEnabled?: boolean;
+    factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
+    preEditDryRunOnly?: boolean;
+    maxLatencyMs?: number;
+  };
   /** Wave 19/24/31 — context scoring feature flags. Wave 31 Phase E adds packetMode. */
-  context?: { provenanceWeights?: boolean; pagerank?: boolean; pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number }; decisionLogging?: boolean; rerankerEnabled?: boolean; packetMode?: 'full' | 'lean' };
+  context?: {
+    provenanceWeights?: boolean;
+    pagerank?: boolean;
+    pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number };
+    decisionLogging?: boolean;
+    rerankerEnabled?: boolean;
+    packetMode?: 'full' | 'lean';
+  };
   /** Wave 33a Phase A — mobile client pairing + device registry. */
-  mobileAccess?: { enabled: boolean; pairedDevices: Array<{ id: string; label: string; refreshTokenHash: string; fingerprint: string; capabilities: string[]; issuedAt: string; lastSeenAt: string }> };
+  mobileAccess?: {
+    enabled: boolean;
+    pairedDevices: Array<{
+      id: string;
+      label: string;
+      refreshTokenHash: string;
+      fingerprint: string;
+      capabilities: string[];
+      issuedAt: string;
+      lastSeenAt: string;
+    }>;
+  };
   /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
-  sessionDispatch?: { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: Array<{ id: string; request: { title: string; prompt: string; projectPath: string; worktreeName?: string }; status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled'; createdAt: string; startedAt?: string; endedAt?: string; sessionId?: string; error?: string; deviceId?: string }> };
+  sessionDispatch?: {
+    enabled: boolean;
+    maxConcurrent: number;
+    jobTimeoutMs: number;
+    queue: Array<{
+      id: string;
+      request: { title: string; prompt: string; projectPath: string; worktreeName?: string };
+      status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled';
+      createdAt: string;
+      startedAt?: string;
+      endedAt?: string;
+      sessionId?: string;
+      error?: string;
+      deviceId?: string;
+    }>;
+  };
   /** Wave 35+36 — per-user theming overrides; providers.multiProvider gates non-Claude session providers. */
-  theming?: { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }; providers?: { multiProvider?: boolean };
+  theming?: {
+    accentOverride?: string;
+    verbOverride?: string;
+    thinkingVerbs?: string[];
+    spinnerChars?: string;
+    fonts?: { editor?: string; chat?: string; terminal?: string };
+    customTokens?: Record<string, string>;
+  };
+  providers?: { multiProvider?: boolean };
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
    *  Wave 45 Phase A — codexAppServerTransport gates the Codex app-server transport scaffold. */
-  ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number }; codexAppServerTransport?: boolean };
+  ecosystem?: {
+    lastSeenSnapshot?: {
+      cliVersion: string;
+      capturedAt: number;
+      promptHash: string;
+      promptText: string;
+    };
+    lastExport?: { path: string; at: number; rows: number };
+    codexAppServerTransport?: boolean;
+  };
   /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
   platform?: PlatformConfig;
 }
 
-/** Wave 38 Phase F — named platform config slice (update channel + crash reporter). */
-export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string; dismissedEmptyStates?: Record<string, boolean> }
-
-export interface ContextLayerConfig {
-  enabled: boolean;
-  maxModules: number;
-  maxSizeBytes: number;
-  debounceMs: number;
-  autoSummarize: boolean;
-  moduleDepthLimit: number;
-}
-
+export type { AgentEvent, AgentEventType, HookPayload, RawApiTokenUsage } from './electron-agent-events';
+export type { ContextLayerConfig, PlatformConfig } from './electron-config-slices';
 export type {
   BufferExcerpt,
   DirEntry,
@@ -281,78 +337,12 @@ export type {
   FileChangeType,
   MultiBufferConfig,
 } from './electron-file-types';
-
-export type AgentEventType =
-  // Lifecycle
-  | 'session_start'
-  | 'session_end'
-  | 'session_stop'
-  | 'stop_failure'
-  | 'setup'
-  // Tools
-  | 'pre_tool_use'
-  | 'post_tool_use'
-  | 'post_tool_use_failure'
-  // Agents
-  | 'agent_start'
-  | 'agent_end'
-  | 'agent_stop'
-  | 'teammate_idle'
-  // Tasks
-  | 'task_created'
-  | 'task_completed'
-  | 'user_prompt_submit'
-  | 'elicitation'
-  | 'elicitation_result'
-  | 'notification'
-  | 'cwd_changed'
-  | 'file_changed'
-  | 'worktree_create'
-  | 'worktree_remove'
-  | 'config_change'
-  | 'pre_compact'
-  | 'post_compact'
-  | 'instructions_loaded'
-  | 'permission_request'
-  | 'permission_denied';
-
-export interface AgentEvent {
-  type: AgentEventType;
-  sessionId?: string;
-  agentId?: string;
-  timestamp: number;
-  payload: unknown;
-}
-
-export interface RawApiTokenUsage {
-  input_tokens?: number;
-  output_tokens?: number;
-  cache_read_input_tokens?: number;
-  cache_creation_input_tokens?: number;
-}
-
-export interface HookPayload {
-  type: AgentEventType;
-  sessionId: string;
-  timestamp: number;
-  toolName?: string;
-  toolCallId?: string;
-  input?: Record<string, unknown>;
-  output?: Record<string, unknown>;
-  prompt?: string;
-  error?: string;
-  parentSessionId?: string;
-  usage?: RawApiTokenUsage;
-  model?: string;
-  requestId?: string;
-  cwd?: string;
-  internal?: boolean;
-  /** True when the event originates from a Claude Code process spawned inside the IDE. */
-  ideSpawned?: boolean;
-  costUsd?: number;
-  parentToolCallId?: string;
-  taskLabel?: string;
-  data?: Record<string, unknown>;
-}
-
-export type { IpcResult, ReadBinaryFileResult, ReadDirResult, ReadFileResult, SelectFolderResult, ToolCallEvent, ToolCallPayload } from './electron-ipc-results';
+export type {
+  IpcResult,
+  ReadBinaryFileResult,
+  ReadDirResult,
+  ReadFileResult,
+  SelectFolderResult,
+  ToolCallEvent,
+  ToolCallPayload,
+} from './electron-ipc-results';

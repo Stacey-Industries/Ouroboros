@@ -31,7 +31,13 @@ function StepBody({ stepIndex }: { stepIndex: number }): React.ReactElement {
   );
 }
 
-function StepCounter({ stepIndex, totalSteps }: { stepIndex: number; totalSteps: number }): React.ReactElement {
+function StepCounter({
+  stepIndex,
+  totalSteps,
+}: {
+  stepIndex: number;
+  totalSteps: number;
+}): React.ReactElement {
   return (
     <span className="text-text-semantic-faint text-xs">
       {stepIndex + 1} / {totalSteps}
@@ -39,7 +45,13 @@ function StepCounter({ stepIndex, totalSteps }: { stepIndex: number; totalSteps:
   );
 }
 
-function BackButton({ stepIndex, onBack }: { stepIndex: number; onBack: () => void }): React.ReactElement | null {
+function BackButton({
+  stepIndex,
+  onBack,
+}: {
+  stepIndex: number;
+  onBack: () => void;
+}): React.ReactElement | null {
   if (stepIndex === 0) return null;
   return (
     <button
@@ -53,8 +65,16 @@ function BackButton({ stepIndex, onBack }: { stepIndex: number; onBack: () => vo
 }
 
 function PrimaryButton({
-  stepIndex, totalSteps, onNext, onDone,
-}: { stepIndex: number; totalSteps: number; onNext: () => void; onDone: () => void }): React.ReactElement {
+  stepIndex,
+  totalSteps,
+  onNext,
+  onDone,
+}: {
+  stepIndex: number;
+  totalSteps: number;
+  onNext: () => void;
+  onDone: () => void;
+}): React.ReactElement {
   const isLast = stepIndex === totalSteps - 1;
   return (
     <button
@@ -90,7 +110,12 @@ export function TourStepContent({
             {t('tour.skip')}
           </button>
           <BackButton stepIndex={stepIndex} onBack={onBack} />
-          <PrimaryButton stepIndex={stepIndex} totalSteps={totalSteps} onNext={onNext} onDone={onDone} />
+          <PrimaryButton
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+            onNext={onNext}
+            onDone={onDone}
+          />
         </div>
       </div>
     </div>

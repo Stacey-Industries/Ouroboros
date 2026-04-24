@@ -74,8 +74,10 @@ export async function sendFcmNotification(
   log.info(
     '[fcmAdapter] stub — would send to token hash prefix',
     token.slice(0, 8) + '…',
-    'via', serviceAccountPath,
-    'title:', payload.title,
+    'via',
+    serviceAccountPath,
+    'title:',
+    payload.title,
   );
   return { sent: false, reason: 'no-fcm-backend' };
 }

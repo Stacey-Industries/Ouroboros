@@ -70,9 +70,15 @@ export interface MaterialTokens {
 }
 
 // Neutral palette fragments shared across variants — only the accent axis varies.
-const SHARED_NEUTRAL_DARK: Omit<MaterialPalette,
-  | 'accent' | 'accentHover' | 'accentMuted'
-  | 'selection' | 'focusRing' | 'termCursor' | 'termSelection'
+const SHARED_NEUTRAL_DARK: Omit<
+  MaterialPalette,
+  | 'accent'
+  | 'accentHover'
+  | 'accentMuted'
+  | 'selection'
+  | 'focusRing'
+  | 'termCursor'
+  | 'termSelection'
 > = {
   bg: 'transparent',
   bgSecondary: 'transparent',

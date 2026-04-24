@@ -33,10 +33,7 @@ interface FetchSetters {
   setIsLoading: (v: boolean) => void;
 }
 
-async function fetchRulesAndSkills(
-  root: string,
-  setters: FetchSetters,
-): Promise<void> {
+async function fetchRulesAndSkills(root: string, setters: FetchSetters): Promise<void> {
   if (!hasRulesAndSkillsAPI()) return;
   setters.setIsLoading(true);
   try {
@@ -45,7 +42,8 @@ async function fetchRulesAndSkills(
       window.electronAPI.rulesAndSkills.listCommands(root),
     ]);
     if (rulesResult.success && rulesResult.rules) setters.setRules(rulesResult.rules);
-    if (commandsResult.success && commandsResult.commands) setters.setCommands(commandsResult.commands);
+    if (commandsResult.success && commandsResult.commands)
+      setters.setCommands(commandsResult.commands);
   } finally {
     setters.setIsLoading(false);
   }
@@ -58,7 +56,10 @@ async function createRuleFn(
 ): Promise<string | null> {
   if (!root || !hasRulesAndSkillsAPI()) return null;
   const result = await window.electronAPI.rulesAndSkills.createRule(root, type);
-  if (result.success && result.filePath) { await refresh(); return result.filePath; }
+  if (result.success && result.filePath) {
+    await refresh();
+    return result.filePath;
+  }
   return null;
 }
 
@@ -68,7 +69,9 @@ export function useRulesAndSkills(projectRoot: string | null): UseRulesAndSkills
   const [isLoading, setIsLoading] = useState(false);
   const projectRootRef = useRef(projectRoot);
 
-  useEffect(() => { projectRootRef.current = projectRoot; }, [projectRoot]);
+  useEffect(() => {
+    projectRootRef.current = projectRoot;
+  }, [projectRoot]);
 
   const setters: FetchSetters = { setRules, setCommands, setIsLoading };
 
@@ -88,7 +91,9 @@ export function useRulesAndSkills(projectRoot: string | null): UseRulesAndSkills
       void window.electronAPI.rulesAndSkills.startWatcher(projectRoot);
     }
     void refresh();
-    return window.electronAPI.rulesAndSkills.onChanged(() => { void refresh(); });
+    return window.electronAPI.rulesAndSkills.onChanged(() => {
+      void refresh();
+    });
   }, [projectRoot, refresh]);
 
   if (!projectRoot) return EMPTY;

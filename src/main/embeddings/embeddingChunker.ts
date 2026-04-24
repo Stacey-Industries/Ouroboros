@@ -36,9 +36,7 @@ export function chunkFileWithNodes(
 const SYMBOL_TYPES = new Set(['function', 'class', 'interface', 'type_alias']);
 
 function filterSymbolNodes(nodes: GraphNode[]): GraphNode[] {
-  return nodes
-    .filter((n) => SYMBOL_TYPES.has(n.type))
-    .sort((a, b) => a.line - b.line);
+  return nodes.filter((n) => SYMBOL_TYPES.has(n.type)).sort((a, b) => a.line - b.line);
 }
 
 function buildNodeChunks(
@@ -49,7 +47,7 @@ function buildNodeChunks(
   const chunks: ChunkCandidate[] = [];
   for (const node of symbolNodes) {
     const start = Math.max(0, node.line - 1);
-    const end = Math.min(lines.length, (node.endLine ?? node.line + 20));
+    const end = Math.min(lines.length, node.endLine ?? node.line + 20);
     const clampedEnd = Math.min(end, start + MAX_CHUNK_LINES);
     const text = lines.slice(start, clampedEnd).join('\n');
     if (text.trim().length === 0) continue;
@@ -67,10 +65,7 @@ function buildNodeChunks(
 }
 
 /** Fallback: fixed-window chunking for files without graph nodes. */
-function chunkFileWindowed(
-  filePath: string,
-  lines: string[],
-): ChunkCandidate[] {
+function chunkFileWindowed(filePath: string, lines: string[]): ChunkCandidate[] {
   const chunks: ChunkCandidate[] = [];
   let offset = 0;
   let idx = 0;
@@ -95,10 +90,7 @@ function chunkFileWindowed(
 }
 
 /** Read a file and chunk it. Returns empty array for unreadable files. */
-export function chunkFile(
-  filePath: string,
-  nodes: GraphNode[],
-): ChunkCandidate[] {
+export function chunkFile(filePath: string, nodes: GraphNode[]): ChunkCandidate[] {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath validated by caller
     const stat = fs.statSync(filePath);

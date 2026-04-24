@@ -111,7 +111,10 @@ function handleDelete(args: unknown): HandlerResult<object> {
 
   // Notify the renderer that each orphaned session's folder association is gone.
   if (orphanedSessionIds.length > 0) {
-    log.info('[folderCrud] broadcasting sessionCrud:changed for orphaned sessions', orphanedSessionIds);
+    log.info(
+      '[folderCrud] broadcasting sessionCrud:changed for orphaned sessions',
+      orphanedSessionIds,
+    );
     broadcastSessionsChanged();
   }
   return ok({});

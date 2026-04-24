@@ -2,22 +2,32 @@
  * ApprovalContext.tsx - Manages the pre-execution approval queue.
  *
  * Listens for approval:request events from the main process and maintains
- * a queue of pending requests. Renders the ApprovalDialog overlay when
- * there are pending approvals.
+ * a queue of pending requests. UI surfaces consume the queue and decide
+ * whether to render inline or background approval prompts.
  */
 
 import log from 'electron-log/renderer';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { ApprovalDialog } from '../components/AgentMonitor/ApprovalDialog';
 import type { ApprovalRequest } from '../types/electron';
 
 interface ApprovalContextValue {
   pendingCount: number;
   requests: ApprovalRequest[];
+  approve: (requestId: string) => void;
+  reject: (requestId: string, reason?: string) => void;
+  alwaysAllow: (requestId: string, sessionId: string, toolName: string) => void;
 }
 
-const ApprovalCtx = createContext<ApprovalContextValue>({ pendingCount: 0, requests: [] });
+const noop = (): void => undefined;
+
+const ApprovalCtx = createContext<ApprovalContextValue>({
+  pendingCount: 0,
+  requests: [],
+  approve: noop,
+  reject: noop,
+  alwaysAllow: noop,
+});
 
 export function useApprovalContext(): ApprovalContextValue {
   return useContext(ApprovalCtx);
@@ -84,10 +94,10 @@ function useRemoveRequest(
 
 function useApprovalActions(
   setRequests: React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
-): Pick<React.ComponentProps<typeof ApprovalDialog>, 'onApprove' | 'onReject' | 'onAlwaysAllow'> {
+): Pick<ApprovalContextValue, 'approve' | 'reject' | 'alwaysAllow'> {
   const removeRequest = useRemoveRequest(setRequests);
 
-  const onApprove = useCallback(
+  const approve = useCallback(
     (requestId: string) => {
       removeRequest(requestId);
       window.electronAPI?.approval?.respond(requestId, 'approve').catch((err) => {
@@ -97,7 +107,7 @@ function useApprovalActions(
     [removeRequest],
   );
 
-  const onReject = useCallback(
+  const reject = useCallback(
     (requestId: string, reason?: string) => {
       removeRequest(requestId);
       window.electronAPI?.approval?.respond(requestId, 'reject', reason).catch((err) => {
@@ -107,7 +117,7 @@ function useApprovalActions(
     [removeRequest],
   );
 
-  const onAlwaysAllow = useCallback(
+  const alwaysAllow = useCallback(
     (requestId: string, sessionId: string, toolName: string) => {
       removeRequest(requestId);
       Promise.all([
@@ -120,7 +130,7 @@ function useApprovalActions(
     [removeRequest],
   );
 
-  return { onApprove, onReject, onAlwaysAllow };
+  return { approve, reject, alwaysAllow };
 }
 
 export function ApprovalProvider({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -128,9 +138,8 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }): R
   const approvalHandlers = useApprovalActions(setRequests);
 
   return (
-    <ApprovalCtx.Provider value={{ pendingCount: requests.length, requests }}>
+    <ApprovalCtx.Provider value={{ pendingCount: requests.length, requests, ...approvalHandlers }}>
       {children}
-      {requests.length > 0 && <ApprovalDialog requests={requests} {...approvalHandlers} />}
     </ApprovalCtx.Provider>
   );
 }

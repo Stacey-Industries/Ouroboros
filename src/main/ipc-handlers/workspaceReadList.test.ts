@@ -6,9 +6,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
 
-const mockGetReadList = vi.fn((root: string): string[] => { void root; return []; });
-const mockAddToReadList = vi.fn((root: string, file: string): string[] => { void root; void file; return []; });
-const mockRemoveFromReadList = vi.fn((root: string, file: string): string[] => { void root; void file; return []; });
+const mockGetReadList = vi.fn((root: string): string[] => {
+  void root;
+  return [];
+});
+const mockAddToReadList = vi.fn((root: string, file: string): string[] => {
+  void root;
+  void file;
+  return [];
+});
+const mockRemoveFromReadList = vi.fn((root: string, file: string): string[] => {
+  void root;
+  void file;
+  return [];
+});
 
 vi.mock('../orchestration/workspaceReadList', () => ({
   getReadList: (r: string) => mockGetReadList(r),
@@ -17,7 +28,9 @@ vi.mock('../orchestration/workspaceReadList', () => ({
 }));
 
 const sentMessages: Array<{ channel: string; payload: unknown }> = [];
-const mockWebContents = { send: (ch: string, p: unknown) => sentMessages.push({ channel: ch, payload: p }) };
+const mockWebContents = {
+  send: (ch: string, p: unknown) => sentMessages.push({ channel: ch, payload: p }),
+};
 const mockWin = { isDestroyed: () => false, webContents: mockWebContents };
 
 vi.mock('electron', () => {

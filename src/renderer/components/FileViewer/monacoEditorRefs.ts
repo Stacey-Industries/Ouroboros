@@ -41,13 +41,22 @@ export interface EditorCallbackRefs {
 
 export function updateScrollMetrics(
   editor: monaco.editor.IStandaloneCodeEditor,
-  setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>,
+  setScrollMetrics: React.Dispatch<
+    React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>
+  >,
 ): void {
   const layoutInfo = editor.getLayoutInfo();
-  setScrollMetrics({ scrollTop: editor.getScrollTop(), scrollHeight: editor.getScrollHeight(), clientHeight: layoutInfo.height });
+  setScrollMetrics({
+    scrollTop: editor.getScrollTop(),
+    scrollHeight: editor.getScrollHeight(),
+    clientHeight: layoutInfo.height,
+  });
 }
 
-export function bindGotoLineHandler(editor: monaco.editor.IStandaloneCodeEditor, filePathRef: RefObject<string | null>): () => void {
+export function bindGotoLineHandler(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  filePathRef: RefObject<string | null>,
+): () => void {
   const handleGotoLine = (event: Event): void => {
     const detail = (event as CustomEvent<{ line: number; filePath?: string }>).detail;
     if (!detail || (detail.filePath && detail.filePath !== filePathRef.current)) return;
@@ -61,7 +70,9 @@ export function bindGotoLineHandler(editor: monaco.editor.IStandaloneCodeEditor,
 
 export function bindScrollTracking(
   editor: monaco.editor.IStandaloneCodeEditor,
-  setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>,
+  setScrollMetrics: React.Dispatch<
+    React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>
+  >,
   setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>,
   scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
 ): () => void {
@@ -73,7 +84,9 @@ export function bindScrollTracking(
   };
   requestAnimationFrame(() => updateScrollMetrics(editor, setScrollMetrics));
   const scrollDisposable = editor.onDidScrollChange(onScroll);
-  const layoutDisposable = editor.onDidLayoutChange(() => updateScrollMetrics(editor, setScrollMetrics));
+  const layoutDisposable = editor.onDidLayoutChange(() =>
+    updateScrollMetrics(editor, setScrollMetrics),
+  );
   return () => {
     scrollDisposable.dispose();
     layoutDisposable.dispose();
@@ -83,7 +96,10 @@ export function bindScrollTracking(
 
 export function bindSaveAction(
   editor: monaco.editor.IStandaloneCodeEditor,
-  refs: EditorCallbackRefs & { readOnlyRef: RefObject<boolean | null>; formatOnSaveRef: RefObject<boolean | null> },
+  refs: EditorCallbackRefs & {
+    readOnlyRef: RefObject<boolean | null>;
+    formatOnSaveRef: RefObject<boolean | null>;
+  },
   isDirtyRef: MutableRefObject<boolean>,
   saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>,
 ): void {
@@ -91,17 +107,24 @@ export function bindSaveAction(
     const currentModel = editor.getModel();
     if (!currentModel) return;
     setHostSavedVersion(currentModel.uri.toString(), currentModel.getAlternativeVersionId());
-    if (isDirtyRef.current) { isDirtyRef.current = false; refs.onDirtyChangeRef.current?.(false); }
+    if (isDirtyRef.current) {
+      isDirtyRef.current = false;
+      refs.onDirtyChangeRef.current?.(false);
+    }
     refs.onSaveRef.current?.(currentModel.getValue());
   };
   saveActionDisposableRef.current = editor.addAction({
-    id: 'ouroboros-save', label: 'Save File',
+    id: 'ouroboros-save',
+    label: 'Save File',
     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
     run: () => {
       if (refs.readOnlyRef.current) return;
       if (refs.formatOnSaveRef.current) {
         const formatAction = editor.getAction('editor.action.formatDocument');
-        if (formatAction) { formatAction.run().then(save).catch(save); return; }
+        if (formatAction) {
+          formatAction.run().then(save).catch(save);
+          return;
+        }
       }
       save();
     },
@@ -121,9 +144,18 @@ export function bindContentChange(
 }
 
 export function bindSearchShortcuts(editor: monaco.editor.IStandaloneCodeEditor): () => void {
-  const onFind = (): void => { editor.focus(); editor.getAction('actions.find')?.run(); };
-  const onReplace = (): void => { editor.focus(); editor.getAction('editor.action.startFindReplaceAction')?.run(); };
-  const onGoToLine = (): void => { editor.focus(); editor.getAction('editor.action.gotoLine')?.run(); };
+  const onFind = (): void => {
+    editor.focus();
+    editor.getAction('actions.find')?.run();
+  };
+  const onReplace = (): void => {
+    editor.focus();
+    editor.getAction('editor.action.startFindReplaceAction')?.run();
+  };
+  const onGoToLine = (): void => {
+    editor.focus();
+    editor.getAction('editor.action.gotoLine')?.run();
+  };
   window.addEventListener('agent-ide:find', onFind);
   window.addEventListener('agent-ide:replace', onReplace);
   window.addEventListener('agent-ide:go-to-line', onGoToLine);

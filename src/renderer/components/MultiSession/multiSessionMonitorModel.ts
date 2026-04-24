@@ -43,7 +43,7 @@ function resolveBatchSessions(
 ): Array<AgentSession | null> {
   return batchLabels.map((_, index) => {
     const sessionId = batchSessionIds[index];
-    return sessionId ? agents.find((agent) => agent.id === sessionId) ?? null : null;
+    return sessionId ? (agents.find((agent) => agent.id === sessionId) ?? null) : null;
   });
 }
 
@@ -64,7 +64,9 @@ export function estimateSessionCost(session: AgentSession): number {
 function buildBatchStats(batchSessions: Array<AgentSession | null>, total: number): BatchStats {
   const resolved = batchSessions.filter(isResolvedSession);
   return {
-    completed: resolved.filter((session) => session.status === 'complete' || session.status === 'error').length,
+    completed: resolved.filter(
+      (session) => session.status === 'complete' || session.status === 'error',
+    ).length,
     total,
     totalInputTokens: resolved.reduce((sum, session) => sum + session.inputTokens, 0),
     totalOutputTokens: resolved.reduce((sum, session) => sum + session.outputTokens, 0),
@@ -99,7 +101,10 @@ export function useMultiSessionMonitorModel(
     [agents, batchLabels, batchSessionIds],
   );
   const gridLayout = useMemo(() => getGridLayout(batchLabels.length), [batchLabels.length]);
-  const stats = useMemo(() => buildBatchStats(batchSessions, batchLabels.length), [batchSessions, batchLabels.length]);
+  const stats = useMemo(
+    () => buildBatchStats(batchSessions, batchLabels.length),
+    [batchSessions, batchLabels.length],
+  );
 
   return { batchSessions, gridLayout, stats };
 }

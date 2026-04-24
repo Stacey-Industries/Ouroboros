@@ -52,7 +52,9 @@ function dispatchToolRequest(
 ): void {
   log.debug(`#${connId} request: ${request.method}`);
   void handleRequest(request)
-    .then((response) => { if (!socket.destroyed) writeToolResponse(socket, response); })
+    .then((response) => {
+      if (!socket.destroyed) writeToolResponse(socket, response);
+    })
     .catch((err) => {
       if (!socket.destroyed) {
         writeToolResponse(socket, createToolErrorResponse(request.id, -1, (err as Error).message));
@@ -68,7 +70,10 @@ function processSocketLine(
 ): void {
   if (!line) return;
   const { request, errorResponse } = parseToolRequest(line);
-  if (errorResponse) { writeToolResponse(socket, errorResponse); return; }
+  if (errorResponse) {
+    writeToolResponse(socket, errorResponse);
+    return;
+  }
   if (request) dispatchToolRequest(socket, connId, request, handleRequest);
 }
 

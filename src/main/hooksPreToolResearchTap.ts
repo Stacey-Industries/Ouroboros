@@ -14,7 +14,7 @@ const PRE_TOOL_RESEARCH_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 function extractFilePath(payload: HookPayload): string | undefined {
   const input = payload.input as Record<string, unknown> | undefined;
-  return input?.file_path as string | undefined ?? input?.path as string | undefined;
+  return (input?.file_path as string | undefined) ?? (input?.path as string | undefined);
 }
 
 export function tapPreToolResearch(payload: HookPayload): void {

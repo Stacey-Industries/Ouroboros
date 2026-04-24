@@ -6,10 +6,10 @@ export type { CommitHistoryProps } from './CommitHistory';
 export { CommitHistory } from './CommitHistory';
 export type { ConflictBlock, ConflictResolverProps } from './ConflictResolver';
 export { ConflictResolver, hasConflictMarkers, parseConflictBlocks } from './ConflictResolver';
-export type { DiffLine, DiffLineType,DiffViewProps } from './DiffView';
+export type { DiffLine, DiffLineType, DiffViewProps } from './DiffView';
 export { DiffView } from './DiffView';
 export type { EditorStateSnapshot } from './editorStateStore';
-export { clearEditorState,loadEditorState, saveEditorState } from './editorStateStore';
+export { clearEditorState, loadEditorState, saveEditorState } from './editorStateStore';
 export type { FileViewerProps } from './FileViewer';
 export { FileViewer } from './FileViewer';
 export type { FileViewerManagerProps, OpenFile, SplitState } from './FileViewerManager';
@@ -24,7 +24,7 @@ export type { ImageViewerProps } from './ImageViewer';
 export { ImageViewer } from './ImageViewer';
 export type { InlineEditorProps } from './InlineEditor';
 export { InlineEditor } from './InlineEditor';
-export { attachLinkClickHandler,ensureLinkStyles, injectLinks } from './linkDetector';
+export { attachLinkClickHandler, ensureLinkStyles, injectLinks } from './linkDetector';
 export type { MarkdownPreviewProps } from './MarkdownPreview';
 export { MarkdownPreview } from './MarkdownPreview';
 export { renderMarkdown } from './markdownPreviewRenderer';
@@ -35,15 +35,19 @@ export { Minimap } from './Minimap';
 export type { MonacoDiffEditorProps } from './MonacoDiffEditor';
 export { MonacoDiffEditor } from './MonacoDiffEditor';
 export type { MonacoEditorProps } from './MonacoEditor';
-export { disposeMonacoModel,MonacoEditor } from './MonacoEditor';
+export { disposeMonacoModel, MonacoEditor } from './MonacoEditor';
 export type { MonacoEditorHostProps } from './MonacoEditorHost';
 export { MonacoEditorHost } from './MonacoEditorHost';
 export { disposeMonacoModel as disposeMonacoHostModel } from './MonacoEditorHost';
 export { registerInlineCompletionProvider } from './monacoInlineCompletions';
 export type { KeybindingMode } from './monacoVimMode';
-export { disableVimMode, enableEmacsMode,enableVimMode } from './monacoVimMode';
-export type { AddExcerptFormProps,MultiBufferManagerProps, MultiBufferTab } from './MultiBufferManager';
-export { AddExcerptForm,MultiBufferManager, useMultiBufferManager } from './MultiBufferManager';
+export { disableVimMode, enableEmacsMode, enableVimMode } from './monacoVimMode';
+export type {
+  AddExcerptFormProps,
+  MultiBufferManagerProps,
+  MultiBufferTab,
+} from './MultiBufferManager';
+export { AddExcerptForm, MultiBufferManager, useMultiBufferManager } from './MultiBufferManager';
 export type { MultiBufferViewProps } from './MultiBufferView';
 export { MultiBufferView } from './MultiBufferView';
 export type { PdfViewerProps } from './PdfViewer';

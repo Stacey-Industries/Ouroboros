@@ -53,7 +53,12 @@ function resolveNode(db: GraphDatabase, projectName: string, symbolId: string): 
   if (direct) return direct;
   if (!symbolId.includes('::')) return null;
   const name = symbolId.split('::')[1] ?? '';
-  const result = db.searchNodes({ project: projectName, namePattern: name, caseSensitive: true, limit: 10 });
+  const result = db.searchNodes({
+    project: projectName,
+    namePattern: name,
+    caseSensitive: true,
+    limit: 10,
+  });
   return result.nodes.find((n) => n.name === name) ?? null;
 }
 
@@ -69,7 +74,13 @@ interface BfsArgs {
 
 function collectBfsNodes(args: BfsArgs): GraphNode[] {
   const { db, startId, edgeTypes, direction, depth } = args;
-  const bfsRows = db.bfsTraversal({ startNodeId: startId, edgeTypes, direction, maxDepth: depth, maxNodes: CAP });
+  const bfsRows = db.bfsTraversal({
+    startNodeId: startId,
+    edgeTypes,
+    direction,
+    maxDepth: depth,
+    maxNodes: CAP,
+  });
   const nodes: GraphNode[] = [];
   for (const row of bfsRows) {
     const node = db.getNode(row.id);
@@ -84,13 +95,35 @@ function collectBfsNodes(args: BfsArgs): GraphNode[] {
 const CALL_TYPES = ['CALLS', 'ASYNC_CALLS', 'HTTP_CALLS'];
 const IMPORT_TYPES = ['IMPORTS'];
 
-function buildNeighbourhood(handle: CompatHandle, symbolId: string, depth: number): GraphNeighbourhoodResult {
+function buildNeighbourhood(
+  handle: CompatHandle,
+  symbolId: string,
+  depth: number,
+): GraphNeighbourhoodResult {
   const { db, projectName } = handle;
   const node = resolveNode(db, projectName, symbolId);
   if (!node) return { success: false, error: `Symbol not found: ${symbolId}` };
-  const callerNodes = collectBfsNodes({ db, startId: node.id, edgeTypes: CALL_TYPES, direction: 'inbound', depth });
-  const calleeNodes = collectBfsNodes({ db, startId: node.id, edgeTypes: CALL_TYPES, direction: 'outbound', depth });
-  const importNodes = collectBfsNodes({ db, startId: node.id, edgeTypes: IMPORT_TYPES, direction: 'inbound', depth });
+  const callerNodes = collectBfsNodes({
+    db,
+    startId: node.id,
+    edgeTypes: CALL_TYPES,
+    direction: 'inbound',
+    depth,
+  });
+  const calleeNodes = collectBfsNodes({
+    db,
+    startId: node.id,
+    edgeTypes: CALL_TYPES,
+    direction: 'outbound',
+    depth,
+  });
+  const importNodes = collectBfsNodes({
+    db,
+    startId: node.id,
+    edgeTypes: IMPORT_TYPES,
+    direction: 'inbound',
+    depth,
+  });
   return {
     success: true,
     symbol: toSystem1GraphNode(node),
@@ -104,17 +137,31 @@ function buildNeighbourhood(handle: CompatHandle, symbolId: string, depth: numbe
 
 const BLAST_EDGE_TYPES = ['CALLS', 'ASYNC_CALLS', 'HTTP_CALLS', 'USAGE', 'IMPORTS'];
 
-function buildBlastRadius(handle: CompatHandle, symbolId: string, depth: number): GraphBlastRadiusResult {
+function buildBlastRadius(
+  handle: CompatHandle,
+  symbolId: string,
+  depth: number,
+): GraphBlastRadiusResult {
   const { db, projectName } = handle;
   const node = resolveNode(db, projectName, symbolId);
   if (!node) return { success: false, error: `Symbol not found: ${symbolId}` };
-  const bfsRows = db.bfsTraversal({ startNodeId: node.id, edgeTypes: BLAST_EDGE_TYPES, direction: 'inbound', maxDepth: depth, maxNodes: CAP });
+  const bfsRows = db.bfsTraversal({
+    startNodeId: node.id,
+    edgeTypes: BLAST_EDGE_TYPES,
+    direction: 'inbound',
+    maxDepth: depth,
+    maxNodes: CAP,
+  });
   const affectedSymbols = bfsRows
     .map((row) => {
       const affectedNode = db.getNode(row.id);
       if (!affectedNode) return null;
       const inDegree = db.getNodeDegree(row.id, undefined, 'in');
-      return { node: toSystem1GraphNode(affectedNode), distance: row.depth, criticality: classifyCriticality(affectedNode, inDegree) };
+      return {
+        node: toSystem1GraphNode(affectedNode),
+        distance: row.depth,
+        criticality: classifyCriticality(affectedNode, inDegree),
+      };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
   return { success: true, symbol: toSystem1GraphNode(node), affectedSymbols };

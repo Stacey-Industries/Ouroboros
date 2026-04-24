@@ -48,29 +48,32 @@ export interface UseDropTargetsReturn {
 export function useDropTargets(): UseDropTargetsReturn {
   const { swapSlots, splitSlot } = useLayoutPreset();
 
-  const onDragEnd = useCallback((event: DragEndEvent) => {
-    const sourceId = event.active.id;
-    const targetId = event.over?.id;
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const sourceId = event.active.id;
+      const targetId = event.over?.id;
 
-    if (!targetId) return;
-    if (sourceId === targetId) return;
-    if (!isSlotName(sourceId)) return;
+      if (!targetId) return;
+      if (sourceId === targetId) return;
+      if (!isSlotName(sourceId)) return;
 
-    // Phase C: edge drop — `{slotName}:edge:{direction}`
-    if (typeof targetId === 'string') {
-      const edgeDrop = parseEdgeDropId(targetId);
-      if (edgeDrop) {
-        if (edgeDrop.slotName === sourceId) return;
-        const { direction, position } = edgeToSplitParams(edgeDrop.edge);
-        splitSlot(edgeDrop.slotName, sourceId, direction, position);
-        return;
+      // Phase C: edge drop — `{slotName}:edge:{direction}`
+      if (typeof targetId === 'string') {
+        const edgeDrop = parseEdgeDropId(targetId);
+        if (edgeDrop) {
+          if (edgeDrop.slotName === sourceId) return;
+          const { direction, position } = edgeToSplitParams(edgeDrop.edge);
+          splitSlot(edgeDrop.slotName, sourceId, direction, position);
+          return;
+        }
       }
-    }
 
-    // Phase B: center drop — plain slot name swap
-    if (!isSlotName(targetId)) return;
-    swapSlots(sourceId, targetId);
-  }, [swapSlots, splitSlot]);
+      // Phase B: center drop — plain slot name swap
+      if (!isSlotName(targetId)) return;
+      swapSlots(sourceId, targetId);
+    },
+    [swapSlots, splitSlot],
+  );
 
   return { onDragEnd };
 }

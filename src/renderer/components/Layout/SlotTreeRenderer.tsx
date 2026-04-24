@@ -43,7 +43,10 @@ function SplitRenderer({ node, renderLeaf }: SplitRendererProps): React.ReactEle
       className="flex min-h-0 min-w-0 flex-1"
       style={{ flexDirection: flexDir }}
     >
-      <div style={{ flexBasis: firstBasis, flexShrink: 0, flexGrow: 0 }} className="min-h-0 min-w-0 overflow-hidden">
+      <div
+        style={{ flexBasis: firstBasis, flexShrink: 0, flexGrow: 0 }}
+        className="min-h-0 min-w-0 overflow-hidden"
+      >
         <SlotNodeRenderer node={node.children[0]} renderLeaf={renderLeaf} />
       </div>
       <div style={{ flex: 1 }} className="min-h-0 min-w-0 overflow-hidden">

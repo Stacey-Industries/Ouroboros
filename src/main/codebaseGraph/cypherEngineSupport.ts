@@ -8,55 +8,55 @@
 export type MatchPattern =
   | { kind: 'single'; alias: string; label: string | null }
   | {
-      kind: 'hop'
-      left: { alias: string; label: string | null }
-      right: { alias: string; label: string | null }
-      edgeType: string | null
-      direction: 'outbound' | 'inbound'
+      kind: 'hop';
+      left: { alias: string; label: string | null };
+      right: { alias: string; label: string | null };
+      edgeType: string | null;
+      direction: 'outbound' | 'inbound';
     }
   | {
-      kind: 'varpath'
-      left: { alias: string; label: string | null }
-      right: { alias: string; label: string | null }
-      edgeType: string | null
-      minHops: number
-      maxHops: number
-      direction: 'outbound' | 'inbound'
-    }
+      kind: 'varpath';
+      left: { alias: string; label: string | null };
+      right: { alias: string; label: string | null };
+      edgeType: string | null;
+      minHops: number;
+      maxHops: number;
+      direction: 'outbound' | 'inbound';
+    };
 
 export interface WhereCondition {
-  alias: string
-  property: string
-  operator: string
-  value: string | number
-  conjunction: 'AND' | 'OR' | null
+  alias: string;
+  property: string;
+  operator: string;
+  value: string | number;
+  conjunction: 'AND' | 'OR' | null;
 }
 
 export interface ParsedQuery {
-  match: MatchPattern
-  where: WhereCondition[]
-  returnFields: ReturnField[]
-  orderBy: OrderByClause[]
-  limit: number
-  isCount: boolean
-  isDistinct: boolean
+  match: MatchPattern;
+  where: WhereCondition[];
+  returnFields: ReturnField[];
+  orderBy: OrderByClause[];
+  limit: number;
+  isCount: boolean;
+  isDistinct: boolean;
 }
 
 export interface ReturnField {
-  alias: string
-  property: string
-  outputName: string
+  alias: string;
+  property: string;
+  outputName: string;
 }
 
 export interface OrderByClause {
-  alias: string
-  property: string
-  direction: 'ASC' | 'DESC'
+  alias: string;
+  property: string;
+  direction: 'ASC' | 'DESC';
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const MAX_ROWS = 200
+export const MAX_ROWS = 200;
 
 /** Map Cypher node properties to SQL column names */
 export const PROP_TO_COLUMN: Record<string, string> = {
@@ -72,23 +72,25 @@ export const PROP_TO_COLUMN: Record<string, string> = {
   qualifiedName: 'qualified_name',
   id: 'id',
   project: 'project',
-}
+};
 
 // ─── parseMatch helpers ───────────────────────────────────────────────────────
 
-// eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher varpath syntax; bounded quantifiers prevent catastrophic backtracking
-const VARPATH_OUT = /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i
-// eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher varpath syntax; bounded quantifiers prevent catastrophic backtracking
-const VARPATH_IN = /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i
+ 
+const VARPATH_OUT =
+  /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i;
+ 
+const VARPATH_IN =
+  /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_OUT = /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)?\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i
+const HOP_OUT = /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)?\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_IN = /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)?\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i
+const HOP_IN = /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)?\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches single Cypher node; no backtracking risk
-const SINGLE_NODE = /\((\w+)(?::(\w+))?\)/i
+const SINGLE_NODE = /\((\w+)(?::(\w+))?\)/i;
 
 function tryVarpath(matchStr: string): MatchPattern | null {
-  let m = VARPATH_OUT.exec(matchStr)
+  let m = VARPATH_OUT.exec(matchStr);
   if (m) {
     return {
       kind: 'varpath',
@@ -98,9 +100,9 @@ function tryVarpath(matchStr: string): MatchPattern | null {
       minHops: parseInt(m[4], 10),
       maxHops: parseInt(m[5], 10),
       direction: 'outbound',
-    }
+    };
   }
-  m = VARPATH_IN.exec(matchStr)
+  m = VARPATH_IN.exec(matchStr);
   if (m) {
     return {
       kind: 'varpath',
@@ -110,13 +112,13 @@ function tryVarpath(matchStr: string): MatchPattern | null {
       minHops: parseInt(m[4], 10),
       maxHops: parseInt(m[5], 10),
       direction: 'inbound',
-    }
+    };
   }
-  return null
+  return null;
 }
 
 function tryHop(matchStr: string): MatchPattern | null {
-  let m = HOP_OUT.exec(matchStr)
+  let m = HOP_OUT.exec(matchStr);
   if (m) {
     return {
       kind: 'hop',
@@ -124,9 +126,9 @@ function tryHop(matchStr: string): MatchPattern | null {
       right: { alias: m[4], label: m[5] || null },
       edgeType: m[3] || null,
       direction: 'outbound',
-    }
+    };
   }
-  m = HOP_IN.exec(matchStr)
+  m = HOP_IN.exec(matchStr);
   if (m) {
     return {
       kind: 'hop',
@@ -134,25 +136,25 @@ function tryHop(matchStr: string): MatchPattern | null {
       right: { alias: m[4], label: m[5] || null },
       edgeType: m[3] || null,
       direction: 'inbound',
-    }
+    };
   }
-  return null
+  return null;
 }
 
 /** Parse MATCH clause into a MatchPattern. */
 export function parseMatch(matchStr: string): MatchPattern {
-  const varpath = tryVarpath(matchStr)
-  if (varpath) return varpath
+  const varpath = tryVarpath(matchStr);
+  if (varpath) return varpath;
 
-  const hop = tryHop(matchStr)
-  if (hop) return hop
+  const hop = tryHop(matchStr);
+  if (hop) return hop;
 
-  const m = SINGLE_NODE.exec(matchStr)
+  const m = SINGLE_NODE.exec(matchStr);
   if (m) {
-    return { kind: 'single', alias: m[1], label: m[2] || null }
+    return { kind: 'single', alias: m[1], label: m[2] || null };
   }
 
-  throw new Error(`Unsupported MATCH pattern: ${matchStr}`)
+  throw new Error(`Unsupported MATCH pattern: ${matchStr}`);
 }
 
 // ─── parseReturn helpers ──────────────────────────────────────────────────────
@@ -161,10 +163,10 @@ function parseCountReturn(
   working: string,
   isDistinct: boolean,
 ): { fields: ReturnField[]; isCount: boolean; isDistinct: boolean } | null {
-  const countMatch = /^COUNT\s*\(\s*(.*)\s*\)$/i.exec(working)
-  if (!countMatch) return null
+  const countMatch = /^COUNT\s*\(\s*(.*)\s*\)$/i.exec(working);
+  if (!countMatch) return null;
 
-  const inner = countMatch[1].trim()
+  const inner = countMatch[1].trim();
   if (inner === '*' || /^\w+$/.test(inner)) {
     return {
       fields: [
@@ -176,58 +178,60 @@ function parseCountReturn(
       ],
       isCount: true,
       isDistinct,
-    }
+    };
   }
-  return null
+  return null;
 }
 
 function parseReturnField(fieldStr: string): ReturnField | null {
-  const asMatch = /^(.+?)\s+AS\s+(\w+)$/i.exec(fieldStr)
-  let expr: string
-  let outputName: string
+  const asMatch = /^(.+?)\s+AS\s+(\w+)$/i.exec(fieldStr);
+  let expr: string;
+  let outputName: string;
 
   if (asMatch) {
-    expr = asMatch[1].trim()
-    outputName = asMatch[2]
+    expr = asMatch[1].trim();
+    outputName = asMatch[2];
   } else {
-    expr = fieldStr
-    outputName = fieldStr.replace('.', '_')
+    expr = fieldStr;
+    outputName = fieldStr.replace('.', '_');
   }
 
-  const propMatch = /^(\w+)\.(\w+)$/.exec(expr)
+  const propMatch = /^(\w+)\.(\w+)$/.exec(expr);
   if (propMatch) {
-    return { alias: propMatch[1], property: propMatch[2], outputName }
+    return { alias: propMatch[1], property: propMatch[2], outputName };
   }
   if (/^\w+$/.test(expr)) {
-    return { alias: expr, property: '*', outputName: expr }
+    return { alias: expr, property: '*', outputName: expr };
   }
-  return null
+  return null;
 }
 
 /** Parse RETURN clause into fields and detect COUNT/DISTINCT. */
-export function parseReturn(
-  returnStr: string,
-): { fields: ReturnField[]; isCount: boolean; isDistinct: boolean } {
-  let isDistinct = false
-  let working = returnStr.trim()
+export function parseReturn(returnStr: string): {
+  fields: ReturnField[];
+  isCount: boolean;
+  isDistinct: boolean;
+} {
+  let isDistinct = false;
+  let working = returnStr.trim();
 
   if (working.toUpperCase().startsWith('DISTINCT')) {
-    isDistinct = true
-    working = working.slice(8).trim()
+    isDistinct = true;
+    working = working.slice(8).trim();
   }
 
-  const countResult = parseCountReturn(working, isDistinct)
-  if (countResult) return countResult
+  const countResult = parseCountReturn(working, isDistinct);
+  if (countResult) return countResult;
 
-  const fieldStrs = working.split(',').map((s) => s.trim())
-  const fields: ReturnField[] = []
+  const fieldStrs = working.split(',').map((s) => s.trim());
+  const fields: ReturnField[] = [];
   for (const fieldStr of fieldStrs) {
-    if (!fieldStr) continue
-    const field = parseReturnField(fieldStr)
-    if (field) fields.push(field)
+    if (!fieldStr) continue;
+    const field = parseReturnField(fieldStr);
+    if (field) fields.push(field);
   }
 
-  return { fields, isCount: false, isDistinct }
+  return { fields, isCount: false, isDistinct };
 }
 
 // ─── singleHopSql helpers ─────────────────────────────────────────────────────
@@ -240,10 +244,19 @@ export function buildHopJoinCondition(
   direction: 'outbound' | 'inbound',
 ): string {
   if (direction === 'outbound') {
-    return `${edgeAlias}.source_id = ${leftAlias}.id AND ${edgeAlias}.target_id = ${rightAlias}.id`
+    return `${edgeAlias}.source_id = ${leftAlias}.id AND ${edgeAlias}.target_id = ${rightAlias}.id`;
   }
-  return `${edgeAlias}.target_id = ${leftAlias}.id AND ${edgeAlias}.source_id = ${rightAlias}.id`
+  return `${edgeAlias}.target_id = ${leftAlias}.id AND ${edgeAlias}.source_id = ${rightAlias}.id`;
 }
 
-export type { CypherResolvers, VarpathStartContext, VarpathTemplateOptions } from './cypherEngineVarpath'
-export { buildVarpathEndConditions, buildVarpathSelectParts, buildVarpathSqlTemplate, buildVarpathStartConditions } from './cypherEngineVarpath'
+export type {
+  CypherResolvers,
+  VarpathStartContext,
+  VarpathTemplateOptions,
+} from './cypherEngineVarpath';
+export {
+  buildVarpathEndConditions,
+  buildVarpathSelectParts,
+  buildVarpathSqlTemplate,
+  buildVarpathStartConditions,
+} from './cypherEngineVarpath';

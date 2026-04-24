@@ -31,7 +31,11 @@ function buildTokenTitle(session: AgentSession): string {
   return base + cacheRead + cacheWrite;
 }
 
-function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement<unknown> | null {
+function TokenUsageSummary({
+  session,
+}: {
+  session: AgentSession;
+}): React.ReactElement<unknown> | null {
   if (session.inputTokens < 1 && session.outputTokens < 1) return null;
   const estimatedCost = estimateCost({
     inputTokens: session.inputTokens,
@@ -132,7 +136,10 @@ export function AgentCardMeta({
       )}
       <DispatchBadge sessionId={session.id} jobs={jobs} />
       <TokenUsageSummary session={session} />
-      <CompactionIndicator compactions={session.compactions} failedCompactions={session.failedCompactions} />
+      <CompactionIndicator
+        compactions={session.compactions}
+        failedCompactions={session.failedCompactions}
+      />
     </div>
   );
 }

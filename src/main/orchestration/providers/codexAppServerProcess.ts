@@ -1,10 +1,11 @@
-import { type ChildProcess, exec, spawn } from 'child_process';
+import { type ChildProcess, spawn } from 'child_process';
 
-import {
-  CodexAppServerFramingParser,
-  encodeCodexAppServerMessage,
-} from './codexAppServerFraming';
-import type { CodexAppServerIncomingMessage, CodexAppServerOutgoingMessage } from './codexAppServerTypes';
+import { CodexAppServerFramingParser, encodeCodexAppServerMessage } from './codexAppServerFraming';
+import type {
+  CodexAppServerIncomingMessage,
+  CodexAppServerOutgoingMessage,
+} from './codexAppServerTypes';
+import { withStableWindowsShellEnv } from './codexWindowsShellEnv';
 
 export interface CodexAppServerSpawnOptions {
   cwd: string;
@@ -51,12 +52,12 @@ export function buildCodexAppServerArgs(options: CodexAppServerSpawnOptions): {
 }
 
 function buildProcessEnv(extraEnv?: Record<string, string>): Record<string, string> {
-  return {
+  return withStableWindowsShellEnv({
     ...process.env,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     ...extraEnv,
-  } as Record<string, string>;
+  } as Record<string, string>);
 }
 
 function killCodexAppServerProcess(child: ChildProcess): void {
@@ -66,7 +67,10 @@ function killCodexAppServerProcess(child: ChildProcess): void {
       return;
     }
     if (child.pid) {
-      exec(`taskkill /T /F /PID ${child.pid}`, { timeout: 5000 }, () => {
+      const taskkill = spawn('taskkill', ['/T', '/F', '/PID', String(child.pid)], {
+        stdio: 'ignore',
+      });
+      taskkill.on('close', () => {
         try {
           child.kill();
         } catch {
@@ -81,6 +85,84 @@ function killCodexAppServerProcess(child: ChildProcess): void {
   }
 }
 
+interface ProcessListeners {
+  messageListeners: Set<(message: CodexAppServerIncomingMessage) => void>;
+  closeListeners: Set<(event: CodexAppServerCloseEvent) => void>;
+}
+
+interface WireProcessEventsArgs {
+  child: ChildProcess;
+  parser: CodexAppServerFramingParser<CodexAppServerIncomingMessage>;
+  listeners: ProcessListeners;
+  stderrRef: { value: string };
+  resolveClosed: (event: CodexAppServerCloseEvent) => void;
+  resolvedRef: { value: boolean };
+}
+
+function wireProcessEvents(args: WireProcessEventsArgs): void {
+  const { child, parser, listeners, stderrRef, resolveClosed, resolvedRef } = args;
+  child.stdout?.on('data', (chunk: Buffer) => {
+    for (const message of parser.push(chunk)) {
+      for (const listener of listeners.messageListeners) listener(message);
+    }
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    stderrRef.value += chunk.toString();
+  });
+  child.on('close', (code, signal) => {
+    for (const message of parser.flush()) {
+      for (const listener of listeners.messageListeners) listener(message);
+    }
+    const event: CodexAppServerCloseEvent = { code, signal, stderr: stderrRef.value };
+    if (!resolvedRef.value) {
+      resolvedRef.value = true;
+      resolveClosed(event);
+    }
+    for (const listener of listeners.closeListeners) listener(event);
+  });
+}
+
+function buildProcessHandle(
+  child: ChildProcess,
+  listeners: ProcessListeners,
+  stderrRef: { value: string },
+  closed: Promise<CodexAppServerCloseEvent>,
+): CodexAppServerProcessHandle {
+  return {
+    get pid() {
+      return child.pid;
+    },
+    get stderr() {
+      return stderrRef.value;
+    },
+    closed,
+    send(message) {
+      if (!child.stdin || child.stdin.destroyed) {
+        throw new Error('Codex app-server stdin is not available.');
+      }
+      child.stdin.write(encodeCodexAppServerMessage(message));
+    },
+    onMessage(listener) {
+      listeners.messageListeners.add(listener);
+      return () => {
+        listeners.messageListeners.delete(listener);
+      };
+    },
+    onClose(listener) {
+      listeners.closeListeners.add(listener);
+      return () => {
+        listeners.closeListeners.delete(listener);
+      };
+    },
+    close() {
+      child.stdin?.end();
+    },
+    kill() {
+      killCodexAppServerProcess(child);
+    },
+  };
+}
+
 export function spawnCodexAppServerProcess(
   options: CodexAppServerSpawnOptions,
 ): CodexAppServerProcessHandle {
@@ -91,74 +173,18 @@ export function spawnCodexAppServerProcess(
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const parser = new CodexAppServerFramingParser<CodexAppServerIncomingMessage>();
-  const messageListeners = new Set<(message: CodexAppServerIncomingMessage) => void>();
-  const closeListeners = new Set<(event: CodexAppServerCloseEvent) => void>();
-  let stderr = '';
-  let resolved = false;
+  const listeners: ProcessListeners = {
+    messageListeners: new Set(),
+    closeListeners: new Set(),
+  };
+  const stderrRef = { value: '' };
+  const resolvedRef = { value: false };
   let resolveClosed: (event: CodexAppServerCloseEvent) => void = () => {};
   const closed = new Promise<CodexAppServerCloseEvent>((resolve) => {
     resolveClosed = resolve;
   });
-
-  child.stdout?.on('data', (chunk: Buffer) => {
-    for (const message of parser.push(chunk)) {
-      for (const listener of messageListeners) {
-        listener(message);
-      }
-    }
-  });
-  child.stderr?.on('data', (chunk: Buffer) => {
-    stderr += chunk.toString();
-  });
-  child.on('close', (code, signal) => {
-    for (const message of parser.flush()) {
-      for (const listener of messageListeners) {
-        listener(message);
-      }
-    }
-    const event: CodexAppServerCloseEvent = { code, signal, stderr };
-    if (!resolved) {
-      resolved = true;
-      resolveClosed(event);
-    }
-    for (const listener of closeListeners) {
-      listener(event);
-    }
-  });
-
-  return {
-    get pid() {
-      return child.pid;
-    },
-    get stderr() {
-      return stderr;
-    },
-    closed,
-    send(message) {
-      if (!child.stdin || child.stdin.destroyed) {
-        throw new Error('Codex app-server stdin is not available.');
-      }
-      child.stdin.write(encodeCodexAppServerMessage(message));
-    },
-    onMessage(listener) {
-      messageListeners.add(listener);
-      return () => {
-        messageListeners.delete(listener);
-      };
-    },
-    onClose(listener) {
-      closeListeners.add(listener);
-      return () => {
-        closeListeners.delete(listener);
-      };
-    },
-    close() {
-      child.stdin?.end();
-    },
-    kill() {
-      killCodexAppServerProcess(child);
-    },
-  };
+  wireProcessEvents({ child, parser, listeners, stderrRef, resolveClosed, resolvedRef });
+  return buildProcessHandle(child, listeners, stderrRef, closed);
 }
 
 export async function ensureCodexAppServerProcess(args: {
@@ -177,4 +203,28 @@ export async function ensureCodexAppServerProcess(args: {
     }
   });
   return handle;
+}
+
+export async function shutdownCodexAppServerProcesses(): Promise<void> {
+  const handles = Array.from(processRegistry.values());
+  processRegistry.clear();
+  for (const handle of handles) {
+    try {
+      handle.close();
+    } catch {
+      /* already closed */
+    }
+  }
+  for (const handle of handles) {
+    try {
+      handle.kill();
+    } catch {
+      /* already dead */
+    }
+  }
+  await Promise.allSettled(handles.map(async (handle) => handle.closed));
+}
+
+export function resetCodexAppServerProcessesForTests(): void {
+  processRegistry.clear();
 }

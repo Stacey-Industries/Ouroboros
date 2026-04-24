@@ -13,7 +13,7 @@ import { WebSocket } from 'ws';
 import log from '../logger';
 import { getAllActiveWindows } from '../windowManager';
 import { enforceCapabilityOrRespond, type MobileAccessMeta } from './bridgeCapabilityGate';
-import { type DispatchContext,dispatchResumable, handleResumeFrame } from './bridgeResume';
+import { type DispatchContext, dispatchResumable, handleResumeFrame } from './bridgeResume';
 import { ipcHandlerRegistry } from './handlerRegistry';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -142,7 +142,9 @@ function parseJsonRpcMessage(ws: WebSocket, raw: string): JsonRpcRequest | null 
 
 // ─── Resume handshake ─────────────────────────────────────────────────────────
 
-interface ResumeParams { tokens?: unknown }
+interface ResumeParams {
+  tokens?: unknown;
+}
 
 function handleResume(
   ws: WebSocket,
@@ -182,10 +184,8 @@ export function handleJsonRpcMessage(
   }
 
   // ── Capability gate (Phase C) ─────────────────────────────────────────────
-  const proceed = enforceCapabilityOrRespond(
-    request,
-    connectionMeta,
-    (response) => sendResponse(ws, response),
+  const proceed = enforceCapabilityOrRespond(request, connectionMeta, (response) =>
+    sendResponse(ws, response),
   );
   if (!proceed) return;
 

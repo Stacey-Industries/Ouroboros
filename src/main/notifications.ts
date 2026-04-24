@@ -47,9 +47,7 @@ function buildClickHandler(threadId: string | undefined): (() => void) | undefin
  * No-ops silently if any window is currently focused or notifications
  * are not supported on this platform.
  */
-export function showStreamCompletionNotification(
-  opts: StreamCompletionNotifyOptions,
-): void {
+export function showStreamCompletionNotification(opts: StreamCompletionNotifyOptions): void {
   const focused = BrowserWindow.getAllWindows().some(
     (win) => !win.isDestroyed() && win.isFocused(),
   );

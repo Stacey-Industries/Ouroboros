@@ -71,10 +71,7 @@ describe('SessionSidebar — a11y', () => {
   it('has no axe violations with session rows', async () => {
     mockApi.sessionCrud.list.mockResolvedValue({
       success: true,
-      sessions: [
-        makeSession('s1', '/projects/alpha'),
-        makeSession('s2', '/projects/beta'),
-      ],
+      sessions: [makeSession('s1', '/projects/alpha'), makeSession('s2', '/projects/beta')],
     });
     const { container } = render(<SessionSidebar />);
     await waitFor(() => expect(mockApi.sessionCrud.list).toHaveBeenCalled());

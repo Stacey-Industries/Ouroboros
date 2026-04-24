@@ -6,7 +6,11 @@ import type { ContextMenuState } from './ContextMenu';
 import { buildMenuItems, type MenuBuilderOptions } from './contextMenuControllerHelpers';
 import type { TreeNode } from './FileTreeItem';
 import { useFileTreeStore } from './fileTreeStore';
-import { type BulkHandlerArgs, useBulkHandlers, useContextMenuHandlers } from './useContextMenuHandlerHooks';
+import {
+  type BulkHandlerArgs,
+  useBulkHandlers,
+  useContextMenuHandlers,
+} from './useContextMenuHandlerHooks';
 
 export interface MenuItem {
   action: () => void;
@@ -36,12 +40,25 @@ interface UseContextMenuControllerProps {
   onUnstage?: (node: TreeNode) => void;
 }
 
-function useDismissMenu(menuRef: React.RefObject<HTMLDivElement | null>, onClose: () => void, visible: boolean): void {
+function useDismissMenu(
+  menuRef: React.RefObject<HTMLDivElement | null>,
+  onClose: () => void,
+  visible: boolean,
+): void {
   useEffect(() => {
     if (!visible) return;
-    const onMouseDown = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose(); };
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); onClose(); } };
-    const onScroll = () => { onClose(); };
+    const onMouseDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    const onScroll = () => {
+      onClose();
+    };
     document.addEventListener('mousedown', onMouseDown, true);
     document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('scroll', onScroll, true);
@@ -53,14 +70,22 @@ function useDismissMenu(menuRef: React.RefObject<HTMLDivElement | null>, onClose
   }, [menuRef, onClose, visible]);
 }
 
-function useDeleteConfirmation(node: TreeNode | null, visible: boolean): readonly [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
+function useDeleteConfirmation(
+  node: TreeNode | null,
+  visible: boolean,
+): readonly [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
   const state = useState(false);
   const [, setConfirmingDelete] = state;
-  useEffect(() => { setConfirmingDelete(false); }, [node, setConfirmingDelete, visible]);
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [node, setConfirmingDelete, visible]);
   return state;
 }
 
-function useMenuItems(node: TreeNode | null, options: Omit<MenuBuilderOptions, 'isRoot'>): ReturnType<typeof buildMenuItems> {
+function useMenuItems(
+  node: TreeNode | null,
+  options: Omit<MenuBuilderOptions, 'isRoot'>,
+): ReturnType<typeof buildMenuItems> {
   return useMemo(() => {
     if (!node) return [];
     return buildMenuItems({ ...options, isRoot: node.relativePath === '' });
@@ -84,7 +109,20 @@ function buildBulkHandlerArgs(opts: {
   };
 }
 
-export function useContextMenuController({ state, projectRoot, ...options }: UseContextMenuControllerProps): {
+function useMultiSelectCount(
+  selectedPaths: Set<string> | undefined,
+  node: TreeNode | null,
+): { combinedCount: number; isMultiSelect: boolean } {
+  const combinedCount =
+    selectedPaths && node ? new Set([...selectedPaths, node.path]).size : 0;
+  return { combinedCount, isMultiSelect: combinedCount > 1 };
+}
+
+export function useContextMenuController({
+  state,
+  projectRoot,
+  ...options
+}: UseContextMenuControllerProps): {
   items: ReturnType<typeof buildMenuItems>;
   menuRef: React.RefObject<HTMLDivElement | null>;
 } {
@@ -95,12 +133,17 @@ export function useContextMenuController({ state, projectRoot, ...options }: Use
 
   useDismissMenu(menuRef, options.onClose, state.visible);
 
-  const handlers = useContextMenuHandlers({ ...options, confirmingDelete, node: state.node, setConfirmingDelete, toast });
-  const bulkHandlerArgs = buildBulkHandlerArgs({ options, projectRoot, toast, confirmingDelete, setConfirmingDelete });
-  const bulkHandlers = useBulkHandlers(bulkHandlerArgs);
-
-  const combinedCount = options.selectedPaths && state.node ? new Set([...options.selectedPaths, state.node.path]).size : 0;
-  const isMultiSelect = combinedCount > 1;
+  const handlers = useContextMenuHandlers({
+    ...options,
+    confirmingDelete,
+    node: state.node,
+    setConfirmingDelete,
+    toast,
+  });
+  const bulkHandlers = useBulkHandlers(
+    buildBulkHandlerArgs({ options, projectRoot, toast, confirmingDelete, setConfirmingDelete }),
+  );
+  const { combinedCount, isMultiSelect } = useMultiSelectCount(options.selectedPaths, state.node);
 
   const items = useMenuItems(state.node, {
     confirmingDelete,

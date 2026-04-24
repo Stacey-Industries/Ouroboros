@@ -3,14 +3,12 @@
  *
  * Extracted from chatOrchestrationBridge.ts to keep file line counts under the ESLint limit.
  * Handles streaming, completion, cancellation, and failure progress events.
+ * Block-level helpers live in chatOrchestrationBridgeProgressBlocks.ts.
  */
 
 import type { ProviderProgressEvent } from '../orchestration/types';
 import {
   emitMonitorSessionEnd,
-  emitMonitorSubTool,
-  emitMonitorToolEnd,
-  emitMonitorToolStart,
   emitStreamChunk,
   ensureMonitorSessionStarted,
   stopIncrementalFlush,
@@ -21,15 +19,10 @@ import {
   persistFailedTurnNoContent,
   persistFailedTurnWithContent,
 } from './chatOrchestrationBridgePersist';
-import {
-  findContextForProgress,
-  logFirstChunk,
-} from './chatOrchestrationBridgeProgressHelpers';
-import { applySubToolToAccumulatedBlock, buildSubToolStreamChunk } from './chatOrchestrationBridgeSubTools';
+import { handleContentBlock } from './chatOrchestrationBridgeProgressBlocks';
+import { findContextForProgress } from './chatOrchestrationBridgeProgressHelpers';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
-import { tapTextDeltaForFactClaims } from './factClaimTap';
 import { tokenCalibrationStore } from './tokenCalibration';
-import type { AgentChatContentBlock, AgentChatSubToolActivity } from './types';
 
 // ---------------------------------------------------------------------------
 // Session ID / link population
@@ -49,167 +42,8 @@ function syncProviderSessionId(ctx: ActiveStreamContext, progress: ProviderProgr
 }
 
 // ---------------------------------------------------------------------------
-// Streaming block handlers
+// Legacy message handler
 // ---------------------------------------------------------------------------
-
-function ensureBlockCapacity(ctx: ActiveStreamContext, blockIndex: number): void {
-  while (ctx.accumulatedBlocks.length <= blockIndex) {
-    ctx.accumulatedBlocks.push({ kind: 'text', content: '' });
-  }
-}
-
-interface BlockHandlerArgs {
-  ctx: ActiveStreamContext;
-  listeners: AgentChatBridgeRuntime['streamChunkListeners'];
-  blockIndex: number;
-  now: number;
-}
-
-function handleTextBlock(args: BlockHandlerArgs, textDelta: string): void {
-  const { ctx, listeners, blockIndex, now } = args;
-  ctx.accumulatedText += textDelta;
-  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-  const existing = ctx.accumulatedBlocks[blockIndex];
-  if (existing.kind === 'text') {
-    (existing as { kind: 'text'; content: string }).content += textDelta;
-  } else {
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-    ctx.accumulatedBlocks[blockIndex] = { kind: 'text', content: textDelta };
-  }
-  emitStreamChunk(
-    listeners,
-    {
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      type: 'text_delta',
-      blockIndex,
-      textDelta,
-      timestamp: now,
-      tokenUsage: ctx.tokenUsage,
-    },
-    ctx,
-  );
-  // Wave 30 Phase F: tap text deltas through the fact-claim detector.
-  // Fire-and-forget — the provider event callback is synchronous; the 800ms
-  // latency budget is honoured inside maybePauseForFactClaim but does not
-  // block the current chunk from being emitted to listeners above.
-  void tapTextDeltaForFactClaims(ctx, listeners, textDelta, now);
-}
-
-function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
-  const { ctx, listeners, blockIndex, now } = args;
-  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-  const existing = ctx.accumulatedBlocks[blockIndex];
-  if (existing.kind === 'thinking') {
-    (existing as { kind: 'thinking'; content: string }).content += textDelta;
-  } else {
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-    ctx.accumulatedBlocks[blockIndex] = { kind: 'thinking', content: textDelta };
-  }
-  emitStreamChunk(
-    listeners,
-    {
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      type: 'thinking_delta',
-      blockIndex,
-      thinkingDelta: textDelta,
-      timestamp: now,
-      tokenUsage: ctx.tokenUsage,
-    },
-    ctx,
-  );
-}
-
-type ToolActivity = NonNullable<NonNullable<ProviderProgressEvent['contentBlock']>['toolActivity']>;
-
-function applyToolStart(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {
-  const existing = ctx.accumulatedBlocks[blockIndex];
-  const isRepeatedStart =
-    existing?.kind === 'tool_use' &&
-    existing.status === 'running' &&
-    existing.tool === toolActivity.name;
-  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-  ctx.accumulatedBlocks[blockIndex] = {
-    kind: 'tool_use',
-    tool: toolActivity.name,
-    status: 'running',
-    filePath: toolActivity.filePath,
-    inputSummary: toolActivity.inputSummary,
-    editSummary: toolActivity.editSummary,
-    blockId: `tool-${blockIndex}`,
-  };
-  if (!isRepeatedStart) {
-    ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
-    emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
-  }
-}
-
-function applyToolComplete(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {
-  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-  const block = ctx.accumulatedBlocks[blockIndex];
-  if (block.kind === 'tool_use')
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-    ctx.accumulatedBlocks[blockIndex] = { ...block, status: 'complete', output: toolActivity.output } as AgentChatContentBlock;
-  emitMonitorToolEnd(ctx, blockIndex, { toolName: toolActivity.name, now, output: toolActivity.output });
-}
-
-function handleToolBlock(args: BlockHandlerArgs, toolActivity: ToolActivity): void {
-  const { ctx, listeners, blockIndex, now } = args;
-  if (toolActivity.subToolActivity) {
-    const subTool: AgentChatSubToolActivity = {
-      ...toolActivity.subToolActivity,
-      status: toolActivity.subToolActivity.status === 'complete' ? 'complete' : 'running',
-    };
-    applySubToolToAccumulatedBlock(ctx, blockIndex, subTool);
-    const subChunk = buildSubToolStreamChunk(ctx, blockIndex, subTool, now);
-    emitStreamChunk(listeners, subChunk, ctx);
-    emitMonitorSubTool(ctx, blockIndex, toolActivity.subToolActivity, now);
-    return;
-  }
-  if (toolActivity.status === 'running') applyToolStart(ctx, blockIndex, toolActivity, now);
-  else if (toolActivity.status === 'complete') applyToolComplete(ctx, blockIndex, toolActivity, now);
-  emitStreamChunk(
-    listeners,
-    {
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      type: 'tool_activity',
-      blockIndex,
-      toolActivity: {
-        name: toolActivity.name,
-        status: toolActivity.status,
-        filePath: toolActivity.filePath,
-        inputSummary: toolActivity.inputSummary,
-        editSummary: toolActivity.editSummary,
-        output: toolActivity.output,
-      },
-      timestamp: now,
-      tokenUsage: ctx.tokenUsage,
-    },
-    ctx,
-  );
-}
-
-function handleContentBlock(
-  ctx: ActiveStreamContext,
-  listeners: AgentChatBridgeRuntime['streamChunkListeners'],
-  block: NonNullable<ProviderProgressEvent['contentBlock']>,
-  now: number,
-): void {
-  const { blockIndex, blockType, textDelta, toolActivity } = block;
-  ensureBlockCapacity(ctx, blockIndex);
-  const handlerArgs: BlockHandlerArgs = { ctx, listeners, blockIndex, now };
-  if (blockType === 'text' && textDelta) {
-    handleTextBlock(handlerArgs, textDelta);
-  } else if (blockType === 'thinking' && textDelta) {
-    handleThinkingBlock(handlerArgs, textDelta);
-  } else if (blockType === 'tool_use' && toolActivity) {
-    handleToolBlock(handlerArgs, toolActivity);
-  }
-  logFirstChunk(ctx);
-  ctx.firstChunkEmitted = true;
-}
 
 function handleLegacyMessage(
   ctx: ActiveStreamContext,
@@ -235,7 +69,6 @@ function handleLegacyMessage(
     },
     ctx,
   );
-  logFirstChunk(ctx);
   ctx.firstChunkEmitted = true;
 }
 

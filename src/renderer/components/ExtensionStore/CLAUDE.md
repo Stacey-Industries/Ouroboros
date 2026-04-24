@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-Now I have enough to write a useful CLAUDE.md.
-
 # ExtensionStore — Extension browsing, installation, and management UI
 
 Two parallel extension systems in one page: VSX registry extensions (Open VSX / VS Code Marketplace) and locally-installed native extensions. Rendered as a centre-pane `SpecialView` via `ExtensionStorePage`.
@@ -85,4 +83,5 @@ window.dispatchEvent(new CustomEvent(OPEN_EXTENSION_STORE_EVENT, { detail: { tab
 - **Pagination**: `PAGE_SIZE = 20` in both `extensionStoreModel.ts` and `ExtensionStoreSection.tsx` — they are separate constants. The model's offset tracks the last fetched page; "load more" appends to the list.
 - **`useExtensionsSectionSupport.ts`** is a support module only — do not import `ExtensionsState` or `ExtensionLoaders` in UI components. Those interfaces are internal to the model layer.
 - **`VsxInstalledSection`** is not rendered by `ExtensionStorePage` — it lives in Settings. Don't move it here without checking the Settings integration.
+
 <!-- claude-md-auto:end -->

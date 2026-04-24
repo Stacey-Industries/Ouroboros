@@ -12,7 +12,7 @@ import {
   type TabId,
   TABS,
 } from './settingsTabs';
-import { type SettingsDraftApi,useSettingsDraft } from './useSettingsDraft';
+import { type SettingsDraftApi, useSettingsDraft } from './useSettingsDraft';
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -42,14 +42,48 @@ function useSettingsModalState(isOpen: boolean, onClose: () => void, initialTab:
     setActiveMainTab(getMainTabForSubTab(sub));
     setActiveSubTab(sub);
   };
-  useOpenCloseEffect({ config, initialTab, isOpen, api, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery });
+  useOpenCloseEffect({
+    config,
+    initialTab,
+    isOpen,
+    api,
+    setActiveMainTab,
+    setActiveSubTab,
+    setIsMounted,
+    setIsVisible,
+    setSearchQuery,
+  });
   useExternalChangeEffect({ isOpen, setDraft: api.setDraft });
   const isSearching = searchQuery.trim().length > 0;
-  useKeyboardEffect({ isOpen, isSearching, onCancelRef: cancelRef, searchInputRef, setSearchQuery });
-  return { api, activeMainTab, activeSubTab, setActiveSubTab, cancelRef, isSearching, isMounted, isVisible, handleMainTabChange, handleResultClick, searchInputRef, searchQuery, setSearchQuery };
+  useKeyboardEffect({
+    isOpen,
+    isSearching,
+    onCancelRef: cancelRef,
+    searchInputRef,
+    setSearchQuery,
+  });
+  return {
+    api,
+    activeMainTab,
+    activeSubTab,
+    setActiveSubTab,
+    cancelRef,
+    isSearching,
+    isMounted,
+    isVisible,
+    handleMainTabChange,
+    handleResultClick,
+    searchInputRef,
+    searchQuery,
+    setSearchQuery,
+  };
 }
 
-export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: SettingsModalProps): React.ReactElement | null {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  initialTab = 'general',
+}: SettingsModalProps): React.ReactElement | null {
   const s = useSettingsModalState(isOpen, onClose, initialTab);
   if (!s.isMounted || !s.api.draft) return null;
   return (

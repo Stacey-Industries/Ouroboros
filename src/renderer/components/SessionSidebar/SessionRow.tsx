@@ -46,32 +46,39 @@ function daysUntilPurge(deletedAt: number): number {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-interface StatusPillProps { label: string }
+interface StatusPillProps {
+  label: string;
+}
 
 function StatusPill({ label }: StatusPillProps): React.ReactElement {
   const cls =
-    label === 'archived' ? 'bg-status-warning-subtle text-status-warning' :
-    label === 'trash'    ? 'bg-status-error-subtle text-status-error' :
-    'bg-status-success-subtle text-status-success';
-  return (
-    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
-      {label}
-    </span>
-  );
+    label === 'archived'
+      ? 'bg-status-warning-subtle text-status-warning'
+      : label === 'trash'
+        ? 'bg-status-error-subtle text-status-error'
+        : 'bg-status-success-subtle text-status-success';
+  return <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>;
 }
 
-interface PinButtonProps { sessionId: string; pinned: boolean; onToggled?: () => void }
+interface PinButtonProps {
+  sessionId: string;
+  pinned: boolean;
+  onToggled?: () => void;
+}
 
 function PinButton({ sessionId, pinned, onToggled }: PinButtonProps): React.ReactElement {
   const [busy, setBusy] = useState(false);
-  const handle = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.electronAPI) return;
-    setBusy(true);
-    await window.electronAPI.sessionCrud.pin(sessionId, !pinned);
-    setBusy(false);
-    onToggled?.();
-  }, [sessionId, pinned, onToggled]);
+  const handle = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!window.electronAPI) return;
+      setBusy(true);
+      await window.electronAPI.sessionCrud.pin(sessionId, !pinned);
+      setBusy(false);
+      onToggled?.();
+    },
+    [sessionId, pinned, onToggled],
+  );
   return (
     <button
       type="button"
@@ -86,18 +93,25 @@ function PinButton({ sessionId, pinned, onToggled }: PinButtonProps): React.Reac
   );
 }
 
-interface RestoreButtonProps { sessionId: string; label: string; onRestored?: () => void }
+interface RestoreButtonProps {
+  sessionId: string;
+  label: string;
+  onRestored?: () => void;
+}
 
 function RestoreButton({ sessionId, label, onRestored }: RestoreButtonProps): React.ReactElement {
   const [busy, setBusy] = useState(false);
-  const handle = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.electronAPI) return;
-    setBusy(true);
-    await window.electronAPI.sessionCrud.restore(sessionId);
-    setBusy(false);
-    onRestored?.();
-  }, [sessionId, onRestored]);
+  const handle = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!window.electronAPI) return;
+      setBusy(true);
+      await window.electronAPI.sessionCrud.restore(sessionId);
+      setBusy(false);
+      onRestored?.();
+    },
+    [sessionId, onRestored],
+  );
   return (
     <button
       type="button"
@@ -111,18 +125,27 @@ function RestoreButton({ sessionId, label, onRestored }: RestoreButtonProps): Re
   );
 }
 
-interface RestoreDeletedButtonProps { sessionId: string; onRestored?: () => void }
+interface RestoreDeletedButtonProps {
+  sessionId: string;
+  onRestored?: () => void;
+}
 
-function RestoreDeletedButton({ sessionId, onRestored }: RestoreDeletedButtonProps): React.ReactElement {
+function RestoreDeletedButton({
+  sessionId,
+  onRestored,
+}: RestoreDeletedButtonProps): React.ReactElement {
   const [busy, setBusy] = useState(false);
-  const handle = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.electronAPI) return;
-    setBusy(true);
-    await window.electronAPI.sessionCrud.restoreDeleted(sessionId);
-    setBusy(false);
-    onRestored?.();
-  }, [sessionId, onRestored]);
+  const handle = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!window.electronAPI) return;
+      setBusy(true);
+      await window.electronAPI.sessionCrud.restoreDeleted(sessionId);
+      setBusy(false);
+      onRestored?.();
+    },
+    [sessionId, onRestored],
+  );
   return (
     <button
       type="button"
@@ -138,7 +161,10 @@ function RestoreDeletedButton({ sessionId, onRestored }: RestoreDeletedButtonPro
 
 // ─── SessionRowBody ───────────────────────────────────────────────────────────
 
-interface SessionRowBodyProps { session: SessionRecord; onToggled?: () => void }
+interface SessionRowBodyProps {
+  session: SessionRecord;
+  onToggled?: () => void;
+}
 
 function SessionRowBody({ session, onToggled }: SessionRowBodyProps): React.ReactElement {
   return (
@@ -148,8 +174,14 @@ function SessionRowBody({ session, onToggled }: SessionRowBodyProps): React.Reac
           {projectBasename(session.projectRoot)}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
-          <PinButton sessionId={session.id} pinned={Boolean(session.pinned)} onToggled={onToggled} />
-          <span className="text-xs text-text-semantic-faint">{relativeTime(session.lastUsedAt)}</span>
+          <PinButton
+            sessionId={session.id}
+            pinned={Boolean(session.pinned)}
+            onToggled={onToggled}
+          />
+          <span className="text-xs text-text-semantic-faint">
+            {relativeTime(session.lastUsedAt)}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-1.5">
@@ -167,7 +199,10 @@ function SessionRowBody({ session, onToggled }: SessionRowBodyProps): React.Reac
 
 // ─── Inline badges ────────────────────────────────────────────────────────────
 
-interface DeletedBadgeProps { session: SessionRecord; onRestored?: () => void }
+interface DeletedBadgeProps {
+  session: SessionRecord;
+  onRestored?: () => void;
+}
 
 function DeletedBadge({ session, onRestored }: DeletedBadgeProps): React.ReactElement | null {
   if (!session.deletedAt) return null;
@@ -192,11 +227,16 @@ export interface SessionRowProps {
 }
 
 export function SessionRow({
-  session, isActive, onClick, onRestored,
+  session,
+  isActive,
+  onClick,
+  onRestored,
 }: SessionRowProps): React.ReactElement {
   const handleClick = useCallback(() => onClick(session.id), [onClick, session.id]);
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') onClick(session.id); },
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') onClick(session.id);
+    },
     [onClick, session.id],
   );
   const activeCls = isActive

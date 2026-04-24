@@ -8,11 +8,7 @@ import {
   revertPendingEntries,
   stagePendingEntries,
 } from './diffReviewState.ops';
-import {
-  executeAcceptHunk,
-  executeRejectHunk,
-  isFileStale,
-} from './diffReviewState.stale';
+import { executeAcceptHunk, executeRejectHunk, isFileStale } from './diffReviewState.stale';
 import type { DiffReviewState, HunkDecision, ReviewFile, StalePendingOp } from './types';
 
 export { toReviewFiles } from './diffReviewState.ops';
@@ -131,7 +127,9 @@ function rollbackBatch(state: DiffReviewState): DiffReviewState {
   const files = state.files.map((file) => ({
     ...file,
     hunks: file.hunks.map((hunk) =>
-      ids.has(hunk.id) && hunk.decision === 'accepted' ? { ...hunk, decision: 'pending' as HunkDecision } : hunk,
+      ids.has(hunk.id) && hunk.decision === 'accepted'
+        ? { ...hunk, decision: 'pending' as HunkDecision }
+        : hunk,
     ),
   }));
   return { ...state, files, lastAcceptedBatch: null };
@@ -148,9 +146,12 @@ function applyStaleAction(
       if (state.staleFiles.includes(action.relativePath)) return state;
       return { ...state, staleFiles: [...state.staleFiles, action.relativePath] };
     }
-    case 'PEND_STALE_OP': return { ...state, stalePendingOp: action.op };
-    case 'DISMISS_STALE_OP': return { ...state, stalePendingOp: null };
-    default: return UNHANDLED;
+    case 'PEND_STALE_OP':
+      return { ...state, stalePendingOp: action.op };
+    case 'DISMISS_STALE_OP':
+      return { ...state, stalePendingOp: null };
+    default:
+      return UNHANDLED;
   }
 }
 
@@ -158,15 +159,24 @@ function applyAction(state: DiffReviewState, action: DiffReviewAction): DiffRevi
   const staleResult = applyStaleAction(state, action);
   if (staleResult !== UNHANDLED) return staleResult;
   switch (action.type) {
-    case 'LOADED': return { ...state, files: action.files, loading: false };
-    case 'ERROR': return { ...state, error: action.error, loading: false };
-    case 'CLOSE': return null;
-    case 'SET_DECISION': return setHunkDecision(state, action.fileIdx, action.hunkIdx, action.decision);
-    case 'SET_FILE_DECISION': return setFileDecision(state, action.fileIdx, action.decision);
-    case 'SET_ALL_DECISION': return setAllDecision(state, action.decision);
-    case 'CAPTURE_BATCH': return { ...state, lastAcceptedBatch: action.hunkIds };
-    case 'ROLLBACK_LAST_BATCH': return rollbackBatch(state);
-    default: return state;
+    case 'LOADED':
+      return { ...state, files: action.files, loading: false };
+    case 'ERROR':
+      return { ...state, error: action.error, loading: false };
+    case 'CLOSE':
+      return null;
+    case 'SET_DECISION':
+      return setHunkDecision(state, action.fileIdx, action.hunkIdx, action.decision);
+    case 'SET_FILE_DECISION':
+      return setFileDecision(state, action.fileIdx, action.decision);
+    case 'SET_ALL_DECISION':
+      return setAllDecision(state, action.decision);
+    case 'CAPTURE_BATCH':
+      return { ...state, lastAcceptedBatch: action.hunkIds };
+    case 'ROLLBACK_LAST_BATCH':
+      return rollbackBatch(state);
+    default:
+      return state;
   }
 }
 
@@ -278,7 +288,9 @@ export function useBulkReviewActions(
 
   const acceptAll = useCallback(() => {
     if (!state) return;
-    const hunkIds = state.files.flatMap((f) => f.hunks.filter((h) => h.decision === 'pending').map((h) => h.id));
+    const hunkIds = state.files.flatMap((f) =>
+      f.hunks.filter((h) => h.decision === 'pending').map((h) => h.id),
+    );
     dispatch({ type: 'SET_ALL_DECISION', decision: 'accepted' });
     dispatch({ type: 'CAPTURE_BATCH', hunkIds });
     void stagePendingEntries(

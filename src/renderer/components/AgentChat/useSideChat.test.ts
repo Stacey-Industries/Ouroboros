@@ -10,7 +10,11 @@ import { useSideChat } from './useSideChat';
 
 // ── electronAPI mock ──────────────────────────────────────────────────────────
 
-function installElectronApi(forkResult: { success: boolean; thread?: { id: string }; error?: string }): void {
+function installElectronApi(forkResult: {
+  success: boolean;
+  thread?: { id: string };
+  error?: string;
+}): void {
   Object.defineProperty(window, 'electronAPI', {
     value: {
       agentChat: {
@@ -55,8 +59,12 @@ describe('useSideChat', () => {
   it('openSideChat does not duplicate an already-open thread', async () => {
     const { result } = renderHook(() => useSideChat());
 
-    await act(async () => { await result.current.openSideChat('parent-1', 'msg-1'); });
-    await act(async () => { await result.current.openSideChat('parent-1', 'msg-1'); });
+    await act(async () => {
+      await result.current.openSideChat('parent-1', 'msg-1');
+    });
+    await act(async () => {
+      await result.current.openSideChat('parent-1', 'msg-1');
+    });
 
     // forkThread is called twice but the ID returned is the same mock value
     expect(result.current.sideChats).toEqual(['side-1']);
@@ -77,9 +85,13 @@ describe('useSideChat', () => {
 
   it('closeSideChat removes the thread from the list', async () => {
     const { result } = renderHook(() => useSideChat());
-    await act(async () => { await result.current.openSideChat('parent-1', 'msg-1'); });
+    await act(async () => {
+      await result.current.openSideChat('parent-1', 'msg-1');
+    });
 
-    act(() => { result.current.closeSideChat('side-1'); });
+    act(() => {
+      result.current.closeSideChat('side-1');
+    });
 
     expect(result.current.sideChats).toEqual([]);
     expect(result.current.activeSideChatId).toBeNull();
@@ -89,24 +101,36 @@ describe('useSideChat', () => {
     // open two distinct side chats
     installElectronApi({ success: true, thread: { id: 'side-1' } });
     const { result } = renderHook(() => useSideChat());
-    await act(async () => { await result.current.openSideChat('parent-1', 'msg-1'); });
+    await act(async () => {
+      await result.current.openSideChat('parent-1', 'msg-1');
+    });
 
     // manually inject a second entry
-    act(() => { result.current.setActive('side-1'); });
+    act(() => {
+      result.current.setActive('side-1');
+    });
 
-    act(() => { result.current.closeSideChat('other-id'); });
+    act(() => {
+      result.current.closeSideChat('other-id');
+    });
 
     expect(result.current.activeSideChatId).toBe('side-1');
   });
 
   it('setActive changes the active thread', async () => {
     const { result } = renderHook(() => useSideChat());
-    await act(async () => { await result.current.openSideChat('parent-1', 'msg-1'); });
+    await act(async () => {
+      await result.current.openSideChat('parent-1', 'msg-1');
+    });
 
-    act(() => { result.current.setActive(null); });
+    act(() => {
+      result.current.setActive(null);
+    });
     expect(result.current.activeSideChatId).toBeNull();
 
-    act(() => { result.current.setActive('side-1'); });
+    act(() => {
+      result.current.setActive('side-1');
+    });
     expect(result.current.activeSideChatId).toBe('side-1');
   });
 });

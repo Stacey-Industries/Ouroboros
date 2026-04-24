@@ -38,14 +38,26 @@ function createMockProc(): MockProc {
     kill: vi.fn(),
     onData: (cb) => {
       dataCb = cb;
-      return { dispose: () => { dataCb = null; } };
+      return {
+        dispose: () => {
+          dataCb = null;
+        },
+      };
     },
     onExit: (cb) => {
       exitCb = cb;
-      return { dispose: () => { exitCb = null; } };
+      return {
+        dispose: () => {
+          exitCb = null;
+        },
+      };
     },
-    emitData: (data) => { dataCb?.(data); },
-    emitExit: (exitCode, signal) => { exitCb?.({ exitCode, signal }); },
+    emitData: (data) => {
+      dataCb?.(data);
+    },
+    emitExit: (exitCode, signal) => {
+      exitCb?.({ exitCode, signal });
+    },
   };
   return proc;
 }
@@ -92,7 +104,9 @@ beforeEach(() => {
   // Mock process.parentPort BEFORE the module is imported.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (process as any).parentPort = {
-    postMessage: (msg: OutboundMessage) => { postedMessages.push(msg); },
+    postMessage: (msg: OutboundMessage) => {
+      postedMessages.push(msg);
+    },
     on: vi.fn(),
   };
   postedMessages.length = 0;
@@ -122,8 +136,14 @@ function findEvents(type: string): OutboundMessage[] {
 
 function makeSpawnInstruction(id: string) {
   return {
-    id, shell: '/bin/bash', args: [], env: { TERM: 'xterm-256color' },
-    cwd: '/tmp', cols: 80, rows: 24, windowId: 1,
+    id,
+    shell: '/bin/bash',
+    args: [],
+    env: { TERM: 'xterm-256color' },
+    cwd: '/tmp',
+    cols: 80,
+    rows: 24,
+    windowId: 1,
   };
 }
 
@@ -229,7 +249,11 @@ describe('ptyHostMain dispatcher', () => {
     it('returns active sessions with cwd and windowId', async () => {
       const dispatch = await importDispatcher();
       dispatch({ type: 'spawn', requestId: 'r1', instruction: makeSpawnInstruction('s1') });
-      dispatch({ type: 'spawn', requestId: 'r2', instruction: { ...makeSpawnInstruction('s2'), cwd: '/home' } });
+      dispatch({
+        type: 'spawn',
+        requestId: 'r2',
+        instruction: { ...makeSpawnInstruction('s2'), cwd: '/home' },
+      });
       dispatch({ type: 'listSessions', requestId: 'r3' });
       const res = findResponse('r3');
       const list = res?.list as Array<{ id: string; cwd: string; windowId: number }>;
@@ -254,8 +278,16 @@ describe('ptyHostMain dispatcher', () => {
 
     it('killForWindow kills only matching sessions', async () => {
       const dispatch = await importDispatcher();
-      dispatch({ type: 'spawn', requestId: 'r1', instruction: { ...makeSpawnInstruction('s1'), windowId: 1 } });
-      dispatch({ type: 'spawn', requestId: 'r2', instruction: { ...makeSpawnInstruction('s2'), windowId: 2 } });
+      dispatch({
+        type: 'spawn',
+        requestId: 'r1',
+        instruction: { ...makeSpawnInstruction('s1'), windowId: 1 },
+      });
+      dispatch({
+        type: 'spawn',
+        requestId: 'r2',
+        instruction: { ...makeSpawnInstruction('s2'), windowId: 2 },
+      });
       postedMessages.length = 0;
       dispatch({ type: 'killForWindow', requestId: 'r3', windowId: 1 });
       expect(procFactories[0]!.kill).toHaveBeenCalled();
@@ -276,7 +308,11 @@ describe('ptyHostMain dispatcher', () => {
 
     it('returns initial state for active session', async () => {
       const dispatch = await importDispatcher();
-      dispatch({ type: 'spawn', requestId: 'r1', instruction: { ...makeSpawnInstruction('s1'), cwd: '/etc' } });
+      dispatch({
+        type: 'spawn',
+        requestId: 'r1',
+        instruction: { ...makeSpawnInstruction('s1'), cwd: '/etc' },
+      });
       dispatch({ type: 'getShellState', requestId: 'r2', id: 's1' });
       const res = findResponse('r2');
       const state = res?.state as { cwd: string; isExecuting: boolean } | null;

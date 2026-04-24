@@ -38,7 +38,12 @@ export interface SandboxHooks {
   onLog: (extName: string, message: string) => void;
   onUiNotification: (extName: string, message: string) => void;
   /** Issue a Host→Main API call and await the response. */
-  requestApiCall: (extName: string, namespace: 'files' | 'terminal', method: string, args: unknown[]) => Promise<unknown>;
+  requestApiCall: (
+    extName: string,
+    namespace: 'files' | 'terminal',
+    method: string,
+    args: unknown[],
+  ) => Promise<unknown>;
   /** Notify main that an extension registered a command. */
   onCommandRegistered: (extName: string, fullCommandId: string) => void;
   /** Notify main that an extension unregistered a command. */
@@ -115,9 +120,9 @@ function buildFilesApi(state: HostExtensionState, hooks: SandboxHooks): Record<s
       requireNonEmptyString(filePath, 'file path');
       appendHostLog(state, `files.readFile: ${filePath}`);
       hooks.onLog(state.manifest.name, `files.readFile: ${filePath}`);
-      const result = await hooks.requestApiCall(
-        state.manifest.name, 'files', 'readFile', [filePath],
-      );
+      const result = await hooks.requestApiCall(state.manifest.name, 'files', 'readFile', [
+        filePath,
+      ]);
       return result as string;
     },
     writeFile: async (filePath: string, content: string): Promise<void> => {
@@ -126,9 +131,7 @@ function buildFilesApi(state: HostExtensionState, hooks: SandboxHooks): Record<s
       requireString(content, 'Content');
       appendHostLog(state, `files.writeFile: ${filePath}`);
       hooks.onLog(state.manifest.name, `files.writeFile: ${filePath}`);
-      await hooks.requestApiCall(
-        state.manifest.name, 'files', 'writeFile', [filePath, content],
-      );
+      await hooks.requestApiCall(state.manifest.name, 'files', 'writeFile', [filePath, content]);
     },
   };
 }
@@ -142,9 +145,7 @@ function buildTerminalApi(state: HostExtensionState, hooks: SandboxHooks): Recor
       const msg = `terminal.write: tab=${tabId}, ${data.length} chars`;
       appendHostLog(state, msg);
       hooks.onLog(state.manifest.name, msg);
-      await hooks.requestApiCall(
-        state.manifest.name, 'terminal', 'write', [tabId, data],
-      );
+      await hooks.requestApiCall(state.manifest.name, 'terminal', 'write', [tabId, data]);
     },
   };
 }
@@ -218,12 +219,41 @@ export function buildHostSandboxAPI(
 
 export function getHostSafeSandboxGlobals(): Record<string, unknown> {
   return {
-    setTimeout, clearTimeout, setInterval, clearInterval,
-    Promise, JSON, Math, Date, Array, Object, String, Number, Boolean,
-    Map, Set, WeakMap, WeakSet, Symbol,
-    Error, TypeError, RangeError, URIError, SyntaxError, ReferenceError,
-    RegExp, parseInt, parseFloat, isNaN, isFinite,
-    encodeURIComponent, decodeURIComponent, encodeURI, decodeURI,
-    undefined, NaN, Infinity,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+    Promise,
+    JSON,
+    Math,
+    Date,
+    Array,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Map,
+    Set,
+    WeakMap,
+    WeakSet,
+    Symbol,
+    Error,
+    TypeError,
+    RangeError,
+    URIError,
+    SyntaxError,
+    ReferenceError,
+    RegExp,
+    parseInt,
+    parseFloat,
+    isNaN,
+    isFinite,
+    encodeURIComponent,
+    decodeURIComponent,
+    encodeURI,
+    decodeURI,
+    undefined,
+    NaN,
+    Infinity,
   };
 }

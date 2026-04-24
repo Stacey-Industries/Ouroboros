@@ -19,7 +19,12 @@ import {
   claudeSectionSectionDescriptionStyle,
   claudeSectionTextInputStyle,
 } from './claudeSectionContentStyles';
-import { SelectSection, SwitchControl, TextInputSection, ToggleSection } from './ClaudeSectionControls';
+import {
+  SelectSection,
+  SwitchControl,
+  TextInputSection,
+  ToggleSection,
+} from './ClaudeSectionControls';
 import { SectionLabel } from './settingsStyles';
 import {
   CODEX_APPROVAL_POLICIES,
@@ -109,7 +114,9 @@ function SandboxModeSection({ model }: { model: CodexSectionModel }): React.Reac
       label="Codex sandbox mode"
       title="Sandbox Mode"
       value={model.settings.sandbox}
-      onChange={(value) => model.updateSetting('sandbox', value as AppConfig['codexCliSettings']['sandbox'])}
+      onChange={(value) =>
+        model.updateSetting('sandbox', value as AppConfig['codexCliSettings']['sandbox'])
+      }
     >
       {CODEX_SANDBOX_MODES.map((option) => (
         <option key={option.value} value={option.value}>
@@ -127,7 +134,12 @@ function ApprovalPolicySection({ model }: { model: CodexSectionModel }): React.R
       label="Codex approval policy"
       title="Approval Policy"
       value={model.settings.approvalPolicy}
-      onChange={(value) => model.updateSetting('approvalPolicy', value as AppConfig['codexCliSettings']['approvalPolicy'])}
+      onChange={(value) =>
+        model.updateSetting(
+          'approvalPolicy',
+          value as AppConfig['codexCliSettings']['approvalPolicy'],
+        )
+      }
     >
       {CODEX_APPROVAL_POLICIES.map((option) => (
         <option key={option.value} value={option.value}>
@@ -220,15 +232,57 @@ function ExecutionSection({
 }
 
 function AdditionalDirectoriesSection({ model }: { model: CodexSectionModel }): React.ReactElement {
-  return <section>
-    <SectionLabel>Additional Directories</SectionLabel>
-    <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>Extra directories Codex can write to in addition to the primary workspace.</p>
-    {model.settings.addDirs.length > 0 && <div style={claudeSectionDirectoryListStyle}>{model.settings.addDirs.map((directory, index) => <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}><span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>{directory}</span><button onClick={() => model.removeDir(index)} aria-label={`Remove ${directory}`} className="text-text-semantic-muted" style={claudeSectionRemoveDirectoryButtonStyle}>x</button></div>)}</div>}
-    <div style={claudeSectionAddDirectoryRowStyle}>
-      <input type="text" value={model.newDir} onChange={(event) => model.setNewDir(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); model.addDir(); } }} placeholder="/path/to/directory" aria-label="New Codex directory path" className="text-text-semantic-primary" style={{ ...claudeSectionTextInputStyle, flex: 1 }} />
-      <button onClick={model.addDir} disabled={!model.canAddDir} style={claudeSectionAddButtonStyle(model.canAddDir)}>Add</button>
-    </div>
-  </section>;
+  return (
+    <section>
+      <SectionLabel>Additional Directories</SectionLabel>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        Extra directories Codex can write to in addition to the primary workspace.
+      </p>
+      {model.settings.addDirs.length > 0 && (
+        <div style={claudeSectionDirectoryListStyle}>
+          {model.settings.addDirs.map((directory, index) => (
+            <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}>
+              <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>
+                {directory}
+              </span>
+              <button
+                onClick={() => model.removeDir(index)}
+                aria-label={`Remove ${directory}`}
+                className="text-text-semantic-muted"
+                style={claudeSectionRemoveDirectoryButtonStyle}
+              >
+                x
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={claudeSectionAddDirectoryRowStyle}>
+        <input
+          type="text"
+          value={model.newDir}
+          onChange={(event) => model.setNewDir(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              model.addDir();
+            }
+          }}
+          placeholder="/path/to/directory"
+          aria-label="New Codex directory path"
+          className="text-text-semantic-primary"
+          style={{ ...claudeSectionTextInputStyle, flex: 1 }}
+        />
+        <button
+          onClick={model.addDir}
+          disabled={!model.canAddDir}
+          style={claudeSectionAddButtonStyle(model.canAddDir)}
+        >
+          Add
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React.ReactElement {
@@ -244,7 +298,12 @@ function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React
 }
 
 function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactElement {
-  return <><AdditionalDirectoriesSection model={model} /><SkipGitRepoCheckSection model={model} /></>;
+  return (
+    <>
+      <AdditionalDirectoriesSection model={model} />
+      <SkipGitRepoCheckSection model={model} />
+    </>
+  );
 }
 
 function DangerZoneSection({ model }: { model: CodexSectionModel }): React.ReactElement {
@@ -253,10 +312,12 @@ function DangerZoneSection({ model }: { model: CodexSectionModel }): React.React
       <SectionLabel className="text-status-error">Danger Zone</SectionLabel>
       <div style={claudeSectionDangerRowStyle}>
         <div style={claudeSectionDangerCopyStyle}>
-          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>Bypass Approvals And Sandbox</div>
+          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>
+            Bypass Approvals And Sandbox
+          </div>
           <p className="text-status-warning" style={claudeSectionDangerTextStyle}>
-            Disables all Codex approval prompts and sandboxing. Only use this when the environment is
-            already externally sandboxed.
+            Disables all Codex approval prompts and sandboxing. Only use this when the environment
+            is already externally sandboxed.
           </p>
         </div>
         <SwitchControl

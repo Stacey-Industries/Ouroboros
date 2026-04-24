@@ -52,7 +52,6 @@ afterEach(() => {
   closeCostHistoryDb();
 });
 
- 
 describe('costHistory', () => {
   it('saves and retrieves an entry', async () => {
     await saveCostEntry(makeEntry('s1'));

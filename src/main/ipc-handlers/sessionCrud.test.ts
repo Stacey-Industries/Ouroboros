@@ -92,7 +92,9 @@ function makeInMemoryStore(): SessionStore {
   const data: Session[] = [];
   return openSessionStore({
     read: () => [...data],
-    write: (sessions) => { data.splice(0, data.length, ...sessions); },
+    write: (sessions) => {
+      data.splice(0, data.length, ...sessions);
+    },
   });
 }
 
@@ -154,7 +156,7 @@ describe('registerSessionCrudHandlers', () => {
     const s = makeSession('/projects/alpha');
     store.upsert(s);
     const handler = captureHandler('sessionCrud:list');
-    const result = await handler?.(makeEvent()) as { success: boolean; sessions: Session[] };
+    const result = (await handler?.(makeEvent())) as { success: boolean; sessions: Session[] };
     expect(result.success).toBe(true);
     expect(result.sessions).toHaveLength(1);
     expect(result.sessions[0].id).toBe(s.id);
@@ -162,8 +164,9 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:create creates a session and returns it', async () => {
     const handler = captureHandler('sessionCrud:create');
-    const result = await handler?.(makeEvent(), { projectRoot: '/projects/beta' }) as {
-      success: boolean; session: Session;
+    const result = (await handler?.(makeEvent(), { projectRoot: '/projects/beta' })) as {
+      success: boolean;
+      session: Session;
     };
     expect(result.success).toBe(true);
     expect(result.session.projectRoot).toBe('/projects/beta');
@@ -172,7 +175,7 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:create fails without projectRoot', async () => {
     const handler = captureHandler('sessionCrud:create');
-    const result = await handler?.(makeEvent(), {}) as { success: boolean; error: string };
+    const result = (await handler?.(makeEvent(), {})) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/projectRoot/);
   });
@@ -185,7 +188,10 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:active returns null when no session activated', async () => {
     const handler = captureHandler('sessionCrud:active');
-    const result = await handler?.(makeEvent(99)) as { success: boolean; sessionId: string | null };
+    const result = (await handler?.(makeEvent(99))) as {
+      success: boolean;
+      sessionId: string | null;
+    };
     expect(result.success).toBe(true);
     expect(result.sessionId).toBeNull();
   });
@@ -196,7 +202,10 @@ describe('registerSessionCrudHandlers', () => {
     const activateHandler = captureHandler('sessionCrud:activate');
     await activateHandler?.(makeEvent(42), { sessionId: s.id });
     const activeHandler = captureHandler('sessionCrud:active');
-    const result = await activeHandler?.(makeEvent(42)) as { success: boolean; sessionId: string };
+    const result = (await activeHandler?.(makeEvent(42))) as {
+      success: boolean;
+      sessionId: string;
+    };
     expect(result.sessionId).toBe(s.id);
   });
 
@@ -210,15 +219,16 @@ describe('registerSessionCrudHandlers', () => {
       },
     );
     const handler = captureHandler('sessionCrud:restore');
-    const result = await handler?.(makeEvent(), { sessionId: s.id }) as { success: boolean };
+    const result = (await handler?.(makeEvent(), { sessionId: s.id })) as { success: boolean };
     expect(result.success).toBe(true);
   });
 
   it('sessionCrud:restore fails when no trash file exists', async () => {
     mockRestoreFromTrash.mockResolvedValueOnce(false);
     const handler = captureHandler('sessionCrud:restore');
-    const result = await handler?.(makeEvent(), { sessionId: 'ghost-id' }) as {
-      success: boolean; error: string;
+    const result = (await handler?.(makeEvent(), { sessionId: 'ghost-id' })) as {
+      success: boolean;
+      error: string;
     };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/trash/);
@@ -226,7 +236,7 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:restore fails without sessionId', async () => {
     const handler = captureHandler('sessionCrud:restore');
-    const result = await handler?.(makeEvent(), {}) as { success: boolean; error: string };
+    const result = (await handler?.(makeEvent(), {})) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/sessionId/);
   });
@@ -235,7 +245,7 @@ describe('registerSessionCrudHandlers', () => {
     const s = makeSession('/projects/epsilon');
     store.upsert(s);
     const handler = captureHandler('sessionCrud:archive');
-    const result = await handler?.(makeEvent(), { sessionId: s.id }) as { success: boolean };
+    const result = (await handler?.(makeEvent(), { sessionId: s.id })) as { success: boolean };
     expect(result.success).toBe(true);
     const archived = store.getById(s.id);
     expect(archived?.archivedAt).toBeDefined();
@@ -254,7 +264,7 @@ describe('registerSessionCrudHandlers', () => {
     const s = makeSession('/projects/eta');
     store.upsert(s);
     const handler = captureHandler('sessionCrud:delete');
-    const result = await handler?.(makeEvent(), { sessionId: s.id }) as { success: boolean };
+    const result = (await handler?.(makeEvent(), { sessionId: s.id })) as { success: boolean };
     expect(result.success).toBe(true);
     expect(store.getById(s.id)).toBeUndefined();
   });
@@ -262,7 +272,7 @@ describe('registerSessionCrudHandlers', () => {
   it('sessionCrud:list returns empty when store is not initialised', async () => {
     vi.mocked(getSessionStore).mockReturnValue(null);
     const handler = captureHandler('sessionCrud:list');
-    const result = await handler?.(makeEvent()) as { success: boolean; sessions: unknown[] };
+    const result = (await handler?.(makeEvent())) as { success: boolean; sessions: unknown[] };
     expect(result.success).toBe(true);
     expect(result.sessions).toHaveLength(0);
   });
@@ -270,8 +280,9 @@ describe('registerSessionCrudHandlers', () => {
   it('sessionCrud:openChatWindow calls createChatWindow and returns windowId', async () => {
     mockCreateChatWindow.mockClear();
     const handler = captureHandler('sessionCrud:openChatWindow');
-    const result = await handler?.(makeEvent(), { sessionId: 'sess-xyz' }) as {
-      success: boolean; windowId: number;
+    const result = (await handler?.(makeEvent(), { sessionId: 'sess-xyz' })) as {
+      success: boolean;
+      windowId: number;
     };
     expect(result.success).toBe(true);
     expect(result.windowId).toBe(42);
@@ -280,7 +291,7 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:openChatWindow fails without sessionId', async () => {
     const handler = captureHandler('sessionCrud:openChatWindow');
-    const result = await handler?.(makeEvent(), {}) as { success: boolean; error: string };
+    const result = (await handler?.(makeEvent(), {})) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/sessionId/);
   });
@@ -290,7 +301,7 @@ describe('registerSessionCrudHandlers', () => {
     store.upsert(s);
     const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
     const settings = { viewMode: 'summary' as const, inlineEventTypes: ['pre_tool_use'] };
-    const result = await handler?.(makeEvent(), { sessionId: s.id, settings }) as {
+    const result = (await handler?.(makeEvent(), { sessionId: s.id, settings })) as {
       success: boolean;
     };
     expect(result.success).toBe(true);
@@ -301,17 +312,18 @@ describe('registerSessionCrudHandlers', () => {
 
   it('sessionCrud:updateAgentMonitorSettings fails without sessionId', async () => {
     const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
-    const result = await handler?.(makeEvent(), {
+    const result = (await handler?.(makeEvent(), {
       settings: { viewMode: 'normal', inlineEventTypes: [] },
-    }) as { success: boolean; error: string };
+    })) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/sessionId/);
   });
 
   it('sessionCrud:updateAgentMonitorSettings fails without settings', async () => {
     const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
-    const result = await handler?.(makeEvent(), { sessionId: 'no-settings' }) as {
-      success: boolean; error: string;
+    const result = (await handler?.(makeEvent(), { sessionId: 'no-settings' })) as {
+      success: boolean;
+      error: string;
     };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/settings/);

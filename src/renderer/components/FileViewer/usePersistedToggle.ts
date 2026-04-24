@@ -1,4 +1,4 @@
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * A boolean toggle backed by localStorage.
@@ -6,7 +6,7 @@ import { useEffect,useState } from 'react';
  */
 export function usePersistedToggle(
   key: string,
-  defaultValue: boolean
+  defaultValue: boolean,
 ): [boolean, (updater: boolean | ((prev: boolean) => boolean)) => void] {
   'use no memo';
   const [value, setValue] = useState<boolean>(() => {
@@ -22,7 +22,9 @@ export function usePersistedToggle(
   useEffect(() => {
     try {
       localStorage.setItem(key, String(value));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [key, value]);
 
   return [value, setValue];

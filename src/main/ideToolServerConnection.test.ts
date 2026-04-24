@@ -14,11 +14,20 @@ vi.mock('./logger', () => ({
 vi.mock('./pipeAuth', () => ({
   getToolServerToken: vi.fn(() => 'test-token'),
   validatePipeAuthWithGrace: vi.fn((_line: string) => {
-    try { return JSON.parse(_line).auth === 'test-token'; } catch { return false; }
+    try {
+      return JSON.parse(_line).auth === 'test-token';
+    } catch {
+      return false;
+    }
   }),
 }));
 
-import { ConnContext, handleSocketData, makeConnContext, makeHandleRequest } from './ideToolServerConnection';
+import {
+  ConnContext,
+  handleSocketData,
+  makeConnContext,
+  makeHandleRequest,
+} from './ideToolServerConnection';
 
 function makeQueryRenderer() {
   return vi.fn().mockResolvedValue({});
@@ -51,7 +60,9 @@ describe('makeHandleRequest', () => {
 
   it('wraps handler errors as error responses', async () => {
     const handlers = {
-      'ide.boom': async () => { throw new Error('exploded'); },
+      'ide.boom': async () => {
+        throw new Error('exploded');
+      },
     };
     const handle = makeHandleRequest(handlers);
     const resp = await handle({ id: 'r3', method: 'ide.boom', params: {} });

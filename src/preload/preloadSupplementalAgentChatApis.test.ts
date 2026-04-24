@@ -33,7 +33,9 @@ describe('agentChatApi', () => {
   });
 
   it('createThread invokes the correct channel', async () => {
-    await agentChatApi.createThread({ workspaceRoot: '/proj', title: 'T' } as Parameters<typeof agentChatApi.createThread>[0]);
+    await agentChatApi.createThread({ workspaceRoot: '/proj', title: 'T' } as Parameters<
+      typeof agentChatApi.createThread
+    >[0]);
     expect(mockInvoke).toHaveBeenCalledWith('agentChat:createThread', expect.anything());
   });
 

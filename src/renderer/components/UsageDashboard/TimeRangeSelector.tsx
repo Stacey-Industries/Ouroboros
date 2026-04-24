@@ -23,10 +23,7 @@ const OPTIONS: Array<{ key: TimeRangeKey; label: string }> = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TimeRangeSelector({
-  value,
-  onChange,
-}: TimeRangeSelectorProps): React.ReactElement {
+export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps): React.ReactElement {
   return (
     <select
       value={value}

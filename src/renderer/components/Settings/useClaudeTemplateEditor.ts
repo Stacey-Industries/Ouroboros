@@ -40,12 +40,14 @@ export function useTemplateEditorModel(
     setEditDraft({});
   };
   const addTemplate = (): void => startNewTemplate(templates, onChange, setEditingId, setEditDraft);
-  const deleteTemplate = (id: string): void => removeTemplate({ cancelEdit, editingId, id, onChange, templates });
+  const deleteTemplate = (id: string): void =>
+    removeTemplate({ cancelEdit, editingId, id, onChange, templates });
   const startEdit = (template: AgentTemplate): void => {
     setEditingId(template.id);
     setEditDraft({ ...template });
   };
-  const saveEdit = (): void => applyTemplateEdit({ cancelEdit, editDraft, editingId, onChange, templates });
+  const saveEdit = (): void =>
+    applyTemplateEdit({ cancelEdit, editDraft, editingId, onChange, templates });
   const updateDraft = (key: keyof AgentTemplate, value: string): void =>
     setEditDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
 

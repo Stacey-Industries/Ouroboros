@@ -73,15 +73,22 @@ const TOGGLE_STYLE: React.CSSProperties = {
   transition: 'background 120ms',
 };
 
-export function SearchToggle({ label, title, active, onClick }: SearchToggleProps): React.ReactElement {
+export function SearchToggle({
+  label,
+  title,
+  active,
+  onClick,
+}: SearchToggleProps): React.ReactElement {
   return (
     <button
       title={title}
       aria-pressed={active}
       onClick={onClick}
-      className={active
-        ? 'bg-interactive-accent text-text-semantic-on-accent'
-        : 'bg-transparent text-text-semantic-muted hover:text-text-semantic-secondary hover:bg-surface-raised'}
+      className={
+        active
+          ? 'bg-interactive-accent text-text-semantic-on-accent'
+          : 'bg-transparent text-text-semantic-muted hover:text-text-semantic-secondary hover:bg-surface-raised'
+      }
       style={TOGGLE_STYLE}
     >
       {label}
@@ -101,14 +108,33 @@ interface SearchToggleBarProps {
 }
 
 export function SearchToggleBar({
-  isRegex, caseSensitive, wholeWord,
-  onToggleRegex, onToggleCase, onToggleWord,
+  isRegex,
+  caseSensitive,
+  wholeWord,
+  onToggleRegex,
+  onToggleCase,
+  onToggleWord,
 }: SearchToggleBarProps): React.ReactElement {
   return (
     <div className="flex items-center gap-0.5">
-      <SearchToggle label=".*" title="Use Regular Expression (Alt+R)" active={isRegex} onClick={onToggleRegex} />
-      <SearchToggle label="Aa" title="Match Case (Alt+C)" active={caseSensitive} onClick={onToggleCase} />
-      <SearchToggle label="ab" title="Match Whole Word (Alt+W)" active={wholeWord} onClick={onToggleWord} />
+      <SearchToggle
+        label=".*"
+        title="Use Regular Expression (Alt+R)"
+        active={isRegex}
+        onClick={onToggleRegex}
+      />
+      <SearchToggle
+        label="Aa"
+        title="Match Case (Alt+C)"
+        active={caseSensitive}
+        onClick={onToggleCase}
+      />
+      <SearchToggle
+        label="ab"
+        title="Match Whole Word (Alt+W)"
+        active={wholeWord}
+        onClick={onToggleWord}
+      />
     </div>
   );
 }
@@ -135,8 +161,14 @@ const FILTER_INPUT_STYLE: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-function FilterInput({ value, placeholder, onChange }: {
-  value: string; placeholder: string; onChange: (v: string) => void;
+function FilterInput({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
 }): React.ReactElement {
   return (
     <input
@@ -160,7 +192,12 @@ const FILTER_LABEL_STYLE: React.CSSProperties = {
 };
 
 export function FilterInputs({
-  includeGlob, excludeGlob, onIncludeChange, onExcludeChange, expanded, onToggle,
+  includeGlob,
+  excludeGlob,
+  onIncludeChange,
+  onExcludeChange,
+  expanded,
+  onToggle,
 }: FilterInputsProps): React.ReactElement {
   return (
     <div className="flex flex-col gap-1">
@@ -170,18 +207,38 @@ export function FilterInputs({
         onClick={onToggle}
         aria-expanded={expanded}
       >
-        <span style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 120ms', display: 'inline-block' }}>▾</span>
+        <span
+          style={{
+            transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+            transition: 'transform 120ms',
+            display: 'inline-block',
+          }}
+        >
+          ▾
+        </span>
         <span>Files to include/exclude</span>
       </button>
       {expanded && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>Include</span>
-            <FilterInput value={includeGlob} placeholder="e.g. *.ts,src/**" onChange={onIncludeChange} />
+            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>
+              Include
+            </span>
+            <FilterInput
+              value={includeGlob}
+              placeholder="e.g. *.ts,src/**"
+              onChange={onIncludeChange}
+            />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>Exclude</span>
-            <FilterInput value={excludeGlob} placeholder="e.g. **/node_modules" onChange={onExcludeChange} />
+            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>
+              Exclude
+            </span>
+            <FilterInput
+              value={excludeGlob}
+              placeholder="e.g. **/node_modules"
+              onChange={onExcludeChange}
+            />
           </div>
         </div>
       )}
@@ -199,7 +256,13 @@ interface SearchStatusProps {
   error: string | null;
 }
 
-export function SearchStatus({ query, resultCount, fileCount, isSearching, error }: SearchStatusProps): React.ReactElement | null {
+export function SearchStatus({
+  query,
+  resultCount,
+  fileCount,
+  isSearching,
+  error,
+}: SearchStatusProps): React.ReactElement | null {
   const style: React.CSSProperties = {
     fontSize: '0.6875rem',
     fontFamily: 'var(--font-ui)',
@@ -209,13 +272,17 @@ export function SearchStatus({ query, resultCount, fileCount, isSearching, error
 
   if (error) {
     return (
-      <div className="text-status-error" style={style}>{error}</div>
+      <div className="text-status-error" style={style}>
+        {error}
+      </div>
     );
   }
 
   if (isSearching) {
     return (
-      <div className="text-text-semantic-muted" style={style}>Searching…</div>
+      <div className="text-text-semantic-muted" style={style}>
+        Searching…
+      </div>
     );
   }
 
@@ -242,10 +309,14 @@ export function TruncatedWarning(): React.ReactElement {
   return (
     <div
       className="bg-status-warning-subtle text-status-warning"
-      style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-ui)', padding: '6px 8px', flexShrink: 0 }}
+      style={{
+        fontSize: '0.6875rem',
+        fontFamily: 'var(--font-ui)',
+        padding: '6px 8px',
+        flexShrink: 0,
+      }}
     >
       Results capped at 500. Refine your search.
     </div>
   );
 }
-

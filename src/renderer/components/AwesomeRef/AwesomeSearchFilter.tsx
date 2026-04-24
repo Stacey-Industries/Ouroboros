@@ -38,7 +38,8 @@ interface ChipProps {
 }
 
 function Chip({ label, active, onClick }: ChipProps): React.ReactElement {
-  const base = 'text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer select-none';
+  const base =
+    'text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer select-none';
   const activeClass = 'bg-interactive-accent text-text-on-accent border-interactive-accent';
   const inactiveClass = [
     'bg-surface-raised text-text-semantic-secondary border-border-subtle',
@@ -79,11 +80,7 @@ export function AwesomeSearchFilter({
         ].join(' ')}
       />
       <div className="flex gap-1.5 flex-wrap">
-        <Chip
-          label="All"
-          active={category === 'all'}
-          onClick={() => onCategoryChange('all')}
-        />
+        <Chip label="All" active={category === 'all'} onClick={() => onCategoryChange('all')} />
         {AWESOME_CATEGORIES.map((cat) => (
           <Chip
             key={cat}

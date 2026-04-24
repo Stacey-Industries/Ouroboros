@@ -90,7 +90,10 @@ describe('setMessageReactionsSql', () => {
   });
 
   it('replaces existing reactions on second call', () => {
-    setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: '+1', at: 1 }, { kind: '-1', at: 2 }]);
+    setMessageReactionsSql(db, 'msg-1', 't1', [
+      { kind: '+1', at: 1 },
+      { kind: '-1', at: 2 },
+    ]);
     // Cast: SQL layer is dumb storage; validation happens at the IPC boundary.
     setMessageReactionsSql(db, 'msg-1', 't1', [{ kind: '-1', at: 3 }]);
     const result = getMessageReactionsSql(db, 'msg-1', 't1');
@@ -129,7 +132,7 @@ describe('enforceReactionCap', () => {
   it('evicts the oldest reaction (lowest at) when cap is exceeded', () => {
     const reactions: Reaction[] = Array.from({ length: MAX_REACTIONS_PER_MESSAGE + 1 }, (_, i) => ({
       kind: '+1' as const,
-      at: i,        // at=0 is the oldest
+      at: i, // at=0 is the oldest
     }));
     const result = enforceReactionCap(reactions);
     expect(result).toHaveLength(MAX_REACTIONS_PER_MESSAGE);

@@ -1,18 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-Three non-obvious things captured in this CLAUDE.md that would otherwise cause bugs:
-1. The duplicate `FileGroup`/`FileGroupHeader` — two implementations exist side-by-side in the same file. The non-virtual `FileGroup` is exported but not used by the main panel (only the internal `FileGroupHeader` is). Easy to accidentally use the wrong one.
-2. The `line + 1` adjustment at the `open-file` dispatch boundary — search IPC is 0-indexed, the open-file event is 1-indexed. The adjustment lives only in `SearchPanel.tsx`, not in the hook or results component.
-3. The dual glob state pattern — single-state implementations would introduce a subtle UX regression where the input lags visually by 300ms (the debounce interval).
-`─────────────────────────────────────────────────`
 
-The CLAUDE.md has been written to `src/renderer/components/Search/CLAUDE.md`. Key things captured:
-
-- The **request-ID race guard** pattern (`requestIdRef` counter) — the lightweight alternative to `AbortController` for superseded async search requests
-- The **dual glob state** in `SearchPanel.tsx` — why the local mirror state exists separately from the hook's setter
-- The **hand-rolled virtual list** architecture — `FlatSearchItem` union interleaving headers and rows, fixed `ROW_HEIGHT = 22`, collapse state as `Set<string>`
-- The **duplicate FileGroup/FileGroupHeader** gotcha — two implementations in the same file, the exported `FileGroup` is not used by the virtual path
-- The **line indexing boundary** — search IPC returns 0-indexed lines; the `agent-ide:open-file` event sends `line + 1`
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

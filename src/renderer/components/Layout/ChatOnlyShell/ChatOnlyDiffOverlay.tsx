@@ -47,7 +47,9 @@ function useEscapeKey(active: boolean, onClose: () => void): void {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handler);
-    return () => { document.removeEventListener('keydown', handler); };
+    return () => {
+      document.removeEventListener('keydown', handler);
+    };
   }, [active, onClose]);
 }
 
@@ -66,13 +68,21 @@ function useFocusTrap(
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener('keydown', handleTab);
-    return () => { document.removeEventListener('keydown', handleTab); };
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+    };
   }, [active, containerRef]);
 }
 
@@ -83,28 +93,47 @@ interface OverlayContentProps {
   handleBackdrop: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-function OverlayContent({ containerRef, diffReview, handleClose, handleBackdrop }: OverlayContentProps): React.ReactElement {
-  if (!diffReview.state) return <></>;
+function OverlayDialog({
+  containerRef,
+  diffReview,
+  handleClose,
+}: Omit<OverlayContentProps, 'handleBackdrop'>): React.ReactElement {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" data-testid="diff-overlay-backdrop" onClick={handleBackdrop}>
-      <div
-        ref={containerRef} role="dialog" aria-modal="true" aria-label="Diff review"
-        tabIndex={-1} className="flex flex-col w-full h-full bg-surface-base" data-testid="diff-overlay"
-      >
-        <DiffReviewPanel
-          state={diffReview.state} canRollback={diffReview.canRollback} enhancedEnabled={false}
-          onAcceptHunk={diffReview.acceptHunk} onRejectHunk={diffReview.rejectHunk}
-          onAcceptAllFile={diffReview.acceptAllFile} onRejectAllFile={diffReview.rejectAllFile}
-          onAcceptAll={diffReview.acceptAll} onRejectAll={diffReview.rejectAll}
-          onRollback={diffReview.rollback} onClose={handleClose}
-          onConfirmStaleOp={diffReview.confirmStaleOp} onDismissStaleOp={diffReview.dismissStaleOp}
-        />
-      </div>
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Diff review" tabIndex={-1}
+      className="flex flex-col w-full h-full bg-surface-base" data-testid="diff-overlay"
+    >
+      <DiffReviewPanel
+        state={diffReview.state!}
+        canRollback={diffReview.canRollback}
+        enhancedEnabled={false}
+        onAcceptHunk={diffReview.acceptHunk}
+        onRejectHunk={diffReview.rejectHunk}
+        onAcceptAllFile={diffReview.acceptAllFile}
+        onRejectAllFile={diffReview.rejectAllFile}
+        onAcceptAll={diffReview.acceptAll}
+        onRejectAll={diffReview.rejectAll}
+        onRollback={diffReview.rollback}
+        onClose={handleClose}
+        onConfirmStaleOp={diffReview.confirmStaleOp}
+        onDismissStaleOp={diffReview.dismissStaleOp}
+      />
     </div>
   );
 }
 
-export function ChatOnlyDiffOverlay({ open, onClose }: ChatOnlyDiffOverlayProps): React.ReactElement | null {
+function OverlayContent({ containerRef, diffReview, handleClose, handleBackdrop }: OverlayContentProps): React.ReactElement {
+  if (!diffReview.state) return <></>;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" data-testid="diff-overlay-backdrop" onClick={handleBackdrop}>
+      <OverlayDialog containerRef={containerRef} diffReview={diffReview} handleClose={handleClose} />
+    </div>
+  );
+}
+
+export function ChatOnlyDiffOverlay({
+  open,
+  onClose,
+}: ChatOnlyDiffOverlayProps): React.ReactElement | null {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const diffReview = useDiffReview();
 
@@ -121,10 +150,20 @@ export function ChatOnlyDiffOverlay({ open, onClose }: ChatOnlyDiffOverlayProps)
     onClose();
   }, [diffReview, onClose]);
 
-  const handleBackdrop = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+  const handleBackdrop = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>): void => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    [onClose],
+  );
 
   if (!open || !diffReview.state) return null;
-  return <OverlayContent containerRef={containerRef} diffReview={diffReview} handleClose={handleClose} handleBackdrop={handleBackdrop} />;
+  return (
+    <OverlayContent
+      containerRef={containerRef}
+      diffReview={diffReview}
+      handleClose={handleClose}
+      handleBackdrop={handleBackdrop}
+    />
+  );
 }

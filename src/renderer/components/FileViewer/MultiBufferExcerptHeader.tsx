@@ -97,7 +97,11 @@ function FileLinkButton({
 
 function ExcerptLabel({ label }: { label?: string }): React.ReactElement | null {
   if (!label) return null;
-  return <span className="text-text-semantic-primary" style={LABEL_STYLE}>{label}</span>;
+  return (
+    <span className="text-text-semantic-primary" style={LABEL_STYLE}>
+      {label}
+    </span>
+  );
 }
 
 function ExcerptMeta({ excerpt }: { excerpt: BufferExcerpt }): React.ReactElement {
@@ -118,7 +122,12 @@ function ActionButton({
   title: string;
 }): React.ReactElement {
   return (
-    <button onClick={onClick} className="text-text-semantic-muted" style={ACTION_BUTTON_STYLE} title={title}>
+    <button
+      onClick={onClick}
+      className="text-text-semantic-muted"
+      style={ACTION_BUTTON_STYLE}
+      title={title}
+    >
       {label}
     </button>
   );
@@ -155,7 +164,10 @@ export function MultiBufferExcerptHeader({
 }): React.ReactElement {
   return (
     <div
-      style={{ ...HEADER_STYLE, borderBottom: collapsed ? 'none' : '1px solid var(--border-semantic)' }}
+      style={{
+        ...HEADER_STYLE,
+        borderBottom: collapsed ? 'none' : '1px solid var(--border-semantic)',
+      }}
     >
       <ToggleButton collapsed={collapsed} onToggle={onToggle} />
       <FileLinkButton excerpt={excerpt} onOpenFile={onOpenFile} />

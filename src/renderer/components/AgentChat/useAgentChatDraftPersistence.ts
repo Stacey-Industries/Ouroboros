@@ -1,4 +1,10 @@
-import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useRef } from 'react';
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useEffect,
+  useRef,
+} from 'react';
 
 const DRAFT_KEY_PREFIX = 'agentChat:draft:';
 const DEBOUNCE_MS = 500;
@@ -63,19 +69,24 @@ function useThreadSwitchPersistence(
     const prevId = previousThreadIdRef.current;
     previousThreadIdRef.current = activeThreadId;
 
-    // eslint-disable-next-line react-compiler/react-compiler
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     flushDraftToStorage(getDraftKey(prevId), draftRef.current);
     restoreDraftFromStorage(getDraftKey(activeThreadId), setDraft);
   }, [activeThreadId, setDraft, timerRef, draftRef]);
 }
 
-function useMountRestoreDraft(activeThreadId: string | null, setDraft: Dispatch<SetStateAction<string>>): void {
+function useMountRestoreDraft(
+  activeThreadId: string | null,
+  setDraft: Dispatch<SetStateAction<string>>,
+): void {
   useEffect(() => {
     const stored = localStorage.getItem(getDraftKey(activeThreadId));
     if (stored) setDraft(stored);
     // Only run on mount
-    // eslint-disable-next-line react-compiler/react-compiler
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
@@ -87,7 +98,9 @@ function useDebouncedDraftSave(activeThreadId: string | null, draft: string): vo
     timerRef.current = setTimeout(() => {
       flushDraftToStorage(getDraftKey(activeThreadId), draft);
     }, DEBOUNCE_MS);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [activeThreadId, draft]);
 }
 

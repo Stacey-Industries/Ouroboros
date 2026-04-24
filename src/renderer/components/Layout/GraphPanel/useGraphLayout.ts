@@ -23,12 +23,18 @@ function buildAdjacency(edges: RawGraphEdge[]): Map<string, string[]> {
   return adj;
 }
 
-function seedRoots(nodeIds: string[], adj: Map<string, string[]>): { layers: Map<string, number>; queue: string[] } {
+function seedRoots(
+  nodeIds: string[],
+  adj: Map<string, string[]>,
+): { layers: Map<string, number>; queue: string[] } {
   const hasIncoming = new Set([...adj.values()].flat());
   const layers = new Map<string, number>();
   const queue: string[] = [];
   for (const id of nodeIds) {
-    if (!hasIncoming.has(id)) { layers.set(id, 0); queue.push(id); }
+    if (!hasIncoming.has(id)) {
+      layers.set(id, 0);
+      queue.push(id);
+    }
   }
   return { layers, queue };
 }
@@ -51,7 +57,9 @@ function bfsLayers(adj: Map<string, string[]>, layers: Map<string, number>, queu
 function assignLayers(nodeIds: string[], adj: Map<string, string[]>): Map<string, number> {
   const { layers, queue } = seedRoots(nodeIds, adj);
   bfsLayers(adj, layers, queue);
-  for (const id of nodeIds) { if (!layers.has(id)) layers.set(id, 0); }
+  for (const id of nodeIds) {
+    if (!layers.has(id)) layers.set(id, 0);
+  }
   return layers;
 }
 
@@ -67,7 +75,10 @@ function groupByLayer(nodes: RawGraphNode[], layers: Map<string, number>): Map<n
   return byLayer;
 }
 
-function computePositions(nodes: RawGraphNode[], layers: Map<string, number>): Map<string, { x: number; y: number }> {
+function computePositions(
+  nodes: RawGraphNode[],
+  layers: Map<string, number>,
+): Map<string, { x: number; y: number }> {
   const byLayer = groupByLayer(nodes, layers);
   const positions = new Map<string, { x: number; y: number }>();
   const stride = NODE_WIDTH + SIBLING_GAP_X;
@@ -87,22 +98,44 @@ export interface GraphLayoutResult {
   edges: LaidOutEdge[];
 }
 
-export function computeLayout(rawNodes: RawGraphNode[], rawEdges: RawGraphEdge[]): GraphLayoutResult {
+export function computeLayout(
+  rawNodes: RawGraphNode[],
+  rawEdges: RawGraphEdge[],
+): GraphLayoutResult {
   const adj = buildAdjacency(rawEdges);
-  const layers = assignLayers(rawNodes.map((n) => n.id), adj);
+  const layers = assignLayers(
+    rawNodes.map((n) => n.id),
+    adj,
+  );
   const positions = computePositions(rawNodes, layers);
 
   const nodes: LaidOutNode[] = rawNodes.map((n) => {
     const pos = positions.get(n.id) ?? { x: 0, y: 0 };
-    return { id: n.id, type: n.type, name: n.name, filePath: n.filePath, x: pos.x, y: pos.y, width: NODE_WIDTH, height: NODE_HEIGHT };
+    return {
+      id: n.id,
+      type: n.type,
+      name: n.name,
+      filePath: n.filePath,
+      x: pos.x,
+      y: pos.y,
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    };
   });
-  const edges: LaidOutEdge[] = rawEdges.map((e) => ({ source: e.source, target: e.target, edgeType: e.type }));
+  const edges: LaidOutEdge[] = rawEdges.map((e) => ({
+    source: e.source,
+    target: e.target,
+    edgeType: e.type,
+  }));
 
   return { nodes, edges };
 }
 
 // ── React hook wrapper ────────────────────────────────────────────────────────
 
-export function useGraphLayout(rawNodes: RawGraphNode[], rawEdges: RawGraphEdge[]): GraphLayoutResult {
+export function useGraphLayout(
+  rawNodes: RawGraphNode[],
+  rawEdges: RawGraphEdge[],
+): GraphLayoutResult {
   return useMemo(() => computeLayout(rawNodes, rawEdges), [rawNodes, rawEdges]);
 }

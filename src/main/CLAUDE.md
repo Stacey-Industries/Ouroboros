@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-The existing file has some stale entries (`usageReader.ts`, `usageReaderSupport.ts` don't exist in the file list). Here's the corrected CLAUDE.md content:
-
 # `src/main/` — Electron Main Process
 
 Node.js main process. Owns all privileged operations: window management, PTY sessions, IPC handlers, hooks pipeline, LSP, extensions, config persistence, and the reverse IDE tool channel.
@@ -141,6 +139,7 @@ Node.js main process. Owns all privileged operations: window management, PTY ses
 | `storage/` | SQLite database layer and JSON→SQLite migration |
 | `symbolExtractor/` | Symbol extraction for context injection |
 | `web/` | HTTP + WebSocket server for browser-based IDE access |
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

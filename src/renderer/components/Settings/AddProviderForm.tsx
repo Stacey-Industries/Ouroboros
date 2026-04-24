@@ -88,21 +88,43 @@ function ProviderFormFields({ onAdd, onCancel }: ProviderFormFieldsProps): React
     <div style={formContainerStyle}>
       <PresetSelector value={preset} onChange={handlePresetChange} />
       <FormField label="Name" value={name} onChange={setName} placeholder="e.g. MiniMax" />
-      <FormField label="Base URL" value={baseUrl} onChange={setBaseUrl} placeholder="https://api.example.com/v1" />
+      <FormField
+        label="Base URL"
+        value={baseUrl}
+        onChange={setBaseUrl}
+        placeholder="https://api.example.com/v1"
+      />
       <PasswordField label="API Key" value={apiKey} onChange={setApiKey} placeholder="sk-..." />
       <div style={formButtonRowStyle}>
-        <button style={formActionButtonStyle(canSave)} onClick={handleSave} disabled={!canSave}>Save</button>
-        <button style={formActionButtonStyle(false)} onClick={onCancel}>Cancel</button>
+        <button style={formActionButtonStyle(canSave)} onClick={handleSave} disabled={!canSave}>
+          Save
+        </button>
+        <button style={formActionButtonStyle(false)} onClick={onCancel}>
+          Cancel
+        </button>
       </div>
     </div>
   );
 }
 
-function PresetSelector({ value, onChange }: { value: string; onChange: (v: string) => void }): React.ReactElement {
+function PresetSelector({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
   return (
     <div>
-      <div className="text-text-semantic-muted" style={formLabelStyle}>Preset</div>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="text-text-semantic-primary" style={formSelectStyle}>
+      <div className="text-text-semantic-muted" style={formLabelStyle}>
+        Preset
+      </div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="text-text-semantic-primary"
+        style={formSelectStyle}
+      >
         <option value="custom">Custom</option>
         <option value="minimax">MiniMax</option>
       </select>
@@ -120,7 +142,9 @@ interface FormFieldProps {
 function FormField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement {
   return (
     <div>
-      <div className="text-text-semantic-muted" style={formLabelStyle}>{label}</div>
+      <div className="text-text-semantic-muted" style={formLabelStyle}>
+        {label}
+      </div>
       <input
         type="text"
         value={value}
@@ -133,10 +157,17 @@ function FormField({ label, value, onChange, placeholder }: FormFieldProps): Rea
   );
 }
 
-function PasswordField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement {
+function PasswordField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: FormFieldProps): React.ReactElement {
   return (
     <div>
-      <div className="text-text-semantic-muted" style={formLabelStyle}>{label}</div>
+      <div className="text-text-semantic-muted" style={formLabelStyle}>
+        {label}
+      </div>
       <input
         type="password"
         value={value}

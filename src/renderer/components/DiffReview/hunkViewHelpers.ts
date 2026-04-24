@@ -82,25 +82,34 @@ export function lineTypeFromPrefix(line: string): DiffLineType {
 
 export function lineBg(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'var(--diff-add-bg)';
-    case 'removed': return 'var(--diff-del-bg)';
-    default: return 'transparent';
+    case 'added':
+      return 'var(--diff-add-bg)';
+    case 'removed':
+      return 'var(--diff-del-bg)';
+    default:
+      return 'transparent';
   }
 }
 
 export function gutterBg(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'var(--diff-add-bg)';
-    case 'removed': return 'var(--diff-del-bg)';
-    default: return 'var(--surface-base)';
+    case 'added':
+      return 'var(--diff-add-bg)';
+    case 'removed':
+      return 'var(--diff-del-bg)';
+    default:
+      return 'var(--surface-base)';
   }
 }
 
 export function markerColor(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'var(--status-success)';
-    case 'removed': return 'var(--status-error)';
-    default: return 'var(--text-faint)';
+    case 'added':
+      return 'var(--status-success)';
+    case 'removed':
+      return 'var(--status-error)';
+    default:
+      return 'var(--text-faint)';
   }
 }
 

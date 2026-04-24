@@ -47,11 +47,19 @@ describe('ChatOnlyUserMenu', () => {
     // Patch getBoundingClientRect to return a non-zero rect.
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
     expect(screen.getByTestId('user-menu-popover')).toBeTruthy();
   });
 
@@ -59,11 +67,19 @@ describe('ChatOnlyUserMenu', () => {
     render(<ChatOnlyUserMenu />);
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
     expect(screen.getByTestId('user-menu-popover')).toBeTruthy();
     act(() => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -75,16 +91,28 @@ describe('ChatOnlyUserMenu', () => {
     render(<ChatOnlyUserMenu />);
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
 
     const dispatched: string[] = [];
-    const listener = (e: Event): void => { dispatched.push(e.type); };
+    const listener = (e: Event): void => {
+      dispatched.push(e.type);
+    };
     window.addEventListener(OPEN_SETTINGS_EVENT, listener);
-    act(() => { screen.getByText('Settings').click(); });
+    act(() => {
+      screen.getByText('Settings').click();
+    });
     window.removeEventListener(OPEN_SETTINGS_EVENT, listener);
     expect(dispatched).toContain(OPEN_SETTINGS_EVENT);
   });
@@ -93,16 +121,28 @@ describe('ChatOnlyUserMenu', () => {
     render(<ChatOnlyUserMenu />);
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
 
     const dispatched: string[] = [];
-    const listener = (e: Event): void => { dispatched.push(e.type); };
+    const listener = (e: Event): void => {
+      dispatched.push(e.type);
+    };
     window.addEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, listener);
-    act(() => { screen.getByText('Exit chat mode').click(); });
+    act(() => {
+      screen.getByText('Exit chat mode').click();
+    });
     window.removeEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, listener);
     expect(dispatched).toContain(TOGGLE_IMMERSIVE_CHAT_EVENT);
   });
@@ -111,16 +151,28 @@ describe('ChatOnlyUserMenu', () => {
     render(<ChatOnlyUserMenu />);
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
 
     const dispatched: string[] = [];
-    const listener = (e: Event): void => { dispatched.push(e.type); };
+    const listener = (e: Event): void => {
+      dispatched.push(e.type);
+    };
     window.addEventListener(TOGGLE_SHORTCUT_CHEATSHEET_EVENT, listener);
-    act(() => { screen.getByText('Keyboard shortcuts').click(); });
+    act(() => {
+      screen.getByText('Keyboard shortcuts').click();
+    });
     window.removeEventListener(TOGGLE_SHORTCUT_CHEATSHEET_EVENT, listener);
     expect(dispatched).toContain(TOGGLE_SHORTCUT_CHEATSHEET_EVENT);
   });
@@ -129,11 +181,19 @@ describe('ChatOnlyUserMenu', () => {
     render(<ChatOnlyUserMenu />);
     const trigger = screen.getByTestId('user-menu-trigger');
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-      top: 100, left: 10, bottom: 128, right: 200,
-      width: 190, height: 28, x: 10, y: 100,
+      top: 100,
+      left: 10,
+      bottom: 128,
+      right: 200,
+      width: 190,
+      height: 28,
+      x: 10,
+      y: 100,
       toJSON: () => ({}),
     } as DOMRect);
-    act(() => { trigger.click(); });
+    act(() => {
+      trigger.click();
+    });
     const logoutBtn = screen.getByText('Log out').closest('button');
     expect(logoutBtn?.disabled).toBe(true);
   });

@@ -20,9 +20,7 @@ function makeThread(overrides: Partial<AgentChatThreadRecord> = {}): AgentChatTh
   };
 }
 
-function makeMessage(
-  overrides: Partial<AgentChatMessageRecord> = {},
-): AgentChatMessageRecord {
+function makeMessage(overrides: Partial<AgentChatMessageRecord> = {}): AgentChatMessageRecord {
   return {
     id: 'msg-1',
     threadId: 'thread-abc123',
@@ -75,9 +73,7 @@ describe('exportToMarkdown', () => {
     const msg = makeMessage({
       role: 'assistant',
       content: '',
-      blocks: [
-        { kind: 'tool_use', tool: 'Read', input: { path: '/foo.ts' }, status: 'complete' },
-      ],
+      blocks: [{ kind: 'tool_use', tool: 'Read', input: { path: '/foo.ts' }, status: 'complete' }],
     });
     const result = exportToMarkdown(makeThread(), [msg]);
     expect(result).toContain('[Tool: Read]');

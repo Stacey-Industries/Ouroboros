@@ -2,26 +2,29 @@
  * agentChatUiHelpers.ts — Agent chat UI helper functions.
  */
 
-import {
-  FOCUS_AGENT_CHAT_EVENT,
-  OPEN_ORCHESTRATION_SESSION_EVENT,
-} from './appEventNames';
+import { FOCUS_AGENT_CHAT_EVENT, OPEN_ORCHESTRATION_SESSION_EVENT } from './appEventNames';
 import type { ToastType } from './useToast';
 
-export type ToastFn = (message: string, type?: ToastType, options?: Record<string, unknown>) => unknown
+export type ToastFn = (
+  message: string,
+  type?: ToastType,
+  options?: Record<string, unknown>,
+) => unknown;
 
 interface AgentChatHandlerArgs {
-  projectRoot: string | null
-  toast: ToastFn
+  projectRoot: string | null;
+  toast: ToastFn;
 }
 
 interface AgentChatStatusHandlerArgs {
-  seenStatuses: Set<string>
-  status: unknown
-  toast: ToastFn
+  seenStatuses: Set<string>;
+  status: unknown;
+  toast: ToastFn;
 }
 
-export function createResumeLatestAgentChatThreadHandler(args: AgentChatHandlerArgs): EventListener {
+export function createResumeLatestAgentChatThreadHandler(
+  args: AgentChatHandlerArgs,
+): EventListener {
   return () => {
     if (!args.projectRoot) {
       args.toast('No project open', 'error');
@@ -38,9 +41,14 @@ export function createResumeLatestAgentChatThreadHandler(args: AgentChatHandlerA
         }
         const sorted = [...threads].sort((a, b) => b.createdAt - a.createdAt);
         const thread = sorted[0];
-        window.dispatchEvent(new CustomEvent(FOCUS_AGENT_CHAT_EVENT, { detail: { threadId: thread.id } }));
+        window.dispatchEvent(
+          new CustomEvent(FOCUS_AGENT_CHAT_EVENT, { detail: { threadId: thread.id } }),
+        );
       } catch (err) {
-        args.toast(err instanceof Error ? err.message : 'Failed to resume agent chat thread', 'error');
+        args.toast(
+          err instanceof Error ? err.message : 'Failed to resume agent chat thread',
+          'error',
+        );
       }
     })();
   };
@@ -65,12 +73,17 @@ export function createOpenLatestAgentChatDetailsHandler(args: AgentChatHandlerAr
         const thread = sorted[0];
         const sessionId = thread.latestOrchestration?.sessionId;
         if (sessionId) {
-          window.dispatchEvent(new CustomEvent(OPEN_ORCHESTRATION_SESSION_EVENT, { detail: { sessionId } }));
+          window.dispatchEvent(
+            new CustomEvent(OPEN_ORCHESTRATION_SESSION_EVENT, { detail: { sessionId } }),
+          );
         } else {
           args.toast('No linked orchestration session found', 'error');
         }
       } catch (err) {
-        args.toast(err instanceof Error ? err.message : 'Failed to open agent chat details', 'error');
+        args.toast(
+          err instanceof Error ? err.message : 'Failed to open agent chat details',
+          'error',
+        );
       }
     })();
   };

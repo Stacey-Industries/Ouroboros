@@ -18,10 +18,7 @@ function resolveTheme(): BundledTheme {
   return getShikiTheme(themeId);
 }
 
-export function useCodeHighlight(
-  code: string,
-  language?: string,
-): { html: string | null } {
+export function useCodeHighlight(code: string, language?: string): { html: string | null } {
   const [html, setHtml] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const [themeVersion, setThemeVersion] = useState(0);
@@ -47,7 +44,9 @@ export function useCodeHighlight(
       setHtml(result);
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [code, language, themeVersion]);
 
   return { html };

@@ -70,7 +70,10 @@ function applyDelete(adaptor: StoreAdaptor, id: string): void {
 function applyPin(adaptor: StoreAdaptor, id: string, pinned: boolean): void {
   const all = adaptor.read();
   const idx = all.findIndex((s) => s.id === id);
-  if (idx < 0) { log.warn('[sessionStore] pin: session not found', id); return; }
+  if (idx < 0) {
+    log.warn('[sessionStore] pin: session not found', id);
+    return;
+  }
   const existing = all.find((_, i) => i === idx);
   if (!existing) return;
   all.splice(idx, 1, { ...existing, pinned });
@@ -80,7 +83,10 @@ function applyPin(adaptor: StoreAdaptor, id: string, pinned: boolean): void {
 function applySoftDelete(adaptor: StoreAdaptor, id: string, now: number): void {
   const all = adaptor.read();
   const idx = all.findIndex((s) => s.id === id);
-  if (idx < 0) { log.warn('[sessionStore] softDelete: session not found', id); return; }
+  if (idx < 0) {
+    log.warn('[sessionStore] softDelete: session not found', id);
+    return;
+  }
   const existing = all.find((_, i) => i === idx);
   if (!existing) return;
   all.splice(idx, 1, { ...existing, deletedAt: now });
@@ -90,7 +96,10 @@ function applySoftDelete(adaptor: StoreAdaptor, id: string, now: number): void {
 function applyRestoreDeleted(adaptor: StoreAdaptor, id: string): void {
   const all = adaptor.read();
   const idx = all.findIndex((s) => s.id === id);
-  if (idx < 0) { log.warn('[sessionStore] restoreDeleted: session not found', id); return; }
+  if (idx < 0) {
+    log.warn('[sessionStore] restoreDeleted: session not found', id);
+    return;
+  }
   const existing = all.find((_, i) => i === idx) as Session | undefined;
   if (!existing) return;
   const { deletedAt: _removed, ...rest } = existing;

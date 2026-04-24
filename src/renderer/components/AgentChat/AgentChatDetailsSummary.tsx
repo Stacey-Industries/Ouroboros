@@ -34,7 +34,9 @@ function formatCount(value: number): string {
 function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement {
   return (
     <div className="rounded border border-border-semantic bg-surface-base px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">
+        {label}
+      </div>
       <div className="mt-1 text-xs text-text-semantic-primary">{value}</div>
     </div>
   );
@@ -49,8 +51,12 @@ function SummaryHeadline(props: {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-text-semantic-primary">{getStatusLabel(props.activeThread.status)}</div>
-        <div className="mt-1 text-xs leading-5 text-text-semantic-muted">{getStatusDescription(props.activeThread)}</div>
+        <div className="text-sm font-medium text-text-semantic-primary">
+          {getStatusLabel(props.activeThread.status)}
+        </div>
+        <div className="mt-1 text-xs leading-5 text-text-semantic-muted">
+          {getStatusDescription(props.activeThread)}
+        </div>
       </div>
       {latestLink ? (
         <button
@@ -71,12 +77,18 @@ function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElemen
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
-      {pills.map((pill) => <SummaryPill key={pill.label} label={pill.label} value={pill.value} />)}
+      {pills.map((pill) => (
+        <SummaryPill key={pill.label} label={pill.label} value={pill.value} />
+      ))}
     </div>
   );
 }
 
-function SummaryVerificationNote({ summary }: { summary: string | null }): React.ReactElement | null {
+function SummaryVerificationNote({
+  summary,
+}: {
+  summary: string | null;
+}): React.ReactElement | null {
   if (!summary) {
     return null;
   }
@@ -95,7 +107,10 @@ export function AgentChatDetailsSummary({
   onOpenDetails,
   skillCount,
 }: AgentChatDetailsSummaryProps): React.ReactElement {
-  const summary = useMemo(() => buildSummaryData(details, { skillCount: skillCount ?? 0 }), [details, skillCount]);
+  const summary = useMemo(
+    () => buildSummaryData(details, { skillCount: skillCount ?? 0 }),
+    [details, skillCount],
+  );
   const pills = useMemo(
     () => buildSummaryPills({ formatCount, hasDetails: Boolean(details), isLoading, summary }),
     [details, isLoading, summary],
@@ -112,7 +127,10 @@ export function AgentChatDetailsSummary({
 
 /* ---------- Drawer sub-components (exported for use in AgentChatDetailsDrawer) ---------- */
 
-export function DrawerSection(props: { children: React.ReactNode; title: string }): React.ReactElement {
+export function DrawerSection(props: {
+  children: React.ReactNode;
+  title: string;
+}): React.ReactElement {
   return (
     <section className="rounded border border-border-semantic bg-surface-base px-3 py-3">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">
@@ -123,15 +141,26 @@ export function DrawerSection(props: { children: React.ReactNode; title: string 
   );
 }
 
-export function MetadataGrid(props: { rows: Array<{ label: string; value: string | null }> }): React.ReactElement {
+export function MetadataGrid(props: {
+  rows: Array<{ label: string; value: string | null }>;
+}): React.ReactElement {
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-      {props.rows.filter((row) => row.value).map((row) => (
-        <div key={row.label} className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">{row.label}</div>
-          <div className="mt-1 truncate text-text-semantic-primary" title={row.value ?? undefined}>{row.value}</div>
-        </div>
-      ))}
+      {props.rows
+        .filter((row) => row.value)
+        .map((row) => (
+          <div key={row.label} className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">
+              {row.label}
+            </div>
+            <div
+              className="mt-1 truncate text-text-semantic-primary"
+              title={row.value ?? undefined}
+            >
+              {row.value}
+            </div>
+          </div>
+        ))}
     </div>
   );
 }

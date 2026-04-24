@@ -32,7 +32,10 @@ import type { LspDiagnostic } from '../../types/electron';
 import { createLanguageExtensions, getLanguageExtension } from './InlineEditor.cm.language';
 import { getLspCompletionType, getLspSeverity } from './InlineEditor.cm.support';
 import { createHighlightExtension, editorThemeExtensions } from './InlineEditor.cm.theme';
-import { hasLspApi as hasLspApiShared, normalizeFilePath as normalizeFilePathShared } from './lspShared';
+import {
+  hasLspApi as hasLspApiShared,
+  normalizeFilePath as normalizeFilePathShared,
+} from './lspShared';
 
 type StringRef = MutableRefObject<string>;
 type NullableStringRef = MutableRefObject<string | null | undefined>;

@@ -161,7 +161,9 @@ export function registerWindowHandlers(channels: ChannelList): void {
   });
 }
 
-function openExtensionsFolder(extensions: typeof import('../extensions')): Promise<EmptySuccessResponse> {
+function openExtensionsFolder(
+  extensions: typeof import('../extensions'),
+): Promise<EmptySuccessResponse> {
   return (async () => {
     const extensionsPath = extensions.getExtensionsDirPath();
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- extensionsPath derived from extensions module, not user input

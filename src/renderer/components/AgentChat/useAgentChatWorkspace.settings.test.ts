@@ -17,6 +17,9 @@ describe('applyModelSettingsConfig', () => {
       setModelProviders: (v: unknown[]) => {
         captured.modelProviders = v;
       },
+      setCodexAppServerTransport: (v: boolean) => {
+        captured.codexAppServerTransport = v;
+      },
     };
     const captured: Record<string, unknown> = {};
 
@@ -25,6 +28,7 @@ describe('applyModelSettingsConfig', () => {
         claudeCliSettings: { model: 'claude-opus-4' },
         codexCliSettings: { model: 'gpt-4o' },
         agentChatSettings: { defaultProvider: 'codex' },
+        ecosystem: { codexAppServerTransport: true },
         modelProviders: [],
       } as unknown as Parameters<typeof applyModelSettingsConfig>[0],
       setters as Parameters<typeof applyModelSettingsConfig>[1],
@@ -33,6 +37,7 @@ describe('applyModelSettingsConfig', () => {
     expect(captured.settingsModel).toBe('claude-opus-4');
     expect(captured.codexSettingsModel).toBe('gpt-4o');
     expect(captured.defaultProvider).toBe('codex');
+    expect(captured.codexAppServerTransport).toBe(true);
   });
 
   it('falls back to empty string when claude model is missing', () => {
@@ -50,6 +55,9 @@ describe('applyModelSettingsConfig', () => {
       setModelProviders: (v: unknown[]) => {
         captured.modelProviders = v;
       },
+      setCodexAppServerTransport: (v: boolean) => {
+        captured.codexAppServerTransport = v;
+      },
     };
 
     applyModelSettingsConfig(
@@ -59,5 +67,6 @@ describe('applyModelSettingsConfig', () => {
 
     expect(captured.settingsModel).toBe('');
     expect(captured.defaultProvider).toBe('claude-code');
+    expect(captured.codexAppServerTransport).toBe(false);
   });
 });

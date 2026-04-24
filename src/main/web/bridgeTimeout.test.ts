@@ -38,7 +38,9 @@ import { TimeoutError, withTimeout } from './bridgeTimeout';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function never<T>(): Promise<T> {
-  return new Promise<T>(() => { /* never resolves */ });
+  return new Promise<T>(() => {
+    /* never resolves */
+  });
 }
 
 function resolveAfter<T>(ms: number, value: T): Promise<T> {
@@ -80,7 +82,9 @@ describe('withTimeout', () => {
     vi.advanceTimersByTime(9_999);
     // Not yet
     let settled = false;
-    promise.catch(() => { settled = true; });
+    promise.catch(() => {
+      settled = true;
+    });
     await Promise.resolve(); // flush microtasks
     expect(settled).toBe(false);
 
@@ -106,7 +110,9 @@ describe('withTimeout', () => {
     const promise = withTimeout(never<void>(), 'normal:op');
     vi.advanceTimersByTime(29_999);
     let rejected = false;
-    promise.catch(() => { rejected = true; });
+    promise.catch(() => {
+      rejected = true;
+    });
     await Promise.resolve();
     expect(rejected).toBe(false);
 
@@ -128,7 +134,9 @@ describe('withTimeout', () => {
     const promise = withTimeout(never<void>(), 'long:chat');
     vi.advanceTimersByTime(119_999);
     let rejected = false;
-    promise.catch(() => { rejected = true; });
+    promise.catch(() => {
+      rejected = true;
+    });
     await Promise.resolve();
     expect(rejected).toBe(false);
 

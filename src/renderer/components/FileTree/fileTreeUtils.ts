@@ -13,10 +13,7 @@ export const ITEM_HEIGHT = 28;
 export const OVERSCAN = 10;
 
 /** Hardcoded directories to always skip */
-export const IGNORED_DIRS_BASE = new Set([
-  '.git',
-  '__pycache__',
-]);
+export const IGNORED_DIRS_BASE = new Set(['.git', '__pycache__']);
 
 // ─── Inline edit state types ──────────────────────────────────────────────────
 
@@ -68,7 +65,7 @@ export async function loadDirChildren(
   root: string,
   dirPath: string,
   depth: number,
-  shouldIgnore: (name: string) => boolean = (n) => IGNORED_DIRS_BASE.has(n)
+  shouldIgnore: (name: string) => boolean = (n) => IGNORED_DIRS_BASE.has(n),
 ): Promise<TreeNode[]> {
   const result = await window.electronAPI.files.readDir(dirPath);
   if (!result.success || !result.items) return [];
@@ -96,7 +93,7 @@ export async function loadDirChildren(
 export function updateNodeInTree(
   nodes: TreeNode[],
   targetPath: string,
-  updater: (node: TreeNode) => TreeNode
+  updater: (node: TreeNode) => TreeNode,
 ): TreeNode[] {
   return nodes.map((node) => {
     if (node.path === targetPath) {
@@ -172,16 +169,16 @@ export function collectAllFiles(nodes: TreeNode[]): TreeNode[] {
 }
 
 const STATUS_PRIORITY: Record<string, number> = {
-  'D': 4,
-  'M': 3,
-  'A': 2,
-  'R': 2,
+  D: 4,
+  M: 3,
+  A: 2,
+  R: 2,
   '?': 1,
 };
 
 export function getDirectoryGitStatus(
   relativePath: string,
-  gitStatusMap: Map<string, GitFileStatus>
+  gitStatusMap: Map<string, GitFileStatus>,
 ): GitFileStatus | undefined {
   const prefix = relativePath + '/';
   let worst: GitFileStatus | undefined;
@@ -202,7 +199,7 @@ export function getDirectoryGitStatus(
 
 export function getNodeGitStatus(
   node: TreeNode,
-  gitStatusMap: Map<string, GitFileStatus>
+  gitStatusMap: Map<string, GitFileStatus>,
 ): GitFileStatus | undefined {
   if (!node.isDirectory) {
     return gitStatusMap.get(node.relativePath);

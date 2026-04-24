@@ -9,7 +9,10 @@ interface UsageModalProps {
   onClose: () => void;
 }
 
-export const UsageModal = memo(function UsageModal({ isOpen, onClose }: UsageModalProps): React.JSX.Element | null {
+export const UsageModal = memo(function UsageModal({
+  isOpen,
+  onClose,
+}: UsageModalProps): React.JSX.Element | null {
   const [range, setRange] = useState<TimeRange>('30d');
   const { error, isLoading, loadUsage, summary } = useUsageSummary(isOpen, range);
 
@@ -21,59 +24,51 @@ export const UsageModal = memo(function UsageModal({ isOpen, onClose }: UsageMod
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(2px)' }}
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <div
         className="flex flex-col rounded-lg shadow-2xl overflow-hidden bg-surface-panel border border-border-semantic"
         style={{ width: '560px', maxHeight: '80vh', fontFamily: 'var(--font-ui)' }}
       >
         <UsageModalHeader onClose={onClose} />
-        <UsageRangeControls range={range} onRangeChange={setRange} onRefresh={() => void loadUsage(range)} />
-        <UsageModalContent summary={summary} isLoading={isLoading} error={error} onRetry={() => void loadUsage(range)} />
+        <UsageRangeControls
+          range={range}
+          onRangeChange={setRange}
+          onRefresh={() => void loadUsage(range)}
+        />
+        <UsageModalContent
+          summary={summary}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void loadUsage(range)}
+        />
       </div>
     </div>
   );
 });
 
-function useUsageSummary(isOpen: boolean, range: TimeRange): {
-  error: string | null;
-  isLoading: boolean;
-  loadUsage: (timeRange: TimeRange) => Promise<void>;
-  summary: UsageSummary | null;
-} {
-  const [summary, setSummary] = useState<UsageSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadUsage = useCallback(async (timeRange: TimeRange) => {
-    if (!window.electronAPI?.usage?.getSummary) {
-      setError('Usage API not available');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+function useLoadUsage(setSummary: (s: UsageSummary | null) => void, setIsLoading: (v: boolean) => void, setError: (e: string | null) => void): (timeRange: TimeRange) => Promise<void> {
+  return useCallback(async (timeRange: TimeRange) => {
+    if (!window.electronAPI?.usage?.getSummary) { setError('Usage API not available'); return; }
+    setIsLoading(true); setError(null);
     try {
       const result = await window.electronAPI.usage.getSummary({ since: getTimeSince(timeRange), maxSessions: 200 });
-      if (result.success && result.summary) {
-        setSummary(result.summary);
-        return;
-      }
+      if (result.success && result.summary) { setSummary(result.summary); return; }
       setError(result.error ?? 'Failed to load usage data');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    } finally { setIsLoading(false); }
+  }, [setSummary, setIsLoading, setError]);
+}
 
-  useEffect(() => {
-    if (isOpen) {
-      void loadUsage(range);
-    }
-  }, [isOpen, range, loadUsage]);
-
+function useUsageSummary(isOpen: boolean, range: TimeRange): { error: string | null; isLoading: boolean; loadUsage: (timeRange: TimeRange) => Promise<void>; summary: UsageSummary | null } {
+  const [summary, setSummary] = useState<UsageSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const loadUsage = useLoadUsage(setSummary, setIsLoading, setError);
+  useEffect(() => { if (isOpen) void loadUsage(range); }, [isOpen, range, loadUsage]);
   return { error, isLoading, loadUsage, summary };
 }
 

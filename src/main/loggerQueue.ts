@@ -39,9 +39,7 @@ let overflowFired = false;
 
 function isEmfileError(e: unknown): boolean {
   return (
-    typeof e === 'object' &&
-    e !== null &&
-    EMFILE_CODES.has((e as NodeJS.ErrnoException).code ?? '')
+    typeof e === 'object' && e !== null && EMFILE_CODES.has((e as NodeJS.ErrnoException).code ?? '')
   );
 }
 
@@ -71,10 +69,9 @@ function flushEntry(entry: RetryEntry): void {
 function scheduleRetry(entry: RetryEntry): void {
   const delay = RETRY_DELAYS_MS[entry.attempts as 0 | 1 | 2] ?? null;
   if (delay === null) {
-    console.warn(
-      `[loggerQueue] dropped log line after ${RETRY_DELAYS_MS.length} retries`,
-      { pressure: describeFdPressure() },
-    );
+    console.warn(`[loggerQueue] dropped log line after ${RETRY_DELAYS_MS.length} retries`, {
+      pressure: describeFdPressure(),
+    });
     return;
   }
   entry.attempts += 1;
@@ -85,10 +82,9 @@ function enqueueForRetry(entry: Omit<RetryEntry, 'attempts'>): void {
   if (retryQueue.length >= MAX_QUEUE_SIZE) {
     if (!overflowFired) {
       overflowFired = true;
-      console.error(
-        `[loggerQueue] ring buffer full (${MAX_QUEUE_SIZE}); oldest entries dropped`,
-        { pressure: describeFdPressure() },
-      );
+      console.error(`[loggerQueue] ring buffer full (${MAX_QUEUE_SIZE}); oldest entries dropped`, {
+        pressure: describeFdPressure(),
+      });
     }
     retryQueue.shift(); // drop oldest to make room
   }

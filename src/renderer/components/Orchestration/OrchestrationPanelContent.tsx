@@ -13,7 +13,10 @@ export interface OrchestrationPanelContentProps {
   onClose: () => void;
 }
 
-function useInitialSessionSelection(initialSessionId: string | null | undefined, selectSession: (sessionId: string) => Promise<void>): void {
+function useInitialSessionSelection(
+  initialSessionId: string | null | undefined,
+  selectSession: (sessionId: string) => Promise<void>,
+): void {
   useEffect(() => {
     if (!initialSessionId) {
       return;
@@ -24,21 +27,30 @@ function useInitialSessionSelection(initialSessionId: string | null | undefined,
 }
 
 function deriveCurrentStep(model: ReturnType<typeof useOrchestrationModel>): string {
-  return model.providerEvent?.message
-    ?? model.state?.message
-    ?? model.latestResult?.message
-    ?? model.state?.status
-    ?? 'idle';
+  return (
+    model.providerEvent?.message ??
+    model.state?.message ??
+    model.latestResult?.message ??
+    model.state?.status ??
+    'idle'
+  );
 }
 
-export function OrchestrationPanelContent({ projectRoot, initialSessionId = null, onClose }: OrchestrationPanelContentProps): React.ReactElement {
+export function OrchestrationPanelContent({
+  projectRoot,
+  initialSessionId = null,
+  onClose,
+}: OrchestrationPanelContentProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<OrchestrationTab>('overview');
   const model = useOrchestrationModel(projectRoot);
   useInitialSessionSelection(initialSessionId, model.selectSession);
-  const handleTaskReady = useCallback(async (sessionId: string): Promise<void> => {
-    await model.selectSession(sessionId);
-    setActiveTab('overview');
-  }, [model, setActiveTab]);
+  const handleTaskReady = useCallback(
+    async (sessionId: string): Promise<void> => {
+      await model.selectSession(sessionId);
+      setActiveTab('overview');
+    },
+    [model, setActiveTab],
+  );
 
   const currentStep = useMemo(() => deriveCurrentStep(model), [model]);
 

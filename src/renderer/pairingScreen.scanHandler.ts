@@ -30,18 +30,12 @@ function applyHighlight(setters: ScanOutcomeSetters): void {
     clearTimeout(highlightTimeoutRef.current);
   }
   setHighlight(true);
-  highlightTimeoutRef.current = setTimeout(
-    () => setHighlight(false),
-    SCAN_HIGHLIGHT_MS,
-  );
+  highlightTimeoutRef.current = setTimeout(() => setHighlight(false), SCAN_HIGHLIGHT_MS);
 }
 
 // ─── Per-outcome handlers (extracted for complexity limit) ────────────────────
 
-function handleSuccess(
-  payload: PairingLinkPayload,
-  setters: ScanOutcomeSetters,
-): void {
+function handleSuccess(payload: PairingLinkPayload, setters: ScanOutcomeSetters): void {
   const { setCode, setErrorMsg } = setters;
   setCode(payload.code);
   setErrorMsg('');

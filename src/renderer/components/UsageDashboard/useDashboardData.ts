@@ -7,10 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import type {
-  GlobalCostRollupRecord,
-  ThreadCostRollupRecord,
-} from '../../types/electron';
+import type { GlobalCostRollupRecord, ThreadCostRollupRecord } from '../../types/electron';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,9 +25,7 @@ export interface DashboardData {
 
 // ─── Time range helpers ───────────────────────────────────────────────────────
 
-function buildTimeRangeParam(
-  key: TimeRangeKey,
-): { from: number; to: number } | undefined {
+function buildTimeRangeParam(key: TimeRangeKey): { from: number; to: number } | undefined {
   if (key === 'all') return undefined;
   const now = Date.now();
   const days = key === '7d' ? 7 : 30;

@@ -18,7 +18,12 @@ const SUMMARY_MAX_CHARS = 500;
 
 /** First non-empty line of a string, trimmed. */
 function firstLine(text: string): string {
-  return text.split('\n').find((l) => l.trim().length > 0)?.trim() ?? '';
+  return (
+    text
+      .split('\n')
+      .find((l) => l.trim().length > 0)
+      ?.trim() ?? ''
+  );
 }
 
 export function buildHeuristicSummary(messages: AgentChatMessageRecord[]): string {
@@ -28,9 +33,7 @@ export function buildHeuristicSummary(messages: AgentChatMessageRecord[]): strin
     .filter((l) => l.length > 0);
 
   const joined = lines.join(' — ');
-  return joined.length <= SUMMARY_MAX_CHARS
-    ? joined
-    : `${joined.slice(0, SUMMARY_MAX_CHARS - 1)}…`;
+  return joined.length <= SUMMARY_MAX_CHARS ? joined : `${joined.slice(0, SUMMARY_MAX_CHARS - 1)}…`;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,7 +61,10 @@ function useDialogKeyboard(isOpen: boolean, onClose: () => void): void {
 
 // ── Thread loading ────────────────────────────────────────────────────────────
 
-function useLoadSideChatMessages(sideChatId: string, isOpen: boolean): {
+function useLoadSideChatMessages(
+  sideChatId: string,
+  isOpen: boolean,
+): {
   messages: AgentChatMessageRecord[];
   loading: boolean;
 } {
@@ -75,7 +81,9 @@ function useLoadSideChatMessages(sideChatId: string, isOpen: boolean): {
           setMessages(result.thread.messages);
         }
       })
-      .catch(() => { /* leave empty */ })
+      .catch(() => {
+        /* leave empty */
+      })
       .finally(() => setLoading(false));
   }, [sideChatId, isOpen]);
 
@@ -91,24 +99,15 @@ interface MessageRowProps {
 }
 
 function MessageCheckboxRow({ message, checked, onToggle }: MessageRowProps): React.ReactElement {
-  const label =
-    message.role === 'assistant' ? 'Assistant' : message.role === 'user' ? 'User' : 'System';
+  const label = message.role === 'assistant' ? 'Assistant' : message.role === 'user' ? 'User' : 'System';
   const preview = message.content.slice(0, 120);
-
+  const previewText = preview.length < message.content.length ? `${preview}…` : preview;
   return (
     <label className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 hover:bg-surface-hover">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={() => onToggle(message.id)}
-        className="mt-0.5 flex-shrink-0 accent-interactive-accent"
-        aria-label={`Include message from ${label}`}
-      />
+      <input type="checkbox" checked={checked} onChange={() => onToggle(message.id)} className="mt-0.5 flex-shrink-0 accent-interactive-accent" aria-label={`Include message from ${label}`} />
       <span className="min-w-0">
         <span className="mr-1.5 text-xs font-medium text-text-semantic-secondary">{label}</span>
-        <span className="text-xs text-text-semantic-muted">
-          {preview.length < message.content.length ? `${preview}…` : preview}
-        </span>
+        <span className="text-xs text-text-semantic-muted">{previewText}</span>
       </span>
     </label>
   );
@@ -122,23 +121,10 @@ interface MessageListProps {
 
 function MessageCheckboxList({ messages, selectedIds, onToggle }: MessageListProps): React.ReactElement {
   const visible = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
-
-  if (visible.length === 0) {
-    return (
-      <p className="py-2 text-xs text-text-semantic-muted">No messages to include.</p>
-    );
-  }
-
+  if (visible.length === 0) return <p className="py-2 text-xs text-text-semantic-muted">No messages to include.</p>;
   return (
     <div className="max-h-40 overflow-y-auto rounded border border-border-subtle bg-surface-inset">
-      {visible.map((m) => (
-        <MessageCheckboxRow
-          key={m.id}
-          message={m}
-          checked={selectedIds.has(m.id)}
-          onToggle={onToggle}
-        />
-      ))}
+      {visible.map((m) => <MessageCheckboxRow key={m.id} message={m} checked={selectedIds.has(m.id)} onToggle={onToggle} />)}
     </div>
   );
 }
@@ -201,7 +187,9 @@ interface SummaryAreaProps {
 
 function SummaryTextarea({ value, onChange, disabled }: SummaryAreaProps): React.ReactElement {
   const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { ref.current?.focus(); }, []);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
   return (
     <textarea
       ref={ref}
@@ -221,39 +209,23 @@ function SummaryTextarea({ value, onChange, disabled }: SummaryAreaProps): React
 function DialogHeader({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-      <h3 id="merge-dialog-title" className="text-sm font-medium text-text-semantic-primary">
-        Merge into main thread
-      </h3>
-      <button
-        type="button"
-        aria-label="Close merge dialog"
-        onClick={onClose}
-        className="rounded p-1 text-text-semantic-muted hover:bg-surface-hover hover:text-text-semantic-primary"
-      >
-        ✕
-      </button>
+      <h3 id="merge-dialog-title" className="text-sm font-medium text-text-semantic-primary">Merge into main thread</h3>
+      <button type="button" aria-label="Close merge dialog" onClick={onClose} className="rounded p-1 text-text-semantic-muted hover:bg-surface-hover hover:text-text-semantic-primary">✕</button>
     </div>
   );
 }
 
-interface FooterProps { merging: boolean; summary: string; onClose: () => void }
+interface FooterProps {
+  merging: boolean;
+  summary: string;
+  onClose: () => void;
+}
 
 function DialogFormFooter({ merging, summary, onClose }: FooterProps): React.ReactElement {
   return (
     <div className="flex justify-end gap-2">
-      <button
-        type="button"
-        onClick={onClose}
-        disabled={merging}
-        className="rounded px-3 py-1 text-xs text-text-semantic-muted transition-colors hover:text-text-semantic-primary"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        disabled={merging || !summary.trim()}
-        className="rounded bg-interactive-accent px-3 py-1 text-xs text-text-on-accent transition-opacity disabled:opacity-50"
-      >
+      <button type="button" onClick={onClose} disabled={merging} className="rounded px-3 py-1 text-xs text-text-semantic-muted transition-colors hover:text-text-semantic-primary">Cancel</button>
+      <button type="submit" disabled={merging || !summary.trim()} className="rounded bg-interactive-accent px-3 py-1 text-xs text-text-on-accent transition-opacity disabled:opacity-50">
         {merging ? 'Merging…' : 'Merge'}
       </button>
     </div>
@@ -295,6 +267,17 @@ function useDialogState(messages: AgentChatMessageRecord[]) {
   return { summary, setSummary, selectedIds, toggleId };
 }
 
+function DialogSummaryField({ loading, summary, setSummary, merging }: { loading: boolean; summary: string; setSummary: (v: string) => void; merging: boolean }): React.ReactElement {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-text-semantic-secondary">Summary</label>
+      {loading
+        ? <div className="flex h-20 items-center justify-center text-xs text-text-semantic-muted">Loading…</div>
+        : <SummaryTextarea value={summary} onChange={setSummary} disabled={merging} />}
+    </div>
+  );
+}
+
 function DialogBody({ messages, loading, merging, error, onClose, onMerge }: DialogBodyProps): React.ReactElement {
   const { summary, setSummary, selectedIds, toggleId } = useDialogState(messages);
   const handleSubmit = useCallback(
@@ -311,12 +294,7 @@ function DialogBody({ messages, loading, merging, error, onClose, onMerge }: Dia
     >
       <DialogHeader onClose={onClose} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 overflow-y-auto p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-semantic-secondary">Summary</label>
-          {loading
-            ? <div className="flex h-20 items-center justify-center text-xs text-text-semantic-muted">Loading…</div>
-            : <SummaryTextarea value={summary} onChange={setSummary} disabled={merging} />}
-        </div>
+        <DialogSummaryField loading={loading} summary={summary} setSummary={setSummary} merging={merging} />
         <div>
           <p className="mb-1 text-xs font-medium text-text-semantic-secondary">Include messages (optional)</p>
           <MessageCheckboxList messages={messages} selectedIds={selectedIds} onToggle={toggleId} />
@@ -338,7 +316,12 @@ export function MergeToMainDialog({
   onMerged,
 }: MergeToMainDialogProps): React.ReactElement | null {
   const { messages, loading } = useLoadSideChatMessages(sideChatId, isOpen);
-  const { merging, error, handleMerge } = useMergeAction({ sideChatId, parentThreadId, onClose, onMerged });
+  const { merging, error, handleMerge } = useMergeAction({
+    sideChatId,
+    parentThreadId,
+    onClose,
+    onMerged,
+  });
   useDialogKeyboard(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -347,7 +330,9 @@ export function MergeToMainDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <DialogBody
         messages={messages}

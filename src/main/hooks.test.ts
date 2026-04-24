@@ -17,9 +17,13 @@ vi.mock('./approvalManager', () => ({
   toolRequiresApproval: vi.fn().mockReturnValue(false),
 }));
 vi.mock('./claudeMdGenerator', () => ({ generateClaudeMd: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('./codebaseGraph/graphController', () => ({ getGraphController: vi.fn().mockReturnValue(null) }));
+vi.mock('./codebaseGraph/graphController', () => ({
+  getGraphController: vi.fn().mockReturnValue(null),
+}));
 vi.mock('./config', () => ({ getConfigValue: vi.fn().mockReturnValue(undefined) }));
-vi.mock('./contextLayer/contextLayerController', () => ({ getContextLayerController: vi.fn().mockReturnValue(null) }));
+vi.mock('./contextLayer/contextLayerController', () => ({
+  getContextLayerController: vi.fn().mockReturnValue(null),
+}));
 vi.mock('./extensions', () => ({ dispatchActivationEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./hooksLifecycleHandlers', () => ({
   enrichFromPermissionRequest: vi.fn(),
@@ -71,7 +75,9 @@ describe('stopHooksServer', () => {
 });
 
 describe('HookPayload data field', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('HookPayload type accepts a data field', () => {
     // Type-level smoke test — if this compiles the field is correctly typed

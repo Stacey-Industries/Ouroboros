@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { CodexAppServerClient, type CodexAppServerTransport } from './codexAppServerClient';
-import type { CodexAppServerIncomingMessage, CodexAppServerOutgoingMessage } from './codexAppServerTypes';
+import type {
+  CodexAppServerIncomingMessage,
+  CodexAppServerOutgoingMessage,
+} from './codexAppServerTypes';
 
 function createFakeTransport(): CodexAppServerTransport & {
   sent: CodexAppServerOutgoingMessage[];

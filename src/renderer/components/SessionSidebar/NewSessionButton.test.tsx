@@ -15,7 +15,20 @@ const mockCreate = vi.fn();
 
 beforeEach(() => {
   mockSelectFolder.mockResolvedValue({ success: true, path: '/projects/new-one' });
-  mockCreate.mockResolvedValue({ success: true, session: {} });
+  mockCreate.mockResolvedValue({
+    success: true,
+    session: {
+      id: 'session-1',
+      createdAt: '2026-04-22T12:00:00.000Z',
+      lastUsedAt: '2026-04-22T12:00:00.000Z',
+      projectRoot: '/projects/new-one',
+      worktree: false,
+      tags: [],
+      activeTerminalIds: [],
+      costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },
+      telemetry: { correlationIds: [], telemetrySessionId: 'session-1' },
+    },
+  });
 
   Object.defineProperty(window, 'electronAPI', {
     value: {
@@ -57,6 +70,15 @@ describe('NewSessionButton', () => {
     render(<NewSessionButton onCreated={onCreated} />);
     fireEvent.click(screen.getByRole('button'));
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
+  });
+
+  it('does not call onCreated when session creation does not return a session', async () => {
+    mockCreate.mockResolvedValue({ success: false, error: 'create failed' });
+    const onCreated = vi.fn();
+    render(<NewSessionButton onCreated={onCreated} />);
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it('does not call create if selectFolder is cancelled', async () => {

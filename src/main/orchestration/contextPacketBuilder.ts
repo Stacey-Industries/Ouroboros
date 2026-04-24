@@ -128,29 +128,32 @@ function checkContextPacketCache(
   return { selection: cached.result.selection, packet: updatedPacket, traceId: randomUUID() };
 }
 
+async function loadSystemInstructionsForProvider(request: TaskRequest): Promise<string | null> {
+  // Claude Code CLI loads CLAUDE.md natively via directory walk — injecting
+  // it as <system_instructions> would double it (~3k tokens/turn wasted).
+  if (request.provider === 'claude-code') return null;
+  const workspaceRoot = request.workspaceRoots[0];
+  if (!workspaceRoot) return null;
+  try {
+    const { readRulesForProvider } = await import('../rulesAndSkills/rulesReader');
+    return await readRulesForProvider(workspaceRoot, request.provider);
+  } catch {
+    return null;
+  }
+}
+
 async function enrichPacketWithSystemInstructions(
   packet: ContextPacket,
   request: TaskRequest,
 ): Promise<ContextPacket> {
   const enriched = { ...packet };
-  try {
-    const { readRulesForProvider } = await import('../rulesAndSkills/rulesReader');
-    const workspaceRoot = request.workspaceRoots[0];
-    if (workspaceRoot) {
-      const content = await readRulesForProvider(workspaceRoot, request.provider);
-      if (content) enriched.systemInstructions = content;
-    }
-  } catch {
-    // Rules injection is optional — non-fatal
-  }
+  const content = await loadSystemInstructionsForProvider(request);
+  if (content) enriched.systemInstructions = content;
   if (request.skillExpansion) enriched.skillInstructions = request.skillExpansion;
   return enriched;
 }
 
-async function enrichPacket(
-  packet: ContextPacket,
-  request: TaskRequest,
-): Promise<ContextPacket> {
+async function enrichPacket(packet: ContextPacket, request: TaskRequest): Promise<ContextPacket> {
   const withLayer = await enrichPacketWithContextLayer(packet, request.goal);
   return enrichPacketWithSystemInstructions(withLayer, request);
 }
@@ -163,10 +166,7 @@ async function enrichPacketWithContextLayer(
     const { getContextLayerController } = await import('../contextLayer/contextLayerController');
     const layerController = getContextLayerController();
     if (layerController) {
-      const enriched = await layerController.enrichPacket(
-        packet,
-        extractGoalKeywords(goal),
-      );
+      const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(goal));
       return enriched.packet;
     }
   } catch {
@@ -175,7 +175,8 @@ async function enrichPacketWithContextLayer(
   return packet;
 }
 
-type OmittedCandidates = ContextPacket['omittedCandidates']; type PacketBudget = ReturnType<typeof buildBudgetSummary>;
+type OmittedCandidates = ContextPacket['omittedCandidates'];
+type PacketBudget = ReturnType<typeof buildBudgetSummary>;
 
 interface BuildFilesOptions {
   selection: ContextSelectionResult;
@@ -188,7 +189,12 @@ interface BuildFilesOptions {
   userSelectedRanges?: import('../../shared/types/orchestrationDomain').UserSelectedFileRange[];
 }
 
-function omitOverBudget(filePath: string, maxFiles: number, budget: PacketBudget, omitted: OmittedCandidates): void {
+function omitOverBudget(
+  filePath: string,
+  maxFiles: number,
+  budget: PacketBudget,
+  omitted: OmittedCandidates,
+): void {
   omitted.push({ filePath, reason: 'Excluded after ranking because maxFiles budget was reached' });
   budget.droppedContentNotes.push(`Skipped ${filePath} because maxFiles=${maxFiles} was reached`);
 }
@@ -264,24 +270,13 @@ async function buildPacketFiles(
   budget.estimatedTokens = tier1Budget.estimatedTokens;
   const otherResult = await buildFilesForGroup(otherFiles, opts, budget, tier1Result.files);
   budget.tierAllocation = { tier1: tier1Result.bytesUsed, tier2Plus: otherResult.bytesUsed };
-  const omittedCandidates = [
-    ...selection.omittedCandidates,
-    ...tier1Result.omittedCandidates,
-    ...otherResult.omittedCandidates,
-  ];
+  const omittedCandidates = [...selection.omittedCandidates, ...tier1Result.omittedCandidates, ...otherResult.omittedCandidates];
   return { files: [...tier1Result.files, ...otherResult.files], omittedCandidates };
 }
 
-interface ResolveFilesOptionsInput {
-  request: TaskRequest;
-  modelBudgets: ReturnType<typeof getModelBudgets>;
-  budget: PacketBudget;
-  selection: ContextSelectionResult;
-  snapshotCache: Map<string, ContextFileSnapshot>;
-}
+type ResolveFilesOptionsInput = { request: TaskRequest; modelBudgets: ReturnType<typeof getModelBudgets>; budget: PacketBudget; selection: ContextSelectionResult; snapshotCache: Map<string, ContextFileSnapshot> };
 
-function resolveFilesOptions(input: ResolveFilesOptionsInput): BuildFilesOptions {
-  const { request, modelBudgets, budget, selection, snapshotCache } = input;
+function resolveFilesOptions({ request, modelBudgets, budget, selection, snapshotCache }: ResolveFilesOptionsInput): BuildFilesOptions {
   return {
     selection, budget,
     maxFiles: request.budget?.maxFiles ?? modelBudgets.maxFiles,
@@ -293,21 +288,22 @@ function resolveFilesOptions(input: ResolveFilesOptionsInput): BuildFilesOptions
   };
 }
 
-interface SelectAndBuildInput {
-  request: TaskRequest;
-  repoFacts: RepoFacts;
-  liveIdeState?: LiveIdeState;
-  model?: string;
-}
+type SelectAndBuildInput = { request: TaskRequest; repoFacts: RepoFacts; liveIdeState?: LiveIdeState; model?: string };
 
-async function selectAndBuildFiles(
-  input: SelectAndBuildInput,
-): Promise<{ selection: ContextSelectionResult; files: RankedContextFile[]; omittedCandidates: OmittedCandidates; budget: PacketBudget }> {
+type SelectAndBuildResult = { selection: ContextSelectionResult; files: RankedContextFile[]; omittedCandidates: OmittedCandidates; budget: PacketBudget };
+
+async function selectAndBuildFiles(input: SelectAndBuildInput): Promise<SelectAndBuildResult> {
   const modelBudgets = getModelBudgets(input.model ?? '');
   const rawSelection = await selectContextFiles(input);
-  const selection: ContextSelectionResult = { ...rawSelection, rankedFiles: await rerankRankedFiles(input.request.goal, rawSelection.rankedFiles) };
+  const selection: ContextSelectionResult = {
+    ...rawSelection,
+    rankedFiles: await rerankRankedFiles(input.request.goal, rawSelection.rankedFiles),
+  };
   const snapshotCache = new Map(Object.entries(selection.snapshots));
-  const budget = buildBudgetSummary(input.request.budget?.maxBytes ?? modelBudgets.maxBytes, input.request.budget?.maxTokens ?? modelBudgets.maxTokens);
+  const budget = buildBudgetSummary(
+    input.request.budget?.maxBytes ?? modelBudgets.maxBytes,
+    input.request.budget?.maxTokens ?? modelBudgets.maxTokens,
+  );
   const { files, omittedCandidates } = await buildPacketFiles(
     resolveFilesOptions({ request: input.request, modelBudgets, budget, selection, snapshotCache }),
   );
@@ -320,7 +316,8 @@ async function buildFullContextPacket(options: {
   liveIdeState?: LiveIdeState;
   model?: string;
   repoSnapshot?: RepoIndexSnapshot;
-  traceId?: string; sessionId?: string;
+  traceId?: string;
+  sessionId?: string;
 }): Promise<ContextPacketBuildResult> {
   // Wave 29.5 Phase B (H1): Mint traceId unconditionally so every packet build
   // produces a training sample regardless of router state. The caller may supply
@@ -356,7 +353,11 @@ export async function buildContextPacket(options: {
   sessionId?: string;
 }): Promise<ContextPacketBuildResult> {
   const cacheKey = options.request.workspaceRoots.slice().sort().join('|');
-  const fingerprint = computeContextFingerprint(options.request, options.repoFacts, options.liveIdeState);
+  const fingerprint = computeContextFingerprint(
+    options.request,
+    options.repoFacts,
+    options.liveIdeState,
+  );
   const cachedResult = checkContextPacketCache(cacheKey, fingerprint, options.request);
   if (cachedResult) return cachedResult;
 

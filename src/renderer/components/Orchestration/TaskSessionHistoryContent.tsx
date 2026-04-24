@@ -13,18 +13,26 @@ export interface TaskSessionHistoryContentProps {
   onSelectSession: (sessionId: string) => void;
 }
 
-export function TaskSessionHistoryContent({ sessions, selectedSessionId, onSelectSession }: TaskSessionHistoryContentProps): React.ReactElement {
+export function TaskSessionHistoryContent({
+  sessions,
+  selectedSessionId,
+  onSelectSession,
+}: TaskSessionHistoryContentProps): React.ReactElement {
   return (
     <div className="space-y-3">
       <SessionHistoryIntro />
-      {sessions.length ? sessions.map((session) => (
-        <SessionHistoryItem
-          key={session.id}
-          session={session}
-          selected={session.id === selectedSessionId}
-          onSelect={onSelectSession}
-        />
-      )) : <SessionHistoryEmptyState />}
+      {sessions.length ? (
+        sessions.map((session) => (
+          <SessionHistoryItem
+            key={session.id}
+            session={session}
+            selected={session.id === selectedSessionId}
+            onSelect={onSelectSession}
+          />
+        ))
+      ) : (
+        <SessionHistoryEmptyState />
+      )}
     </div>
   );
 }

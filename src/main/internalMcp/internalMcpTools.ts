@@ -9,8 +9,8 @@
  */
 // Part of the unwired internalMcp module — see index.ts for deprecation notice.
 
-import { getGraphController } from '../codebaseGraph/graphControllerSupport'
-import { createGraphMcpTools } from '../codebaseGraph/mcpToolHandlers'
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
+import { createGraphMcpTools } from '../codebaseGraph/mcpToolHandlers';
 import {
   detectChangesTool,
   getArchitectureTool,
@@ -18,14 +18,14 @@ import {
   getSymbolTool,
   searchSymbolsTool,
   traceImportsTool,
-} from './internalMcpToolsGraph'
+} from './internalMcpToolsGraph';
 import {
   getModuleFilesTool,
   getModuleTool,
   listModulesTool,
   searchModulesTool,
-} from './internalMcpToolsModules'
-import type { McpToolDefinition } from './internalMcpTypes'
+} from './internalMcpToolsModules';
+import type { McpToolDefinition } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
 // Tool registry
@@ -42,25 +42,25 @@ export const ALL_TOOLS: McpToolDefinition[] = [
   getSymbolTool,
   traceImportsTool,
   detectChangesTool,
-]
+];
 
 /**
  * Return the active tool list. If the codebase graph is healthy, returns the
  * 14 graph-backed tools. Otherwise falls back to the context-layer module tools.
  */
 export function getActiveTools(): McpToolDefinition[] {
-  const graphCtrl = getGraphController()
-  const graphContext = graphCtrl?.getGraphToolContext()
+  const graphCtrl = getGraphController();
+  const graphContext = graphCtrl?.getGraphToolContext();
 
   if (graphContext) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return createGraphMcpTools(graphContext as any)
+    return createGraphMcpTools(graphContext as any);
   }
 
-  return ALL_TOOLS
+  return ALL_TOOLS;
 }
 
 /** Look up a tool by name (searches active tools first, then fallback list) */
 export function findTool(name: string): McpToolDefinition | undefined {
-  return getActiveTools().find((t) => t.name === name)
+  return getActiveTools().find((t) => t.name === name);
 }

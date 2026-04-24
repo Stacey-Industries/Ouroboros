@@ -13,8 +13,16 @@ import { rankCommands } from './commandSearch';
 const COMMANDS = [
   { label: 'Open Settings', description: 'Configure IDE preferences', tags: ['config', 'prefs'] },
   { label: 'Toggle Terminal', description: 'Show or hide the terminal panel', tags: ['panel'] },
-  { label: 'marketplace:open', description: 'Browse docs packs and extensions', tags: ['docs', 'plugins'] },
-  { label: 'Git Time Travel', description: 'Browse commit history snapshots', tags: ['git', 'history'] },
+  {
+    label: 'marketplace:open',
+    description: 'Browse docs packs and extensions',
+    tags: ['docs', 'plugins'],
+  },
+  {
+    label: 'Git Time Travel',
+    description: 'Browse commit history snapshots',
+    tags: ['git', 'history'],
+  },
   { label: 'Open Usage Dashboard', description: 'View token and cost statistics', tags: ['stats'] },
 ] as const;
 
@@ -156,6 +164,6 @@ describe('rankCommands — fuzzy subsequence', () => {
     const fuzzyMatch = result.find((r) => r.command.label === 'AbbbbC');
     expect(substrMatch).toBeDefined();
     expect(fuzzyMatch).toBeDefined();
-    expect((substrMatch?.score ?? 0)).toBeGreaterThan((fuzzyMatch?.score ?? 0));
+    expect(substrMatch?.score ?? 0).toBeGreaterThan(fuzzyMatch?.score ?? 0);
   });
 });

@@ -25,10 +25,16 @@ interface VimModeHandle {
 let importAttempted = false;
 let importFailed = false;
 
-type VimInitFn = (editor: monaco.editor.IStandaloneCodeEditor, statusBarNode: HTMLElement) => VimModeHandle;
+type VimInitFn = (
+  editor: monaco.editor.IStandaloneCodeEditor,
+  statusBarNode: HTMLElement,
+) => VimModeHandle;
 
 function resolveVimInitFn(rawMod: unknown): VimInitFn | null {
-  const mod = rawMod as { initVimMode?: VimInitFn; default?: { initVimMode?: VimInitFn } | VimInitFn };
+  const mod = rawMod as {
+    initVimMode?: VimInitFn;
+    default?: { initVimMode?: VimInitFn } | VimInitFn;
+  };
   const defaultFn = typeof mod.default === 'function' ? (mod.default as VimInitFn) : null;
   const defaultObj = mod.default && typeof mod.default === 'object' ? mod.default : null;
   return mod.initVimMode ?? defaultObj?.initVimMode ?? defaultFn ?? null;
@@ -290,24 +296,33 @@ export function setHostDirtyState(
 // ────────────────────────────────────────────────────────────────────────────
 
 interface StableCallbackProps {
-  onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void;
-  onContentChange?: (content: string) => void; readOnly: boolean; formatOnSave: boolean; filePath: string;
+  onSave?: (content: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onContentChange?: (content: string) => void;
+  readOnly: boolean;
+  formatOnSave: boolean;
+  filePath: string;
 }
 
 export interface StableCallbackRefs {
   onSaveRef: MutableRefObject<((content: string) => void) | undefined>;
   onDirtyChangeRef: MutableRefObject<((dirty: boolean) => void) | undefined>;
   onContentChangeRef: MutableRefObject<((content: string) => void) | undefined>;
-  readOnlyRef: MutableRefObject<boolean>; formatOnSaveRef: MutableRefObject<boolean>; filePathRef: MutableRefObject<string>;
+  readOnlyRef: MutableRefObject<boolean>;
+  formatOnSaveRef: MutableRefObject<boolean>;
+  filePathRef: MutableRefObject<string>;
 }
 
 export function useStableCallbackRefs(p: StableCallbackProps): StableCallbackRefs {
   const s = useRef<StableCallbackRefs | null>(null);
   if (!s.current) {
     s.current = {
-      onSaveRef: { current: p.onSave }, onDirtyChangeRef: { current: p.onDirtyChange },
-      onContentChangeRef: { current: p.onContentChange }, readOnlyRef: { current: p.readOnly },
-      formatOnSaveRef: { current: p.formatOnSave }, filePathRef: { current: p.filePath },
+      onSaveRef: { current: p.onSave },
+      onDirtyChangeRef: { current: p.onDirtyChange },
+      onContentChangeRef: { current: p.onContentChange },
+      readOnlyRef: { current: p.readOnly },
+      formatOnSaveRef: { current: p.formatOnSave },
+      filePathRef: { current: p.filePath },
     };
   }
   s.current.onSaveRef.current = p.onSave;

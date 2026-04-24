@@ -70,21 +70,36 @@ export function useSystemBack(): void {
   const isDrawerOpenRef = useRef(isDrawerOpen);
   const isSheetOpenRef = useRef(isSheetOpen);
 
-  useEffect(() => { activePanelRef.current = activePanel; }, [activePanel]);
-  useEffect(() => { isDrawerOpenRef.current = isDrawerOpen; }, [isDrawerOpen]);
-  useEffect(() => { isSheetOpenRef.current = isSheetOpen; }, [isSheetOpen]);
+  useEffect(() => {
+    activePanelRef.current = activePanel;
+  }, [activePanel]);
+  useEffect(() => {
+    isDrawerOpenRef.current = isDrawerOpen;
+  }, [isDrawerOpen]);
+  useEffect(() => {
+    isSheetOpenRef.current = isSheetOpen;
+  }, [isSheetOpen]);
 
   useEffect(() => {
     if (!isNative()) return;
 
     const handle = App.addListener('backButton', () => {
       // Priority 1: close drawer / sheet.
-      if (isDrawerOpenRef.current) { closeDrawer(); return; }
-      if (isSheetOpenRef.current) { closeSheet(); return; }
+      if (isDrawerOpenRef.current) {
+        closeDrawer();
+        return;
+      }
+      if (isSheetOpenRef.current) {
+        closeSheet();
+        return;
+      }
 
       // Priority 2: cycle panel back.
       const target = BACK_PANEL[activePanelRef.current];
-      if (target !== null) { setActivePanel(target); return; }
+      if (target !== null) {
+        setActivePanel(target);
+        return;
+      }
 
       // Priority 3: exit flow (chat is the home panel).
       if (exitPendingRef.current) {

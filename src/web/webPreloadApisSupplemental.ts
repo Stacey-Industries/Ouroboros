@@ -30,8 +30,7 @@ export function buildTransactionApis(t: WebSocketTransport) {
     listDispatchJobs: () => t.invoke('sessions:listDispatchJobs'),
     cancelDispatchJob: (jobId: string) => t.invoke('sessions:cancelDispatchJob', jobId),
     getSystemPrompt: (sessionId: string) => t.invoke('sessions:getSystemPrompt', sessionId),
-    onDispatchStatus: (cb: (job: unknown) => void) =>
-      t.on('sessionDispatch:status', cb),
+    onDispatchStatus: (cb: (job: unknown) => void) => t.on('sessionDispatch:status', cb),
     onDispatchNotification: (cb: (payload: unknown) => void) =>
       t.on('sessionDispatch:notification', cb),
   };
@@ -231,10 +230,8 @@ export function buildAgentChatApi(t: WebSocketTransport) {
     revertToSnapshot: (threadId: string, messageId: string) =>
       t.invoke('agentChat:revertToSnapshot', threadId, messageId),
     cancelTask: (taskId: string) => t.invoke('agentChat:cancelTask', taskId),
-    cancelByThreadId: (threadId: string) =>
-      t.invoke('agentChat:cancelByThreadId', threadId),
-    listMemories: (workspaceRoot: string) =>
-      t.invoke('agentChat:listMemories', workspaceRoot),
+    cancelByThreadId: (threadId: string) => t.invoke('agentChat:cancelByThreadId', threadId),
+    listMemories: (workspaceRoot: string) => t.invoke('agentChat:listMemories', workspaceRoot),
     createMemory: (workspaceRoot: string, entry: unknown) =>
       t.invoke('agentChat:createMemory', workspaceRoot, entry),
     updateMemory: (workspaceRoot: string, memoryId: string, updates: unknown) =>
@@ -286,8 +283,7 @@ export function buildMobileAccessApi(t: WebSocketTransport) {
   return {
     generatePairingCode: () => t.invoke('mobileAccess:generatePairingCode'),
     listPairedDevices: () => t.invoke('mobileAccess:listPairedDevices'),
-    revokePairedDevice: (deviceId: string) =>
-      t.invoke('mobileAccess:revokePairedDevice', deviceId),
+    revokePairedDevice: (deviceId: string) => t.invoke('mobileAccess:revokePairedDevice', deviceId),
     getTimeoutStats: () => t.invoke('mobileAccess:getTimeoutStats'),
     registerPushToken: (args: { deviceId: string; token: string; platform: string }) =>
       t.invoke('mobileAccess:registerPushToken', args),

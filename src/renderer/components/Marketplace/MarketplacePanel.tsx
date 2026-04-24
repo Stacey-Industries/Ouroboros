@@ -45,7 +45,9 @@ function useMarketplaceData(isOpen: boolean): {
   }, []);
 
   useEffect(() => {
-    if (isOpen && !loadedRef.current) { void load(); }
+    if (isOpen && !loadedRef.current) {
+      void load();
+    }
   }, [isOpen, load]);
 
   return { bundles, state, reload: load };
@@ -55,17 +57,21 @@ function useMarketplaceData(isOpen: boolean): {
 
 function useInstall(): (entryId: string, title: string) => Promise<void> {
   const { toast } = useToastContext();
-  return useCallback(async (entryId: string, title: string) => {
-    const result = await window.electronAPI.marketplace.install({ entryId });
-    if (result.success) {
-      toast(`"${title}" installed.`, 'success');
-    } else {
-      const reason = result.error === 'invalid-signature'
-        ? 'Signature invalid — bundle rejected'
-        : (result.error ?? 'Install failed');
-      toast(reason, 'error');
-    }
-  }, [toast]);
+  return useCallback(
+    async (entryId: string, title: string) => {
+      const result = await window.electronAPI.marketplace.install({ entryId });
+      if (result.success) {
+        toast(`"${title}" installed.`, 'success');
+      } else {
+        const reason =
+          result.error === 'invalid-signature'
+            ? 'Signature invalid — bundle rejected'
+            : (result.error ?? 'Install failed');
+        toast(reason, 'error');
+      }
+    },
+    [toast],
+  );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -98,7 +104,9 @@ function MarketplacePanelBody({ onClose }: MarketplacePanelBodyProps): React.Rea
   const { bundles, state, reload } = useMarketplaceData(isOpen);
   const install = useInstall();
 
-  useEffect(() => { setIsOpen(true); }, []);
+  useEffect(() => {
+    setIsOpen(true);
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-surface-panel">
@@ -123,13 +131,10 @@ function MarketplacePanelBody({ onClose }: MarketplacePanelBodyProps): React.Rea
         {state === 'loading' && <LoadingSpinner />}
         {state === 'offline' && <OfflineBanner />}
         {state === 'ready' && bundles.length === 0 && (
-          <p className="text-text-semantic-muted text-sm py-6 text-center">
-            No bundles available.
-          </p>
+          <p className="text-text-semantic-muted text-sm py-6 text-center">No bundles available.</p>
         )}
-        {state === 'ready' && bundles.map((b) => (
-          <BundleCard key={b.id} entry={b} onInstall={install} />
-        ))}
+        {state === 'ready' &&
+          bundles.map((b) => <BundleCard key={b.id} entry={b} onInstall={install} />)}
       </div>
     </div>
   );
@@ -142,7 +147,10 @@ export interface MarketplacePanelProps {
   onClose: () => void;
 }
 
-export function MarketplacePanel({ isOpen, onClose }: MarketplacePanelProps): React.ReactElement | null {
+export function MarketplacePanel({
+  isOpen,
+  onClose,
+}: MarketplacePanelProps): React.ReactElement | null {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   if (!isOpen) return null;
@@ -161,7 +169,9 @@ export function MarketplacePanel({ isOpen, onClose }: MarketplacePanelProps): Re
       aria-modal="true"
       aria-label="Marketplace"
       className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay/60"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="w-[520px] max-h-[70vh] flex flex-col rounded-lg shadow-lg overflow-hidden border border-border-subtle bg-surface-panel">
         <MarketplacePanelBody onClose={onClose} />

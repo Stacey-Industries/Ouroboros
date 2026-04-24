@@ -125,7 +125,9 @@ export function updateTitleBarOverlay(theme: Theme | null): void {
     const bg = theme?.colors.bg ?? 'transparent';
     const symbol = theme?.colors.textMuted ?? '#9090a4'; // hardcoded: title-bar overlay fallback; matches SHARED_NEUTRAL_DARK.textMuted for the no-theme case.
     api.app.setTitleBarOverlay(bg, symbol);
-  } catch { /* IPC not available */ }
+  } catch {
+    /* IPC not available */
+  }
 }
 
 const FALLBACK_FONTS: Theme['fontFamily'] = {
@@ -265,7 +267,12 @@ export async function loadExtensionThemesIntoRegistry(): Promise<void> {
       if (id.startsWith('ext:')) unregisterExtensionTheme(id);
     }
     for (const t of result.themes) {
-      registerExtensionTheme({ id: t.id, name: t.name, fontFamily: t.fontFamily, colors: t.colors });
+      registerExtensionTheme({
+        id: t.id,
+        name: t.name,
+        fontFamily: t.fontFamily,
+        colors: t.colors,
+      });
     }
   } catch {
     // Extension themes are optional — don't block startup

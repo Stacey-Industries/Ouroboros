@@ -57,8 +57,11 @@ export function setMessageReactionsSql(
   reactions: Reaction[],
 ): void {
   const encoded = reactions.length > 0 ? JSON.stringify(reactions) : null;
-  db.prepare('UPDATE messages SET reactions = ? WHERE id = ? AND threadId = ?')
-    .run(encoded, messageId, threadId);
+  db.prepare('UPDATE messages SET reactions = ? WHERE id = ? AND threadId = ?').run(
+    encoded,
+    messageId,
+    threadId,
+  );
 }
 
 // ── Collapsed ─────────────────────────────────────────────────────────────────

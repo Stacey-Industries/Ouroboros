@@ -35,7 +35,5 @@ export const CHANNEL_CATALOG: readonly import('./channelCatalog.always').Channel
  * Fast O(1) lookup map. Preferred over iterating CHANNEL_CATALOG.
  * @internal — used by capabilityGate.ts and coverage test.
  */
-export const CATALOG_LOOKUP: ReadonlyMap<
-  string,
-  import('./channelCatalog.always').CatalogEntry
-> = new Map(Object.entries(CATALOG_MAP));
+export const CATALOG_LOOKUP: ReadonlyMap<string, import('./channelCatalog.always').CatalogEntry> =
+  new Map(Object.entries(CATALOG_MAP));

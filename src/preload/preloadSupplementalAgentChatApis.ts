@@ -28,20 +28,15 @@ function onChannel<T>(channel: string, callback: (data: T) => void): () => void 
 }
 
 export const agentChatApi: AgentChatAPI = {
-  createThread: (request) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.createThread, request),
-  deleteThread: (threadId) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteThread, threadId),
-  loadThread: (threadId) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.loadThread, threadId),
+  createThread: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.createThread, request),
+  deleteThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteThread, threadId),
+  loadThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.loadThread, threadId),
   listThreads: (workspaceRoot) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listThreads, workspaceRoot),
-  sendMessage: (request) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.sendMessage, request),
+  sendMessage: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.sendMessage, request),
   resumeLatestThread: (workspaceRoot) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.resumeLatestThread, workspaceRoot),
-  getLinkedDetails: (link) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getLinkedDetails, link),
+  getLinkedDetails: (link) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getLinkedDetails, link),
   branchThread: (threadId, fromMessageId) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.branchThread, threadId, fromMessageId),
   getLinkedTerminal: (threadId) =>
@@ -50,8 +45,7 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getBufferedChunks, threadId),
   revertToSnapshot: (threadId, messageId) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, threadId, messageId),
-  cancelTask: (taskId) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+  cancelTask: (taskId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
   cancelByThreadId: (threadId) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelByThreadId, threadId),
   listMemories: (workspaceRoot) =>
@@ -66,8 +60,7 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getThreadTags, threadId),
   setThreadTags: (threadId, tags) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setThreadTags, threadId, tags),
-  searchThreads: (payload) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.searchThreads, payload),
+  searchThreads: (payload) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.searchThreads, payload),
   pinThread: (threadId, pinned) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.pinThread, { threadId, pinned }),
   softDeleteThread: (threadId) =>
@@ -91,17 +84,23 @@ export const agentChatApi: AgentChatAPI = {
   removeMessageReaction: (messageId, threadId, kind) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, messageId, threadId, kind),
   setMessageCollapsed: (messageId, threadId, collapsed) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed, messageId, threadId, collapsed),
+    ipcRenderer.invoke(
+      AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed,
+      messageId,
+      threadId,
+      collapsed,
+    ),
   reRunFromMessage: (threadId, messageId, overrides) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage, threadId, messageId, overrides),
-  forkThread: (request) =>
-    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.forkThread, request),
+  forkThread: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.forkThread, request),
   renameBranch: (threadId, name) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.renameBranch, { threadId, name }),
   listBranches: (rootThreadId) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listBranches, { rootThreadId }),
   mergeSideChat: (request: AgentChatMergeSideChatRequest) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, request),
+  injectMidTurn: (taskId, content) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.injectMidTurn, taskId, content),
   onThreadUpdate: (callback) =>
     onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
   onMessageUpdate: (callback) =>
@@ -110,6 +109,5 @@ export const agentChatApi: AgentChatAPI = {
     onChannel<AgentChatThreadStatusSnapshot>(AGENT_CHAT_EVENT_CHANNELS.status, callback),
   onStreamChunk: (callback) =>
     onChannel<AgentChatStreamChunk>(AGENT_CHAT_EVENT_CHANNELS.stream, callback),
-  onEvent: (callback) =>
-    onChannel<AgentChatEvent>(AGENT_CHAT_EVENT_CHANNELS.event, callback),
+  onEvent: (callback) => onChannel<AgentChatEvent>(AGENT_CHAT_EVENT_CHANNELS.event, callback),
 };

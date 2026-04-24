@@ -165,7 +165,9 @@ function startWatchLoop(
     loop.watcher = fs.watch(outcomesPath, () => {
       if (!isStopped()) scheduleDebounce();
     });
-    loop.watcher.on('error', () => { /* file may not exist yet — suppress */ });
+    loop.watcher.on('error', () => {
+      /* file may not exist yet — suppress */
+    });
   } catch {
     // outcomesPath does not exist yet; trigger only via requestNow until file appears
   }
@@ -191,8 +193,14 @@ function buildController(ctx: TriggerContext): ContextRetrainController {
     stop() {
       if (ctx.isStopped()) return;
       ctx.markStopped();
-      if (ctx.loop.debounceHandle) { clearTimeout(ctx.loop.debounceHandle); ctx.loop.debounceHandle = null; }
-      if (ctx.loop.watcher) { ctx.loop.watcher.close(); ctx.loop.watcher = null; }
+      if (ctx.loop.debounceHandle) {
+        clearTimeout(ctx.loop.debounceHandle);
+        ctx.loop.debounceHandle = null;
+      }
+      if (ctx.loop.watcher) {
+        ctx.loop.watcher.close();
+        ctx.loop.watcher = null;
+      }
     },
     getStatus(): ContextRetrainStatus {
       return {
@@ -206,8 +214,12 @@ function buildController(ctx: TriggerContext): ContextRetrainController {
     },
     requestNow() {
       if (ctx.isStopped()) return;
-      const cooled = !!ctx.state.lastRunAt && Date.now() - ctx.state.lastRunAt.getTime() < ctx.cooldownMs;
-      if (cooled) { log.info('[context-ranker] requestNow ignored — within cooldown window'); return; }
+      const cooled =
+        !!ctx.state.lastRunAt && Date.now() - ctx.state.lastRunAt.getTime() < ctx.cooldownMs;
+      if (cooled) {
+        log.info('[context-ranker] requestNow ignored — within cooldown window');
+        return;
+      }
       void ctx.checkAndMaybeRetrain();
     },
   };
@@ -222,35 +234,39 @@ function buildController(ctx: TriggerContext): ContextRetrainController {
  * Safe to call once per main-process boot. Integration point (Phase D/later):
  * wire into src/main/mainStartup.ts with paths from app.getPath('userData').
  */
-export function startContextRetrainTrigger(
-  config: ContextRetrainConfig,
-): ContextRetrainController {
-  const minNewRows = config.minNewRowsToTrigger ?? DEFAULT_MIN_NEW_ROWS;
-  const cooldownMs = config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
-  const resolved: Required<ContextRetrainConfig> = {
-    ...config, minNewRowsToTrigger: minNewRows, cooldownMs, pythonBin: config.pythonBin ?? '',
-  };
-  const state: RetrainState = {
-    lastRunAt: null, lastOutcome: null, lastError: null, rowCountAtLastRun: 0, isRunning: false,
-  };
-  let stopped = false;
+function buildRetrainState(): RetrainState {
+  return { lastRunAt: null, lastOutcome: null, lastError: null, rowCountAtLastRun: 0, isRunning: false };
+}
 
-  void countRows(config.outcomesPath).then((n) => { state.rowCountAtLastRun = n; });
+interface CheckAndRetrainCtx {
+  config: Required<ContextRetrainConfig>;
+  state: RetrainState;
+  minNewRows: number;
+  cooldownMs: number;
+  isStopped: () => boolean;
+}
 
-  function isCoolingDown(): boolean {
-    return !!state.lastRunAt && Date.now() - state.lastRunAt.getTime() < cooldownMs;
-  }
-
-  async function checkAndMaybeRetrain(): Promise<void> {
-    if (stopped) return;
+function makeCheckAndRetrain(ctx: CheckAndRetrainCtx): () => Promise<void> {
+  const { config, state, minNewRows, cooldownMs, isStopped } = ctx;
+  const isCoolingDown = () => !!state.lastRunAt && Date.now() - state.lastRunAt.getTime() < cooldownMs;
+  return async () => {
+    if (isStopped()) return;
     const current = await countRows(config.outcomesPath);
     if (current - state.rowCountAtLastRun < minNewRows || isCoolingDown()) return;
-    await executeRetrain(resolved, state, current);
-  }
+    await executeRetrain(config, state, current);
+  };
+}
 
+export function startContextRetrainTrigger(config: ContextRetrainConfig): ContextRetrainController {
+  const minNewRows = config.minNewRowsToTrigger ?? DEFAULT_MIN_NEW_ROWS;
+  const cooldownMs = config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+  const resolved: Required<ContextRetrainConfig> = { ...config, minNewRowsToTrigger: minNewRows, cooldownMs, pythonBin: config.pythonBin ?? '' };
+  const state = buildRetrainState();
+  let stopped = false;
+  void countRows(config.outcomesPath).then((n) => { state.rowCountAtLastRun = n; });
+  const checkAndMaybeRetrain = makeCheckAndRetrain({ config: resolved, state, minNewRows, cooldownMs, isStopped: () => stopped });
   const loop = startWatchLoop(config.outcomesPath, () => { void checkAndMaybeRetrain(); }, () => stopped);
   log.info(`[context-ranker] retrain trigger started (minNewRows=${minNewRows}, cooldown=${cooldownMs}ms)`);
-
   return buildController({
     resolved, state, loop, minNewRows, cooldownMs,
     isStopped: () => stopped,

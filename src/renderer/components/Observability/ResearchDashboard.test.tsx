@@ -94,9 +94,7 @@ describe('ResearchDashboard — error state', () => {
     });
 
     render(<ResearchDashboard />);
-    await waitFor(() =>
-      expect(screen.getByText(/failed to load metrics/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/failed to load metrics/i)).toBeTruthy());
     expect(screen.getByText(/DB connection failed/i)).toBeTruthy();
   });
 
@@ -104,9 +102,7 @@ describe('ResearchDashboard — error state', () => {
     mockGetDashboardMetrics.mockRejectedValue(new Error('IPC timeout'));
 
     render(<ResearchDashboard />);
-    await waitFor(() =>
-      expect(screen.getByText(/failed to load metrics/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/failed to load metrics/i)).toBeTruthy());
     expect(screen.getByText(/IPC timeout/i)).toBeTruthy();
   });
 });
@@ -125,9 +121,7 @@ describe('ResearchDashboard — empty state', () => {
     mockGetDashboardMetrics.mockResolvedValue({ success: true, metrics: emptyMetrics });
 
     render(<ResearchDashboard />);
-    await waitFor(() =>
-      expect(screen.getByText(/no research invocations recorded/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/no research invocations recorded/i)).toBeTruthy());
   });
 });
 

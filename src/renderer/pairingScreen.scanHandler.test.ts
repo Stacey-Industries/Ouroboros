@@ -10,10 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ScanOutcome } from '../web/capacitor/qrScanner';
-import {
-  buildScanOutcomeHandler,
-  type ScanOutcomeSetters,
-} from './pairingScreen.scanHandler';
+import { buildScanOutcomeHandler, type ScanOutcomeSetters } from './pairingScreen.scanHandler';
 
 // ─── Factory helpers ──────────────────────────────────────────────────────────
 
@@ -111,9 +108,7 @@ describe('buildScanOutcomeHandler — success', () => {
 describe('buildScanOutcomeHandler — denied', () => {
   it('shows camera permission error', () => {
     const setters = dispatch({ kind: 'denied' });
-    expect(setters.setErrorMsg).toHaveBeenCalledWith(
-      'Camera permission required to scan.',
-    );
+    expect(setters.setErrorMsg).toHaveBeenCalledWith('Camera permission required to scan.');
   });
 
   it('does not modify the code field', () => {
@@ -150,9 +145,7 @@ describe('buildScanOutcomeHandler — invalid-format', () => {
       kind: 'invalid-format',
       rawValue: 'https://example.com',
     });
-    expect(setters.setErrorMsg).toHaveBeenCalledWith(
-      "That QR code isn't a valid pairing link.",
-    );
+    expect(setters.setErrorMsg).toHaveBeenCalledWith("That QR code isn't a valid pairing link.");
   });
 
   it('does not modify the code field', () => {

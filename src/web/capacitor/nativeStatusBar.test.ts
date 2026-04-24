@@ -30,10 +30,14 @@ import { setStatusBarColor, setStatusBarStyle } from './nativeStatusBar';
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('nativeStatusBar — web fallback (isNativePlatform = false)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(false);
+  });
 
   it('setStatusBarStyle is a no-op on web', async () => {
     await setStatusBarStyle('dark');
@@ -47,7 +51,9 @@ describe('nativeStatusBar — web fallback (isNativePlatform = false)', () => {
 });
 
 describe('nativeStatusBar — native path (isNativePlatform = true)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(true);
+  });
 
   it('setStatusBarStyle(dark) calls StatusBar.setStyle with DARK', async () => {
     await setStatusBarStyle('dark');

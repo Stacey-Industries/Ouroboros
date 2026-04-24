@@ -22,7 +22,10 @@ function TestConsumer(): React.ReactElement {
 
 function renderWithProvider(props: { sessionPresetId?: string; forcePresetId?: string }): void {
   render(
-    <LayoutPresetResolverProvider sessionPresetId={props.sessionPresetId} forcePresetId={props.forcePresetId}>
+    <LayoutPresetResolverProvider
+      sessionPresetId={props.sessionPresetId}
+      forcePresetId={props.forcePresetId}
+    >
       <TestConsumer />
     </LayoutPresetResolverProvider>,
   );

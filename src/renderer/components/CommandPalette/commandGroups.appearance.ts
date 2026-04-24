@@ -15,7 +15,9 @@ export function materialVariantCommands(): Command {
     id: 'material',
     label: 'Material',
     category: 'view',
-    action: () => { /* submenu */ },
+    action: () => {
+      /* submenu */
+    },
     children: variants.map((v) => ({
       id: `material:${v.id}`,
       label: v.label,
@@ -41,7 +43,9 @@ export function themeCommands(): Command {
     label: 'Theme',
     category: 'view',
     icon: '\u{1F3A8}',
-    action: () => { /* submenu */ },
+    action: () => {
+      /* submenu */
+    },
     children: themes.map((t) => ({
       id: `theme:${t.id}`,
       label: t.label,

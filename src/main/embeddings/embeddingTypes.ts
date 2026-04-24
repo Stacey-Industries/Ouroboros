@@ -66,10 +66,7 @@ export interface EmbeddingIndexStatus {
 export interface IEmbeddingStore {
   upsertChunks(chunks: EmbeddingChunk[]): void;
   deleteByFile(filePath: string): void;
-  searchSimilar(
-    queryEmbedding: Float32Array,
-    topK: number,
-  ): EmbeddingSearchResult[];
+  searchSimilar(queryEmbedding: Float32Array, topK: number): EmbeddingSearchResult[];
   getChunksByFile(filePath: string): ChunkMetadata[];
   getStatus(): EmbeddingIndexStatus;
   hasChunkHash(contentHash: string): boolean;

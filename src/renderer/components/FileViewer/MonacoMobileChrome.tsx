@@ -28,12 +28,7 @@ const ctaStyle: React.CSSProperties = {
 export function MonacoMobileChrome(): React.ReactElement {
   return (
     <div style={chromeStyle}>
-      <button
-        disabled
-        title="Desktop mode required"
-        style={ctaStyle}
-        type="button"
-      >
+      <button disabled title="Desktop mode required" style={ctaStyle} type="button">
         Open in desktop
       </button>
     </div>

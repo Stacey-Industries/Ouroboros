@@ -59,23 +59,13 @@ export const ConversationTurnRow = memo(function ConversationTurnRow({
       >
         {'\u25b8'}
       </span>
-      <span
-        className="shrink-0 text-[10px] font-medium"
-        style={{ color }}
-      >
+      <span className="shrink-0 text-[10px] font-medium" style={{ color }}>
         {label}
       </span>
-      <span
-        className="flex-1 min-w-0 truncate text-text-semantic-muted"
-        title={content}
-      >
+      <span className="flex-1 min-w-0 truncate text-text-semantic-muted" title={content}>
         {content}
       </span>
-      <span
-        className="shrink-0 text-[10px] tabular-nums text-text-semantic-faint"
-      >
-        {ts}
-      </span>
+      <span className="shrink-0 text-[10px] tabular-nums text-text-semantic-faint">{ts}</span>
     </div>
   );
 });

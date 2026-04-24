@@ -35,10 +35,12 @@ const mockList = vi.fn();
 const mockAdd = vi.fn();
 const mockRemove = vi.fn();
 const mockDismiss = vi.fn();
-const mockOnChanged = vi.fn((cb: (p: { sessionId: string; items: PinnedContextItem[] }) => void) => {
-  capturedOnChangedCb = cb;
-  return mockCleanup;
-});
+const mockOnChanged = vi.fn(
+  (cb: (p: { sessionId: string; items: PinnedContextItem[] }) => void) => {
+    capturedOnChangedCb = cb;
+    return mockCleanup;
+  },
+);
 
 function setupElectronAPI(): void {
   Object.defineProperty(window, 'electronAPI', {
@@ -92,7 +94,9 @@ describe('usePinnedContext', () => {
     mockList.mockResolvedValueOnce({ success: true, items: [item] });
 
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.items).toHaveLength(1);
     expect(result.current.items[0].id).toBe('item-1');
@@ -100,13 +104,17 @@ describe('usePinnedContext', () => {
 
   it('starts with empty items when list returns none', async () => {
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(result.current.items).toEqual([]);
   });
 
   it('updates items when onChanged fires for matching sessionId', async () => {
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const newItem = makeItem({ id: 'item-2', title: 'bar.ts' });
     act(() => {
@@ -120,7 +128,9 @@ describe('usePinnedContext', () => {
   it('ignores onChanged events for a different sessionId', async () => {
     mockList.mockResolvedValueOnce({ success: true, items: [makeItem()] });
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     act(() => {
       capturedOnChangedCb?.({ sessionId: 'sess-other', items: [] });
@@ -131,7 +141,9 @@ describe('usePinnedContext', () => {
 
   it('filters out dismissed items received via onChanged', async () => {
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const visible = makeItem({ id: 'v', dismissed: false });
     const hidden = makeItem({ id: 'h', dismissed: true });
@@ -148,12 +160,18 @@ describe('usePinnedContext', () => {
     mockAdd.mockResolvedValueOnce({ success: true, item: created });
 
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     let returned: PinnedContextItem | null = null;
     await act(async () => {
       returned = await result.current.add({
-        type: 'user-file', source: '/x.ts', title: 'x.ts', content: '', tokens: 1,
+        type: 'user-file',
+        source: '/x.ts',
+        title: 'x.ts',
+        content: '',
+        tokens: 1,
       });
     });
 
@@ -165,12 +183,18 @@ describe('usePinnedContext', () => {
     mockAdd.mockResolvedValueOnce({ success: false, error: 'cap reached' });
 
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     let returned: PinnedContextItem | null = makeItem();
     await act(async () => {
       returned = await result.current.add({
-        type: 'user-file', source: '/x.ts', title: 'x.ts', content: '', tokens: 1,
+        type: 'user-file',
+        source: '/x.ts',
+        title: 'x.ts',
+        content: '',
+        tokens: 1,
       });
     });
     expect(returned).toBeNull();
@@ -178,15 +202,23 @@ describe('usePinnedContext', () => {
 
   it('remove() calls pinnedContext.remove', async () => {
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
-    await act(async () => { await result.current.remove('item-1'); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await result.current.remove('item-1');
+    });
     expect(mockRemove).toHaveBeenCalledWith('sess-1', 'item-1');
   });
 
   it('dismiss() calls pinnedContext.dismiss', async () => {
     const { result } = renderHook(() => usePinnedContext('sess-1'));
-    await act(async () => { await Promise.resolve(); });
-    await act(async () => { await result.current.dismiss('item-1'); });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await result.current.dismiss('item-1');
+    });
     expect(mockDismiss).toHaveBeenCalledWith('sess-1', 'item-1');
   });
 

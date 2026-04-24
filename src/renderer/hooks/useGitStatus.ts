@@ -1,4 +1,4 @@
-import { useCallback,useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { GitFileStatus } from '../types/electron';
 
@@ -125,7 +125,12 @@ function parseStatusResult(files: Record<string, string>): Map<string, GitFileSt
   return map;
 }
 
-function cleanupGitStatusEffect(refs: GitStatusRefs, projectRoot: string, cleanupWatcher: (() => void) | null, cleanupVisibility: () => void): void {
+function cleanupGitStatusEffect(
+  refs: GitStatusRefs,
+  projectRoot: string,
+  cleanupWatcher: (() => void) | null,
+  cleanupVisibility: () => void,
+): void {
   if (refs.currentRootRef.current === projectRoot) refs.currentRootRef.current = null;
   clearPollingInterval(refs.intervalRef);
   clearScheduledRefresh(refs.timeoutRef);
@@ -146,8 +151,9 @@ async function executeStatusFetch(
     const result = await window.electronAPI.git.status(root);
     if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
     if (result.success && result.files) setGitStatus(parseStatusResult(result.files));
-  } catch { /* silently ignore */ }
-  finally {
+  } catch {
+    /* silently ignore */
+  } finally {
     refs.inFlightRef.current = false;
     if (refs.pendingRef.current && refs.isRepoRef.current && refs.currentRootRef.current === root) {
       refs.pendingRef.current = false;
@@ -166,18 +172,29 @@ interface StartStatusPollingArgs {
 }
 
 function startStatusPolling({
-  refs, projectRoot, scheduleRefresh, setIsRepo, setGitStatus, repo,
+  refs,
+  projectRoot,
+  scheduleRefresh,
+  setIsRepo,
+  setGitStatus,
+  repo,
 }: StartStatusPollingArgs): void {
   setIsRepo(repo);
   refs.isRepoRef.current = repo;
-  if (!repo) { setGitStatus(new Map()); return; }
+  if (!repo) {
+    setGitStatus(new Map());
+    return;
+  }
   scheduleRefresh(projectRoot);
   refs.intervalRef.current = setInterval(() => {
     if (document.visibilityState === 'visible') scheduleRefresh(projectRoot);
   }, POLL_INTERVAL_MS);
 }
 
-export function useGitStatus(projectRoot: string | null, { enabled = true }: UseGitStatusOptions = {}): UseGitStatusReturn {
+export function useGitStatus(
+  projectRoot: string | null,
+  { enabled = true }: UseGitStatusOptions = {},
+): UseGitStatusReturn {
   const [gitStatus, setGitStatus] = useState<Map<string, GitFileStatus>>(new Map());
   const [isRepo, setIsRepo] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -186,22 +203,41 @@ export function useGitStatus(projectRoot: string | null, { enabled = true }: Use
   const currentRootRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const pendingRef = useRef(false);
-  const refsRef = useRef<GitStatusRefs>({ intervalRef, timeoutRef, isRepoRef, currentRootRef, inFlightRef, pendingRef });
+  const refsRef = useRef<GitStatusRefs>({
+    intervalRef,
+    timeoutRef,
+    isRepoRef,
+    currentRootRef,
+    inFlightRef,
+    pendingRef,
+  });
 
   const fetchStatus = useCallback(async (root: string): Promise<void> => {
     const refs = refsRef.current;
     if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
-    if (refs.inFlightRef.current) { refs.pendingRef.current = true; return; }
+    if (refs.inFlightRef.current) {
+      refs.pendingRef.current = true;
+      return;
+    }
     await executeStatusFetch(root, refs, setGitStatus, fetchStatus);
   }, []);
 
-  const scheduleRefresh = useCallback((root: string, delayMs: number = 0): void => {
-    const refs = refsRef.current;
-    if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
-    clearScheduledRefresh(refs.timeoutRef);
-    if (delayMs <= 0) { void fetchStatus(root); return; }
-    refs.timeoutRef.current = setTimeout(() => { refs.timeoutRef.current = null; void fetchStatus(root); }, delayMs);
-  }, [fetchStatus]);
+  const scheduleRefresh = useCallback(
+    (root: string, delayMs: number = 0): void => {
+      const refs = refsRef.current;
+      if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
+      clearScheduledRefresh(refs.timeoutRef);
+      if (delayMs <= 0) {
+        void fetchStatus(root);
+        return;
+      }
+      refs.timeoutRef.current = setTimeout(() => {
+        refs.timeoutRef.current = null;
+        void fetchStatus(root);
+      }, delayMs);
+    },
+    [fetchStatus],
+  );
 
   useEffect(() => {
     const refs = refsRef.current;
@@ -211,15 +247,35 @@ export function useGitStatus(projectRoot: string | null, { enabled = true }: Use
     if (!projectRoot || !enabled) return;
 
     let disposed = false;
-    const cleanupWatcher = setupFileChangeWatcher(scheduleRefresh, refs.isRepoRef, refs.currentRootRef, projectRoot);
-    const cleanupVisibility = setupVisibilityWatchers(projectRoot, scheduleRefresh, refs.isRepoRef, refs.currentRootRef);
+    const cleanupWatcher = setupFileChangeWatcher(
+      scheduleRefresh,
+      refs.isRepoRef,
+      refs.currentRootRef,
+      projectRoot,
+    );
+    const cleanupVisibility = setupVisibilityWatchers(
+      projectRoot,
+      scheduleRefresh,
+      refs.isRepoRef,
+      refs.currentRootRef,
+    );
 
     window.electronAPI.git.isRepo(projectRoot).then((result) => {
       if (disposed || refs.currentRootRef.current !== projectRoot) return;
-      startStatusPolling({ refs, projectRoot, scheduleRefresh, setIsRepo, setGitStatus, repo: !!(result.success && result.isRepo) });
+      startStatusPolling({
+        refs,
+        projectRoot,
+        scheduleRefresh,
+        setIsRepo,
+        setGitStatus,
+        repo: !!(result.success && result.isRepo),
+      });
     });
 
-    return () => { disposed = true; cleanupGitStatusEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility); };
+    return () => {
+      disposed = true;
+      cleanupGitStatusEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility);
+    };
   }, [enabled, projectRoot, scheduleRefresh]);
 
   return { gitStatus, isRepo };

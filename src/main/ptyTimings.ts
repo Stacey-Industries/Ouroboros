@@ -17,7 +17,10 @@ export function reportPtyExit(sessionId: string, cwd: string, exitCode: number):
   const startTs = sessionStartTs.get(sessionId);
   sessionStartTs.delete(sessionId);
   getOutcomeObserver()?.onPtyExit({
-    sessionId, cwd, exitCode, signal: null,
+    sessionId,
+    cwd,
+    exitCode,
+    signal: null,
     durationMs: startTs != null ? Date.now() - startTs : 0,
   });
 }

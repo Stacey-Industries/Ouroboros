@@ -15,7 +15,13 @@ import type { CompareProvidersEventPayload } from '../types/electron';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type CompareSessionStatus = 'idle' | 'starting' | 'running' | 'completed' | 'error' | 'cancelled';
+export type CompareSessionStatus =
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'completed'
+  | 'error'
+  | 'cancelled';
 
 export interface ProviderPaneState {
   providerId: string;
@@ -53,7 +59,8 @@ function makeIdlePane(providerId: string): ProviderPaneState {
 
 function makeInitialState(providerIds: [string, string]): CompareSessionState {
   return {
-    compareId: null, status: 'starting',
+    compareId: null,
+    status: 'starting',
     paneA: makeIdlePane(providerIds[0]),
     paneB: makeIdlePane(providerIds[1]),
     error: null,
@@ -62,7 +69,10 @@ function makeInitialState(providerIds: [string, string]): CompareSessionState {
 
 // ─── Event application ────────────────────────────────────────────────────────
 
-function applyEvent(pane: ProviderPaneState, event: CompareProvidersEventPayload['event']): ProviderPaneState {
+function applyEvent(
+  pane: ProviderPaneState,
+  event: CompareProvidersEventPayload['event'],
+): ProviderPaneState {
   switch (event.type) {
     case 'stdout': {
       const chunk = typeof event.payload === 'string' ? event.payload : '';
@@ -84,8 +94,10 @@ function applyEvent(pane: ProviderPaneState, event: CompareProvidersEventPayload
 // ─── Hook helpers ─────────────────────────────────────────────────────────────
 
 const EMPTY_STATE: CompareSessionState = {
-  compareId: null, status: 'idle',
-  paneA: makeIdlePane(''), paneB: makeIdlePane(''),
+  compareId: null,
+  status: 'idle',
+  paneA: makeIdlePane(''),
+  paneB: makeIdlePane(''),
   error: null,
 };
 
@@ -102,8 +114,11 @@ function buildEventHandler(compareId: string, setState: SetState) {
       const isA = payload.providerId === s.paneA.providerId;
       const paneA = isA ? applyEvent(s.paneA, payload.event) : s.paneA;
       const paneB = !isA ? applyEvent(s.paneB, payload.event) : s.paneB;
-      const bothDone = paneA.status !== 'streaming' && paneA.status !== 'idle'
-        && paneB.status !== 'streaming' && paneB.status !== 'idle';
+      const bothDone =
+        paneA.status !== 'streaming' &&
+        paneA.status !== 'idle' &&
+        paneB.status !== 'streaming' &&
+        paneB.status !== 'idle';
       return { ...s, paneA, paneB, status: bothDone ? 'completed' : 'running' };
     });
   };
@@ -115,7 +130,12 @@ export function useCompareSession(): UseCompareSessionReturn {
   const [state, setState] = useState<CompareSessionState>(EMPTY_STATE);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => () => { cleanupRef.current?.(); }, []);
+  useEffect(
+    () => () => {
+      cleanupRef.current?.();
+    },
+    [],
+  );
 
   const start = useCallback(async (opts: StartOpts) => {
     if (!hasElectronAPI()) return;

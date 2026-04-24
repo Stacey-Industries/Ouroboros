@@ -38,9 +38,7 @@ function getCommandPreview(request: ApprovalRequest): string {
 
 function BannerToolLabel({ toolName }: { toolName: string }): React.ReactElement {
   return (
-    <span className="font-mono text-xs font-semibold text-text-semantic-primary">
-      {toolName}
-    </span>
+    <span className="font-mono text-xs font-semibold text-text-semantic-primary">{toolName}</span>
   );
 }
 
@@ -59,7 +57,12 @@ interface ActionButtonProps {
   onClick: () => void;
 }
 
-function ActionButton({ label, variant, disabled, onClick }: ActionButtonProps): React.ReactElement {
+function ActionButton({
+  label,
+  variant,
+  disabled,
+  onClick,
+}: ActionButtonProps): React.ReactElement {
   const base = 'rounded border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50';
   const styles: Record<typeof variant, string> = {
     allow: `${base} border-border-semantic bg-interactive-accent text-text-semantic-on-accent hover:bg-interactive-accent-hover`,
@@ -69,12 +72,7 @@ function ActionButton({ label, variant, disabled, onClick }: ActionButtonProps):
   };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={styles[variant]}
-    >
+    <button type="button" onClick={onClick} disabled={disabled} className={styles[variant]}>
       {label}
     </button>
   );
@@ -124,10 +122,30 @@ function ApprovalActions({
 }): React.ReactElement {
   return (
     <div className="flex shrink-0 flex-wrap gap-2">
-      <ActionButton label="Allow Once" variant="allow" disabled={busy} onClick={() => decide('approve', 'once')} />
-      <ActionButton label="Allow Always" variant="allow-always" disabled={busy} onClick={() => decide('approve', 'always')} />
-      <ActionButton label="Deny Once" variant="deny" disabled={busy} onClick={() => decide('reject', 'once')} />
-      <ActionButton label="Deny Always" variant="deny-always" disabled={busy} onClick={() => decide('reject', 'always')} />
+      <ActionButton
+        label="Allow Once"
+        variant="allow"
+        disabled={busy}
+        onClick={() => decide('approve', 'once')}
+      />
+      <ActionButton
+        label="Allow Always"
+        variant="allow-always"
+        disabled={busy}
+        onClick={() => decide('approve', 'always')}
+      />
+      <ActionButton
+        label="Deny Once"
+        variant="deny"
+        disabled={busy}
+        onClick={() => decide('reject', 'once')}
+      />
+      <ActionButton
+        label="Deny Always"
+        variant="deny-always"
+        disabled={busy}
+        onClick={() => decide('reject', 'always')}
+      />
     </div>
   );
 }

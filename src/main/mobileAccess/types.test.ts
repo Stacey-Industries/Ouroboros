@@ -7,13 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type {
-  Capability,
-  PairedDevice,
-  PairingTicket,
-  QrPayload,
-  TimeoutClass,
-} from './types';
+import type { Capability, PairedDevice, PairingTicket, QrPayload, TimeoutClass } from './types';
 
 describe('Capability type values', () => {
   it('accepts all valid capability strings', () => {

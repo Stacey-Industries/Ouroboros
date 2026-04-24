@@ -5,11 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  countRows,
-  parseSummaryLine,
-  resetPythonCache,
-} from './contextRetrainTriggerHelpers';
+import { countRows, parseSummaryLine, resetPythonCache } from './contextRetrainTriggerHelpers';
 
 // ─── Temp dir setup ──────────────────────────────────────────────────────────
 
@@ -98,10 +94,8 @@ describe('findPython', () => {
     beforeEach(async () => {
       vi.resetModules();
       vi.doMock('node:child_process', () => ({
-        execFile: (
-          _b: string, _a: string[], _o: object,
-          cb: (e: Error | null) => void,
-        ) => cb(new Error('not found')),
+        execFile: (_b: string, _a: string[], _o: object, cb: (e: Error | null) => void) =>
+          cb(new Error('not found')),
         spawn: vi.fn(),
       }));
     });

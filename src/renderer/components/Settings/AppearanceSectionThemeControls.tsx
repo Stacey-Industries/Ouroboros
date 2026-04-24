@@ -183,7 +183,9 @@ export function MaterialVariantSection({
               aria-pressed={value === opt.value}
             >
               <span style={{ fontWeight: 500 }}>{opt.label}</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{opt.description}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                {opt.description}
+              </span>
             </button>
           ))}
         </div>

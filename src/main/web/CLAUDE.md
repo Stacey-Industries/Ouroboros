@@ -1,15 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The two things most worth adding vs. the existing version:
-1. **`index.html` caching gotcha** — `cachedIndexHtml` is module-level state, read once and never re-validated. During dev the renderer hot-reloads but the web server keeps serving stale HTML. Came from reading `registerSpaFallback()` directly.
-2. **`broadcast()` vs `webContents.send` rule** — the existing file said "should go through broadcast()" but didn't explain *why*. The reason is that calling `webContents.send` directly silently skips all WebSocket clients, so it's a correctness concern, not just style.
-`─────────────────────────────────────────────────`
 
-Done. Key changes from the prior version:
-- Removed the duplicate `claude-md-manual:preserved` section (identical content, different formatting)
-- Added the `index.html` caching gotcha (`cachedIndexHtml` is never invalidated — stale after renderer rebuilds)
-- Clarified the `broadcast()` rule with *why* (skipping it silently drops web clients, not just style)
-- Tightened table formatting to match the rest of the `src/main/` CLAUDE.md conventions
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

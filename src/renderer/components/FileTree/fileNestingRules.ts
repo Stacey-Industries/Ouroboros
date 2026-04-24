@@ -49,12 +49,7 @@ export const DEFAULT_NESTING_RULES: Record<string, string[]> = {
   ],
   'tsconfig.json': ['tsconfig.*.json'],
   '.env': ['.env.*', '.env.local', '.env.development', '.env.production'],
-  'README.md': [
-    'CHANGELOG.md',
-    'LICENSE',
-    'LICENSE.md',
-    'CONTRIBUTING.md',
-  ],
+  'README.md': ['CHANGELOG.md', 'LICENSE', 'LICENSE.md', 'CONTRIBUTING.md'],
   '.gitignore': ['.gitattributes', '.gitmodules', '.mailmap'],
   'Cargo.toml': ['Cargo.lock'],
   'pyproject.toml': ['poetry.lock', 'setup.py', 'setup.cfg'],
@@ -75,10 +70,7 @@ function stripExtension(filename: string): string {
  * Expand a nesting pattern by replacing `${basename}` with the actual basename
  * (without extension) of the parent file.
  */
-export function expandNestingPattern(
-  pattern: string,
-  parentBasename: string,
-): string {
+export function expandNestingPattern(pattern: string, parentBasename: string): string {
   return pattern.replace(/\$\{basename\}/g, parentBasename);
 }
 
@@ -96,12 +88,7 @@ function matchesGlob(filename: string, pattern: string): boolean {
   }
 
   // Convert glob to regex: escape dots, replace * with .*
-  const regexStr =
-    '^' +
-    pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '.*') +
-    '$';
+  const regexStr = '^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$';
   return new RegExp(regexStr).test(filename);
 }
 
@@ -120,10 +107,7 @@ function parentPatternMatches(filename: string, pattern: string): boolean {
  * child filename patterns that should nest under it (expanded with the parent's
  * basename).
  */
-function getChildPatternsForParent(
-  parentName: string,
-  rules: Record<string, string[]>,
-): string[] {
+function getChildPatternsForParent(parentName: string, rules: Record<string, string[]>): string[] {
   const result: string[] = [];
   const parentBase = stripExtension(parentName);
 
@@ -153,11 +137,7 @@ interface FileMatchContext {
 }
 
 /** Find matching files for a single pattern from the file map */
-function collectMatchingFiles(
-  pattern: string,
-  parentName: string,
-  ctx: FileMatchContext,
-): void {
+function collectMatchingFiles(pattern: string, parentName: string, ctx: FileMatchContext): void {
   for (const [name, node] of ctx.filesByName) {
     if (name === parentName) continue;
     if (ctx.nestedChildNames.has(name)) continue;
@@ -194,10 +174,7 @@ function buildNestingMap(
   return { nestedChildNames, parentToChildren };
 }
 
-function nestSiblings(
-  nodes: TreeNode[],
-  rules: Record<string, string[]>,
-): TreeNode[] {
+function nestSiblings(nodes: TreeNode[], rules: Record<string, string[]>): TreeNode[] {
   const files = nodes.filter((n) => !n.isDirectory);
   const dirs = nodes.filter((n) => n.isDirectory);
 

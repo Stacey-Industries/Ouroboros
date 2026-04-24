@@ -16,10 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Database } from '../storage/database';
 import { openDatabase, runTransaction } from '../storage/database';
-import {
-  getMessageReactionsSql,
-  setMessageReactionsSql,
-} from './threadStoreSqliteReactions';
+import { getMessageReactionsSql, setMessageReactionsSql } from './threadStoreSqliteReactions';
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
@@ -55,34 +52,52 @@ function setupForkScenario(): void {
     `);
 
     // Source thread
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run('source-thread', '/workspace', 1000, 1000, 'Source Thread', 'idle');
+    `,
+    ).run('source-thread', '/workspace', 1000, 1000, 'Source Thread', 'idle');
 
     // Forked thread (parentThreadId = source-thread)
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status, parentThreadId)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run('fork-thread', '/workspace', 1001, 1001, 'Fork of Source Thread', 'idle', 'source-thread');
+    `,
+    ).run(
+      'fork-thread',
+      '/workspace',
+      1001,
+      1001,
+      'Fork of Source Thread',
+      'idle',
+      'source-thread',
+    );
 
     // Same message ID in both threads — this is the fork scenario:
     // forkThreadImpl copies messages with threadId rebased to the fork.
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO messages (id, threadId, role, content, createdAt)
       VALUES (?, ?, ?, ?, ?)
-    `).run('shared-msg-id', 'source-thread', 'user', 'Hello from source', 1001);
+    `,
+    ).run('shared-msg-id', 'source-thread', 'user', 'Hello from source', 1001);
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO messages (id, threadId, role, content, createdAt)
       VALUES (?, ?, ?, ?, ?)
-    `).run('shared-msg-id', 'fork-thread', 'user', 'Hello from source', 1001);
+    `,
+    ).run('shared-msg-id', 'fork-thread', 'user', 'Hello from source', 1001);
 
     // A message that exists only in the fork (new turn added after forking)
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO messages (id, threadId, role, content, createdAt)
       VALUES (?, ?, ?, ?, ?)
-    `).run('fork-only-msg', 'fork-thread', 'assistant', 'Fork reply', 1002);
+    `,
+    ).run('fork-only-msg', 'fork-thread', 'assistant', 'Fork reply', 1002);
   });
 }
 
@@ -133,9 +148,7 @@ describe('threadStoreFork.reactions — cross-fork isolation (Wave 41 E.2)', () 
       { kind: '+1', at: 1 },
       { kind: '+1', at: 2 },
     ]);
-    setMessageReactionsSql(db, 'shared-msg-id', 'fork-thread', [
-      { kind: '-1', at: 3 },
-    ]);
+    setMessageReactionsSql(db, 'shared-msg-id', 'fork-thread', [{ kind: '-1', at: 3 }]);
 
     const sourceReactions = getMessageReactionsSql(db, 'shared-msg-id', 'source-thread');
     const forkReactions = getMessageReactionsSql(db, 'shared-msg-id', 'fork-thread');

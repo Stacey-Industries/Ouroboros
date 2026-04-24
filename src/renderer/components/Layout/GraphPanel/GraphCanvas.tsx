@@ -31,19 +31,35 @@ export function resolveColors(): CanvasColors {
 
 // ── Visibility helpers ────────────────────────────────────────────────────────
 
-interface CanvasSize { w: number; h: number }
+interface CanvasSize {
+  w: number;
+  h: number;
+}
 
 function isNodeVisible(node: LaidOutNode, t: ViewportTransform, size: CanvasSize): boolean {
   const sx = node.x * t.scale + t.x;
   const sy = node.y * t.scale + t.y;
-  return sx + node.width * t.scale > 0 && sy + node.height * t.scale > 0
-    && sx < size.w && sy < size.h;
+  return (
+    sx + node.width * t.scale > 0 && sy + node.height * t.scale > 0 && sx < size.w && sy < size.h
+  );
 }
 
 // ── Draw helpers ──────────────────────────────────────────────────────────────
 
-interface NodeDrawOpts { ctx: CanvasRenderingContext2D; node: LaidOutNode; selected: boolean; scale: number; colors: CanvasColors }
-interface EdgeDrawOpts { ctx: CanvasRenderingContext2D; edge: LaidOutEdge; nodeMap: Map<string, LaidOutNode>; scale: number; colors: CanvasColors }
+interface NodeDrawOpts {
+  ctx: CanvasRenderingContext2D;
+  node: LaidOutNode;
+  selected: boolean;
+  scale: number;
+  colors: CanvasColors;
+}
+interface EdgeDrawOpts {
+  ctx: CanvasRenderingContext2D;
+  edge: LaidOutEdge;
+  nodeMap: Map<string, LaidOutNode>;
+  scale: number;
+  colors: CanvasColors;
+}
 
 function fillForNode(node: LaidOutNode, selected: boolean, colors: CanvasColors): string {
   if (selected) return colors.nodeFillSelected;
@@ -52,7 +68,12 @@ function fillForNode(node: LaidOutNode, selected: boolean, colors: CanvasColors)
   return colors.nodeFill;
 }
 
-function drawNodeLabel(ctx: CanvasRenderingContext2D, node: LaidOutNode, scale: number, colors: CanvasColors): void {
+function drawNodeLabel(
+  ctx: CanvasRenderingContext2D,
+  node: LaidOutNode,
+  scale: number,
+  colors: CanvasColors,
+): void {
   ctx.fillStyle = colors.labelFill;
   ctx.font = `${11 / scale}px sans-serif`;
   ctx.textBaseline = 'middle';
@@ -86,9 +107,25 @@ function drawEdge({ ctx, edge, nodeMap, scale, colors }: EdgeDrawOpts): void {
 
 // ── Main draw function ────────────────────────────────────────────────────────
 
-interface DrawArgs { ctx: CanvasRenderingContext2D; nodes: LaidOutNode[]; edges: LaidOutEdge[]; transform: ViewportTransform; selectedId: string | null; colors: CanvasColors; size: CanvasSize }
+interface DrawArgs {
+  ctx: CanvasRenderingContext2D;
+  nodes: LaidOutNode[];
+  edges: LaidOutEdge[];
+  transform: ViewportTransform;
+  selectedId: string | null;
+  colors: CanvasColors;
+  size: CanvasSize;
+}
 
-export function drawGraph({ ctx, nodes, edges, transform, selectedId, colors, size }: DrawArgs): void {
+export function drawGraph({
+  ctx,
+  nodes,
+  edges,
+  transform,
+  selectedId,
+  colors,
+  size,
+}: DrawArgs): void {
   ctx.clearRect(0, 0, size.w, size.h);
   ctx.save();
   ctx.translate(transform.x, transform.y);
@@ -134,34 +171,38 @@ function useCanvasDraw(
   });
 }
 
-export function GraphCanvas({
-  nodes, edges, transform, selectedId, width, height,
-  onWheel, onPointerDown, onPointerMove, onPointerUp, onNodeClick,
-}: GraphCanvasProps): React.ReactElement {
+function useCanvasClickHandler(
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  nodes: LaidOutNode[],
+  transform: ViewportTransform,
+  onNodeClick: (id: string | null) => void,
+): (e: React.MouseEvent<HTMLCanvasElement>) => void {
+  return useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const cx = (e.clientX - rect.left - transform.x) / transform.scale;
+      const cy = (e.clientY - rect.top - transform.y) / transform.scale;
+      const hit = nodes.find((n) => cx >= n.x && cx <= n.x + n.width && cy >= n.y && cy <= n.y + n.height);
+      onNodeClick(hit ? hit.id : null);
+    },
+    [canvasRef, nodes, transform, onNodeClick],
+  );
+}
+
+export function GraphCanvas({ nodes, edges, transform, selectedId, width, height, onWheel, onPointerDown, onPointerMove, onPointerUp, onNodeClick }: GraphCanvasProps): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const colorsRef = useRef<CanvasColors | null>(null);
   if (!colorsRef.current) colorsRef.current = resolveColors();
-
-  useCanvasDraw(canvasRef, {
-    nodes, edges, transform, selectedId, colors: colorsRef.current, size: { w: width, h: height },
-  });
-
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left - transform.x) / transform.scale;
-    const cy = (e.clientY - rect.top - transform.y) / transform.scale;
-    const hit = nodes.find((n) => cx >= n.x && cx <= n.x + n.width && cy >= n.y && cy <= n.y + n.height);
-    onNodeClick(hit ? hit.id : null);
-  }, [nodes, transform, onNodeClick]);
-
+  useCanvasDraw(canvasRef, { nodes, edges, transform, selectedId, colors: colorsRef.current, size: { w: width, h: height } });
+  const handleClick = useCanvasClickHandler(canvasRef, nodes, transform, onNodeClick);
   return (
     <canvas ref={canvasRef} width={width} height={height}
       style={{ display: 'block', cursor: 'grab', touchAction: 'none' }}
-      onWheel={onWheel} onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-      onClick={handleClick} aria-label="Codebase graph canvas" role="img"
+      onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp} onClick={handleClick}
+      aria-label="Codebase graph canvas" role="img"
     />
   );
 }

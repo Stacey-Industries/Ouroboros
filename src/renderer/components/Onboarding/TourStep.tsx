@@ -68,10 +68,13 @@ function Arrow({ side }: { side: ArrowSide }): React.ReactElement | null {
 
   const base: React.CSSProperties = { position: 'absolute', width: ARROW_SIZE, height: ARROW_SIZE };
   const pos: React.CSSProperties =
-    side === 'top' ? { top: -ARROW_SIZE, left: '50%', transform: 'translateX(-50%)' } :
-    side === 'bottom' ? { bottom: -ARROW_SIZE, left: '50%', transform: 'translateX(-50%)' } :
-    side === 'left' ? { left: -ARROW_SIZE, top: '50%', transform: 'translateY(-50%)' } :
-    { right: -ARROW_SIZE, top: '50%', transform: 'translateY(-50%)' };
+    side === 'top'
+      ? { top: -ARROW_SIZE, left: '50%', transform: 'translateX(-50%)' }
+      : side === 'bottom'
+        ? { bottom: -ARROW_SIZE, left: '50%', transform: 'translateX(-50%)' }
+        : side === 'left'
+          ? { left: -ARROW_SIZE, top: '50%', transform: 'translateY(-50%)' }
+          : { right: -ARROW_SIZE, top: '50%', transform: 'translateY(-50%)' };
 
   return (
     <div
@@ -82,10 +85,13 @@ function Arrow({ side }: { side: ArrowSide }): React.ReactElement | null {
         borderWidth: ARROW_SIZE,
         borderStyle: 'solid',
         borderColor:
-          side === 'top' ? 'transparent transparent var(--surface-panel) transparent' :
-          side === 'bottom' ? 'var(--surface-panel) transparent transparent transparent' :
-          side === 'left' ? 'transparent var(--surface-panel) transparent transparent' :
-          'transparent transparent transparent var(--surface-panel)',
+          side === 'top'
+            ? 'transparent transparent var(--surface-panel) transparent'
+            : side === 'bottom'
+              ? 'var(--surface-panel) transparent transparent transparent'
+              : side === 'left'
+                ? 'transparent var(--surface-panel) transparent transparent'
+                : 'transparent transparent transparent var(--surface-panel)',
       }}
     />
   );

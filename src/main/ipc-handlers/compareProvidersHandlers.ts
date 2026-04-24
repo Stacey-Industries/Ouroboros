@@ -17,7 +17,12 @@ import { ipcMain } from 'electron';
 
 import log from '../logger';
 import { getSessionProvider } from '../providers/providerRegistry';
-import type { ProfileSnapshot, SessionEvent, SessionHandle, SpawnOptions } from '../providers/sessionProvider';
+import type {
+  ProfileSnapshot,
+  SessionEvent,
+  SessionHandle,
+  SpawnOptions,
+} from '../providers/sessionProvider';
 import { getAllActiveWindows } from '../windowManager';
 
 // ─── Response helpers ──────────────────────────────────────────────────────────
@@ -110,7 +115,8 @@ async function handleStart(args: unknown): Promise<OkResult<object> | FailResult
   const { prompt, projectPath, providerIds } = (args ?? {}) as StartArgs;
   if (!prompt || typeof prompt !== 'string') return fail('prompt is required');
   if (!projectPath || typeof projectPath !== 'string') return fail('projectPath is required');
-  if (!Array.isArray(providerIds) || providerIds.length !== 2) return fail('providerIds must be [string, string]');
+  if (!Array.isArray(providerIds) || providerIds.length !== 2)
+    return fail('providerIds must be [string, string]');
 
   const compareId = `cmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const spawnOpts = { prompt, projectPath };
@@ -121,10 +127,14 @@ async function handleStart(args: unknown): Promise<OkResult<object> | FailResult
       spawnCompareSession(providerIds[1], compareId, spawnOpts),
     ]);
     activeSessions.set(compareId, {
-      sessionA: resA.handle, sessionB: resB.handle,
-      cleanupA: resA.cleanup, cleanupB: resB.cleanup,
+      sessionA: resA.handle,
+      sessionB: resB.handle,
+      cleanupA: resA.cleanup,
+      cleanupB: resB.cleanup,
     });
-    log.info(`[compareProviders] started compareId=${compareId} providers=${providerIds.join(',')}`);
+    log.info(
+      `[compareProviders] started compareId=${compareId} providers=${providerIds.join(',')}`,
+    );
     return ok({
       compareId,
       sessions: [
@@ -152,10 +162,7 @@ async function handleCancel(args: unknown): Promise<OkResult<object> | FailResul
 
   const provA = getSessionProvider(sessionA.providerId);
   const provB = getSessionProvider(sessionB.providerId);
-  await Promise.allSettled([
-    provA?.cancel(sessionA),
-    provB?.cancel(sessionB),
-  ]);
+  await Promise.allSettled([provA?.cancel(sessionA), provB?.cancel(sessionB)]);
 
   log.info(`[compareProviders] cancelled compareId=${compareId}`);
   return ok({});

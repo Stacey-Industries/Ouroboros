@@ -1,4 +1,4 @@
-import React, { useCallback,useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface GoToLineProps {
   /** Total number of lines in the file */
@@ -93,7 +93,7 @@ function useGoToLineController({
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => handleGoToLineKeyDown(event, onClose, handleGo),
-    [handleGo, onClose]
+    [handleGo, onClose],
   );
 
   const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,18 +123,20 @@ function GoToLinePanel({
 }: GoToLinePanelProps): React.ReactElement {
   return (
     <div style={getPopupStyle(hasError)} onKeyDown={onKeyDown}>
-      <GoToLineInput
-        ref={inputRef}
-        value={value}
-        hasError={hasError}
-        onChange={onChange}
-      />
-      <span className="text-text-semantic-faint" style={lineRangeStyle}>1 &ndash; {lineCount}</span>
+      <GoToLineInput ref={inputRef} value={value} hasError={hasError} onChange={onChange} />
+      <span className="text-text-semantic-faint" style={lineRangeStyle}>
+        1 &ndash; {lineCount}
+      </span>
     </div>
   );
 }
 
-function GoToLineInput({ value, hasError, onChange, ref }: {
+function GoToLineInput({
+  value,
+  hasError,
+  onChange,
+  ref,
+}: {
   value: string;
   hasError: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -150,8 +152,12 @@ function GoToLineInput({ value, hasError, onChange, ref }: {
       spellCheck={false}
       className="text-text-semantic-primary"
       style={getInputStyle(hasError)}
-      onFocus={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--interactive-accent)')}
-      onBlur={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--border-semantic)')}
+      onFocus={(event) =>
+        updateInputBorderColor(event.currentTarget, hasError, 'var(--interactive-accent)')
+      }
+      onBlur={(event) =>
+        updateInputBorderColor(event.currentTarget, hasError, 'var(--border-semantic)')
+      }
     />
   );
 }
@@ -164,7 +170,7 @@ function parseTargetLine(value: string, lineCount: number): number | null {
 function goToLine(
   lineNum: number,
   scrollContainer: HTMLElement | null,
-  codeContainer: HTMLElement | null
+  codeContainer: HTMLElement | null,
 ): void {
   if (!scrollContainer) return;
 
@@ -197,7 +203,7 @@ function getRenderedLineMetrics(scrollContainer: HTMLElement): {
 function handleGoToLineKeyDown(
   event: React.KeyboardEvent,
   onClose: () => void,
-  onGo: () => void
+  onGo: () => void,
 ): void {
   if (event.key === 'Escape') {
     event.preventDefault();
@@ -229,7 +235,7 @@ function getInputStyle(hasError: boolean): React.CSSProperties {
 function updateInputBorderColor(
   input: HTMLInputElement,
   hasError: boolean,
-  borderColor: string
+  borderColor: string,
 ): void {
   if (!hasError) input.style.borderColor = borderColor;
 }

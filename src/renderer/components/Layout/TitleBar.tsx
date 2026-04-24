@@ -2,23 +2,23 @@
  * TitleBar.tsx — Draggable window title bar with branding, dropdown menus, and action buttons.
  *
  * Sub-modules:
- *   TitleBar.menus.ts   — menu data definitions
- *   TitleBar.navbar.tsx — NavbarMenus with keyboard navigation
- *   TitleBar.mobile.tsx — MobileHamburgerMenu, MobileOverflowMenu
+ *   TitleBar.menus.ts    — menu data definitions
+ *   TitleBar.navbar.tsx  — NavbarMenus with keyboard navigation
+ *   TitleBar.mobile.tsx  — MobileHamburgerMenu, MobileOverflowMenu
+ *   TitleBar.controls.tsx — WindowControls, NotificationBell, PanelToggleBar
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 import ouroborosLogo from '../../../../public/OUROBOROS.png';
-import { useToastContext } from '../../contexts/ToastContext';
 import {
   OPEN_EXTENSION_STORE_EVENT,
   OPEN_MCP_STORE_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
 } from '../../hooks/appEventNames';
 import { useProgressSubscriptions } from '../../hooks/useProgressSubscriptions';
-import { BellIcon, NotificationBadge, NotificationCenter } from '../shared/NotificationCenter';
 import { ProductIcon } from '../shared/ProductIcon';
+import { NotificationBell, PanelToggleBar, WindowControls } from './TitleBar.controls';
 import { MobileFileTreeButton, MobileHamburgerMenu, MobileOverflowMenu } from './TitleBar.mobile';
 import { NavbarMenus } from './TitleBar.navbar';
 import { UsageActions } from './TitleBar.usage';
@@ -28,81 +28,90 @@ import type { CollapseState, CollapseTarget } from './usePanelCollapse';
 
 function SettingsGearIcon(): React.ReactElement {
   return (
-    <ProductIcon
-      iconId="settings-gear"
-      fallback={
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="8" r="2.5" />
-          <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M11.99 11.99l1.07 1.07M13.07 2.93l-1.06 1.06M4.01 11.99l-1.07 1.07" />
-        </svg>
-      }
-    />
+    <ProductIcon iconId="settings-gear" fallback={
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="2.5" />
+        <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M11.99 11.99l1.07 1.07M13.07 2.93l-1.06 1.06M4.01 11.99l-1.07 1.07" />
+      </svg>
+    } />
   );
 }
 
 function UsageBarIcon(): React.ReactElement {
   return (
-    <ProductIcon
-      iconId="graph-left"
-      fallback={
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="8" width="3" height="7" rx="0.5" />
-          <rect x="6.5" y="3" width="3" height="12" rx="0.5" />
-          <rect x="12" y="1" width="3" height="14" rx="0.5" />
-        </svg>
-      }
-    />
+    <ProductIcon iconId="graph-left" fallback={
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="8" width="3" height="7" rx="0.5" />
+        <rect x="6.5" y="3" width="3" height="12" rx="0.5" />
+        <rect x="12" y="1" width="3" height="14" rx="0.5" />
+      </svg>
+    } />
   );
 }
 
 function ExtensionStoreIcon(): React.ReactElement {
   return (
-    <ProductIcon
-      iconId="extensions"
-      fallback={
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
-        </svg>
-      }
-    />
+    <ProductIcon iconId="extensions" fallback={
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
+      </svg>
+    } />
   );
 }
 
 function McpStoreIcon(): React.ReactElement {
   return (
-    <ProductIcon
-      iconId="server"
-      fallback={
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="1" width="10" height="5" rx="1" />
-          <rect x="3" y="10" width="10" height="5" rx="1" />
-          <line x1="8" y1="6" x2="8" y2="10" />
-          <circle cx="5.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
-          <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
-          <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
-          <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
-        </svg>
-      }
-    />
+    <ProductIcon iconId="server" fallback={
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="1" width="10" height="5" rx="1" />
+        <rect x="3" y="10" width="10" height="5" rx="1" />
+        <line x1="8" y1="6" x2="8" y2="10" />
+        <circle cx="5.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+        <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+        <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+        <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+      </svg>
+    } />
   );
 }
 
 // ── Panel toggle icons ────────────────────────────────────────────────────────
 
 function PanelLeftIcon(): React.ReactElement {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="5.5" y1="2.5" x2="5.5" y2="13.5" /></svg>;
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
+    </svg>
+  );
 }
 
 function PanelCentreIcon(): React.ReactElement {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="5,4 3,8 5,12" /><polyline points="11,4 13,8 11,12" /><line x1="9" y1="3" x2="7" y2="13" /></svg>;
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="5,4 3,8 5,12" />
+      <polyline points="11,4 13,8 11,12" />
+      <line x1="9" y1="3" x2="7" y2="13" />
+    </svg>
+  );
 }
 
 function PanelBottomIcon(): React.ReactElement {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="1.5" y1="10" x2="14.5" y2="10" /></svg>;
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="1.5" y1="10" x2="14.5" y2="10" />
+    </svg>
+  );
 }
 
 function PanelRightIcon(): React.ReactElement {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="10.5" y1="2.5" x2="10.5" y2="13.5" /></svg>;
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
+    </svg>
+  );
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -141,93 +150,12 @@ export const TITLE_BAR_ACTIONS: TitleBarAction[] = [
   { eventName: OPEN_USAGE_PANEL_EVENT, title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
 ];
 
-// ── WindowControls ────────────────────────────────────────────────────────────
-
-function WindowControls(): React.ReactElement | null {
-  const [platform, setPlatform] = useState<string>('');
-  useEffect(() => { window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {}); }, []);
-  if (platform !== 'win32') return null;
-  const api = window.electronAPI?.app;
-  const base = 'titlebar-no-drag flex items-center justify-center w-[46px] h-full transition-colors duration-100';
-  return (
-    <div className="web-mobile-hide flex items-stretch h-full ml-auto" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button className={`${base} hover:bg-[rgba(255,255,255,0.08)] text-text-semantic-muted`} onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
-        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
-      </button>
-      <button className={`${base} hover:bg-[rgba(255,255,255,0.08)] text-text-semantic-muted`} onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" /></svg>
-      </button>
-      <button className={`${base} hover:bg-[#e81123] hover:text-white text-text-semantic-muted`} onClick={() => api?.closeWindow()} title="Close" aria-label="Close">
-        <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2"><line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" /></svg>
-      </button>
-    </div>
-  );
-}
-
-// ── Panel toggle bar ──────────────────────────────────────────────────────────
-
-const PANEL_TOGGLES: Array<{ panel: CollapseTarget; title: string; shortcut?: string; Icon: () => React.ReactElement }> = [
-  { panel: 'leftSidebar', title: 'File Tree', shortcut: 'Ctrl+B', Icon: PanelLeftIcon },
-  { panel: 'editor', title: 'Editor', Icon: PanelCentreIcon },
-  { panel: 'terminal', title: 'Terminal', shortcut: 'Ctrl+J', Icon: PanelBottomIcon },
-  { panel: 'rightSidebar', title: 'Chat', shortcut: 'Ctrl+\\', Icon: PanelRightIcon },
+const PANEL_TOGGLES = [
+  { panel: 'leftSidebar' as CollapseTarget, title: 'File Tree', shortcut: 'Ctrl+B', Icon: PanelLeftIcon },
+  { panel: 'editor' as CollapseTarget, title: 'Editor', Icon: PanelCentreIcon },
+  { panel: 'terminal' as CollapseTarget, title: 'Terminal', shortcut: 'Ctrl+J', Icon: PanelBottomIcon },
+  { panel: 'rightSidebar' as CollapseTarget, title: 'Chat', shortcut: 'Ctrl+\\', Icon: PanelRightIcon },
 ];
-
-function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL_TOGGLES[number]; isActive: boolean; onClick: () => void }): React.ReactElement {
-  const label = `${isActive ? 'Hide' : 'Show'} ${config.title}${config.shortcut ? ` (${config.shortcut})` : ''}`;
-  return (
-    <button className="titlebar-no-drag" title={label} aria-label={label} onClick={onClick}
-      style={{ ...titleButtonStyle, color: isActive ? 'var(--text-secondary)' : 'var(--text-faint, var(--text-semantic-faint))', opacity: isActive ? 1 : 0.5 }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.15)'; e.currentTarget.style.opacity = '1'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = isActive ? 'var(--text-secondary)' : 'var(--text-faint, var(--text-semantic-faint))'; e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.opacity = isActive ? '1' : '0.5'; }}>
-      <config.Icon />
-    </button>
-  );
-}
-
-function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement | null {
-  if (!collapsed || !onToggle) return null;
-  return (
-    <>{PANEL_TOGGLES.map((config) => (
-      <PanelToggleButton key={config.panel} config={config} isActive={!collapsed[config.panel]} onClick={() => onToggle(config.panel)} />
-    ))}</>
-  );
-}
-
-// ── Notification bell ─────────────────────────────────────────────────────────
-
-function NotificationBell(): React.ReactElement {
-  const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
-  const [open, setOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const updateAnchorRect = useCallback(() => {
-    setAnchorRect(buttonRef.current?.getBoundingClientRect() ?? null);
-  }, []);
-  const toggle = useCallback(() => { setOpen((prev) => !prev); }, []);
-  useEffect(() => { if (open && unreadCount > 0) markAllRead(); }, [open, unreadCount, markAllRead]);
-  const handleClose = useCallback(() => { setOpen(false); }, []);
-  useEffect(() => {
-    if (!open) return;
-    updateAnchorRect();
-    const handlePositionChange = (): void => updateAnchorRect();
-    window.addEventListener('resize', handlePositionChange);
-    window.addEventListener('scroll', handlePositionChange, true);
-    return () => {
-      window.removeEventListener('resize', handlePositionChange);
-      window.removeEventListener('scroll', handlePositionChange, true);
-    };
-  }, [open, updateAnchorRect]);
-  return (
-    <div className="titlebar-no-drag" style={{ position: 'relative', height: '100%' }}>
-      <button ref={buttonRef} className="titlebar-no-drag text-text-semantic-muted" title="Notifications"
-        onMouseDown={(e) => { e.stopPropagation(); toggle(); }} style={titleButtonStyle} {...hoverStyle}>
-        <BellIcon /><NotificationBadge count={unreadCount} />
-      </button>
-      {open && <NotificationCenter anchorRect={anchorRect} notifications={notifications} onRemove={removeNotification} onClearAll={clearAllNotifications} onClose={handleClose} />}
-    </div>
-  );
-}
 
 // ── TitleBarActionButtons ─────────────────────────────────────────────────────
 
@@ -235,12 +163,8 @@ function TitleBarActionButtons({ actions }: { actions: TitleBarAction[] }): Reac
   return (
     <>
       {actions.map((action) => (
-        <button
-          key={action.eventName}
-          className="titlebar-no-drag text-text-semantic-muted"
-          title={action.title}
-          onClick={() => window.dispatchEvent(new CustomEvent(action.eventName))}
-          style={titleButtonStyle}
+        <button key={action.eventName} className="titlebar-no-drag text-text-semantic-muted" title={action.title}
+          onClick={() => window.dispatchEvent(new CustomEvent(action.eventName))} style={titleButtonStyle}
           {...(action.eventName === OPEN_SETTINGS_PANEL_EVENT ? { 'data-tour-anchor': 'settings-trigger' } : {})}
           {...hoverStyle}
         >
@@ -251,6 +175,23 @@ function TitleBarActionButtons({ actions }: { actions: TitleBarAction[] }): Reac
   );
 }
 
+// ── Logo ──────────────────────────────────────────────────────────────────────
+
+function TitleBarLogo(): React.ReactElement {
+  return (
+    <img className="titlebar-no-drag select-none" src={ouroborosLogo} alt="Ouroboros"
+      style={{ height: '20px', width: '20px', marginLeft: '8px', marginRight: '6px', flexShrink: 0, objectFit: 'contain', opacity: 0.9 }}
+      draggable={false}
+    />
+  );
+}
+
+// ── Divider ───────────────────────────────────────────────────────────────────
+
+const DIVIDER_STYLE: React.CSSProperties = {
+  width: '1px', height: '14px', backgroundColor: 'var(--border-semantic)', margin: '0 6px', opacity: 0.5,
+};
+
 // ── TitleBar ──────────────────────────────────────────────────────────────────
 
 export interface TitleBarProps {
@@ -258,37 +199,33 @@ export interface TitleBarProps {
   onTogglePanel?: (panel: CollapseTarget) => void;
 }
 
+const TITLEBAR_STYLE: React.CSSProperties = {
+  height: 'var(--titlebar-height, 36px)',
+  background: 'var(--titlebar-bg)',
+  backdropFilter: 'blur(var(--material-blur))',
+  WebkitBackdropFilter: 'blur(var(--material-blur))',
+  boxShadow: 'var(--shadow-inset)',
+  borderBottom: '1px solid var(--stroke-inner)',
+};
+
 export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement {
   useProgressSubscriptions();
-  const titleBarActions = TITLE_BAR_ACTIONS.filter((action) => action.eventName !== OPEN_USAGE_PANEL_EVENT);
+  const titleBarActions = TITLE_BAR_ACTIONS.filter((a) => a.eventName !== OPEN_USAGE_PANEL_EVENT);
   return (
-    <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center"
-      style={{
-        height: 'var(--titlebar-height, 36px)',
-        background: 'var(--titlebar-bg)',
-        backdropFilter: 'blur(var(--material-blur))',
-        WebkitBackdropFilter: 'blur(var(--material-blur))',
-        boxShadow: 'var(--shadow-inset)',
-        borderBottom: '1px solid var(--stroke-inner)',
-      }}>
+    <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center" style={TITLEBAR_STYLE}>
       <MobileHamburgerMenu titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
       <MobileFileTreeButton titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
-      <img className="titlebar-no-drag select-none" src={ouroborosLogo} alt="Ouroboros"
-        style={{ height: '20px', width: '20px', marginLeft: '8px', marginRight: '6px', flexShrink: 0, objectFit: 'contain', opacity: 0.9 }}
-        draggable={false} />
+      <TitleBarLogo />
       <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
         <NavbarMenus />
       </div>
       <div className="flex-1" />
       <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-        <PanelToggleBar collapsed={collapsed} onToggle={onTogglePanel} />
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-semantic)', margin: '0 6px', opacity: 0.5 }} />
+        <PanelToggleBar panelToggles={PANEL_TOGGLES} collapsed={collapsed} onToggle={onTogglePanel} />
+        <div style={DIVIDER_STYLE} />
         <TitleBarActionButtons actions={titleBarActions} />
-        <UsageActions
-          UsageIcon={UsageBarIcon}
-          onOpenPanel={() => window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT))}
-          titleButtonStyle={titleButtonStyle}
-          hoverStyle={hoverStyle}
+        <UsageActions UsageIcon={UsageBarIcon} onOpenPanel={() => window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT))}
+          titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle}
         />
         <NotificationBell />
       </div>

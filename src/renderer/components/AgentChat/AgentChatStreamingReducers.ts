@@ -5,10 +5,7 @@
  * Tool-activity helpers live in AgentChatStreamingReducers.tool.ts.
  * Dedup helpers live in AgentChatStreamingReducers.dedup.ts.
  */
-import type {
-  AgentChatContentBlock,
-  AgentChatStreamChunk,
-} from '../../types/electron-agent-chat';
+import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
 import { clearSeenChunkIds, isDuplicateChunk } from './AgentChatStreamingReducers.dedup';
 import {
   applyToolActivityLegacy,
@@ -43,10 +40,7 @@ export { generateBlockId } from './AgentChatStreamingReducers.tool';
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-function sealThinkingBlocks(
-  blocks: AgentChatContentBlock[],
-  now: number,
-): AgentChatContentBlock[] {
+function sealThinkingBlocks(blocks: AgentChatContentBlock[], now: number): AgentChatContentBlock[] {
   let changed = false;
   const next = blocks.map((b) => {
     if (b.kind === 'thinking' && b.startedAt !== undefined && b.duration === undefined) {
@@ -193,8 +187,10 @@ function applyDeltaChunk(
       return { ...prev, _seenChunkIds: seenIds };
     }
   }
-  if (chunk.type === 'text_delta') return { ...applyTextChunk(prev, chunk), _seenChunkIds: seenIds };
-  if (chunk.type === 'thinking_delta') return { ...applyThinkingChunk(prev, chunk), _seenChunkIds: seenIds };
+  if (chunk.type === 'text_delta')
+    return { ...applyTextChunk(prev, chunk), _seenChunkIds: seenIds };
+  if (chunk.type === 'thinking_delta')
+    return { ...applyThinkingChunk(prev, chunk), _seenChunkIds: seenIds };
   const result = applyToolChunk(prev, chunk);
   return result ? { ...result, _seenChunkIds: seenIds } : null;
 }

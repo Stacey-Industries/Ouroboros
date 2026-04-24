@@ -1,90 +1,15 @@
-<!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-A few non-obvious things worth capturing in the CLAUDE.md:
-- `vitest.config.ts` aliases `better-sqlite3` to a separately-installed system-Node build because the project's native addon is compiled against Electron's ABI, which differs from system Node. Tests break silently otherwise.
-- `vite.webpreload.config.ts` uses `emptyOutDir: false` — running it first would wipe the renderer output. Build ordering is enforced by convention, not tooling.
-- `mica-electron` is force-inlined via `server.deps.inline` so vitest's alias redirect fires before the module calls `electron.app.commandLine.appendSwitch()` at load time — a subtle native-module boot-order issue.
-`─────────────────────────────────────────────────`
+# Ouroboros — Claude Code Instructions
 
-# Root — Build Configuration & Tooling
-
-Build pipeline and tooling config for an Electron desktop IDE. Three build targets (main/preload/renderer) plus an optional web deployment mode.
-
-## Key Files
-
-| File | Role |
-|---|---|
-| `electron.vite.config.ts` | Primary build — three targets: `main` (Node), `preload` (Node), `renderer` (React + Monaco). Run with `npm run build`. |
-| `vite.web.config.ts` | Web deployment build — same React renderer served over HTTP. Outputs to `out/web/`. Injects `webPreload.js` via `transformIndexHtml` and relocates `index.html` from `out/web/src/web/` to `out/web/` via `closeBundle`. |
-| `vite.webpreload.config.ts` | Builds `src/web/webPreload.ts` as an IIFE — provides `window.electronAPI` over WebSocket for web mode. Must run **after** `vite.web.config.ts`. Uses `emptyOutDir: false` to preserve the renderer build. |
-| `vitest.config.ts` | Unit tests — Node env, `src/**/*.test.ts`, V8 coverage. Thresholds at 5% (ratchet up over time). Aliases `mica-electron` to a stub and `better-sqlite3` to a system-Node build. |
-| `knip.config.ts` | Dead code detection. Entry points: `main.ts`, `preload.ts`, `preloadSupplementalApis.ts`, `index.tsx`. `src/renderer/types/**` excluded (declaration files only). |
-| `playwright.config.ts` | E2E test config. |
-| `postcss.config.js` | Tailwind + Autoprefixer only. No custom transforms. |
-
-## Build Targets
-
-```
-electron.vite.config.ts
-  ├── main     → src/main/main.ts          (Node.js, deps externalized)
-  ├── preload  → src/preload/preload.ts    (Node.js, isolated renderer context)
-  └── renderer → src/renderer/index.html  (Browser, React, Monaco workers, Tailwind)
-
-vite.web.config.ts        → out/web/              (browser deployment)
-vite.webpreload.config.ts → out/web/webPreload.js  (IIFE shim, must build last)
-```
-
-## Path Aliases
-
-| Alias | Resolves to | Available in |
-|---|---|---|
-| `@main/*` | `src/main/*` | main, preload |
-| `@preload/*` | `src/preload/*` | preload |
-| `@renderer/*` | `src/renderer/*` | renderer, web |
-| `@shared/*` | `src/shared/*` | all targets |
-
-## Monaco Workers
-
-The renderer bundles 5 Monaco language workers: `editorWorkerService`, `typescript`, `json`, `css`, `html`. Workers output to `out/renderer/monacoeditorwork/` (Electron) or `out/web/monacoeditorwork/` (web).
-
-## Bundle Analysis
-
-```bash
-ANALYZE=true npm run build
-```
-
-Outputs `stats/main.html`, `stats/preload.html`, `stats/renderer.html` via `rollup-plugin-visualizer`.
-
-## Gotchas
-
-- **Monaco plugin CJS/ESM interop**: `vite-plugin-monaco-editor` exports a CJS default — both configs wrap it with `.default ?? module`. Do not simplify this.
-- **`optimizeDeps.force: true` in dev**: Forces Vite dep re-scan on cold starts. Prevents stale hash mismatches after `npm install`. Set to `false` in production.
-- **Web build ordering matters**: Run `vite.web.config.ts` first, then `vite.webpreload.config.ts`. Reversing the order wipes the renderer output (`emptyOutDir: false` only protects against the preload build doing the wiping).
-- **`index.html` relocation**: `moveHtmlToRoot` plugin in `vite.web.config.ts` renames `out/web/src/web/index.html` → `out/web/index.html` in `closeBundle`. Vite preserves project-relative directory structure; this corrects it.
-- **`better-sqlite3` in vitest**: The project's native addon is compiled against Electron's Node ABI. Vitest runs under system Node (different ABI), so `vitest.config.ts` aliases `better-sqlite3` to a separately-installed system-Node build at `%LOCALAPPDATA%/Temp/sqlite-fresh/`. Tests that import it will fail silently if that directory doesn't exist.
-- **`mica-electron` must be inlined**: `vitest.config.ts` uses `server.deps.inline: ['mica-electron']` so the `resolve.alias` redirect to a stub fires before the module calls `electron.app.commandLine.appendSwitch()` at load time. Removing the inline entry breaks vitest startup.
-- **File watcher exclusions**: `electron.vite.config.ts` ignores `docs/`, `plan/`, `ai/`, `stats/`, `*.md`, etc. to prevent agent/IDE file changes from triggering hot-reload restarts.
-- **Tailwind only scans `src/renderer/`**: Classes used in main or preload code won't appear in the CSS bundle.
-- **`src/renderer/types/**` excluded from knip**: These are `.d.ts` declaration files — knip can't analyze them as entry consumers.
-- **`src/main/templates/` copied at build time**: `copyTemplatesPlugin` in `electron.vite.config.ts` copies `src/main/templates/` → `out/main/templates/` via `closeBundle`. `specScaffold.ts` reads templates via `path.join(__dirname, '..', 'templates', 'spec')` at runtime. Without the copy, `/spec` fails silently in production builds.
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
-# Ouroboros — Claude Code Guidelines
-
-## What This Is
-
-Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation. **Built by Claude Code, running inside itself.** The agent makes implementation decisions autonomously; the human steers direction and reviews.
+Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation. **Built by Claude Code, running inside itself.**
 
 ## Meta-Development Warning
 
-**This project is developed from within itself.** Claude Code runs as a terminal session inside the Ouroboros — the very app being edited. This means:
+This project is developed from within itself. Claude Code runs as a terminal session inside the Ouroboros — the very app being edited.
 
-- **`npm run dev` is fine to run** — it spawns its own Electron instance separate from the host. The host IDE keeps running unless explicitly closed.
-- **Killing electron processes is permitted when needed** — e.g. cleaning up orphan dev launches or freeing the single-instance lock. The host IDE is one of those processes; the user may have to relaunch it afterwards. That's an acceptable cost when the alternative is leaving stale state to compound.
-- Hot-reload (`npm run dev` / vite HMR) updates the renderer in-place without killing the window. Main-process changes still require a relaunch.
-- If you need the user to test a change, ask them to reload the renderer (`Ctrl+R`) for renderer-only changes, or to relaunch the app for main-process changes.
+- `npm run dev` is safe — it spawns its own Electron instance separate from the host. The host IDE keeps running unless explicitly closed.
+- Killing electron processes is permitted when needed. The host IDE is one of those processes; the user may have to relaunch it afterwards.
+- Hot-reload (`npm run dev` / Vite HMR) updates the renderer in-place without killing the window. Main-process changes require a relaunch.
+- For renderer-only changes, ask the user to reload with `Ctrl+R`. For main-process changes, ask them to relaunch.
 
 ## Commands
 
@@ -94,9 +19,7 @@ Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. 
 - `npm test` — run vitest (unit tests)
 - `npm run test:watch` — vitest in watch mode
 
-## Quick Reference
-
-### Key Files
+## Key Files
 
 | File                               | Role                                       |
 | ---------------------------------- | ------------------------------------------ |
@@ -109,7 +32,7 @@ Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. 
 | `src/renderer/App.tsx`             | Root React component                       |
 | `src/renderer/types/electron.d.ts` | Single source of truth for IPC shapes      |
 
-### Folder Map
+## Folder Map
 
 | Path                       | Contents                                                                                        |
 | -------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -118,55 +41,14 @@ Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. 
 | `src/renderer/components/` | Feature folders: Layout, Terminal, FileTree, FileViewer, AgentMonitor, CommandPalette, Settings |
 | `src/renderer/hooks/`      | Shared hooks: useConfig, useTheme, usePty, useAgentEvents, useFileWatcher                       |
 | `src/renderer/contexts/`   | React contexts: ProjectContext                                                                  |
-| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro, glass, light, high-contrast)             |
+| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro, glass, light, high-contrast)              |
 | `src/renderer/types/`      | `electron.d.ts` — full IPC type contract                                                        |
 
-## Codebase Graph (codebase-memory MCP)
+Each subdirectory has its own `CLAUDE.md` with a subsystem-specific file map.
 
-The repo is indexed in the codebase-memory graph (1.4K nodes, 2.3K edges). Auto-sync keeps it fresh.
+## Codebase Graph
 
-### When to use Graph tools vs Grep/Read
-
-**MUST use graph tools — these tasks are significantly faster and more accurate with the graph:**
-
-| Task                                      | Tool                                    | Why not Grep/Read                                                                                                               |
-| ----------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Before refactoring a function**         | `trace_call_path`                       | Grep finds string matches; the graph finds actual callers across the dependency chain. Prevents breaking unknown consumers.     |
-| **Debugging a crash across components**   | `detect_changes` + `trace_call_path`    | Maps dirty files → affected symbols → blast radius with risk levels. Would have saved hours on the HMR/chat crash (2026-03).    |
-| **Finding where a symbol is defined**     | `search_graph`                          | Returns the exact file + line + metadata. Grep returns every file containing the string, including comments and variable names. |
-| **Understanding a module before editing** | `get_architecture aspects=['hotspots']` | Shows most-connected functions — the ones where a change has the widest impact.                                                 |
-| **Impact analysis before a PR**           | `detect_changes scope='branch'`         | Topology-based risk classification (CRITICAL → LOW) for every affected caller.                                                  |
-
-**Use Grep/Read instead — graph adds overhead for these:**
-
-| Task                                          | Tool            | Why                                                         |
-| --------------------------------------------- | --------------- | ----------------------------------------------------------- |
-| Read a specific file you already know         | `Read`          | Direct I/O, no graph query needed                           |
-| Find a string literal or error message        | `Grep`          | Text search; the graph indexes symbols, not string literals |
-| Find files by name pattern                    | `Glob`          | File-system glob, not a symbol query                        |
-| Single-file edits with no cross-module impact | `Read` → `Edit` | No blast radius to assess                                   |
-
-### Graph tool reference
-
-- `search_graph` — find functions/classes/modules by name pattern
-- `trace_call_path` — who calls a function, what it calls
-- `get_code_snippet` — retrieve source + metadata for a known symbol
-- `query_graph` — Cypher queries for relationship patterns (e.g. find all callers of a module)
-- `detect_changes` — map uncommitted changes to affected symbols + blast radius
-- `get_architecture` — structural overview (use `aspects` param to limit output: `['hotspots']`, `['file_tree']`, etc.)
-
-## Task-Type Skip List
-
-Only load docs relevant to your task. Saves tokens and avoids confusion.
-
-| Working on...                 | Read                                                                 | Skip                                         |
-| ----------------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
-| Terminal (xterm, PTY, shell)  | Terminal Gotchas below, `docs/api-contract.md` (PTY API)             | FileViewer, AgentMonitor sections            |
-| File viewer / tree            | `docs/api-contract.md` (Files API)                                   | Terminal Gotchas, AgentMonitor sections      |
-| Agent monitor (hooks, events) | `docs/api-contract.md` (Hooks API), `docs/data-model.md`             | Terminal Gotchas, FileViewer sections        |
-| Layout / panels / theming     | `docs/architecture.md` (component tree, layout system)               | `docs/api-contract.md`, `docs/data-model.md` |
-| IPC / preload / main process  | `docs/architecture.md`, `docs/api-contract.md`, `docs/data-model.md` | Frontend component sections                  |
-| New feature (any)             | `docs/architecture.md` (full), this file (full)                      | Nothing — read everything                    |
+The repo is indexed in the codebase-memory graph (~1.4K nodes, ~2.3K edges). Auto-sync keeps it fresh. See `~/.claude/rules/graph-tool-routing.md` for when to use graph tools vs Grep/Read.
 
 ## Key Conventions
 
@@ -177,32 +59,9 @@ Only load docs relevant to your task. Saves tokens and avoids confusion.
 
 Never mix these. IPC events flow through preload. DOM events are renderer-only.
 
-### Chat-Only Shell
-
-Wave 42 introduced a second renderer shell — `ChatOnlyShell` — that replaces the full five-panel IDE when immersive chat mode is active. The backend is unchanged; same session store, same threads, same PTY, same hooks pipe.
-
-**Trigger condition** (computed in `InnerApp`):
-```ts
-const isImmersive = isChatWindow || immersiveFlag;
-```
-- `isChatWindow` — window opened as `?mode=chat` (pop-out chat window, Wave 20).
-- `immersiveFlag` — `config.layout.immersiveChat === true` (toggled via Settings, `Ctrl+Alt+I`, or View menu).
-
-**Shell layout (Wave 44 parity pass):** `ChatOnlyTitleBar` + horizontal `ChatOnlyBody` (persistent `ChatHistorySidebar` + `AgentChatWorkspace` with `ChatStatusChipRow` beneath the composer) + `ChatOnlyStatusBar` + overlays (`ChatOnlyDiffOverlay`, `ChatOnlySettingsOverlay`, `KeyboardShortcutCheatSheet`, `CommandPalette`). Sidebar cycles pinned (280px) → collapsed (48px rail) → hidden (off-canvas `ChatOnlySessionDrawer` fallback); mode persists in `config.layout.chatSidebarMode`.
-
-**Chat workbench variant (Wave 46, gated by `layout.chatWorkbench`):** replaces the history-first body with a session-first `WorkbenchRail`, keeps `AgentChatWorkspace` central, and adds three selective IDE reuses around it: `ChatWorkbenchArtifactPane` (file/diff preview), `ChatWorkbenchUtilityDrawer` (approvals, review, activity, subagents), and `ChatWorkbenchTerminalDock` (shared terminal manager in a bottom dock). The utility drawer auto-opens on new approvals, new diff review, and `agent-ide:open-subagent-panel`.
-
-**Chat-only keyboard shortcuts:** `Ctrl+,` Settings · `Ctrl+K` command palette · `Ctrl+/` shortcut cheat-sheet · sidebar toggle cycles mode.
-
-**`IdeToolBridge` is intentionally NOT mounted** in chat-only mode. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty — matching Claude desktop behaviour. Cross-window IDE-tool delegation is a Wave 45+ candidate.
-
-Providers (`DiffReviewProvider`, `FileViewerManager`, `MultiBufferManager`) live above the branch in `ChatOnlyShellWrapper`; the `AgentChatStoreContext` store is lifted at the shell level so the sidebar + user menu (outside `AgentChatWorkspace`) share state with the workspace.
-
-**Theme / Material (Wave 45):** shell root uses `h-screen w-screen`. The app ships a **material baseline** — `MATERIAL_VARIANTS = { vapor, prism, warp }` in `src/renderer/themes/material.ts`. The user picks the variant via `config.materialVariant` (Settings → Appearance → Material, or the `Material:` submenu in the command palette). Themes paint the accent/text channel on top of whichever material is active; they no longer carry their own `backgroundGradient`. Shell roots stack three background layers (`var(--glass-dim), var(--bg-glows), var(--bg-wash)`) and `--surface-chat` now points at `var(--material-panel)` so glass themes don't bleed through to window chrome. Composer is a `FloatingComposerContainer` reading `--composer-wash / --radius-md / --shadow-bubble`; model + permission chips live in `ChatStatusChipRow` below the composer (NOT the title bar — avoids drag-region / popover conflicts). Streaming is rAF-batched via `useRafBatchedChunks`.
-
 ### Per-Window Project Isolation
 
-Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `sessionsData` (SQLite) and restored on relaunch — the old `windowSessions` electron-store key was migrated away in Wave 16.
+Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `sessionsData` (SQLite) and restored on relaunch.
 
 ## Known Issues / Tech Debt
 
@@ -213,16 +72,16 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 - Wave 19 PageRank convergence at 10k cyclic nodes — bounded and non-DoS; profile in practice before tuning `maxIterations`.
 - `AnyOverrides = Record<string, any>` in Wave 26 profile code — one-line type escape hatch; fix when the surrounding code is next refactored.
 
-## Project Context
+## Further Reading
 
-- `ai/vision.md` — Product vision, design north stars
-- `ai/deferred.md` — Remaining unimplemented features, prioritized by area
 - `docs/architecture.md` — Full architecture, component tree, state management, ownership rules, security model
 - `docs/api-contract.md` — Complete IPC channel reference, file operations, PTY API
 - `docs/data-model.md` — Config schema, state types, event types
+- `docs/build.md` — Build tooling, Vite config, Monaco workers, path aliases, bundle analysis
+- `docs/chat-shell.md` — Chat-only shell (Wave 42+), workbench variant (Wave 46), material theming (Wave 45)
+- `ai/vision.md` — Product vision, design north stars
+- `ai/deferred.md` — Remaining unimplemented features, prioritized by area
 
 ## Rules, Hooks, and Commands
 
 Context-specific rules are in `.claude/rules/` (injected automatically by glob match). Hooks enforce constraints deterministically via `.claude/settings.json`. Slash commands are in `.claude/commands/` (project) and `~/.claude/commands/` (global).
-
-See `claudeimprovements.md` for the full inventory.

@@ -2,10 +2,7 @@ import DOMPurify from 'dompurify';
 import React, { useEffect, useMemo } from 'react';
 
 import { renderMarkdown } from './markdownPreviewRenderer';
-import {
-  ensureMarkdownPreviewStyles,
-  PURIFY_CONFIG,
-} from './markdownPreviewStyles';
+import { ensureMarkdownPreviewStyles, PURIFY_CONFIG } from './markdownPreviewStyles';
 
 export interface MarkdownPreviewProps {
   content: string;
@@ -25,7 +22,11 @@ const PREVIEW_SHELL_STYLE = {
 
 function useSanitizedMarkdown(content: string): string {
   return useMemo(
-    () => DOMPurify.sanitize(renderMarkdown(content), PURIFY_CONFIG as Parameters<typeof DOMPurify.sanitize>[1]),
+    () =>
+      DOMPurify.sanitize(
+        renderMarkdown(content),
+        PURIFY_CONFIG as Parameters<typeof DOMPurify.sanitize>[1],
+      ),
     [content],
   );
 }
@@ -39,10 +40,7 @@ export function MarkdownPreview({ content }: MarkdownPreviewProps): React.ReactE
 
   return (
     <div style={PREVIEW_SHELL_STYLE}>
-      <div
-        className="md-preview"
-        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-      />
+      <div className="md-preview" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
     </div>
   );
 }

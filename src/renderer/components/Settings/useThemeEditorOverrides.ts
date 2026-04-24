@@ -40,10 +40,14 @@ export function useThemeEditorOverrides(
   }, [activeThemeId, customThemeColors]);
 
   const getEffectiveColor = useCallback(
-    (token: ColorToken): string => overrides[token.cssVar] ?? baseTheme.colors[token.colorKey] ?? fallbackHex,
+    (token: ColorToken): string =>
+      overrides[token.cssVar] ?? baseTheme.colors[token.colorKey] ?? fallbackHex,
     [baseTheme, overrides],
   );
-  const isOverridden = useCallback((token: ColorToken): boolean => token.cssVar in overrides, [overrides]);
+  const isOverridden = useCallback(
+    (token: ColorToken): boolean => token.cssVar in overrides,
+    [overrides],
+  );
 
   return { getEffectiveColor, isOverridden, overrides, setOverrides };
 }

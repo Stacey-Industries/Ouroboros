@@ -7,6 +7,7 @@ import type React from 'react';
 import type { AgentChatMessageRecord, CodexModelOption } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import {
+  autoResizeTextarea,
   extractMentionQuery,
   extractSlashQuery,
   findLastUserMessageContent,
@@ -64,6 +65,7 @@ function handlePermissionModeShortcut(args: {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
 }): boolean {
   if (
     args.event.key !== 'Tab' ||
@@ -80,7 +82,9 @@ function handlePermissionModeShortcut(args: {
   );
   args.onChatOverridesChange({
     ...args.chatOverrides,
-    permissionMode: cyclePermissionMode(args.chatOverrides.permissionMode, provider),
+    permissionMode: cyclePermissionMode(args.chatOverrides.permissionMode, provider, {
+      codexAppServerTransport: args.codexAppServerTransport,
+    }),
   });
   return true;
 }
@@ -148,6 +152,7 @@ export function handleComposerShortcutKeyDown(args: {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   draft: string;
   messages?: AgentChatMessageRecord[];
   onChange: (value: string) => void;
@@ -179,6 +184,7 @@ export interface ComposerKeyDownArgs {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   onCloseAutocomplete?: () => void;
   messages?: AgentChatMessageRecord[];
   draft: string;
@@ -246,7 +252,11 @@ function handleMentionOrAutocomplete(args: ComposerChangeArgs, mentionQuery: str
 }
 
 export function handleComposerChange(args: ComposerChangeArgs, value: string): void {
-  setDraftValue(args.textareaRef, args.lastSyncedDraft, args.onChange, value);
+  args.lastSyncedDraft.current = value;
+  args.onChange(value);
+  if (args.textareaRef.current) {
+    autoResizeTextarea(args.textareaRef.current);
+  }
   const cursorPos = args.textareaRef.current?.selectionStart ?? value.length;
   const slashQuery = extractSlashQuery(value, cursorPos);
   if (slashQuery !== null) {

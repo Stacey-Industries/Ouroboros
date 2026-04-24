@@ -9,17 +9,19 @@ import { AGENT_CHAT_INVOKE_CHANNELS } from '@shared/ipc/agentChatChannels';
 import type { BranchNode } from '@shared/types/agentChat';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type ForkHandlerDeps,registerForkHandlers } from './agentChatFork';
+import { type ForkHandlerDeps, registerForkHandlers } from './agentChatFork';
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
 
 type HandlerFn = (...args: unknown[]) => Promise<unknown>;
 
-function makeStubs(overrides: {
-  forkThread?: (p: unknown) => Promise<unknown>;
-  renameBranch?: (id: string, name: string) => Promise<void>;
-  listBranches?: (rootId: string) => Promise<BranchNode[]>;
-} = {}) {
+function makeStubs(
+  overrides: {
+    forkThread?: (p: unknown) => Promise<unknown>;
+    renameBranch?: (id: string, name: string) => Promise<void>;
+    listBranches?: (rootId: string) => Promise<BranchNode[]>;
+  } = {},
+) {
   const forkThread = overrides.forkThread ?? vi.fn().mockResolvedValue({ id: 'fork-id' });
   const renameBranch = overrides.renameBranch ?? vi.fn().mockResolvedValue(undefined);
   const listBranches = overrides.listBranches ?? vi.fn().mockResolvedValue([]);
@@ -73,12 +75,12 @@ describe('registerForkHandlers', () => {
       const forkThread = vi.fn().mockResolvedValue({ id: 'fork-id' });
       const { handlers } = makeStubs({ forkThread });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.forkThread, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.forkThread, {
         sourceThreadId: 'src',
         fromMessageId: 'msg-1',
         includeHistory: true,
         isSideChat: false,
-      }) as { success: boolean; threadId: string };
+      })) as { success: boolean; threadId: string };
 
       expect(result.success).toBe(true);
       expect(result.threadId).toBe('fork-id');
@@ -101,20 +103,18 @@ describe('registerForkHandlers', () => {
         isSideChat: true,
       });
 
-      expect(forkThread).toHaveBeenCalledWith(
-        expect.objectContaining({ isSideChat: true }),
-      );
+      expect(forkThread).toHaveBeenCalledWith(expect.objectContaining({ isSideChat: true }));
     });
 
     it('returns { success: false } when the store throws', async () => {
       const forkThread = vi.fn().mockRejectedValue(new Error('Thread not found: src'));
       const { handlers } = makeStubs({ forkThread });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.forkThread, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.forkThread, {
         sourceThreadId: 'src',
         fromMessageId: 'msg-1',
         includeHistory: true,
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Thread not found');
@@ -155,10 +155,10 @@ describe('registerForkHandlers', () => {
       const renameBranch = vi.fn().mockResolvedValue(undefined);
       const { handlers } = makeStubs({ renameBranch });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.renameBranch, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.renameBranch, {
         threadId: 'thread-1',
         name: 'my feature branch',
-      }) as { success: boolean };
+      })) as { success: boolean };
 
       expect(result.success).toBe(true);
       expect(renameBranch).toHaveBeenCalledWith('thread-1', 'my feature branch');
@@ -168,10 +168,10 @@ describe('registerForkHandlers', () => {
       const renameBranch = vi.fn().mockRejectedValue(new Error('oops'));
       const { handlers } = makeStubs({ renameBranch });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.renameBranch, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.renameBranch, {
         threadId: 'thread-1',
         name: 'my branch',
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('oops');
@@ -198,9 +198,9 @@ describe('registerForkHandlers', () => {
       const listBranches = vi.fn().mockResolvedValue([node]);
       const { handlers } = makeStubs({ listBranches });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
         rootThreadId: 'root',
-      }) as { success: boolean; branches: BranchNode[] };
+      })) as { success: boolean; branches: BranchNode[] };
 
       expect(result.success).toBe(true);
       expect(result.branches).toHaveLength(1);
@@ -211,9 +211,9 @@ describe('registerForkHandlers', () => {
     it('returns empty array when no branches exist', async () => {
       const { handlers } = makeStubs();
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
         rootThreadId: 'root',
-      }) as { success: boolean; branches: BranchNode[] };
+      })) as { success: boolean; branches: BranchNode[] };
 
       expect(result.success).toBe(true);
       expect(result.branches).toHaveLength(0);
@@ -223,9 +223,9 @@ describe('registerForkHandlers', () => {
       const listBranches = vi.fn().mockRejectedValue(new Error('db error'));
       const { handlers } = makeStubs({ listBranches });
 
-      const result = await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
+      const result = (await call(handlers, AGENT_CHAT_INVOKE_CHANNELS.listBranches, {
         rootThreadId: 'root',
-      }) as { success: boolean; error: string };
+      })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('db error');

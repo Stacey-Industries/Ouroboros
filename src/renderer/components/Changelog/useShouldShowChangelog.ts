@@ -55,14 +55,17 @@ export function useShouldShowChangelog(): ShouldShowResult {
   const [moduleAbsent, setModuleAbsent] = useState(false);
 
   useEffect(() => {
-    window.electronAPI.app.getVersion().then(setCurrentVersion).catch(() => {
-      // Non-fatal — show nothing if version fetch fails.
-    });
+    window.electronAPI.app
+      .getVersion()
+      .then(setCurrentVersion)
+      .catch(() => {
+        // Non-fatal — show nothing if version fetch fails.
+      });
   }, []);
 
   useEffect(() => {
     import('@renderer/generated/changelog')
-      .then(m => setMod(m as unknown as ChangelogModule))
+      .then((m) => setMod(m as unknown as ChangelogModule))
       .catch(() => setModuleAbsent(true));
   }, []);
 

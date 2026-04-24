@@ -65,16 +65,16 @@ describe('useGraphNeighbourhood', () => {
   it('does not fetch when enabled=false', async () => {
     const invokeFn = vi.fn().mockResolvedValue(SUCCESS_DATA);
     setApi({ graph: { getNeighbourhood: invokeFn } });
-    renderHook(() =>
-      useGraphNeighbourhood({ symbolId: 'fn1', depth: 1, enabled: false }),
-    );
+    renderHook(() => useGraphNeighbourhood({ symbolId: 'fn1', depth: 1, enabled: false }));
     await act(async () => {});
     expect(invokeFn).not.toHaveBeenCalled();
   });
 
   it('sets loading=true then resolves data on success', async () => {
     let resolve!: (v: GraphNeighbourhoodResult) => void;
-    const deferred = new Promise<GraphNeighbourhoodResult>((r) => { resolve = r; });
+    const deferred = new Promise<GraphNeighbourhoodResult>((r) => {
+      resolve = r;
+    });
     setApi({ graph: { getNeighbourhood: vi.fn(() => deferred) } });
 
     const { result } = renderHook(() =>
@@ -83,7 +83,10 @@ describe('useGraphNeighbourhood', () => {
 
     expect(result.current.loading).toBe(true);
 
-    await act(async () => { resolve(SUCCESS_DATA); await deferred; });
+    await act(async () => {
+      resolve(SUCCESS_DATA);
+      await deferred;
+    });
 
     expect(result.current.loading).toBe(false);
     expect(result.current.data).toEqual(SUCCESS_DATA);
@@ -104,8 +107,7 @@ describe('useGraphNeighbourhood', () => {
     setApi({ graph: { getNeighbourhood: invokeFn } });
 
     const { result, rerender } = renderHook(
-      ({ id }: { id: string }) =>
-        useGraphNeighbourhood({ symbolId: id, depth: 1, enabled: true }),
+      ({ id }: { id: string }) => useGraphNeighbourhood({ symbolId: id, depth: 1, enabled: true }),
       { initialProps: { id: 'fn1' } },
     );
     await act(async () => {});
@@ -122,8 +124,7 @@ describe('useGraphNeighbourhood', () => {
     setApi({ graph: { getNeighbourhood: invokeFn } });
 
     const { rerender } = renderHook(
-      ({ id }: { id: string }) =>
-        useGraphNeighbourhood({ symbolId: id, depth: 1, enabled: true }),
+      ({ id }: { id: string }) => useGraphNeighbourhood({ symbolId: id, depth: 1, enabled: true }),
       { initialProps: { id: 'fn1' } },
     );
     await act(async () => {});
@@ -143,7 +144,9 @@ describe('useGraphNeighbourhood', () => {
     await act(async () => {});
     expect(result.current.data).toEqual(SUCCESS_DATA);
 
-    act(() => { result.current.clear(); });
+    act(() => {
+      result.current.clear();
+    });
 
     expect(result.current.data).toBeNull();
     expect(result.current.loading).toBe(false);
@@ -170,9 +173,7 @@ describe('useGraphNeighbourhood', () => {
   it('passes depth to the IPC call', async () => {
     const invokeFn = vi.fn().mockResolvedValue(SUCCESS_DATA);
     setApi({ graph: { getNeighbourhood: invokeFn } });
-    renderHook(() =>
-      useGraphNeighbourhood({ symbolId: 'fn1', depth: 2, enabled: true }),
-    );
+    renderHook(() => useGraphNeighbourhood({ symbolId: 'fn1', depth: 2, enabled: true }));
     await act(async () => {});
     expect(invokeFn).toHaveBeenCalledWith('fn1', 2);
   });

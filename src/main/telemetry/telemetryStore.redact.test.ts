@@ -71,9 +71,9 @@ describe('redactPayload', () => {
     const result = redactPayload({
       a: { b: { c: { password: 'deep' } } },
     }) as Record<string, unknown>;
-    const inner = (result.a as Record<string, unknown>);
-    const deeper = (inner.b as Record<string, unknown>);
-    const deepest = (deeper.c as Record<string, unknown>);
+    const inner = result.a as Record<string, unknown>;
+    const deeper = inner.b as Record<string, unknown>;
+    const deepest = deeper.c as Record<string, unknown>;
     expect(deepest.password).toBe('[REDACTED]');
   });
 
@@ -90,7 +90,8 @@ describe('redactPayload', () => {
   });
 
   it('redacts JWT-shaped string values', () => {
-    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const jwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     const result = redactPayload({ bearerToken: jwt }) as Record<string, unknown>;
     expect(result.bearerToken).toBe('[REDACTED]');
   });
@@ -199,7 +200,8 @@ describe('enqueueEvent redacts payload before storing', () => {
   });
 
   it('stores [REDACTED] for JWT-shaped value in payload', () => {
-    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const jwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     const store = openTelemetryStore(tmpDir);
     const payload: HookPayload = {
       type: 'pre_tool_use',

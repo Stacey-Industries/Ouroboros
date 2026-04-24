@@ -75,10 +75,13 @@ function useNavigationActions(
   navigateBack: () => void;
   navigateInto: (command: Command) => void;
 } {
-  const navigateInto = useCallback((command: Command) => {
-    setNavStack((previous) => [...previous, command]);
-    resetSearch();
-  }, [resetSearch, setNavStack]);
+  const navigateInto = useCallback(
+    (command: Command) => {
+      setNavStack((previous) => [...previous, command]);
+      resetSearch();
+    },
+    [resetSearch, setNavStack],
+  );
   const navigateBack = useCallback(() => {
     setNavStack((previous) => previous.slice(0, -1));
     resetSearch();
@@ -96,38 +99,47 @@ function useExecuteCommand({
   onClose: () => void;
   onExecute: (command: Command) => Promise<void>;
 }): (command: Command) => Promise<void> {
-  return useCallback(async (command: Command) => {
-    if (hasChildren(command)) {
-      navigateInto(command);
-      return;
-    }
+  return useCallback(
+    async (command: Command) => {
+      if (hasChildren(command)) {
+        navigateInto(command);
+        return;
+      }
 
-    onClose();
-    await onExecute(command);
-  }, [navigateInto, onClose, onExecute]);
+      onClose();
+      await onExecute(command);
+    },
+    [navigateInto, onClose, onExecute],
+  );
 }
 
 function useHoveredSelection(
   matches: CommandMatch[],
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
 ): (command: Command) => void {
-  return useCallback((command: Command) => {
-    const index = matches.findIndex((match) => match.command.id === command.id);
+  return useCallback(
+    (command: Command) => {
+      const index = matches.findIndex((match) => match.command.id === command.id);
 
-    if (index !== -1) {
-      setSelectedIndex(index);
-    }
-  }, [matches, setSelectedIndex]);
+      if (index !== -1) {
+        setSelectedIndex(index);
+      }
+    },
+    [matches, setSelectedIndex],
+  );
 }
 
 function useQueryChange(
   setQuery: React.Dispatch<React.SetStateAction<string>>,
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
 ): (value: string) => void {
-  return useCallback((value: string) => {
-    setQuery(value);
-    setSelectedIndex(0);
-  }, [setQuery, setSelectedIndex]);
+  return useCallback(
+    (value: string) => {
+      setQuery(value);
+      setSelectedIndex(0);
+    },
+    [setQuery, setSelectedIndex],
+  );
 }
 
 type LifecycleOptions = {
@@ -192,7 +204,9 @@ function useScrollIntoView(
   selectedIndex: number,
 ): void {
   useEffect(() => {
-    const item = listRef.current?.querySelector(`[data-idx="${selectedIndex}"]`) as HTMLElement | null;
+    const item = listRef.current?.querySelector(
+      `[data-idx="${selectedIndex}"]`,
+    ) as HTMLElement | null;
     item?.scrollIntoView({ block: 'nearest' });
   }, [listRef, selectedIndex]);
 }
@@ -214,29 +228,26 @@ function useKeyboardNav({
 }: KeyboardNavOptions): (event: React.KeyboardEvent<HTMLInputElement>) => void {
   const { handleEscape, openSelectedChild, runSelectedCommand } = useKeyboardCallbacks(options);
 
-  return useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    const handler = getKeyboardHandler({
-      eventKey: event.key,
-      handleEscape,
-      matchesLength: options.matches.length,
-      openSelectedChild,
-      runSelectedCommand,
-      setSelectedIndex,
-    });
+  return useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      const handler = getKeyboardHandler({
+        eventKey: event.key,
+        handleEscape,
+        matchesLength: options.matches.length,
+        openSelectedChild,
+        runSelectedCommand,
+        setSelectedIndex,
+      });
 
-    if (!handler) {
-      return;
-    }
+      if (!handler) {
+        return;
+      }
 
-    event.preventDefault();
-    handler();
-  }, [
-    handleEscape,
-    openSelectedChild,
-    options.matches.length,
-    runSelectedCommand,
-    setSelectedIndex,
-  ]);
+      event.preventDefault();
+      handler();
+    },
+    [handleEscape, openSelectedChild, options.matches.length, runSelectedCommand, setSelectedIndex],
+  );
 }
 
 function useKeyboardCallbacks({

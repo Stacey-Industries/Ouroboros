@@ -56,8 +56,10 @@ function makeState(): MonitorState {
 // ── Pair report builder ───────────────────────────────────────────────────────
 
 interface PairReportArgs {
-  sidA: string; entryA: { files: Set<string> };
-  sidB: string; entryB: { files: Set<string> };
+  sidA: string;
+  entryA: { files: Set<string> };
+  sidB: string;
+  entryB: { files: Set<string> };
   symsA: GraphNode[];
   symsB: GraphNode[];
   hot: boolean;
@@ -68,8 +70,15 @@ function buildPairReport(args: PairReportArgs): AgentConflictReport {
   const overlappingFiles = Array.from(entryA.files).filter((f) => entryB.files.has(f));
   const overlappingSymbols = hot ? buildOverlapSymbols(symsA, symsB) : [];
   const severity = hot ? severityForSymbols(symsA, symsB) : 'warning';
-  return { sessionA: sidA, sessionB: sidB, overlappingSymbols, overlappingFiles,
-    severity, updatedAt: Date.now(), fileOnly: !hot };
+  return {
+    sessionA: sidA,
+    sessionB: sidB,
+    overlappingSymbols,
+    overlappingFiles,
+    severity,
+    updatedAt: Date.now(),
+    fileOnly: !hot,
+  };
 }
 
 // ── Dismiss check ─────────────────────────────────────────────────────────────
@@ -97,9 +106,11 @@ async function computePairReports(
 ): Promise<AgentConflictReport[]> {
   const symbolCache = new Map<string, Awaited<ReturnType<typeof computeSymbols>>>();
   if (hot) {
-    await Promise.all(rootSessions.map(async ({ sessionId, entry }) => {
-      symbolCache.set(sessionId, await computeSymbols(root, sessionId, Array.from(entry.files)));
-    }));
+    await Promise.all(
+      rootSessions.map(async ({ sessionId, entry }) => {
+        symbolCache.set(sessionId, await computeSymbols(root, sessionId, Array.from(entry.files)));
+      }),
+    );
   }
   const reports: AgentConflictReport[] = [];
   for (let i = 0; i < rootSessions.length; i++) {
@@ -130,11 +141,7 @@ async function computeReportsForRoot(
   return computePairReports(state, root, rootSessions, isGraphHot(root));
 }
 
-async function recompute(
-  state: MonitorState,
-  emitter: EventEmitter,
-  root: string,
-): Promise<void> {
+async function recompute(state: MonitorState, emitter: EventEmitter, root: string): Promise<void> {
   try {
     const reports = await computeReportsForRoot(state, root);
     const sessionFiles: Record<string, string[]> = {};
@@ -151,11 +158,7 @@ async function recompute(
 
 // ── Monitor method implementations ───────────────────────────────────────────
 
-function scheduleRecompute(
-  state: MonitorState,
-  emitter: EventEmitter,
-  root: string,
-): void {
+function scheduleRecompute(state: MonitorState, emitter: EventEmitter, root: string): void {
   const existing = state.debounceTimers.get(root);
   if (existing) clearTimeout(existing);
   const timer = setTimeout(() => {
@@ -165,7 +168,11 @@ function scheduleRecompute(
   state.debounceTimers.set(root, timer);
 }
 
-interface EditArgs { projectRoot: string; sessionId: string; filePath: string }
+interface EditArgs {
+  projectRoot: string;
+  sessionId: string;
+  filePath: string;
+}
 
 function implRecordEdit(state: MonitorState, emitter: EventEmitter, args: EditArgs): void {
   const { projectRoot, sessionId, filePath } = args;
@@ -189,10 +196,7 @@ function implDismiss(state: MonitorState, sessionA: string, sessionB: string): v
   log.info(`[conflictMonitor] dismissed pair ${sessionA} ↔ ${sessionB}`);
 }
 
-function implGetSnapshot(
-  state: MonitorState,
-  projectRoot?: string,
-): AgentConflictSnapshot {
+function implGetSnapshot(state: MonitorState, projectRoot?: string): AgentConflictSnapshot {
   if (!projectRoot) return state.cachedSnapshot;
   const reports = state.cachedSnapshot.reports.filter((r) =>
     state.sessions.has(rootSessionKey(projectRoot, r.sessionA)),
@@ -214,17 +218,20 @@ export function createConflictMonitor(): ConflictMonitor {
   const emitter = new EventEmitter() as ConflictMonitor;
   const state = makeState();
 
-  (emitter as unknown as { recordEdit: ConflictMonitor['recordEdit'] }).recordEdit =
-    (root, sid, file) => implRecordEdit(state, emitter, { projectRoot: root, sessionId: sid, filePath: file });
+  (emitter as unknown as { recordEdit: ConflictMonitor['recordEdit'] }).recordEdit = (
+    root,
+    sid,
+    file,
+  ) => implRecordEdit(state, emitter, { projectRoot: root, sessionId: sid, filePath: file });
 
-  (emitter as unknown as { dismiss: ConflictMonitor['dismiss'] }).dismiss =
-    (a, b) => implDismiss(state, a, b);
+  (emitter as unknown as { dismiss: ConflictMonitor['dismiss'] }).dismiss = (a, b) =>
+    implDismiss(state, a, b);
 
-  (emitter as unknown as { getSnapshot: ConflictMonitor['getSnapshot'] }).getSnapshot =
-    (root?) => implGetSnapshot(state, root);
+  (emitter as unknown as { getSnapshot: ConflictMonitor['getSnapshot'] }).getSnapshot = (root?) =>
+    implGetSnapshot(state, root);
 
-  (emitter as unknown as { dispose: ConflictMonitor['dispose'] }).dispose =
-    () => implDispose(state, emitter);
+  (emitter as unknown as { dispose: ConflictMonitor['dispose'] }).dispose = () =>
+    implDispose(state, emitter);
 
   return emitter;
 }

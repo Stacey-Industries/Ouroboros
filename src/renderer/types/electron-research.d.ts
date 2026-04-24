@@ -66,8 +66,7 @@ export interface ResearchAPI {
   getDashboardMetrics(
     range: '7d' | '30d' | 'all',
   ): Promise<
-    | { success: true; metrics: ResearchDashboardMetrics }
-    | { success: false; error: string }
+    { success: true; metrics: ResearchDashboardMetrics } | { success: false; error: string }
   >;
 }
 

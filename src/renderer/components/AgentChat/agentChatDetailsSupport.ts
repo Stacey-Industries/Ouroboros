@@ -96,7 +96,9 @@ export function shortenId(value: string | undefined): string {
   return value.length > 14 ? `${value.slice(0, 12)}…` : value;
 }
 
-export function getLatestLink(thread: AgentChatThreadRecord): AgentChatOrchestrationLink | undefined {
+export function getLatestLink(
+  thread: AgentChatThreadRecord,
+): AgentChatOrchestrationLink | undefined {
   if (thread.latestOrchestration) {
     return thread.latestOrchestration;
   }
@@ -149,7 +151,10 @@ function getSummaryContextTokens(contextPacket: ContextPacket | null): number | 
   return contextPacket?.budget.estimatedTokens;
 }
 
-function getSummaryNextAction(session: TaskSessionRecord | null, result: TaskResult | null): string | null {
+function getSummaryNextAction(
+  session: TaskSessionRecord | null,
+  result: TaskResult | null,
+): string | null {
   return formatActionLabel(result?.nextSuggestedAction ?? session?.nextSuggestedAction);
 }
 
@@ -180,7 +185,10 @@ export function buildSummaryData(
   };
 }
 
-export function formatContextValue(summary: AgentChatSummaryData, formatCount: (value: number) => string): string {
+export function formatContextValue(
+  summary: AgentChatSummaryData,
+  formatCount: (value: number) => string,
+): string {
   const segments = [`${formatCount(summary.contextFiles ?? 0)} files`];
   if (summary.contextOmitted) {
     segments.push(`${formatCount(summary.contextOmitted)} omitted`);
@@ -225,12 +233,25 @@ export function buildSummaryPills(args: {
   return pills;
 }
 
-export function buildResultRows(result: TaskResult): Array<{ label: string; value: string | null }> {
+export function buildResultRows(
+  result: TaskResult,
+): Array<{ label: string; value: string | null }> {
   return [
     { label: 'Status', value: result.status },
     { label: 'Next', value: formatActionLabel(result.nextSuggestedAction) },
-    { label: 'Files', value: result.diffSummary ? `${result.diffSummary.totalFiles.toLocaleString()} changed` : null },
-    { label: 'Issues', value: result.unresolvedIssues.length > 0 ? `${result.unresolvedIssues.length.toLocaleString()} unresolved` : null },
+    {
+      label: 'Files',
+      value: result.diffSummary
+        ? `${result.diffSummary.totalFiles.toLocaleString()} changed`
+        : null,
+    },
+    {
+      label: 'Issues',
+      value:
+        result.unresolvedIssues.length > 0
+          ? `${result.unresolvedIssues.length.toLocaleString()} unresolved`
+          : null,
+    },
   ];
 }
 

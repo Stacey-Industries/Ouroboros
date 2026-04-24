@@ -23,7 +23,11 @@ function useAboutModal(): { isOpen: boolean; data: AboutData | null; close: () =
   useEffect(() => {
     const handler = (e: Event): void => {
       const { version, platform } = (e as CustomEvent).detail ?? {};
-      const sys = window.electronAPI?.app?.getSystemInfo?.() ?? { electron: '', chrome: '', node: '' };
+      const sys = window.electronAPI?.app?.getSystemInfo?.() ?? {
+        electron: '',
+        chrome: '',
+        node: '',
+      };
       setData({ version: version ?? '', platform: platform ?? '', ...sys });
       setIsOpen(true);
     };
@@ -49,8 +53,13 @@ const GITHUB_URL = 'https://github.com/hesnotsoharry/Ouroboros';
 function AboutHeader({ version }: { version: string }): React.ReactElement {
   return (
     <div className="flex flex-col items-center pt-6 pb-4 px-6">
-      <img src={ouroborosLogo} alt="Ouroboros" className="select-none" draggable={false}
-        style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 12 }} />
+      <img
+        src={ouroborosLogo}
+        alt="Ouroboros"
+        className="select-none"
+        draggable={false}
+        style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 12 }}
+      />
       <h2 className="text-text-semantic-primary text-base font-semibold">Ouroboros</h2>
       <span className="text-text-semantic-muted text-xs mt-1">Version {version}</span>
     </div>
@@ -93,7 +102,13 @@ function AboutActions({ onClose }: { onClose: () => void }): React.ReactElement 
   );
 }
 
-function AboutContent({ data, onClose }: { data: AboutData; onClose: () => void }): React.ReactElement {
+function AboutContent({
+  data,
+  onClose,
+}: {
+  data: AboutData;
+  onClose: () => void;
+}): React.ReactElement {
   return (
     <div
       className="bg-surface-panel border border-border-semantic rounded-lg shadow-2xl"

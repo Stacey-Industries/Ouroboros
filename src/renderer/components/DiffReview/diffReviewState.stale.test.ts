@@ -82,7 +82,9 @@ beforeEach(() => {
       files: {
         onFileChange: vi.fn((cb) => {
           fileChangeCallback = cb;
-          return () => { fileChangeCallback = null; };
+          return () => {
+            fileChangeCallback = null;
+          };
         }),
       },
     },
@@ -203,7 +205,9 @@ describe('useConfirmStaleOp', () => {
     const dispatch = vi.fn();
 
     const { result } = renderHook(() => useConfirmStaleOp(state, dispatch));
-    act(() => { result.current.confirmStaleOp(); });
+    act(() => {
+      result.current.confirmStaleOp();
+    });
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'DISMISS_STALE_OP' });
     expect(mockStageHunk).toHaveBeenCalledWith('/proj', 'diff patch text');
@@ -217,7 +221,9 @@ describe('useConfirmStaleOp', () => {
     const dispatch = vi.fn();
 
     const { result } = renderHook(() => useConfirmStaleOp(state, dispatch));
-    act(() => { result.current.confirmStaleOp(); });
+    act(() => {
+      result.current.confirmStaleOp();
+    });
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'DISMISS_STALE_OP' });
     expect(mockRevertHunk).toHaveBeenCalledWith('/proj', 'diff patch text');
@@ -230,7 +236,9 @@ describe('useConfirmStaleOp', () => {
     const dispatch = vi.fn();
 
     const { result } = renderHook(() => useConfirmStaleOp(state, dispatch));
-    act(() => { result.current.dismissStaleOp(); });
+    act(() => {
+      result.current.dismissStaleOp();
+    });
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'DISMISS_STALE_OP' });
     expect(mockStageHunk).not.toHaveBeenCalled();
@@ -241,7 +249,9 @@ describe('useConfirmStaleOp', () => {
     const dispatch = vi.fn();
 
     const { result } = renderHook(() => useConfirmStaleOp(state, dispatch));
-    act(() => { result.current.confirmStaleOp(); });
+    act(() => {
+      result.current.confirmStaleOp();
+    });
 
     expect(dispatch).not.toHaveBeenCalled();
     expect(mockStageHunk).not.toHaveBeenCalled();

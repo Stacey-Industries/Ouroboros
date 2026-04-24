@@ -143,7 +143,9 @@ async function sendMessageWithBridge(
   const validationError = validateSendRequest(request);
   if (validationError) return buildSendFailureResult({ error: validationError });
 
-  const slashResult = dispatchSlashCommand(request.content.trim(), { sessionId: request.threadId ?? '' });
+  const slashResult = dispatchSlashCommand(request.content.trim(), {
+    sessionId: request.threadId ?? '',
+  });
   if (slashResult) return slashResult;
 
   const conflictError = findActiveThreadConflict(runtime.activeSends, request.threadId);

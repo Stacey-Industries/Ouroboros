@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  FOCUS_AGENT_CHAT_EVENT,
-  OPEN_AGENT_CHAT_PANEL_EVENT,
-} from '../../hooks/appEventNames';
+import { FOCUS_AGENT_CHAT_EVENT, OPEN_AGENT_CHAT_PANEL_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatDefaultView } from '../../types/electron';
 
 export interface AgentChatDefaultViewState {
@@ -19,13 +16,16 @@ export function useAgentChatDefaultView(): AgentChatDefaultViewState {
   useEffect(() => {
     if (hasUserSelectionRef.current) return;
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
-      window.electronAPI.config.getAll()
+      window.electronAPI.config
+        .getAll()
         .then((cfg) => {
           if (!hasUserSelectionRef.current && cfg?.agentChatSettings?.defaultView) {
             setActiveViewState(cfg.agentChatSettings.defaultView);
           }
         })
-        .catch(() => { /* default 'chat' */ });
+        .catch(() => {
+          /* default 'chat' */
+        });
     }
   }, []);
 

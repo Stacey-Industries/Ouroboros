@@ -82,12 +82,8 @@ describe('useStreamCompletionNotifications', () => {
 
   async function mountHook(config: Record<string, unknown> | null) {
     const { renderHook } = await import('@testing-library/react');
-    const { useStreamCompletionNotifications } = await import(
-      './useStreamCompletionNotifications'
-    );
-    const result = renderHook(() =>
-      useStreamCompletionNotifications(config as never),
-    );
+    const { useStreamCompletionNotifications } = await import('./useStreamCompletionNotifications');
+    const result = renderHook(() => useStreamCompletionNotifications(config as never));
     return result;
   }
 
@@ -186,9 +182,7 @@ describe('useStreamCompletionNotifications', () => {
 
   it('returns cleanup from onStreamChunk on unmount', async () => {
     const { renderHook } = await import('@testing-library/react');
-    const { useStreamCompletionNotifications } = await import(
-      './useStreamCompletionNotifications'
-    );
+    const { useStreamCompletionNotifications } = await import('./useStreamCompletionNotifications');
     const { unmount } = renderHook(() =>
       useStreamCompletionNotifications({ chat: { desktopNotifications: true } } as never),
     );

@@ -38,7 +38,14 @@ interface ModeOptionProps {
   onSelect: () => void;
 }
 
-function ModeOption({ value, label, description, checked, disabled, onSelect }: ModeOptionProps): React.ReactElement {
+function ModeOption({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
   return (
     <label
       htmlFor={`research-mode-${value}`}
@@ -84,12 +91,14 @@ const MODE_OPTIONS: Array<{ value: ResearchMode; label: string; description: str
   {
     value: 'conservative',
     label: 'Conservative',
-    description: 'Research only when the pre-tool evaluator is highly confident it will improve the response.',
+    description:
+      'Research only when the pre-tool evaluator is highly confident it will improve the response.',
   },
   {
     value: 'aggressive',
     label: 'Aggressive',
-    description: 'Research proactively before most tool calls. Per-session Aggressive mode can override this even if global is disabled.',
+    description:
+      'Research proactively before most tool calls. Per-session Aggressive mode can override this even if global is disabled.',
   },
 ];
 
@@ -99,7 +108,11 @@ interface ModeGroupProps {
   onSelect: (m: ResearchMode) => void;
 }
 
-function ResearchDefaultModeGroup({ currentMode, disabled, onSelect }: ModeGroupProps): React.ReactElement {
+function ResearchDefaultModeGroup({
+  currentMode,
+  disabled,
+  onSelect,
+}: ModeGroupProps): React.ReactElement {
   return (
     <section style={{ marginTop: '12px' }}>
       <SectionLabel>Default mode for new sessions</SectionLabel>
@@ -160,14 +173,12 @@ export function ResearchSettings({ draft, onChange }: ResearchSettingsProps): Re
 
       {!globalEnabled && (
         <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-          Note: per-session Aggressive mode (Ctrl+Alt+R in chat) can enable research for a single session even when the global toggle is off.
+          Note: per-session Aggressive mode (Ctrl+Alt+R in chat) can enable research for a single
+          session even when the global toggle is off.
         </p>
       )}
 
-      <ResearchSettingsAdvanced
-        settings={settings}
-        onUpdate={(patch) => updateSettings(patch)}
-      />
+      <ResearchSettingsAdvanced settings={settings} onUpdate={(patch) => updateSettings(patch)} />
     </div>
   );
 }

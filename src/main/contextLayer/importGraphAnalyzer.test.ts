@@ -13,13 +13,19 @@ import { refineModuleAssignments } from './importGraphAnalyzerSupport';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeFile(
-  relativePath: string,
-  imports: string[] = [],
-): RootRepoIndexSnapshot['files'][0] {
+function makeFile(relativePath: string, imports: string[] = []): RootRepoIndexSnapshot['files'][0] {
   const dotIndex = relativePath.lastIndexOf('.');
   const extension = dotIndex >= 0 ? relativePath.slice(dotIndex) : '';
-  return { relativePath, extension, imports, size: 100, modifiedAt: 0, rootPath: '/repo', path: `/repo/${relativePath}`, language: 'typescript' };
+  return {
+    relativePath,
+    extension,
+    imports,
+    size: 100,
+    modifiedAt: 0,
+    rootPath: '/repo',
+    path: `/repo/${relativePath}`,
+    language: 'typescript',
+  };
 }
 
 function makeRoot(files: RootRepoIndexSnapshot['files']): RootRepoIndexSnapshot {
@@ -48,30 +54,24 @@ function makeGraph(
 
 describe('buildResolvedImportGraph — relative import resolution', () => {
   it('resolves a sibling relative import', () => {
-    const root = makeRoot([
-      makeFile('src/a.ts', ['./b']),
-      makeFile('src/b.ts'),
-    ]);
+    const root = makeRoot([makeFile('src/a.ts', ['./b']), makeFile('src/b.ts')]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.edges).toHaveLength(1);
     expect(graph.edges[0]).toMatchObject({ fromFile: 'src/a.ts', toFile: 'src/b.ts' });
   });
 
   it('resolves a parent-relative import (../)', () => {
-    const root = makeRoot([
-      makeFile('src/utils/helper.ts', ['../core']),
-      makeFile('src/core.ts'),
-    ]);
+    const root = makeRoot([makeFile('src/utils/helper.ts', ['../core']), makeFile('src/core.ts')]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.edges).toHaveLength(1);
-    expect(graph.edges[0]).toMatchObject({ fromFile: 'src/utils/helper.ts', toFile: 'src/core.ts' });
+    expect(graph.edges[0]).toMatchObject({
+      fromFile: 'src/utils/helper.ts',
+      toFile: 'src/core.ts',
+    });
   });
 
   it('resolves import without extension by appending .ts', () => {
-    const root = makeRoot([
-      makeFile('src/index.ts', ['./utils']),
-      makeFile('src/utils.ts'),
-    ]);
+    const root = makeRoot([makeFile('src/index.ts', ['./utils']), makeFile('src/utils.ts')]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.edges[0]).toMatchObject({ toFile: 'src/utils.ts' });
   });
@@ -86,18 +86,13 @@ describe('buildResolvedImportGraph — relative import resolution', () => {
   });
 
   it('resolves import to .tsx file', () => {
-    const root = makeRoot([
-      makeFile('src/app.ts', ['./Button']),
-      makeFile('src/Button.tsx'),
-    ]);
+    const root = makeRoot([makeFile('src/app.ts', ['./Button']), makeFile('src/Button.tsx')]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.edges[0]).toMatchObject({ toFile: 'src/Button.tsx' });
   });
 
   it('ignores self-imports', () => {
-    const root = makeRoot([
-      makeFile('src/a.ts', ['./a']),
-    ]);
+    const root = makeRoot([makeFile('src/a.ts', ['./a'])]);
     const graph = buildResolvedImportGraph([root]);
     // Self-import should be filtered out
     expect(graph.edges).toHaveLength(0);
@@ -123,9 +118,7 @@ describe('buildResolvedImportGraph — relative import resolution', () => {
   });
 
   it('counts unresolved imports', () => {
-    const root = makeRoot([
-      makeFile('src/a.ts', ['./missing', './alsoMissing']),
-    ]);
+    const root = makeRoot([makeFile('src/a.ts', ['./missing', './alsoMissing'])]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.unresolvedCount).toBe(2);
     expect(graph.totalRelativeImports).toBe(2);
@@ -133,9 +126,7 @@ describe('buildResolvedImportGraph — relative import resolution', () => {
   });
 
   it('ignores absolute/package imports (no leading dot)', () => {
-    const root = makeRoot([
-      makeFile('src/a.ts', ['react', 'lodash']),
-    ]);
+    const root = makeRoot([makeFile('src/a.ts', ['react', 'lodash'])]);
     const graph = buildResolvedImportGraph([root]);
     // Package imports can't be resolved to local files
     expect(graph.edges).toHaveLength(0);
@@ -187,10 +178,7 @@ describe('buildResolvedImportGraph — adjacency maps', () => {
 
 describe('buildResolvedImportGraph — circular imports', () => {
   it('handles direct circular imports (A → B → A)', () => {
-    const root = makeRoot([
-      makeFile('src/a.ts', ['./b']),
-      makeFile('src/b.ts', ['./a']),
-    ]);
+    const root = makeRoot([makeFile('src/a.ts', ['./b']), makeFile('src/b.ts', ['./a'])]);
     const graph = buildResolvedImportGraph([root]);
     expect(graph.edges).toHaveLength(2);
     const fromA = graph.edges.find((e) => e.fromFile === 'src/a.ts');
@@ -365,9 +353,7 @@ describe('refineModuleAssignments', () => {
   });
 
   it('converges immediately when graph has no edges', () => {
-    const modules = [
-      { id: 'A', files: [{ relativePath: 'a/x.ts' }, { relativePath: 'a/y.ts' }] },
-    ];
+    const modules = [{ id: 'A', files: [{ relativePath: 'a/x.ts' }, { relativePath: 'a/y.ts' }] }];
     const graph = makeGraph([]);
     const result = refineModuleAssignments(modules, graph);
     expect(result.iterations).toBe(1);
@@ -474,9 +460,7 @@ describe('refineModuleAssignments', () => {
   });
 
   it('respects maxIterations option', () => {
-    const modules = [
-      { id: 'A', files: [{ relativePath: 'a/x.ts' }, { relativePath: 'a/y.ts' }] },
-    ];
+    const modules = [{ id: 'A', files: [{ relativePath: 'a/x.ts' }, { relativePath: 'a/y.ts' }] }];
     const graph = makeGraph([]);
     const result = refineModuleAssignments(modules, graph, { maxIterations: 3 });
     expect(result.iterations).toBeLessThanOrEqual(3);

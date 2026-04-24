@@ -21,65 +21,57 @@ function truncate(text: string, max: number): string {
 
 /* ---------- Sub-components ---------- */
 
-function SubToolStatusIcon({ status }: { status: AgentChatSubToolActivity['status'] }): React.ReactElement {
-  if (status === 'running') {
-    return (
-      <svg
-        className="h-3 w-3 shrink-0 animate-spin text-interactive-accent"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
-        <circle
-          cx="8" cy="8" r="6.5"
-          stroke="currentColor" strokeWidth="1.5"
-          strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M4 4l8 8M12 4l-8 8"
-          stroke="currentColor" strokeWidth="1.5"
-          strokeLinecap="round" strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
+function SpinnerIcon(): React.ReactElement {
   return (
-    <svg className="h-3 w-3 shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M3.5 8.5L6.5 11.5L12.5 4.5"
-        stroke="currentColor" strokeWidth="1.5"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
+    <svg className="h-3 w-3 shrink-0 animate-spin text-interactive-accent" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
     </svg>
   );
+}
+
+function ErrorCrossIcon(): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
+      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CheckmarkIcon(): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
+      <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SubToolStatusIcon({ status }: { status: AgentChatSubToolActivity['status'] }): React.ReactElement {
+  if (status === 'running') return <SpinnerIcon />;
+  if (status === 'error') return <ErrorCrossIcon />;
+  return <CheckmarkIcon />;
 }
 
 function SubToolIcon({ name }: { name: string }): React.ReactElement {
   return (
     TOOL_ICON_BUILDERS.find((entry) => entry.names.has(name))?.render() ?? (
-      <svg
-        className="h-3 w-3 shrink-0 text-text-semantic-muted"
-        viewBox="0 0 14 14"
-        fill="none"
-      >
+      <svg className="h-3 w-3 shrink-0 text-text-semantic-muted" viewBox="0 0 14 14" fill="none">
         <path
           d="M9.5 1.5a4 4 0 00-4.5 4.5L1.5 9.5 4 12l3.5-3.5a4 4 0 004.5-4.5L9.5 6.5 7 4l2.5-2.5z"
-          stroke="currentColor" strokeWidth="1.5"
-          strokeLinecap="round" strokeLinejoin="round"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     )
   );
 }
 
-function SubToolDetail({ subTool }: { subTool: AgentChatSubToolActivity }): React.ReactElement | null {
+function SubToolDetail({
+  subTool,
+}: {
+  subTool: AgentChatSubToolActivity;
+}): React.ReactElement | null {
   const detail = subTool.filePath
     ? shortenPath(subTool.filePath)
     : subTool.inputSummary
@@ -90,9 +82,7 @@ function SubToolDetail({ subTool }: { subTool: AgentChatSubToolActivity }): Reac
 
   return (
     <>
-      {detail && (
-        <span className="min-w-0 truncate text-text-semantic-muted">{detail}</span>
-      )}
+      {detail && <span className="min-w-0 truncate text-text-semantic-muted">{detail}</span>}
       {subTool.editSummary && (
         <span className="shrink-0 text-text-semantic-muted">
           <span style={{ color: 'var(--status-error)' }}>-{subTool.editSummary.oldLines}</span>

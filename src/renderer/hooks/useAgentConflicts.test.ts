@@ -104,20 +104,21 @@ describe('useAgentConflicts', () => {
     mockGetReports.mockResolvedValueOnce({ success: true, snapshot: makeSnapshot(reports) });
 
     const { result } = renderHook(() => useAgentConflicts(undefined));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.reports).toHaveLength(2);
   });
 
   it('filters reports to only those involving the given sessionId', async () => {
-    const reports = [
-      makeReport('sessA', 'sessB'),
-      makeReport('sessC', 'sessD'),
-    ];
+    const reports = [makeReport('sessA', 'sessB'), makeReport('sessC', 'sessD')];
     mockGetReports.mockResolvedValueOnce({ success: true, snapshot: makeSnapshot(reports) });
 
     const { result } = renderHook(() => useAgentConflicts('sessA'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(result.current.reports).toHaveLength(1);
     expect(result.current.reports[0]).toMatchObject({ sessionA: 'sessA', sessionB: 'sessB' });
@@ -125,7 +126,9 @@ describe('useAgentConflicts', () => {
 
   it('updates reports when onChange fires', async () => {
     const { result } = renderHook(() => useAgentConflicts('sess1'));
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const newReport = makeReport('sess1', 'sess2');
     act(() => {

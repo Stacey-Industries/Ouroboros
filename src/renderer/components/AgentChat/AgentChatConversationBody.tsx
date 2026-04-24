@@ -54,7 +54,7 @@ export function useSmartAutoScroll(deps: unknown[]): {
   useEffect(() => {
     const el = scrollRef.current;
     if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
-    // eslint-disable-next-line react-compiler/react-compiler
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
@@ -186,9 +186,7 @@ export function MessageList(props: MessageListProps): React.ReactElement {
           />
         )}
         <MessageCards {...props} />
-        {props.pendingUserMessage && (
-          <PendingUserBubble text={props.pendingUserMessage} />
-        )}
+        {props.pendingUserMessage && <PendingUserBubble text={props.pendingUserMessage} />}
         <FailedBanner activeThread={props.activeThread} />
         <InlineError error={props.error} />
       </div>
@@ -215,6 +213,7 @@ export interface ConversationBodyProps {
   onSelectThread?: (threadId: string) => void;
   onDraftChange?: (value: string) => void;
   onRerunSuccess?: (newThreadId: string) => void;
+  inlineBanner?: React.ReactNode;
 }
 
 function useConversationBodyState(props: ConversationBodyProps) {
@@ -233,7 +232,11 @@ function useConversationBodyState(props: ConversationBodyProps) {
 
 type BodyState = ReturnType<typeof useConversationBodyState>;
 
-function ConflictBanners({ activeThread }: { activeThread: AgentChatThreadRecord }): React.ReactElement | null {
+function ConflictBanners({
+  activeThread,
+}: {
+  activeThread: AgentChatThreadRecord;
+}): React.ReactElement | null {
   const sessionId = activeThread.latestOrchestration?.claudeSessionId;
   const { reports } = useAgentConflicts(sessionId);
 
@@ -246,7 +249,11 @@ function ConflictBanners({ activeThread }: { activeThread: AgentChatThreadRecord
   return (
     <div className="flex flex-col gap-1 px-4 pt-2">
       {reports.map((r) => (
-        <AgentConflictBanner key={`${r.sessionA}||${r.sessionB}`} report={r} onDismiss={handleDismiss} />
+        <AgentConflictBanner
+          key={`${r.sessionA}||${r.sessionB}`}
+          report={r}
+          onDismiss={handleDismiss}
+        />
       ))}
     </div>
   );
@@ -260,6 +267,7 @@ function ConversationBodyWithThread(
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <ConflictBanners activeThread={props.activeThread} />
+      {props.inlineBanner}
       <VirtualizedMessageList
         activeThread={props.activeThread}
         allThreads={threads}

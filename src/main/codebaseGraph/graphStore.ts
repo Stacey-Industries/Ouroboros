@@ -40,7 +40,9 @@ interface EdgeRow {
   metadata: string | null;
 }
 
-interface CountRow { cnt: number }
+interface CountRow {
+  cnt: number;
+}
 
 // ── Schema DDL ───────────────────────────────────────────────────────
 
@@ -97,9 +99,7 @@ function prepareEdgeStmts(db: Database) {
     insertEdge: db.prepare(
       'INSERT INTO edges (source, target, type, metadata) VALUES (?, ?, ?, ?)',
     ),
-    deleteEdgesForNode: db.prepare(
-      'DELETE FROM edges WHERE source = ? OR target = ?',
-    ),
+    deleteEdgesForNode: db.prepare('DELETE FROM edges WHERE source = ? OR target = ?'),
     deleteEdgesForFile: db.prepare(`
       DELETE FROM edges
        WHERE source IN (SELECT id FROM nodes WHERE filePath = ?)
@@ -128,8 +128,7 @@ function rowToNode(row: NodeRow): GraphNode {
   };
   if (row.endLine != null) node.endLine = row.endLine;
   if (row.metadata) {
-    node.metadata = JSON.parse(row.metadata) as
-      Record<string, unknown>;
+    node.metadata = JSON.parse(row.metadata) as Record<string, unknown>;
   }
   return node;
 }
@@ -141,8 +140,7 @@ function rowToEdge(row: EdgeRow): GraphEdge {
     type: row.type as GraphEdge['type'],
   };
   if (row.metadata) {
-    edge.metadata = JSON.parse(row.metadata) as
-      Record<string, unknown>;
+    edge.metadata = JSON.parse(row.metadata) as Record<string, unknown>;
   }
   return edge;
 }
@@ -158,9 +156,7 @@ export class GraphStore implements IGraphStore {
   private txRemoveNode: ReturnType<Database['transaction']>;
 
   constructor(projectRoot: string) {
-    const dbPath = path.join(
-      projectRoot, '.ouroboros', 'graph.db',
-    );
+    const dbPath = path.join(projectRoot, '.ouroboros', 'graph.db');
     this.db = openDatabase(dbPath);
     this.ensureSchema();
     this.stmts = {
@@ -169,32 +165,22 @@ export class GraphStore implements IGraphStore {
     };
 
     // Pre-build transactions used in hot paths
-    this.txAddBulk = this.db.transaction(
-      (nodes: GraphNode[], edges: GraphEdge[]) => {
-        for (const n of nodes) this.insertNode(n);
-        for (const e of edges) this.insertEdge(e);
-      },
-    );
-    this.txClearFile = this.db.transaction(
-      (filePath: string) => {
-        this.stmts.deleteEdgesForFile.run(
-          filePath, filePath,
-        );
-        this.stmts.deleteNodesForFile.run(filePath);
-      },
-    );
-    this.txReplaceEdges = this.db.transaction(
-      (edges: GraphEdge[]) => {
-        this.db.exec('DELETE FROM edges');
-        for (const e of edges) this.insertEdge(e);
-      },
-    );
-    this.txRemoveNode = this.db.transaction(
-      (id: string) => {
-        this.stmts.deleteEdgesForNode.run(id, id);
-        this.stmts.deleteNode.run(id);
-      },
-    );
+    this.txAddBulk = this.db.transaction((nodes: GraphNode[], edges: GraphEdge[]) => {
+      for (const n of nodes) this.insertNode(n);
+      for (const e of edges) this.insertEdge(e);
+    });
+    this.txClearFile = this.db.transaction((filePath: string) => {
+      this.stmts.deleteEdgesForFile.run(filePath, filePath);
+      this.stmts.deleteNodesForFile.run(filePath);
+    });
+    this.txReplaceEdges = this.db.transaction((edges: GraphEdge[]) => {
+      this.db.exec('DELETE FROM edges');
+      for (const e of edges) this.insertEdge(e);
+    });
+    this.txRemoveNode = this.db.transaction((id: string) => {
+      this.stmts.deleteEdgesForNode.run(id, id);
+      this.stmts.deleteNode.run(id);
+    });
   }
 
   private ensureSchema(): void {
@@ -208,15 +194,21 @@ export class GraphStore implements IGraphStore {
 
   private insertNode(node: GraphNode): void {
     this.stmts.insertNode.run(
-      node.id, node.type, node.name, node.filePath,
-      node.line, node.endLine ?? null,
+      node.id,
+      node.type,
+      node.name,
+      node.filePath,
+      node.line,
+      node.endLine ?? null,
       node.metadata ? JSON.stringify(node.metadata) : null,
     );
   }
 
   private insertEdge(edge: GraphEdge): void {
     this.stmts.insertEdge.run(
-      edge.source, edge.target, edge.type,
+      edge.source,
+      edge.target,
+      edge.type,
       edge.metadata ? JSON.stringify(edge.metadata) : null,
     );
   }
@@ -232,25 +224,20 @@ export class GraphStore implements IGraphStore {
   }
 
   getNode(id: string): GraphNode | undefined {
-    const row = this.stmts.getNode.get(id) as
-      NodeRow | undefined;
+    const row = this.stmts.getNode.get(id) as NodeRow | undefined;
     return row ? rowToNode(row) : undefined;
   }
 
   getAllNodes(): GraphNode[] {
-    return (this.stmts.getAllNodes.all() as NodeRow[])
-      .map(rowToNode);
+    return (this.stmts.getAllNodes.all() as NodeRow[]).map(rowToNode);
   }
 
   getNodesByType(type: GraphNode['type']): GraphNode[] {
-    return (this.stmts.getNodesByType.all(type) as NodeRow[])
-      .map(rowToNode);
+    return (this.stmts.getNodesByType.all(type) as NodeRow[]).map(rowToNode);
   }
 
   getNodesByFile(filePath: string): GraphNode[] {
-    return (
-      this.stmts.getNodesByFile.all(filePath) as NodeRow[]
-    ).map(rowToNode);
+    return (this.stmts.getNodesByFile.all(filePath) as NodeRow[]).map(rowToNode);
   }
 
   // ── Edge CRUD ──
@@ -268,20 +255,15 @@ export class GraphStore implements IGraphStore {
   }
 
   getEdgesFrom(nodeId: string): GraphEdge[] {
-    return (
-      this.stmts.getEdgesFrom.all(nodeId) as EdgeRow[]
-    ).map(rowToEdge);
+    return (this.stmts.getEdgesFrom.all(nodeId) as EdgeRow[]).map(rowToEdge);
   }
 
   getEdgesTo(nodeId: string): GraphEdge[] {
-    return (
-      this.stmts.getEdgesTo.all(nodeId) as EdgeRow[]
-    ).map(rowToEdge);
+    return (this.stmts.getEdgesTo.all(nodeId) as EdgeRow[]).map(rowToEdge);
   }
 
   getAllEdges(): GraphEdge[] {
-    return (this.stmts.getAllEdges.all() as EdgeRow[])
-      .map(rowToEdge);
+    return (this.stmts.getAllEdges.all() as EdgeRow[]).map(rowToEdge);
   }
 
   replaceAllEdges(edges: GraphEdge[]): void {

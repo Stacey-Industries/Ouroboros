@@ -11,11 +11,7 @@ import { app } from 'electron';
 import path from 'path';
 
 import type { Database } from '../storage/database';
-import {
-  getSchemaVersion,
-  openDatabase,
-  setSchemaVersion,
-} from '../storage/database';
+import { getSchemaVersion, openDatabase, setSchemaVersion } from '../storage/database';
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -47,10 +43,19 @@ function ensureSchema(db: Database): void {
 // ── Row mapper ────────────────────────────────────────────────────────────────
 
 type JobRow = {
-  id: string; projectRoot: string; prompt: string; label: string | null;
-  status: string; createdAt: string; startedAt: string | null;
-  completedAt: string | null; exitCode: number | null; sessionId: string | null;
-  resultSummary: string | null; errorMessage: string | null; costUsd: number | null;
+  id: string;
+  projectRoot: string;
+  prompt: string;
+  label: string | null;
+  status: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  exitCode: number | null;
+  sessionId: string | null;
+  resultSummary: string | null;
+  errorMessage: string | null;
+  costUsd: number | null;
 };
 
 function rowToJob(row: JobRow): BackgroundJob {
@@ -91,9 +96,17 @@ export interface JobStore {
 function buildJobUpdateSql(changes: Partial<BackgroundJob>): { sql: string; values: unknown[] } {
   const keys = Object.keys(changes) as Array<keyof BackgroundJob>;
   const setClauses = keys.map((k) => `${k} = ?`).join(', ');
-  // eslint-disable-next-line security/detect-object-injection -- keys are enumerated from BackgroundJob type via Object.keys
-  const values = keys.map((k) => { const v = changes[k]; return v === undefined ? null : v; });
+  const values = keys.map((k) => {
+    const v = Reflect.get(changes, k) as unknown;
+    return v === undefined ? null : v;
+  });
   return { sql: `UPDATE background_jobs SET ${setClauses} WHERE id = ?`, values };
+}
+
+function insertJobRow(db: Database, id: string, req: BackgroundJobRequest, now: string): void {
+  db.prepare(
+    `INSERT INTO background_jobs (id, projectRoot, prompt, label, status, createdAt) VALUES (?, ?, ?, ?, 'queued', ?)`,
+  ).run(id, req.projectRoot, req.prompt, req.label ?? null, now);
 }
 
 function makeJobCrud(db: Database, notify: (id: string, ch: Partial<BackgroundJob>) => void) {
@@ -108,21 +121,20 @@ function makeJobCrud(db: Database, notify: (id: string, ch: Partial<BackgroundJo
       status: 'queued',
       createdAt: now,
     };
-    db.prepare(
-      `INSERT INTO background_jobs (id, projectRoot, prompt, label, status, createdAt) VALUES (?, ?, ?, ?, 'queued', ?)`,
-    ).run(id, req.projectRoot, req.prompt, req.label ?? null, now);
+    insertJobRow(db, id, req, now);
     notify(id, job);
     return job;
   }
 
   function getJob(id: string): BackgroundJob | null {
-    const row = db.prepare('SELECT * FROM background_jobs WHERE id = ?').get(id) as JobRow | undefined;
+    const row = db.prepare('SELECT * FROM background_jobs WHERE id = ?').get(id) as
+      | JobRow
+      | undefined;
     return row ? rowToJob(row) : null;
   }
 
   function updateJob(id: string, changes: Partial<BackgroundJob>): void {
-    const keys = Object.keys(changes) as Array<keyof BackgroundJob>;
-    if (keys.length === 0) return;
+    if (Object.keys(changes).length === 0) return;
     const { sql, values } = buildJobUpdateSql(changes);
     db.prepare(sql).run(...values, id);
     notify(id, changes);
@@ -130,7 +142,9 @@ function makeJobCrud(db: Database, notify: (id: string, ch: Partial<BackgroundJo
 
   function listJobs(projectRoot?: string): BackgroundJob[] {
     const rows = projectRoot
-      ? (db.prepare('SELECT * FROM background_jobs WHERE projectRoot = ? ORDER BY createdAt DESC').all(projectRoot) as JobRow[])
+      ? (db
+          .prepare('SELECT * FROM background_jobs WHERE projectRoot = ? ORDER BY createdAt DESC')
+          .all(projectRoot) as JobRow[])
       : (db.prepare('SELECT * FROM background_jobs ORDER BY createdAt DESC').all() as JobRow[]);
     return rows.map(rowToJob);
   }

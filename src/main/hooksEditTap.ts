@@ -15,21 +15,14 @@ const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 function getFilePathFromInput(payload: HookPayload): string | undefined {
   const input = payload.input as Record<string, unknown> | undefined;
-  return input?.file_path as string | undefined ?? input?.path as string | undefined;
+  return (input?.file_path as string | undefined) ?? (input?.path as string | undefined);
 }
 
 function isPostEditEvent(payload: HookPayload): boolean {
-  return (
-    payload.type === 'post_tool_use' &&
-    !!payload.toolName &&
-    EDIT_TOOLS.has(payload.toolName)
-  );
+  return payload.type === 'post_tool_use' && !!payload.toolName && EDIT_TOOLS.has(payload.toolName);
 }
 
-export function tapConflictMonitor(
-  payload: HookPayload,
-  sessionCwdMap: Map<string, string>,
-): void {
+export function tapConflictMonitor(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
   if (!isPostEditEvent(payload)) return;
   const filePath = getFilePathFromInput(payload);
   if (!filePath) return;

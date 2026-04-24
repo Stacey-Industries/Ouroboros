@@ -15,10 +15,7 @@ export interface ImageViewerProps {
  * Supports fit-to-window, 100%, zoom in/out with scroll wheel, pan with mouse drag,
  * checkerboard transparency background, and SVG source viewing via Monaco read-only.
  */
-export function ImageViewer({
-  filePath,
-  fileSize,
-}: ImageViewerProps): React.ReactElement {
+export function ImageViewer({ filePath, fileSize }: ImageViewerProps): React.ReactElement {
   const viewer = useImageViewerState(filePath);
   const isSvg = filePath.toLowerCase().endsWith('.svg');
   const [showSource, setShowSource] = useState(false);

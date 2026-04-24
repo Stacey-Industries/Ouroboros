@@ -43,7 +43,9 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => { vi.clearAllMocks(); });
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 

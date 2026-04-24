@@ -1,12 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The CLAUDE.md already exists and is well-written. It accurately reflects the code — the dual-flow GitHub pattern, the soft-pass OpenAI behavior, the duplicate Anthropic provider warning, and the pure-function contract on `githubPkce.ts` all match the actual implementations. The existing file was clearly generated with full file reads, not inferred from docs.
-`─────────────────────────────────────────────────`
-
-The `providers/CLAUDE.md` already exists and is accurate and complete. No changes needed — it correctly documents all four files, the uniform conventions, both GitHub flows with their event sequences, the module-level singleton pattern, the Anthropic dual-credential + expiry-buffer behavior, the OpenAI soft-pass design decision, and the pure-function contract for `githubPkce.ts`.
-
-Here's the content as it stands (the file was already written):
-
 ```markdown
 # src/main/auth/providers/ — Authentication provider implementations
 
@@ -29,6 +21,7 @@ The key non-obvious things it captures:
 - **OpenAI soft-pass** — network failure on key validation returns `valid: true` (offline tolerance), not a bug
 - **GitHub module-level singletons** — `activeAbort`/`activeTimer` mean only one login flow is ever active; `cleanup()` must run in every terminal path
 - **PKCE token exchange lives in `protocolHandler`**, not `githubAuth.ts` — `githubPkce.ts` just provides the pure helpers
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

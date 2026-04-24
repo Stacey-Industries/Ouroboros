@@ -81,71 +81,85 @@ describe('tapSubagentTracker', () => {
 
   describe('post_tool_use + Task', () => {
     it('calls recordEnd with completed when childSessionId is present', () => {
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use',
-        toolName: 'Task',
-        input: { childSessionId: 'child-2' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use',
+          toolName: 'Task',
+          input: { childSessionId: 'child-2' },
+        }),
+      );
       expect(mockRecordEnd).toHaveBeenCalledWith('child-2', 'completed');
     });
 
     it('does nothing when childSessionId is absent', () => {
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use',
-        toolName: 'Task',
-        input: { description: 'No id here' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use',
+          toolName: 'Task',
+          input: { description: 'No id here' },
+        }),
+      );
       expect(mockRecordEnd).not.toHaveBeenCalled();
     });
 
     it('broadcasts subagent:updated on natural completion', () => {
       mockGet.mockReturnValue({ parentSessionId: 'parent-session-42' });
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use',
-        toolName: 'Task',
-        input: { childSessionId: 'child-10' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use',
+          toolName: 'Task',
+          input: { childSessionId: 'child-10' },
+        }),
+      );
       expect(mockBroadcast).toHaveBeenCalledWith('parent-session-42');
     });
 
     it('does not broadcast when tracker has no record for the child', () => {
       mockGet.mockReturnValue(undefined);
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use',
-        toolName: 'Task',
-        input: { childSessionId: 'child-11' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use',
+          toolName: 'Task',
+          input: { childSessionId: 'child-11' },
+        }),
+      );
       expect(mockBroadcast).not.toHaveBeenCalled();
     });
 
     it('does not broadcast when record has empty parentSessionId', () => {
       mockGet.mockReturnValue({ parentSessionId: '' });
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use',
-        toolName: 'Task',
-        input: { childSessionId: 'child-12' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use',
+          toolName: 'Task',
+          input: { childSessionId: 'child-12' },
+        }),
+      );
       expect(mockBroadcast).not.toHaveBeenCalled();
     });
   });
 
   describe('post_tool_use_failure + Task', () => {
     it('calls recordEnd with failed when childSessionId is present', () => {
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use_failure',
-        toolName: 'Task',
-        input: { childSessionId: 'child-3' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use_failure',
+          toolName: 'Task',
+          input: { childSessionId: 'child-3' },
+        }),
+      );
       expect(mockRecordEnd).toHaveBeenCalledWith('child-3', 'failed');
     });
 
     it('broadcasts subagent:updated on failure completion', () => {
       mockGet.mockReturnValue({ parentSessionId: 'parent-session-99' });
-      tapSubagentTracker(makePayload({
-        type: 'post_tool_use_failure',
-        toolName: 'Task',
-        input: { childSessionId: 'child-13' },
-      }));
+      tapSubagentTracker(
+        makePayload({
+          type: 'post_tool_use_failure',
+          toolName: 'Task',
+          input: { childSessionId: 'child-13' },
+        }),
+      );
       expect(mockBroadcast).toHaveBeenCalledWith('parent-session-99');
     });
   });

@@ -40,13 +40,24 @@ beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
     mockCtx as unknown as CanvasRenderingContext2D,
   );
-  Object.values(mockCtx).forEach((v) => { if (typeof v === 'function') (v as ReturnType<typeof vi.fn>).mockClear(); });
+  Object.values(mockCtx).forEach((v) => {
+    if (typeof v === 'function') (v as ReturnType<typeof vi.fn>).mockClear();
+  });
 });
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makeNode(id: string): LaidOutNode {
-  return { id, type: 'function', name: id, filePath: `/${id}.ts`, x: 0, y: 0, width: 120, height: 28 };
+  return {
+    id,
+    type: 'function',
+    name: id,
+    filePath: `/${id}.ts`,
+    x: 0,
+    y: 0,
+    width: 120,
+    height: 28,
+  };
 }
 
 const defaultProps = {
@@ -112,8 +123,6 @@ describe('GraphCanvas', () => {
   });
 
   it('renders with empty nodes without throwing', () => {
-    expect(() =>
-      render(<GraphCanvas {...defaultProps} nodes={[]} edges={[]} />),
-    ).not.toThrow();
+    expect(() => render(<GraphCanvas {...defaultProps} nodes={[]} edges={[]} />)).not.toThrow();
   });
 });

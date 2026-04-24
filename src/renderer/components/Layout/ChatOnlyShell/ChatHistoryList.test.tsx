@@ -25,10 +25,12 @@ afterEach(() => cleanup());
 vi.mock('./ChatHistoryRow', () => ({
   ChatHistoryRow: ({
     thread,
+    completionIndicator,
     isActive,
     onClick,
   }: {
     thread: AgentChatThreadRecord;
+    completionIndicator?: string;
     isActive: boolean;
     onClick: (id: string) => void;
     onDelete: (id: string) => Promise<void>;
@@ -37,6 +39,7 @@ vi.mock('./ChatHistoryRow', () => ({
     <div
       data-testid="chat-history-row"
       data-thread-id={thread.id}
+      data-completion-indicator={completionIndicator ?? 'none'}
       data-active={String(isActive)}
       onClick={() => onClick(thread.id)}
     >
@@ -60,10 +63,19 @@ function makeThread(overrides: Partial<AgentChatThreadRecord>): AgentChatThreadR
 }
 
 const THREAD_A = makeThread({ id: 'a', title: 'Thread A', workspaceRoot: '/project/alpha' });
-const THREAD_B = makeThread({ id: 'b', title: 'Thread B', workspaceRoot: '/project/alpha', updatedAt: Date.now() - 120_000 });
+const THREAD_B = makeThread({
+  id: 'b',
+  title: 'Thread B',
+  workspaceRoot: '/project/alpha',
+  updatedAt: Date.now() - 120_000,
+});
 const THREAD_BETA = makeThread({ id: 'c', title: 'Thread Beta', workspaceRoot: '/project/beta' });
 const THREAD_PINNED = makeThread({ id: 'p', title: 'Pinned Thread', pinned: true });
-const THREAD_DELETED = makeThread({ id: 'd', title: 'Deleted Thread', deletedAt: Date.now() - 1000 });
+const THREAD_DELETED = makeThread({
+  id: 'd',
+  title: 'Deleted Thread',
+  deletedAt: Date.now() - 1000,
+});
 
 const defaultProps = {
   activeThreadId: null,
@@ -117,7 +129,9 @@ describe('ChatHistoryList', () => {
 
   it('calls onSelectThread with thread id when row is clicked', () => {
     const onSelectThread = vi.fn();
-    render(<ChatHistoryList {...defaultProps} onSelectThread={onSelectThread} threads={[THREAD_A]} />);
+    render(
+      <ChatHistoryList {...defaultProps} onSelectThread={onSelectThread} threads={[THREAD_A]} />,
+    );
     fireEvent.click(screen.getByTestId('chat-history-row'));
     expect(onSelectThread).toHaveBeenCalledWith('a');
   });
@@ -127,5 +141,18 @@ describe('ChatHistoryList', () => {
     const rows = screen.getAllByTestId('chat-history-row');
     const activeRow = rows.find((r) => r.getAttribute('data-thread-id') === 'a');
     expect(activeRow?.getAttribute('data-active')).toBe('true');
+  });
+
+  it('passes completion indicator state through to rows', () => {
+    render(
+      <ChatHistoryList
+        {...defaultProps}
+        threads={[THREAD_A]}
+        completionIndicators={{ a: 'unseen' }}
+      />,
+    );
+    expect(screen.getByTestId('chat-history-row').getAttribute('data-completion-indicator')).toBe(
+      'unseen',
+    );
   });
 });

@@ -204,6 +204,7 @@ export const schema: Record<string, unknown> = {
       chrome: { type: 'boolean', default: false },
       worktree: { type: 'boolean', default: false },
       dangerouslySkipPermissions: { type: 'boolean', default: false },
+      useWarmProcess: { type: 'boolean', default: true },
     },
     default: {
       permissionMode: 'default',
@@ -218,6 +219,7 @@ export const schema: Record<string, unknown> = {
       chrome: false,
       worktree: false,
       dangerouslySkipPermissions: false,
+      useWarmProcess: true,
     },
   },
   codexCliSettings: {

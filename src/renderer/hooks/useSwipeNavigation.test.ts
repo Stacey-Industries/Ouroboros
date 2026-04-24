@@ -72,9 +72,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     const el = makeEl();
     const ref = makeRef(el);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     // dx=-100, dt=100ms → velocity 1 px/ms > 0.3
     swipe(el, { dx: -100, dy: 0, dtMs: 100 });
     expect(onSwipeLeft).toHaveBeenCalledOnce();
@@ -84,9 +82,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     const el = makeEl();
     const ref = makeRef(el);
     const onSwipeRight = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeRight, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeRight, threshold: 50, velocity: 0.3 }));
     swipe(el, { dx: 100, dy: 0, dtMs: 100 });
     expect(onSwipeRight).toHaveBeenCalledOnce();
   });
@@ -95,9 +91,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     const el = makeEl();
     const ref = makeRef(el);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     swipe(el, { dx: -30, dy: 0, dtMs: 50 });
     expect(onSwipeLeft).not.toHaveBeenCalled();
   });
@@ -106,9 +100,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     const el = makeEl();
     const ref = makeRef(el);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     // dx=-100, dt=1000ms → velocity 0.1 px/ms < 0.3
     swipe(el, { dx: -100, dy: 0, dtMs: 1000 });
     expect(onSwipeLeft).not.toHaveBeenCalled();
@@ -118,9 +110,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     const el = makeEl();
     const ref = makeRef(el);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     // |dy|=150 > |dx|=80 → axis not dominant
     swipe(el, { dx: -80, dy: -150, dtMs: 100 });
     expect(onSwipeLeft).not.toHaveBeenCalled();
@@ -133,9 +123,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     child.setAttribute('data-no-swipe', '');
     el.appendChild(child);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     swipe(el, { dx: -100, dy: 0, dtMs: 100, eventTarget: child });
     expect(onSwipeLeft).not.toHaveBeenCalled();
   });
@@ -149,9 +137,7 @@ describe('useSwipeNavigation — x-axis (default)', () => {
     Object.defineProperty(scroller, 'clientWidth', { value: 300 });
     el.appendChild(scroller);
     const onSwipeLeft = vi.fn();
-    renderHook(() =>
-      useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }),
-    );
+    renderHook(() => useSwipeNavigation(ref, { onSwipeLeft, threshold: 50, velocity: 0.3 }));
     swipe(el, { dx: -100, dy: 0, dtMs: 100, eventTarget: scroller });
     expect(onSwipeLeft).not.toHaveBeenCalled();
   });

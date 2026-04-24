@@ -9,6 +9,7 @@ import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import { IdePanels, useBranchCompare } from './AgentChatWorkspace.compare';
+import { useWorkspaceStoreSync } from './AgentChatWorkspace.storeSync';
 import { DensityProvider } from './DensityContext';
 import { PinnedContextBar } from './PinnedContextBar';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -16,108 +17,17 @@ import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
 import { useSideChat } from './useSideChat';
-import {
-  type WorkspaceVariant,
-  WorkspaceVariantContext,
-} from './WorkspaceVariantContext';
+import { type WorkspaceVariant, WorkspaceVariantContext } from './WorkspaceVariantContext';
 
 export interface AgentChatWorkspaceProps {
   projectRoot: string | null;
   /** Wave 25 — session ID for pinned context; null hides the bar. */
   activeSessionId?: string | null;
+  preferredThreadId?: string | null;
+  readOnly?: boolean;
   onModelReady?: (model: AgentChatWorkspaceModel) => void;
   /** Wave 43 Phase C — shell variant; defaults to 'ide'. */
   variant?: WorkspaceVariant;
-}
-
-/* ── Sync hooks: push existing hook data into zustand store ──────────────── */
-
-function useSyncStateIntoStore(
-  store: ReturnType<typeof createAgentChatStore>,
-  model: AgentChatWorkspaceModel,
-  context: ReturnType<typeof useAgentChatContext>,
-): void {
-  useEffect(() => {
-    store.setState({
-      activeThread: model.activeThread,
-      threads: model.threads,
-      canSend: model.canSend,
-      draft: model.draft,
-      error: model.error,
-      hasProject: model.hasProject,
-      isLoading: model.isLoading,
-      isSending: model.isSending,
-      pendingUserMessage: model.pendingUserMessage,
-      isDetailsOpen: model.isDetailsOpen,
-      details: model.details,
-      detailsError: model.detailsError,
-      detailsIsLoading: model.detailsIsLoading,
-    });
-  }, [store, model]);
-
-  useEffect(() => {
-    store.setState({
-      pinnedFiles: context.pinnedFiles,
-      contextSummary: context.contextSummary,
-      autocompleteResults: context.autocompleteResults,
-      isAutocompleteOpen: context.isAutocompleteOpen,
-      mentions: context.mentions,
-      allFiles: context.allFiles,
-    });
-  }, [store, context]);
-}
-
-function useSyncModelSettingsIntoStore(
-  store: ReturnType<typeof createAgentChatStore>,
-  model: AgentChatWorkspaceModel,
-): void {
-  useEffect(() => {
-    store.setState({
-      chatOverrides: model.chatOverrides,
-      settingsModel: model.settingsModel,
-      codexSettingsModel: model.codexSettingsModel,
-      defaultProvider: model.defaultProvider,
-      modelProviders: model.modelProviders,
-      codexModels: model.codexModels,
-      queuedMessages: model.queuedMessages,
-      attachments: model.attachments,
-    });
-  }, [store, model]);
-}
-
-function useSyncActionsIntoStore(
-  store: ReturnType<typeof createAgentChatStore>,
-  model: AgentChatWorkspaceModel,
-  context: ReturnType<typeof useAgentChatContext>,
-): void {
-  useEffect(() => {
-    store.setState({
-      onDraftChange: model.setDraft,
-      onEdit: model.editAndResend,
-      onRetry: model.retryMessage,
-      onBranch: model.branchFromMessage,
-      onRevert: model.revertMessage,
-      onRerunSuccess: model.selectThread,
-      onOpenLinkedDetails: model.openLinkedDetails,
-      onOpenLinkedTask: model.openDetailsInOrchestration,
-      onSend: model.sendMessage,
-      onStop: model.stopTask,
-      closeDetails: model.closeDetails,
-      onSelectThread: model.selectThread,
-      onChatOverridesChange: model.setChatOverrides,
-      onEditQueuedMessage: model.editQueuedMessage,
-      onDeleteQueuedMessage: model.deleteQueuedMessage,
-      onSendQueuedMessageNow: model.sendQueuedMessageNow,
-      onAttachmentsChange: model.setAttachments,
-      onRemoveFile: context.removeFile,
-      onAutocompleteQuery: context.setAutocompleteQuery,
-      onSelectFile: context.addFile,
-      onCloseAutocomplete: context.closeAutocomplete,
-      onOpenAutocomplete: context.openAutocomplete,
-      onAddMention: context.addMention,
-      onRemoveMention: context.removeMention,
-    });
-  }, [store, model, context]);
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -151,8 +61,12 @@ function useSpecAction(
 ): (featureName: string) => void {
   return useCallback(
     (featureName: string) => {
-      if (!projectRoot) { toast('Open a project before scaffolding a spec.', 'error'); return; }
-      void window.electronAPI.spec.scaffold({ projectRoot, featureName })
+      if (!projectRoot) {
+        toast('Open a project before scaffolding a spec.', 'error');
+        return;
+      }
+      void window.electronAPI.spec
+        .scaffold({ projectRoot, featureName })
         .then((result) => {
           if (!result.success) {
             if (result.collision) {
@@ -174,20 +88,6 @@ function useSpecAction(
     },
     [projectRoot, toast],
   );
-}
-
-/* ── Store sync orchestration ────────────────────────────────────────────── */
-
-function useWorkspaceStoreSync(
-  store: ReturnType<typeof createAgentChatStore>,
-  model: AgentChatWorkspaceModel,
-  context: ReturnType<typeof useAgentChatContext>,
-  slashCmd: SlashCommandContext,
-): void {
-  useEffect(() => { store.setState({ slashCommandContext: slashCmd }); }, [store, slashCmd]);
-  useSyncStateIntoStore(store, model, context);
-  useSyncModelSettingsIntoStore(store, model);
-  useSyncActionsIntoStore(store, model, context);
 }
 
 /* ── Workspace helpers ───────────────────────────────────────────────────── */
@@ -243,8 +143,12 @@ function useWorkspaceSlashCmd(
   // Phase E will wire this to config.research?.explicit once that key is added.
   return useMemo<SlashCommandContext>(
     () => ({
-      onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
-      onRemember, onOpenMemories, onSpec, commands: model.commands,
+      onClearChat: model.reloadThreads,
+      onNewThread: model.startNewChat,
+      onRemember,
+      onOpenMemories,
+      onSpec,
+      commands: model.commands,
       researchEnabled: true,
     }),
     [model, onRemember, onOpenMemories, onSpec],
@@ -262,45 +166,71 @@ interface WorkspaceWiringArgs {
   onOpenMemories: () => void;
   onSpec: (n: string) => void;
   activeSessionId?: string | null;
+  readOnly: boolean;
 }
 
 function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   const { model, context, store, onModelReady, onRemember, onOpenMemories, onSpec } = args;
   const { setContextFilePaths, setMentionRanges } = model;
-  useEffect(() => { setContextFilePaths(context.filePaths); }, [context.filePaths, setContextFilePaths]);
-  useEffect(() => { setMentionRanges(buildMentionRanges(context.mentions)); }, [context.mentions, setMentionRanges]);
-  useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
+  useEffect(() => {
+    setContextFilePaths(context.filePaths);
+  }, [context.filePaths, setContextFilePaths]);
+  useEffect(() => {
+    setMentionRanges(buildMentionRanges(context.mentions));
+  }, [context.mentions, setMentionRanges]);
+  useEffect(() => {
+    onModelReady?.(model);
+  }, [model, onModelReady]);
   const slashCmd = useWorkspaceSlashCmd(model, onRemember, onOpenMemories, onSpec);
-  useWorkspaceStoreSync(store, model, context, slashCmd);
+  useWorkspaceStoreSync({ store, model, context, slashCmd, readOnly: args.readOnly });
   const { activeSessionId } = args;
-  useEffect(() => { store.setState({ activeSessionId: activeSessionId ?? null }); }, [store, activeSessionId]);
+  useEffect(() => {
+    store.setState({ activeSessionId: activeSessionId ?? null });
+  }, [store, activeSessionId]);
 }
 
 function useWorkspaceActions(
   projectRoot: string | null,
   sideChat: ReturnType<typeof useSideChat>,
   setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>,
-): { onRemember: (c: string) => Promise<void>; onSpec: (n: string) => void; onOpenMemories: () => void; onCloseTab: (id: string) => void } {
+): {
+  onRemember: (c: string) => Promise<void>;
+  onSpec: (n: string) => void;
+  onOpenMemories: () => void;
+  onCloseTab: (id: string) => void;
+} {
   const { toast } = useToastContext();
   const onRemember = useRememberAction(projectRoot, toast);
   const onSpec = useSpecAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
-    window.dispatchEvent(new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }));
+    window.dispatchEvent(
+      new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }),
+    );
   }, []);
-  const onCloseTab = useCallback((id: string) => {
-    sideChat.closeSideChat(id);
-    if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
-  }, [sideChat, setIsDrawerOpen]);
+  const onCloseTab = useCallback(
+    (id: string) => {
+      sideChat.closeSideChat(id);
+      if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
+    },
+    [sideChat, setIsDrawerOpen],
+  );
   return { onRemember, onSpec, onOpenMemories, onCloseTab };
 }
 
-export function AgentChatWorkspace({
-  projectRoot,
-  activeSessionId = null,
-  onModelReady,
-  variant = 'ide',
-}: AgentChatWorkspaceProps): React.ReactElement {
-  const model = useAgentChatWorkspace(projectRoot);
+interface WorkspaceSetup {
+  model: AgentChatWorkspaceModel;
+  store: ReturnType<typeof createAgentChatStore>;
+  sideChat: ReturnType<typeof useSideChat>;
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  compareState: ReturnType<typeof useBranchCompare>['compareState'];
+  closeCompare: ReturnType<typeof useBranchCompare>['closeCompare'];
+  onCloseTab: (id: string) => void;
+}
+
+function useWorkspaceSetup(props: AgentChatWorkspaceProps): WorkspaceSetup {
+  const { projectRoot, preferredThreadId = null, readOnly = false } = props;
+  const model = useAgentChatWorkspace(projectRoot, preferredThreadId, readOnly);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
   // Wave 43 hotfix: reuse an ancestor-provided store (e.g. ChatOnlyShell lifts
   // the store so the title bar's ChatOnlyHeaderControls can read from it).
@@ -309,19 +239,54 @@ export function AgentChatWorkspace({
   const localStore = useRef(createAgentChatStore()).current;
   const store = inheritedStore ?? localStore;
   useWorkspaceNotifications();
-
   const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
   const { compareState, closeCompare } = useBranchCompare();
-  const { onRemember, onSpec, onOpenMemories, onCloseTab } = useWorkspaceActions(projectRoot, sideChat, setIsDrawerOpen);
-  useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec, activeSessionId });
+  const { onRemember, onSpec, onOpenMemories, onCloseTab } = useWorkspaceActions(
+    projectRoot,
+    sideChat,
+    setIsDrawerOpen,
+  );
+  useWorkspaceWiring({
+    model,
+    context,
+    store,
+    onModelReady: props.onModelReady,
+    onRemember,
+    onOpenMemories,
+    onSpec,
+    activeSessionId: props.activeSessionId,
+    readOnly,
+  });
+  return {
+    model,
+    store,
+    sideChat,
+    isDrawerOpen,
+    setIsDrawerOpen,
+    compareState,
+    closeCompare,
+    onCloseTab,
+  };
+}
+
+export function AgentChatWorkspace(props: AgentChatWorkspaceProps): React.ReactElement {
+  const { activeSessionId = null, variant = 'ide' } = props;
+  const { store, sideChat, isDrawerOpen, setIsDrawerOpen, compareState, closeCompare, onCloseTab } =
+    useWorkspaceSetup(props);
 
   return (
     <WorkspaceVariantContext.Provider value={variant}>
       <AgentChatStoreContext.Provider value={store}>
         <DensityProvider>
-          <div data-tour-anchor="chat" className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel" style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}>
+          <div
+            data-tour-anchor="chat"
+            className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel"
+            style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}
+          >
             <PinnedContextBar activeSessionId={activeSessionId} />
-            <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AgentChatConversation />
+            </div>
           </div>
           {variant === 'ide' && (
             <IdePanels

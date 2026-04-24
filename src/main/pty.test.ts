@@ -24,7 +24,10 @@ const { configValues, proxyMocks, directPtyMocks } = vi.hoisted(() => {
         { id: 's2', cwd: '/y', windowId: 1 },
       ]),
       getShellStateViaPtyHost: vi.fn(() => ({
-        cwd: '/proxy', lastExitCode: 0, lastCommand: null, isExecuting: false,
+        cwd: '/proxy',
+        lastExitCode: 0,
+        lastCommand: null,
+        isExecuting: false,
       })),
       killAllViaPtyHost: vi.fn(async () => undefined),
       killForWindowViaPtyHost: vi.fn(async () => undefined),
@@ -32,10 +35,14 @@ const { configValues, proxyMocks, directPtyMocks } = vi.hoisted(() => {
     },
     directPtyMocks: {
       spawn: vi.fn(() => ({
-        pid: 1, write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+        pid: 1,
+        write: vi.fn(),
+        resize: vi.fn(),
+        kill: vi.fn(),
         onData: vi.fn(() => ({ dispose: vi.fn() })),
         onExit: vi.fn(() => ({ dispose: vi.fn() })),
-        cols: 80, rows: 24,
+        cols: 80,
+        rows: 24,
       })),
     },
   };
@@ -63,7 +70,8 @@ vi.mock('./ptyEnv', () => ({
 
 vi.mock('./ptyOutputBuffer', () => ({
   terminalOutputBuffer: {
-    append: vi.fn(), removeSession: vi.fn(),
+    append: vi.fn(),
+    removeSession: vi.fn(),
     getRecentLines: vi.fn(() => []),
     getAllRecentLines: vi.fn(() => []),
     clear: vi.fn(),
@@ -72,13 +80,18 @@ vi.mock('./ptyOutputBuffer', () => ({
 
 vi.mock('./ptyElectronBatcher', () => ({
   electronBatcher: {
-    register: vi.fn(), append: vi.fn(), cleanup: vi.fn(), dispose: vi.fn(),
+    register: vi.fn(),
+    append: vi.fn(),
+    cleanup: vi.fn(),
+    dispose: vi.fn(),
   },
 }));
 
 vi.mock('./web/ptyBatcher', () => ({
   ptyBatcher: {
-    append: vi.fn(), removeSession: vi.fn(), dispose: vi.fn(),
+    append: vi.fn(),
+    removeSession: vi.fn(),
+    dispose: vi.fn(),
   },
 }));
 
@@ -91,7 +104,10 @@ vi.mock('./ptyShellIntegration', () => ({
   processAndUpdateState: vi.fn((_id: string, data: string) => data),
   removeShellState: vi.fn(),
   getShellState: vi.fn(() => ({
-    cwd: '/direct', lastExitCode: 0, lastCommand: null, isExecuting: false,
+    cwd: '/direct',
+    lastExitCode: 0,
+    lastCommand: null,
+    isExecuting: false,
   })),
 }));
 
@@ -118,14 +134,26 @@ vi.mock('./ptyAgent', () => ({
 }));
 
 vi.mock('electron', () => ({
-  BrowserWindow: class { id = 1; isDestroyed = (): boolean => false },
+  BrowserWindow: class {
+    id = 1;
+    isDestroyed = (): boolean => false;
+  },
 }));
 
 // ── Imports (after mocks) ──
 
 import {
-  getActiveSessions, getPtyCwd, getShellState, killAllPtySessions, killPty,
-  killPtySessionsForWindow, resizePty, spawnPty, startPtyRecording, stopPtyRecording, writeToPty,
+  getActiveSessions,
+  getPtyCwd,
+  getShellState,
+  killAllPtySessions,
+  killPty,
+  killPtySessionsForWindow,
+  resizePty,
+  spawnPty,
+  startPtyRecording,
+  stopPtyRecording,
+  writeToPty,
 } from './pty';
 import { startRecordingViaPtyHost, stopRecordingViaPtyHost } from './ptyHost/ptyHostProxyRecording';
 

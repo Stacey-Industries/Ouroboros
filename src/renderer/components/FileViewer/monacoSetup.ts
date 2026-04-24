@@ -24,7 +24,10 @@ export function initMonaco(): void {
   // The vite-plugin-monaco-editor handles MonacoEnvironment.getWorkerUrl
   // configuration at build time. If it hasn't set it up (e.g. in test env),
   // provide a safe fallback that uses the editor worker for everything.
-  if (typeof self !== 'undefined' && !(self as unknown as Record<string, unknown>).MonacoEnvironment) {
+  if (
+    typeof self !== 'undefined' &&
+    !(self as unknown as Record<string, unknown>).MonacoEnvironment
+  ) {
     (self as unknown as Record<string, unknown>).MonacoEnvironment = {
       getWorker() {
         // Fallback: return a basic worker. In production the plugin sets the
@@ -152,10 +155,10 @@ const extensionToLanguage: Record<string, string> = {
 
 /** Map of well-known file names (case-insensitive) to Monaco language IDs */
 const filenameToLanguage: Record<string, string> = {
-  'dockerfile': 'dockerfile',
-  'makefile': 'makefile',
-  'gemfile': 'ruby',
-  'rakefile': 'ruby',
+  dockerfile: 'dockerfile',
+  makefile: 'makefile',
+  gemfile: 'ruby',
+  rakefile: 'ruby',
   'cmakelists.txt': 'cmake',
   '.gitignore': 'ini',
   '.gitattributes': 'ini',

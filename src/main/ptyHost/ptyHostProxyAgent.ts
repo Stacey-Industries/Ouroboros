@@ -44,7 +44,8 @@ export function createAgentBridgeWithResult(
       if (settled) return;
       settled = true;
       if (res) resolveResult(res);
-      else if (exitCode && exitCode !== 0) rejectResult(new Error(`Claude Code exited with code ${exitCode}`));
+      else if (exitCode && exitCode !== 0)
+        rejectResult(new Error(`Claude Code exited with code ${exitCode}`));
       else resolveResult(null);
     },
   });
@@ -80,7 +81,8 @@ export async function spawnAgentViaPtyHost(
   onEvent?: (event: StreamJsonEvent) => void,
 ): Promise<SpawnAgentResult> {
   const spawnRes = await spawnViaPtyHost(instruction, win);
-  if (!spawnRes.success) return { success: false, ...(spawnRes.error ? { error: spawnRes.error } : {}) };
+  if (!spawnRes.success)
+    return { success: false, ...(spawnRes.error ? { error: spawnRes.error } : {}) };
   const { bridge, result } = createAgentBridgeWithResult(instruction.id, onEvent);
   registerAgentBridge(instruction.id, bridge);
   // Match the 150ms delay from direct ptyAgent.ts — gives the shell a moment

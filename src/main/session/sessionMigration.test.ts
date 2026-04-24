@@ -5,10 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AppConfig } from '../config';
-import {
-  migrateAgentMonitorSettings,
-  migrateWindowSessionsToSessions,
-} from './sessionMigration';
+import { migrateAgentMonitorSettings, migrateWindowSessionsToSessions } from './sessionMigration';
 
 // ─── Fake config store ────────────────────────────────────────────────────────
 
@@ -80,10 +77,7 @@ describe('already migrated → no-op', () => {
 describe('2-entry source → 2 sessions', () => {
   it('returns migrated:2', async () => {
     const cfg = makeConfigStore({
-      windowSessions: [
-        { projectRoots: ['/root-a'] },
-        { projectRoots: ['/root-b'] },
-      ],
+      windowSessions: [{ projectRoots: ['/root-a'] }, { projectRoots: ['/root-b'] }],
     });
     const result = await migrateWindowSessionsToSessions(cfg.getConfig, cfg.setConfig);
     expect(result.migrated).toBe(2);
@@ -91,10 +85,7 @@ describe('2-entry source → 2 sessions', () => {
 
   it('writes exactly 2 sessions', async () => {
     const cfg = makeConfigStore({
-      windowSessions: [
-        { projectRoots: ['/root-a'] },
-        { projectRoots: ['/root-b'] },
-      ],
+      windowSessions: [{ projectRoots: ['/root-a'] }, { projectRoots: ['/root-b'] }],
     });
     await migrateWindowSessionsToSessions(cfg.getConfig, cfg.setConfig);
     const sessions = cfg.snapshot().sessionsData as unknown[];
@@ -103,9 +94,7 @@ describe('2-entry source → 2 sessions', () => {
 
   it('maps projectRoots[0] to projectRoot', async () => {
     const cfg = makeConfigStore({
-      windowSessions: [
-        { projectRoots: ['/root-a', '/root-b'] },
-      ],
+      windowSessions: [{ projectRoots: ['/root-a', '/root-b'] }],
     });
     await migrateWindowSessionsToSessions(cfg.getConfig, cfg.setConfig);
     const sessions = cfg.snapshot().sessionsData as Array<{ projectRoot: string }>;
@@ -156,10 +145,7 @@ describe('bounds preserved', () => {
 describe('worktree:false always', () => {
   it('sets worktree:false on every migrated session', async () => {
     const cfg = makeConfigStore({
-      windowSessions: [
-        { projectRoots: ['/a'] },
-        { projectRoots: ['/b'] },
-      ],
+      windowSessions: [{ projectRoots: ['/a'] }, { projectRoots: ['/b'] }],
     });
     await migrateWindowSessionsToSessions(cfg.getConfig, cfg.setConfig);
     const sessions = cfg.snapshot().sessionsData as Array<{ worktree: boolean }>;
@@ -231,7 +217,10 @@ describe('migrateAgentMonitorSettings — patching', () => {
   it('only patches sessions missing the field, preserving others', () => {
     const cfg = makeConfigStore({
       sessionsData: [
-        { id: 's1', agentMonitorSettings: { viewMode: 'verbose', inlineEventTypes: ['pre_tool_use'] } },
+        {
+          id: 's1',
+          agentMonitorSettings: { viewMode: 'verbose', inlineEventTypes: ['pre_tool_use'] },
+        },
         { id: 's2' },
       ] as never,
     });
@@ -246,7 +235,10 @@ describe('migrateAgentMonitorSettings — patching', () => {
   });
 
   it('does not write to store when nothing needs patching', () => {
-    type SessionLike = { id: string; agentMonitorSettings: { viewMode: string; inlineEventTypes: string[] } };
+    type SessionLike = {
+      id: string;
+      agentMonitorSettings: { viewMode: string; inlineEventTypes: string[] };
+    };
     const sessions: SessionLike[] = [
       { id: 's1', agentMonitorSettings: { viewMode: 'summary', inlineEventTypes: [] } },
     ];

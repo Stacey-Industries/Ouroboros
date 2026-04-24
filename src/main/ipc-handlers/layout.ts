@@ -82,19 +82,27 @@ function handleSetCustomLayout(sessionId: unknown, tree: unknown): HandlerResult
   if (typeof sessionId !== 'string' || !sessionId) return ok();
   if (tree === null || typeof tree !== 'object') return fail('tree must be an object');
   const layout = getConfigValue('layout') ?? {};
-  const entries = { ...((layout.customLayoutsPerSession ?? {}) as Record<string, SerializedSlotTree>) };
+  const entries = {
+    ...((layout.customLayoutsPerSession ?? {}) as Record<string, SerializedSlotTree>),
+  };
   // eslint-disable-next-line security/detect-object-injection
   entries[sessionId] = tree as SerializedSlotTree;
   const mru = touchMru((layout.customLayoutsMru ?? []) as string[], sessionId, MAX_PER_SESSION);
   const [pruned, prunedMru] = pruneEntries(entries, mru, MAX_PER_SESSION);
-  setConfigValue('layout', { ...layout, customLayoutsPerSession: pruned, customLayoutsMru: prunedMru });
+  setConfigValue('layout', {
+    ...layout,
+    customLayoutsPerSession: pruned,
+    customLayoutsMru: prunedMru,
+  });
   return ok();
 }
 
 function handleDeleteCustomLayout(sessionId: unknown): HandlerResult {
   if (typeof sessionId !== 'string' || !sessionId) return ok();
   const layout = getConfigValue('layout') ?? {};
-  const entries = { ...((layout.customLayoutsPerSession ?? {}) as Record<string, SerializedSlotTree>) };
+  const entries = {
+    ...((layout.customLayoutsPerSession ?? {}) as Record<string, SerializedSlotTree>),
+  };
   // eslint-disable-next-line security/detect-object-injection
   delete entries[sessionId];
   const mru = ((layout.customLayoutsMru ?? []) as string[]).filter((id) => id !== sessionId);
@@ -111,7 +119,9 @@ function handlePromoteToGlobal(name: unknown, tree: unknown): HandlerResult {
   ];
   presets.push({ name, tree: tree as SerializedSlotTree, createdAt: Date.now() });
   const capped =
-    presets.length > MAX_GLOBAL_PRESETS ? presets.slice(presets.length - MAX_GLOBAL_PRESETS) : presets;
+    presets.length > MAX_GLOBAL_PRESETS
+      ? presets.slice(presets.length - MAX_GLOBAL_PRESETS)
+      : presets;
   setConfigValue('layout', { ...layout, globalCustomPresets: capped });
   return ok();
 }

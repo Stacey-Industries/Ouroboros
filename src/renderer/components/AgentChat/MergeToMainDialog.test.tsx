@@ -19,10 +19,12 @@ vi.mock('../../contexts/ToastContext', () => ({
   useToastContext: () => ({ toast: mockToast }),
 }));
 
-function setElectronApi(overrides: {
-  loadThread?: typeof mockLoadThread;
-  mergeSideChat?: typeof mockMergeSideChat;
-} = {}) {
+function setElectronApi(
+  overrides: {
+    loadThread?: typeof mockLoadThread;
+    mergeSideChat?: typeof mockMergeSideChat;
+  } = {},
+) {
   const loadThread = overrides.loadThread ?? mockLoadThread;
   const mergeSideChat = overrides.mergeSideChat ?? mockMergeSideChat;
   Object.defineProperty(window, 'electronAPI', {
@@ -34,9 +36,7 @@ function setElectronApi(overrides: {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function defaultProps(
-  overrides: Partial<MergeToMainDialogProps> = {},
-): MergeToMainDialogProps {
+function defaultProps(overrides: Partial<MergeToMainDialogProps> = {}): MergeToMainDialogProps {
   return {
     sideChatId: 'side-1',
     parentThreadId: 'main-1',
@@ -69,7 +69,13 @@ describe('buildHeuristicSummary', () => {
   it('concatenates first lines of assistant messages', () => {
     const messages = [
       { id: '1', threadId: 't', role: 'user', content: 'question', createdAt: 1 },
-      { id: '2', threadId: 't', role: 'assistant', content: 'First answer\nmore detail', createdAt: 2 },
+      {
+        id: '2',
+        threadId: 't',
+        role: 'assistant',
+        content: 'First answer\nmore detail',
+        createdAt: 2,
+      },
       { id: '3', threadId: 't', role: 'assistant', content: 'Second answer', createdAt: 3 },
     ] as import('../../types/electron').AgentChatMessageRecord[];
 
@@ -82,7 +88,9 @@ describe('buildHeuristicSummary', () => {
   it('truncates at 500 chars with ellipsis', () => {
     const messages = [
       {
-        id: '1', threadId: 't', role: 'assistant',
+        id: '1',
+        threadId: 't',
+        role: 'assistant',
         content: 'a'.repeat(600),
         createdAt: 1,
       },
@@ -112,9 +120,7 @@ describe('MergeToMainDialog', () => {
   });
 
   it('renders nothing when isOpen is false', () => {
-    const { container } = render(
-      <MergeToMainDialog {...defaultProps({ isOpen: false })} />,
-    );
+    const { container } = render(<MergeToMainDialog {...defaultProps({ isOpen: false })} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -242,17 +248,16 @@ describe('MergeToMainDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /^merge$/i }));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.stringContaining('merged'),
-        'success',
-      );
+      expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('merged'), 'success');
     });
   });
 
   it('Merge button is disabled when summary is empty', async () => {
     render(<MergeToMainDialog {...defaultProps()} />);
     // Wait for textarea to appear, then clear it
-    const textarea = await screen.findByRole('textbox', { name: /summary/i }) as HTMLTextAreaElement;
+    const textarea = (await screen.findByRole('textbox', {
+      name: /summary/i,
+    })) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '' } });
     const mergeBtn = screen.getByRole('button', { name: /^merge$/i }) as HTMLButtonElement;
     expect(mergeBtn.disabled).toBe(true);

@@ -7,11 +7,7 @@
 import React from 'react';
 
 import type { ModelSlotAssignments } from '../../types/electron';
-import {
-  slotDescriptionStyle,
-  slotSectionStyle,
-  slotSelectStyle,
-} from './providersSectionStyles';
+import { slotDescriptionStyle, slotSectionStyle, slotSelectStyle } from './providersSectionStyles';
 import { SectionLabel } from './settingsStyles';
 import type { ProviderModelOption } from './useProvidersSection';
 
@@ -80,15 +76,13 @@ interface SlotDropdownProps {
   onChange: (value: string) => void;
 }
 
-function SlotDropdown({
-  config,
-  value,
-  options,
-  onChange,
-}: SlotDropdownProps): React.ReactElement {
+function SlotDropdown({ config, value, options, onChange }: SlotDropdownProps): React.ReactElement {
   return (
     <div>
-      <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>
+      <div
+        className="text-text-semantic-primary"
+        style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}
+      >
         {config.title}
       </div>
       <select
@@ -100,10 +94,14 @@ function SlotDropdown({
       >
         <option value="">(No override — use CLI default)</option>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
         ))}
       </select>
-      <p className="text-text-semantic-muted" style={slotDescriptionStyle}>{config.description}</p>
+      <p className="text-text-semantic-muted" style={slotDescriptionStyle}>
+        {config.description}
+      </p>
     </div>
   );
 }

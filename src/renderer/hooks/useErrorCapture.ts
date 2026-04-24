@@ -35,9 +35,14 @@ export function useErrorCapture(): void {
     function safeSend(source: string, message: string, stack?: string): void {
       if (sendingRef.current || shouldThrottle()) return;
       sendingRef.current = true;
-      window.electronAPI.crash.logError(source, message, stack).catch(() => {
-        // Swallow — prevents infinite loop if logError IPC is missing
-      }).finally(() => { sendingRef.current = false; });
+      window.electronAPI.crash
+        .logError(source, message, stack)
+        .catch(() => {
+          // Swallow — prevents infinite loop if logError IPC is missing
+        })
+        .finally(() => {
+          sendingRef.current = false;
+        });
     }
 
     function onError(event: ErrorEvent): void {
@@ -46,9 +51,10 @@ export function useErrorCapture(): void {
     }
 
     function onUnhandledRejection(event: PromiseRejectionEvent): void {
-      const msg = event.reason instanceof Error
-        ? (event.reason.stack ?? event.reason.message)
-        : String(event.reason);
+      const msg =
+        event.reason instanceof Error
+          ? (event.reason.stack ?? event.reason.message)
+          : String(event.reason);
       safeSend('renderer:unhandledRejection', msg);
     }
 

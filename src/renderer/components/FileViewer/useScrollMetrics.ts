@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface ScrollMetrics {
   scrollTop: number;
@@ -11,9 +11,7 @@ export interface ScrollMetrics {
  * Track scroll position and container dimensions for a scrollable element.
  * Updates on scroll events and container resize.
  */
-export function useScrollMetrics(
-  scrollRef: RefObject<HTMLDivElement | null>
-): ScrollMetrics {
+export function useScrollMetrics(scrollRef: RefObject<HTMLDivElement | null>): ScrollMetrics {
   const [metrics, setMetrics] = useState<ScrollMetrics>({
     scrollTop: 0,
     containerHeight: 0,

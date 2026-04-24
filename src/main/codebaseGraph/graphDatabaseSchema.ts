@@ -19,7 +19,7 @@
 //        CONFIGURES, WRITES, MEMBER_OF, TESTS, USES_TYPE, FILE_CHANGES_WITH,
 //        EXPORTS, EXTENDS
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 1;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
@@ -106,4 +106,4 @@ CREATE TRIGGER IF NOT EXISTS nodes_au AFTER UPDATE ON nodes BEGIN
   INSERT INTO nodes_fts(rowid, name, qualified_name, file_path)
   VALUES (new.rowid, new.name, new.qualified_name, new.file_path);
 END;
-`
+`;

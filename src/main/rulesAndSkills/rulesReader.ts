@@ -7,8 +7,7 @@ import path from 'path';
 
 const MAX_RULES_SIZE = 12288; // 12 KB
 
-const TRUNCATION_NOTE =
-  '\n\n[... content truncated — file exceeds 12 KB limit ...]';
+const TRUNCATION_NOTE = '\n\n[... content truncated — file exceeds 12 KB limit ...]';
 
 function fileNameForType(type: 'claude-md' | 'agents-md'): string {
   return type === 'claude-md' ? 'CLAUDE.md' : 'AGENTS.md';
@@ -19,10 +18,7 @@ function truncateIfOversized(content: string): string {
   return content.slice(0, MAX_RULES_SIZE) + TRUNCATION_NOTE;
 }
 
-function buildMissingResult(
-  type: 'claude-md' | 'agents-md',
-  filePath: string,
-): RulesFile {
+function buildMissingResult(type: 'claude-md' | 'agents-md', filePath: string): RulesFile {
   return { type, filePath, exists: false };
 }
 

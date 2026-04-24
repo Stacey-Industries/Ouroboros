@@ -52,20 +52,17 @@ export function mergeThreadCollection(
   }
 
   if (existing) {
-    const existingIds = new Set(existing.messages.map((m) => m.id));
     const droppedIds = existing.messages
       .filter((m) => !nextThread.messages.some((n) => n.id === m.id))
       .map((m) => `${m.role}:${m.id.slice(-6)}`);
-    log.info(
-      '[trace:chat-order] mergeThreadCollection',
-      'thread:', nextThread.id.slice(-6),
-      'existing:', existing.messages.length,
-      'incoming:', nextThread.messages.length,
-      'defensive:', defensiveMerge,
-      'incomingIds:', nextThread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
-      'droppedFromExisting:', droppedIds.length > 0 ? droppedIds.join(',') : 'none',
-      'existingIdsPresent:', existingIds.size,
-    );
+    log.info('[trace:chat-order] mergeThreadCollection', {
+      thread: nextThread.id.slice(-6),
+      existing: existing.messages.length,
+      incoming: nextThread.messages.length,
+      defensive: defensiveMerge,
+      incomingIds: nextThread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
+      dropped: droppedIds.length > 0 ? droppedIds.join(',') : 'none',
+    });
   }
 
   return sortThreads([...remainingThreads, merged]);
@@ -91,11 +88,25 @@ export function mergeThreadMessage(
 }
 
 type OrchestrationRecord = NonNullable<AgentChatThreadRecord['latestOrchestration']>;
-type StickyOrchestrationKey = 'provider' | 'claudeSessionId' | 'codexThreadId' | 'model' | 'effort' | 'linkedTerminalId';
+type StickyOrchestrationKey =
+  | 'provider'
+  | 'claudeSessionId'
+  | 'codexThreadId'
+  | 'model'
+  | 'effort'
+  | 'linkedTerminalId';
 const STICKY_ORCHESTRATION_KEYS: StickyOrchestrationKey[] = [
-  'provider', 'claudeSessionId', 'codexThreadId', 'model', 'effort', 'linkedTerminalId',
+  'provider',
+  'claudeSessionId',
+  'codexThreadId',
+  'model',
+  'effort',
+  'linkedTerminalId',
 ];
-function applyStickyFields(target: OrchestrationRecord, existing: AgentChatThreadRecord['latestOrchestration']): void {
+function applyStickyFields(
+  target: OrchestrationRecord,
+  existing: AgentChatThreadRecord['latestOrchestration'],
+): void {
   for (const key of STICKY_ORCHESTRATION_KEYS) {
     if (target[key] == null && existing?.[key] != null) {
       (target as Record<string, unknown>)[key] = existing[key];

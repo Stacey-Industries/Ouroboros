@@ -224,7 +224,14 @@ function ModalSearchAndNav({
   setSearchQuery,
 }: Pick<
   SettingsModalPortalProps,
-  'activeMainTab' | 'activeSubTab' | 'isSearching' | 'onMainTabChange' | 'onSubTabChange' | 'searchInputRef' | 'searchQuery' | 'setSearchQuery'
+  | 'activeMainTab'
+  | 'activeSubTab'
+  | 'isSearching'
+  | 'onMainTabChange'
+  | 'onSubTabChange'
+  | 'searchInputRef'
+  | 'searchQuery'
+  | 'setSearchQuery'
 >): React.ReactElement {
   return (
     <>

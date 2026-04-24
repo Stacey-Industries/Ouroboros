@@ -12,7 +12,7 @@ import {
 } from './ChatControlsBarSupport';
 
 describe('buildThreadModelUsage', () => {
-  it('uses the highest input token value per model (high-water mark)', () => {
+  it('uses the highest input token value per Claude-family model (high-water mark)', () => {
     const usage = buildThreadModelUsage([
       {
         id: 'm1',
@@ -20,7 +20,8 @@ describe('buildThreadModelUsage', () => {
         role: 'assistant',
         content: 'first',
         createdAt: 1,
-        model: 'gpt-5.4',
+        model: 'claude-sonnet-4-6',
+        orchestration: { provider: 'claude-code' },
         tokenUsage: { inputTokens: 5000, outputTokens: 100 },
       },
       {
@@ -29,7 +30,8 @@ describe('buildThreadModelUsage', () => {
         role: 'assistant',
         content: 'second',
         createdAt: 2,
-        model: 'gpt-5.4',
+        model: 'claude-sonnet-4-6',
+        orchestration: { provider: 'claude-code' },
         tokenUsage: { inputTokens: 18000, outputTokens: 300 },
       },
       {
@@ -38,12 +40,40 @@ describe('buildThreadModelUsage', () => {
         role: 'assistant',
         content: 'third (after compaction)',
         createdAt: 3,
-        model: 'gpt-5.4',
+        model: 'claude-sonnet-4-6',
+        orchestration: { provider: 'claude-code' },
         tokenUsage: { inputTokens: 1200, outputTokens: 50 },
       },
     ]);
 
-    expect(usage).toEqual([{ model: 'gpt-5.4', inputTokens: 18000, outputTokens: 300 }]);
+    expect(usage).toEqual([{ model: 'claude-sonnet-4-6', inputTokens: 18000, outputTokens: 300 }]);
+  });
+
+  it('uses the most recent Codex sample so stale spikes do not stick forever', () => {
+    const usage = buildThreadModelUsage([
+      {
+        id: 'm1',
+        threadId: 't1',
+        role: 'assistant',
+        content: 'first',
+        createdAt: 1,
+        model: 'gpt-5.4',
+        orchestration: { provider: 'codex' },
+        tokenUsage: { inputTokens: 1_900_000, outputTokens: 100 },
+      },
+      {
+        id: 'm2',
+        threadId: 't1',
+        role: 'assistant',
+        content: 'second',
+        createdAt: 2,
+        model: 'gpt-5.4',
+        orchestration: { provider: 'codex' },
+        tokenUsage: { inputTokens: 42000, outputTokens: 300 },
+      },
+    ]);
+
+    expect(usage).toEqual([{ model: 'gpt-5.4', inputTokens: 42000, outputTokens: 300 }]);
   });
 
   it('keeps separate high-water entries for different models', () => {
@@ -55,6 +85,7 @@ describe('buildThreadModelUsage', () => {
         content: 'codex',
         createdAt: 1,
         model: 'gpt-5.4',
+        orchestration: { provider: 'codex' },
         tokenUsage: { inputTokens: 900, outputTokens: 100 },
       },
       {
@@ -64,6 +95,7 @@ describe('buildThreadModelUsage', () => {
         content: 'claude',
         createdAt: 2,
         model: 'claude-opus-4-6',
+        orchestration: { provider: 'claude-code' },
         tokenUsage: { inputTokens: 1800, outputTokens: 200 },
       },
     ]);
@@ -107,7 +139,11 @@ describe('buildModelOptions', () => {
   });
 
   it('treats Anthropic Auto as a Claude provider selection even when Codex is default', () => {
-    expect(resolveChatControlProvider(ANTHROPIC_AUTO_MODEL, 'codex', [{ id: 'gpt-5.4', name: 'GPT-5.4', reasoningEfforts: [] }])).toBe('claude-code');
+    expect(
+      resolveChatControlProvider(ANTHROPIC_AUTO_MODEL, 'codex', [
+        { id: 'gpt-5.4', name: 'GPT-5.4', reasoningEfforts: [] },
+      ]),
+    ).toBe('claude-code');
   });
 
   it('resolves the active model for Anthropic Auto from Claude settings', () => {
@@ -147,8 +183,27 @@ describe('buildModelOptions', () => {
     ]);
   });
 
-  it('limits Codex permission modes to the non-blocking chat-supported set on exec transport', () => {
+  it('shows all gpt-5.5 Codex effort levels from model capabilities', () => {
+    expect(
+      getEffortOptions('codex', 'gpt-5.5', [
+        {
+          id: 'gpt-5.5',
+          name: 'gpt-5.5',
+          reasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+        },
+      ]),
+    ).toEqual([
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+      { value: 'xhigh', label: 'Extra High' },
+    ]);
+  });
+
+  it('shows app-server Codex permission modes by default', () => {
     expect(getPermissionModes('codex')).toEqual([
+      { value: 'acceptEdits', label: 'Accept Edits' },
+      { value: 'plan', label: 'Plan' },
       { value: 'auto', label: 'Workspace Auto' },
       { value: 'bypassPermissions', label: 'Bypass' },
     ]);

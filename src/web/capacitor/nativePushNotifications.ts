@@ -73,7 +73,9 @@ async function waitForToken(plugin: PushPlugin): Promise<string> {
         errorListener?.remove();
         resolve(token.value);
       })
-      .then((l) => { tokenListener = l; })
+      .then((l) => {
+        tokenListener = l;
+      })
       .catch(reject);
 
     plugin
@@ -82,7 +84,9 @@ async function waitForToken(plugin: PushPlugin): Promise<string> {
         tokenListener?.remove();
         reject(new Error(err.error));
       })
-      .then((l) => { errorListener = l; })
+      .then((l) => {
+        errorListener = l;
+      })
       .catch(reject);
   });
 }

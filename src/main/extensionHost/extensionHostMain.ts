@@ -42,7 +42,10 @@ const extensions = new Map<string, HostExtension>();
 // ── parentPort messaging ──
 
 declare const process: NodeJS.Process & {
-  parentPort?: { postMessage: (msg: unknown) => void; on: (e: 'message', cb: (m: unknown) => void) => void };
+  parentPort?: {
+    postMessage: (msg: unknown) => void;
+    on: (e: 'message', cb: (m: unknown) => void) => void;
+  };
 };
 
 function post(msg: ExtensionHostOutbound): void {
@@ -169,10 +172,17 @@ async function handleActivate(requestId: string, pkg: ExtensionPackage): Promise
     const message = err instanceof Error ? err.message : String(err);
     extensions.set(pkg.manifest.name, {
       state: { manifest: pkg.manifest, configSnapshot: pkg.configSnapshot, log: [] },
-      context: null, status: 'error', errorMessage: message,
+      context: null,
+      status: 'error',
+      errorMessage: message,
     });
     post({ type: 'extensionError', name: pkg.manifest.name, message });
-    post({ type: 'extensionStatus', name: pkg.manifest.name, status: 'error', errorMessage: message });
+    post({
+      type: 'extensionStatus',
+      name: pkg.manifest.name,
+      status: 'error',
+      errorMessage: message,
+    });
     postError(requestId, err);
   }
 }
@@ -254,4 +264,4 @@ function bootstrap(): void {
 bootstrap();
 
 // Re-export types so the bundler resolves them.
-export type { ExtensionHostEvent,ExtensionHostRequest, ExtensionHostResponse };
+export type { ExtensionHostEvent, ExtensionHostRequest, ExtensionHostResponse };

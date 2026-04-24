@@ -72,7 +72,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
   it('calls getSessionMode then setSessionMode with the next mode', async () => {
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-1', toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     expect(mockGetSessionMode).toHaveBeenCalledWith('sess-1');
     // conservative → aggressive
@@ -83,7 +85,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
     mockGetSessionMode.mockResolvedValue({ success: true, mode: 'off' });
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-2', toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     expect(mockSetSessionMode).toHaveBeenCalledWith('sess-2', 'conservative');
   });
@@ -92,7 +96,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
     mockGetSessionMode.mockResolvedValue({ success: true, mode: 'aggressive' });
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-3', toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     expect(mockSetSessionMode).toHaveBeenCalledWith('sess-3', 'off');
   });
@@ -101,7 +107,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
     mockGetSessionMode.mockResolvedValue({ success: true, mode: 'conservative' });
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-4', toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     expect(toast).toHaveBeenCalledOnce();
     const [msg] = toast.mock.calls[0] as [string, string];
@@ -111,7 +119,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
   it('shows toast with "no active session" when sessionId is null', async () => {
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: null, toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     expect(mockGetSessionMode).not.toHaveBeenCalled();
     expect(mockSetSessionMode).not.toHaveBeenCalled();
@@ -122,7 +132,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
   it('does NOT fire on Ctrl+Shift+R (reserved for Reload Window)', async () => {
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-5', toast }));
-    await act(async () => { fireCtrlShiftR(); });
+    await act(async () => {
+      fireCtrlShiftR();
+    });
     unmount();
     expect(mockGetSessionMode).not.toHaveBeenCalled();
     expect(mockSetSessionMode).not.toHaveBeenCalled();
@@ -133,7 +145,9 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
     mockGetSessionMode.mockRejectedValue(new Error('IPC failed'));
     const toast = vi.fn();
     const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-6', toast }));
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     unmount();
     // Falls back to conservative → cycles to aggressive
     expect(mockSetSessionMode).toHaveBeenCalledWith('sess-6', 'aggressive');
@@ -141,12 +155,12 @@ describe('useResearchModeShortcut — Ctrl+Alt+R cycles mode', () => {
 
   it('removes the keydown listener on unmount', async () => {
     const toast = vi.fn();
-    const { unmount } = renderHook(() =>
-      useResearchModeShortcut({ sessionId: 'sess-7', toast }),
-    );
+    const { unmount } = renderHook(() => useResearchModeShortcut({ sessionId: 'sess-7', toast }));
     unmount();
     vi.clearAllMocks();
-    await act(async () => { fireCtrlAltR(); });
+    await act(async () => {
+      fireCtrlAltR();
+    });
     expect(mockGetSessionMode).not.toHaveBeenCalled();
     expect(mockSetSessionMode).not.toHaveBeenCalled();
   });

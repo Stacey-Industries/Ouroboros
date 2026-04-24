@@ -25,7 +25,9 @@ export interface ChatOnlyShellWrapperProps {
   terminal?: UseTerminalSessionsReturn;
 }
 
-export function ChatOnlyShellWrapper({ terminal }: ChatOnlyShellWrapperProps = {}): React.ReactElement {
+export function ChatOnlyShellWrapper({
+  terminal,
+}: ChatOnlyShellWrapperProps = {}): React.ReactElement {
   const { projectRoot } = useProject();
   return (
     <FileViewerManager projectRoot={projectRoot}>

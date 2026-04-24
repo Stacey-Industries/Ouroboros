@@ -70,9 +70,7 @@ describe('applyEdit', () => {
     applyEdit(editor as never, range, 'const x = 1;');
     expect(editor.executeEdits).toHaveBeenCalledWith(
       'inline-edit',
-      expect.arrayContaining([
-        expect.objectContaining({ text: 'const x = 1;' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ text: 'const x = 1;' })]),
     );
   });
 
@@ -91,7 +89,10 @@ describe('applyEdit', () => {
   it('constructs the Range spanning the selection lines', () => {
     const editor = makeEditor(40);
     applyEdit(editor as never, range, 'x');
-    const [, edits] = editor.executeEdits.mock.calls[0] as [string, Array<{ range: Record<string, number> }>];
+    const [, edits] = editor.executeEdits.mock.calls[0] as [
+      string,
+      Array<{ range: Record<string, number> }>,
+    ];
     const r = edits[0].range;
     expect(r['startLineNumber']).toBe(3);
     expect(r['endLineNumber']).toBe(5);

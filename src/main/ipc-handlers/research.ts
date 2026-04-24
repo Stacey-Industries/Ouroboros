@@ -11,7 +11,10 @@ import type { ResearchArtifact } from '@shared/types/research';
 import { ipcMain } from 'electron';
 
 import log from '../logger';
-import { getResearchCorrelationStore, type SessionCorrelationSummary } from '../research/researchCorrelation';
+import {
+  getResearchCorrelationStore,
+  type SessionCorrelationSummary,
+} from '../research/researchCorrelation';
 import { runResearch } from '../research/researchSubagent';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────

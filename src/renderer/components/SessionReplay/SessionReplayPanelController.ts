@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef,useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AgentSession } from '../AgentMonitor/types';
 import type { ReplayStep } from './types';
@@ -30,7 +30,14 @@ export function useSessionReplayController(session: AgentSession): SessionReplay
   const steps = useMemo(() => buildReplaySteps(session), [session]);
   const totalDurationMs = useMemo(() => getTotalDurationMs(session, steps), [session, steps]);
 
-  usePlaybackTimer({ currentStep, playing, setCurrentStep, setPlaying, speed: SPEEDS[speedIdx], steps });
+  usePlaybackTimer({
+    currentStep,
+    playing,
+    setCurrentStep,
+    setPlaying,
+    speed: SPEEDS[speedIdx],
+    steps,
+  });
   useReplayKeyboard({ panelRef, setCurrentStep, setPlaying, stepsLength: steps.length });
 
   return {
@@ -41,47 +48,45 @@ export function useSessionReplayController(session: AgentSession): SessionReplay
     playing,
     speed: SPEEDS[speedIdx],
     totalDurationMs,
-    ...useReplayHandlers({ currentStep, setCurrentStep, setPlaying, setSpeedIdx, stepsLength: steps.length }),
+    ...useReplayHandlers({
+      currentStep,
+      setCurrentStep,
+      setPlaying,
+      setSpeedIdx,
+      stepsLength: steps.length,
+    }),
   };
 }
 
-function useReplayHandlers({
-  currentStep,
-  setCurrentStep,
-  setPlaying,
-  setSpeedIdx,
-  stepsLength,
-}: {
+interface ReplayHandlerArgs {
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   setPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   setSpeedIdx: React.Dispatch<React.SetStateAction<number>>;
   stepsLength: number;
-}): Pick<
-  SessionReplayController,
-  'handlePrev' | 'handleNext' | 'handleTogglePlay' | 'handleCycleSpeed' | 'handleSeek'
-> {
+}
+
+function useReplayHandlers(args: ReplayHandlerArgs): Pick<SessionReplayController, 'handlePrev' | 'handleNext' | 'handleTogglePlay' | 'handleCycleSpeed' | 'handleSeek'> {
+  const { currentStep, setCurrentStep, setPlaying, setSpeedIdx, stepsLength } = args;
   const stopPlayback = useCallback(() => setPlaying(false), [setPlaying]);
   const handlePrev = useCallback(() => stepReplay(setCurrentStep, stopPlayback, -1, stepsLength), [setCurrentStep, stopPlayback, stepsLength]);
   const handleNext = useCallback(() => stepReplay(setCurrentStep, stopPlayback, 1, stepsLength), [setCurrentStep, stopPlayback, stepsLength]);
   const handleTogglePlay = useCallback(() => toggleReplay(setCurrentStep, setPlaying, currentStep, stepsLength), [currentStep, setCurrentStep, setPlaying, stepsLength]);
   const handleCycleSpeed = useCallback(() => setSpeedIdx((idx) => (idx + 1) % SPEEDS.length), [setSpeedIdx]);
-  const handleSeek = useCallback((idx: number) => {
-    setCurrentStep(idx);
-    stopPlayback();
-  }, [setCurrentStep, stopPlayback]);
-
+  const handleSeek = useCallback((idx: number) => { setCurrentStep(idx); stopPlayback(); }, [setCurrentStep, stopPlayback]);
   return { handlePrev, handleNext, handleTogglePlay, handleCycleSpeed, handleSeek };
 }
 
 function buildReplaySteps(session: AgentSession): ReplayStep[] {
-  const result: ReplayStep[] = [{
-    index: 0,
-    type: 'session_start',
-    timestamp: session.startedAt,
-    elapsedMs: 0,
-    label: session.taskLabel,
-  }];
+  const result: ReplayStep[] = [
+    {
+      index: 0,
+      type: 'session_start',
+      timestamp: session.startedAt,
+      elapsedMs: 0,
+      label: session.taskLabel,
+    },
+  ];
 
   for (let index = 0; index < session.toolCalls.length; index += 1) {
     const toolCall = session.toolCalls[index];
@@ -112,9 +117,9 @@ function stepReplay(
   delta: -1 | 1,
   stepsLength: number,
 ): void {
-  setCurrentStep((step) => delta > 0
-    ? Math.min(step + 1, stepsLength - 1)
-    : Math.max(step - 1, 0));
+  setCurrentStep((step) =>
+    delta > 0 ? Math.min(step + 1, stepsLength - 1) : Math.max(step - 1, 0),
+  );
   stopPlayback();
 }
 
@@ -227,7 +232,7 @@ function runReplayKeyCommand(
     return;
   }
   setPlaying(false);
-  setCurrentStep((step) => command === 'next'
-    ? Math.min(step + 1, stepsLength - 1)
-    : Math.max(step - 1, 0));
+  setCurrentStep((step) =>
+    command === 'next' ? Math.min(step + 1, stepsLength - 1) : Math.max(step - 1, 0),
+  );
 }

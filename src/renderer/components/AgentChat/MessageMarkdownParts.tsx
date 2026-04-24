@@ -82,36 +82,35 @@ const mdPreStyle: React.CSSProperties = {
   lineHeight: 1.5,
 };
 
-function MarkdownCodeBlock({
-  className,
-  children,
-  rest,
-}: MarkdownCodeBlockProps): React.ReactElement {
+function CodeBlockBody({ html, roundedClass, hasBorder, className, rest, children }: {
+  html: string | null;
+  roundedClass: string;
+  hasBorder: boolean;
+  className?: string;
+  rest: Record<string, unknown>;
+  children?: React.ReactNode;
+}): React.ReactElement {
+  const borderTop = hasBorder ? 'none' : undefined;
+  if (html) return <div className={roundedClass} style={{ ...mdPreStyle, borderTop, fontSize: '0.85em', fontFamily: 'var(--font-mono)' }} dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <pre className={roundedClass} style={{ ...mdPreStyle, borderTop }}>
+      <code className={className} style={{ fontSize: '0.85em' }} {...rest}>{children}</code>
+    </pre>
+  );
+}
+
+function MarkdownCodeBlock({ className, children, rest }: MarkdownCodeBlockProps): React.ReactElement {
   const match = /language-(\w+)/.exec(className || '');
   const codeStr = String(children).replace(/\n$/, '');
   const { html } = useCodeHighlight(codeStr, match?.[1]);
-  const roundedClass = match ? 'rounded-b' : 'rounded';
   return (
     <div className="group/code relative my-2">
       {match && (
-        <div
-          className="rounded-t px-3 py-1 text-[10px] font-medium bg-surface-raised text-text-semantic-muted"
-          style={{ borderBottom: '1px solid var(--border-default)' }}
-        >
+        <div className="rounded-t px-3 py-1 text-[10px] font-medium bg-surface-raised text-text-semantic-muted" style={{ borderBottom: '1px solid var(--border-default)' }}>
           {match[1]}
         </div>
       )}
-      {html ? (
-        <div
-          className={roundedClass}
-          style={{ ...mdPreStyle, borderTop: match ? 'none' : undefined, fontSize: '0.85em', fontFamily: 'var(--font-mono)' }}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      ) : (
-        <pre className={roundedClass} style={{ ...mdPreStyle, borderTop: match ? 'none' : undefined }}>
-          <code className={className} style={{ fontSize: '0.85em' }} {...rest}>{children}</code>
-        </pre>
-      )}
+      <CodeBlockBody html={html} roundedClass={match ? 'rounded-b' : 'rounded'} hasBorder={!!match} className={className} rest={rest}>{children}</CodeBlockBody>
       <CopyButton text={codeStr} />
     </div>
   );

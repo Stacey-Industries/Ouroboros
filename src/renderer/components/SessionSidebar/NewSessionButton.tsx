@@ -8,6 +8,8 @@
 
 import React, { useCallback, useState } from 'react';
 
+import type { SessionRecord } from '../../types/electron';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function hasElectronAPI(): boolean {
@@ -21,9 +23,16 @@ async function pickProjectRoot(): Promise<string | null> {
   return result.path;
 }
 
-async function createSession(projectRoot: string): Promise<void> {
-  if (!hasElectronAPI()) return;
-  await window.electronAPI.sessionCrud.create(projectRoot);
+async function createStoredSession(projectRoot: string): Promise<SessionRecord | null> {
+  if (!hasElectronAPI()) return null;
+  const result = await window.electronAPI.sessionCrud.create(projectRoot);
+  return result.success && result.session ? result.session : null;
+}
+
+export async function createStoredSessionFromPicker(): Promise<SessionRecord | null> {
+  const projectRoot = await pickProjectRoot();
+  if (!projectRoot) return null;
+  return createStoredSession(projectRoot);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -40,9 +49,8 @@ export function NewSessionButton({ onCreated }: NewSessionButtonProps): React.Re
     if (busy) return;
     setBusy(true);
     try {
-      const root = await pickProjectRoot();
-      if (!root) return;
-      await createSession(root);
+      const session = await createStoredSessionFromPicker();
+      if (!session) return;
       onCreated?.();
     } finally {
       setBusy(false);

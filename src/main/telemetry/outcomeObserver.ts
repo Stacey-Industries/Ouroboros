@@ -21,7 +21,12 @@ export interface OutcomeObserver {
    * @param rowId     The `events.id` returned by `store.record()` — used as FK in outcomes.
    * @param correlationId The paired correlationId for cross-channel joins.
    */
-  noteToolUseEvent(sessionId: string, rowId: string, correlationId: string, timestamp: number): void;
+  noteToolUseEvent(
+    sessionId: string,
+    rowId: string,
+    correlationId: string,
+    timestamp: number,
+  ): void;
   onPtyExit(args: PtyExitArgs): void;
   onConflictSignal(args: ConflictSignalArgs): void;
   /** Append stderr bytes to the rolling 4KB tail for a session. */
@@ -111,8 +116,8 @@ function implOnPtyExit(
   stderrRing.delete(sessionId);
   log.info(
     `[outcomeObserver] exit corr session=${sessionId} eventId=${recent.eventId} ` +
-    `correlationId=${recent.correlationId} delta=${deltaMs}ms confidence=${confidence}` +
-    (stderrHash ? ` stderrHash=${stderrHash}` : ''),
+      `correlationId=${recent.correlationId} delta=${deltaMs}ms confidence=${confidence}` +
+      (stderrHash ? ` stderrHash=${stderrHash}` : ''),
   );
   try {
     store.recordOutcome({
@@ -145,7 +150,10 @@ function implOnConflictSignal(store: TelemetryStore, args: ConflictSignalArgs): 
 function implAppendStderr(ring: Map<string, string>, sessionId: string, data: string): void {
   const prev = ring.get(sessionId) ?? '';
   const combined = prev + data;
-  ring.set(sessionId, combined.length > STDERR_RING_CAP ? combined.slice(-STDERR_RING_CAP) : combined);
+  ring.set(
+    sessionId,
+    combined.length > STDERR_RING_CAP ? combined.slice(-STDERR_RING_CAP) : combined,
+  );
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -159,7 +167,10 @@ export function createOutcomeObserver(store: TelemetryStore): OutcomeObserver {
     onPtyExit: (args) => implOnPtyExit(lastToolUse, stderrRing, store, args),
     onConflictSignal: (args) => implOnConflictSignal(store, args),
     appendStderr: (sid, data) => implAppendStderr(stderrRing, sid, data),
-    close: () => { lastToolUse.clear(); stderrRing.clear(); },
+    close: () => {
+      lastToolUse.clear();
+      stderrRing.clear();
+    },
   };
 }
 

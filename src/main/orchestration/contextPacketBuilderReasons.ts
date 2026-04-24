@@ -37,13 +37,21 @@ function findKeywordRanges(content: string, detail: string): ContextSnippetRange
 }
 
 function findImportRanges(content: string): ContextSnippetRange[] {
-  const ranges = content.split(/\r?\n/).flatMap((line, index) =>
-    /\b(import|export)\b|require\(/.test(line) ? [{ startLine: index + 1, endLine: index + 2 }] : [],
-  );
+  const ranges = content
+    .split(/\r?\n/)
+    .flatMap((line, index) =>
+      /\b(import|export)\b|require\(/.test(line)
+        ? [{ startLine: index + 1, endLine: index + 2 }]
+        : [],
+    );
   return mergeSnippetRanges(ranges);
 }
 
-function findLineWindow(totalLines: number, centerLine: number, lineLimit: number): ContextSnippetRange {
+function findLineWindow(
+  totalLines: number,
+  centerLine: number,
+  lineLimit: number,
+): ContextSnippetRange {
   const half = Math.max(1, Math.floor(lineLimit / 2));
   return clampRange(
     { startLine: centerLine - half, endLine: centerLine - half + lineLimit - 1 },
@@ -117,7 +125,11 @@ function appendDiffHunkRanges(
       startLine: Math.max(1, hunk.startLine - CONTEXT_PADDING),
       endLine: Math.min(totalLines, hunk.startLine + hunk.lineCount + CONTEXT_PADDING),
     };
-    target.push({ range: clampRange(range, totalLines), source: 'diff_hunk', label: `Diff hunk at line ${hunk.startLine}` });
+    target.push({
+      range: clampRange(range, totalLines),
+      source: 'diff_hunk',
+      label: `Diff hunk at line ${hunk.startLine}`,
+    });
   }
 }
 

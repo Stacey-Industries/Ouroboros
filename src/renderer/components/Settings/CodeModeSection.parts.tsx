@@ -18,10 +18,7 @@ export function CodeModeSectionView(props: CodeModeSectionModel): React.ReactEle
         onToggle={() => props.setIsTypesOpen((value) => !value)}
         title="Generated Types"
       >
-        <GeneratedTypesContent
-          generatedTypes={props.generatedTypes}
-          isEnabled={props.isEnabled}
-        />
+        <GeneratedTypesContent generatedTypes={props.generatedTypes} isEnabled={props.isEnabled} />
       </CollapsibleSection>
       <CollapsibleSection
         isOpen={props.isHowItWorksOpen}

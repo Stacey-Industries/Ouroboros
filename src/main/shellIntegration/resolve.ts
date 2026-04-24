@@ -3,25 +3,28 @@
  * and determines which shell type is being used.
  */
 
-import { app } from 'electron'
-import fs from 'fs'
-import path from 'path'
+import { app } from 'electron';
+import fs from 'fs';
+import path from 'path';
 
-export type ShellType = 'bash' | 'zsh' | 'pwsh' | 'unknown'
+export type ShellType = 'bash' | 'zsh' | 'pwsh' | 'unknown';
 
 /**
  * Detect shell type from a shell executable path.
  */
 export function detectShellType(shell: string): ShellType {
-  const base = path.basename(shell).toLowerCase().replace(/\.exe$/, '')
-  if (base === 'bash' || base === 'sh') return 'bash'
-  if (base === 'zsh') return 'zsh'
+  const base = path
+    .basename(shell)
+    .toLowerCase()
+    .replace(/\.exe$/, '');
+  if (base === 'bash' || base === 'sh') return 'bash';
+  if (base === 'zsh') return 'zsh';
   // 'pwsh' is PowerShell 7+ which supports OSC 633 via the integration script.
   // 'powershell' is Windows PowerShell 5.1 — the integration script is NOT
   // compatible because [Console]::Write + [char]27 behaves differently in PS5.1,
   // causing ESC to print literally (e]633...) and leaving blocks incomplete.
-  if (base === 'pwsh') return 'pwsh'
-  return 'unknown'
+  if (base === 'pwsh') return 'pwsh';
+  return 'unknown';
 }
 
 /**
@@ -34,34 +37,34 @@ function getShellIntegrationDir(): string {
     path.join(app.getAppPath(), 'src', 'main', 'shellIntegration'),
     path.join(__dirname, 'shellIntegration'),
     path.join(__dirname, '..', '..', 'src', 'main', 'shellIntegration'),
-  ]
+  ];
 
   for (const candidate of candidates) {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- candidate is built from trusted app paths
-    if (fs.existsSync(candidate)) return candidate
+    if (fs.existsSync(candidate)) return candidate;
   }
 
   // Fallback to the source directory (dev mode)
-  return candidates[1]
+  return candidates[1];
 }
 
 const SCRIPT_MAP: Record<Exclude<ShellType, 'unknown'>, string> = {
   bash: 'bash.sh',
   zsh: 'zsh.sh',
   pwsh: 'pwsh.ps1',
-}
+};
 
 /**
  * Get the path to the shell integration script for a given shell type.
  * Returns null if the shell type is unknown or the script doesn't exist.
  */
 export function getShellIntegrationScript(shellType: ShellType): string | null {
-  if (shellType === 'unknown') return null
-  const dir = getShellIntegrationDir()
+  if (shellType === 'unknown') return null;
+  const dir = getShellIntegrationDir();
   // eslint-disable-next-line security/detect-object-injection -- shellType is validated as a non-unknown ShellType enum value
-  const scriptPath = path.join(dir, SCRIPT_MAP[shellType])
+  const scriptPath = path.join(dir, SCRIPT_MAP[shellType]);
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- scriptPath is derived from trusted app paths + fixed filename map
-  return fs.existsSync(scriptPath) ? scriptPath : null
+  return fs.existsSync(scriptPath) ? scriptPath : null;
 }
 
 /**
@@ -74,14 +77,14 @@ export function buildShellIntegrationEnv(
   shell: string,
   existingEnv: Record<string, string>,
 ): { env: Record<string, string>; shellArgs: string[] | null } {
-  const shellType = detectShellType(shell)
-  const scriptPath = getShellIntegrationScript(shellType)
+  const shellType = detectShellType(shell);
+  const scriptPath = getShellIntegrationScript(shellType);
 
   if (!scriptPath) {
-    return { env: existingEnv, shellArgs: null }
+    return { env: existingEnv, shellArgs: null };
   }
 
-  const env = { ...existingEnv }
+  const env = { ...existingEnv };
 
   switch (shellType) {
     case 'bash':
@@ -89,8 +92,8 @@ export function buildShellIntegrationEnv(
       // For interactive login shells (bash -l -i), .bashrc/.bash_profile
       // are sourced but BASH_ENV is also checked. This is the standard
       // mechanism VS Code uses for shell integration injection.
-      env.BASH_ENV = scriptPath
-      return { env, shellArgs: null }
+      env.BASH_ENV = scriptPath;
+      return { env, shellArgs: null };
 
     case 'zsh':
       // For zsh, we set ZDOTDIR to a custom value would be invasive.
@@ -100,26 +103,21 @@ export function buildShellIntegrationEnv(
       // set BASH_ENV as a fallback for zsh in sh-compat mode.
       // The most reliable non-invasive approach: set the env var and
       // also try BASH_ENV (zsh ignores it, but it's harmless).
-      env.OUROBOROS_ZSH_INTEGRATION = scriptPath
-      env.BASH_ENV = scriptPath
-      return { env, shellArgs: null }
+      env.OUROBOROS_ZSH_INTEGRATION = scriptPath;
+      env.BASH_ENV = scriptPath;
+      return { env, shellArgs: null };
 
     case 'pwsh':
       // For PowerShell, dot-source the integration script on startup.
       // This replaces the default args (-NoLogo) with a command that
       // loads the integration then enters interactive mode.
-      env.OUROBOROS_PWSH_INTEGRATION = scriptPath
+      env.OUROBOROS_PWSH_INTEGRATION = scriptPath;
       return {
         env,
-        shellArgs: [
-          '-NoLogo',
-          '-NoExit',
-          '-Command',
-          `. '${scriptPath.replace(/'/g, "''")}'`,
-        ],
-      }
+        shellArgs: ['-NoLogo', '-NoExit', '-Command', `. '${scriptPath.replace(/'/g, "''")}'`],
+      };
 
     default:
-      return { env: existingEnv, shellArgs: null }
+      return { env: existingEnv, shellArgs: null };
   }
 }

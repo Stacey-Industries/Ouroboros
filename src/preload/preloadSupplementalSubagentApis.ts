@@ -15,16 +15,11 @@ function onChannel<T>(channel: string, callback: (payload: T) => void): () => vo
 }
 
 export const subagentApi: SubagentApiType = {
-  list: (args) =>
-    ipcRenderer.invoke('subagent:list', args),
-  get: (args) =>
-    ipcRenderer.invoke('subagent:get', args),
-  liveCount: (args) =>
-    ipcRenderer.invoke('subagent:liveCount', args),
-  costRollup: (args) =>
-    ipcRenderer.invoke('subagent:costRollup', args),
-  cancel: (args) =>
-    ipcRenderer.invoke('subagent:cancel', args),
+  list: (args) => ipcRenderer.invoke('subagent:list', args),
+  get: (args) => ipcRenderer.invoke('subagent:get', args),
+  liveCount: (args) => ipcRenderer.invoke('subagent:liveCount', args),
+  costRollup: (args) => ipcRenderer.invoke('subagent:costRollup', args),
+  cancel: (args) => ipcRenderer.invoke('subagent:cancel', args),
   onUpdated: (callback: (event: SubagentUpdatedEvent) => void) =>
     onChannel<SubagentUpdatedEvent>('subagent:updated', callback),
 };

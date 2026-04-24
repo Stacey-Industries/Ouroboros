@@ -17,12 +17,7 @@ export function PinnedContextBar({
   return (
     <div className="flex flex-col gap-1 px-2 py-1.5" data-testid="pinned-context-bar">
       {items.map((item) => (
-        <PinnedContextCard
-          key={item.id}
-          item={item}
-          onDismiss={dismiss}
-          onRemove={remove}
-        />
+        <PinnedContextCard key={item.id} item={item} onDismiss={dismiss} onRemove={remove} />
       ))}
     </div>
   );

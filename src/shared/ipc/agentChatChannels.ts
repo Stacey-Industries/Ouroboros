@@ -50,6 +50,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   listBranches: 'agentChat:listBranches',
   // Wave 23 Phase D — merge side chat into main thread
   mergeSideChat: 'agentChat:mergeSideChat',
+  // Mid-turn injection — write a user message to the active warm process stdin
+  injectMidTurn: 'agentChat:injectMidTurn',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

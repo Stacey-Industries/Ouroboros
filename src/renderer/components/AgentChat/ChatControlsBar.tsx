@@ -52,8 +52,12 @@ export function resolveChatControlProvider(
   return defaultProvider;
 }
 
-export function cyclePermissionMode(current: string, provider: ChatControlProvider): string {
-  const modes = getPermissionModes(provider);
+export function cyclePermissionMode(
+  current: string,
+  provider: ChatControlProvider,
+  options?: { codexAppServerTransport?: boolean },
+): string {
+  const modes = getPermissionModes(provider, options);
   const idx = modes.findIndex((mode) => mode.value === current);
   return idx === -1 ? (modes[0]?.value ?? current) : modes[(idx + 1) % modes.length].value;
 }
@@ -101,13 +105,22 @@ function PermissionModeIndicator(props: {
   provider: ChatControlProvider;
   value: string;
   onChange: (value: string) => void;
+  codexAppServerTransport?: boolean;
 }): React.ReactElement {
-  const modes = getPermissionModes(props.provider);
+  const modes = getPermissionModes(props.provider, {
+    codexAppServerTransport: props.codexAppServerTransport,
+  });
   const current = modes.find((mode) => mode.value === props.value) ?? modes[0];
   return (
     <button
       type="button"
-      onClick={() => props.onChange(cyclePermissionMode(props.value, props.provider))}
+      onClick={() =>
+        props.onChange(
+          cyclePermissionMode(props.value, props.provider, {
+            codexAppServerTransport: props.codexAppServerTransport,
+          }),
+        )
+      }
       className="flex items-center gap-1 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-surface-hover"
       style={{ ...pillStyle, fontFamily: 'var(--font-ui)' }}
       title="Permission mode (Shift+Tab to cycle)"
@@ -125,6 +138,7 @@ interface ChatControlsBarProps {
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   routedBy?: string;
 }
 
@@ -154,6 +168,8 @@ function buildControlsBarState(props: ChatControlsBarProps) {
   return { activeProvider, effortOptions, effortValue, ...modelOptions };
 }
 
+export { buildControlsBarState };
+
 function useActiveSessionRules() {
   const { agents } = useAgentEventsContext();
   return useMemo(() => {
@@ -182,6 +198,25 @@ function RoutedByBadge(props: { routedBy?: string }): React.ReactElement | null 
   );
 }
 
+function DensityIcon({ isCompact }: { isCompact: boolean }): React.ReactElement {
+  if (isCompact) {
+    return (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <line x1="1" y1="3" x2="11" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="1" y1="9" x2="11" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <line x1="1" y1="2.5" x2="11" y2="2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="1" y1="9.5" x2="11" y2="9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function DensityToggle(): React.ReactElement {
   const { density, setDensity } = useDensity();
   const isCompact = density === 'compact';
@@ -193,21 +228,7 @@ function DensityToggle(): React.ReactElement {
       className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text-semantic-primary"
       style={{ fontFamily: 'var(--font-ui)' }}
     >
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-        {isCompact ? (
-          <>
-            <line x1="1" y1="3" x2="11" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="1" y1="9" x2="11" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </>
-        ) : (
-          <>
-            <line x1="1" y1="2.5" x2="11" y2="2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="1" y1="9.5" x2="11" y2="9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </>
-        )}
-      </svg>
+      <DensityIcon isCompact={isCompact} />
       <span>{isCompact ? 'Compact' : 'Comfortable'}</span>
     </button>
   );
@@ -238,6 +259,7 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
       <PermissionModeIndicator
         provider={activeProvider}
         value={props.overrides.permissionMode}
+        codexAppServerTransport={props.codexAppServerTransport}
         onChange={(permissionMode) => props.onChange({ ...props.overrides, permissionMode })}
       />
       <RulesActivityBadge rules={loadedRules} />

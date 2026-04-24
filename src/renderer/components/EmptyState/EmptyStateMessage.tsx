@@ -107,8 +107,12 @@ function ActionButton({
       onClick={onAction}
       className="text-text-semantic-on-accent"
       style={actionButtonStyle}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--interactive-hover)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--interactive-accent)'; }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--interactive-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--interactive-accent)';
+      }}
     >
       {t(labelKey)}
     </button>
@@ -123,8 +127,12 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }): React.ReactEle
       aria-label={t('common.close')}
       className="text-text-semantic-faint"
       style={dismissButtonStyle}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--surface-hover)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
     >
       ×
     </button>
@@ -158,9 +166,7 @@ export const EmptyStateMessage = memo(function EmptyStateMessage({
       <span className="text-text-semantic-muted" style={titleStyle}>
         {t(messageKey)}
       </span>
-      {showAction && (
-        <ActionButton labelKey={actionLabel} onAction={onAction} />
-      )}
+      {showAction && <ActionButton labelKey={actionLabel} onAction={onAction} />}
     </div>
   );
 });

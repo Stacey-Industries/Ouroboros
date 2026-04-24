@@ -94,7 +94,11 @@ async function rotateIfNeeded(filePath: string, deps: DecisionWriterDeps): Promi
   for (let i = 2; i >= 1; i--) {
     const src = rotationPath(filePath, i);
     const dst = rotationPath(filePath, i + 1);
-    try { await deps.rotate(src, dst); } catch { /* may not exist */ }
+    try {
+      await deps.rotate(src, dst);
+    } catch {
+      /* may not exist */
+    }
   }
   await deps.rotate(filePath, rotationPath(filePath, 1));
 }

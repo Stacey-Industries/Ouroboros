@@ -65,10 +65,7 @@ describe('PinnedContextBar', () => {
   });
 
   it('renders a card for each pinned item', () => {
-    mockItems = [
-      makeItem({ id: 'a', title: 'alpha.ts' }),
-      makeItem({ id: 'b', title: 'beta.ts' }),
-    ];
+    mockItems = [makeItem({ id: 'a', title: 'alpha.ts' }), makeItem({ id: 'b', title: 'beta.ts' })];
     render(<PinnedContextBar activeSessionId="sess-1" />);
     expect(screen.getByText('alpha.ts')).toBeTruthy();
     expect(screen.getByText('beta.ts')).toBeTruthy();

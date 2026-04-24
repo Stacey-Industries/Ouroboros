@@ -15,11 +15,7 @@ import { useDispatchJobs } from '../../hooks/useDispatchJobs';
 import { DispatchForm } from './DispatchForm';
 import { DispatchJobDetail } from './DispatchJobDetail';
 import { DispatchQueueList } from './DispatchQueueList';
-import {
-  SCREEN_WRAPPER_STYLE,
-  TAB_BAR_STYLE,
-  tabButtonStyle,
-} from './DispatchScreen.styles';
+import { SCREEN_WRAPPER_STYLE, TAB_BAR_STYLE, tabButtonStyle } from './DispatchScreen.styles';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,8 +64,14 @@ interface ViewProps {
 }
 
 function DispatchViewBody({
-  view, projectRoots, jobs, selectedJobId, cancel,
-  onJobCreated, onSelectJob, onCloseDetail,
+  view,
+  projectRoots,
+  jobs,
+  selectedJobId,
+  cancel,
+  onJobCreated,
+  onSelectJob,
+  onCloseDetail,
 }: ViewProps): React.ReactElement {
   const selectedJob = jobs.find((j) => j.id === selectedJobId) ?? null;
 
@@ -98,7 +100,9 @@ function DispatchViewBody({
     <DispatchForm
       projectRoots={projectRoots}
       onSuccess={onJobCreated}
-      onError={() => { /* errors shown inline by DispatchForm */ }}
+      onError={() => {
+        /* errors shown inline by DispatchForm */
+      }}
     />
   );
 }
@@ -132,11 +136,7 @@ export function DispatchScreen(): React.ReactElement {
 
   return (
     <div style={SCREEN_WRAPPER_STYLE} data-testid="dispatch-screen">
-      <DispatchTabBar
-        activeView={view}
-        jobCount={jobs.length}
-        onSwitch={handleTabSwitch}
-      />
+      <DispatchTabBar activeView={view} jobCount={jobs.length} onSwitch={handleTabSwitch} />
       <DispatchViewBody
         view={view}
         projectRoots={projectRoots}

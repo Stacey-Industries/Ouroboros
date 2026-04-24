@@ -21,12 +21,16 @@ function getDefaultProvider(cfg: CfgType): 'claude-code' | 'codex' | 'anthropic-
 function getModelProviders(cfg: CfgType): ModelProvider[] {
   return cfg?.modelProviders ?? [];
 }
+function getCodexAppServerTransport(cfg: CfgType): boolean {
+  return cfg?.ecosystem?.codexAppServerTransport === true;
+}
 
 interface ModelSettingsSetters {
   setSettingsModel: (v: string) => void;
   setCodexSettingsModel: (v: string) => void;
   setDefaultProvider: (v: 'claude-code' | 'codex' | 'anthropic-api') => void;
   setModelProviders: (v: ModelProvider[]) => void;
+  setCodexAppServerTransport: (v: boolean) => void;
 }
 
 export function applyModelSettingsConfig(cfg: CfgType, setters: ModelSettingsSetters): void {
@@ -34,6 +38,23 @@ export function applyModelSettingsConfig(cfg: CfgType, setters: ModelSettingsSet
   setters.setCodexSettingsModel(getCodexSettingsModel(cfg));
   setters.setDefaultProvider(getDefaultProvider(cfg));
   setters.setModelProviders(getModelProviders(cfg));
+  setters.setCodexAppServerTransport(getCodexAppServerTransport(cfg));
+}
+
+function useModelSettingsConfigSubscription(setters: ModelSettingsSetters): void {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('electronAPI' in window)) return undefined;
+    const applyConfig = (cfg: CfgType): void => applyModelSettingsConfig(cfg, setters);
+    window.electronAPI.config
+      .getAll()
+      .then(applyConfig)
+      .catch((error) => {
+        log.error('Failed to load config:', error);
+      });
+    return window.electronAPI.config.onExternalChange?.(applyConfig);
+    // State setters are stable; this subscription should be installed once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 export function useModelSettings() {
@@ -44,22 +65,18 @@ export function useModelSettings() {
   );
   const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
   const [codexModels, setCodexModels] = useState<CodexModelOption[]>([]);
+  const [codexAppServerTransport, setCodexAppServerTransport] = useState(false);
+  const setters = {
+    setSettingsModel,
+    setCodexSettingsModel,
+    setDefaultProvider,
+    setModelProviders,
+    setCodexAppServerTransport,
+  };
 
+  useModelSettingsConfigSubscription(setters);
   useEffect(() => {
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
-      window.electronAPI.config
-        .getAll()
-        .then((cfg) => {
-          applyModelSettingsConfig(cfg, {
-            setSettingsModel,
-            setCodexSettingsModel,
-            setDefaultProvider,
-            setModelProviders,
-          });
-        })
-        .catch((error) => {
-          log.error('Failed to load config:', error);
-        });
       window.electronAPI.codex
         .listModels()
         .then(setCodexModels)
@@ -67,6 +84,7 @@ export function useModelSettings() {
           log.error('Failed to load Codex models:', error);
         });
     }
+    return undefined;
   }, []);
 
   return {
@@ -75,5 +93,6 @@ export function useModelSettings() {
     defaultProvider,
     modelProviders,
     codexModels,
+    codexAppServerTransport,
   };
 }

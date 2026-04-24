@@ -26,11 +26,7 @@ export function NoDragZone({ children }: { children: React.ReactNode }): React.R
   const stop = useCallback(stopPropagation, []);
 
   return (
-    <div
-      style={containerStyle}
-      onPointerDownCapture={stop}
-      onTouchStartCapture={stop}
-    >
+    <div style={containerStyle} onPointerDownCapture={stop} onTouchStartCapture={stop}>
       {children}
     </div>
   );

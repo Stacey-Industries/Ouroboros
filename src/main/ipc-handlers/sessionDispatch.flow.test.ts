@@ -22,10 +22,7 @@ import {
   startDispatchRunner,
   stopDispatchRunner,
 } from '../session/sessionDispatchRunner';
-import {
-  cleanupDispatchHandlers,
-  registerDispatchHandlers,
-} from './sessionDispatchHandlers';
+import { cleanupDispatchHandlers, registerDispatchHandlers } from './sessionDispatchHandlers';
 
 // ── Fake timers for entire suite ──────────────────────────────────────────────
 
@@ -59,10 +56,14 @@ const configStore: Record<string, unknown> = {
 };
 
 vi.mock('../config', () => ({
-  // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
-  getConfigValue: (k: string) => configStore[k],
-  // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
-  setConfigValue: (k: string, v: unknown) => { configStore[k] = v; },
+  getConfigValue: (k: string) => {
+    // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
+    return configStore[k];
+  },
+  setConfigValue: (k: string, v: unknown) => {
+    // eslint-disable-next-line security/detect-object-injection -- test-only config store; k is controlled by test code
+    configStore[k] = v;
+  },
 }));
 
 // ── Window manager ────────────────────────────────────────────────────────────
@@ -76,7 +77,9 @@ vi.mock('../windowManager', () => ({
 
 const broadcastCalls: unknown[] = [];
 vi.mock('../session/sessionDispatchRunnerStatus', () => ({
-  broadcastJobStatus: (job: unknown) => { broadcastCalls.push(job); },
+  broadcastJobStatus: (job: unknown) => {
+    broadcastCalls.push(job);
+  },
 }));
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
@@ -93,10 +96,15 @@ vi.mock('../session/worktreeManager', () => ({
 
 // ── spawnAgentSession — controllable per test ─────────────────────────────────
 
-const mockSpawnAgentSession = vi.fn<(a: unknown, b: unknown) => Promise<{
-  ptyId: string;
-  completion: Promise<void>;
-}>>();
+const mockSpawnAgentSession = vi.fn<
+  (
+    a: unknown,
+    b: unknown,
+  ) => Promise<{
+    ptyId: string;
+    completion: Promise<void>;
+  }>
+>();
 const mockKillSession = vi.fn<(a: unknown) => Promise<undefined>>();
 mockKillSession.mockResolvedValue(undefined);
 
@@ -158,7 +166,9 @@ afterEach(() => {
 describe('sessionDispatch full flow — IPC → queue → runner → completion', () => {
   it('transitions queued → starting → running → completed', async () => {
     let completionResolve!: () => void;
-    const completionPromise = new Promise<void>((res) => { completionResolve = res; });
+    const completionPromise = new Promise<void>((res) => {
+      completionResolve = res;
+    });
 
     mockSpawnAgentSession.mockResolvedValue({
       ptyId: 'pty-flow-1',
@@ -167,10 +177,11 @@ describe('sessionDispatch full flow — IPC → queue → runner → completion'
 
     const dispatchHandler = captureHandler('sessions:dispatchTask');
 
-    const result = await dispatchHandler(
-      makeEvent(1),
-      { title: 'Flow Test', prompt: 'Do work', projectPath: WIN_ROOT_RESOLVED },
-    ) as { success: boolean; jobId?: string };
+    const result = (await dispatchHandler(makeEvent(1), {
+      title: 'Flow Test',
+      prompt: 'Do work',
+      projectPath: WIN_ROOT_RESOLVED,
+    })) as { success: boolean; jobId?: string };
 
     expect(result.success).toBe(true);
     const jobId = result.jobId!;
@@ -216,15 +227,18 @@ describe('sessionDispatch full flow — IPC → queue → runner → completion'
 
     mockSpawnAgentSession.mockResolvedValue({
       ptyId: 'pty-cap',
-      completion: new Promise(() => { /* never resolves */ }),
+      completion: new Promise(() => {
+        /* never resolves */
+      }),
     });
 
     const dispatchHandler = captureHandler('sessions:dispatchTask');
 
-    await dispatchHandler(
-      makeEvent(1),
-      { title: 'Cap Test', prompt: 'Work', projectPath: WIN_ROOT_RESOLVED },
-    );
+    await dispatchHandler(makeEvent(1), {
+      title: 'Cap Test',
+      prompt: 'Work',
+      projectPath: WIN_ROOT_RESOLVED,
+    });
 
     startDispatchRunner();
     await vi.advanceTimersByTimeAsync(500);
@@ -240,10 +254,11 @@ describe('sessionDispatch full flow — IPC → queue → runner → completion'
 
     const dispatchHandler = captureHandler('sessions:dispatchTask');
 
-    await dispatchHandler(
-      makeEvent(1),
-      { title: 'Fail Test', prompt: 'Fail prompt', projectPath: WIN_ROOT_RESOLVED },
-    );
+    await dispatchHandler(makeEvent(1), {
+      title: 'Fail Test',
+      prompt: 'Fail prompt',
+      projectPath: WIN_ROOT_RESOLVED,
+    });
 
     startDispatchRunner();
     await vi.advanceTimersByTimeAsync(300);
@@ -260,18 +275,16 @@ describe('sessionDispatch — cancel flow', () => {
     const dispatchHandler = captureHandler('sessions:dispatchTask');
     const cancelHandler = captureHandler('sessions:cancelDispatchJob');
 
-    const enqueueResult = await dispatchHandler(
-      makeEvent(1),
-      { title: 'To cancel', prompt: 'Cancel me', projectPath: WIN_ROOT_RESOLVED },
-    ) as { success: boolean; jobId?: string };
+    const enqueueResult = (await dispatchHandler(makeEvent(1), {
+      title: 'To cancel',
+      prompt: 'Cancel me',
+      projectPath: WIN_ROOT_RESOLVED,
+    })) as { success: boolean; jobId?: string };
 
     expect(enqueueResult.success).toBe(true);
     const jobId = enqueueResult.jobId!;
 
-    const cancelResult = await cancelHandler(
-      makeEvent(1),
-      jobId,
-    ) as { success: boolean };
+    const cancelResult = (await cancelHandler(makeEvent(1), jobId)) as { success: boolean };
 
     expect(cancelResult.success).toBe(true);
 

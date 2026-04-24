@@ -19,6 +19,10 @@ vi.mock('./AgentChatSubToolList', () => ({
   AgentChatSubToolList: () => null,
 }));
 
+vi.mock('./AgentChatSubAgentTranscript', () => ({
+  AgentChatSubAgentTranscript: () => <div data-testid="subagent-transcript" />,
+}));
+
 vi.mock('./AgentChatToolCardSupport', () => ({
   ToolHeader: ({ name }: { name: string }) => <div data-testid="tool-header">{name}</div>,
   ToolDetails: () => null,
@@ -85,9 +89,7 @@ describe('AgentChatToolCard — chat-only mode (Phase E flat strip)', () => {
     // Should not contain border-border-semantic or the base border class
     expect(el.className).not.toContain('border-border-semantic');
     // The 'border' token should not appear unless it's the error path
-    const hasPlainBorder = el.className
-      .split(' ')
-      .some((cls) => cls === 'border');
+    const hasPlainBorder = el.className.split(' ').some((cls) => cls === 'border');
     expect(hasPlainBorder).toBe(false);
   });
 
@@ -105,5 +107,20 @@ describe('AgentChatToolCard — IDE error mode', () => {
   it('applies inline borderColor style for error in IDE mode', () => {
     const el = renderCard('ide', { errorOutput: 'boom' });
     expect(el.style.borderColor).toBe('var(--diff-del-border)');
+  });
+
+  it('renders nested subagent transcript when present', () => {
+    const el = renderCard('ide', {
+      isCollapsed: false,
+      subAgentTranscript: [
+        {
+          entryId: 'agent-1:text',
+          subAgentId: 'agent-1',
+          kind: 'text',
+          content: 'child transcript',
+        },
+      ],
+    });
+    expect(el.querySelector('[data-testid="subagent-transcript"]')).not.toBeNull();
   });
 });

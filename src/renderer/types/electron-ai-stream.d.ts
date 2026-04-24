@@ -12,12 +12,11 @@ export interface AiStreamAPI {
    * sibling subscription — see `onStream`. Resolves with the request id once
    * the main process has accepted the request.
    */
-  startInlineEdit: (request: InlineEditStreamRequest) => Promise<IpcResult & { requestId?: string }>;
+  startInlineEdit: (
+    request: InlineEditStreamRequest,
+  ) => Promise<IpcResult & { requestId?: string }>;
   cancelInlineEdit: (request: InlineEditStreamCancelRequest) => Promise<IpcResult>;
-  onStream: (
-    requestId: string,
-    callback: (event: InlineEditStreamEvent) => void,
-  ) => () => void;
+  onStream: (requestId: string, callback: (event: InlineEditStreamEvent) => void) => () => void;
 }
 
 export type { InlineEditStreamCancelRequest, InlineEditStreamEvent, InlineEditStreamRequest };

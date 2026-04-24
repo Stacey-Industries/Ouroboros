@@ -22,7 +22,9 @@ import {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function leaf(slotName: 'editorContent' | 'terminalContent' | 'sidebarContent' | 'agentCards'): LeafSlot {
+function leaf(
+  slotName: 'editorContent' | 'terminalContent' | 'sidebarContent' | 'agentCards',
+): LeafSlot {
   return { kind: 'leaf', slotName, component: { componentKey: slotName } };
 }
 
@@ -100,7 +102,11 @@ describe('splitLeafWith', () => {
   });
 
   it('splits a leaf deep inside a nested tree', () => {
-    const tree: SplitNode = { kind: 'split', direction: 'horizontal', children: [editor, terminal] };
+    const tree: SplitNode = {
+      kind: 'split',
+      direction: 'horizontal',
+      children: [editor, terminal],
+    };
     const result = splitLeafWith({
       tree,
       targetSlot: 'terminalContent',
@@ -127,7 +133,11 @@ describe('removeLeaf', () => {
   });
 
   it('collapses the split when one child is removed', () => {
-    const tree: SplitNode = { kind: 'split', direction: 'horizontal', children: [editor, terminal] };
+    const tree: SplitNode = {
+      kind: 'split',
+      direction: 'horizontal',
+      children: [editor, terminal],
+    };
     const result = removeLeaf(tree, 'editorContent');
     expect(result).not.toBeNull();
     expect(isLeaf(result!)).toBe(true);
@@ -170,13 +180,21 @@ describe('replaceLeaf', () => {
 
 describe('unsplitIfOrphan', () => {
   it('leaves a valid two-child split unchanged', () => {
-    const tree: SplitNode = { kind: 'split', direction: 'horizontal', children: [editor, terminal] };
+    const tree: SplitNode = {
+      kind: 'split',
+      direction: 'horizontal',
+      children: [editor, terminal],
+    };
     const result = unsplitIfOrphan(tree);
     expect(result).toBe(tree);
   });
 
   it('collapses a split after one child is removed via removeLeaf', () => {
-    const tree: SplitNode = { kind: 'split', direction: 'horizontal', children: [editor, terminal] };
+    const tree: SplitNode = {
+      kind: 'split',
+      direction: 'horizontal',
+      children: [editor, terminal],
+    };
     const removed = removeLeaf(tree, 'terminalContent');
     expect(removed).not.toBeNull();
     const collapsed = unsplitIfOrphan(removed!);

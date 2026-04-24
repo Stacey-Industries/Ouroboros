@@ -2,7 +2,14 @@
  * MonacoDiffEditor - standalone Monaco Diff Editor React wrapper.
  */
 import * as monaco from 'monaco-editor';
-import React, { memo, type MutableRefObject,useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  memo,
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { detectLanguage, initMonaco } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
@@ -20,14 +27,45 @@ export interface MonacoDiffEditorProps {
 
 initMonaco();
 
-const frameStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' };
-const toolbarStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderBottom: '1px solid var(--border-semantic)', background: 'var(--surface-panel)', fontSize: 12, flexShrink: 0 };
-const buttonStyle: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border-semantic)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11 };
-const dangerButtonStyle: React.CSSProperties = { ...buttonStyle, border: '1px solid var(--status-error)' };
-const successButtonStyle: React.CSSProperties = { ...buttonStyle, border: '1px solid var(--status-success)' };
+const frameStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: '100%',
+  height: '100%',
+  overflow: 'hidden',
+};
+const toolbarStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '4px 8px',
+  borderBottom: '1px solid var(--border-semantic)',
+  background: 'var(--surface-panel)',
+  fontSize: 12,
+  flexShrink: 0,
+};
+const buttonStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: '1px solid var(--border-semantic)',
+  borderRadius: 4,
+  padding: '2px 8px',
+  cursor: 'pointer',
+  fontSize: 11,
+};
+const dangerButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  border: '1px solid var(--status-error)',
+};
+const successButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  border: '1px solid var(--status-success)',
+};
 const editorShellStyle: React.CSSProperties = { flex: 1, overflow: 'hidden' };
 
-function createDiffOptions(readOnly: boolean, sideBySide: boolean): monaco.editor.IStandaloneDiffEditorConstructionOptions {
+function createDiffOptions(
+  readOnly: boolean,
+  sideBySide: boolean,
+): monaco.editor.IStandaloneDiffEditorConstructionOptions {
   return {
     theme: 'ouroboros',
     automaticLayout: true,
@@ -55,8 +93,10 @@ function getTargetChange(
   currentLine: number,
   direction: 'next' | 'prev',
 ): monaco.editor.ILineChange | undefined {
-  if (direction === 'next') return changes.find((change) => change.modifiedStartLineNumber > currentLine) ?? changes[0];
-  for (let i = changes.length - 1; i >= 0; i -= 1) if (changes[i].modifiedStartLineNumber < currentLine) return changes[i];
+  if (direction === 'next')
+    return changes.find((change) => change.modifiedStartLineNumber > currentLine) ?? changes[0];
+  for (let i = changes.length - 1; i >= 0; i -= 1)
+    if (changes[i].modifiedStartLineNumber < currentLine) return changes[i];
   return changes[changes.length - 1];
 }
 
@@ -92,7 +132,10 @@ function useDiffLifecycle({
     originalModelRef.current = originalModel;
     modifiedModelRef.current = modifiedModel;
 
-    const diffEditor = monaco.editor.createDiffEditor(container, createDiffOptions(readOnly, sideBySide));
+    const diffEditor = monaco.editor.createDiffEditor(
+      container,
+      createDiffOptions(readOnly, sideBySide),
+    );
     diffEditor.setModel({ original: originalModel, modified: modifiedModel });
     editorRef.current = diffEditor;
 
@@ -117,8 +160,10 @@ function useDiffContentSync(
   useEffect(() => {
     const originalModel = originalModelRef.current;
     const modifiedModel = modifiedModelRef.current;
-    if (originalModel && originalModel.getValue() !== originalContent) originalModel.setValue(originalContent);
-    if (modifiedModel && modifiedModel.getValue() !== modifiedContent) modifiedModel.setValue(modifiedContent);
+    if (originalModel && originalModel.getValue() !== originalContent)
+      originalModel.setValue(originalContent);
+    if (modifiedModel && modifiedModel.getValue() !== modifiedContent)
+      modifiedModel.setValue(modifiedContent);
   }, [originalContent, modifiedContent, modifiedModelRef, originalModelRef]);
 }
 
@@ -131,22 +176,27 @@ function useDiffSideBySideSync(
   }, [editorRef, sideBySide]);
 }
 
-function useChangeNavigation(editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>) {
-  return useCallback((direction: 'next' | 'prev') => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const changes = editor.getLineChanges();
-    if (!changes?.length) return;
+function useChangeNavigation(
+  editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>,
+) {
+  return useCallback(
+    (direction: 'next' | 'prev') => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const changes = editor.getLineChanges();
+      if (!changes?.length) return;
 
-    const modifiedEditor = editor.getModifiedEditor();
-    const currentLine = modifiedEditor.getPosition()?.lineNumber ?? 1;
-    const targetChange = getTargetChange(changes, currentLine, direction);
-    if (!targetChange) return;
+      const modifiedEditor = editor.getModifiedEditor();
+      const currentLine = modifiedEditor.getPosition()?.lineNumber ?? 1;
+      const targetChange = getTargetChange(changes, currentLine, direction);
+      if (!targetChange) return;
 
-    modifiedEditor.revealLineInCenter(targetChange.modifiedStartLineNumber);
-    modifiedEditor.setPosition({ lineNumber: targetChange.modifiedStartLineNumber, column: 1 });
-    modifiedEditor.focus();
-  }, [editorRef]);
+      modifiedEditor.revealLineInCenter(targetChange.modifiedStartLineNumber);
+      modifiedEditor.setPosition({ lineNumber: targetChange.modifiedStartLineNumber, column: 1 });
+      modifiedEditor.focus();
+    },
+    [editorRef],
+  );
 }
 
 function useChangeCount(
@@ -174,23 +224,28 @@ interface DiffToolbarProps {
   onRejectHunk?: (hunkIndex: number) => void;
 }
 
-function renderToolbar({
-  sideBySide,
-  setSideBySide,
-  onPrev,
-  onNext,
-  changeCount,
-  onAcceptHunk,
-  onRejectHunk,
-}: DiffToolbarProps): React.ReactElement {
+function DiffHunkActions({ onAcceptHunk, onRejectHunk }: Pick<DiffToolbarProps, 'onAcceptHunk' | 'onRejectHunk'>): React.ReactElement | null {
+  if (!onAcceptHunk && !onRejectHunk) return null;
+  return (
+    <>
+      {onAcceptHunk && (
+        <button onClick={() => onAcceptHunk(0)} title="Accept all changes" className="text-status-success" style={successButtonStyle}>
+          Accept All
+        </button>
+      )}
+      {onRejectHunk && (
+        <button onClick={() => onRejectHunk(0)} title="Reject all changes" className="text-status-error" style={dangerButtonStyle}>
+          Reject All
+        </button>
+      )}
+    </>
+  );
+}
+
+function DiffToolbar({ sideBySide, setSideBySide, onPrev, onNext, changeCount, onAcceptHunk, onRejectHunk }: DiffToolbarProps): React.ReactElement {
   return (
     <div style={toolbarStyle} className="text-text-semantic-muted">
-      <button
-        onClick={() => setSideBySide((value) => !value)}
-        title={sideBySide ? 'Switch to inline diff' : 'Switch to side-by-side diff'}
-        className="text-text-semantic-primary"
-        style={buttonStyle}
-      >
+      <button onClick={() => setSideBySide((v) => !v)} title={sideBySide ? 'Switch to inline diff' : 'Switch to side-by-side diff'} className="text-text-semantic-primary" style={buttonStyle}>
         {sideBySide ? 'Inline' : 'Side-by-Side'}
       </button>
       <span style={{ color: 'var(--border-semantic)' }}>|</span>
@@ -198,36 +253,41 @@ function renderToolbar({
       <button onClick={onNext} title="Next change" className="text-text-semantic-primary" style={buttonStyle}>&darr; Next</button>
       <span>{changeCount} change{changeCount !== 1 ? 's' : ''}</span>
       <span style={{ flex: 1 }} />
-      {(onAcceptHunk || onRejectHunk) && <>
-        {onAcceptHunk && <button onClick={() => onAcceptHunk(0)} title="Accept all changes" className="text-status-success" style={successButtonStyle}>Accept All</button>}
-        {onRejectHunk && <button onClick={() => onRejectHunk(0)} title="Reject all changes" className="text-status-error" style={dangerButtonStyle}>Reject All</button>}
-      </>}
+      <DiffHunkActions onAcceptHunk={onAcceptHunk} onRejectHunk={onRejectHunk} />
     </div>
   );
 }
 
-export const MonacoDiffEditor = memo(function MonacoDiffEditor(props: MonacoDiffEditorProps): React.ReactElement {
-  const { originalContent, modifiedContent, language: languageProp, filePath, readOnly = true, onAcceptHunk, onRejectHunk, className } = props;
+function useDiffEditorSetup(props: MonacoDiffEditorProps) {
+  const { originalContent, modifiedContent, filePath, readOnly = true } = props;
+  const language = props.language || (filePath ? detectLanguage(filePath) : 'plaintext');
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
   const originalModelRef = useRef<monaco.editor.ITextModel | null>(null);
   const modifiedModelRef = useRef<monaco.editor.ITextModel | null>(null);
   const [sideBySide, setSideBySide] = useState(true);
-
   useMonacoTheme();
-  const language = languageProp || (filePath ? detectLanguage(filePath) : 'plaintext');
   useDiffLifecycle({ containerRef, editorRef, originalModelRef, modifiedModelRef, originalContent, modifiedContent, language, readOnly, sideBySide });
   useDiffContentSync(originalContent, modifiedContent, originalModelRef, modifiedModelRef);
   useDiffSideBySideSync(editorRef, sideBySide);
-
   const navigateChange = useChangeNavigation(editorRef);
   const changeCount = useChangeCount(editorRef, originalContent, modifiedContent);
-  const handleAcceptHunk = useCallback((hunkIndex: number) => onAcceptHunk?.(hunkIndex), [onAcceptHunk]);
-  const handleRejectHunk = useCallback((hunkIndex: number) => onRejectHunk?.(hunkIndex), [onRejectHunk]);
+  return { containerRef, sideBySide, setSideBySide, navigateChange, changeCount };
+}
 
+export const MonacoDiffEditor = memo(function MonacoDiffEditor(props: MonacoDiffEditorProps): React.ReactElement {
+  const { onAcceptHunk, onRejectHunk, className } = props;
+  const { containerRef, sideBySide, setSideBySide, navigateChange, changeCount } = useDiffEditorSetup(props);
+  const handleAcceptHunk = useCallback((i: number) => onAcceptHunk?.(i), [onAcceptHunk]);
+  const handleRejectHunk = useCallback((i: number) => onRejectHunk?.(i), [onRejectHunk]);
   return (
     <div className={className} style={frameStyle}>
-      {renderToolbar({ sideBySide, setSideBySide, onPrev: () => navigateChange('prev'), onNext: () => navigateChange('next'), changeCount, onAcceptHunk: handleAcceptHunk, onRejectHunk: handleRejectHunk })}
+      <DiffToolbar
+        sideBySide={sideBySide} setSideBySide={setSideBySide}
+        onPrev={() => navigateChange('prev')} onNext={() => navigateChange('next')}
+        changeCount={changeCount}
+        onAcceptHunk={handleAcceptHunk} onRejectHunk={handleRejectHunk}
+      />
       <div ref={containerRef} style={editorShellStyle} />
     </div>
   );

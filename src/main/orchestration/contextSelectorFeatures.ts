@@ -121,10 +121,7 @@ function toolKindOneHot(hint: ToolHint): ToolOneHot {
  *   prevUsedCount, toolKindHint_read, toolKindHint_edit,
  *   toolKindHint_write, toolKindHint_other
  */
-export function computeFeatures(
-  candidate: MutableCandidate,
-  ctx: FeatureCtx,
-): ContextFeatureVec {
+export function computeFeatures(candidate: MutableCandidate, ctx: FeatureCtx): ContextFeatureVec {
   const hint = resolveToolHint(ctx.request.mode);
   return {
     recencyScore: deriveRecencyScore(candidate),

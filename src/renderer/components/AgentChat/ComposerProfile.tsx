@@ -37,8 +37,11 @@ function useProfiles(): Profile[] {
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   useEffect(() => {
-    window.electronAPI.profileCrud.list()
-      .then((res) => { if (res.success && res.profiles) setProfiles(res.profiles); })
+    window.electronAPI.profileCrud
+      .list()
+      .then((res) => {
+        if (res.success && res.profiles) setProfiles(res.profiles);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -65,13 +68,18 @@ function DropdownItem({
   return (
     <button
       type="button"
-      onClick={() => { onSelect(profile.id); onClose(); }}
+      onClick={() => {
+        onSelect(profile.id);
+        onClose();
+      }}
       style={isActive ? dropdownItemActiveStyle : dropdownItemStyle}
       className={isActive ? 'text-text-semantic-primary' : 'text-text-semantic-secondary'}
     >
       <span style={dropdownNameStyle}>{profile.name}</span>
       {profile.effort && (
-        <span className="text-text-semantic-faint" style={dropdownBadgeStyle}>{profile.effort}</span>
+        <span className="text-text-semantic-faint" style={dropdownBadgeStyle}>
+          {profile.effort}
+        </span>
       )}
     </button>
   );
@@ -88,7 +96,8 @@ function useDropdownOverlay(args: {
     if (!args.open) return;
     function handleOutside(event: MouseEvent): void {
       const target = event.target as Node;
-      if (args.buttonRef.current?.contains(target) || args.menuRef.current?.contains(target)) return;
+      if (args.buttonRef.current?.contains(target) || args.menuRef.current?.contains(target))
+        return;
       args.close();
     }
     function handleKey(event: KeyboardEvent): void {
@@ -111,39 +120,19 @@ function useDropdownOverlay(args: {
 }
 
 function ProfileDropdown({
-  profiles,
-  activeId,
-  onSelect,
-  onClose,
-  menuRef,
-  style,
+  profiles, activeId, onSelect, onClose, menuRef, style,
 }: {
-  profiles: Profile[];
-  activeId: string | null;
-  onSelect: (id: string) => void;
-  onClose: () => void;
-  menuRef: React.RefObject<HTMLDivElement | null>;
-  style: React.CSSProperties;
+  profiles: Profile[]; activeId: string | null; onSelect: (id: string) => void;
+  onClose: () => void; menuRef: React.RefObject<HTMLDivElement | null>; style: React.CSSProperties;
 }): React.ReactElement {
   return (
-    <div
-      ref={menuRef}
-      role="listbox"
-      aria-label="Session profiles"
+    <div ref={menuRef} role="listbox" aria-label="Session profiles"
       style={{ ...dropdownStyle, ...style, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}
       className="bg-surface-overlay"
     >
-      {profiles.length === 0 && (
-        <div className="text-text-semantic-muted" style={emptyDropdownStyle}>No profiles</div>
-      )}
+      {profiles.length === 0 && <div className="text-text-semantic-muted" style={emptyDropdownStyle}>No profiles</div>}
       {profiles.map((p) => (
-        <DropdownItem
-          key={p.id}
-          profile={p}
-          isActive={p.id === activeId}
-          onSelect={onSelect}
-          onClose={onClose}
-        />
+        <DropdownItem key={p.id} profile={p} isActive={p.id === activeId} onSelect={onSelect} onClose={onClose} />
       ))}
     </div>
   );
@@ -151,15 +140,13 @@ function ProfileDropdown({
 
 // ─── ComposerProfile ──────────────────────────────────────────────────────────
 
-export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfileProps): React.ReactElement {
-  const profiles = useProfiles();
+type MenuPos = { left: number; bottom: number; width: number };
+
+function useProfileDropdownState(activeProfileId: string | null, onSwitch: (id: string) => void) {
   const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? null;
-  const label = activeProfile?.name ?? 'No profile';
 
   const close = useCallback(() => setOpen(false), []);
   const updateMenuPos = useCallback(() => {
@@ -171,18 +158,6 @@ export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfilePr
       width: Math.max(rect.width, 180),
     });
   }, []);
-  useDropdownOverlay({ open, close, buttonRef, menuRef, updatePosition: updateMenuPos });
-
-  const handleSelect = useCallback((profileId: string) => {
-    if (profileId === activeProfileId) return;
-    window.dispatchEvent(
-      new CustomEvent<ProfileSwitchedDetail>(PROFILE_SWITCHED_EVENT, {
-        detail: { oldProfileId: activeProfileId, newProfileId: profileId },
-      }),
-    );
-    onSwitch(profileId);
-  }, [activeProfileId, onSwitch]);
-
   const handleToggle = useCallback(() => {
     if (open) {
       close();
@@ -191,33 +166,86 @@ export function ComposerProfile({ activeProfileId, onSwitch }: ComposerProfilePr
     updateMenuPos();
     setOpen(true);
   }, [close, open, updateMenuPos]);
+  const handleSelect = useCallback(
+    (profileId: string) => {
+      if (profileId === activeProfileId) return;
+      window.dispatchEvent(
+        new CustomEvent<ProfileSwitchedDetail>(PROFILE_SWITCHED_EVENT, {
+          detail: { oldProfileId: activeProfileId, newProfileId: profileId },
+        }),
+      );
+      onSwitch(profileId);
+    },
+    [activeProfileId, onSwitch],
+  );
+
+  useDropdownOverlay({ open, close, buttonRef, menuRef, updatePosition: updateMenuPos });
+  return { open, menuPos, buttonRef, menuRef, close, handleToggle, handleSelect };
+}
+
+function ProfilePill({
+  buttonRef,
+  label,
+  open,
+  handleToggle,
+}: {
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  label: string;
+  open: boolean;
+  handleToggle: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      onClick={handleToggle}
+      style={{ ...pillStyle, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}
+      aria-label="Switch active profile"
+      aria-haspopup="listbox"
+      aria-expanded={open}
+    >
+      <span style={dotStyle} />
+      <span className="text-text-semantic-secondary" style={labelStyle}>
+        {label}
+      </span>
+      <span className="text-text-semantic-faint" style={chevronStyle}>
+        ▾
+      </span>
+    </button>
+  );
+}
+
+export function ComposerProfile({
+  activeProfileId,
+  onSwitch,
+}: ComposerProfileProps): React.ReactElement {
+  const profiles = useProfiles();
+  const { open, menuPos, buttonRef, menuRef, close, handleToggle, handleSelect } =
+    useProfileDropdownState(activeProfileId, onSwitch);
+  const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? null;
+  const label = activeProfile?.name ?? 'No profile';
 
   return (
     <div style={wrapStyle}>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleToggle}
-        style={{ ...pillStyle, ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties) }}
-        aria-label="Switch active profile"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span style={dotStyle} />
-        <span className="text-text-semantic-secondary" style={labelStyle}>{label}</span>
-        <span className="text-text-semantic-faint" style={chevronStyle}>▾</span>
-      </button>
-      {open && menuPos && createPortal(
-        <ProfileDropdown
-          profiles={profiles}
-          activeId={activeProfileId}
-          onSelect={handleSelect}
-          onClose={close}
-          menuRef={menuRef}
-          style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }}
-        />,
-        document.body,
-      )}
+      <ProfilePill buttonRef={buttonRef} label={label} open={open} handleToggle={handleToggle} />
+      {open &&
+        menuPos &&
+        createPortal(
+          <ProfileDropdown
+            profiles={profiles}
+            activeId={activeProfileId}
+            onSelect={handleSelect}
+            onClose={close}
+            menuRef={menuRef}
+            style={{
+              position: 'fixed',
+              left: menuPos.left,
+              bottom: menuPos.bottom,
+              width: menuPos.width,
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

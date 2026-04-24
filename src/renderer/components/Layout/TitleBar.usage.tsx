@@ -9,10 +9,7 @@ interface UsageActionsProps {
   UsageIcon: () => React.ReactElement;
   onOpenPanel: () => void;
   titleButtonStyle: React.CSSProperties;
-  hoverStyle: Pick<
-    React.ButtonHTMLAttributes<HTMLButtonElement>,
-    'onMouseEnter' | 'onMouseLeave'
-  >;
+  hoverStyle: Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onMouseEnter' | 'onMouseLeave'>;
 }
 
 async function fetchUsageWindowSnapshot(): Promise<{
@@ -97,10 +94,7 @@ function UsagePanelButton({
   hoverStyle,
   onOpenPanel,
   titleButtonStyle,
-}: Pick<
-  UsageActionsProps,
-  'UsageIcon' | 'hoverStyle' | 'onOpenPanel' | 'titleButtonStyle'
-> & {
+}: Pick<UsageActionsProps, 'UsageIcon' | 'hoverStyle' | 'onOpenPanel' | 'titleButtonStyle'> & {
   closeDropdown: () => void;
 }): React.ReactElement {
   return (
@@ -158,26 +152,24 @@ function UsageWindowToggleButton({
   );
 }
 
-export function UsageActions({
-  UsageIcon,
-  onOpenPanel,
-  titleButtonStyle,
-  hoverStyle,
-}: UsageActionsProps): React.ReactElement {
+function useUsageActionsState(
+  snapshot: UsageWindowSnapshot | null,
+  loadSnapshot: () => Promise<void>,
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
+): {
+  open: boolean;
+  anchorRect: DOMRect | null;
+  closeDropdown: () => void;
+  handleToggle: () => void;
+  toggleButtonRef: React.RefObject<HTMLButtonElement | null>;
+} {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const toggleButtonRef = useRef<HTMLButtonElement>(null);
-  const { error, isLoading, loadSnapshot, setIsLoading, snapshot } = useUsageWindowSnapshot();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const closeDropdown = useCallback(() => setOpen(false), []);
-
-  useDismissableDropdown(containerRef, dropdownRef, open, closeDropdown);
-
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const updateAnchorRect = useCallback(() => {
     setAnchorRect(toggleButtonRef.current?.getBoundingClientRect() ?? null);
   }, []);
-
+  const closeDropdown = useCallback(() => setOpen(false), []);
   const handleToggle = useCallback(() => {
     if (!open) {
       setIsLoading(snapshot === null);
@@ -186,38 +178,31 @@ export function UsageActions({
     }
     setOpen((current) => !current);
   }, [loadSnapshot, open, setIsLoading, snapshot, updateAnchorRect]);
-
   useEffect(() => {
     if (!open) return;
     updateAnchorRect();
-    const handlePositionChange = (): void => updateAnchorRect();
-    window.addEventListener('resize', handlePositionChange);
-    window.addEventListener('scroll', handlePositionChange, true);
+    window.addEventListener('resize', updateAnchorRect);
+    window.addEventListener('scroll', updateAnchorRect, true);
     return () => {
-      window.removeEventListener('resize', handlePositionChange);
-      window.removeEventListener('scroll', handlePositionChange, true);
+      window.removeEventListener('resize', updateAnchorRect);
+      window.removeEventListener('scroll', updateAnchorRect, true);
     };
   }, [open, updateAnchorRect]);
+  return { open, anchorRect, closeDropdown, handleToggle, toggleButtonRef };
+}
 
+export function UsageActions({ UsageIcon, onOpenPanel, titleButtonStyle, hoverStyle }: UsageActionsProps): React.ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { error, isLoading, loadSnapshot, setIsLoading, snapshot } = useUsageWindowSnapshot();
+  const { open, anchorRect, closeDropdown, handleToggle, toggleButtonRef } = useUsageActionsState(snapshot, loadSnapshot, setIsLoading);
+  useDismissableDropdown(containerRef, dropdownRef, open, closeDropdown);
   return (
-    <div
-      ref={containerRef}
-      className="titlebar-no-drag"
+    <div ref={containerRef} className="titlebar-no-drag"
       style={{ position: 'relative', display: 'flex', alignItems: 'stretch', height: '100%' }}
     >
-      <UsagePanelButton
-        UsageIcon={UsageIcon}
-        closeDropdown={closeDropdown}
-        hoverStyle={hoverStyle}
-        onOpenPanel={onOpenPanel}
-        titleButtonStyle={titleButtonStyle}
-      />
-      <UsageWindowToggleButton
-        buttonRef={toggleButtonRef}
-        handleToggle={handleToggle}
-        hoverStyle={hoverStyle}
-        titleButtonStyle={titleButtonStyle}
-      />
+      <UsagePanelButton UsageIcon={UsageIcon} closeDropdown={closeDropdown} hoverStyle={hoverStyle} onOpenPanel={onOpenPanel} titleButtonStyle={titleButtonStyle} />
+      <UsageWindowToggleButton buttonRef={toggleButtonRef} handleToggle={handleToggle} hoverStyle={hoverStyle} titleButtonStyle={titleButtonStyle} />
       {open && createPortal(
         <UsageDropdown snapshot={snapshot} isLoading={isLoading} error={error} anchorRect={anchorRect} alignRight={true} dropdownRef={dropdownRef} />,
         document.body,

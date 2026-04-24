@@ -54,7 +54,13 @@ export function emitStreamChunk(
 
 export function stopIncrementalFlush(ctx: ActiveStreamContext): void {
   if (!ctx.streamEnded && typeof ctx.sendStartedAt === 'number') {
-    log.info('[chat-perf] total-turn-wallclock:', Date.now() - ctx.sendStartedAt, 'ms', 'thread:', ctx.threadId);
+    log.info(
+      '[chat-perf] total-turn-wallclock:',
+      Date.now() - ctx.sendStartedAt,
+      'ms',
+      'thread:',
+      ctx.threadId,
+    );
   }
   ctx.streamEnded = true;
   if (ctx.flushTimer) {
@@ -158,9 +164,10 @@ export function emitMonitorSubTool(
   const input: Record<string, unknown> = {};
   if (sub.filePath) input.file_path = sub.filePath;
   if (sub.inputSummary) input.description = sub.inputSummary;
-  const correlationId = type === 'pre_tool_use'
-    ? mintCorrelationId(ctx.threadId, toolCallId)
-    : resolveCorrelationId(ctx.threadId, toolCallId);
+  const correlationId =
+    type === 'pre_tool_use'
+      ? mintCorrelationId(ctx.threadId, toolCallId)
+      : resolveCorrelationId(ctx.threadId, toolCallId);
   dispatchSyntheticHookEvent({
     type,
     sessionId: ctx.threadId,

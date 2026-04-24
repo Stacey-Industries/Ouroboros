@@ -26,7 +26,11 @@ describe('disposeAll', () => {
   });
 
   it('swallows errors thrown by dispose() and continues to the next entry', () => {
-    const a = { dispose: vi.fn(() => { throw new Error('already disposed'); }) };
+    const a = {
+      dispose: vi.fn(() => {
+        throw new Error('already disposed');
+      }),
+    };
     const b = { dispose: vi.fn() };
     const list = [a, b];
     expect(() => disposeAll(list)).not.toThrow();

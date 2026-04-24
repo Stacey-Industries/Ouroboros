@@ -138,7 +138,9 @@ function handleSocket(socket: net.Socket, connId: number): void {
   socket.on('data', (chunk: string) => handleSocketData(socket, connId, ctx, chunk));
   socket.on('timeout', () => {
     socket.end();
-    setTimeout(() => { if (!socket.destroyed) socket.destroy(); }, 5_000);
+    setTimeout(() => {
+      if (!socket.destroyed) socket.destroy();
+    }, 5_000);
   });
   socket.on('error', (err: NodeJS.ErrnoException) => logSocketError(connId, err));
   socket.on('close', () => {

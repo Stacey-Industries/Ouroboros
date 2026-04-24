@@ -73,7 +73,7 @@ function usePairingGenerator(): PairingGeneratorResult {
 
   // Keep pairing visible but mark it expired so the UI can show an expired notice.
   const setExpiredState = useCallback(() => {
-    setPairing((prev) => prev ? { ...prev, expiresAt: 0 } : null);
+    setPairing((prev) => (prev ? { ...prev, expiresAt: 0 } : null));
   }, []);
 
   return { pairing, loading, error, generate, setExpiredState };
@@ -135,7 +135,15 @@ function QrBlock({ pairingUrl }: { pairingUrl: string }): React.ReactElement {
         aria-label="Pairing URL"
         className="text-text-semantic-muted"
         readOnly
-        style={{ fontSize: '10px', width: '100%', background: 'transparent', border: 'none', textAlign: 'center', cursor: 'text', userSelect: 'all' }}
+        style={{
+          fontSize: '10px',
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'center',
+          cursor: 'text',
+          userSelect: 'all',
+        }}
         value={pairingUrl}
       />
     </div>
@@ -151,10 +159,24 @@ interface PairingDisplayProps {
 
 function PairingDisplay({ pairing, onExpired }: PairingDisplayProps): React.ReactElement {
   return (
-    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-start' }}>
+    <div
+      style={{
+        marginTop: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        alignItems: 'flex-start',
+      }}
+    >
       <span
         aria-label="Pairing code"
-        style={{ fontFamily: 'var(--font-mono)', fontSize: '32px', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--text-primary)' }}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '32px',
+          fontWeight: 700,
+          letterSpacing: '0.2em',
+          color: 'var(--text-primary)',
+        }}
       >
         {pairing.code}
       </span>
@@ -172,7 +194,9 @@ function isServerNotReady(error: string | null): boolean {
   return error !== null && error.toLowerCase().includes(NOT_READY_MARKER);
 }
 
-interface NotReadyHintProps { onRetry: () => void }
+interface NotReadyHintProps {
+  onRetry: () => void;
+}
 
 function ServerNotReadyHint({ onRetry }: NotReadyHintProps): React.ReactElement {
   return (
@@ -198,31 +222,66 @@ interface SectionBodyProps {
   onExpired: () => void;
 }
 
-interface ErrorAreaProps { error: string | null; onRetry: () => void }
+interface ErrorAreaProps {
+  error: string | null;
+  onRetry: () => void;
+}
 
 function ErrorArea({ error, onRetry }: ErrorAreaProps): React.ReactElement | null {
   if (!error) return null;
   if (isServerNotReady(error)) return <ServerNotReadyHint onRetry={onRetry} />;
-  return <p className="text-status-error" style={{ fontSize: '12px', marginTop: '8px' }}>{error}</p>;
+  return (
+    <p className="text-status-error" style={{ fontSize: '12px', marginTop: '8px' }}>
+      {error}
+    </p>
+  );
 }
 
-interface PairingResultProps { pairing: PairingState | null; isExpired: boolean; onExpired: () => void }
+interface PairingResultProps {
+  pairing: PairingState | null;
+  isExpired: boolean;
+  onExpired: () => void;
+}
 
-function PairingResult({ pairing, isExpired, onExpired }: PairingResultProps): React.ReactElement | null {
+function PairingResult({
+  pairing,
+  isExpired,
+  onExpired,
+}: PairingResultProps): React.ReactElement | null {
   if (!pairing) return null;
   if (isExpired) {
-    return <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '12px' }}>Expired — regenerate to create a new code.</p>;
+    return (
+      <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '12px' }}>
+        Expired — regenerate to create a new code.
+      </p>
+    );
   }
   return <PairingDisplay pairing={pairing} onExpired={onExpired} />;
 }
 
-function PairingSectionBody({ enabled, pairing, loading, error, onGenerate, onExpired }: SectionBodyProps): React.ReactElement {
+function PairingSectionBody({
+  enabled,
+  pairing,
+  loading,
+  error,
+  onGenerate,
+  onExpired,
+}: SectionBodyProps): React.ReactElement {
   const isDisabled = !enabled || loading;
   const isExpired = pairing !== null && pairing.expiresAt === 0;
-  const label = loading ? 'Generating…' : pairing && !isExpired ? 'Regenerate' : 'Generate Pairing Code';
+  const label = loading
+    ? 'Generating…'
+    : pairing && !isExpired
+      ? 'Regenerate'
+      : 'Generate Pairing Code';
   return (
     <>
-      <button disabled={isDisabled} onClick={onGenerate} style={generateBtnStyle(isDisabled)} type="button">
+      <button
+        disabled={isDisabled}
+        onClick={onGenerate}
+        style={generateBtnStyle(isDisabled)}
+        type="button"
+      >
         {label}
       </button>
       <ErrorArea error={error} onRetry={onGenerate} />
@@ -238,7 +297,9 @@ export function MobileAccessPairingSection({ enabled }: { enabled: boolean }): R
 
   return (
     <section aria-labelledby="pairing-section-label">
-      <div id="pairing-section-label"><SectionLabel>Pairing Code</SectionLabel></div>
+      <div id="pairing-section-label">
+        <SectionLabel>Pairing Code</SectionLabel>
+      </div>
       <p className="text-text-semantic-muted" style={{ fontSize: '12px', marginBottom: '12px' }}>
         Scan the QR code or enter the 6-digit code on your mobile device to pair it.
       </p>

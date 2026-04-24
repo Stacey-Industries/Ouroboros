@@ -10,12 +10,17 @@ export function filterSessions(sessions: AgentSession[], query: string): AgentSe
 }
 
 function matchesSession(session: AgentSession, query: string): boolean {
-  return session.taskLabel.toLowerCase().includes(query) || getMatchingToolCalls(session, query).length > 0;
+  return (
+    session.taskLabel.toLowerCase().includes(query) ||
+    getMatchingToolCalls(session, query).length > 0
+  );
 }
 
 function getMatchingToolCalls(session: AgentSession, query: string) {
   return session.toolCalls.filter(
-    (toolCall) => toolCall.toolName.toLowerCase().includes(query) || toolCall.input.toLowerCase().includes(query),
+    (toolCall) =>
+      toolCall.toolName.toLowerCase().includes(query) ||
+      toolCall.input.toLowerCase().includes(query),
   );
 }
 

@@ -65,7 +65,10 @@ function makeSessionStore(sessions: Session[]): SessionStore {
     listActive: () => store.filter((s) => !s.archivedAt && !s.deletedAt),
     upsert: vi.fn(),
     archive: vi.fn(),
-    delete: (id) => { const i = store.findIndex((s) => s.id === id); if (i >= 0) store.splice(i, 1); },
+    delete: (id) => {
+      const i = store.findIndex((s) => s.id === id);
+      if (i >= 0) store.splice(i, 1);
+    },
     pin: vi.fn(),
     softDelete: vi.fn(),
     restoreDeleted: vi.fn(),
@@ -200,9 +203,7 @@ describe('runSoftDeleteGc — boundary conditions', () => {
   });
 
   it('returns combined counts for sessions and threads', async () => {
-    const sessionStore = makeSessionStore([
-      makeSession('s1', NOW - THIRTY_DAYS_MS - 1),
-    ]);
+    const sessionStore = makeSessionStore([makeSession('s1', NOW - THIRTY_DAYS_MS - 1)]);
     const threadStore = makeThreadStore([
       makeThread('t1', NOW - THIRTY_DAYS_MS - 1),
       makeThread('t2', NOW - THIRTY_DAYS_MS - 1),

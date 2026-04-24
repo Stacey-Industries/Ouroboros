@@ -22,9 +22,7 @@ export interface RegisterPushTokenArgs {
   platform: 'android' | 'ios';
 }
 
-type RegisterPushTokenResult =
-  | { success: true }
-  | { success: false; error: string };
+type RegisterPushTokenResult = { success: true } | { success: false; error: string };
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -32,8 +30,10 @@ function validateArgs(args: unknown): args is RegisterPushTokenArgs {
   if (!args || typeof args !== 'object') return false;
   const a = args as Record<string, unknown>;
   return (
-    typeof a['deviceId'] === 'string' && a['deviceId'].length > 0 &&
-    typeof a['token'] === 'string' && a['token'].length > 0 &&
+    typeof a['deviceId'] === 'string' &&
+    a['deviceId'].length > 0 &&
+    typeof a['token'] === 'string' &&
+    a['token'].length > 0 &&
     (a['platform'] === 'android' || a['platform'] === 'ios')
   );
 }

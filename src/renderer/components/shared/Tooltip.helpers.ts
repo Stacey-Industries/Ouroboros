@@ -30,7 +30,10 @@ function resolveTooltipPosition(
   if (preferred === 'top' && triggerRect.top - tooltipRect.height - GAP < 0) {
     return 'bottom';
   }
-  if (preferred === 'bottom' && triggerRect.bottom + tooltipRect.height + GAP > window.innerHeight) {
+  if (
+    preferred === 'bottom' &&
+    triggerRect.bottom + tooltipRect.height + GAP > window.innerHeight
+  ) {
     return 'top';
   }
   if (preferred === 'left' && triggerRect.left - tooltipRect.width - GAP < 0) {
@@ -84,8 +87,16 @@ export function computePosition(
   const coords = buildTooltipCoords(triggerRect, tooltipRect, resolved);
   return {
     resolved,
-    left: clamp(coords.left, VIEWPORT_PADDING, window.innerWidth - tooltipRect.width - VIEWPORT_PADDING),
-    top: clamp(coords.top, VIEWPORT_PADDING, window.innerHeight - tooltipRect.height - VIEWPORT_PADDING),
+    left: clamp(
+      coords.left,
+      VIEWPORT_PADDING,
+      window.innerWidth - tooltipRect.width - VIEWPORT_PADDING,
+    ),
+    top: clamp(
+      coords.top,
+      VIEWPORT_PADDING,
+      window.innerHeight - tooltipRect.height - VIEWPORT_PADDING,
+    ),
   };
 }
 

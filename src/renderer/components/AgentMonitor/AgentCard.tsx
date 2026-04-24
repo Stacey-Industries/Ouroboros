@@ -34,9 +34,19 @@ function getAgentCardDerivedState(session: AgentSession, elapsedMs: number): Age
     isRunning,
     isDone: session.status === 'complete' || session.status === 'error',
     displayDuration: isRunning ? elapsedMs : completedAt - session.startedAt,
-    completedCallCount: session.toolCalls.filter((toolCall) => toolCall.status !== 'pending').length,
+    completedCallCount: session.toolCalls.filter((toolCall) => toolCall.status !== 'pending')
+      .length,
     latestCall: session.toolCalls[session.toolCalls.length - 1],
   };
+}
+
+function useAgentCardLocalState(session: AgentSession) {
+  const [expanded, setExpanded] = useState(session.status === 'running');
+  const [showLog, setShowLog] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
+  const [cardView, setCardView] = useState<CardView>('feed');
+  return { expanded, setExpanded, showLog, setShowLog, showNotes, setShowNotes, notesDraft, setNotesDraft, cardView, setCardView };
 }
 
 export const AgentCard = memo(function AgentCard({
@@ -47,32 +57,35 @@ export const AgentCard = memo(function AgentCard({
   onReplay,
   childCount,
 }: AgentCardProps): React.ReactElement<unknown> {
-  const [expanded, setExpanded] = useState(session.status === 'running');
-  const [showLog, setShowLog] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
-  const [cardView, setCardView] = useState<CardView>('feed');
-  const derivedState = getAgentCardDerivedState(session, useElapsedMs(session.startedAt, session.status === 'running'));
+  const ls = useAgentCardLocalState(session);
+  const derivedState = getAgentCardDerivedState(
+    session,
+    useElapsedMs(session.startedAt, session.status === 'running'),
+  );
 
   return (
     <AgentCardLayout
       session={session}
-      expanded={expanded}
-      showLog={showLog}
-      showNotes={showNotes}
-      notesDraft={notesDraft}
-      cardView={cardView}
+      expanded={ls.expanded}
+      showLog={ls.showLog}
+      showNotes={ls.showNotes}
+      notesDraft={ls.notesDraft}
+      cardView={ls.cardView}
       childCount={childCount}
       onDismiss={onDismiss}
       onUpdateNotes={onUpdateNotes}
       onReviewChanges={onReviewChanges}
       onReplay={onReplay}
-      onToggleExpanded={() => setExpanded((value) => !value)}
-      onToggleLog={() => setShowLog((value) => !value)}
-      onToggleNotes={() => setShowNotes((value) => !value)}
-      onNotesDraftChange={setNotesDraft}
-      onSaveNotes={onUpdateNotes ? () => onUpdateNotes(session.id, notesDraft, session.bookmarked) : undefined}
-      onCardViewChange={setCardView}
+      onToggleExpanded={() => ls.setExpanded((v) => !v)}
+      onToggleLog={() => ls.setShowLog((v) => !v)}
+      onToggleNotes={() => ls.setShowNotes((v) => !v)}
+      onNotesDraftChange={ls.setNotesDraft}
+      onSaveNotes={
+        onUpdateNotes
+          ? () => onUpdateNotes(session.id, ls.notesDraft, session.bookmarked)
+          : undefined
+      }
+      onCardViewChange={ls.setCardView}
       {...derivedState}
     />
   );

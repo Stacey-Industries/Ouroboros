@@ -40,7 +40,13 @@ export function extractBareSymbolQuery(query: string): string | null {
 function toSymbolGraphNode(item: {
   node: { name: string; type: string; filePath: string; line: number; endLine?: number };
 }): SymbolGraphNode {
-  return { name: item.node.name, type: item.node.type, filePath: item.node.filePath, line: item.node.line, endLine: item.node.endLine };
+  return {
+    name: item.node.name,
+    type: item.node.type,
+    filePath: item.node.filePath,
+    line: item.node.line,
+    endLine: item.node.endLine,
+  };
 }
 
 // ── Fetch helper (extracted to keep hook under 40 lines) ──────────────────────
@@ -57,13 +63,20 @@ function searchAndUpdate(
       if (cancelled.current) return;
       setResults(result.success && result.results ? result.results.map(toSymbolGraphNode) : []);
     })
-    .catch(() => { if (!cancelled.current) setResults([]); })
-    .finally(() => { if (!cancelled.current) setLoading(false); });
+    .catch(() => {
+      if (!cancelled.current) setResults([]);
+    })
+    .finally(() => {
+      if (!cancelled.current) setLoading(false);
+    });
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useSymbolDisambiguation({ query, enabled }: UseSymbolDisambiguationOptions): UseSymbolDisambiguationResult {
+export function useSymbolDisambiguation({
+  query,
+  enabled,
+}: UseSymbolDisambiguationOptions): UseSymbolDisambiguationResult {
   const [symbolResults, setSymbolResults] = useState<SymbolGraphNode[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import type { AgentTemplate, AppConfig, ClaudeCliSettings, ModelProvider } from '../../types/electron';
+import type {
+  AgentTemplate,
+  AppConfig,
+  ClaudeCliSettings,
+  ModelProvider,
+} from '../../types/electron';
 
 export interface ClaudeOption {
   label: string;
@@ -141,10 +146,7 @@ function updateClaudeSetting<K extends keyof ClaudeCliSettings>(
 function useClaudeDirectoryState(
   settings: ClaudeCliSettings,
   updateSetting: ClaudeSettingUpdater,
-): Pick<
-  ClaudeSectionModel,
-  'addDir' | 'canAddDir' | 'newDir' | 'removeDir' | 'setNewDir'
-> {
+): Pick<ClaudeSectionModel, 'addDir' | 'canAddDir' | 'newDir' | 'removeDir' | 'setNewDir'> {
   const [newDir, setNewDir] = useState('');
 
   function addDir(): void {

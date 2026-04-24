@@ -1,8 +1,16 @@
 import { useCallback, useEffect } from 'react';
 
 import type { ContextGenerateOptions, ProjectContext } from '../../types/electron';
-import { type ContextBuilderState,useContextBuilderState, useTimedStatus } from './useContextBuilderModel.helpers';
-import { type ContextSelectionConfig, type ContextSelectionModel,useContextSelectionModel } from './useContextSelectionModel';
+import {
+  type ContextBuilderState,
+  useContextBuilderState,
+  useTimedStatus,
+} from './useContextBuilderModel.helpers';
+import {
+  type ContextSelectionConfig,
+  type ContextSelectionModel,
+  useContextSelectionModel,
+} from './useContextSelectionModel';
 
 export interface ContextBuilderModel {
   context: ProjectContext | null;
@@ -86,7 +94,15 @@ function useContextScan(params: ContextScanParams): () => Promise<void> {
     } finally {
       setScanning(false);
     }
-  }, [options, projectRoot, setContext, setEditedContent, setError, setGeneratedContent, setScanning]);
+  }, [
+    options,
+    projectRoot,
+    setContext,
+    setEditedContent,
+    setError,
+    setGeneratedContent,
+    setScanning,
+  ]);
 }
 
 function useContextRegeneration(params: ContextRegenerationParams): void {
@@ -160,7 +176,10 @@ function useCreateClaudeMdAction(params: CreateClaudeMdActionParams): () => Prom
     }
 
     try {
-      const result = await window.electronAPI.files.createFile(getClaudeMdPath(projectRoot), editedContent);
+      const result = await window.electronAPI.files.createFile(
+        getClaudeMdPath(projectRoot),
+        editedContent,
+      );
       if (result.success) {
         showStatus('Created CLAUDE.md', 3000);
         setContext((previous) => (previous ? { ...previous, hasClaudeMd: true } : previous));
@@ -179,8 +198,14 @@ function useUpdateClaudeMdAction(params: ClaudeMdActionParams): () => Promise<vo
 
   return useCallback(async () => {
     try {
-      const result = await window.electronAPI.files.saveFile(getClaudeMdPath(projectRoot), editedContent);
-      showStatus(result.success ? 'Updated CLAUDE.md' : result.error ?? 'Failed to update file', 3000);
+      const result = await window.electronAPI.files.saveFile(
+        getClaudeMdPath(projectRoot),
+        editedContent,
+      );
+      showStatus(
+        result.success ? 'Updated CLAUDE.md' : (result.error ?? 'Failed to update file'),
+        3000,
+      );
     } catch {
       showStatus('Failed to update CLAUDE.md', 3000);
     }
@@ -190,9 +215,12 @@ function useUpdateClaudeMdAction(params: ClaudeMdActionParams): () => Promise<vo
 function useOptionToggle(
   setOptions: React.Dispatch<React.SetStateAction<ContextGenerateOptions>>,
 ): (key: keyof ContextGenerateOptions) => void {
-  return useCallback((key: keyof ContextGenerateOptions) => {
-    setOptions((previous) => ({ ...previous, [key]: !previous[key] }));
-  }, [setOptions]);
+  return useCallback(
+    (key: keyof ContextGenerateOptions) => {
+      setOptions((previous) => ({ ...previous, [key]: !previous[key] }));
+    },
+    [setOptions],
+  );
 }
 
 function useContextBuilderScanLifecycle(
@@ -232,7 +260,11 @@ function useContextBuilderActions(
   const handleCopyToClipboard = useCopyToClipboardAction(state.editedContent, showStatus);
   const handleSetSystemPrompt = useSetSystemPromptAction(state.editedContent, showStatus);
   const handleCreateClaudeMd = useCreateClaudeMdAction({ ...state, projectRoot, showStatus });
-  const handleUpdateClaudeMd = useUpdateClaudeMdAction({ editedContent: state.editedContent, projectRoot, showStatus });
+  const handleUpdateClaudeMd = useUpdateClaudeMdAction({
+    editedContent: state.editedContent,
+    projectRoot,
+    showStatus,
+  });
   const handleOptionToggle = useOptionToggle(state.setOptions);
 
   return {
@@ -277,7 +309,10 @@ export interface ContextBuilderModelOptions {
   contextSelection?: ContextSelectionConfig | null;
 }
 
-export function useContextBuilderModel(projectRoot: string, options?: ContextBuilderModelOptions): ContextBuilderModel {
+export function useContextBuilderModel(
+  projectRoot: string,
+  options?: ContextBuilderModelOptions,
+): ContextBuilderModel {
   const state = useContextBuilderState();
   const [statusMessage, showStatus] = useTimedStatus();
   const contextSelectionModel = useContextSelectionModel(options?.contextSelection ?? undefined);

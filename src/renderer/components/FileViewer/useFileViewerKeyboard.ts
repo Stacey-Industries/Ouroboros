@@ -20,9 +20,7 @@ interface KeyboardConfig {
 }
 
 function getCurrentLine(scrollEl: HTMLElement): number {
-  const topLine = Math.floor(
-    (scrollEl.scrollTop - PADDING_TOP + LINE_HEIGHT / 2) / LINE_HEIGHT,
-  );
+  const topLine = Math.floor((scrollEl.scrollTop - PADDING_TOP + LINE_HEIGHT / 2) / LINE_HEIGHT);
   return Math.max(0, topLine);
 }
 
@@ -38,10 +36,7 @@ function findContainingFold(
   return best;
 }
 
-function findNearestAfter(
-  lines: Iterable<number>,
-  currentLine: number,
-): number | null {
+function findNearestAfter(lines: Iterable<number>, currentLine: number): number | null {
   let best: number | null = null;
   for (const startLine of lines) {
     if (startLine < currentLine) continue;
@@ -50,10 +45,7 @@ function findNearestAfter(
   return best;
 }
 
-function findNearestBefore(
-  lines: Iterable<number>,
-  currentLine: number,
-): number | null {
+function findNearestBefore(lines: Iterable<number>, currentLine: number): number | null {
   let best: number | null = null;
   for (const startLine of lines) {
     if (startLine >= currentLine) continue;
@@ -203,10 +195,7 @@ function handleWordWrapShortcut(cfg: KeyboardConfig, event: KeyboardEvent): bool
   return true;
 }
 
-function handleFileViewerKeyDown(
-  cfg: KeyboardConfig,
-  event: KeyboardEvent,
-): void {
+function handleFileViewerKeyDown(cfg: KeyboardConfig, event: KeyboardEvent): void {
   if (!isViewerShortcutTarget(cfg, event.target)) return;
   if (handleFoldShortcut(cfg, event)) return;
   if (handleSearchShortcut(cfg, event)) return;

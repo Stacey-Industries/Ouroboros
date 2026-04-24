@@ -7,10 +7,7 @@
 
 import type { AgentChatService } from '../agentChat';
 import { AGENT_CHAT_INVOKE_CHANNELS } from '../agentChat';
-import {
-  computeGlobalCostRollup,
-  computeThreadCostRollup,
-} from '../agentChat/threadCostRollup';
+import { computeGlobalCostRollup, computeThreadCostRollup } from '../agentChat/threadCostRollup';
 
 // ─── Types shared with parent ─────────────────────────────────────────────────
 
@@ -61,9 +58,7 @@ async function handleGlobalCostRollup(
     return { success: false, error: listResult.error ?? 'Failed to list threads' };
   }
   const threads = timeRange
-    ? listResult.threads.filter(
-        (t) => t.createdAt >= timeRange.from && t.createdAt <= timeRange.to,
-      )
+    ? listResult.threads.filter((t) => t.createdAt >= timeRange.from && t.createdAt <= timeRange.to)
     : listResult.threads;
   const perThread = threads.map((t) => computeThreadCostRollup(t.id, t.messages));
   const rollup = computeGlobalCostRollup(perThread);

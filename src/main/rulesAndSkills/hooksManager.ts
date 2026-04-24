@@ -7,10 +7,7 @@ import path from 'path';
 
 // ─── Path helpers ─────────────────────────────────────────────────────────────
 
-export function getSettingsPath(
-  scope: 'global' | 'project',
-  projectRoot?: string,
-): string {
+export function getSettingsPath(scope: 'global' | 'project', projectRoot?: string): string {
   if (scope === 'global') {
     return path.join(os.homedir(), '.claude', 'settings.json');
   }
@@ -25,9 +22,7 @@ async function readSettings(settingsPath: string): Promise<Record<string, unknow
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from getSettingsPath (known safe locations)
     const raw = await fs.readFile(settingsPath, 'utf8');
     const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === 'object' && parsed !== null
-      ? (parsed as Record<string, unknown>)
-      : {};
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
   } catch {
     return {};
   }
@@ -54,10 +49,7 @@ function extractHooksMap(settings: Record<string, unknown>): HooksConfig {
   return {};
 }
 
-function getMatchersForEvent(
-  hooks: HooksConfig,
-  eventType: string,
-): ClaudeHookMatcher[] {
+function getMatchersForEvent(hooks: HooksConfig, eventType: string): ClaudeHookMatcher[] {
   // eslint-disable-next-line security/detect-object-injection -- eventType from HookEventType (controlled caller input)
   return Array.isArray(hooks[eventType]) ? hooks[eventType] : [];
 }

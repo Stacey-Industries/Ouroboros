@@ -33,7 +33,13 @@ export interface TriggerContext {
 
 export interface TriggerDecision {
   fire: boolean;
-  reason: 'disabled' | 'no-stale-imports' | 'cache-hit' | 'staleness-match' | 'enhanced-library' | 'forced-on';
+  reason:
+    | 'disabled'
+    | 'no-stale-imports'
+    | 'cache-hit'
+    | 'staleness-match'
+    | 'enhanced-library'
+    | 'forced-on';
   library?: string;
   triggerSource: 'rule' | 'correction' | 'fact-claim' | 'slash' | 'none';
 }
@@ -72,7 +78,12 @@ function scanImports(
       continue;
     }
     if (result.fire) {
-      return { fire: true, reason: result.reason, library: result.library, triggerSource: result.triggerSource };
+      return {
+        fire: true,
+        reason: result.reason,
+        library: result.library,
+        triggerSource: result.triggerSource,
+      };
     }
     if (result.reason === 'cache-hit') {
       hadCacheHit = true;

@@ -125,7 +125,9 @@ describe('AgentProfilesSection', () => {
     await waitFor(() => screen.getByText('Delete'));
     fireEvent.click(screen.getByText('Delete'));
     await waitFor(() => {
-      expect((window.electronAPI.profileCrud.delete as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('user-p1');
+      expect(
+        window.electronAPI.profileCrud.delete as ReturnType<typeof vi.fn>,
+      ).toHaveBeenCalledWith('user-p1');
     });
   });
 

@@ -65,7 +65,7 @@ function GeneratedContextActions({
   runScan,
   scanning,
 }: Pick<
-GeneratedContextSectionProps,
+  GeneratedContextSectionProps,
   | 'context'
   | 'handleCopyToClipboard'
   | 'handleCreateClaudeMd'
@@ -99,24 +99,16 @@ function ClaudeMdAction({
   handleCreateClaudeMd,
   handleUpdateClaudeMd,
 }: Pick<
-GeneratedContextSectionProps,
+  GeneratedContextSectionProps,
   'context' | 'handleCreateClaudeMd' | 'handleUpdateClaudeMd'
 >): React.ReactElement {
   if (!context.hasClaudeMd) {
     return (
-      <ActionButton
-        label="Create CLAUDE.md"
-        onClick={() => void handleCreateClaudeMd()}
-        primary
-      />
+      <ActionButton label="Create CLAUDE.md" onClick={() => void handleCreateClaudeMd()} primary />
     );
   }
 
   return (
-    <ActionButton
-      label="Update CLAUDE.md"
-      onClick={() => void handleUpdateClaudeMd()}
-      primary
-    />
+    <ActionButton label="Update CLAUDE.md" onClick={() => void handleUpdateClaudeMd()} primary />
   );
 }

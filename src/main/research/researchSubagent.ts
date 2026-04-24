@@ -67,7 +67,10 @@ function buildClaudeArgs(platform: string): { cmd: string; args: string[] } {
   const cliArgs = ['--model', 'sonnet', '--print'];
   if (platform === 'win32') {
     const escaped = ['claude', ...cliArgs].join(' ');
-    return { cmd: 'powershell.exe', args: ['-NonInteractive', '-NoLogo', '-Command', `& ${escaped}`] };
+    return {
+      cmd: 'powershell.exe',
+      args: ['-NonInteractive', '-NoLogo', '-Command', `& ${escaped}`],
+    };
   }
   return { cmd: 'claude', args: cliArgs };
 }
@@ -76,10 +79,17 @@ function buildClaudeArgs(platform: string): { cmd: string; args: string[] } {
 
 function failureArtifact(input: ResearchInput, id: string): ResearchArtifact {
   return {
-    id, topic: input.topic, library: input.library, version: input.version,
-    sources: [], summary: '(Research failed; proceeding without artifact)',
-    relevantSnippets: [], confidenceHint: 'low',
-    correlationId: id, createdAt: Date.now(), cached: false,
+    id,
+    topic: input.topic,
+    library: input.library,
+    version: input.version,
+    sources: [],
+    summary: '(Research failed; proceeding without artifact)',
+    relevantSnippets: [],
+    confidenceHint: 'low',
+    correlationId: id,
+    createdAt: Date.now(),
+    cached: false,
   };
 }
 
@@ -97,8 +107,15 @@ function coerceConfidence(raw: string | undefined): 'high' | 'medium' | 'low' {
   return 'low';
 }
 
-function parseSubagentOutput(raw: string, input: ResearchInput, id: string): ResearchArtifact | null {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+function parseSubagentOutput(
+  raw: string,
+  input: ResearchInput,
+  id: string,
+): ResearchArtifact | null {
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim();
   let parsed: RawSubagentOutput;
   try {
     parsed = JSON.parse(cleaned) as RawSubagentOutput;
@@ -107,12 +124,17 @@ function parseSubagentOutput(raw: string, input: ResearchInput, id: string): Res
     return null;
   }
   return {
-    id, topic: input.topic, library: input.library, version: input.version,
+    id,
+    topic: input.topic,
+    library: input.library,
+    version: input.version,
     sources: Array.isArray(parsed.sources) ? parsed.sources : [],
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
     relevantSnippets: Array.isArray(parsed.relevantSnippets) ? parsed.relevantSnippets : [],
     confidenceHint: coerceConfidence(parsed.confidenceHint),
-    correlationId: id, createdAt: Date.now(), cached: false,
+    correlationId: id,
+    createdAt: Date.now(),
+    cached: false,
   };
 }
 
@@ -129,21 +151,40 @@ function wireChildEvents(opts: WireOpts): void {
   const { child, timer, timedOut, finish } = opts;
   let stdout = '';
   let stderr = '';
-  child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8'); });
-  child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8'); });
-  child.on('error', (err) => { clearTimeout(timer); finish({ success: false, error: err.message }); });
+  child.stdout?.on('data', (chunk: Buffer) => {
+    stdout += chunk.toString('utf8');
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    stderr += chunk.toString('utf8');
+  });
+  child.on('error', (err) => {
+    clearTimeout(timer);
+    finish({ success: false, error: err.message });
+  });
   child.on('close', (code) => {
     clearTimeout(timer);
     if (timedOut()) return;
-    if (code !== 0) { finish({ success: false, error: `exit ${code}: ${stderr.slice(0, 200)}` }); return; }
+    if (code !== 0) {
+      finish({ success: false, error: `exit ${code}: ${stderr.slice(0, 200)}` });
+      return;
+    }
     const trimmed = stdout.trim();
-    finish(trimmed ? { success: true, output: trimmed } : { success: false, error: 'empty output' });
+    finish(
+      trimmed ? { success: true, output: trimmed } : { success: false, error: 'empty output' },
+    );
   });
 }
 
-function writeStdin(child: ChildProcess, prompt: string, timer: ReturnType<typeof setTimeout>, finish: (r: SpawnResult) => void): void {
+function writeStdin(
+  child: ChildProcess,
+  prompt: string,
+  timer: ReturnType<typeof setTimeout>,
+  finish: (r: SpawnResult) => void,
+): void {
   try {
-    child.stdin?.write(prompt, 'utf8', () => { child.stdin?.end(); });
+    child.stdin?.write(prompt, 'utf8', () => {
+      child.stdin?.end();
+    });
   } catch (err) {
     clearTimeout(timer);
     finish({ success: false, error: err instanceof Error ? err.message : String(err) });
@@ -157,11 +198,19 @@ function spawnResearchClaude(prompt: string, deps: SpawnClaudeDeps): Promise<Spa
     const { cmd, args } = buildClaudeArgs(platform);
     let settled = false;
     let _timedOut = false;
-    const finish = (r: SpawnResult): void => { if (settled) return; settled = true; resolve(r); };
+    const finish = (r: SpawnResult): void => {
+      if (settled) return;
+      settled = true;
+      resolve(r);
+    };
     const child = spawnFn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     const timer = setTimeout(() => {
       _timedOut = true;
-      try { child.kill(); } catch { /* ignore */ }
+      try {
+        child.kill();
+      } catch {
+        /* ignore */
+      }
       finish({ success: false, error: 'timeout' });
     }, TIMEOUT_MS);
     wireChildEvents({ child, timer, timedOut: () => _timedOut, finish });
@@ -185,7 +234,9 @@ function persistArtifact(
   lib: string,
 ): void {
   const ttl = lib ? ttlForLibrary(lib) : ttlForLibrary('__unknown__');
-  try { cache.put(key, artifact, ttl); } catch (err) {
+  try {
+    cache.put(key, artifact, ttl);
+  } catch (err) {
     log.warn('[research] Failed to persist artifact to cache:', err);
   }
 }
@@ -236,23 +287,35 @@ function recordTelemetryInvocation(opts: TelemetryInvocationOpts): void {
  *
  * Wave 29.5 Phase E: every path records to research_invocations via telemetryStore.
  */
-export async function runResearch(
+function checkCacheHit(
+  cache: ReturnType<typeof getResearchCache>,
+  key: string,
   input: ResearchInput,
-  deps: SpawnClaudeDeps = {},
-): Promise<ResearchArtifact> {
-  const id = uuidv4();
-  const key = resolveCacheKey(input);
-  const userDataPath = deps.userDataPath ?? app.getPath('userData');
-  const cache = getResearchCache(path.join(userDataPath, 'research-cache.db'));
-
+): ResearchArtifact | null {
   const hit = cache.get(key);
-  if (hit) {
-    const hitArtifact = { ...hit, cached: true };
-    recordCorrelation(hitArtifact.correlationId, input);
-    recordTelemetryInvocation({ correlationId: hitArtifact.correlationId, input, hitCache: true, latencyMs: 0, summary: hitArtifact.summary });
-    return hitArtifact;
-  }
+  if (!hit) return null;
+  const hitArtifact = { ...hit, cached: true };
+  recordCorrelation(hitArtifact.correlationId, input);
+  recordTelemetryInvocation({
+    correlationId: hitArtifact.correlationId,
+    input,
+    hitCache: true,
+    latencyMs: 0,
+    summary: hitArtifact.summary,
+  });
+  return hitArtifact;
+}
 
+interface SpawnAndParseOpts {
+  input: ResearchInput;
+  id: string;
+  cache: ReturnType<typeof getResearchCache>;
+  key: string;
+  deps: SpawnClaudeDeps;
+}
+
+async function spawnAndParse(opts: SpawnAndParseOpts): Promise<ResearchArtifact> {
+  const { input, id, cache, key, deps } = opts;
   const spawnStart = Date.now();
   const spawnResult = await spawnResearchClaude(buildResearchPrompt(input), deps);
   const latencyMs = Date.now() - spawnStart;
@@ -271,8 +334,29 @@ export async function runResearch(
 
   persistArtifact(cache, key, artifact, input.library ?? '');
   recordCorrelation(artifact.correlationId, input);
-  recordTelemetryInvocation({ correlationId: artifact.correlationId, input, hitCache: false, latencyMs, summary: artifact.summary });
+  recordTelemetryInvocation({
+    correlationId: artifact.correlationId,
+    input,
+    hitCache: false,
+    latencyMs,
+    summary: artifact.summary,
+  });
   return artifact;
+}
+
+export async function runResearch(
+  input: ResearchInput,
+  deps: SpawnClaudeDeps = {},
+): Promise<ResearchArtifact> {
+  const id = uuidv4();
+  const key = resolveCacheKey(input);
+  const userDataPath = deps.userDataPath ?? app.getPath('userData');
+  const cache = getResearchCache(path.join(userDataPath, 'research-cache.db'));
+
+  const cached = checkCacheHit(cache, key, input);
+  if (cached) return cached;
+
+  return spawnAndParse({ input, id, cache, key, deps });
 }
 
 function recordCorrelation(correlationId: string, input: ResearchInput): void {

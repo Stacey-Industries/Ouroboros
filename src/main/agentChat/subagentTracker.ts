@@ -156,10 +156,7 @@ export function recordUsage(subagentId: string, usage: UsageParams): void {
   getOrCreateBuffer(subagentId).usages.push(usage);
 }
 
-export function recordEnd(
-  subagentId: string,
-  status: 'completed' | 'cancelled' | 'failed',
-): void {
+export function recordEnd(subagentId: string, status: 'completed' | 'cancelled' | 'failed'): void {
   const now = Date.now();
   const rec = records.get(subagentId);
   if (!rec) {
@@ -233,9 +230,7 @@ export function rollupCostForParent(parentSessionId: string): SubagentCostRollup
 /** Called from hooks pipeline when a pre_tool_use Task event fires. */
 export function onTaskToolPreUse(payload: HookPayload): void {
   const input = payload.input as Record<string, unknown> | undefined;
-  const taskLabel = (
-    input?.description ?? input?.task ?? input?.prompt
-  ) as string | undefined;
+  const taskLabel = (input?.description ?? input?.task ?? input?.prompt) as string | undefined;
   const childSessionId = input?.childSessionId as string | undefined;
 
   if (!childSessionId) return;

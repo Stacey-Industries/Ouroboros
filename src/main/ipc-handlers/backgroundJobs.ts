@@ -45,7 +45,9 @@ export function ensureSchedulerInit(): void {
     },
   });
 
-  store.subscribeChanges((jobId, changes) => { broadcastUpdate({ jobId, changes }); });
+  store.subscribeChanges((jobId, changes) => {
+    broadcastUpdate({ jobId, changes });
+  });
   log.info('[backgroundJobs] scheduler initialised (maxConcurrent=%d)', maxConcurrent);
 }
 
@@ -100,5 +102,10 @@ export function registerBackgroundJobsHandlers(): string[] {
   ipcMain.handle('backgroundJobs:cancel', (_e, id: string) => handleCancel(id));
   ipcMain.handle('backgroundJobs:list', (_e, root?: string) => handleList(root));
   ipcMain.handle('backgroundJobs:clearCompleted', () => handleClearCompleted());
-  return ['backgroundJobs:enqueue', 'backgroundJobs:cancel', 'backgroundJobs:list', 'backgroundJobs:clearCompleted'];
+  return [
+    'backgroundJobs:enqueue',
+    'backgroundJobs:cancel',
+    'backgroundJobs:list',
+    'backgroundJobs:clearCompleted',
+  ];
 }

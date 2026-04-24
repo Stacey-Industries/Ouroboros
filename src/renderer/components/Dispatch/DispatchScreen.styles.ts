@@ -144,7 +144,12 @@ export const JOB_META_STYLE: React.CSSProperties = {
 // ── Status pill ───────────────────────────────────────────────────────────────
 
 export type DispatchJobStatus =
-  | 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled';
+  | 'queued'
+  | 'starting'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'canceled';
 
 export function statusPillStyle(status: DispatchJobStatus): React.CSSProperties {
   const base: React.CSSProperties = {
@@ -156,12 +161,12 @@ export function statusPillStyle(status: DispatchJobStatus): React.CSSProperties 
     flexShrink: 0,
   };
   const colorMap: Record<DispatchJobStatus, React.CSSProperties> = {
-    queued:    { backgroundColor: 'var(--status-info-subtle)',    color: 'var(--status-info)' },
-    starting:  { backgroundColor: 'var(--status-warning-subtle)', color: 'var(--status-warning)' },
-    running:   { backgroundColor: 'var(--status-warning-subtle)', color: 'var(--status-warning)' },
+    queued: { backgroundColor: 'var(--status-info-subtle)', color: 'var(--status-info)' },
+    starting: { backgroundColor: 'var(--status-warning-subtle)', color: 'var(--status-warning)' },
+    running: { backgroundColor: 'var(--status-warning-subtle)', color: 'var(--status-warning)' },
     completed: { backgroundColor: 'var(--status-success-subtle)', color: 'var(--status-success)' },
-    failed:    { backgroundColor: 'var(--status-error-subtle)',   color: 'var(--status-error)' },
-    canceled:  { backgroundColor: 'var(--surface-raised)',        color: 'var(--text-secondary)' },
+    failed: { backgroundColor: 'var(--status-error-subtle)', color: 'var(--status-error)' },
+    canceled: { backgroundColor: 'var(--surface-raised)', color: 'var(--text-secondary)' },
   };
   return { ...base, ...colorMap[status] };
 }

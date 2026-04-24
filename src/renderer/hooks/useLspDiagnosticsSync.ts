@@ -32,9 +32,7 @@ export function useLspDiagnosticsSync(): void {
 
     const cleanup = window.electronAPI.lsp.onDiagnostics(({ filePath, diagnostics }) => {
       const severity = worstSeverity(diagnostics);
-      useFileTreeStore.getState().updateDiagnostics(
-        new Map([[filePath, severity]]),
-      );
+      useFileTreeStore.getState().updateDiagnostics(new Map([[filePath, severity]]));
     });
 
     return cleanup;

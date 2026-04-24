@@ -30,19 +30,23 @@ const editorContainerStyle: React.CSSProperties = {
 function InlineEditorComponent(props: InlineEditorProps): React.ReactElement {
   const { ref, ...rest } = props;
   const { containerRef, viewRef } = useInlineEditorController(rest);
-  useImperativeHandle(ref, () => ({
-    getContent: () => viewRef.current?.state.doc.toString() ?? '',
-    setContent: (content: string) => {
-      const view = viewRef.current;
-      if (!view) {
-        return;
-      }
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: content },
-        selection: EditorSelection.cursor(content.length),
-      });
-    },
-  }), [viewRef]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      getContent: () => viewRef.current?.state.doc.toString() ?? '',
+      setContent: (content: string) => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: content },
+          selection: EditorSelection.cursor(content.length),
+        });
+      },
+    }),
+    [viewRef],
+  );
   return <div ref={containerRef} style={editorContainerStyle} />;
 }
 

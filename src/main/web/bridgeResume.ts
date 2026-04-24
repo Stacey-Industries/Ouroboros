@@ -55,10 +55,7 @@ interface JsonRpcResponse {
   meta?: { resumeToken: string };
 }
 
-export type HandlerFn = (
-  event: Electron.IpcMainInvokeEvent,
-  ...args: unknown[]
-) => unknown;
+export type HandlerFn = (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
 export type SendResponseFn = (ws: WebSocket, response: JsonRpcResponse) => void;
 
@@ -140,15 +137,15 @@ function sendViaRegistry(
   if (fn) {
     fn(msg);
   } else {
-    try { ctx.sendResponse(fallbackWs, msg); } catch { /* ws closed */ }
+    try {
+      ctx.sendResponse(fallbackWs, msg);
+    } catch {
+      /* ws closed */
+    }
   }
 }
 
-function runHandler(
-  ws: WebSocket,
-  request: JsonRpcRequest,
-  ctx: DispatchContext,
-): void {
+function runHandler(ws: WebSocket, request: JsonRpcRequest, ctx: DispatchContext): void {
   const mockEvent = ctx.createEvent();
   const params = Array.isArray(request.params) ? request.params : [];
   const handlerPromise = Promise.resolve().then(() => ctx.handler(mockEvent, ...params));
@@ -161,7 +158,8 @@ function runHandler(
       const code = isTimeout ? -32001 : -32603;
       const message = err instanceof Error ? err.message : String(err);
       ctx.sendResponse(ws, {
-        jsonrpc: '2.0', id: request.id,
+        jsonrpc: '2.0',
+        id: request.id,
         error: { code, message: isTimeout ? 'timeout' : `Handler error: ${message}` },
       });
     });
@@ -179,7 +177,9 @@ function runResumableHandler(
   withTimeout(handlerPromise, request.method)
     .then((result: unknown) => {
       sendViaRegistry(token, ws, ctx, {
-        jsonrpc: '2.0', id: request.id, result: ctx.encode(result),
+        jsonrpc: '2.0',
+        id: request.id,
+        result: ctx.encode(result),
       });
       resolve(token);
     })
@@ -191,7 +191,8 @@ function runResumableHandler(
       // if handler resolves after timeout fires (withTimeout discards it).
       resolve(token);
       sendViaRegistry(token, ws, ctx, {
-        jsonrpc: '2.0', id: request.id,
+        jsonrpc: '2.0',
+        id: request.id,
         error: { code, message: isTimeout ? 'timeout' : `Handler error: ${message}` },
       });
     });
@@ -224,7 +225,11 @@ export function dispatchResumable(
 
   const token = register({ deviceId: connectionMeta.deviceId, channel: request.method });
   setSendTarget(token, (msg) => {
-    try { ctx.sendResponse(ws, msg as JsonRpcResponse); } catch { /* ws closed */ }
+    try {
+      ctx.sendResponse(ws, msg as JsonRpcResponse);
+    } catch {
+      /* ws closed */
+    }
   });
 
   // Meta frame — client moves request from pendingRequests → resumableRequests

@@ -25,7 +25,9 @@ function setupElectronAPI() {
   let listener: EventCb | null = null;
   mockOnEvent.mockImplementation((cb: EventCb) => {
     listener = cb;
-    return () => { listener = null; };
+    return () => {
+      listener = null;
+    };
   });
 
   Object.defineProperty(window, 'electronAPI', {
@@ -40,7 +42,9 @@ function setupElectronAPI() {
   });
 
   return {
-    emitEvent: (payload: Parameters<EventCb>[0]) => { listener?.(payload); },
+    emitEvent: (payload: Parameters<EventCb>[0]) => {
+      listener?.(payload);
+    },
   };
 }
 
@@ -171,7 +175,9 @@ describe('useCompareSession', () => {
 
     await act(async () => {
       await result.current.start({
-        prompt: 'q', projectPath: '/p', providerIds: ['claude', 'codex'],
+        prompt: 'q',
+        projectPath: '/p',
+        providerIds: ['claude', 'codex'],
       });
     });
 
@@ -197,7 +203,9 @@ describe('useCompareSession', () => {
 
     await act(async () => {
       await result.current.start({
-        prompt: 'q', projectPath: '/p', providerIds: ['claude', 'codex'],
+        prompt: 'q',
+        projectPath: '/p',
+        providerIds: ['claude', 'codex'],
       });
     });
 
@@ -218,20 +226,28 @@ describe('useCompareSession', () => {
 
     await act(async () => {
       await result.current.start({
-        prompt: 'q', projectPath: '/p', providerIds: ['claude', 'codex'],
+        prompt: 'q',
+        projectPath: '/p',
+        providerIds: ['claude', 'codex'],
       });
     });
 
     act(() => {
-      emitEvent({ compareId: 'cmp-6', providerId: 'claude',
-        event: { type: 'completion', sessionId: 's1', payload: null, at: 10 } });
+      emitEvent({
+        compareId: 'cmp-6',
+        providerId: 'claude',
+        event: { type: 'completion', sessionId: 's1', payload: null, at: 10 },
+      });
     });
     // Still running — only one side done
     expect(result.current.state.status).toBe('running');
 
     act(() => {
-      emitEvent({ compareId: 'cmp-6', providerId: 'codex',
-        event: { type: 'completion', sessionId: 's2', payload: null, at: 11 } });
+      emitEvent({
+        compareId: 'cmp-6',
+        providerId: 'codex',
+        event: { type: 'completion', sessionId: 's2', payload: null, at: 11 },
+      });
     });
     expect(result.current.state.status).toBe('completed');
   });

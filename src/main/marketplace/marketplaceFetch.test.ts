@@ -17,7 +17,9 @@ const { mockVerifyImpl } = vi.hoisted(() => ({
 
 // ── Mock node:https ───────────────────────────────────────────────────────────
 
-type HttpsGetCallback = (res: EventEmitter & { on: (e: string, cb: (d?: Buffer) => void) => void }) => void;
+type HttpsGetCallback = (
+  res: EventEmitter & { on: (e: string, cb: (d?: Buffer) => void) => void },
+) => void;
 
 let httpsGetFactory: (url: string, cb: HttpsGetCallback) => EventEmitter;
 
@@ -45,7 +47,9 @@ import { fetchBundle, fetchManifest, fetchRevokedIds, httpsGet } from './marketp
 
 function makeSuccessFactory(body: string): typeof httpsGetFactory {
   return (_url, cb) => {
-    const res = new EventEmitter() as EventEmitter & { on: (e: string, cb: (d?: Buffer) => void) => void };
+    const res = new EventEmitter() as EventEmitter & {
+      on: (e: string, cb: (d?: Buffer) => void) => void;
+    };
     const req = new EventEmitter();
     (req as unknown as { setTimeout: (ms: number, fn: () => void) => void }).setTimeout = () => {};
     setImmediate(() => {
@@ -72,7 +76,10 @@ function makeErrorFactory(message: string): typeof httpsGetFactory {
 // ── fetchManifest ─────────────────────────────────────────────────────────────
 
 describe('fetchManifest', () => {
-  beforeEach(() => { vi.clearAllMocks(); mockVerifyImpl.mockReturnValue(false); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVerifyImpl.mockReturnValue(false);
+  });
 
   it('returns bundles array on valid JSON', async () => {
     httpsGetFactory = makeSuccessFactory(JSON.stringify({ bundles: [{ id: 'a' }] }));
@@ -103,16 +110,26 @@ describe('fetchManifest', () => {
 // ── fetchBundle ───────────────────────────────────────────────────────────────
 
 const ENTRY = {
-  id: 'test-bundle', title: 'Test', description: 'desc', author: 'author',
-  kind: 'theme' as const, version: '1.0.0', signature: 'sig==',
+  id: 'test-bundle',
+  title: 'Test',
+  description: 'desc',
+  author: 'author',
+  kind: 'theme' as const,
+  version: '1.0.0',
+  signature: 'sig==',
   downloadUrl: 'https://example.com/test-bundle.json',
 };
 
 describe('fetchBundle', () => {
-  beforeEach(() => { vi.clearAllMocks(); mockVerifyImpl.mockReturnValue(false); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVerifyImpl.mockReturnValue(false);
+  });
 
   it('returns error when signature is invalid', async () => {
-    httpsGetFactory = makeSuccessFactory(JSON.stringify({ id: 'test-bundle', kind: 'theme', payload: {} }));
+    httpsGetFactory = makeSuccessFactory(
+      JSON.stringify({ id: 'test-bundle', kind: 'theme', payload: {} }),
+    );
     mockVerifyImpl.mockReturnValue(false);
     const result = await fetchBundle(ENTRY);
     expect('error' in result).toBe(true);
@@ -138,7 +155,9 @@ describe('fetchBundle', () => {
 // ── fetchRevokedIds ───────────────────────────────────────────────────────────
 
 describe('fetchRevokedIds', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns ids array from valid response', async () => {
     httpsGetFactory = makeSuccessFactory(JSON.stringify({ ids: ['a', 'b'] }));

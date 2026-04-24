@@ -87,7 +87,11 @@ async function callAnthropicApi(
   const slots = getConfigValue('modelSlots');
   const model = resolveModel(slots?.inlineCompletion ?? '');
   const client = await createAnthropicClient();
-  const prompt = buildFimPrompt(request.textBeforeCursor, request.textAfterCursor, request.openTabContext);
+  const prompt = buildFimPrompt(
+    request.textBeforeCursor,
+    request.textAfterCursor,
+    request.openTabContext,
+  );
 
   const response = await client.messages.create(
     {
@@ -109,7 +113,8 @@ async function handleInlineCompletion(
   _event: Electron.IpcMainInvokeEvent,
   request: CompletionRequest,
 ): Promise<CompletionResult> {
-  if (!getConfigValue('inlineCompletionsEnabled')) return { success: false, error: 'ai-inline-completion-disabled' };
+  if (!getConfigValue('inlineCompletionsEnabled'))
+    return { success: false, error: 'ai-inline-completion-disabled' };
 
   if (activeController) {
     activeController.abort();

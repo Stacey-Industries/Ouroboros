@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DiffReviewLayout } from './DiffReviewPanelSections';
-import {
-  getDiffReviewStateView,
-  getDiffReviewStats,
-} from './DiffReviewPanelState';
+import { getDiffReviewStateView, getDiffReviewStats } from './DiffReviewPanelState';
 import type { DiffReviewState, ReviewHunk } from './types';
 import { useDiffReviewKeyboard } from './useDiffReviewKeyboard';
 
@@ -105,18 +102,27 @@ function useKeyboardNav(
   const flatHunks = useMemo(() => flattenHunks(files), [files]);
   const allHunks = useMemo<ReviewHunk[]>(() => files.flatMap((f) => f.hunks), [files]);
 
-  const handleAccept = useCallback((id: string) => {
-    const entry = flatHunks.find((h) => h.id === id);
-    if (entry) onAcceptHunk(entry.fileIdx, entry.hunkIdx);
-  }, [flatHunks, onAcceptHunk]);
+  const handleAccept = useCallback(
+    (id: string) => {
+      const entry = flatHunks.find((h) => h.id === id);
+      if (entry) onAcceptHunk(entry.fileIdx, entry.hunkIdx);
+    },
+    [flatHunks, onAcceptHunk],
+  );
 
-  const handleReject = useCallback((id: string) => {
-    const entry = flatHunks.find((h) => h.id === id);
-    if (entry) onRejectHunk(entry.fileIdx, entry.hunkIdx);
-  }, [flatHunks, onRejectHunk]);
+  const handleReject = useCallback(
+    (id: string) => {
+      const entry = flatHunks.find((h) => h.id === id);
+      if (entry) onRejectHunk(entry.fileIdx, entry.hunkIdx);
+    },
+    [flatHunks, onRejectHunk],
+  );
 
   const { focusedHunkId } = useDiffReviewKeyboard({
-    enabled, hunks: allHunks, onAccept: handleAccept, onReject: handleReject,
+    enabled,
+    hunks: allHunks,
+    onAccept: handleAccept,
+    onReject: handleReject,
   });
   return focusedHunkId;
 }
@@ -140,35 +146,44 @@ function useFileNavState(files: DiffReviewState['files']): {
   return { selectedFileIdx, setSelectedFileIdx, setFileRef };
 }
 
+function getStaleFilePath(state: DiffReviewState): string | null {
+  const op = state.stalePendingOp;
+  if (op === null) return null;
+  return state.files[op.fileIdx]?.relativePath ?? '';
+}
+
 export function DiffReviewPanel(props: DiffReviewPanelProps): React.ReactElement {
   const { state, canRollback, enhancedEnabled, onAcceptHunk, onRejectHunk } = props;
   const { onAcceptAllFile, onRejectAllFile, onAcceptAll, onRejectAll, onRollback, onClose } = props;
   const { onConfirmStaleOp = () => undefined, onDismissStaleOp = () => undefined } = props;
-
   const stats = useMemo(() => getDiffReviewStats(state.files), [state.files]);
   const stateView = getDiffReviewStateView(state, onClose);
   const focusedHunkId = useKeyboardNav(state.files, enhancedEnabled, onAcceptHunk, onRejectHunk);
   const { selectedFileIdx, setSelectedFileIdx, setFileRef } = useFileNavState(state.files);
-
   if (stateView) return stateView;
-
-  const stalePendingOp = state.stalePendingOp;
-  const staleFilePath = stalePendingOp !== null
-    ? (state.files[stalePendingOp.fileIdx]?.relativePath ?? '')
-    : null;
-
+  const staleFilePath = getStaleFilePath(state);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {staleFilePath !== null && (
         <StalePromptBar staleFile={staleFilePath} onConfirm={onConfirmStaleOp} onDismiss={onDismissStaleOp} />
       )}
       <DiffReviewLayout
-        files={state.files} selectedFileIdx={selectedFileIdx} stats={stats}
-        canRollback={canRollback} enhancedEnabled={enhancedEnabled} focusedHunkId={focusedHunkId}
-        onClose={onClose} onAcceptAll={onAcceptAll} onRejectAll={onRejectAll} onRollback={onRollback}
-        onAcceptAllFile={onAcceptAllFile} onRejectAllFile={onRejectAllFile}
-        onSelectFile={setSelectedFileIdx} onAcceptHunk={onAcceptHunk}
-        onRejectHunk={onRejectHunk} setFileRef={setFileRef}
+        files={state.files}
+        selectedFileIdx={selectedFileIdx}
+        stats={stats}
+        canRollback={canRollback}
+        enhancedEnabled={enhancedEnabled}
+        focusedHunkId={focusedHunkId}
+        onClose={onClose}
+        onAcceptAll={onAcceptAll}
+        onRejectAll={onRejectAll}
+        onRollback={onRollback}
+        onAcceptAllFile={onAcceptAllFile}
+        onRejectAllFile={onRejectAllFile}
+        onSelectFile={setSelectedFileIdx}
+        onAcceptHunk={onAcceptHunk}
+        onRejectHunk={onRejectHunk}
+        setFileRef={setFileRef}
       />
     </div>
   );

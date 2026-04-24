@@ -20,32 +20,24 @@ const BASE_OVERRIDES: ChatOverrides = {
 
 describe('AdvancedInferenceControls', () => {
   it('renders a gear button', () => {
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />);
     const btn = screen.getByTitle('Advanced inference controls');
     expect(btn).toBeDefined();
   });
 
   it('panel is hidden by default', () => {
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />);
     expect(screen.queryByTestId('advanced-inference-panel')).toBeNull();
   });
 
   it('opens panel on gear button click', () => {
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
     expect(screen.getByTestId('advanced-inference-panel')).toBeDefined();
   });
 
   it('closes panel on second gear click', () => {
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={vi.fn()} />);
     const btn = screen.getByTitle('Advanced inference controls');
     fireEvent.click(btn);
     fireEvent.click(btn);
@@ -54,9 +46,7 @@ describe('AdvancedInferenceControls', () => {
 
   it('calls onChange with updated temperature when slider changes', () => {
     const onChange = vi.fn();
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
 
     const slider = screen.getByRole('slider');
@@ -69,9 +59,7 @@ describe('AdvancedInferenceControls', () => {
 
   it('calls onChange with updated maxTokens', () => {
     const onChange = vi.fn();
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
 
     const input = screen.getByPlaceholderText('Provider default');
@@ -84,9 +72,7 @@ describe('AdvancedInferenceControls', () => {
 
   it('enables JSON mode when checkbox is checked', () => {
     const onChange = vi.fn();
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
 
     const checkbox = screen.getByRole('checkbox');
@@ -99,9 +85,7 @@ describe('AdvancedInferenceControls', () => {
 
   it('calls onChange with stop sequences from comma-separated input', () => {
     const onChange = vi.fn();
-    render(
-      <AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />,
-    );
+    render(<AdvancedInferenceControls overrides={BASE_OVERRIDES} onChange={onChange} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
 
     const input = screen.getByPlaceholderText(/end\|/);
@@ -120,9 +104,7 @@ describe('AdvancedInferenceControls', () => {
       maxTokens: 1000,
       stopSequences: ['###'],
     };
-    render(
-      <AdvancedInferenceControls overrides={withOverrides} onChange={onChange} />,
-    );
+    render(<AdvancedInferenceControls overrides={withOverrides} onChange={onChange} />);
     fireEvent.click(screen.getByTitle('Advanced inference controls'));
 
     fireEvent.click(screen.getByText('Reset overrides'));
@@ -137,9 +119,7 @@ describe('AdvancedInferenceControls', () => {
 
   it('shows accent dot indicator when overrides are active', () => {
     const withTemp: ChatOverrides = { ...BASE_OVERRIDES, temperature: 0.3 };
-    render(
-      <AdvancedInferenceControls overrides={withTemp} onChange={vi.fn()} />,
-    );
+    render(<AdvancedInferenceControls overrides={withTemp} onChange={vi.fn()} />);
     // The button should carry the accent class when overrides are set
     const btn = screen.getByTitle('Advanced inference controls');
     expect(btn.className).toContain('text-interactive-accent');

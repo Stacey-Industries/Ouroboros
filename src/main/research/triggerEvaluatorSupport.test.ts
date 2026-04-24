@@ -215,14 +215,25 @@ describe('evaluateRuleLayer — confidence floor (Phase I)', () => {
       // confidence is 'high' per the StalenessEntry type, but we test the floor with value 0.6
       // which tests medium exclusion. Since StalenessEntry only has 'high' for curated,
       // we cast to test the floor logic path.
-      entry: { kind: 'curated', library: 'medium-lib', cutoffVersion: '1.0.0', cutoffDate: '2024-01-01', confidence: 'high' } as never,
+      entry: {
+        kind: 'curated',
+        library: 'medium-lib',
+        cutoffVersion: '1.0.0',
+        cutoffDate: '2024-01-01',
+        confidence: 'high',
+      } as never,
       reason: 'curated-match',
     });
     // Actually override the cast to medium for this test
     vi.mocked(isStale).mockReturnValue({
       library: 'medium-lib',
       stale: true,
-      entry: { kind: 'heuristic', library: 'medium-lib', releasedAfter: '2024-01-01', confidence: 'medium' },
+      entry: {
+        kind: 'heuristic',
+        library: 'medium-lib',
+        releasedAfter: '2024-01-01',
+        confidence: 'medium',
+      },
       reason: 'curated-match',
     });
     vi.mocked(getConfigValue).mockReturnValue({ stalenessConfidenceFloor: 0.6 });

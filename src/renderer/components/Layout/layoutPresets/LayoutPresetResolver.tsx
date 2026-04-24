@@ -7,6 +7,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import type { SerializedSlotNode } from '../../../types/electron-layout';
 import type { LeafSlot, SlotNode } from '../layoutPresets/slotTree';
 import { isLeaf, isSplit } from '../layoutPresets/slotTree';
 import { splitLeafWith, unsplitIfOrphan } from '../layoutPresets/splitSlot';
@@ -133,17 +134,27 @@ export function buildSwapOverrides(
   const aDesc = merged[a];
   const bDesc = merged[b];
   const next = { ...prev };
-  if (bDesc !== undefined) { next[a] = bDesc; } else { delete next[a]; }
-  if (aDesc !== undefined) { next[b] = aDesc; } else { delete next[b]; }
+  if (bDesc !== undefined) {
+    next[a] = bDesc;
+  } else {
+    delete next[a];
+  }
+  if (aDesc !== undefined) {
+    next[b] = aDesc;
+  } else {
+    delete next[b];
+  }
   return next;
 }
 
-export function buildInitialTree(
-  slots: Partial<Record<SlotName, ComponentDescriptor>>,
-): SlotNode {
+export function buildInitialTree(slots: Partial<Record<SlotName, ComponentDescriptor>>): SlotNode {
   const SLOT_ORDER: SlotName[] = [
-    'sidebarHeader', 'sidebarContent', 'editorTabBar',
-    'editorContent', 'agentCards', 'terminalContent',
+    'sidebarHeader',
+    'sidebarContent',
+    'editorTabBar',
+    'editorContent',
+    'agentCards',
+    'terminalContent',
   ];
   const firstSlot = SLOT_ORDER.find((s) => slots[s] !== undefined) ?? 'editorContent';
   const descriptor = slots[firstSlot] ?? { componentKey: firstSlot };
@@ -178,17 +189,23 @@ export function applySwapToTree(
 export interface ProviderState {
   preset: LayoutPreset;
   slotTree: SlotNode;
-  setSlotOverrides: React.Dispatch<React.SetStateAction<Partial<Record<SlotName, ComponentDescriptor>>>>;
+  setSlotOverrides: React.Dispatch<
+    React.SetStateAction<Partial<Record<SlotName, ComponentDescriptor>>>
+  >;
   setSlotTree: React.Dispatch<React.SetStateAction<SlotNode>>;
-  persistence: { save: (tree: unknown) => void };
+  persistence: { save: (tree: SerializedSlotNode) => void };
 }
 
 export function usePresetsFlag(): boolean {
   const [flagOn, setFlagOn] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    void readPresetsFlag().then((v) => { if (!cancelled) setFlagOn(v); });
-    return () => { cancelled = true; };
+    void readPresetsFlag().then((v) => {
+      if (!cancelled) setFlagOn(v);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return flagOn;
 }
@@ -197,8 +214,12 @@ export function useMobilePrimaryFlag(): boolean {
   const [flagOn, setFlagOn] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    void readMobilePrimaryFlag().then((v) => { if (!cancelled) setFlagOn(v); });
-    return () => { cancelled = true; };
+    void readMobilePrimaryFlag().then((v) => {
+      if (!cancelled) setFlagOn(v);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return flagOn;
 }
@@ -207,29 +228,48 @@ export function useResolvedPreset(
   flagOn: boolean,
   sessionPresetId: string | undefined,
   forcePresetId: string | undefined,
-): [LayoutPreset, LayoutPreset, React.Dispatch<React.SetStateAction<Partial<Record<SlotName, ComponentDescriptor>>>>] {
-  const [slotOverrides, setSlotOverrides] = useState<Partial<Record<SlotName, ComponentDescriptor>>>({});
+): [
+  LayoutPreset,
+  LayoutPreset,
+  React.Dispatch<React.SetStateAction<Partial<Record<SlotName, ComponentDescriptor>>>>,
+] {
+  const [slotOverrides, setSlotOverrides] = useState<
+    Partial<Record<SlotName, ComponentDescriptor>>
+  >({});
   const basePreset = useMemo(
     () => resolveBasePreset(flagOn, sessionPresetId, forcePresetId),
     [flagOn, forcePresetId, sessionPresetId],
   );
-  const preset = useMemo(() => applyOverrides(basePreset, slotOverrides), [basePreset, slotOverrides]);
+  const preset = useMemo(
+    () => applyOverrides(basePreset, slotOverrides),
+    [basePreset, slotOverrides],
+  );
   return [basePreset, preset, setSlotOverrides];
 }
 
 export function useSplitSlotCallback(
   state: ProviderState,
-): (targetSlot: SlotName, sourceSlot: SlotName, direction: 'horizontal' | 'vertical', position: 'start' | 'end') => void {
-  return useCallback((targetSlot, sourceSlot, direction, position) => {
-    state.setSlotTree((prev) => {
-      const sourceDesc = state.preset.slots[sourceSlot] ?? { componentKey: sourceSlot };
-      const sourceLeaf: LeafSlot = { kind: 'leaf', slotName: sourceSlot, component: sourceDesc };
-      const next = unsplitIfOrphan(splitLeafWith({ tree: prev, targetSlot, source: sourceLeaf, direction, position }));
-      // Wave 41 CRIT-A fix: persist split so layout survives reload (was missing).
-      state.persistence.save(next);
-      return next;
-    });
-  }, [state]);
+): (
+  targetSlot: SlotName,
+  sourceSlot: SlotName,
+  direction: 'horizontal' | 'vertical',
+  position: 'start' | 'end',
+) => void {
+  return useCallback(
+    (targetSlot, sourceSlot, direction, position) => {
+      state.setSlotTree((prev) => {
+        const sourceDesc = state.preset.slots[sourceSlot] ?? { componentKey: sourceSlot };
+        const sourceLeaf: LeafSlot = { kind: 'leaf', slotName: sourceSlot, component: sourceDesc };
+        const next = unsplitIfOrphan(
+          splitLeafWith({ tree: prev, targetSlot, source: sourceLeaf, direction, position }),
+        );
+        // Wave 41 CRIT-A fix: persist split so layout survives reload (was missing).
+        state.persistence.save(next as SerializedSlotNode);
+        return next;
+      });
+    },
+    [state],
+  );
 }
 
 // ---------------------------------------------------------------------------

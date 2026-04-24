@@ -7,7 +7,10 @@
  *
  * Editor is set readOnly during streaming to prevent cursor anchor drift.
  */
-import type { InlineEditStreamEvent, InlineEditStreamRequest } from '@shared/types/inlineEditStream';
+import type {
+  InlineEditStreamEvent,
+  InlineEditStreamRequest,
+} from '@shared/types/inlineEditStream';
 import * as monaco from 'monaco-editor';
 import type { MutableRefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -66,8 +69,10 @@ function flushPendingTokens(ctx: FlushContext): void {
   editor.pushUndoStop();
   if (!replacedRef.current) {
     const range = new monaco.Range(
-      selectionRange.startLine, 1,
-      selectionRange.endLine, model.getLineMaxColumn(selectionRange.endLine),
+      selectionRange.startLine,
+      1,
+      selectionRange.endLine,
+      model.getLineMaxColumn(selectionRange.endLine),
     );
     editor.executeEdits(EDIT_SOURCE, [{ range, text: delta }]);
     replacedRef.current = true;
@@ -94,7 +99,10 @@ interface StreamRefs {
 }
 
 function stopStream(refs: StreamRefs, setIsStreaming: (v: boolean) => void): void {
-  if (refs.timer.current) { clearInterval(refs.timer.current); refs.timer.current = null; }
+  if (refs.timer.current) {
+    clearInterval(refs.timer.current);
+    refs.timer.current = null;
+  }
   refs.cleanup.current?.();
   refs.cleanup.current = null;
   refs.currentRequestId.current = null;
@@ -118,9 +126,13 @@ interface BuildRequestParams {
 function buildStreamRequest(params: BuildRequestParams): InlineEditStreamRequest {
   const { requestId, filePath, instruction, selectedText, selectionRange, model } = params;
   return {
-    requestId, filePath, instruction, selectedText,
+    requestId,
+    filePath,
+    instruction,
+    selectedText,
     range: {
-      startLine: selectionRange.startLine, startColumn: 1,
+      startLine: selectionRange.startLine,
+      startColumn: 1,
       endLine: selectionRange.endLine,
       endColumn: model.getLineMaxColumn(selectionRange.endLine),
     },
@@ -169,10 +181,23 @@ interface StartStreamSetup {
 }
 
 function setupStreamListeners(setup: StartStreamSetup): FlushContext {
-  const { requestId, editor, model, selectionRange, refs, setIsStreaming, setStreamedText, setError } = setup;
+  const {
+    requestId,
+    editor,
+    model,
+    selectionRange,
+    refs,
+    setIsStreaming,
+    setStreamedText,
+    setError,
+  } = setup;
   const flushCtx: FlushContext = {
-    editor, model, selectionRange,
-    pendingRef: refs.pending, replacedRef: refs.replaced, endLineRef: refs.endLine,
+    editor,
+    model,
+    selectionRange,
+    pendingRef: refs.pending,
+    replacedRef: refs.replaced,
+    endLineRef: refs.endLine,
   };
   refs.timer.current = setInterval(() => flushPendingTokens(flushCtx), FLUSH_INTERVAL_MS);
   const evDeps: EventHandlerDeps = { flushCtx, refs, setIsStreaming, setStreamedText, setError };
@@ -215,37 +240,41 @@ interface UseStartStreamParams {
   setError: (e: string | null) => void;
 }
 
+async function executeStartStream(
+  p: UseStartStreamParams,
+  instruction: string,
+  selectedText: string,
+  selectionRange: SelectionRange,
+): Promise<void> {
+  const { editorRef, filePath, refs, setError, setIsStreaming, setStreamedText } = p;
+  if (!hasAiStreamApi()) return;
+  const editor = editorRef.current;
+  const model = editor?.getModel();
+  if (!editor || !model) return;
+  const requestId = generateRequestId();
+  refs.currentRequestId.current = requestId;
+  refs.replaced.current = false;
+  refs.pending.current = '';
+  setStreamedText('');
+  setError(null);
+  setIsStreaming(true);
+  editor.updateOptions({ readOnly: true });
+  setupStreamListeners({ requestId, editor, model, selectionRange, refs, setIsStreaming, setStreamedText, setError });
+  const req = buildStreamRequest({ requestId, filePath, instruction, selectedText, selectionRange, model });
+  const result = await window.electronAPI.aiStream.startInlineEdit(req);
+  if (!result.success) {
+    setError(result.error ?? 'Failed to start streaming edit');
+    stopStream(refs, setIsStreaming);
+  }
+}
+
 function useStartStream(p: UseStartStreamParams) {
-  return useCallback(async (
-    instruction: string,
-    selectedText: string,
-    selectionRange: SelectionRange,
-  ): Promise<void> => {
-    if (!hasAiStreamApi()) return;
-    const editor = p.editorRef.current;
-    const model = editor?.getModel();
-    if (!editor || !model) return;
-    const requestId = generateRequestId();
-    const refs = p.refs;
-    // eslint-disable-next-line react-compiler/react-compiler -- intentional ref mutation
-    refs.currentRequestId.current = requestId;
-    refs.replaced.current = false;
-    refs.pending.current = '';
-    p.setStreamedText('');
-    p.setError(null);
-    p.setIsStreaming(true);
-    editor.updateOptions({ readOnly: true });
-    setupStreamListeners({
-      requestId, editor, model, selectionRange, refs,
-      setIsStreaming: p.setIsStreaming, setStreamedText: p.setStreamedText, setError: p.setError,
-    });
-    const req = buildStreamRequest({ requestId, filePath: p.filePath, instruction, selectedText, selectionRange, model });
-    const result = await window.electronAPI.aiStream.startInlineEdit(req);
-    if (!result.success) {
-      p.setError(result.error ?? 'Failed to start streaming edit');
-      stopStream(refs, p.setIsStreaming);
-    }
-  }, [p.editorRef, p.filePath, p.refs, p.setError, p.setIsStreaming, p.setStreamedText]);
+  const { editorRef, filePath, refs, setError, setIsStreaming, setStreamedText } = p;
+  return useCallback(
+    (instruction: string, selectedText: string, selectionRange: SelectionRange): Promise<void> =>
+      executeStartStream({ editorRef, filePath, refs, setError, setIsStreaming, setStreamedText }, instruction, selectedText, selectionRange),
+    [editorRef, filePath, refs, setError, setIsStreaming, setStreamedText],
+  );
 }
 
 // ── Main hook ─────────────────────────────────────────────────────────────────
@@ -260,7 +289,14 @@ export function useStreamingInlineEdit(
 
   const refs = useStreamRefs(editorRef);
 
-  const startStream = useStartStream({ editorRef, filePath, refs, setIsStreaming, setStreamedText, setError });
+  const startStream = useStartStream({
+    editorRef,
+    filePath,
+    refs,
+    setIsStreaming,
+    setStreamedText,
+    setError,
+  });
 
   useEffect(() => {
     return () => {

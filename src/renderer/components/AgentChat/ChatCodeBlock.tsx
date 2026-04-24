@@ -100,39 +100,28 @@ function CodeHeader(props: CodeHeaderProps): React.ReactElement {
 const codeStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' };
 const preBaseStyle: React.CSSProperties = { margin: 0 };
 
+function buildWrapStyle(wordWrap: boolean) {
+  return {
+    whiteSpace: wordWrap ? ('pre-wrap' as const) : ('pre' as const),
+    wordBreak: wordWrap ? ('break-all' as const) : ('normal' as const),
+  };
+}
+
 function CodeBody({
-  code,
-  language,
-  wordWrap,
-  showLineNumbers,
-  lineCount,
+  code, language, wordWrap, showLineNumbers, lineCount,
 }: {
-  code: string;
-  language?: string;
-  wordWrap: boolean;
-  showLineNumbers: boolean;
-  lineCount: number;
+  code: string; language?: string; wordWrap: boolean; showLineNumbers: boolean; lineCount: number;
 }): React.ReactElement {
   const { html } = useCodeHighlight(code, language);
-  const wrapStyle = { whiteSpace: wordWrap ? 'pre-wrap' as const : 'pre' as const, wordBreak: wordWrap ? 'break-all' as const : 'normal' as const };
-
+  const wrapStyle = buildWrapStyle(wordWrap);
   return (
     <div className="flex overflow-x-auto p-3" style={{ maxHeight: '500px', overflowY: 'auto' }} data-no-swipe="">
       {showLineNumbers && <LineNumbers count={lineCount} />}
       {html ? (
-        <div
-          className="flex-1 text-xs shiki-chat-block"
-          style={{ ...preBaseStyle, ...wrapStyle, ...codeStyle }}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="flex-1 text-xs shiki-chat-block" style={{ ...preBaseStyle, ...wrapStyle, ...codeStyle }} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
         <pre className="flex-1" style={{ ...preBaseStyle, ...wrapStyle }}>
-          <code
-            className={`text-xs ${language ? `language-${language}` : ''}`}
-            style={codeStyle}
-          >
-            {code}
-          </code>
+          <code className={`text-xs ${language ? `language-${language}` : ''}`} style={codeStyle}>{code}</code>
         </pre>
       )}
     </div>

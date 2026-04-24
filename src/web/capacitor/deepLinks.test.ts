@@ -16,10 +16,12 @@ const mocked = vi.hoisted(() => {
   const mockRemove = vi.fn(async () => undefined);
   type UrlCb = (e: { url: string }) => void;
   // Explicit param types let the mock factory call pass two args without lint errors.
-  const mockAddListener = vi.fn(async (
-    _event: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-    _cb: UrlCb,     // eslint-disable-line @typescript-eslint/no-unused-vars
-  ) => ({ remove: mockRemove }));
+  const mockAddListener = vi.fn(
+    async (
+      _event: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+      _cb: UrlCb, // eslint-disable-line @typescript-eslint/no-unused-vars
+    ) => ({ remove: mockRemove }),
+  );
   const mockIsNative = vi.fn(() => false);
   return { mockRemove, mockAddListener, mockIsNative };
 });
@@ -31,19 +33,14 @@ vi.mock('./index', () => ({
 // Fully replace @capacitor/app so no native runtime code is loaded.
 vi.mock('@capacitor/app', () => ({
   App: {
-    addListener: (
-      ...args: [string, (e: { url: string }) => void]
-    ) => mocked.mockAddListener(...args),
+    addListener: (...args: [string, (e: { url: string }) => void]) =>
+      mocked.mockAddListener(...args),
   },
 }));
 
 // ─── Import after mocks ────────────────────────────────────────────────────────
 
-import {
-  initDeepLinkListener,
-  parsePairingUrl,
-  readPairingQueryParams,
-} from './deepLinks';
+import { initDeepLinkListener, parsePairingUrl, readPairingQueryParams } from './deepLinks';
 
 // ─── parsePairingUrl ───────────────────────────────────────────────────────────
 
@@ -68,14 +65,14 @@ describe('parsePairingUrl', () => {
 
   it('returns null for wrong host segment', () => {
     expect(
-      parsePairingUrl('ouroboros://connect?host=192.168.1.50&port=4173&code=123456&fingerprint=abc'),
+      parsePairingUrl(
+        'ouroboros://connect?host=192.168.1.50&port=4173&code=123456&fingerprint=abc',
+      ),
     ).toBeNull();
   });
 
   it('returns null when host param is missing', () => {
-    expect(
-      parsePairingUrl('ouroboros://pair?port=4173&code=123456&fingerprint=abc'),
-    ).toBeNull();
+    expect(parsePairingUrl('ouroboros://pair?port=4173&code=123456&fingerprint=abc')).toBeNull();
   });
 
   it('returns null when port param is missing', () => {
@@ -91,9 +88,7 @@ describe('parsePairingUrl', () => {
   });
 
   it('returns null when fingerprint param is missing', () => {
-    expect(
-      parsePairingUrl('ouroboros://pair?host=192.168.1.50&port=4173&code=123456'),
-    ).toBeNull();
+    expect(parsePairingUrl('ouroboros://pair?host=192.168.1.50&port=4173&code=123456')).toBeNull();
   });
 
   it('returns null for a completely invalid URL string', () => {
@@ -133,21 +128,15 @@ describe('readPairingQueryParams', () => {
   });
 
   it('returns null when fingerprint is missing', () => {
-    expect(
-      readPairingQueryParams('?host=192.168.1.50&port=4173&code=123456'),
-    ).toBeNull();
+    expect(readPairingQueryParams('?host=192.168.1.50&port=4173&code=123456')).toBeNull();
   });
 
   it('returns null when code is missing', () => {
-    expect(
-      readPairingQueryParams('?host=192.168.1.50&port=4173&fingerprint=fp'),
-    ).toBeNull();
+    expect(readPairingQueryParams('?host=192.168.1.50&port=4173&fingerprint=fp')).toBeNull();
   });
 
   it('parses without leading ? (bare query string)', () => {
-    const result = readPairingQueryParams(
-      'host=10.0.0.1&port=7890&code=111111&fingerprint=abc',
-    );
+    const result = readPairingQueryParams('host=10.0.0.1&port=7890&code=111111&fingerprint=abc');
     expect(result).not.toBeNull();
     expect(result?.code).toBe('111111');
   });

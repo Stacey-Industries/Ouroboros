@@ -82,9 +82,7 @@ describe('authenticateUpgrade', () => {
 
   it('returns null for an invalid Bearer token', async () => {
     mockVerifyRefreshToken.mockReturnValue({ device: null, reason: 'token-not-found' });
-    const meta = await authenticateUpgrade(
-      makeReq({ authorization: 'Bearer bad-token' }),
-    );
+    const meta = await authenticateUpgrade(makeReq({ authorization: 'Bearer bad-token' }));
     expect(meta).toBeNull();
   });
 

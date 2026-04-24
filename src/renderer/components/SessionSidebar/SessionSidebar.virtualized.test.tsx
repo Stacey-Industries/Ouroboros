@@ -16,7 +16,13 @@ import { SessionSidebar } from './SessionSidebar';
 // ─── @tanstack/react-virtual mock (passthrough — jsdom has no layout) ─────────
 
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({ count, estimateSize }: { count: number; estimateSize: (i: number) => number }) => {
+  useVirtualizer: ({
+    count,
+    estimateSize,
+  }: {
+    count: number;
+    estimateSize: (i: number) => number;
+  }) => {
     let offset = 0;
     const items = Array.from({ length: count }, (_, i) => {
       const size = estimateSize(i);
@@ -44,9 +50,7 @@ function makeSession(id: string, projectRoot = '/projects/big'): SessionRecord {
   };
 }
 
-const TWENTY_FIVE_SESSIONS = Array.from({ length: 25 }, (_, i) =>
-  makeSession(`sess-${i}`),
-);
+const TWENTY_FIVE_SESSIONS = Array.from({ length: 25 }, (_, i) => makeSession(`sess-${i}`));
 
 // ─── electronAPI mock ─────────────────────────────────────────────────────────
 
@@ -81,20 +85,23 @@ beforeEach(() => {
     return vi.fn();
   });
   Object.defineProperty(window, 'electronAPI', {
-    value: mockApi, writable: true, configurable: true,
+    value: mockApi,
+    writable: true,
+    configurable: true,
   });
 });
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('SessionSidebar virtualisation', () => {
   it('activates the virtualizer when 25 sessions are loaded', async () => {
     render(<SessionSidebar />);
-    await waitFor(() =>
-      expect(screen.getByTestId('session-virtual-list')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByTestId('session-virtual-list')).toBeTruthy());
   });
 
   it('does not activate virtualizer when ≤ 20 sessions are loaded', async () => {
@@ -104,7 +111,9 @@ describe('SessionSidebar virtualisation', () => {
     // Wait for load to complete (Sessions heading should appear)
     await waitFor(() => expect(screen.getByText('Sessions')).toBeTruthy());
     // Give any async state updates time to settle
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(screen.queryByTestId('session-virtual-list')).toBeNull();
   });
 
@@ -113,10 +122,10 @@ describe('SessionSidebar virtualisation', () => {
     render(<SessionSidebar />);
     await waitFor(() => expect(screen.getByText('Sessions')).toBeTruthy());
 
-    act(() => { onChangedCallback?.(TWENTY_FIVE_SESSIONS); });
+    act(() => {
+      onChangedCallback?.(TWENTY_FIVE_SESSIONS);
+    });
 
-    await waitFor(() =>
-      expect(screen.getByTestId('session-virtual-list')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByTestId('session-virtual-list')).toBeTruthy());
   });
 });

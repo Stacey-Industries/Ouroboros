@@ -41,7 +41,9 @@ describe('useTerminalDockState', () => {
 
   it('toggleVisible flips visibility and persists', () => {
     const { result } = renderHook(() => useTerminalDockState());
-    act(() => { result.current.toggleVisible(); });
+    act(() => {
+      result.current.toggleVisible();
+    });
     expect(result.current.visible).toBe(true);
     const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}');
     expect(stored.visible).toBe(true);
@@ -50,25 +52,33 @@ describe('useTerminalDockState', () => {
   it('setVisible(false) hides the dock', () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ visible: true, height: 240 }));
     const { result } = renderHook(() => useTerminalDockState());
-    act(() => { result.current.setVisible(false); });
+    act(() => {
+      result.current.setVisible(false);
+    });
     expect(result.current.visible).toBe(false);
   });
 
   it('setHeight clamps below min', () => {
     const { result } = renderHook(() => useTerminalDockState());
-    act(() => { result.current.setHeight(10); });
+    act(() => {
+      result.current.setHeight(10);
+    });
     expect(result.current.height).toBe(TERMINAL_DOCK_CONSTANTS.MIN_HEIGHT);
   });
 
   it('setHeight clamps above max', () => {
     const { result } = renderHook(() => useTerminalDockState());
-    act(() => { result.current.setHeight(9999); });
+    act(() => {
+      result.current.setHeight(9999);
+    });
     expect(result.current.height).toBe(TERMINAL_DOCK_CONSTANTS.MAX_HEIGHT);
   });
 
   it('setHeight accepts and persists in-range values', () => {
     const { result } = renderHook(() => useTerminalDockState());
-    act(() => { result.current.setHeight(320); });
+    act(() => {
+      result.current.setHeight(320);
+    });
     expect(result.current.height).toBe(320);
     const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}');
     expect(stored.height).toBe(320);

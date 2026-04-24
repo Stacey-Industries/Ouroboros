@@ -18,11 +18,13 @@ vi.mock('./index', () => ({
 }));
 
 // Build a controllable plugin factory so each test gets fresh listener slots.
-function makePluginMock(opts: {
-  tokenValue?: string;
-  errorMessage?: string;
-  permissionResult?: string;
-} = {}) {
+function makePluginMock(
+  opts: {
+    tokenValue?: string;
+    errorMessage?: string;
+    permissionResult?: string;
+  } = {},
+) {
   const { tokenValue, errorMessage, permissionResult = 'granted' } = opts;
 
   return {
@@ -70,7 +72,9 @@ afterEach(() => {
 });
 
 describe('registerForPushNotifications — web unavailable', () => {
-  beforeEach(() => { mocks.isNative.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNative.mockReturnValue(false);
+  });
 
   it('returns unavailable on web without calling plugin', async () => {
     const result = await registerForPushNotifications();
@@ -80,7 +84,9 @@ describe('registerForPushNotifications — web unavailable', () => {
 });
 
 describe('registerForPushNotifications — native happy path', () => {
-  beforeEach(() => { mocks.isNative.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNative.mockReturnValue(true);
+  });
 
   it('returns registered with token and platform', async () => {
     pluginOverride = makePluginMock({ tokenValue: 'test-device-token-abc' });
@@ -98,7 +104,9 @@ describe('registerForPushNotifications — native happy path', () => {
 });
 
 describe('registerForPushNotifications — permission denied', () => {
-  beforeEach(() => { mocks.isNative.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNative.mockReturnValue(true);
+  });
 
   it('returns permission-denied without calling register', async () => {
     pluginOverride = makePluginMock({ permissionResult: 'denied' });
@@ -109,7 +117,9 @@ describe('registerForPushNotifications — permission denied', () => {
 });
 
 describe('registerForPushNotifications — registration error', () => {
-  beforeEach(() => { mocks.isNative.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNative.mockReturnValue(true);
+  });
 
   it('returns unavailable on registration error', async () => {
     pluginOverride = makePluginMock({ errorMessage: 'FCM_ERROR' });

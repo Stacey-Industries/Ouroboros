@@ -8,7 +8,15 @@ import type { Theme } from './types';
 import { warpTheme } from './warp';
 
 export type { Theme };
-export { cursorTheme, highContrastTheme, kiroTheme, lightTheme, modernTheme, retroTheme, warpTheme };
+export {
+  cursorTheme,
+  highContrastTheme,
+  kiroTheme,
+  lightTheme,
+  modernTheme,
+  retroTheme,
+  warpTheme,
+};
 
 /**
  * A mutable placeholder for the "Custom" theme.
@@ -51,15 +59,15 @@ export const themeList: Theme[] = [
 
 /** Register a theme from an installed VS Code extension */
 export function registerExtensionTheme(theme: Theme): void {
-  themes[theme.id] = theme
+  themes[theme.id] = theme;
 }
 
 /** Remove a previously registered extension theme */
 export function unregisterExtensionTheme(id: string): void {
-  delete themes[id]
+  delete themes[id];
 }
 
 /** Get all registered theme IDs including extension themes */
 export function getAllThemeIds(): string[] {
-  return Object.keys(themes)
+  return Object.keys(themes);
 }

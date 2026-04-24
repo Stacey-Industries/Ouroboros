@@ -11,8 +11,7 @@ export function Divider({
   className,
   ...rest
 }: DividerProps): React.ReactElement {
-  const dirClass =
-    direction === 'horizontal' ? 'w-full h-px' : 'h-full w-px';
+  const dirClass = direction === 'horizontal' ? 'w-full h-px' : 'h-full w-px';
   const colorClass = subtle ? 'bg-border-semantic-subtle' : 'bg-border-semantic';
   const classes = `${dirClass} ${colorClass} ${className ?? ''}`;
   return <div className={classes} role="separator" {...rest} />;

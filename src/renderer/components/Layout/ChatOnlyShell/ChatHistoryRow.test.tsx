@@ -36,8 +36,20 @@ const BASE_THREAD: AgentChatThreadRecord = {
   title: 'Fix the login bug',
   status: 'complete',
   messages: [
-    { id: 'm1', threadId: 'thread-1', role: 'user', content: 'Fix the login bug', createdAt: Date.now() - 3600_000 },
-    { id: 'm2', threadId: 'thread-1', role: 'assistant', content: 'Done.', createdAt: Date.now() - 3500_000 },
+    {
+      id: 'm1',
+      threadId: 'thread-1',
+      role: 'user',
+      content: 'Fix the login bug',
+      createdAt: Date.now() - 3600_000,
+    },
+    {
+      id: 'm2',
+      threadId: 'thread-1',
+      role: 'assistant',
+      content: 'Done.',
+      createdAt: Date.now() - 3500_000,
+    },
   ],
 };
 
@@ -81,7 +93,9 @@ describe('ChatHistoryRow', () => {
 
   it('inactive row does not have selection class', () => {
     renderRow({ isActive: false });
-    expect(screen.getByTestId('chat-history-row').className).not.toContain('bg-interactive-selection');
+    expect(screen.getByTestId('chat-history-row').className).not.toContain(
+      'bg-interactive-selection',
+    );
   });
 
   it('right-click opens context menu with Pin, Rename, Delete', () => {
@@ -127,5 +141,27 @@ describe('ChatHistoryRow', () => {
   it('renders status dot stub', () => {
     renderRow();
     expect(screen.getByTestId('status-dot-stub')).toBeDefined();
+  });
+
+  it('renders a working spinner beside the subtitle when the thread is still running', () => {
+    renderRow({ thread: { ...BASE_THREAD, status: 'running' } });
+    expect(screen.getByTestId('chat-history-working-spinner')).toBeDefined();
+  });
+
+  it('does not render a working spinner for completed threads', () => {
+    renderRow({ thread: { ...BASE_THREAD, status: 'complete' } });
+    expect(screen.queryByTestId('chat-history-working-spinner')).toBeNull();
+  });
+
+  it('renders an unseen completion indicator for finished chats that have not been viewed', () => {
+    renderRow({ completionIndicator: 'unseen' });
+    expect(screen.getByTestId('chat-history-completion-unseen')).toBeDefined();
+  });
+
+  it('renders a seen completion indicator for finished chats that have been viewed', () => {
+    renderRow({ completionIndicator: 'seen' });
+    const indicator = screen.getByTestId('chat-history-completion-seen');
+    expect(indicator).toBeDefined();
+    expect(indicator.querySelector('svg')).not.toBeNull();
   });
 });

@@ -110,11 +110,17 @@ function subscribeToConfigExternalChange(callback: (config: AppConfig) => void):
     externalChangeListenerInstalled = true;
     ipcRenderer.on('config:externalChange', (_event, config: AppConfig) => {
       for (const cb of externalChangeCallbacks) {
-        try { cb(config); } catch { /* ignore subscriber errors */ }
+        try {
+          cb(config);
+        } catch {
+          /* ignore subscriber errors */
+        }
       }
     });
   }
-  return () => { externalChangeCallbacks.delete(callback); };
+  return () => {
+    externalChangeCallbacks.delete(callback);
+  };
 }
 
 // â”€â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

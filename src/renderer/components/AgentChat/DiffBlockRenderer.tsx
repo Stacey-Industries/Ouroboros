@@ -5,7 +5,8 @@
 import React, { useState } from 'react';
 
 import type { AgentChatContentBlock } from '../../types/electron';
-import { DiffBadge, parseUnifiedDiff } from './AgentChatDiffReviewParts';
+import { DiffBadge } from './AgentChatDiffReviewParts';
+import { HunkLines } from './DiffBlockRendererParts';
 import type { DiffHunk, HunkStatus } from './useDiffBlock';
 import { useDiffBlock } from './useDiffBlock';
 
@@ -67,149 +68,6 @@ function HunkActions({ onAccept, onReject }: HunkActionsProps): React.ReactEleme
   );
 }
 
-/* ---------- Context collapsing ---------- */
-
-const COLLAPSE_THRESHOLD = 8;
-
-interface ContextCollapserProps {
-  count: number;
-  onExpand: () => void;
-}
-
-function ContextCollapser({ count, onExpand }: ContextCollapserProps): React.ReactElement {
-  return (
-    <tr>
-      <td colSpan={3}>
-        <button
-          onClick={onExpand}
-          className="w-full py-0.5 text-left text-[10px] text-interactive-accent hover:opacity-80"
-          style={{ paddingLeft: '0.5rem', backgroundColor: 'var(--surface-inset)' }}
-        >
-          Show {count} unchanged lines
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-/* ---------- Hunk line row helpers ---------- */
-
-type DiffLine = ReturnType<typeof parseUnifiedDiff>[number];
-
-const TD_NUM = 'select-none px-1 text-right text-[10px] text-text-semantic-muted opacity-50';
-const TD_NUM_BORDER: React.CSSProperties = {
-  minWidth: '2.5em',
-  borderRight: '1px solid var(--border-default)',
-};
-
-function ContextRow({ ci, l }: { ci: number; l: DiffLine }): React.ReactElement {
-  return (
-    <tr key={ci} className="bg-surface-base">
-      <td className={TD_NUM} style={{ minWidth: '2.5em' }}>
-        {l.oldLineNo ?? ''}
-      </td>
-      <td className={TD_NUM} style={TD_NUM_BORDER}>
-        {l.newLineNo ?? ''}
-      </td>
-      <td className="select-text whitespace-pre px-2 text-[11px] text-text-semantic-muted">
-        {' '}
-        {l.text}
-      </td>
-    </tr>
-  );
-}
-
-function DiffRow({ lineIdx, line }: { lineIdx: number; line: DiffLine }): React.ReactElement {
-  const isAdd = line.type === 'add';
-  return (
-    <tr
-      key={lineIdx}
-      style={{
-        backgroundColor: isAdd
-          ? 'var(--diff-add-bg, rgba(46, 160, 67, 0.15))'
-          : 'var(--diff-del-bg, rgba(248, 81, 73, 0.15))',
-      }}
-    >
-      <td className={TD_NUM} style={{ minWidth: '2.5em' }}>
-        {line.oldLineNo ?? ''}
-      </td>
-      <td className={TD_NUM} style={TD_NUM_BORDER}>
-        {line.newLineNo ?? ''}
-      </td>
-      <td
-        className="select-text whitespace-pre px-2 text-[11px]"
-        style={{ color: isAdd ? 'var(--diff-add, #2ea043)' : 'var(--diff-del, #f85149)' }}
-      >
-        {isAdd ? '+' : '-'}
-        {line.text}
-      </td>
-    </tr>
-  );
-}
-
-/* ---------- Hunk lines renderer ---------- */
-
-interface HunkLinesProps {
-  hunkRaw: string;
-}
-
-type FlushContextArgs = {
-  contextRun: number[];
-  lines: DiffLine[];
-  expandedRanges: Set<number>;
-  onExpand: (key: number) => void;
-};
-
-function flushContextRun(
-  { contextRun, lines, expandedRanges, onExpand }: FlushContextArgs,
-  flush: boolean,
-): React.ReactElement[] {
-  const rows: React.ReactElement[] = [];
-  const key = contextRun[0];
-  const shouldExpand = contextRun.length < COLLAPSE_THRESHOLD || flush || expandedRanges.has(key);
-  if (shouldExpand) {
-    for (const ci of contextRun) rows.push(<ContextRow key={ci} ci={ci} l={lines[ci]} />);
-  } else {
-    rows.push(
-      <ContextCollapser
-        key={`collapse-${key}`}
-        count={contextRun.length}
-        onExpand={() => onExpand(key)}
-      />,
-    );
-  }
-  return rows;
-}
-
-function buildHunkRows(lines: DiffLine[], expandedRanges: Set<number>, onExpand: (k: number) => void): React.ReactElement[] {
-  const rows: React.ReactElement[] = [];
-  let contextRun: number[] = [];
-  let lineIdx = 0;
-  const flush = (force: boolean): void => {
-    if (contextRun.length > 0) rows.push(...flushContextRun({ contextRun, lines, expandedRanges, onExpand }, force));
-    contextRun = [];
-  };
-  for (const line of lines) {
-    if (line.type === 'header') { lineIdx++; continue; }
-    if (line.type === 'hunk') {
-      flush(false);
-      rows.push(<tr key={`hunk-${lineIdx}`}><td colSpan={3} className="select-text px-2 py-0.5 text-[10px] text-text-semantic-muted" style={{ backgroundColor: 'var(--interactive-accent-subtle)' }}>{line.text}</td></tr>);
-      lineIdx++; continue;
-    }
-    if (line.type === 'context') { contextRun.push(lineIdx); } else { flush(false); rows.push(<DiffRow key={lineIdx} lineIdx={lineIdx} line={line} />); }
-    lineIdx++;
-  }
-  flush(true);
-  return rows;
-}
-
-function HunkLines({ hunkRaw }: HunkLinesProps): React.ReactElement {
-  const [expandedRanges, setExpandedRanges] = useState<Set<number>>(new Set());
-  const lines = parseUnifiedDiff(hunkRaw);
-  const onExpand = (key: number): void => setExpandedRanges((prev) => new Set([...prev, key]));
-  return <>{buildHunkRows(lines, expandedRanges, onExpand)}</>;
-}
-
 /* ---------- Single hunk row ---------- */
 
 interface HunkRowProps {
@@ -265,31 +123,63 @@ interface DiffHeaderProps {
   onRejectAll: () => void;
 }
 
-function DiffHeaderBulkActions({ onAcceptAll, onRejectAll }: { onAcceptAll: () => void; onRejectAll: () => void }): React.ReactElement {
+function DiffHeaderBulkActions({
+  onAcceptAll,
+  onRejectAll,
+}: {
+  onAcceptAll: () => void;
+  onRejectAll: () => void;
+}): React.ReactElement {
   return (
     <>
-      <button onClick={onAcceptAll} className="rounded px-2 py-0.5 text-[10px] font-medium hover:opacity-80"
-        style={{ backgroundColor: 'var(--diff-add-bg)', color: 'var(--status-success)', border: '1px solid var(--diff-add-border)' }}>
+      <button
+        onClick={onAcceptAll}
+        className="rounded px-2 py-0.5 text-[10px] font-medium hover:opacity-80"
+        style={{
+          backgroundColor: 'var(--diff-add-bg)',
+          color: 'var(--status-success)',
+          border: '1px solid var(--diff-add-border)',
+        }}
+      >
         Accept All
       </button>
-      <button onClick={onRejectAll} className="rounded px-2 py-0.5 text-[10px] font-medium hover:opacity-80"
-        style={{ backgroundColor: 'var(--diff-del-bg)', color: 'var(--status-error)', border: '1px solid var(--diff-del-border)' }}>
+      <button
+        onClick={onRejectAll}
+        className="rounded px-2 py-0.5 text-[10px] font-medium hover:opacity-80"
+        style={{
+          backgroundColor: 'var(--diff-del-bg)',
+          color: 'var(--status-error)',
+          border: '1px solid var(--diff-del-border)',
+        }}
+      >
         Reject All
       </button>
     </>
   );
 }
 
-function DiffHeader({ filePath, additions, deletions, pendingCount, onAcceptAll, onRejectAll }: DiffHeaderProps): React.ReactElement {
+function DiffHeader({
+  filePath,
+  additions,
+  deletions,
+  pendingCount,
+  onAcceptAll,
+  onRejectAll,
+}: DiffHeaderProps): React.ReactElement {
   const shortPath = filePath.replace(/\\/g, '/').split('/').slice(-3).join('/');
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border-semantic px-3 py-2">
-      <span className="truncate font-medium text-text-semantic-primary" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+      <span
+        className="truncate font-medium text-text-semantic-primary"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}
+      >
         {shortPath}
       </span>
       <DiffBadge additions={additions} deletions={deletions} />
       <span className="flex-1" />
-      {pendingCount > 0 && <DiffHeaderBulkActions onAcceptAll={onAcceptAll} onRejectAll={onRejectAll} />}
+      {pendingCount > 0 && (
+        <DiffHeaderBulkActions onAcceptAll={onAcceptAll} onRejectAll={onRejectAll} />
+      )}
     </div>
   );
 }
@@ -300,12 +190,39 @@ interface DiffBlockRendererProps {
   block: AgentChatContentBlock & { kind: 'diff' };
 }
 
-function HunkList({ hunks, hunkStatuses, rawHunks, acceptHunk, rejectHunk }: { hunks: DiffHunk[]; hunkStatuses: Map<number, HunkStatus>; rawHunks: string; acceptHunk: (i: number) => void; rejectHunk: (i: number) => void }): React.ReactElement {
-  if (hunks.length === 0) return <pre className="whitespace-pre-wrap px-3 py-2 text-[11px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>{rawHunks}</pre>;
+function HunkList({
+  hunks,
+  hunkStatuses,
+  rawHunks,
+  acceptHunk,
+  rejectHunk,
+}: {
+  hunks: DiffHunk[];
+  hunkStatuses: Map<number, HunkStatus>;
+  rawHunks: string;
+  acceptHunk: (i: number) => void;
+  rejectHunk: (i: number) => void;
+}): React.ReactElement {
+  if (hunks.length === 0)
+    return (
+      <pre
+        className="whitespace-pre-wrap px-3 py-2 text-[11px] text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {rawHunks}
+      </pre>
+    );
   return (
     <>
       {hunks.map((hunk, i) => (
-        <HunkRow key={i} hunk={hunk} index={i} status={hunkStatuses.get(i) ?? 'pending'} onAccept={() => acceptHunk(i)} onReject={() => rejectHunk(i)} />
+        <HunkRow
+          key={i}
+          hunk={hunk}
+          index={i}
+          status={hunkStatuses.get(i) ?? 'pending'}
+          onAccept={() => acceptHunk(i)}
+          onReject={() => rejectHunk(i)}
+        />
       ))}
     </>
   );
@@ -318,7 +235,11 @@ export function DiffBlockRenderer({ block }: DiffBlockRendererProps): React.Reac
   return (
     <div className="my-1.5 overflow-hidden rounded-md border border-border-semantic bg-surface-raised text-xs">
       <DiffHeader filePath={block.filePath} additions={additions} deletions={deletions} pendingCount={pendingCount} onAcceptAll={acceptAll} onRejectAll={rejectAll} />
-      {applyError && <div className="border-b border-border-semantic bg-status-error-subtle px-3 py-1.5 text-[11px] text-status-error">{applyError}</div>}
+      {applyError && (
+        <div className="border-b border-border-semantic bg-status-error-subtle px-3 py-1.5 text-[11px] text-status-error">
+          {applyError}
+        </div>
+      )}
       <div className="max-h-[500px] overflow-y-auto">
         <HunkList hunks={hunks} hunkStatuses={hunkStatuses} rawHunks={block.hunks} acceptHunk={acceptHunk} rejectHunk={rejectHunk} />
       </div>

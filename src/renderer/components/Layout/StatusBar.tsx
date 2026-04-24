@@ -3,13 +3,7 @@ import React, { useMemo } from 'react';
 import type { PanelSizes, WorkspaceLayout } from '../../types/electron';
 import { LspStatus } from './LspStatus';
 import { StatusBarAuthIndicator } from './StatusBarAuthIndicator';
-import {
-  BranchButton,
-  BranchIcon,
-  Divider,
-  LayoutControl,
-  StatusItem,
-} from './StatusBarControls';
+import { BranchButton, BranchIcon, Divider, LayoutControl, StatusItem } from './StatusBarControls';
 
 export interface StatusBarLayoutProps {
   layouts: WorkspaceLayout[];
@@ -153,7 +147,9 @@ function FileSection({
       {lineCount != null && (
         <>
           <Divider />
-          <StatusItem>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</StatusItem>
+          <StatusItem>
+            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+          </StatusItem>
         </>
       )}
       {displayLanguage && (
@@ -166,11 +162,7 @@ function FileSection({
   );
 }
 
-function RightSection({
-  layout,
-}: {
-  layout?: StatusBarLayoutProps;
-}): React.ReactElement {
+function RightSection({ layout }: { layout?: StatusBarLayoutProps }): React.ReactElement {
   return (
     <div className="flex items-center flex-shrink-0">
       {layout && (
@@ -208,7 +200,10 @@ export function StatusBar({
   );
 
   return (
-    <div className="flex items-center justify-between flex-shrink-0 select-none" style={STATUS_BAR_STYLE}>
+    <div
+      className="flex items-center justify-between flex-shrink-0 select-none"
+      style={STATUS_BAR_STYLE}
+    >
       <div className="flex items-center min-w-0 overflow-hidden">
         <GitSection gitBranch={gitBranch} projectRoot={projectRoot} />
         <FileSection

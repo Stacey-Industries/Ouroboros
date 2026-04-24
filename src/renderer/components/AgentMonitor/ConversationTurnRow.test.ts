@@ -68,7 +68,11 @@ describe('turnLabel', () => {
   });
 
   it('returns "You answered:" for elicitation_result type', () => {
-    const turn: ConversationTurn = { type: 'elicitation_result', content: 'yes', timestamp: BASE_TS };
+    const turn: ConversationTurn = {
+      type: 'elicitation_result',
+      content: 'yes',
+      timestamp: BASE_TS,
+    };
     expect(turnLabel(turn)).toBe('You answered:');
   });
 });
@@ -95,7 +99,11 @@ describe('turnContent', () => {
   });
 
   it('returns content for elicitation_result turns', () => {
-    const turn: ConversationTurn = { type: 'elicitation_result', content: 'my answer', timestamp: BASE_TS };
+    const turn: ConversationTurn = {
+      type: 'elicitation_result',
+      content: 'my answer',
+      timestamp: BASE_TS,
+    };
     expect(turnContent(turn)).toBe('my answer');
   });
 });

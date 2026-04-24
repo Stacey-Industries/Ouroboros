@@ -465,8 +465,10 @@ describe('verifyPairingHandshake', () => {
   it('returns error when consumePairingTicket returns rate-limited', () => {
     mockConsumePairingTicket.mockReturnValue({ error: 'rate-limited' });
     const result = verifyPairingHandshake({
-      ticketCode: '123456', deviceLabel: 'Phone',
-      clientFingerprint: 'fp', ip: '10.0.0.1',
+      ticketCode: '123456',
+      deviceLabel: 'Phone',
+      clientFingerprint: 'fp',
+      ip: '10.0.0.1',
     });
     expect(result.error).toBe('rate-limited');
     expect(result.device).toBeUndefined();
@@ -475,8 +477,10 @@ describe('verifyPairingHandshake', () => {
   it('returns error when consumePairingTicket returns invalid', () => {
     mockConsumePairingTicket.mockReturnValue({ error: 'invalid' });
     const result = verifyPairingHandshake({
-      ticketCode: 'bad', deviceLabel: 'Phone',
-      clientFingerprint: 'fp', ip: '10.0.0.1',
+      ticketCode: 'bad',
+      deviceLabel: 'Phone',
+      clientFingerprint: 'fp',
+      ip: '10.0.0.1',
     });
     expect(result.error).toBe('invalid');
   });
@@ -484,8 +488,10 @@ describe('verifyPairingHandshake', () => {
   it('returns error when consumePairingTicket returns expired', () => {
     mockConsumePairingTicket.mockReturnValue({ error: 'expired' });
     const result = verifyPairingHandshake({
-      ticketCode: '000000', deviceLabel: 'Phone',
-      clientFingerprint: 'fp', ip: '10.0.0.1',
+      ticketCode: '000000',
+      deviceLabel: 'Phone',
+      clientFingerprint: 'fp',
+      ip: '10.0.0.1',
     });
     expect(result.error).toBe('expired');
   });
@@ -493,8 +499,10 @@ describe('verifyPairingHandshake', () => {
   it('returns device and refreshToken on success', () => {
     mockConsumePairingTicket.mockReturnValue({ device: fakeDevice, refreshToken: 'new-rt' });
     const result = verifyPairingHandshake({
-      ticketCode: '654321', deviceLabel: 'Tablet',
-      clientFingerprint: 'fp2', ip: '10.0.0.2',
+      ticketCode: '654321',
+      deviceLabel: 'Tablet',
+      clientFingerprint: 'fp2',
+      ip: '10.0.0.2',
     });
     expect(result.device).toBe(fakeDevice);
     expect(result.refreshToken).toBe('new-rt');
@@ -504,11 +512,16 @@ describe('verifyPairingHandshake', () => {
   it('forwards code, label, fingerprint, ip to consumePairingTicket', () => {
     mockConsumePairingTicket.mockReturnValue({ error: 'invalid' });
     verifyPairingHandshake({
-      ticketCode: '111111', deviceLabel: 'My Device',
-      clientFingerprint: 'fp-xyz', ip: '192.168.1.99',
+      ticketCode: '111111',
+      deviceLabel: 'My Device',
+      clientFingerprint: 'fp-xyz',
+      ip: '192.168.1.99',
     });
     expect(mockConsumePairingTicket).toHaveBeenCalledWith(
-      '111111', 'My Device', 'fp-xyz', '192.168.1.99',
+      '111111',
+      'My Device',
+      'fp-xyz',
+      '192.168.1.99',
     );
   });
 });

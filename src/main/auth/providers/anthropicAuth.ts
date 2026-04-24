@@ -7,9 +7,6 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 
 import log from '../../logger';
 import { deleteCredential, getCredential, setCredential } from '../credentialStore';
@@ -182,111 +179,42 @@ export async function getAnthropicAuthState(): Promise<AuthState> {
 // ---------------------------------------------------------------------------
 // Anthropic SDK client factory
 // ---------------------------------------------------------------------------
+//
+// OAuth subscription tokens (Free / Pro / Max) are explicitly banned from
+// third-party SDK use as of Anthropic's April 4, 2026 enforcement — the server
+// rejects them with "This credential is only authorized for use with Claude
+// Code and cannot be used for other API requests." This factory refuses to
+// hand an OAuth token to the SDK client and surfaces a clear error instead.
+//
+// OAuth tokens remain valid for the CLI-spawn path (`claude -p`), which is
+// Anthropic's sanctioned use. That path does NOT go through this function.
 
-const CREDENTIALS_PATH = path.join(os.homedir(), '.claude', '.credentials.json');
-const LEGACY_TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
-const LEGACY_TOKEN_ENDPOINT = 'https://console.anthropic.com/v1/oauth/token';
-
-interface LegacyClaudeOAuthData {
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: number;
-}
-
-interface LegacyClaudeCredentials {
-  claudeAiOauth?: LegacyClaudeOAuthData;
-  [key: string]: unknown;
-}
-
-interface LegacyOAuthRefreshResponse {
-  access_token: string;
-  refresh_token?: string;
-  expires_in: number;
-}
-
-let legacyCachedCredentials: LegacyClaudeCredentials | null = null;
-
-function readLegacyCredentials(): LegacyClaudeCredentials | null {
-  if (legacyCachedCredentials) return legacyCachedCredentials;
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from os.homedir(), not user input
-    const raw = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
-    legacyCachedCredentials = JSON.parse(raw) as LegacyClaudeCredentials;
-    return legacyCachedCredentials;
-  } catch {
-    return null;
-  }
-}
-
-function writeLegacyCredentials(creds: LegacyClaudeCredentials): void {
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from os.homedir(), not user input
-    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), 'utf8');
-    legacyCachedCredentials = creds;
-  } catch (err) {
-    log.warn('[AnthropicAuth] Failed to write legacy credentials:', err);
-  }
-}
-
-async function refreshLegacyOAuthToken(refreshToken: string): Promise<LegacyClaudeOAuthData | null> {
-  try {
-    const response = await fetch(LEGACY_TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as LegacyOAuthRefreshResponse;
-    if (!data.access_token) return null;
-    return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token ?? refreshToken,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function getLegacyOAuthToken(): Promise<string | undefined> {
-  const creds = readLegacyCredentials();
-  const oauth = creds?.claudeAiOauth;
-  if (!oauth?.accessToken) return undefined;
-  if (!oauth.expiresAt || Date.now() < oauth.expiresAt - LEGACY_TOKEN_EXPIRY_BUFFER_MS) {
-    return oauth.accessToken;
-  }
-  if (!oauth.refreshToken) return undefined;
-  const refreshed = await refreshLegacyOAuthToken(oauth.refreshToken);
-  if (!refreshed) return undefined;
-  writeLegacyCredentials({ ...creds, claudeAiOauth: { ...oauth, ...refreshed } });
-  return refreshed.accessToken;
-}
+const OAUTH_BANNED_MESSAGE =
+  'Anthropic subscription OAuth tokens cannot be used with the SDK as of April 4, 2026. ' +
+  'Enter an Anthropic API key in Settings (or set ANTHROPIC_API_KEY) to use this feature, ' +
+  'or switch the chat to the claude-code (CLI) provider.';
 
 /**
- * Create an Anthropic SDK client using the best available credential:
- *   1. Credential store (API key or OAuth)
+ * Create an Anthropic SDK client using the best available API key credential:
+ *   1. Credential store (API key only)
  *   2. ANTHROPIC_API_KEY env var
- *   3. Legacy ~/.claude/.credentials.json OAuth
- *   4. SDK default (throws if none available)
+ *   3. Throw — OAuth tokens are intentionally not accepted here.
+ *
+ * Callers should surface OAUTH_BANNED_MESSAGE to the user when catching.
  */
 export async function createAnthropicClient(): Promise<Anthropic> {
   const credential = await getCredential(PROVIDER);
   if (credential?.type === 'apikey') {
     return new Anthropic({ apiKey: credential.apiKey });
   }
-  if (credential?.type === 'oauth') {
-    return new Anthropic({
-      authToken: credential.accessToken,
-      defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
-    });
-  }
   if (process.env.ANTHROPIC_API_KEY) {
     return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }
-  const legacyToken = await getLegacyOAuthToken();
-  if (legacyToken) {
-    return new Anthropic({ authToken: legacyToken, defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' } });
+  if (credential?.type === 'oauth') {
+    log.warn(
+      '[AnthropicAuth] SDK client requested while only OAuth credential available — refusing.',
+    );
+    throw new Error(OAUTH_BANNED_MESSAGE);
   }
-  return new Anthropic();
+  throw new Error(OAUTH_BANNED_MESSAGE);
 }

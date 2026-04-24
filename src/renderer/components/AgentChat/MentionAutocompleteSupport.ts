@@ -34,7 +34,10 @@ export const SPECIAL_MENTIONS: Array<{
 ];
 
 const FILE_FUSE_OPTIONS = {
-  keys: [{ name: 'name', weight: 0.6 }, { name: 'relativePath', weight: 0.4 }],
+  keys: [
+    { name: 'name', weight: 0.6 },
+    { name: 'relativePath', weight: 0.4 },
+  ],
   threshold: 0.4,
   distance: 200,
   minMatchCharLength: 1,
@@ -98,7 +101,7 @@ export function buildSymbolMentionResult(node: SymbolGraphNode): AutocompleteRes
       key: `@symbol:${node.filePath}::${node.name}::${node.line}`,
       label: node.name,
       path: node.filePath,
-      estimatedTokens: Math.ceil(lines * 40 / CHARS_PER_TOKEN),
+      estimatedTokens: Math.ceil((lines * 40) / CHARS_PER_TOKEN),
       startLine: node.line,
       endLine: node.endLine,
       symbolType: node.type,

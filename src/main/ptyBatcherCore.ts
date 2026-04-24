@@ -16,11 +16,7 @@
 
 const DEFAULT_FLUSH_MS = 16;
 
-export type PtyBatcherFlushFn<TContext> = (
-  id: string,
-  context: TContext,
-  joined: string,
-) => void;
+export type PtyBatcherFlushFn<TContext> = (id: string, context: TContext, joined: string) => void;
 
 interface SessionEntry<TContext> {
   context: TContext;

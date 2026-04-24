@@ -50,12 +50,22 @@ interface JobCardProps {
   onCancel: (id: string) => void;
 }
 
-function JobCardMeta({ job, status }: { job: DispatchJob; status: DispatchJobStatus }): React.ReactElement {
+function JobCardMeta({
+  job,
+  status,
+}: {
+  job: DispatchJob;
+  status: DispatchJobStatus;
+}): React.ReactElement {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={JOB_TITLE_STYLE} className="text-text-semantic-primary">{job.request.title}</span>
-        <span style={statusPillStyle(status)} data-testid={`job-status-${job.id}`}>{status}</span>
+        <span style={JOB_TITLE_STYLE} className="text-text-semantic-primary">
+          {job.request.title}
+        </span>
+        <span style={statusPillStyle(status)} data-testid={`job-status-${job.id}`}>
+          {status}
+        </span>
       </div>
       <div style={JOB_META_STYLE} className="text-text-semantic-muted">
         {relativeTime(job.createdAt)}
@@ -66,22 +76,35 @@ function JobCardMeta({ job, status }: { job: DispatchJob; status: DispatchJobSta
 }
 
 function JobCard({ job, isSelected, onSelect, onCancel }: JobCardProps): React.ReactElement {
-  const handleCancel = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onCancel(job.id);
-  }, [job.id, onCancel]);
+  const handleCancel = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onCancel(job.id);
+    },
+    [job.id, onCancel],
+  );
   const status = job.status as DispatchJobStatus;
   const cardStyle = isSelected ? JOB_CARD_ACTIVE_STYLE : JOB_CARD_STYLE;
   return (
-    <div style={cardStyle} onClick={() => onSelect(job.id)} role="button" tabIndex={0}
+    <div
+      style={cardStyle}
+      onClick={() => onSelect(job.id)}
+      role="button"
+      tabIndex={0}
       aria-pressed={isSelected}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(job.id); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onSelect(job.id);
+      }}
       data-testid={`job-card-${job.id}`}
     >
       <JobCardMeta job={job} status={status} />
       {isCancellable(status) && (
-        <button style={DANGER_BUTTON_STYLE} onClick={handleCancel}
-          aria-label={`Cancel job ${job.request.title}`} data-testid={`job-cancel-${job.id}`}>
+        <button
+          style={DANGER_BUTTON_STYLE}
+          onClick={handleCancel}
+          aria-label={`Cancel job ${job.request.title}`}
+          data-testid={`job-cancel-${job.id}`}
+        >
           Cancel
         </button>
       )}
@@ -116,38 +139,78 @@ export interface DispatchQueueListProps {
 }
 
 interface JobSectionProps {
-  label: string; jobs: DispatchJob[]; selectedJobId: string | null;
-  onSelect: (id: string) => void; onCancel: (id: string) => void; marginTop?: number | string;
+  label: string;
+  jobs: DispatchJob[];
+  selectedJobId: string | null;
+  onSelect: (id: string) => void;
+  onCancel: (id: string) => void;
+  marginTop?: number | string;
 }
 
-function JobSection({ label, jobs, selectedJobId, onSelect, onCancel, marginTop }: JobSectionProps): React.ReactElement {
+function JobSection({
+  label,
+  jobs,
+  selectedJobId,
+  onSelect,
+  onCancel,
+  marginTop,
+}: JobSectionProps): React.ReactElement {
   return (
     <section style={marginTop !== undefined ? { marginTop } : undefined}>
       <div style={{ ...SECTION_LABEL_STYLE, color: 'var(--text-secondary)' }}>{label}</div>
       {jobs.map((job) => (
-        <JobCard key={job.id} job={job} isSelected={job.id === selectedJobId} onSelect={onSelect} onCancel={onCancel} />
+        <JobCard
+          key={job.id}
+          job={job}
+          isSelected={job.id === selectedJobId}
+          onSelect={onSelect}
+          onCancel={onCancel}
+        />
       ))}
     </section>
   );
 }
 
-function splitJobs(jobs: DispatchJob[]): { activeJobs: DispatchJob[]; terminalJobs: DispatchJob[] } {
-  const sorted = [...jobs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+function splitJobs(jobs: DispatchJob[]): {
+  activeJobs: DispatchJob[];
+  terminalJobs: DispatchJob[];
+} {
+  const sorted = [...jobs].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
   const terminalJobs = sorted.filter((j) => (TERMINAL_STATUSES as string[]).includes(j.status));
   const activeJobs = sorted.filter((j) => !(TERMINAL_STATUSES as string[]).includes(j.status));
   return { activeJobs, terminalJobs };
 }
 
-export function DispatchQueueList({ jobs, selectedJobId, onSelect, onCancel }: DispatchQueueListProps): React.ReactElement {
+export function DispatchQueueList({
+  jobs,
+  selectedJobId,
+  onSelect,
+  onCancel,
+}: DispatchQueueListProps): React.ReactElement {
   const { activeJobs, terminalJobs } = splitJobs(jobs);
   return (
     <div style={SCROLLABLE_BODY_STYLE} data-testid="dispatch-queue-list">
       {jobs.length === 0 && <EmptyQueue />}
       {activeJobs.length > 0 && (
-        <JobSection label="Active" jobs={activeJobs} selectedJobId={selectedJobId} onSelect={onSelect} onCancel={onCancel} />
+        <JobSection
+          label="Active"
+          jobs={activeJobs}
+          selectedJobId={selectedJobId}
+          onSelect={onSelect}
+          onCancel={onCancel}
+        />
       )}
       {terminalJobs.length > 0 && (
-        <JobSection label="Completed" jobs={terminalJobs} selectedJobId={selectedJobId} onSelect={onSelect} onCancel={onCancel} marginTop={activeJobs.length > 0 ? '12px' : 0} />
+        <JobSection
+          label="Completed"
+          jobs={terminalJobs}
+          selectedJobId={selectedJobId}
+          onSelect={onSelect}
+          onCancel={onCancel}
+          marginTop={activeJobs.length > 0 ? '12px' : 0}
+        />
       )}
     </div>
   );

@@ -26,11 +26,16 @@ export interface MessageActionsProps {
 }
 
 function ActionButton(props: {
-  title: string; onClick: () => void; children: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <button title={props.title} onClick={props.onClick}
-      className="rounded p-1 text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-text-semantic-primary">
+    <button
+      title={props.title}
+      onClick={props.onClick}
+      className="rounded p-1 text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-text-semantic-primary"
+    >
       {props.children}
     </button>
   );
@@ -49,7 +54,17 @@ function useCopyMessage(content: string): { copied: boolean; copy: () => void } 
 
 // ── UserMessageActions ────────────────────────────────────────────────────────
 
-function UserDesktopToolbar({ message, isLastUserMessage, threadStatus, onEdit, onRetry, onBranch, onRerunSuccess, copied, copy }: MessageActionsProps & { copied: boolean; copy: () => void }): React.ReactElement {
+function UserDesktopToolbar({
+  message,
+  isLastUserMessage,
+  threadStatus,
+  onEdit,
+  onRetry,
+  onBranch,
+  onRerunSuccess,
+  copied,
+  copy,
+}: MessageActionsProps & { copied: boolean; copy: () => void }): React.ReactElement {
   const isThreadBusy = threadStatus === 'submitting' || threadStatus === 'running';
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-hover:opacity-100">
@@ -81,7 +96,9 @@ export function UserMessageActions(props: MessageActionsProps): React.ReactEleme
     const actions: OverflowAction[] = [
       { label: copied ? 'Copied!' : 'Copy', onClick: copy },
       { label: 'Edit & resend', onClick: () => onEdit(message) },
-      ...(!isThreadBusy && isLastUserMessage ? [{ label: 'Retry', onClick: () => onRetry(message) }] : []),
+      ...(!isThreadBusy && isLastUserMessage
+        ? [{ label: 'Retry', onClick: () => onRetry(message) }]
+        : []),
       { label: 'Branch', onClick: () => onBranch(message) },
     ];
     return <MobileOverflowMenu actions={actions} />;
@@ -101,23 +118,50 @@ export interface AssistantMessageActionsProps {
 
 function RewindButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
-    <button title="Rewind to after this message" onClick={onClick}
-      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-warning-subtle hover:text-status-warning">
-      <div className="flex items-center gap-1"><RewindIcon /><span className="text-[10px] font-medium">Rewind</span></div>
+    <button
+      title="Rewind to after this message"
+      onClick={onClick}
+      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-warning-subtle hover:text-status-warning"
+    >
+      <div className="flex items-center gap-1">
+        <RewindIcon />
+        <span className="text-[10px] font-medium">Rewind</span>
+      </div>
     </button>
   );
 }
 
 function RevertButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
-    <button title="Revert changes from this turn" onClick={onClick}
-      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-error-subtle hover:text-status-error">
-      <div className="flex items-center gap-1"><RevertIcon /><span className="text-[10px] font-medium">Revert</span></div>
+    <button
+      title="Revert changes from this turn"
+      onClick={onClick}
+      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-error-subtle hover:text-status-error"
+    >
+      <div className="flex items-center gap-1">
+        <RevertIcon />
+        <span className="text-[10px] font-medium">Revert</span>
+      </div>
     </button>
   );
 }
 
-function AssistantDesktopToolbar({ message, onBranch, onRevert, onRewind, onRerunSuccess, copied, copy, hasSnapshot, hasCheckpoint }: AssistantMessageActionsProps & { copied: boolean; copy: () => void; hasSnapshot: boolean; hasCheckpoint: boolean }): React.ReactElement {
+function AssistantDesktopToolbar({
+  message,
+  onBranch,
+  onRevert,
+  onRewind,
+  onRerunSuccess,
+  copied,
+  copy,
+  hasSnapshot,
+  hasCheckpoint,
+}: AssistantMessageActionsProps & {
+  copied: boolean;
+  copy: () => void;
+  hasSnapshot: boolean;
+  hasCheckpoint: boolean;
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-hover:opacity-100">
       <ActionButton title={copied ? 'Copied!' : 'Copy message'} onClick={copy}>
@@ -125,9 +169,15 @@ function AssistantDesktopToolbar({ message, onBranch, onRevert, onRewind, onReru
       </ActionButton>
       {hasCheckpoint && onRewind && <RewindButton onClick={() => onRewind(message)} />}
       {hasSnapshot && onRevert && <RevertButton onClick={() => onRevert(message)} />}
-      <button title="Branch from this message" onClick={() => onBranch(message)}
-        className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-interactive-accent-subtle hover:text-interactive-accent">
-        <div className="flex items-center gap-1"><BranchIcon /><span className="text-[10px] font-medium">Fork</span></div>
+      <button
+        title="Branch from this message"
+        onClick={() => onBranch(message)}
+        className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-interactive-accent-subtle hover:text-interactive-accent"
+      >
+        <div className="flex items-center gap-1">
+          <BranchIcon />
+          <span className="text-[10px] font-medium">Fork</span>
+        </div>
       </button>
       <RerunMenu messageId={message.id} threadId={message.threadId} onSuccess={onRerunSuccess} />
     </div>
@@ -144,10 +194,20 @@ export function AssistantMessageActions(props: AssistantMessageActionsProps): Re
     const actions: OverflowAction[] = [
       { label: copied ? 'Copied!' : 'Copy', onClick: copy },
       ...(hasCheckpoint && onRewind ? [{ label: 'Rewind', onClick: () => onRewind(message) }] : []),
-      ...(hasSnapshot && onRevert ? [{ label: 'Revert', onClick: () => onRevert(message), danger: true as const }] : []),
+      ...(hasSnapshot && onRevert
+        ? [{ label: 'Revert', onClick: () => onRevert(message), danger: true as const }]
+        : []),
       { label: 'Fork', onClick: () => onBranch(message) },
     ];
     return <MobileOverflowMenu actions={actions} />;
   }
-  return <AssistantDesktopToolbar {...props} copied={copied} copy={copy} hasSnapshot={hasSnapshot} hasCheckpoint={hasCheckpoint} />;
+  return (
+    <AssistantDesktopToolbar
+      {...props}
+      copied={copied}
+      copy={copy}
+      hasSnapshot={hasSnapshot}
+      hasCheckpoint={hasCheckpoint}
+    />
+  );
 }

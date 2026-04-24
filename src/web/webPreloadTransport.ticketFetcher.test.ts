@@ -35,9 +35,15 @@ class FakeWebSocket {
     FakeWebSocket._lastInstance = this;
   }
 
-  send(data: string): void { this.sent.push(data); }
-  triggerOpen(): void { this.onopen?.(new Event('open')); }
-  triggerClose(): void { this.onclose?.(new CloseEvent('close')); }
+  send(data: string): void {
+    this.sent.push(data);
+  }
+  triggerOpen(): void {
+    this.onopen?.(new Event('open'));
+  }
+  triggerClose(): void {
+    this.onclose?.(new CloseEvent('close'));
+  }
 }
 
 // ─── Setup ────────────────────────────────────────────────────────────────────

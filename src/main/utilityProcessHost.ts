@@ -48,7 +48,10 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 // ── Generic host ──
 
-export class UtilityProcessHost<TRequest extends { type: string }, TOutbound extends { type: string }> {
+export class UtilityProcessHost<
+  TRequest extends { type: string },
+  TOutbound extends { type: string },
+> {
   private readonly options: UtilityProcessHostOptions;
   private child: UtilityProcess | null = null;
   private pending = new Map<string, PendingRequest>();
@@ -137,7 +140,9 @@ export class UtilityProcessHost<TRequest extends { type: string }, TOutbound ext
   /** Subscribe to push events (messages without `requestId`). */
   onEvent(handler: (event: TOutbound) => void): () => void {
     this.eventHandlers.add(handler);
-    return () => { this.eventHandlers.delete(handler); };
+    return () => {
+      this.eventHandlers.delete(handler);
+    };
   }
 
   // ── Internal ──
@@ -175,7 +180,9 @@ export class UtilityProcessHost<TRequest extends { type: string }, TOutbound ext
     if (this.isShuttingDown) return;
     // Unexpected crash — notify consumer before any auto-restart
     if (this.options.onCrash) {
-      try { this.options.onCrash(code); } catch (err) {
+      try {
+        this.options.onCrash(code);
+      } catch (err) {
         log.warn(`[${this.options.name}] onCrash handler threw:`, err);
       }
     }

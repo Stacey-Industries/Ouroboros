@@ -18,13 +18,13 @@ import { SectionLabel } from './settingsStyles';
 
 function phaseLabel(phase: StartupMark['phase']): string {
   const labels: Record<StartupMark['phase'], string> = {
-    'app-ready':              'App ready',
-    'window-ready':           'Window ready',
-    'ipc-ready':              'IPC ready',
-    'services-ready':         'Services ready',
+    'app-ready': 'App ready',
+    'window-ready': 'Window ready',
+    'ipc-ready': 'IPC ready',
+    'services-ready': 'Services ready',
     'renderer-bundle-loaded': 'Renderer bundle loaded',
-    'react-root-created':     'React root created',
-    'first-render':           'First render',
+    'react-root-created': 'React root created',
+    'first-render': 'First render',
   };
   return labels[phase] ?? phase;
 }
@@ -46,7 +46,9 @@ function totalMs(timings: StartupMark[]): number {
 function TimingRow({ mark, relMs }: { mark: StartupMark; relMs: number }): React.ReactElement {
   return (
     <tr>
-      <td className="text-text-semantic-primary" style={cellStyle}>{phaseLabel(mark.phase)}</td>
+      <td className="text-text-semantic-primary" style={cellStyle}>
+        {phaseLabel(mark.phase)}
+      </td>
       <td className="text-text-semantic-secondary" style={{ ...cellStyle, textAlign: 'right' }}>
         {relMs.toFixed(1)} ms
       </td>
@@ -60,8 +62,13 @@ function TimingRow({ mark, relMs }: { mark: StartupMark; relMs: number }): React
 function TotalRow({ ms }: { ms: number }): React.ReactElement {
   return (
     <tr style={totalRowStyle}>
-      <td className="text-text-semantic-primary" style={{ ...cellStyle, fontWeight: 600 }}>Total</td>
-      <td className="text-text-semantic-secondary" style={{ ...cellStyle, textAlign: 'right', fontWeight: 600 }}>
+      <td className="text-text-semantic-primary" style={{ ...cellStyle, fontWeight: 600 }}>
+        Total
+      </td>
+      <td
+        className="text-text-semantic-secondary"
+        style={{ ...cellStyle, textAlign: 'right', fontWeight: 600 }}
+      >
         {ms.toFixed(1)} ms
       </td>
       <td style={cellStyle} />
@@ -75,14 +82,32 @@ interface StartupTimingsSectionProps {
   onReload: () => void;
 }
 
-function TimingsTable({ timings, isComplete }: { timings: StartupMark[]; isComplete: boolean }): React.ReactElement {
+function TimingsTable({
+  timings,
+  isComplete,
+}: {
+  timings: StartupMark[];
+  isComplete: boolean;
+}): React.ReactElement {
   return (
     <table style={tableStyle}>
       <thead>
         <tr>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle }}>Phase</th>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>From start</th>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>Delta</th>
+          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle }}>
+            Phase
+          </th>
+          <th
+            className="text-text-semantic-muted"
+            style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}
+          >
+            From start
+          </th>
+          <th
+            className="text-text-semantic-muted"
+            style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}
+          >
+            Delta
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -95,7 +120,11 @@ function TimingsTable({ timings, isComplete }: { timings: StartupMark[]; isCompl
   );
 }
 
-function StartupTimingsSection({ timings, isComplete, onReload }: StartupTimingsSectionProps): React.ReactElement {
+function StartupTimingsSection({
+  timings,
+  isComplete,
+  onReload,
+}: StartupTimingsSectionProps): React.ReactElement {
   return (
     <section style={sectionStyle}>
       <SectionLabel>Startup Timings</SectionLabel>
@@ -105,7 +134,12 @@ function StartupTimingsSection({ timings, isComplete, onReload }: StartupTimings
       {timings.length === 0 && (
         <p className="text-text-semantic-faint" style={hintStyle}>
           No timing marks collected yet.{' '}
-          <button type="button" className="text-text-semantic-secondary" style={inlineLinkStyle} onClick={onReload}>
+          <button
+            type="button"
+            className="text-text-semantic-secondary"
+            style={inlineLinkStyle}
+            onClick={onReload}
+          >
             Refresh
           </button>
         </p>
@@ -129,8 +163,12 @@ function secondsAgo(date: Date): number {
 function MetricRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div style={metricRowStyle}>
-      <span className="text-text-semantic-secondary" style={metricLabelStyle}>{label}</span>
-      <span className="text-text-semantic-primary" style={metricValueStyle}>{value}</span>
+      <span className="text-text-semantic-secondary" style={metricLabelStyle}>
+        {label}
+      </span>
+      <span className="text-text-semantic-primary" style={metricValueStyle}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -140,7 +178,10 @@ interface RuntimeMetricsSectionProps {
   lastUpdated: Date | null;
 }
 
-function RuntimeMetricsSection({ metrics, lastUpdated }: RuntimeMetricsSectionProps): React.ReactElement {
+function RuntimeMetricsSection({
+  metrics,
+  lastUpdated,
+}: RuntimeMetricsSectionProps): React.ReactElement {
   return (
     <section style={sectionStyle}>
       <SectionLabel>Runtime Metrics</SectionLabel>
@@ -148,7 +189,9 @@ function RuntimeMetricsSection({ metrics, lastUpdated }: RuntimeMetricsSectionPr
         Live memory and CPU snapshot. Refreshed every 5 seconds.
       </p>
       {metrics === null && (
-        <p className="text-text-semantic-faint" style={hintStyle}>Waiting for first sample…</p>
+        <p className="text-text-semantic-faint" style={hintStyle}>
+          Waiting for first sample…
+        </p>
       )}
       {metrics !== null && (
         <div style={metricsGridStyle}>
@@ -189,7 +232,8 @@ function DeltaCell({ curr, prev }: { curr: number; prev: number | undefined }): 
   const sign = diff > 0 ? '+' : '';
   return (
     <td className={cls} style={{ ...cellStyle, textAlign: 'right' }}>
-      {sign}{diff.toFixed(0)} ms
+      {sign}
+      {diff.toFixed(0)} ms
     </td>
   );
 }
@@ -199,9 +243,21 @@ function HistoryTable({ records }: { records: StartupHistoryRecord[] }): React.R
     <table style={tableStyle}>
       <thead>
         <tr>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle }}>Time</th>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>Total ms</th>
-          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>vs prev</th>
+          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle }}>
+            Time
+          </th>
+          <th
+            className="text-text-semantic-muted"
+            style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}
+          >
+            Total ms
+          </th>
+          <th
+            className="text-text-semantic-muted"
+            style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}
+          >
+            vs prev
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -213,7 +269,10 @@ function HistoryTable({ records }: { records: StartupHistoryRecord[] }): React.R
               <td className="text-text-semantic-primary" style={cellStyle}>
                 {new Date(rec.ts).toLocaleString()}
               </td>
-              <td className="text-text-semantic-secondary" style={{ ...cellStyle, textAlign: 'right' }}>
+              <td
+                className="text-text-semantic-secondary"
+                style={{ ...cellStyle, textAlign: 'right' }}
+              >
                 {ms.toFixed(0)} ms
               </td>
               <DeltaCell curr={ms} prev={prevMs} />
@@ -248,13 +307,18 @@ function StartupHistorySection(): React.ReactElement {
       {open && (
         <>
           <p className="text-text-semantic-muted" style={descStyle}>
-            Total startup duration per launch. Green = faster by &gt;50 ms, red = slower by &gt;50 ms.
+            Total startup duration per launch. Green = faster by &gt;50 ms, red = slower by &gt;50
+            ms.
           </p>
           {isLoading && (
-            <p className="text-text-semantic-faint" style={hintStyle}>Loading…</p>
+            <p className="text-text-semantic-faint" style={hintStyle}>
+              Loading…
+            </p>
           )}
           {!isLoading && records.length === 0 && (
-            <p className="text-text-semantic-faint" style={hintStyle}>No history yet.</p>
+            <p className="text-text-semantic-faint" style={hintStyle}>
+              No history yet.
+            </p>
           )}
           {!isLoading && records.length > 0 && <HistoryTable records={records} />}
         </>
@@ -284,37 +348,57 @@ const sectionStyle: React.CSSProperties = { display: 'flex', flexDirection: 'col
 const descStyle: React.CSSProperties = { fontSize: '12px', lineHeight: 1.5, margin: '0 0 8px' };
 const hintStyle: React.CSSProperties = { fontSize: '12px', margin: 0 };
 const inlineLinkStyle: React.CSSProperties = {
-  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-  fontSize: '12px', textDecoration: 'underline',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  fontSize: '12px',
+  textDecoration: 'underline',
 };
 const tableStyle: React.CSSProperties = {
-  width: '100%', borderCollapse: 'collapse', fontSize: '12px',
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: '12px',
 };
 const cellStyle: React.CSSProperties = {
   padding: '5px 8px',
   borderBottom: '1px solid var(--border-subtle)',
 };
 const thStyle: React.CSSProperties = {
-  fontWeight: 600, fontSize: '11px', textAlign: 'left',
+  fontWeight: 600,
+  fontSize: '11px',
+  textAlign: 'left',
 };
 const totalRowStyle: React.CSSProperties = {
   borderTop: '2px solid var(--border-default)',
 };
 const metricsGridStyle: React.CSSProperties = {
-  display: 'flex', flexDirection: 'column', gap: '6px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
 };
 const metricRowStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'baseline',
   fontSize: '12px',
 };
 const metricLabelStyle: React.CSSProperties = { fontSize: '12px' };
 const metricValueStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-mono)', fontSize: '12px', fontVariantNumeric: 'tabular-nums',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '12px',
+  fontVariantNumeric: 'tabular-nums',
 };
 const updatedStyle: React.CSSProperties = { fontSize: '11px', margin: '4px 0 0' };
 const historyToggleStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  width: '100%', background: 'none', border: 'none', padding: 0,
-  cursor: 'pointer', textAlign: 'left',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  textAlign: 'left',
 };
 const chevronStyle: React.CSSProperties = { fontSize: '10px', marginLeft: '8px' };

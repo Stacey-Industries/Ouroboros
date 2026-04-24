@@ -26,9 +26,6 @@ export function isDuplicateChunk(
 }
 
 /** Drop the seen-ID set for a messageId (call when a stream completes or errors). */
-export function clearSeenChunkIds(
-  seenIds: Map<string, Set<string>>,
-  messageId: string,
-): void {
+export function clearSeenChunkIds(seenIds: Map<string, Set<string>>, messageId: string): void {
   seenIds.delete(messageId);
 }

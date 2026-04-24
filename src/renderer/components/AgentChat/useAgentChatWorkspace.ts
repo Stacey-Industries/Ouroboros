@@ -1,6 +1,6 @@
 /* @refresh reset */
 import log from 'electron-log/renderer';
-import { useEffect, useMemo, useRef,useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
@@ -14,7 +14,12 @@ import type {
   ImageAttachment,
   ModelProvider,
 } from '../../types/electron';
-import { buildAgentChatWorkspaceModel, flushPendingResend, type QueuedResend, useAgentChatActions } from './agentChatWorkspaceActions';
+import {
+  buildAgentChatWorkspaceModel,
+  flushPendingResend,
+  type QueuedResend,
+  useAgentChatActions,
+} from './agentChatWorkspaceActions';
 import {
   useActiveThread,
   useAgentChatEventSubscriptions,
@@ -47,6 +52,7 @@ export interface AgentChatWorkspaceModel {
   /** Configured model providers (non-Anthropic) for the model picker. */
   modelProviders: ModelProvider[];
   codexModels: CodexModelOption[];
+  codexAppServerTransport: boolean;
   pendingUserMessage: string | null;
   closeDetails: () => void;
   deleteThread: (threadId: string) => Promise<void>;
@@ -96,11 +102,18 @@ function useControllerState() {
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const pendingResendRef = useRef<QueuedResend | null>(null);
   return {
-    draft, setDraft, isSending, setIsSending,
-    pendingUserMessage, setPendingUserMessage,
-    contextFilePaths, setContextFilePaths,
-    mentionRanges, setMentionRanges,
-    attachments, setAttachments,
+    draft,
+    setDraft,
+    isSending,
+    setIsSending,
+    pendingUserMessage,
+    setPendingUserMessage,
+    contextFilePaths,
+    setContextFilePaths,
+    mentionRanges,
+    setMentionRanges,
+    attachments,
+    setAttachments,
     pendingResendRef,
   };
 }
@@ -123,25 +136,33 @@ function usePendingUserMessageClearEffect(
       const matched = m.content === pendingUserMessage;
       log.info(
         '[trace:chat-order] pendingUserClearEffect',
-        'thread:', activeThread.id.slice(-6),
-        'lastUserId:', m.id.slice(-6),
-        'matched:', matched,
-        'pendingPreview:', pendingUserMessage.slice(0, 40),
-        'lastUserPreview:', m.content.slice(0, 40),
+        'thread:',
+        activeThread.id.slice(-6),
+        'lastUserId:',
+        m.id.slice(-6),
+        'matched:',
+        matched,
+        'pendingPreview:',
+        pendingUserMessage.slice(0, 40),
+        'lastUserPreview:',
+        m.content.slice(0, 40),
       );
       if (matched) setPendingUserMessage(null);
       return;
     }
     log.info(
       '[trace:chat-order] pendingUserClearEffect',
-      'thread:', activeThread.id.slice(-6),
-      'outcome:', 'no user message in thread yet',
-      'pendingPreview:', pendingUserMessage.slice(0, 40),
+      'thread:',
+      activeThread.id.slice(-6),
+      'outcome:',
+      'no user message in thread yet',
+      'pendingPreview:',
+      pendingUserMessage.slice(0, 40),
     );
   }, [activeThread, pendingUserMessage, setPendingUserMessage]);
 }
 
-function useAgentChatWorkspaceController(projectRoot: string | null) {
+function useAgentChatWorkspaceController(projectRoot: string | null, readOnly: boolean) {
   const state = useControllerState();
   const threadState = useThreadState({ projectRoot });
   const modelSettings = useModelSettings();
@@ -159,8 +180,18 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
     setThreads: threadState.setThreads,
   });
 
-  useAgentChatDraftPersistence(threadState.activeThreadId, state.draft, state.setDraft);
-  usePendingUserMessageClearEffect(state.pendingUserMessage, state.setPendingUserMessage, activeThread);
+  // Always call unconditionally (rules-of-hooks). When readOnly, pass null threadId and '' draft so
+  // persistence is a no-op that never contaminates the real per-thread draft storage.
+  useAgentChatDraftPersistence(
+    readOnly ? null : threadState.activeThreadId,
+    readOnly ? '' : state.draft,
+    state.setDraft,
+  );
+  usePendingUserMessageClearEffect(
+    state.pendingUserMessage,
+    state.setPendingUserMessage,
+    activeThread,
+  );
 
   return { activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState };
 }
@@ -241,12 +272,29 @@ function buildModel(args: BuildModelArgs) {
   });
 }
 
-export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWorkspaceModel {
-  const controller = useAgentChatWorkspaceController(projectRoot);
+export function useAgentChatWorkspace(
+  projectRoot: string | null,
+  preferredThreadId?: string | null,
+  readOnly = false,
+): AgentChatWorkspaceModel {
+  const controller = useAgentChatWorkspaceController(projectRoot, readOnly);
   const { commands } = useRulesAndSkills(projectRoot);
   const actions = useAgentChatActions(buildActionArgs(controller, projectRoot));
   const hooks = useWorkspaceHooks(controller, actions);
   useFlushPendingResend(controller, projectRoot);
+
+  useEffect(() => {
+    if (!preferredThreadId) return;
+    if (!controller.threadState.threads.some((thread) => thread.id === preferredThreadId)) return;
+    if (controller.threadState.activeThreadId === preferredThreadId) return;
+    controller.threadState.setActiveThreadId(preferredThreadId);
+  }, [
+    controller.threadState.activeThreadId,
+    controller.threadState.setActiveThreadId,
+    controller.threadState.threads,
+    preferredThreadId,
+  ]);
+
   return useMemo(
     () => buildModel({ controller, actions, hooks, projectRoot, commands }),
     [controller, actions, hooks, projectRoot, commands],

@@ -206,9 +206,12 @@ function makeSnapshotHandler(
     if (!thread || !thread.id) return;
     log.info(
       '[trace:chat-order] snapshot received',
-      'thread:', thread.id.slice(-6),
-      'msgs:', thread.messages.length,
-      'ids:', thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
+      'thread:',
+      thread.id.slice(-6),
+      'msgs:',
+      thread.messages.length,
+      'ids:',
+      thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
     );
     setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
   };

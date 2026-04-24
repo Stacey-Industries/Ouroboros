@@ -46,27 +46,39 @@ function persistConfig(key: string, value: unknown): void {
 export function useThemeActions(deps: ThemeActionDeps): ThemeActions {
   const { setRuntimeState, writeThemeToStore } = deps;
 
-  const setTheme = useCallback(async (id: string) => {
-    const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
-    setRuntimeState({ themeId: resolved, hydrated: true });
-    await writeThemeToStore(resolved);
-  }, [setRuntimeState, writeThemeToStore]);
+  const setTheme = useCallback(
+    async (id: string) => {
+      const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
+      setRuntimeState({ themeId: resolved, hydrated: true });
+      await writeThemeToStore(resolved);
+    },
+    [setRuntimeState, writeThemeToStore],
+  );
 
-  const setShowBgGradient = useCallback((value: boolean) => {
-    setRuntimeState({ showBgGradient: value, hydrated: true });
-    persistConfig('showBgGradient', value);
-  }, [setRuntimeState]);
+  const setShowBgGradient = useCallback(
+    (value: boolean) => {
+      setRuntimeState({ showBgGradient: value, hydrated: true });
+      persistConfig('showBgGradient', value);
+    },
+    [setRuntimeState],
+  );
 
-  const setGlassOpacity = useCallback((value: number) => {
-    setRuntimeState({ glassOpacity: value, hydrated: true });
-    persistConfig('glassOpacity', value);
-  }, [setRuntimeState]);
+  const setGlassOpacity = useCallback(
+    (value: number) => {
+      setRuntimeState({ glassOpacity: value, hydrated: true });
+      persistConfig('glassOpacity', value);
+    },
+    [setRuntimeState],
+  );
 
-  const setMaterialVariant = useCallback((value: MaterialVariant) => {
-    const normalized = normalizeMaterialVariant(value);
-    setRuntimeState({ materialVariant: normalized, hydrated: true });
-    persistConfig('materialVariant', normalized);
-  }, [setRuntimeState]);
+  const setMaterialVariant = useCallback(
+    (value: MaterialVariant) => {
+      const normalized = normalizeMaterialVariant(value);
+      setRuntimeState({ materialVariant: normalized, hydrated: true });
+      persistConfig('materialVariant', normalized);
+    },
+    [setRuntimeState],
+  );
 
   return { setTheme, setShowBgGradient, setGlassOpacity, setMaterialVariant };
 }

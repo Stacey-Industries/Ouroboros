@@ -7,25 +7,32 @@
  * SQL DDL lives in graphDatabaseSchema.ts.
  */
 
-import type Database from 'better-sqlite3'
-import path from 'path'
+import type Database from 'better-sqlite3';
+import path from 'path';
 
 import type {
-  ADRRecord, EdgeType, FileHashRecord, GraphEdge, GraphNode, NodeFilter, NodeLabel,
-  NodeSearchResult, ProjectRecord,
-} from './graphDatabaseTypes'
+  ADRRecord,
+  EdgeType,
+  FileHashRecord,
+  GraphEdge,
+  GraphNode,
+  NodeFilter,
+  NodeLabel,
+  NodeSearchResult,
+  ProjectRecord,
+} from './graphDatabaseTypes';
 
-export { SCHEMA_SQL } from './graphDatabaseSchema'
+export { SCHEMA_SQL } from './graphDatabaseSchema';
 
 // ─── Database path ────────────────────────────────────────────────────────────
 
 export function getDbPath(): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('electron')
-    return path.join(app.getPath('userData'), 'codebase-graph.db')
+    const { app } = require('electron');
+    return path.join(app.getPath('userData'), 'codebase-graph.db');
   } catch {
-    return path.join(process.cwd(), 'codebase-graph.db')
+    return path.join(process.cwd(), 'codebase-graph.db');
   }
 }
 
@@ -50,11 +57,13 @@ export function buildCoreStatements(db: Database.Database): Record<string, Datab
     getEdgesByTarget: db.prepare('SELECT * FROM edges WHERE target_id = ?'),
     getEdgesByTargetAndType: db.prepare('SELECT * FROM edges WHERE target_id = ? AND type = ?'),
     updateNodeProps: db.prepare('UPDATE nodes SET props = @props WHERE id = @id'),
-  }
+  };
 }
 
 /** Build file-hash and project statements. */
-export function buildHashAndProjectStatements(db: Database.Database): Record<string, Database.Statement> {
+export function buildHashAndProjectStatements(
+  db: Database.Database,
+): Record<string, Database.Statement> {
   return {
     upsertFileHash: db.prepare(`
       INSERT OR REPLACE INTO file_hashes (project, rel_path, content_hash, mtime_ns, size)
@@ -76,11 +85,13 @@ export function buildHashAndProjectStatements(db: Database.Database): Record<str
     getProject: db.prepare('SELECT * FROM projects WHERE name = ?'),
     listProjects: db.prepare('SELECT * FROM projects ORDER BY name'),
     deleteProject: db.prepare('DELETE FROM projects WHERE name = ?'),
-  }
+  };
 }
 
 /** Build search, label, stats, and ADR statements. */
-export function buildSearchAndStatsStatements(db: Database.Database): Record<string, Database.Statement> {
+export function buildSearchAndStatsStatements(
+  db: Database.Database,
+): Record<string, Database.Statement> {
   return {
     countNodes: db.prepare('SELECT COUNT(*) as count FROM nodes WHERE project = ?'),
     countEdges: db.prepare('SELECT COUNT(*) as count FROM edges WHERE project = ?'),
@@ -116,7 +127,7 @@ export function buildSearchAndStatsStatements(db: Database.Database): Record<str
       WHERE e.project = ?
       ORDER BY pattern
     `),
-  }
+  };
 }
 
 // ─── searchNodes SQL builders ─────────────────────────────────────────────────
@@ -128,24 +139,24 @@ export function buildBaseConditions(
   params: unknown[],
 ): void {
   if (filter.project) {
-    conditions.push('n.project = ?')
-    params.push(filter.project)
+    conditions.push('n.project = ?');
+    params.push(filter.project);
   }
   if (filter.label) {
-    conditions.push('n.label = ?')
-    params.push(filter.label)
+    conditions.push('n.label = ?');
+    params.push(filter.label);
   }
   if (filter.namePattern) {
     if (filter.caseSensitive) {
-      conditions.push('n.name LIKE ?')
+      conditions.push('n.name LIKE ?');
     } else {
-      conditions.push('LOWER(n.name) LIKE LOWER(?)')
+      conditions.push('LOWER(n.name) LIKE LOWER(?)');
     }
-    params.push(`%${filter.namePattern}%`)
+    params.push(`%${filter.namePattern}%`);
   }
   if (filter.filePath) {
-    conditions.push('n.file_path LIKE ?')
-    params.push(`%${filter.filePath}%`)
+    conditions.push('n.file_path LIKE ?');
+    params.push(`%${filter.filePath}%`);
   }
 }
 
@@ -154,14 +165,14 @@ export function buildDegreeExpr(
   edgeDir: 'inbound' | 'outbound' | 'both',
   edgeType?: string,
 ): string {
-  const typeClause = edgeType ? ' AND e.type = ?' : ''
+  const typeClause = edgeType ? ' AND e.type = ?' : '';
   if (edgeDir === 'inbound') {
-    return `(SELECT COUNT(*) FROM edges e WHERE e.target_id = n.id${typeClause})`
+    return `(SELECT COUNT(*) FROM edges e WHERE e.target_id = n.id${typeClause})`;
   }
   if (edgeDir === 'outbound') {
-    return `(SELECT COUNT(*) FROM edges e WHERE e.source_id = n.id${typeClause})`
+    return `(SELECT COUNT(*) FROM edges e WHERE e.source_id = n.id${typeClause})`;
   }
-  return `(SELECT COUNT(*) FROM edges e WHERE (e.source_id = n.id OR e.target_id = n.id)${typeClause})`
+  return `(SELECT COUNT(*) FROM edges e WHERE (e.source_id = n.id OR e.target_id = n.id)${typeClause})`;
 }
 
 /** Add degree conditions to the WHERE clause. */
@@ -170,22 +181,22 @@ export function addDegreeConditions(
   conditions: string[],
   params: unknown[],
 ): void {
-  if (filter.minDegree === undefined && filter.maxDegree === undefined) return
+  if (filter.minDegree === undefined && filter.maxDegree === undefined) return;
 
-  const edgeDir = filter.direction ?? 'both'
-  const edgeType = filter.relationship
+  const edgeDir = filter.direction ?? 'both';
+  const edgeType = filter.relationship;
 
   if (filter.minDegree !== undefined) {
-    const degreeExpr = buildDegreeExpr(edgeDir, edgeType)
-    if (edgeType) params.push(edgeType)
-    conditions.push(`${degreeExpr} >= ?`)
-    params.push(filter.minDegree)
+    const degreeExpr = buildDegreeExpr(edgeDir, edgeType);
+    if (edgeType) params.push(edgeType);
+    conditions.push(`${degreeExpr} >= ?`);
+    params.push(filter.minDegree);
   }
   if (filter.maxDegree !== undefined) {
-    const degreeExpr = buildDegreeExpr(edgeDir, edgeType)
-    if (edgeType) params.push(edgeType)
-    conditions.push(`${degreeExpr} <= ?`)
-    params.push(filter.maxDegree)
+    const degreeExpr = buildDegreeExpr(edgeDir, edgeType);
+    if (edgeType) params.push(edgeType);
+    conditions.push(`${degreeExpr} <= ?`);
+    params.push(filter.maxDegree);
   }
 }
 
@@ -194,46 +205,60 @@ export function addDegreeConditions(
 // ─── Row-to-type mappers ──────────────────────────────────────────────────────
 
 export function rowToNode(row: unknown): GraphNode {
-  const r = row as Record<string, unknown>
+  const r = row as Record<string, unknown>;
   return {
-    id: r.id as string, project: r.project as string, label: r.label as NodeLabel,
-    name: r.name as string, qualified_name: r.qualified_name as string,
-    file_path: r.file_path as string | null, start_line: r.start_line as number | null,
-    end_line: r.end_line as number | null, props: JSON.parse(r.props as string),
-  }
+    id: r.id as string,
+    project: r.project as string,
+    label: r.label as NodeLabel,
+    name: r.name as string,
+    qualified_name: r.qualified_name as string,
+    file_path: r.file_path as string | null,
+    start_line: r.start_line as number | null,
+    end_line: r.end_line as number | null,
+    props: JSON.parse(r.props as string),
+  };
 }
 
 export function rowToEdge(row: unknown): GraphEdge {
-  const r = row as Record<string, unknown>
+  const r = row as Record<string, unknown>;
   return {
-    id: r.id as number, project: r.project as string, source_id: r.source_id as string,
-    target_id: r.target_id as string, type: r.type as EdgeType,
+    id: r.id as number,
+    project: r.project as string,
+    source_id: r.source_id as string,
+    target_id: r.target_id as string,
+    type: r.type as EdgeType,
     props: JSON.parse(r.props as string),
-  }
+  };
 }
 
 export function rowToProject(row: Record<string, unknown>): ProjectRecord {
   return {
-    name: row.name as string, root_path: row.root_path as string,
-    indexed_at: row.indexed_at as number, node_count: row.node_count as number,
+    name: row.name as string,
+    root_path: row.root_path as string,
+    indexed_at: row.indexed_at as number,
+    node_count: row.node_count as number,
     edge_count: row.edge_count as number,
-  }
+  };
 }
 
 export function rowToFileHash(r: Record<string, unknown>): FileHashRecord {
   return {
-    project: r.project as string, rel_path: r.rel_path as string,
-    content_hash: r.content_hash as string, mtime_ns: r.mtime_ns as number,
+    project: r.project as string,
+    rel_path: r.rel_path as string,
+    content_hash: r.content_hash as string,
+    mtime_ns: r.mtime_ns as number,
     size: r.size as number,
-  }
+  };
 }
 
 export function rowToAdr(r: Record<string, unknown>): ADRRecord {
   return {
-    project: r.project as string, summary: r.summary as string,
-    source_hash: r.source_hash as string, created_at: r.created_at as number,
+    project: r.project as string,
+    summary: r.summary as string,
+    source_hash: r.source_hash as string,
+    created_at: r.created_at as number,
     updated_at: r.updated_at as number,
-  }
+  };
 }
 
 // ─── Row aggregation helpers ──────────────────────────────────────────────────
@@ -242,16 +267,26 @@ export function rowToAdr(r: Record<string, unknown>): ADRRecord {
 export function aggregateNodeLabelCounts(
   rows: Array<{ label: string; count: number }>,
 ): Record<NodeLabel, number> {
-   
-  return rows.reduce((acc, row) => { acc[row.label as NodeLabel] = row.count; return acc }, {} as Record<NodeLabel, number>)
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.label as NodeLabel] = row.count;
+      return acc;
+    },
+    {} as Record<NodeLabel, number>,
+  );
 }
 
 /** Map type-count rows to a typed record. */
 export function aggregateEdgeTypeCounts(
   rows: Array<{ type: string; count: number }>,
 ): Record<EdgeType, number> {
-   
-  return rows.reduce((acc, row) => { acc[row.type as EdgeType] = row.count; return acc }, {} as Record<EdgeType, number>)
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.type as EdgeType] = row.count;
+      return acc;
+    },
+    {} as Record<EdgeType, number>,
+  );
 }
 
 // ─── searchNodes / getNodesByDegree body helpers ──────────────────────────────
@@ -262,32 +297,38 @@ export function runSearchNodes(
   filter: NodeFilter,
   rowToNode: (row: unknown) => GraphNode,
 ): NodeSearchResult {
-  const conditions: string[] = []
-  const params: unknown[] = []
+  const conditions: string[] = [];
+  const params: unknown[] = [];
 
-  buildBaseConditions(filter, conditions, params)
-  addDegreeConditions(filter, conditions, params)
+  buildBaseConditions(filter, conditions, params);
+  addDegreeConditions(filter, conditions, params);
 
   if (filter.excludeEntryPoints) {
-    conditions.push("json_extract(n.props, '$.is_entry_point') != 1")
+    conditions.push("json_extract(n.props, '$.is_entry_point') != 1");
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-  const limit = filter.limit ?? 100
-  const offset = filter.offset ?? 0
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limit = filter.limit ?? 100;
+  const offset = filter.offset ?? 0;
 
-  const countSql = `SELECT COUNT(*) as total FROM nodes n ${where}`
-  const countRow = db.prepare(countSql).get(...params) as { total: number }
+  const countSql = `SELECT COUNT(*) as total FROM nodes n ${where}`;
+  const countRow = db.prepare(countSql).get(...params) as { total: number };
 
-  const dataSql = `SELECT * FROM nodes n ${where} ORDER BY n.name LIMIT ? OFFSET ?`
-  const rows = db.prepare(dataSql).all(...params, limit, offset)
+  const dataSql = `SELECT * FROM nodes n ${where} ORDER BY n.name LIMIT ? OFFSET ?`;
+  const rows = db.prepare(dataSql).all(...params, limit, offset);
 
   return {
     nodes: rows.map(rowToNode),
     total: countRow.total,
     has_more: offset + limit < countRow.total,
-  }
+  };
 }
 
-export type { BfsOptions, NodesByDegreeOptions } from './graphDatabaseTraversal'
-export { addNodeDegreeConditions, buildNodeDegreeExpr, runBfsTraversal, runGetNodesByDegree, runNodeDegreeQuery } from './graphDatabaseTraversal'
+export type { BfsOptions, NodesByDegreeOptions } from './graphDatabaseTraversal';
+export {
+  addNodeDegreeConditions,
+  buildNodeDegreeExpr,
+  runBfsTraversal,
+  runGetNodesByDegree,
+  runNodeDegreeQuery,
+} from './graphDatabaseTraversal';

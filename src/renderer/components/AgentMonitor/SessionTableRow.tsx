@@ -72,10 +72,12 @@ function SessionRowCells({ entry, combinedCost }: RowCellsProps): React.ReactEle
       <span
         className="text-interactive-accent"
         style={{ width: '52px', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}
-        title={hasChildren ? formatRollupDisclosure(combinedCost!) ?? undefined : undefined}
+        title={hasChildren ? (formatRollupDisclosure(combinedCost!) ?? undefined) : undefined}
       >
         {formatCost(displayCost)}
-        {hasChildren && <span style={{ fontSize: '8px', marginLeft: '2px', opacity: 0.7 }}>+sub</span>}
+        {hasChildren && (
+          <span style={{ fontSize: '8px', marginLeft: '2px', opacity: 0.7 }}>+sub</span>
+        )}
       </span>
     </>
   );
@@ -110,7 +112,13 @@ export const SessionTableRow = memo(function SessionTableRow({
   );
 });
 
-function DetailPair({ label, value }: { label: string; value: string }): React.ReactElement<unknown> {
+function DetailPair({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactElement<unknown> {
   return (
     <span>
       {label}: <span className="text-text-semantic-primary">{value}</span>
@@ -139,7 +147,10 @@ function ExpandedDetailsFields({ entry }: { entry: CostEntry }): React.ReactElem
 function ExpandedDetails({
   entry,
   combinedCost,
-}: { entry: CostEntry; combinedCost?: CombinedCost }): React.ReactElement<unknown> {
+}: {
+  entry: CostEntry;
+  combinedCost?: CombinedCost;
+}): React.ReactElement<unknown> {
   const disclosure = combinedCost ? formatRollupDisclosure(combinedCost) : null;
   return (
     <div
@@ -150,9 +161,7 @@ function ExpandedDetails({
       <div className="mt-1 text-text-semantic-faint">
         Task: <span className="text-text-semantic-primary">{entry.taskLabel}</span>
       </div>
-      {disclosure && (
-        <div className="mt-0.5 text-text-semantic-faint italic">{disclosure}</div>
-      )}
+      {disclosure && <div className="mt-0.5 text-text-semantic-faint italic">{disclosure}</div>}
     </div>
   );
 }

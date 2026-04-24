@@ -11,6 +11,7 @@
 import type {
   AgentChatContentBlock,
   AgentChatStreamChunk,
+  AgentChatSubAgentTranscriptEntry,
   AgentChatSubToolActivity,
 } from '../../types/electron-agent-chat';
 
@@ -59,38 +60,87 @@ export function applySubToolDelta(
   return next;
 }
 
+type SubAgentMessage = {
+  entryId: string;
+  subAgentId: string;
+  label?: string;
+  kind: 'text' | 'thinking';
+  textDelta: string;
+};
+
+function buildSubAgentTranscript(
+  existing: AgentChatSubAgentTranscriptEntry[],
+  message: SubAgentMessage,
+): AgentChatSubAgentTranscriptEntry[] {
+  const matchIndex = existing.findIndex((entry) => entry.entryId === message.entryId);
+  if (matchIndex === -1) {
+    return [
+      ...existing,
+      {
+        entryId: message.entryId,
+        subAgentId: message.subAgentId,
+        label: message.label,
+        kind: message.kind,
+        content: message.textDelta,
+      },
+    ];
+  }
+  return existing.map((entry, index) =>
+    index === matchIndex
+      ? {
+          ...entry,
+          label: message.label ?? entry.label,
+          content: entry.content + message.textDelta,
+        }
+      : entry,
+  );
+}
+
+export function applySubAgentMessageDelta(
+  blocks: AgentChatContentBlock[],
+  blockIndex: number,
+  message: SubAgentMessage,
+): AgentChatContentBlock[] {
+  const next = [...blocks];
+  const parent = next[blockIndex];
+  if (!parent || parent.kind !== 'tool_use') return next;
+  const transcript = buildSubAgentTranscript(parent.subAgentTranscript ?? [], message);
+  next[blockIndex] = { ...parent, subAgentTranscript: transcript };
+  return next;
+}
+
 // ── Structured tool activity (blockIndex present) ─────────────────────────────
+
+function applyToolBlockUpdate(
+  blocks: AgentChatContentBlock[],
+  idx: number,
+  chunk: AgentChatStreamChunk,
+): void {
+  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
+  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
+  if (status === 'running') {
+    blocks[idx] = { kind: 'tool_use', tool: name, status, filePath, inputSummary, editSummary, blockId: generateBlockId() };
+  } else {
+    const existing = blocks[idx];
+    if (existing.kind === 'tool_use') {
+      blocks[idx] = { ...existing, status, filePath: filePath ?? existing.filePath, output: chunk.toolActivity!.output ?? existing.output };
+    }
+  }
+}
 
 export function applyToolActivityStructured(
   sealed: AgentChatContentBlock[],
   chunk: AgentChatStreamChunk,
 ): AgentChatContentBlock[] {
+  if (chunk.toolActivity!.subAgentMessage) {
+    return applySubAgentMessageDelta(sealed, chunk.blockIndex!, chunk.toolActivity!.subAgentMessage);
+  }
   if (chunk.toolActivity!.subTool) {
     return applySubToolDelta(sealed, chunk.blockIndex!, chunk.toolActivity!.subTool);
   }
-  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
-  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
   const blocks = [...sealed];
   ensureBlockCapacity(blocks, chunk.blockIndex!);
-  if (status === 'running') {
-    blocks[chunk.blockIndex!] = {
-      kind: 'tool_use',
-      tool: name,
-      status,
-      filePath,
-      inputSummary,
-      editSummary,
-      blockId: generateBlockId(),
-    };
-  } else {
-    const existing = blocks[chunk.blockIndex!];
-    if (existing.kind === 'tool_use') {
-      blocks[chunk.blockIndex!] = {
-        ...existing, status, filePath: filePath ?? existing.filePath,
-        output: chunk.toolActivity!.output ?? existing.output,
-      };
-    }
-  }
+  applyToolBlockUpdate(blocks, chunk.blockIndex!, chunk);
   return blocks;
 }
 
@@ -124,7 +174,9 @@ export function applyToolActivityLegacy(
     const block = blocks[i];
     if (block.kind === 'tool_use' && block.tool === name && block.status === 'running') {
       blocks[i] = {
-        ...block, status, filePath: filePath ?? block.filePath,
+        ...block,
+        status,
+        filePath: filePath ?? block.filePath,
         output: chunk.toolActivity!.output,
       };
       break;

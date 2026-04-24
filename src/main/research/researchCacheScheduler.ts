@@ -31,11 +31,7 @@ export function scheduleResearchCachePurge(userDataPath: string): void {
   };
   setImmediate(runPurge);
   _purgeHandle = setInterval(runPurge, PURGE_INTERVAL_MS);
-  if (
-    typeof _purgeHandle === 'object' &&
-    _purgeHandle !== null &&
-    'unref' in _purgeHandle
-  ) {
+  if (typeof _purgeHandle === 'object' && _purgeHandle !== null && 'unref' in _purgeHandle) {
     (_purgeHandle as NodeJS.Timeout).unref();
   }
 }

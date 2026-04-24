@@ -2,20 +2,18 @@
  * ipc-handlers/extensionStore.ts - IPC handlers for the VSX Extension Store.
  */
 
-import { BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import { getErrorMessage } from '../agentChat/utils';
+import { getExtensionDetails, installExtension, searchExtensions } from './extensionStoreApi';
 import {
-  getExtensionDetails,
-  installExtension,
-  searchExtensions,
-} from './extensionStoreApi';
-import {
-  disableContributions,
-  enableContributions,
   getIconThemeContributions,
   getProductIconThemeContributions,
   getThemeContributions,
+} from './extensionStoreContributions';
+import {
+  disableContributions,
+  enableContributions,
   refreshInstalledListFromDisk,
   uninstallExtension,
 } from './extensionStoreHelpers';
@@ -62,19 +60,48 @@ async function getInstalledExtensions() {
 }
 
 function registerCrudHandlers(channels: string[]): void {
-  registerHandler(channels, 'extensionStore:search', async (_event, query: string, offset?: number) => runHandler(() => searchExtensions(query, offset ?? 0)));
-  registerHandler(channels, 'extensionStore:getDetails', async (_event, namespace: string, name: string) => runHandler(() => getExtensionDetails(namespace, name)));
-  registerHandler(channels, 'extensionStore:install', async (_event, namespace: string, name: string, version?: string) => runHandler(() => installExtension(namespace, name, version)));
-  registerHandler(channels, 'extensionStore:uninstall', async (_event, id: string) => runHandler(() => uninstallExtension(id)));
-  registerHandler(channels, 'extensionStore:getInstalled', async () => runHandler(() => getInstalledExtensions()));
+  registerHandler(
+    channels,
+    'extensionStore:search',
+    async (_event, query: string, offset?: number) =>
+      runHandler(() => searchExtensions(query, offset ?? 0)),
+  );
+  registerHandler(
+    channels,
+    'extensionStore:getDetails',
+    async (_event, namespace: string, name: string) =>
+      runHandler(() => getExtensionDetails(namespace, name)),
+  );
+  registerHandler(
+    channels,
+    'extensionStore:install',
+    async (_event, namespace: string, name: string, version?: string) =>
+      runHandler(() => installExtension(namespace, name, version)),
+  );
+  registerHandler(channels, 'extensionStore:uninstall', async (_event, id: string) =>
+    runHandler(() => uninstallExtension(id)),
+  );
+  registerHandler(channels, 'extensionStore:getInstalled', async () =>
+    runHandler(() => getInstalledExtensions()),
+  );
 }
 
 function registerContributionHandlers(channels: string[]): void {
-  registerHandler(channels, 'extensionStore:enableContributions', async (_event, id: string) => runHandler(() => enableContributions(id)));
-  registerHandler(channels, 'extensionStore:disableContributions', async (_event, id: string) => runHandler(() => disableContributions(id)));
-  registerHandler(channels, 'extensionStore:getThemeContributions', async () => runHandler(() => getThemeContributions()));
-  registerHandler(channels, 'extensionStore:getIconThemeContributions', async () => runHandler(() => getIconThemeContributions()));
-  registerHandler(channels, 'extensionStore:getProductIconThemeContributions', async () => runHandler(() => getProductIconThemeContributions()));
+  registerHandler(channels, 'extensionStore:enableContributions', async (_event, id: string) =>
+    runHandler(() => enableContributions(id)),
+  );
+  registerHandler(channels, 'extensionStore:disableContributions', async (_event, id: string) =>
+    runHandler(() => disableContributions(id)),
+  );
+  registerHandler(channels, 'extensionStore:getThemeContributions', async () =>
+    runHandler(() => getThemeContributions()),
+  );
+  registerHandler(channels, 'extensionStore:getIconThemeContributions', async () =>
+    runHandler(() => getIconThemeContributions()),
+  );
+  registerHandler(channels, 'extensionStore:getProductIconThemeContributions', async () =>
+    runHandler(() => getProductIconThemeContributions()),
+  );
 }
 
 export function registerExtensionStoreHandlers(_senderWindow: SenderWindow): string[] {

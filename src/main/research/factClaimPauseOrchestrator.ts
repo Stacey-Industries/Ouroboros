@@ -152,10 +152,7 @@ interface MatchHandlerInput {
   maxLatencyMs: number;
 }
 
-async function handleMatch(
-  input: MatchHandlerInput,
-  deps: MatchHandlerDeps,
-): Promise<void> {
+async function handleMatch(input: MatchHandlerInput, deps: MatchHandlerDeps): Promise<void> {
   const { sessionId, modelId, library, confidence, offset, emitStatusChunk, maxLatencyMs } = input;
   const { runResearch, isCachedFn, globalFlag } = deps;
 
@@ -175,7 +172,11 @@ async function handleMatch(
 
   if (!shouldFire) {
     // Flag off and not aggressive — record observation only
-    recordTraceSafe('fact-claim-match-observed', { library, confidence, offset, sessionId }, sessionId);
+    recordTraceSafe(
+      'fact-claim-match-observed',
+      { library, confidence, offset, sessionId },
+      sessionId,
+    );
     return;
   }
 
@@ -197,7 +198,11 @@ async function handleMatch(
 
   if (raceResult === undefined) {
     // delay won — research timed out relative to the budget
-    recordTraceSafe('fact-claim-timeout', { library, confidence, sessionId, maxLatencyMs }, sessionId);
+    recordTraceSafe(
+      'fact-claim-timeout',
+      { library, confidence, sessionId, maxLatencyMs },
+      sessionId,
+    );
   }
 }
 
@@ -218,7 +223,15 @@ async function processMatches(
     if (isCached(match.library)) continue;
     if (isInFlight(sessionId, match.library)) continue;
     await handleMatch(
-      { sessionId, modelId, library: match.library, confidence: match.confidence, offset: match.offset, emitStatusChunk, maxLatencyMs: effectiveLatency },
+      {
+        sessionId,
+        modelId,
+        library: match.library,
+        confidence: match.confidence,
+        offset: match.offset,
+        emitStatusChunk,
+        maxLatencyMs: effectiveLatency,
+      },
       deps,
     );
     return; // only one match per chunk
@@ -247,7 +260,11 @@ export async function maybePauseForFactClaim(input: FactClaimPauseInput): Promis
     }
 
     const globalFlag = resolveGlobalFlag();
-    const deps: MatchHandlerDeps = { runResearch: researchSubagent.runResearch, isCachedFn: isCached, globalFlag };
+    const deps: MatchHandlerDeps = {
+      runResearch: researchSubagent.runResearch,
+      isCachedFn: isCached,
+      globalFlag,
+    };
     await processMatches(input, knobs, effectiveLatency, deps);
   } catch (e) {
     console.warn('[fact-claim]', e);

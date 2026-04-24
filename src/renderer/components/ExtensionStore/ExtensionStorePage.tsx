@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { OPEN_EXTENSION_STORE_EVENT } from '../../hooks/appEventNames';
-import { StorePageShell,type StoreTab } from '../StorePageShell';
+import { StorePageShell, type StoreTab } from '../StorePageShell';
 import { ExtensionsSection } from './ExtensionsSection';
 import { ExtensionStoreSection } from './ExtensionStoreSection';
 
@@ -34,18 +34,17 @@ export function ExtensionStorePage(): React.ReactElement {
       onTabChange={setActiveTab}
       onRefresh={handleRefresh}
     >
-      {activeTab === 'browse'
-        ? <ExtensionStoreSection onRegisterRefresh={registerRefresh} />
-        : <ExtensionsSection onRegisterRefresh={registerRefresh} />}
+      {activeTab === 'browse' ? (
+        <ExtensionStoreSection onRegisterRefresh={registerRefresh} />
+      ) : (
+        <ExtensionsSection onRegisterRefresh={registerRefresh} />
+      )}
     </StorePageShell>
   );
 }
 
 /** Listens for repeated open events with an optional `{ tab }` payload. */
-function useDeepLinkTab(
-  eventName: string,
-  setTab: (tab: StoreTab) => void,
-): void {
+function useDeepLinkTab(eventName: string, setTab: (tab: StoreTab) => void): void {
   useEffect(() => {
     function handler(e: Event): void {
       const detail = (e as CustomEvent<{ tab?: StoreTab }>).detail;

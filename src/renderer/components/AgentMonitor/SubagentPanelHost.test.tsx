@@ -14,9 +14,52 @@ import { OPEN_SUBAGENT_EVENT } from './ToolCallRow';
 const mockGet = vi.fn();
 const mockLiveCount = vi.fn();
 const mockOnUpdated = vi.fn(() => vi.fn());
+let currentSessions = [] as Array<{
+  id: string;
+  parentSessionId?: string;
+  startedAt: number;
+  status: 'running' | 'complete' | 'error' | 'idle';
+  taskLabel: string;
+  toolCalls: Array<unknown>;
+}>;
+
+vi.mock('../../contexts/AgentEventsContext', () => ({
+  useAgentEventsContext: () => ({
+    currentSessions,
+    historicalSessions: [],
+    agents: currentSessions,
+    activeCount: currentSessions.filter((session) => session.status === 'running').length,
+    clearCompleted: vi.fn(),
+    dismiss: vi.fn(),
+    updateNotes: vi.fn(),
+  }),
+}));
+
+vi.mock('./SubagentPanel', () => ({
+  SubagentPanel: ({
+    subagentId,
+    parentSessionId,
+    onClose,
+  }: {
+    subagentId: string;
+    parentSessionId: string;
+    onClose?: () => void;
+  }) => (
+    <div data-testid="mock-subagent-panel">
+      <span>{subagentId}</span>
+      <span>{parentSessionId}</span>
+      {onClose && (
+        <button type="button" aria-label="Close subagent panel" onClick={onClose}>
+          Close
+        </button>
+      )}
+    </div>
+  ),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentSessions = [];
 
   mockGet.mockResolvedValue({ success: false, error: 'not found' });
   mockLiveCount.mockResolvedValue({ success: true, count: 0 });
@@ -40,10 +83,11 @@ afterEach(() => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function dispatchOpenSubagent(toolCallId: string): void {
-  window.dispatchEvent(
-    new CustomEvent(OPEN_SUBAGENT_EVENT, { detail: { toolCallId } }),
-  );
+function dispatchOpenSubagent(
+  toolCallId: string,
+  extra: Partial<{ parentSessionId: string; timestamp: number }> = {},
+): void {
+  window.dispatchEvent(new CustomEvent(OPEN_SUBAGENT_EVENT, { detail: { toolCallId, ...extra } }));
 }
 
 // ─── Feature flag ─────────────────────────────────────────────────────────────
@@ -67,25 +111,96 @@ describe('SubagentPanelHost — opens on event', () => {
   it('shows the drawer after OPEN_SUBAGENT_EVENT is dispatched', async () => {
     render(<SubagentPanelHost />);
     dispatchOpenSubagent('tc-1');
-    await waitFor(() =>
-      expect(screen.getByRole('dialog')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
   });
 
   it('shows unresolvable state when subagent cannot be resolved', async () => {
     render(<SubagentPanelHost />);
     dispatchOpenSubagent('tc-unresolvable');
-    await waitFor(() =>
-      expect(screen.getByText(/subagent not found in tracker/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/subagent not found in tracker/i)).toBeTruthy());
   });
 
   it('shows the tool call id in the unresolvable state', async () => {
     render(<SubagentPanelHost />);
     dispatchOpenSubagent('tc-abc-123');
-    await waitFor(() =>
-      expect(screen.getByText(/tc-abc-123/)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/tc-abc-123/)).toBeTruthy());
+  });
+
+  it('resolves the correct child session when parent context and timestamp are provided', async () => {
+    currentSessions = [
+      {
+        id: 'sub-1',
+        parentSessionId: 'parent-1',
+        startedAt: 1_100,
+        status: 'running',
+        taskLabel: 'Investigate',
+        toolCalls: [],
+      },
+    ];
+    mockGet.mockResolvedValue({
+      success: true,
+      record: {
+        id: 'sub-1',
+        parentSessionId: 'parent-1',
+        taskLabel: 'Investigate',
+        status: 'running',
+        startedAt: 1_100,
+        endedAt: undefined,
+        usdCost: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        messages: [],
+      },
+    });
+
+    render(<SubagentPanelHost />);
+    dispatchOpenSubagent('tc-1', { parentSessionId: 'parent-1', timestamp: 1_000 });
+
+    await waitFor(() => expect(screen.getByTestId('mock-subagent-panel')).toBeTruthy());
+    expect(screen.getByText('sub-1')).toBeTruthy();
+  });
+
+  it('replaces the resolved transcript when a second tool call opens a newer child', async () => {
+    currentSessions = [
+      {
+        id: 'sub-1',
+        parentSessionId: 'parent-1',
+        startedAt: 1_100,
+        status: 'complete',
+        taskLabel: 'First',
+        toolCalls: [],
+      },
+      {
+        id: 'sub-2',
+        parentSessionId: 'parent-1',
+        startedAt: 2_100,
+        status: 'running',
+        taskLabel: 'Second',
+        toolCalls: [],
+      },
+    ];
+    mockGet.mockResolvedValue({
+      success: true,
+      record: {
+        id: 'sub-2',
+        parentSessionId: 'parent-1',
+        taskLabel: 'Second',
+        status: 'running',
+        startedAt: 2_100,
+        endedAt: undefined,
+        usdCost: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        messages: [],
+      },
+    });
+
+    render(<SubagentPanelHost />);
+    dispatchOpenSubagent('tc-1', { parentSessionId: 'parent-1', timestamp: 1_000 });
+    await waitFor(() => expect(screen.getByText('sub-1')).toBeTruthy());
+
+    dispatchOpenSubagent('tc-2', { parentSessionId: 'parent-1', timestamp: 2_000 });
+    await waitFor(() => expect(screen.getByText('sub-2')).toBeTruthy());
   });
 });
 
@@ -98,9 +213,7 @@ describe('SubagentPanelHost — close', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
 
     fireEvent.click(screen.getByLabelText(/close subagent panel/i));
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog')).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('closes when the backdrop is clicked', async () => {
@@ -113,9 +226,7 @@ describe('SubagentPanelHost — close', () => {
     expect(backdrop).toBeTruthy();
     fireEvent.click(backdrop);
 
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog')).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });
 

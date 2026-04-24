@@ -9,7 +9,10 @@ export function getErrorMessage(error: unknown, fallbackMessage: string): string
 }
 
 export function parseServerNames(serverNames: string): string[] {
-  return serverNames.split(',').map((value) => value.trim()).filter(Boolean);
+  return serverNames
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 export function readStatus(result: CodeModeStatusResult | null): {

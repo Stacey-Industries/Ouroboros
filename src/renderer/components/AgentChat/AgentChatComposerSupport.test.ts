@@ -4,8 +4,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import type { MentionItem } from './MentionAutocomplete';
 import { selectComposerMention } from './AgentChatComposerSupport';
+import type { MentionItem } from './MentionAutocomplete';
 
 function makeTextarea(value: string, cursor: number): HTMLTextAreaElement {
   const textarea = document.createElement('textarea');

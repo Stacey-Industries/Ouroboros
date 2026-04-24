@@ -36,7 +36,10 @@ type WatchCallback = (eventType: string, filename: string | null) => void;
 
 const { mockFsWatcher, mockFsWatch } = vi.hoisted(() => {
   const watcher = { close: vi.fn() };
-  const watchFn = vi.fn((...args: unknown[]) => { void args; return watcher; });
+  const watchFn = vi.fn((...args: unknown[]) => {
+    void args;
+    return watcher;
+  });
   return { mockFsWatcher: watcher, mockFsWatch: watchFn };
 });
 

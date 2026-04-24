@@ -47,15 +47,27 @@ import { registerGraphNeighbourhoodChannels } from './graphHandlersNeighbourhood
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeNode(id: string, label = 'Function') {
-  return { id, name: id, label, file_path: `src/${id}.ts`, start_line: 1, end_line: 10, project: 'test', qualified_name: id, props: {} };
+  return {
+    id,
+    name: id,
+    label,
+    file_path: `src/${id}.ts`,
+    start_line: 1,
+    end_line: 10,
+    project: 'test',
+    qualified_name: id,
+    props: {},
+  };
 }
 
-function makeDb(overrides: Partial<{
-  getNode: (id: string) => ReturnType<typeof makeNode> | null;
-  searchNodes: (filter: unknown) => { nodes: ReturnType<typeof makeNode>[] };
-  bfsTraversal: (opts: unknown) => Array<{ id: string; depth: number; path: string[] }>;
-  getNodeDegree: (id: string, type?: unknown, dir?: unknown) => number;
-}> = {}) {
+function makeDb(
+  overrides: Partial<{
+    getNode: (id: string) => ReturnType<typeof makeNode> | null;
+    searchNodes: (filter: unknown) => { nodes: ReturnType<typeof makeNode>[] };
+    bfsTraversal: (opts: unknown) => Array<{ id: string; depth: number; path: string[] }>;
+    getNodeDegree: (id: string, type?: unknown, dir?: unknown) => number;
+  }> = {},
+) {
   return {
     getNode: vi.fn((id: string) => makeNode(id)),
     searchNodes: vi.fn(() => ({ nodes: [] })),
@@ -104,7 +116,10 @@ describe('registerGraphNeighbourhoodChannels', () => {
       mockGetGraphController.mockReturnValue(null);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getNeighbourhood')!;
-      const result = await handler(FAKE_EVENT, 'someSymbol', 1) as { success: boolean; error: string };
+      const result = (await handler(FAKE_EVENT, 'someSymbol', 1)) as {
+        success: boolean;
+        error: string;
+      };
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/not initialized/i);
     });
@@ -113,16 +128,18 @@ describe('registerGraphNeighbourhoodChannels', () => {
       mockGetGraphController.mockReturnValue({ handle: null } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getNeighbourhood')!;
-      const result = await handler(FAKE_EVENT, 'sym', 1) as { success: boolean; error: string };
+      const result = (await handler(FAKE_EVENT, 'sym', 1)) as { success: boolean; error: string };
       expect(result.success).toBe(false);
     });
 
     it('returns error when symbol not found in DB', async () => {
       const db = makeDb({ getNode: vi.fn(() => null), searchNodes: vi.fn(() => ({ nodes: [] })) });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getNeighbourhood')!;
-      const result = await handler(FAKE_EVENT, 'unknown', 1) as { success: boolean };
+      const result = (await handler(FAKE_EVENT, 'unknown', 1)) as { success: boolean };
       expect(result.success).toBe(false);
     });
 
@@ -130,17 +147,19 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const targetNode = makeNode('target');
       const callerNode = makeNode('caller');
       const db = makeDb({
-        getNode: vi.fn((id: string) => id === 'target' ? targetNode : callerNode),
+        getNode: vi.fn((id: string) => (id === 'target' ? targetNode : callerNode)),
         bfsTraversal: vi.fn((opts: unknown) =>
           (opts as { direction: string }).direction === 'inbound'
             ? [{ id: 'caller', depth: 1, path: ['target', 'caller'] }]
             : [],
         ),
       });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getNeighbourhood')!;
-      const result = await handler(FAKE_EVENT, 'target', 1) as {
+      const result = (await handler(FAKE_EVENT, 'target', 1)) as {
         success: boolean;
         callers: unknown[];
         callees: unknown[];
@@ -156,11 +175,15 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const targetNode = makeNode('fn');
       const db = makeDb({ getNode: vi.fn(() => targetNode) });
       const bfsSpy = db.bfsTraversal;
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getNeighbourhood')!;
       await handler(FAKE_EVENT, 'fn', 99);
-      const calls = (bfsSpy as ReturnType<typeof vi.fn>).mock.calls as Array<[{ maxDepth: number }]>;
+      const calls = (bfsSpy as ReturnType<typeof vi.fn>).mock.calls as Array<
+        [{ maxDepth: number }]
+      >;
       for (const [opts] of calls) {
         expect(opts.maxDepth).toBeLessThanOrEqual(3);
       }
@@ -172,16 +195,18 @@ describe('registerGraphNeighbourhoodChannels', () => {
       mockGetGraphController.mockReturnValue(null);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
-      const result = await handler(FAKE_EVENT, 'sym', 2) as { success: boolean };
+      const result = (await handler(FAKE_EVENT, 'sym', 2)) as { success: boolean };
       expect(result.success).toBe(false);
     });
 
     it('returns error when symbol not found', async () => {
       const db = makeDb({ getNode: vi.fn(() => null), searchNodes: vi.fn(() => ({ nodes: [] })) });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
-      const result = await handler(FAKE_EVENT, 'ghost', 2) as { success: boolean };
+      const result = (await handler(FAKE_EVENT, 'ghost', 2)) as { success: boolean };
       expect(result.success).toBe(false);
     });
 
@@ -189,14 +214,16 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const target = makeNode('myFn');
       const affected = makeNode('caller');
       const db = makeDb({
-        getNode: vi.fn((id: string) => id === 'myFn' ? target : affected),
+        getNode: vi.fn((id: string) => (id === 'myFn' ? target : affected)),
         bfsTraversal: vi.fn(() => [{ id: 'caller', depth: 1, path: ['myFn', 'caller'] }]),
         getNodeDegree: vi.fn(() => 3),
       });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
-      const result = await handler(FAKE_EVENT, 'myFn', 2) as {
+      const result = (await handler(FAKE_EVENT, 'myFn', 2)) as {
         success: boolean;
         affectedSymbols: Array<{ distance: number; criticality: string }>;
       };
@@ -209,14 +236,16 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const target = makeNode('hub');
       const dependent = makeNode('dep');
       const db = makeDb({
-        getNode: vi.fn((id: string) => id === 'hub' ? target : dependent),
+        getNode: vi.fn((id: string) => (id === 'hub' ? target : dependent)),
         bfsTraversal: vi.fn(() => [{ id: 'dep', depth: 1, path: ['hub', 'dep'] }]),
         getNodeDegree: vi.fn(() => 10),
       });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
-      const result = await handler(FAKE_EVENT, 'hub', 2) as {
+      const result = (await handler(FAKE_EVENT, 'hub', 2)) as {
         success: boolean;
         affectedSymbols: Array<{ criticality: string }>;
       };
@@ -228,14 +257,16 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const target = makeNode('leaf');
       const dep = makeNode('leaf-dep', 'Variable');
       const db = makeDb({
-        getNode: vi.fn((id: string) => id === 'leaf' ? target : dep),
+        getNode: vi.fn((id: string) => (id === 'leaf' ? target : dep)),
         bfsTraversal: vi.fn(() => [{ id: 'leaf-dep', depth: 1, path: ['leaf', 'leaf-dep'] }]),
         getNodeDegree: vi.fn(() => 0),
       });
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
-      const result = await handler(FAKE_EVENT, 'leaf', 2) as {
+      const result = (await handler(FAKE_EVENT, 'leaf', 2)) as {
         success: boolean;
         affectedSymbols: Array<{ criticality: string }>;
       };
@@ -247,11 +278,15 @@ describe('registerGraphNeighbourhoodChannels', () => {
       const node = makeNode('fn');
       const db = makeDb({ getNode: vi.fn(() => node) });
       const bfsSpy = db.bfsTraversal;
-      mockGetGraphController.mockReturnValue({ handle: { db, projectName: 'proj' } } as unknown as typeof mockController);
+      mockGetGraphController.mockReturnValue({
+        handle: { db, projectName: 'proj' },
+      } as unknown as typeof mockController);
       const handlers = captureHandlers();
       const handler = handlers.get('graph:getBlastRadius')!;
       await handler(FAKE_EVENT, 'fn', 999);
-      const calls = (bfsSpy as ReturnType<typeof vi.fn>).mock.calls as Array<[{ maxDepth: number }]>;
+      const calls = (bfsSpy as ReturnType<typeof vi.fn>).mock.calls as Array<
+        [{ maxDepth: number }]
+      >;
       expect(calls[0][0].maxDepth).toBeLessThanOrEqual(5);
     });
   });

@@ -34,10 +34,11 @@ export function useAgentConflicts(sessionId: string | undefined): UseAgentConfli
     return cleanup;
   }, []);
 
-  const reports = snapshot?.reports.filter((r) => {
-    if (!sessionId) return true;
-    return r.sessionA === sessionId || r.sessionB === sessionId;
-  }) ?? [];
+  const reports =
+    snapshot?.reports.filter((r) => {
+      if (!sessionId) return true;
+      return r.sessionA === sessionId || r.sessionB === sessionId;
+    }) ?? [];
 
   return { reports, snapshot };
 }

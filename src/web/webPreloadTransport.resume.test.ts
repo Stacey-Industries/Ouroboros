@@ -31,9 +31,13 @@ class FakeWebSocket {
 
   static _lastInstance: FakeWebSocket | null = null;
 
-  send(data: string): void { this.sent.push(data); }
+  send(data: string): void {
+    this.sent.push(data);
+  }
 
-  triggerOpen(): void { this.onopen?.(new Event('open')); }
+  triggerOpen(): void {
+    this.onopen?.(new Event('open'));
+  }
 
   triggerMessage(data: unknown): void {
     this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }));
@@ -44,7 +48,9 @@ class FakeWebSocket {
     this.onclose?.(new CloseEvent('close'));
   }
 
-  close(): void { this.readyState = FakeWebSocket.CLOSED; }
+  close(): void {
+    this.readyState = FakeWebSocket.CLOSED;
+  }
 }
 
 // ─── DOM stubs ────────────────────────────────────────────────────────────────
@@ -138,7 +144,13 @@ describe('WebSocketTransport — resumable request lifecycle', () => {
     await vi.advanceTimersByTimeAsync(50);
 
     let settled = false;
-    void invokeP.then(() => { settled = true; }).catch(() => { settled = true; });
+    void invokeP
+      .then(() => {
+        settled = true;
+      })
+      .catch(() => {
+        settled = true;
+      });
     await Promise.resolve();
     expect(settled).toBe(false);
   });

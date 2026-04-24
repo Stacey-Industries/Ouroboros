@@ -9,12 +9,7 @@ import { act, cleanup, fireEvent, render, renderHook } from '@testing-library/re
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  Scrim,
-  useBodyScrollLock,
-  useEscapeKey,
-  useFocusTrap,
-} from './MobileOverlayShell';
+import { Scrim, useBodyScrollLock, useEscapeKey, useFocusTrap } from './MobileOverlayShell';
 
 afterEach(() => {
   cleanup();
@@ -123,7 +118,9 @@ describe('useFocusTrap', () => {
       );
     }
     const { getByTestId } = render(<Wrapper />);
-    act(() => { getByTestId('last').focus(); });
+    act(() => {
+      getByTestId('last').focus();
+    });
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: false });
     expect(document.activeElement).toBe(getByTestId('first'));
   });
@@ -140,7 +137,9 @@ describe('useFocusTrap', () => {
       );
     }
     const { getByTestId } = render(<Wrapper />);
-    act(() => { getByTestId('first').focus(); });
+    act(() => {
+      getByTestId('first').focus();
+    });
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(getByTestId('last'));
   });

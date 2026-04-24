@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { DirEntry } from '../../types/electron';
-import {
-  REQUEST_FOLDER_SELECTION_EVENT,
-  resolveFolderSelection,
-} from './WebFolderBrowserSupport';
+import { REQUEST_FOLDER_SELECTION_EVENT, resolveFolderSelection } from './WebFolderBrowserSupport';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -102,7 +99,9 @@ function DirList({ entries, onEnter }: DirListProps): React.ReactElement {
             className="w-full text-left flex items-center gap-2 text-text-semantic-primary hover:bg-interactive-muted transition-colors"
             style={{ padding: '6px 14px', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            <span className="text-interactive-accent" style={{ fontSize: '14px' }}>{'\u{1F4C1}'}</span>
+            <span className="text-interactive-accent" style={{ fontSize: '14px' }}>
+              {'\u{1F4C1}'}
+            </span>
             <span style={{ fontSize: '13px', fontFamily: 'var(--font-ui)' }}>{entry.name}</span>
           </button>
         </li>
@@ -123,7 +122,13 @@ function ConfirmButtons({ loading, onSelect, onCancel }: ConfirmButtonsProps): R
       <button
         onClick={onCancel}
         className="text-text-semantic-secondary hover:text-text-semantic-primary border border-border-semantic transition-colors"
-        style={{ background: 'none', cursor: 'pointer', padding: '5px 12px', borderRadius: '5px', fontSize: '13px' }}
+        style={{
+          background: 'none',
+          cursor: 'pointer',
+          padding: '5px 12px',
+          borderRadius: '5px',
+          fontSize: '13px',
+        }}
       >
         Cancel
       </button>
@@ -131,7 +136,13 @@ function ConfirmButtons({ loading, onSelect, onCancel }: ConfirmButtonsProps): R
         onClick={onSelect}
         disabled={loading}
         className="bg-interactive-accent text-text-semantic-on-accent hover:bg-interactive-hover disabled:opacity-50 transition-colors"
-        style={{ cursor: loading ? 'default' : 'pointer', padding: '5px 14px', borderRadius: '5px', fontSize: '13px', border: 'none' }}
+        style={{
+          cursor: loading ? 'default' : 'pointer',
+          padding: '5px 14px',
+          borderRadius: '5px',
+          fontSize: '13px',
+          border: 'none',
+        }}
       >
         Select This Folder
       </button>
@@ -147,7 +158,13 @@ interface ModalActionsProps {
   onUp: () => void;
 }
 
-function ModalActions({ currentPath, loading, onSelect, onCancel, onUp }: ModalActionsProps): React.ReactElement {
+function ModalActions({
+  currentPath,
+  loading,
+  onSelect,
+  onCancel,
+  onUp,
+}: ModalActionsProps): React.ReactElement {
   const isRoot = currentPath === '/';
   return (
     <div
@@ -158,7 +175,12 @@ function ModalActions({ currentPath, loading, onSelect, onCancel, onUp }: ModalA
         onClick={onUp}
         disabled={isRoot || loading}
         className="text-text-semantic-secondary hover:text-text-semantic-primary disabled:opacity-40 transition-colors"
-        style={{ background: 'none', border: 'none', cursor: isRoot ? 'default' : 'pointer', fontSize: '12px' }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: isRoot ? 'default' : 'pointer',
+          fontSize: '12px',
+        }}
       >
         Up
       </button>
@@ -179,7 +201,11 @@ function useWebFolderBrowser() {
     try {
       const result = await window.electronAPI.files.readDir(path);
       if (!result.success) {
-        setState((s) => ({ ...s, loading: false, error: result.error ?? 'Failed to read directory' }));
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: result.error ?? 'Failed to read directory',
+        }));
         return;
       }
       setState((s) => ({ ...s, loading: false, entries: result.items ?? [] }));
@@ -209,10 +235,19 @@ function useWebFolderBrowser() {
 
 // ─── Modal Header + Body ───────────────────────────────────────────────────
 
-function ModalHeader({ currentPath, onNavigate }: { currentPath: string; onNavigate: (p: string) => void }): React.ReactElement {
+function ModalHeader({
+  currentPath,
+  onNavigate,
+}: {
+  currentPath: string;
+  onNavigate: (p: string) => void;
+}): React.ReactElement {
   return (
     <div className="border-b border-border-semantic" style={{ padding: '12px 14px 8px' }}>
-      <div className="text-text-semantic-primary" style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
+      <div
+        className="text-text-semantic-primary"
+        style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}
+      >
         Select Folder
       </div>
       <Breadcrumbs path={currentPath} onNavigate={onNavigate} />
@@ -220,17 +255,29 @@ function ModalHeader({ currentPath, onNavigate }: { currentPath: string; onNavig
   );
 }
 
-function ModalBody({ state, onEnter }: { state: BrowserState; onEnter: (p: string) => void }): React.ReactElement {
+function ModalBody({
+  state,
+  onEnter,
+}: {
+  state: BrowserState;
+  onEnter: (p: string) => void;
+}): React.ReactElement {
   if (state.loading) {
     return (
-      <div className="text-text-semantic-muted flex items-center justify-center flex-1" style={{ height: '120px', fontSize: '13px' }}>
+      <div
+        className="text-text-semantic-muted flex items-center justify-center flex-1"
+        style={{ height: '120px', fontSize: '13px' }}
+      >
         Loading...
       </div>
     );
   }
   if (state.error) {
     return (
-      <div className="text-status-error flex items-center justify-center flex-1" style={{ height: '80px', fontSize: '13px', padding: '0 14px', textAlign: 'center' }}>
+      <div
+        className="text-status-error flex items-center justify-center flex-1"
+        style={{ height: '80px', fontSize: '13px', padding: '0 14px', textAlign: 'center' }}
+      >
         {state.error}
       </div>
     );
@@ -251,7 +298,12 @@ interface ModalPanelProps {
   onCancel: () => void;
 }
 
-function ModalPanel({ state, onNavigate, onSelect, onCancel }: ModalPanelProps): React.ReactElement {
+function ModalPanel({
+  state,
+  onNavigate,
+  onSelect,
+  onCancel,
+}: ModalPanelProps): React.ReactElement {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -309,7 +361,16 @@ export function WebFolderBrowser(): React.ReactElement | null {
       role="dialog"
       aria-label="Select Folder"
       onClick={cancel}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', padding: '16px' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.55)',
+        padding: '16px',
+      }}
     >
       <ModalPanel state={state} onNavigate={navigate} onSelect={select} onCancel={cancel} />
     </div>

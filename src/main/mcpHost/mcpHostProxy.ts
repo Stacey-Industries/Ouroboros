@@ -36,7 +36,7 @@ function getHost(): UtilityProcessHost<McpHostRequest, McpHostOutbound> {
   host = new UtilityProcessHost<McpHostRequest, McpHostOutbound>({
     name: 'mcpHost',
     modulePath: resolveModulePath(),
-    autoRestart: false,  // McpHost is stateless — restart is owned by main
+    autoRestart: false, // McpHost is stateless — restart is owned by main
   });
   host.fork();
   host.onEvent((msg) => {
@@ -49,8 +49,12 @@ function getHost(): UtilityProcessHost<McpHostRequest, McpHostOutbound> {
 
 function handleEvent(event: McpHostEvent): void {
   switch (event.type) {
-    case 'toolListRequest': handleToolListRequest(event.callId); return;
-    case 'toolCallRequest': void handleToolCallRequest(event.callId, event.name, event.args); return;
+    case 'toolListRequest':
+      handleToolListRequest(event.callId);
+      return;
+    case 'toolCallRequest':
+      void handleToolCallRequest(event.callId, event.name, event.args);
+      return;
   }
 }
 
@@ -58,7 +62,9 @@ function handleToolListRequest(callId: string): void {
   if (!host || !host.alive) return;
   try {
     const tools = getActiveTools().map((t) => ({
-      name: t.name, description: t.description, inputSchema: t.inputSchema,
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
     }));
     host.send({ type: 'toolListResponse', callId, tools });
   } catch (err) {
@@ -98,9 +104,12 @@ export async function startMcpHost(
     const h = getHost();
     workspaceRoot = workspace;
     const requestId = h.nextRequestId();
-    const res = await h.request<McpHostResponse & { type: 'started' }>(
-      { type: 'start', requestId, workspaceRoot: workspace, port },
-    );
+    const res = await h.request<McpHostResponse & { type: 'started' }>({
+      type: 'start',
+      requestId,
+      workspaceRoot: workspace,
+      port,
+    });
     return { success: true, port: res.port };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };

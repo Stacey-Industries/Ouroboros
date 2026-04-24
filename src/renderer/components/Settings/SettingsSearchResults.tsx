@@ -50,7 +50,9 @@ function SearchResultItem({
   onClick: () => void;
 }): React.ReactElement {
   const mainLabel = getMainTabLabel(match.entry);
-  const breadcrumb = mainLabel ? `${mainLabel} › ${match.entry.sectionLabel}` : match.entry.sectionLabel;
+  const breadcrumb = mainLabel
+    ? `${mainLabel} › ${match.entry.sectionLabel}`
+    : match.entry.sectionLabel;
 
   return (
     <button onClick={onClick} style={itemStyle}>

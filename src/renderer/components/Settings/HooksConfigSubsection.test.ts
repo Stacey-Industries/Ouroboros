@@ -12,25 +12,51 @@ import { describe, expect, it } from 'vitest';
 // If the component's HOOK_EVENT_CATEGORIES changes, update this list to match.
 const EXPECTED_EVENTS = [
   // Lifecycle
-  'SessionStart', 'SessionEnd', 'Stop', 'StopFailure', 'Setup',
+  'SessionStart',
+  'SessionEnd',
+  'Stop',
+  'StopFailure',
+  'Setup',
   // Tools
-  'PreToolUse', 'PostToolUse', 'PostToolUseFailure',
+  'PreToolUse',
+  'PostToolUse',
+  'PostToolUseFailure',
   // Agents
-  'SubagentStart', 'SubagentStop', 'TeammateIdle',
+  'SubagentStart',
+  'SubagentStop',
+  'TeammateIdle',
   // Tasks
-  'TaskCreated', 'TaskCompleted',
+  'TaskCreated',
+  'TaskCompleted',
   // Conversation
-  'UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification',
+  'UserPromptSubmit',
+  'Elicitation',
+  'ElicitationResult',
+  'Notification',
   // Workspace
-  'CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange',
+  'CwdChanged',
+  'FileChanged',
+  'WorktreeCreate',
+  'WorktreeRemove',
+  'ConfigChange',
   // Context
-  'PreCompact', 'PostCompact', 'InstructionsLoaded',
+  'PreCompact',
+  'PostCompact',
+  'InstructionsLoaded',
   // Permissions
-  'PermissionRequest', 'PermissionDenied',
+  'PermissionRequest',
+  'PermissionDenied',
 ] as const;
 
 const EXPECTED_CATEGORIES = [
-  'Lifecycle', 'Tools', 'Agents', 'Tasks', 'Conversation', 'Workspace', 'Context', 'Permissions',
+  'Lifecycle',
+  'Tools',
+  'Agents',
+  'Tasks',
+  'Conversation',
+  'Workspace',
+  'Context',
+  'Permissions',
 ];
 
 describe('HOOK_EVENT_CATEGORIES structure', () => {

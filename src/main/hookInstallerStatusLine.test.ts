@@ -81,7 +81,9 @@ describe('isOuroborosStatusLine', () => {
 });
 
 describe('registerStatusLineInSettings', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('writes settings when no existing statusLine', () => {
     mockReadClaudeSettings.mockReturnValue({});

@@ -65,9 +65,7 @@ describe('SlotTreeRenderer — single leaf', () => {
 describe('SlotTreeRenderer — horizontal split', () => {
   it('renders a flex column container for a horizontal split', () => {
     const tree = makeSplit(editor, terminal, 'horizontal');
-    const { container } = render(
-      <SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />,
-    );
+    const { container } = render(<SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />);
     const splitEl = container.querySelector('[data-split="horizontal"]');
     expect(splitEl).not.toBeNull();
     expect((splitEl as HTMLElement).style.flexDirection).toBe('column');
@@ -75,18 +73,14 @@ describe('SlotTreeRenderer — horizontal split', () => {
 
   it('renders both children of a horizontal split', () => {
     const tree = makeSplit(editor, terminal, 'horizontal');
-    const { getByTestId } = render(
-      <SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />,
-    );
+    const { getByTestId } = render(<SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />);
     expect(getByTestId('slot-editorContent')).toBeDefined();
     expect(getByTestId('slot-terminalContent')).toBeDefined();
   });
 
   it('applies 50% flex-basis to first child when ratio is not set', () => {
     const tree = makeSplit(editor, terminal, 'horizontal');
-    const { container } = render(
-      <SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />,
-    );
+    const { container } = render(<SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />);
     const splitEl = container.querySelector('[data-split="horizontal"]');
     const firstChild = splitEl?.firstElementChild as HTMLElement | null;
     expect(firstChild?.style.flexBasis).toBe('50%');
@@ -94,9 +88,7 @@ describe('SlotTreeRenderer — horizontal split', () => {
 
   it('applies custom ratio as flex-basis to first child', () => {
     const tree = makeSplit(editor, terminal, 'horizontal', 0.3);
-    const { container } = render(
-      <SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />,
-    );
+    const { container } = render(<SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />);
     const splitEl = container.querySelector('[data-split="horizontal"]');
     const firstChild = splitEl?.firstElementChild as HTMLElement | null;
     expect(firstChild?.style.flexBasis).toBe('30%');
@@ -110,9 +102,7 @@ describe('SlotTreeRenderer — horizontal split', () => {
 describe('SlotTreeRenderer — vertical split', () => {
   it('renders a flex row container for a vertical split', () => {
     const tree = makeSplit(editor, sidebar, 'vertical');
-    const { container } = render(
-      <SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />,
-    );
+    const { container } = render(<SlotTreeRenderer tree={tree} renderLeaf={renderLeaf} />);
     const splitEl = container.querySelector('[data-split="vertical"]');
     expect(splitEl).not.toBeNull();
     expect((splitEl as HTMLElement).style.flexDirection).toBe('row');

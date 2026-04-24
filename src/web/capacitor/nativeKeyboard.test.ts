@@ -62,7 +62,9 @@ afterEach(() => {
 });
 
 describe('nativeKeyboard — web fallback (isNativePlatform = false)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(false); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(false);
+  });
 
   it('returns a no-op cleanup without attaching listeners', async () => {
     const cleanup = await initKeyboardListeners();
@@ -79,7 +81,9 @@ describe('nativeKeyboard — web fallback (isNativePlatform = false)', () => {
 });
 
 describe('nativeKeyboard — native path (isNativePlatform = true)', () => {
-  beforeEach(() => { mocks.isNativePlatform.mockReturnValue(true); });
+  beforeEach(() => {
+    mocks.isNativePlatform.mockReturnValue(true);
+  });
 
   it('registers keyboardDidShow and keyboardDidHide listeners', async () => {
     await initKeyboardListeners();

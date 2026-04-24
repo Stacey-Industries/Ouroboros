@@ -67,12 +67,9 @@ export function blameLinesToDecorations(blameLines: BlameLine[]): BlameDecoratio
 function buildHoverMessage(d: BlameDecoration): monaco.IMarkdownString {
   const dateStr = d.timestamp ? new Date(d.timestamp * 1000).toLocaleString() : '';
   return {
-    value: [
-      `\`${d.hash.slice(0, 8)}\` &nbsp; **${d.fullAuthor}**`,
-      dateStr,
-      '',
-      d.summary,
-    ].join('\n\n'),
+    value: [`\`${d.hash.slice(0, 8)}\` &nbsp; **${d.fullAuthor}**`, dateStr, '', d.summary].join(
+      '\n\n',
+    ),
     isTrusted: true,
   };
 }
@@ -85,11 +82,13 @@ export function blameDecorationsToMonaco(
     return {
       range: new monaco.Range(d.lineNumber, 1, d.lineNumber, 1),
       options: {
-        after: text ? {
-          content: text,
-          inlineClassName: 'blame-inline-decoration',
-          cursorStops: monaco.editor.InjectedTextCursorStops.None,
-        } : undefined,
+        after: text
+          ? {
+              content: text,
+              inlineClassName: 'blame-inline-decoration',
+              cursorStops: monaco.editor.InjectedTextCursorStops.None,
+            }
+          : undefined,
         isWholeLine: true,
         className: `blame-line-bg`,
         hoverMessage: d.isGroupStart ? buildHoverMessage(d) : undefined,

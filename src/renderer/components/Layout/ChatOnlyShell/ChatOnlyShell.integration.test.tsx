@@ -77,9 +77,7 @@ vi.mock('../../DiffReview/DiffReviewManager', () => ({
 
 // ChatOnlyShell sub-components — use lightweight stubs to avoid deep IPC deps.
 vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
-  AgentChatWorkspace: () => (
-    <div data-testid="agent-chat-workspace">AgentChatWorkspace</div>
-  ),
+  AgentChatWorkspace: () => <div data-testid="agent-chat-workspace">AgentChatWorkspace</div>,
 }));
 
 // ChatOnlyHeaderControls requires AgentChatStoreContext — stub it out.
@@ -93,13 +91,17 @@ vi.mock('../../../hooks/useGitBranch', () => ({
 
 vi.mock('./ChatOnlySessionDrawer', () => ({
   ChatOnlySessionDrawer: ({ open }: { open: boolean; onClose: () => void }) => (
-    <div data-testid="session-drawer" data-open={String(open)}>SessionDrawer</div>
+    <div data-testid="session-drawer" data-open={String(open)}>
+      SessionDrawer
+    </div>
   ),
 }));
 
 vi.mock('./ChatOnlyDiffOverlay', () => ({
   ChatOnlyDiffOverlay: ({ open }: { open: boolean; onClose: () => void }) => (
-    <div data-testid="diff-overlay" data-open={String(open)}>DiffOverlay</div>
+    <div data-testid="diff-overlay" data-open={String(open)}>
+      DiffOverlay
+    </div>
   ),
 }));
 
@@ -146,9 +148,13 @@ function BranchHarness({ initial }: { initial: boolean }): React.ReactElement {
   const [isImmersive, setIsImmersive] = useState(initial);
 
   React.useEffect(() => {
-    const handler = (): void => { setIsImmersive((prev) => !prev); };
+    const handler = (): void => {
+      setIsImmersive((prev) => !prev);
+    };
     window.addEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler);
-    return () => { window.removeEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler); };
+    return () => {
+      window.removeEventListener(TOGGLE_IMMERSIVE_CHAT_EVENT, handler);
+    };
   }, []);
 
   if (isImmersive) return <ChatOnlyShellWrapper />;
@@ -157,7 +163,9 @@ function BranchHarness({ initial }: { initial: boolean }): React.ReactElement {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-beforeEach(() => { mockFlagValue = false; });
+beforeEach(() => {
+  mockFlagValue = false;
+});
 afterEach(() => cleanup());
 
 describe('ChatOnlyShell integration — mode-switch branch', () => {
@@ -179,8 +187,13 @@ describe('ChatOnlyShell integration — mode-switch branch', () => {
     render(<BranchHarness initial={true} />);
     const html = document.body.innerHTML;
     const forbidden = [
-      'TerminalPane', 'TerminalManager', 'AgentMonitorPane',
-      'AppLayout', 'IdeToolBridge', 'RightSidebarTabs', 'SessionSidebar',
+      'TerminalPane',
+      'TerminalManager',
+      'AgentMonitorPane',
+      'AppLayout',
+      'IdeToolBridge',
+      'RightSidebarTabs',
+      'SessionSidebar',
       'CentrePaneConnected',
     ];
     for (const name of forbidden) {

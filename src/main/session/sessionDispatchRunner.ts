@@ -10,11 +10,7 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import type { DispatchJob } from './sessionDispatch';
 import { notifyJobTransition } from './sessionDispatchNotifier';
-import {
-  nextQueued,
-  registerCancelHook,
-  updateJob,
-} from './sessionDispatchQueue';
+import { nextQueued, registerCancelHook, updateJob } from './sessionDispatchQueue';
 import type { LifecycleState } from './sessionDispatchRunnerLifecycle';
 import {
   clearAllTimeouts,
@@ -120,7 +116,10 @@ async function startJob(job: DispatchJob): Promise<void> {
   if (!starting) return;
 
   const { worktreePath, error: wtError } = await maybeCreateWorktree(job);
-  if (wtError) { markFailed(job.id, wtError); return; }
+  if (wtError) {
+    markFailed(job.id, wtError);
+    return;
+  }
 
   let handle: SessionHandle;
   try {
@@ -136,7 +135,10 @@ async function startJob(job: DispatchJob): Promise<void> {
 
   activeHandles.set(job.id, handle);
   const running_ = transition(job.id, { status: 'running', sessionId: handle.ptyId });
-  if (!running_) { activeHandles.delete(job.id); return; }
+  if (!running_) {
+    activeHandles.delete(job.id);
+    return;
+  }
 
   const timeoutMs = resolveTimeoutMs();
   lifecycle = registerJobTimeout(lifecycle, job.id, timeoutMs, handleTimeout);

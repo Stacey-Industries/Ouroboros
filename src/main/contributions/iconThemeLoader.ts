@@ -91,7 +91,10 @@ function skipBlockComment(input: string, start: number): number {
   return i + 1;
 }
 
-interface StringState { inString: boolean; escaped: boolean }
+interface StringState {
+  inString: boolean;
+  escaped: boolean;
+}
 
 /** Process one character while inside a JSON string literal. Returns the updated state. */
 function advanceStringChar(ch: string, state: StringState): StringState {
@@ -113,9 +116,20 @@ function stripJsonComments(input: string): string {
       Object.assign(st, advanceStringChar(ch, st));
       continue;
     }
-    if (ch === '"') { st.inString = true; result += ch; continue; }
-    if (ch === '/' && nx === '/') { i = skipLineComment(input, i); if (i < input.length) result += input.charAt(i); continue; }
-    if (ch === '/' && nx === '*') { i = skipBlockComment(input, i); continue; }
+    if (ch === '"') {
+      st.inString = true;
+      result += ch;
+      continue;
+    }
+    if (ch === '/' && nx === '/') {
+      i = skipLineComment(input, i);
+      if (i < input.length) result += input.charAt(i);
+      continue;
+    }
+    if (ch === '/' && nx === '*') {
+      i = skipBlockComment(input, i);
+      continue;
+    }
     result += ch;
   }
   return result;
@@ -143,7 +157,11 @@ function stripTrailingCommas(input: string): string {
       if (!escaped && ch === '"') inString = false;
       continue;
     }
-    if (ch === '"') { inString = true; result += ch; continue; }
+    if (ch === '"') {
+      inString = true;
+      result += ch;
+      continue;
+    }
     if (ch === ',' && isTrailingComma(input, i)) continue;
     result += ch;
   }
@@ -226,46 +244,50 @@ function resolveIconDefinitions(
   return Object.fromEntries(resolved);
 }
 
+async function loadOneIconTheme(
+  extensionId: string,
+  contribution: { id: string; label: string; path: string },
+): Promise<ExtensionIconThemeData | null> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from validated extension contribution metadata
+    const raw = await fs.readFile(contribution.path, 'utf-8');
+    const themeJson = parseJsonc(raw);
+    const themeSlug = slugify(contribution.id || contribution.label);
+    const fonts = resolveFonts(themeJson.fonts, contribution.path, extensionId, themeSlug);
+    return {
+      id: `icon:${extensionId}:${themeSlug}`,
+      extensionId,
+      label: contribution.label,
+      iconDefinitions: resolveIconDefinitions(themeJson.iconDefinitions, contribution.path, fonts),
+      fonts,
+      file: themeJson.file,
+      folder: themeJson.folder,
+      folderExpanded: themeJson.folderExpanded,
+      rootFolder: themeJson.rootFolder,
+      rootFolderExpanded: themeJson.rootFolderExpanded,
+      hidesExplorerArrows: themeJson.hidesExplorerArrows,
+      fileExtensions: themeJson.fileExtensions,
+      fileNames: themeJson.fileNames,
+      folderNames: themeJson.folderNames,
+      folderNamesExpanded: themeJson.folderNamesExpanded,
+      rootFolderNames: themeJson.rootFolderNames,
+      rootFolderNamesExpanded: themeJson.rootFolderNamesExpanded,
+      light: normalizeAssociations(themeJson.light),
+      highContrast: normalizeAssociations(themeJson.highContrast),
+    };
+  } catch {
+    return null; // Ignore malformed icon theme contributions.
+  }
+}
+
 export async function loadExtensionIconThemes(
   extensionId: string,
   iconThemeContributions: Array<{ id: string; label: string; path: string }>,
 ): Promise<ExtensionIconThemeData[]> {
-  const themes: ExtensionIconThemeData[] = [];
-
-  for (const contribution of iconThemeContributions) {
-    try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from validated extension contribution metadata
-      const raw = await fs.readFile(contribution.path, 'utf-8');
-      const themeJson = parseJsonc(raw);
-      const themeSlug = slugify(contribution.id || contribution.label);
-      const fonts = resolveFonts(themeJson.fonts, contribution.path, extensionId, themeSlug);
-      themes.push({
-        id: `icon:${extensionId}:${themeSlug}`,
-        extensionId,
-        label: contribution.label,
-        iconDefinitions: resolveIconDefinitions(themeJson.iconDefinitions, contribution.path, fonts),
-        fonts,
-        file: themeJson.file,
-        folder: themeJson.folder,
-        folderExpanded: themeJson.folderExpanded,
-        rootFolder: themeJson.rootFolder,
-        rootFolderExpanded: themeJson.rootFolderExpanded,
-        hidesExplorerArrows: themeJson.hidesExplorerArrows,
-        fileExtensions: themeJson.fileExtensions,
-        fileNames: themeJson.fileNames,
-        folderNames: themeJson.folderNames,
-        folderNamesExpanded: themeJson.folderNamesExpanded,
-        rootFolderNames: themeJson.rootFolderNames,
-        rootFolderNamesExpanded: themeJson.rootFolderNamesExpanded,
-        light: normalizeAssociations(themeJson.light),
-        highContrast: normalizeAssociations(themeJson.highContrast),
-      });
-    } catch {
-      // Ignore malformed icon theme contributions.
-    }
-  }
-
-  return themes;
+  const results = await Promise.all(
+    iconThemeContributions.map((c) => loadOneIconTheme(extensionId, c)),
+  );
+  return results.filter((t): t is ExtensionIconThemeData => t !== null);
 }
 
 export async function loadExtensionProductIconThemes(
@@ -285,7 +307,11 @@ export async function loadExtensionProductIconThemes(
         id: `product-icon:${extensionId}:${themeSlug}`,
         extensionId,
         label: contribution.label,
-        iconDefinitions: resolveIconDefinitions(themeJson.iconDefinitions, contribution.path, fonts),
+        iconDefinitions: resolveIconDefinitions(
+          themeJson.iconDefinitions,
+          contribution.path,
+          fonts,
+        ),
         fonts,
       });
     } catch {

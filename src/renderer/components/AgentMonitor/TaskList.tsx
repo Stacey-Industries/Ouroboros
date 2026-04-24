@@ -32,7 +32,10 @@ interface TaskItemProps {
   depth: number;
 }
 
-const TaskItem = memo(function TaskItem({ task, depth }: TaskItemProps): React.ReactElement<unknown> {
+const TaskItem = memo(function TaskItem({
+  task,
+  depth,
+}: TaskItemProps): React.ReactElement<unknown> {
   const icon = taskStatusIcon(task.status);
   const indentPx = depth * 12;
   return (
@@ -69,7 +72,9 @@ function buildTaskTree(tasks: AgentTask[]): TaskTreeItem[] {
   return result;
 }
 
-export const TaskList = memo(function TaskList({ tasks }: TaskListProps): React.ReactElement<unknown> | null {
+export const TaskList = memo(function TaskList({
+  tasks,
+}: TaskListProps): React.ReactElement<unknown> | null {
   const flat = useMemo(() => buildTaskTree(tasks ?? []), [tasks]);
   if (flat.length === 0) return null;
 

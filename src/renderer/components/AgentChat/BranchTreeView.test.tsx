@@ -12,10 +12,7 @@ afterEach(cleanup);
 
 // ── electronAPI mock ──────────────────────────────────────────────────────────
 
-function makeNode(
-  id: string,
-  overrides: Partial<BranchNode> = {},
-): BranchNode {
+function makeNode(id: string, overrides: Partial<BranchNode> = {}): BranchNode {
   return {
     id,
     branchName: `Branch ${id}`,
@@ -40,9 +37,7 @@ function setupElectronApi(
 }
 
 beforeEach(() => {
-  setupElectronApi(() =>
-    Promise.resolve({ success: true, branches: [] }),
-  );
+  setupElectronApi(() => Promise.resolve({ success: true, branches: [] }));
 });
 
 describe('BranchTreeView', () => {
@@ -126,9 +121,7 @@ describe('BranchTreeView', () => {
   it('renders nested children with deeper indentation', async () => {
     const child = makeNode('child', { branchName: 'Child branch' });
     const parent = makeNode('parent', { branchName: 'Parent branch', children: [child] });
-    setupElectronApi(() =>
-      Promise.resolve({ success: true, branches: [parent] }),
-    );
+    setupElectronApi(() => Promise.resolve({ success: true, branches: [parent] }));
     render(
       <BranchTreeView
         rootThreadId="root"
@@ -139,8 +132,12 @@ describe('BranchTreeView', () => {
     );
     await waitFor(() => screen.getByText('Child branch'));
     // Indent is on the wrapping div (group container), not the button itself
-    const parentRow = screen.getByText('Parent branch').closest('[class*="group"]') as HTMLElement | null;
-    const childRow = screen.getByText('Child branch').closest('[class*="group"]') as HTMLElement | null;
+    const parentRow = screen
+      .getByText('Parent branch')
+      .closest('[class*="group"]') as HTMLElement | null;
+    const childRow = screen
+      .getByText('Child branch')
+      .closest('[class*="group"]') as HTMLElement | null;
     const parentIndent = parseInt(parentRow?.style.paddingLeft ?? '0', 10);
     const childIndent = parseInt(childRow?.style.paddingLeft ?? '0', 10);
     expect(childIndent).toBeGreaterThan(parentIndent);
@@ -183,9 +180,7 @@ describe('BranchTreeView', () => {
   });
 
   it('shows error message when API call fails', async () => {
-    setupElectronApi(() =>
-      Promise.resolve({ success: false, error: 'DB error' }),
-    );
+    setupElectronApi(() => Promise.resolve({ success: false, error: 'DB error' }));
     render(
       <BranchTreeView
         rootThreadId="root"

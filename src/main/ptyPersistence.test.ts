@@ -59,7 +59,11 @@ beforeEach(() => {
 
 afterEach(() => {
   store.close();
-  try { fs.rmSync(tmpDir, { recursive: true }); } catch { /* ignore */ }
+  try {
+    fs.rmSync(tmpDir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('createPtyPersistence — flag OFF', () => {

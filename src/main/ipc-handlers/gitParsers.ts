@@ -8,7 +8,9 @@ import path from 'path';
 
 export type DiffStatus = 'modified' | 'added' | 'deleted' | 'renamed';
 export type DiffLineKind = 'added' | 'modified' | 'deleted';
-export type GitResponse<T extends object> = ({ success: true } & T) | { success: false; error: string };
+export type GitResponse<T extends object> =
+  | ({ success: true } & T)
+  | { success: false; error: string };
 
 export interface ParsedHunk {
   header: string;
@@ -51,13 +53,6 @@ export interface GitLogEntry {
   email: string;
   date: string;
   message: string;
-}
-
-export interface ChangedFile {
-  path: string;
-  status: string;
-  additions: number;
-  deletions: number;
 }
 
 interface DiffMeta {
@@ -133,7 +128,12 @@ export function parseHunkHeader(
   const oldRange = oldToken?.startsWith('-') ? parseRangeToken(oldToken.slice(1)) : undefined;
   const newRange = newToken?.startsWith('+') ? parseRangeToken(newToken.slice(1)) : undefined;
   return oldRange && newRange
-    ? { oldStart: oldRange.start, oldCount: oldRange.count, newStart: newRange.start, newCount: newRange.count }
+    ? {
+        oldStart: oldRange.start,
+        oldCount: oldRange.count,
+        newStart: newRange.start,
+        newCount: newRange.count,
+      }
     : undefined;
 }
 
@@ -153,9 +153,15 @@ function parseDiffMeta(lines: string[]): DiffMeta | undefined {
   for (const line of lines.slice(1, 6)) {
     if (line.startsWith('new file mode')) status = 'added';
     else if (line.startsWith('deleted file mode')) status = 'deleted';
-    else if (line.startsWith('rename from ')) { status = 'renamed'; oldPath = line.slice(12); }
+    else if (line.startsWith('rename from ')) {
+      status = 'renamed';
+      oldPath = line.slice(12);
+    }
   }
-  if (header[1] !== header[2] && oldPath === undefined) { status = 'renamed'; oldPath = header[1]; }
+  if (header[1] !== header[2] && oldPath === undefined) {
+    status = 'renamed';
+    oldPath = header[1];
+  }
   const startIndex = lines.findIndex((line, index) => index > 0 && line.startsWith('@@'));
   return {
     relativePath: header[2],
@@ -202,12 +208,21 @@ function parseFileDiff(fileDiff: string, root: string): ParsedFileDiff | undefin
   const hunks: ParsedHunk[] = [];
   for (let index = meta.startIndex; index < lines.length; ) {
     const line = lines.at(index);
-    if (!line?.startsWith('@@')) { index++; continue; }
+    if (!line?.startsWith('@@')) {
+      index++;
+      continue;
+    }
     const parsed = parseHunk(lines, index, meta.diffHeader);
     if (parsed.hunk) hunks.push(parsed.hunk);
     index = parsed.nextIndex;
   }
-  return { filePath: path.resolve(root, meta.relativePath), relativePath: meta.relativePath, status: meta.status, hunks, oldPath: meta.oldPath };
+  return {
+    filePath: path.resolve(root, meta.relativePath),
+    relativePath: meta.relativePath,
+    status: meta.status,
+    hunks,
+    oldPath: meta.oldPath,
+  };
 }
 
 export function parseDiffOutput(diffText: string, root: string): ParsedFileDiff[] {
@@ -218,7 +233,12 @@ export function parseDiffOutput(diffText: string, root: string): ParsedFileDiff[
     .filter((file): file is ParsedFileDiff => file !== undefined);
 }
 
-function flushDeleted(lines: DiffLine[], newLine: number, newStart: number, pendingDeletes: number): number {
+function flushDeleted(
+  lines: DiffLine[],
+  newLine: number,
+  newStart: number,
+  pendingDeletes: number,
+): number {
   if (pendingDeletes <= 0) return 0;
   lines.push({ line: newLine > newStart ? newLine - 1 : newLine, kind: 'deleted' });
   return 0;
@@ -259,52 +279,6 @@ export function parseLogOutput(stdout: string): GitLogEntry[] {
   });
 }
 
-function parseNumstat(stdout: string): ChangedFile[] {
-  return nonEmptyLines(stdout).flatMap((line) => {
-    const parts = line.split('\t');
-    return parts.length < 3
-      ? []
-      : [{ path: parts[2], status: 'modified', additions: parts[0] === '-' ? 0 : Number(parts[0]), deletions: parts[1] === '-' ? 0 : Number(parts[1]) }];
-  });
-}
-
-function classifyNameStatus(prefix: string): string {
-  if (prefix.startsWith('A')) return 'added';
-  if (prefix.startsWith('D')) return 'deleted';
-  if (prefix.startsWith('R')) return 'renamed';
-  return 'modified';
-}
-
-function parseNameStatus(stdout: string): Record<string, string> {
-  const statusMap = new Map<string, string>();
-  for (const line of nonEmptyLines(stdout)) {
-    const parts = line.split('\t');
-    if (parts.length >= 2) {
-      const filePath = parts[parts.length - 1];
-      statusMap.set(filePath, classifyNameStatus(parts[0]));
-    }
-  }
-  return Object.fromEntries(statusMap);
-}
-
-interface ChangedFilesOptions {
-  root: string;
-  fromHash: string;
-  toHash: string;
-  gitStdout: (root: string, args: string[], maxBuffer?: number) => Promise<string>;
-  MB: number;
-}
-
-export async function getChangedFilesBetween(opts: ChangedFilesOptions): Promise<ChangedFile[]> {
-  const { root, fromHash, toHash, gitStdout, MB } = opts;
-  const files = parseNumstat(await gitStdout(root, ['diff', '--numstat', fromHash, toHash], 4 * MB));
-  try {
-    const statusMap = parseNameStatus(await gitStdout(root, ['diff', '--name-status', fromHash, toHash], 4 * MB));
-    return files.map((file) => {
-      const mappedStatus = statusMap[file.path];
-      return mappedStatus ? { ...file, status: mappedStatus } : file;
-    });
-  } catch {
-    return files;
-  }
-}
+// Extracted to gitParsersChangedFiles.ts (line-limit split)
+export type { ChangedFile, ChangedFilesOptions } from './gitParsersChangedFiles';
+export { getChangedFilesBetween } from './gitParsersChangedFiles';

@@ -166,6 +166,30 @@ function hasActiveInferenceOverrides(overrides: ChatOverrides): boolean {
   );
 }
 
+function InferencePanelControls(props: {
+  overrides: ChatOverrides;
+  patch: (update: Partial<InferenceOverrides>) => void;
+}): React.ReactElement {
+  const { overrides, patch } = props;
+  return (
+    <>
+      <TemperatureSlider
+        value={overrides.temperature}
+        onChange={(temperature) => patch({ temperature })}
+      />
+      <MaxTokensInput value={overrides.maxTokens} onChange={(maxTokens) => patch({ maxTokens })} />
+      <JsonModeCheckbox
+        value={overrides.jsonSchema}
+        onChange={(jsonSchema) => patch({ jsonSchema })}
+      />
+      <StopSequencesInput
+        value={overrides.stopSequences}
+        onChange={(stopSequences) => patch({ stopSequences })}
+      />
+    </>
+  );
+}
+
 function InferencePanelBody(props: {
   overrides: ChatOverrides;
   patch: (update: Partial<InferenceOverrides>) => void;
@@ -178,13 +202,13 @@ function InferencePanelBody(props: {
       style={{ minWidth: '260px' }}
       data-testid="advanced-inference-panel"
     >
-      <span className="text-[11px] font-medium text-text-semantic-muted" style={{ fontFamily: 'var(--font-ui)' }}>
+      <span
+        className="text-[11px] font-medium text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-ui)' }}
+      >
         Per-request overrides (not saved to profile)
       </span>
-      <TemperatureSlider value={overrides.temperature} onChange={(temperature) => patch({ temperature })} />
-      <MaxTokensInput value={overrides.maxTokens} onChange={(maxTokens) => patch({ maxTokens })} />
-      <JsonModeCheckbox value={overrides.jsonSchema} onChange={(jsonSchema) => patch({ jsonSchema })} />
-      <StopSequencesInput value={overrides.stopSequences} onChange={(stopSequences) => patch({ stopSequences })} />
+      <InferencePanelControls overrides={overrides} patch={patch} />
       <button
         type="button"
         onClick={onReset}
@@ -195,6 +219,16 @@ function InferencePanelBody(props: {
       </button>
     </div>
   );
+}
+
+function buildGearButtonClass(hasOverrides: boolean, open: boolean): string {
+  return [
+    'flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors duration-150',
+    hasOverrides
+      ? 'text-interactive-accent'
+      : 'text-text-semantic-muted hover:text-text-semantic-primary',
+    open ? 'bg-surface-hover' : 'hover:bg-surface-hover',
+  ].join(' ');
 }
 
 export function AdvancedInferenceControls({
@@ -210,14 +244,16 @@ export function AdvancedInferenceControls({
   );
 
   const resetOverrides = useCallback(() => {
-    onChange({ ...overrides, temperature: undefined, maxTokens: undefined, stopSequences: undefined, jsonSchema: undefined });
+    onChange({
+      ...overrides,
+      temperature: undefined,
+      maxTokens: undefined,
+      stopSequences: undefined,
+      jsonSchema: undefined,
+    });
   }, [overrides, onChange]);
 
-  const btnClass = [
-    'flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors duration-150',
-    hasOverrides ? 'text-interactive-accent' : 'text-text-semantic-muted hover:text-text-semantic-primary',
-    open ? 'bg-surface-hover' : 'hover:bg-surface-hover',
-  ].join(' ');
+  const btnClass = buildGearButtonClass(hasOverrides, open);
 
   return (
     <div className="relative">

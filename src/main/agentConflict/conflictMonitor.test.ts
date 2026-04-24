@@ -62,7 +62,9 @@ describe('ConflictMonitor — file-only fallback', () => {
     await vi.runAllTimersAsync();
 
     expect(snapshots.length).toBeGreaterThan(0);
-    const snap = snapshots[snapshots.length - 1] as { reports: Array<{ fileOnly: boolean; severity: string }> };
+    const snap = snapshots[snapshots.length - 1] as {
+      reports: Array<{ fileOnly: boolean; severity: string }>;
+    };
     expect(snap.reports).toHaveLength(1);
     expect(snap.reports[0].fileOnly).toBe(true);
     expect(snap.reports[0].severity).toBe('warning');
@@ -112,7 +114,9 @@ describe('ConflictMonitor — symbol-level detection', () => {
 
     await vi.runAllTimersAsync();
 
-    const snap = snapshots[snapshots.length - 1] as { reports: Array<{ severity: string; fileOnly: boolean }> };
+    const snap = snapshots[snapshots.length - 1] as {
+      reports: Array<{ severity: string; fileOnly: boolean }>;
+    };
     expect(snap.reports).toHaveLength(1);
     expect(snap.reports[0].severity).toBe('blocking');
     expect(snap.reports[0].fileOnly).toBe(false);

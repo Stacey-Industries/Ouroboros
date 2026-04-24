@@ -23,7 +23,9 @@ export function AgentMonitorPane({
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     function checkMobile(): void {
-      setIsMobile(window.innerWidth <= 768 && document.documentElement.classList.contains('web-mode'));
+      setIsMobile(
+        window.innerWidth <= 768 && document.documentElement.classList.contains('web-mode'),
+      );
     }
     checkMobile();
     const ro = new ResizeObserver(checkMobile);
@@ -39,14 +41,16 @@ export function AgentMonitorPane({
         bg-surface-panel border-l border-border-semantic
         ${isMobile ? 'mobile-agent-sidebar' : ''}
       `}
-      style={isMobile ? focusStyle : { width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, ...focusStyle }}
+      style={
+        isMobile
+          ? focusStyle
+          : { width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, ...focusStyle }
+      }
       aria-label="Agent sidebar"
       onClick={onFocus}
     >
       {/* No separate header — RightSidebarTabs owns the header */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {children}
-      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
     </div>
   );
 }

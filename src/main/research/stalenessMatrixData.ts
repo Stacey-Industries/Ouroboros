@@ -235,7 +235,4 @@ export const CURATED_STALENESS_ENTRIES: readonly StalenessEntry[] = [
  * Synthetic StalenessEntry returned by the lookup layer for pattern matches:
  *   kind:'curated', cutoffVersion:'*', cutoffDate: TRAINING_CUTOFF_DATE
  */
-export const CURATED_STALE_PREFIXES: readonly string[] = [
-  '@radix-ui/react-',
-  '@deno/',
-];
+export const CURATED_STALE_PREFIXES: readonly string[] = ['@radix-ui/react-', '@deno/'];

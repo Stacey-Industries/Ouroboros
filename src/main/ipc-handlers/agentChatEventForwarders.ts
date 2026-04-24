@@ -5,10 +5,7 @@
  * Extracted from agentChat.ts to stay under the 300-line ESLint limit.
  */
 
-import {
-  AGENT_CHAT_EVENT_CHANNELS,
-  type AgentChatService,
-} from '../agentChat';
+import { AGENT_CHAT_EVENT_CHANNELS, type AgentChatService } from '../agentChat';
 import {
   buildAgentChatOrchestrationLink,
   mapOrchestrationStatusToAgentChatStatus,

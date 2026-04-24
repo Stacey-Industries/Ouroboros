@@ -86,7 +86,8 @@ function ActionButtons({ entry, onInstall }: ActionButtonsProps): React.ReactEle
 // ── Main card ─────────────────────────────────────────────────────────────────
 
 export function AwesomeEntryCard({ entry, onInstall }: AwesomeEntryCardProps): React.ReactElement {
-  const badgeClass = CATEGORY_CLASSES[entry.category] ?? 'bg-surface-raised text-text-semantic-muted';
+  const badgeClass =
+    CATEGORY_CLASSES[entry.category] ?? 'bg-surface-raised text-text-semantic-muted';
 
   return (
     <div className="flex items-start gap-3 p-3 mb-2 rounded-md border border-border-subtle bg-surface-raised hover:bg-surface-hover transition-colors">
@@ -102,9 +103,7 @@ export function AwesomeEntryCard({ entry, onInstall }: AwesomeEntryCardProps): R
         <p className="text-text-semantic-secondary text-xs mb-1 line-clamp-2">
           {entry.description}
         </p>
-        {entry.author && (
-          <span className="text-text-semantic-faint text-xs">{entry.author}</span>
-        )}
+        {entry.author && <span className="text-text-semantic-faint text-xs">{entry.author}</span>}
         {entry.tags && entry.tags.length > 0 && (
           <div className="flex gap-1 mt-1 flex-wrap">
             {entry.tags.map((tag) => (

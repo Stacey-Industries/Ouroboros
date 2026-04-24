@@ -71,9 +71,7 @@ describe('SystemPromptPane — not-yet-captured state', () => {
     await act(async () => {
       render(<SystemPromptPane />);
     });
-    expect(
-      screen.getByText(/send a message in this session to populate/i),
-    ).toBeDefined();
+    expect(screen.getByText(/send a message in this session to populate/i)).toBeDefined();
   });
 });
 

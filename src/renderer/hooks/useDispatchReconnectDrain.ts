@@ -15,10 +15,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import {
-  drainOfflineDispatches,
-  type QueuedOfflineDispatch,
-} from '../../web/offlineDispatchQueue';
+import { drainOfflineDispatches, type QueuedOfflineDispatch } from '../../web/offlineDispatchQueue';
 import { useToast } from './useToast';
 import type { ConnectionState } from './useWebConnectionState';
 
@@ -70,8 +67,7 @@ export function useDispatchReconnectDrain(state: ConnectionState): void {
 
   useEffect(() => {
     const wasOffline =
-      prevStateRef.current === 'disconnected' ||
-      prevStateRef.current === 'connecting';
+      prevStateRef.current === 'disconnected' || prevStateRef.current === 'connecting';
     const nowConnected = state === 'connected';
     prevStateRef.current = state;
 

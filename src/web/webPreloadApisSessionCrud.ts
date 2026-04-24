@@ -30,8 +30,7 @@ export function buildSessionCrudApi(t: WebSocketTransport) {
     }),
     updateAgentMonitorSettings: (sessionId: string, settings: unknown) =>
       t.invoke('sessionCrud:updateAgentMonitorSettings', sessionId, settings),
-    pin: (sessionId: string, pinned: boolean) =>
-      t.invoke('sessionCrud:pin', sessionId, pinned),
+    pin: (sessionId: string, pinned: boolean) => t.invoke('sessionCrud:pin', sessionId, pinned),
     softDelete: (sessionId: string) => t.invoke('sessionCrud:softDelete', sessionId),
     restoreDeleted: (sessionId: string) => t.invoke('sessionCrud:restoreDeleted', sessionId),
     setProfile: (sessionId: string, profileId: string) =>
@@ -68,8 +67,7 @@ export function buildFolderCrudApi(t: WebSocketTransport) {
 
 export function buildPinnedContextApi(t: WebSocketTransport) {
   return {
-    add: (sessionId: string, item: unknown) =>
-      t.invoke('pinnedContext:add', sessionId, item),
+    add: (sessionId: string, item: unknown) => t.invoke('pinnedContext:add', sessionId, item),
     remove: (sessionId: string, itemId: string) =>
       t.invoke('pinnedContext:remove', sessionId, itemId),
     dismiss: (sessionId: string, itemId: string) =>
@@ -105,12 +103,10 @@ export function buildProfileCrudApi(t: WebSocketTransport) {
 
 export function buildLayoutApi(t: WebSocketTransport) {
   return {
-    getCustomLayout: (sessionId: string) =>
-      t.invoke('layout:getCustomLayout', sessionId),
+    getCustomLayout: (sessionId: string) => t.invoke('layout:getCustomLayout', sessionId),
     setCustomLayout: (sessionId: string, tree: unknown) =>
       t.invoke('layout:setCustomLayout', sessionId, tree),
-    deleteCustomLayout: (sessionId: string) =>
-      t.invoke('layout:deleteCustomLayout', sessionId),
+    deleteCustomLayout: (sessionId: string) => t.invoke('layout:deleteCustomLayout', sessionId),
     promoteToGlobal: (name: string, tree: unknown) =>
       t.invoke('layout:promoteToGlobal', name, tree),
   };

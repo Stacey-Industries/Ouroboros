@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-The `credentialStore.test.ts` uses `vi.doMock()` + `loadStore()` instead of the usual top-level `vi.mock()`. This is because `credentialStore` holds a module-level in-memory cache — top-level mocking reuses the same module instance across tests, causing state leakage. The `vi.resetModules()` + dynamic import pattern gives each test a fresh module with a clean cache. This is a pattern worth preserving exactly.
-`─────────────────────────────────────────────────`
-
 # src/main/auth/__tests__/ — Auth subsystem unit tests
 
 Vitest unit tests for the three auth modules: credential store, auth providers (Anthropic/GitHub/OpenAI), and CLI credential importers.
@@ -58,6 +54,7 @@ The `// eslint-disable-line security/detect-object-injection` comment on `proces
 | `../../logger` | `src/main/logger.ts` |
 | `electron` (`safeStorage`, `app`) | Electron built-in |
 | `fs/promises` | Node built-in |
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

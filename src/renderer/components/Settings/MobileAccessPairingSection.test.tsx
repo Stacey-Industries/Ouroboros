@@ -23,7 +23,9 @@ beforeEach(() => {
         generatePairingCode: mockGeneratePairingCode,
         listPairedDevices: vi.fn().mockResolvedValue({ success: true, devices: [] }),
         revokePairedDevice: vi.fn().mockResolvedValue({ success: true }),
-        getTimeoutStats: vi.fn().mockResolvedValue({ success: true, stats: { short: 0, normal: 0, long: 0 } }),
+        getTimeoutStats: vi
+          .fn()
+          .mockResolvedValue({ success: true, stats: { short: 0, normal: 0, long: 0 } }),
       },
     },
   });
@@ -120,7 +122,9 @@ describe('MobileAccessPairingSection', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /generate pairing code/i }));
     });
-    const urlInput = container.querySelector('input[aria-label="Pairing URL"]') as HTMLInputElement | null;
+    const urlInput = container.querySelector(
+      'input[aria-label="Pairing URL"]',
+    ) as HTMLInputElement | null;
     expect(urlInput).not.toBeNull();
     expect(urlInput?.value).toContain('192.168.1.50');
     expect(urlInput?.readOnly).toBe(true);

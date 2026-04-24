@@ -192,7 +192,8 @@ async function reRunFromMessageResult(args: {
 }): Promise<AgentChatThreadResult> {
   try {
     const { branch, userMessage } = await args.threadStore.reRunFromMessage(
-      args.threadId, args.messageId,
+      args.threadId,
+      args.messageId,
     );
     const request: AgentChatSendMessageRequest = {
       threadId: branch.id,

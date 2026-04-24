@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 
 import type {
   AgentChatMessageRecord,
@@ -15,6 +15,7 @@ import {
   useComposerDraftSync,
   useComposerMenuState,
   useImageAttachmentHandlers,
+  useQuoteListener,
 } from './AgentChatComposerHooks';
 import {
   AttachmentChipsBar,
@@ -30,7 +31,6 @@ import type { ChatOverrides } from './ChatControlsBar';
 import { FloatingComposerContainer } from './FloatingComposerContainer';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
-import { QUOTE_EVENT_NAME, type QuoteEventDetail } from './quoteComposer';
 import { buildChatSlashCommands, type SlashCommandContext } from './SlashCommandMenu';
 import type { PinnedFile } from './useAgentChatContext';
 import { useWorkspaceVariant } from './WorkspaceVariantContext';
@@ -65,6 +65,7 @@ export type AgentChatComposerProps = {
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   modelProviders?: ModelProvider[];
   codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   isStreaming?: boolean;
@@ -72,6 +73,9 @@ export type AgentChatComposerProps = {
   slashCommandContext?: SlashCommandContext;
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
+  /** taskId for mid-turn injection — shows lightning button when streaming. */
+  activeMidTurnTaskId?: string | null;
+  onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
 };
 
 /* ---------- useComposerState ---------- */
@@ -127,6 +131,7 @@ function useComposerHandlers(
     onChatOverridesChange: p.onChatOverridesChange,
     defaultProvider: p.defaultProvider,
     codexModels: p.codexModels,
+    codexAppServerTransport: p.codexAppServerTransport,
     onAutocompleteQuery: p.onAutocompleteQuery,
     onOpenAutocomplete: p.onOpenAutocomplete,
     onCloseAutocomplete: p.onCloseAutocomplete,
@@ -230,6 +235,8 @@ function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): R
       useMentionSystem={state.useMentionSystem}
       onCloseAutocomplete={state.closeAutocomplete}
       onCloseMentionAutocomplete={state.closeMentionAutocomplete}
+      activeMidTurnTaskId={cp.activeMidTurnTaskId}
+      onInjectMidTurn={cp.onInjectMidTurn}
     />
   );
 }
@@ -259,35 +266,6 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
       <ComposerInputSection state={state} composerProps={cp} />
     </div>
   );
-}
-
-/* ---------- useQuoteListener ---------- */
-
-/**
- * Listens for `agent-ide:quote-to-composer` DOM events and appends
- * the quoted text to the current draft by calling `onChange(draft + text)`.
- *
- * Uses a ref for `draft` so the effect closure is always fresh without
- * needing to re-register the listener on every keystroke.
- */
-function useQuoteListener(draft: string, onChange: (value: string) => void): void {
-  const draftRef = useRef(draft);
-  const onChangeRef = useRef(onChange);
-
-  useEffect(() => { draftRef.current = draft; }, [draft]);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
-
-  useEffect(() => {
-    const handler = (e: Event): void => {
-      const detail = (e as CustomEvent<QuoteEventDetail>).detail;
-      if (!detail?.text) return;
-      const current = draftRef.current;
-      const separator = current.length > 0 && !current.endsWith('\n') ? '\n' : '';
-      onChangeRef.current(current + separator + detail.text);
-    };
-    window.addEventListener(QUOTE_EVENT_NAME, handler);
-    return () => window.removeEventListener(QUOTE_EVENT_NAME, handler);
-  }, []);
 }
 
 /* ---------- AgentChatComposer ---------- */

@@ -35,16 +35,24 @@ interface FetchArgs {
 function fetchNeighbourhood({ symbolId, depth, cancelled, setData, setLoading }: FetchArgs): void {
   window.electronAPI.graph
     .getNeighbourhood(symbolId, depth)
-    .then((result) => { if (!cancelled.current) setData(result); })
+    .then((result) => {
+      if (!cancelled.current) setData(result);
+    })
     .catch(() => {
       if (!cancelled.current) setData({ success: false, error: 'Failed to load neighbourhood' });
     })
-    .finally(() => { if (!cancelled.current) setLoading(false); });
+    .finally(() => {
+      if (!cancelled.current) setLoading(false);
+    });
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useGraphNeighbourhood({ symbolId, depth = 1, enabled }: UseGraphNeighbourhoodOptions): UseGraphNeighbourhoodResult {
+export function useGraphNeighbourhood({
+  symbolId,
+  depth = 1,
+  enabled,
+}: UseGraphNeighbourhoodOptions): UseGraphNeighbourhoodResult {
   const [data, setData] = useState<GraphNeighbourhoodResult | null>(null);
   const [loading, setLoading] = useState(false);
   const lastIdRef = useRef<string | null>(null);
@@ -62,7 +70,9 @@ export function useGraphNeighbourhood({ symbolId, depth = 1, enabled }: UseGraph
     cancelRef.current = false;
     setLoading(true);
     fetchNeighbourhood({ symbolId, depth, cancelled: cancelRef, setData, setLoading });
-    return () => { cancelRef.current = true; };
+    return () => {
+      cancelRef.current = true;
+    };
   }, [symbolId, depth, enabled]);
 
   const clear = () => {

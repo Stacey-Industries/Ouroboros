@@ -1,8 +1,4 @@
 <!-- claude-md-auto:start -->
-The file already exists and is comprehensive. Here's the content as generated:
-
----
-
 # Terminal — xterm.js Multi-Session Terminal UI
 
 Full-featured terminal subsystem: xterm.js rendering, PTY IPC, shell integration (OSC 633/133), command blocks, tab completions, history search, rich multiline input, session persistence, and split panes.
@@ -105,6 +101,7 @@ Other modules (e.g. `useIdeToolResponder`) call `getTerminalLines(sessionId)` to
 - **Reads from**: `ProjectContext` (cwd), `window.electronAPI.config` (font size, cursor style)
 - **Registry read by**: `useIdeToolResponder` (main process tool server reads buffer content)
 - **DOM events dispatched**: `EXPLAIN_TERMINAL_ERROR_EVENT`, `OPEN_AGENT_CHAT_PANEL_EVENT` (renderer-only, consumed by AgentChat panel)
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

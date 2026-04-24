@@ -109,7 +109,9 @@ describe('UsageExportPane — lastExportInfo readout', () => {
     });
     const { container } = render(<UsageExportPane />);
     await waitFor(() => {
-      const muted = container.querySelector('.text-text-semantic-muted p, p.text-text-semantic-muted');
+      const muted = container.querySelector(
+        '.text-text-semantic-muted p, p.text-text-semantic-muted',
+      );
       expect(muted).not.toBeNull();
     });
     // The last-export paragraph includes the path and "42 rows"

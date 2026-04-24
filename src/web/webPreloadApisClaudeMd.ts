@@ -21,11 +21,12 @@ export function buildClaudeMdApi(t: WebSocketTransport) {
     ): Promise<ClaudeMdGenerateResult> =>
       t.invoke('claudeMd:generate', projectRoot, options) as Promise<ClaudeMdGenerateResult>,
 
-    generateForDir: (
-      projectRoot: string,
-      dirPath: string,
-    ): Promise<ClaudeMdGenerateDirResult> =>
-      t.invoke('claudeMd:generateForDir', projectRoot, dirPath) as Promise<ClaudeMdGenerateDirResult>,
+    generateForDir: (projectRoot: string, dirPath: string): Promise<ClaudeMdGenerateDirResult> =>
+      t.invoke(
+        'claudeMd:generateForDir',
+        projectRoot,
+        dirPath,
+      ) as Promise<ClaudeMdGenerateDirResult>,
 
     getStatus: (): Promise<ClaudeMdStatusResult> =>
       t.invoke('claudeMd:getStatus') as Promise<ClaudeMdStatusResult>,

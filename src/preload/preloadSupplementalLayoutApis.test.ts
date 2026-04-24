@@ -25,7 +25,11 @@ import { layoutApi } from './preloadSupplementalLayoutApis';
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const SESSION_ID = 'session-abc123';
-const TREE = { kind: 'leaf' as const, slotName: 'editorContent', component: { componentKey: 'editorContent' } };
+const TREE = {
+  kind: 'leaf' as const,
+  slotName: 'editorContent',
+  component: { componentKey: 'editorContent' },
+};
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 

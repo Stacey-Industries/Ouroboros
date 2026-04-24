@@ -1,23 +1,5 @@
 <!-- claude-md-auto:start -->
-`★ Insight ─────────────────────────────────────`
-Three notable things about this GitPanel's architecture worth understanding:
 
-1. **The `cancelled` flag pattern in `useGitInitialization`** is a standard React race-condition guard — when `projectRoot` changes rapidly (e.g., switching projects), the old `async/await` chain can resolve after the new one starts. The closure captures `cancelled = true` on cleanup, so stale results are silently dropped rather than overwriting fresh state.
-
-2. **`runGitMutation` enforces refresh discipline** — by funneling all mutations through a single helper that always calls `refreshStatus()` at the end, the pattern prevents a class of bugs where a dev forgets to refresh after a stage/unstage and the UI shows stale state.
-
-3. **`useGitPanelModel.shared.ts` exists for testability**, not just organization — pure functions (`sortEntries`, `resetRepoState`, `runGitMutation`) and type definitions can be imported by tests without instantiating the full React hook. This is the only file in the directory with no React imports.
-`─────────────────────────────────────────────────`
-
-Updated the CLAUDE.md with the following corrections and additions over the previous version:
-
-- Fixed IPC channel name: `git.statusDetailed` (not `git.status`), and added `git.branch` (distinct from `git.branches`)
-- Added the full IPC channel table including `git.diffCached`, `git.log`, and `ai.generateCommitMessage` used by AI commit generation
-- Added `useGitCommitGeneration.ts` to the key files table (it was entirely missing)
-- Added `GitPanelContentParts.tsx` to the key files table
-- Documented the initialization flow with the `cancelled` flag race-condition guard
-- Added `GitPanelState` to the core types section
-- Clarified the `R` status code's missing design token (uses hardcoded `#58a6ff` fallback)
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

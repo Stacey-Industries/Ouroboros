@@ -28,8 +28,12 @@ describe('PlatformLanguageSection', () => {
 // ---------------------------------------------------------------------------
 
 describe('language picker locale state', () => {
-  beforeEach(() => { setLocale('en'); });
-  afterEach(() => { setLocale('en'); });
+  beforeEach(() => {
+    setLocale('en');
+  });
+  afterEach(() => {
+    setLocale('en');
+  });
 
   it('setLocale("es") persists Spanish locale', () => {
     expect(getLocale()).toBe('en');
@@ -55,7 +59,9 @@ describe('language picker locale state', () => {
 // ---------------------------------------------------------------------------
 
 describe('language label strings resolve via t()', () => {
-  afterEach(() => { setLocale('en'); });
+  afterEach(() => {
+    setLocale('en');
+  });
 
   it('settings.language.label returns Language in en', () => {
     setLocale('en');
@@ -113,7 +119,9 @@ describe('language picker config mutation', () => {
 // ---------------------------------------------------------------------------
 
 describe('runtime locale switch integration', () => {
-  afterEach(() => { setLocale('en'); });
+  afterEach(() => {
+    setLocale('en');
+  });
 
   it('t("tour.next") changes when locale switches', () => {
     setLocale('en');

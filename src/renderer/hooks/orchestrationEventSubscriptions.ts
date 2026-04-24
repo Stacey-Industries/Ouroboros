@@ -29,11 +29,19 @@ function createStateKey(state: OrchestrationState): string {
 }
 
 function createVerificationKey(summary: VerificationSummary): string {
-  return [summary.profile, summary.status, summary.startedAt, summary.completedAt, summary.summary].join(':');
+  return [
+    summary.profile,
+    summary.status,
+    summary.startedAt,
+    summary.completedAt,
+    summary.summary,
+  ].join(':');
 }
 
 function createResultKey(result: TaskResult): string {
-  return [result.taskId, result.sessionId, result.attemptId, result.status, result.message].join(':');
+  return [result.taskId, result.sessionId, result.attemptId, result.status, result.message].join(
+    ':',
+  );
 }
 
 function handleStateEvent(state: OrchestrationState, args: SubscriptionArgs): void {
@@ -114,7 +122,8 @@ function handleResultEvent(result: TaskResult, args: SubscriptionArgs): void {
 
   announceProviderSession({
     orchestrationSessionId: result.sessionId,
-    provider: result.providerArtifact?.session.provider ?? result.providerArtifact?.provider ?? 'unknown',
+    provider:
+      result.providerArtifact?.session.provider ?? result.providerArtifact?.provider ?? 'unknown',
     seenKeys: args.seenProviderSessions,
     session: result.providerArtifact?.session,
     taskId: result.taskId,

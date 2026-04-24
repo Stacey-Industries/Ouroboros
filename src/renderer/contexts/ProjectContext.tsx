@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef,useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 export interface ProjectContextValue {
   projectRoots: string[];
@@ -29,7 +37,9 @@ function mergeSavedRoots(savedRoots: string[], initialRoot: string | null): stri
 function useProjectRootState(
   initialRoot: string | null,
 ): [string[], React.Dispatch<React.SetStateAction<string[]>>] {
-  const [projectRoots, setProjectRoots] = useState<string[]>(() => initialRoot ? [initialRoot] : []);
+  const [projectRoots, setProjectRoots] = useState<string[]>(() =>
+    initialRoot ? [initialRoot] : [],
+  );
   const initialRootRef = useRef(initialRoot);
 
   useEffect(() => {
@@ -48,26 +58,41 @@ function useProjectRootState(
 
 function useProjectRootActions(
   setProjectRoots: React.Dispatch<React.SetStateAction<string[]>>,
-): Pick<ProjectContextValue, 'setProjectRoot' | 'addProjectRoot' | 'removeProjectRoot' | 'clearProject'> {
-  const updateRoots = useCallback((updater: (roots: string[]) => string[]) => {
-    setProjectRoots((prev) => {
-      const next = updater(prev);
-      persistRoots(next);
-      return next;
-    });
-  }, [setProjectRoots]);
+): Pick<
+  ProjectContextValue,
+  'setProjectRoot' | 'addProjectRoot' | 'removeProjectRoot' | 'clearProject'
+> {
+  const updateRoots = useCallback(
+    (updater: (roots: string[]) => string[]) => {
+      setProjectRoots((prev) => {
+        const next = updater(prev);
+        persistRoots(next);
+        return next;
+      });
+    },
+    [setProjectRoots],
+  );
 
-  const setProjectRoot = useCallback((path: string): void => {
-    updateRoots(() => [path]);
-  }, [updateRoots]);
+  const setProjectRoot = useCallback(
+    (path: string): void => {
+      updateRoots(() => [path]);
+    },
+    [updateRoots],
+  );
 
-  const addProjectRoot = useCallback((path: string): void => {
-    updateRoots((prev) => prev.includes(path) ? prev : [...prev, path]);
-  }, [updateRoots]);
+  const addProjectRoot = useCallback(
+    (path: string): void => {
+      updateRoots((prev) => (prev.includes(path) ? prev : [...prev, path]));
+    },
+    [updateRoots],
+  );
 
-  const removeProjectRoot = useCallback((path: string): void => {
-    updateRoots((prev) => prev.filter((root) => root !== path));
-  }, [updateRoots]);
+  const removeProjectRoot = useCallback(
+    (path: string): void => {
+      updateRoots((prev) => prev.filter((root) => root !== path));
+    },
+    [updateRoots],
+  );
 
   const clearProject = useCallback((): void => {
     updateRoots(() => []);
@@ -90,18 +115,17 @@ export function ProjectProvider({
   const projectRoot = projectRoots[0] ?? null;
   const projectName = projectRoot ? basename(projectRoot) : '';
 
-  const value = useMemo<ProjectContextValue>(() => ({
-    projectRoots,
-    projectRoot,
-    projectName,
-    ...projectActions,
-  }), [projectActions, projectName, projectRoot, projectRoots]);
-
-  return (
-    <ProjectContext.Provider value={value}>
-      {children}
-    </ProjectContext.Provider>
+  const value = useMemo<ProjectContextValue>(
+    () => ({
+      projectRoots,
+      projectRoot,
+      projectName,
+      ...projectActions,
+    }),
+    [projectActions, projectName, projectRoot, projectRoots],
   );
+
+  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
 }
 
 export function useProject(): ProjectContextValue {

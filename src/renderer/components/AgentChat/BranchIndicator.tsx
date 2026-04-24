@@ -140,9 +140,7 @@ function MultiBranchLabel({
         <span className="font-medium">{forks.length} branches</span>
         <ChevronDownIcon />
       </button>
-      {open && (
-        <MultiBranchDropdown forks={forks} onSelect={onSelect} onClose={handleClose} />
-      )}
+      {open && <MultiBranchDropdown forks={forks} onSelect={onSelect} onClose={handleClose} />}
     </div>
   );
 }

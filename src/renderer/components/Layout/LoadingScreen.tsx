@@ -32,7 +32,14 @@ export function LoadingScreen(): React.ReactElement {
           filter: 'drop-shadow(0 0 24px rgba(88, 166, 255, 0.15))',
         }}
       />
-      <span style={{ fontSize: '11px', fontFamily: 'var(--font-ui, system-ui)', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+      <span
+        style={{
+          fontSize: '11px',
+          fontFamily: 'var(--font-ui, system-ui)',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase' as const,
+        }}
+      >
         Loading…
       </span>
     </div>

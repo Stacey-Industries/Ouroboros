@@ -1,6 +1,10 @@
 import React from 'react';
 
-import type { OrchestrationMode, OrchestrationProvider, VerificationProfileName } from '../../types/electron';
+import type {
+  OrchestrationMode,
+  OrchestrationProvider,
+  VerificationProfileName,
+} from '../../types/electron';
 import { ActionButton, cardStyle } from '../ContextBuilder/ContextBuilderPrimitives';
 import { panelStyle } from './orchestrationUi';
 import type { OrchestrationTaskComposerModel } from './useOrchestrationTaskComposerModel';
@@ -80,7 +84,11 @@ const PROFILE_OPTIONS: Array<{ label: string; value: VerificationProfileName }> 
   { label: 'Full', value: 'full' },
 ];
 
-export function TaskComposerCard({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
+export function TaskComposerCard({
+  model,
+}: {
+  model: OrchestrationTaskComposerModel;
+}): React.ReactElement {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <TaskComposerHeader projectRootLabel={model.projectRootLabel} />
@@ -92,24 +100,37 @@ export function TaskComposerCard({ model }: { model: OrchestrationTaskComposerMo
   );
 }
 
-function TaskComposerHeader({ projectRootLabel }: { projectRootLabel: string }): React.ReactElement {
+function TaskComposerHeader({
+  projectRootLabel,
+}: {
+  projectRootLabel: string;
+}): React.ReactElement {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>New orchestration task</div>
+        <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>
+          New orchestration task
+        </div>
         <div className="mt-1 text-[12px]" style={{ color: 'var(--text-muted)' }}>
           Build context, adjust included files, then launch the provider-backed task.
         </div>
       </div>
-      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{projectRootLabel}</span>
+      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        {projectRootLabel}
+      </span>
     </div>
   );
 }
 
-function TaskComposerGoalField(props: { goal: string; onChange: (value: string) => void }): React.ReactElement {
+function TaskComposerGoalField(props: {
+  goal: string;
+  onChange: (value: string) => void;
+}): React.ReactElement {
   return (
     <div className="mt-4" style={FIELD_STACK_STYLE}>
-      <label style={LABEL_STYLE} htmlFor="orchestration-goal">Goal</label>
+      <label style={LABEL_STYLE} htmlFor="orchestration-goal">
+        Goal
+      </label>
       <textarea
         id="orchestration-goal"
         value={props.goal}
@@ -121,7 +142,11 @@ function TaskComposerGoalField(props: { goal: string; onChange: (value: string) 
   );
 }
 
-function TaskComposerConfigFields({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
+function TaskComposerConfigFields({
+  model,
+}: {
+  model: OrchestrationTaskComposerModel;
+}): React.ReactElement {
   return (
     <div className="mt-4" style={FIELD_GRID_STYLE}>
       <TaskComposerSelectField<OrchestrationMode>
@@ -165,22 +190,49 @@ function TaskComposerSelectField<T extends string>(props: {
         onChange={(event) => props.onChange(event.target.value as T)}
         style={INPUT_STYLE}
       >
-        {props.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </label>
   );
 }
 
-function TaskComposerActions({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
+function TaskComposerActions({
+  model,
+}: {
+  model: OrchestrationTaskComposerModel;
+}): React.ReactElement {
   return (
     <div style={ACTION_ROW_STYLE}>
-      <ActionButton label={model.previewing ? 'Previewing…' : 'Preview Context'} onClick={() => { void model.handlePreview(); }} disabled={!model.canSubmit} />
-      <ActionButton label={model.starting ? 'Starting…' : 'Start Task'} onClick={() => { void model.handleStart(); }} disabled={!model.canSubmit} primary />
+      <ActionButton
+        label={model.previewing ? 'Previewing…' : 'Preview Context'}
+        onClick={() => {
+          void model.handlePreview();
+        }}
+        disabled={!model.canSubmit}
+      />
+      <ActionButton
+        label={model.starting ? 'Starting…' : 'Start Task'}
+        onClick={() => {
+          void model.handleStart();
+        }}
+        disabled={!model.canSubmit}
+        primary
+      />
     </div>
   );
 }
 
-function TaskComposerMessages({ error, status }: { error: string | null; status: string | null }): React.ReactElement {
+function TaskComposerMessages({
+  error,
+  status,
+}: {
+  error: string | null;
+  status: string | null;
+}): React.ReactElement {
   return (
     <>
       {status ? <div style={STATUS_STYLE}>{status}</div> : null}

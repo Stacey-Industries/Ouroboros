@@ -11,7 +11,11 @@ import type { LinkedSession } from './AgentChatTabBarHooks';
 export { resolveLinkedProvider, useLinkedSessionId } from './AgentChatTabBarHooks';
 export type { LinkedSession };
 export { BranchTreeButton } from './AgentChatBranchTreeButton';
-export { OpenInTerminalButton, PopOutChatButton, resolveRootThread } from './AgentChatTabBarParts.extra';
+export {
+  OpenInTerminalButton,
+  PopOutChatButton,
+  resolveRootThread,
+} from './AgentChatTabBarParts.extra';
 
 // ── Tab sub-components (used by AgentChatTabBar) ──────────────────────────────
 
@@ -20,7 +24,10 @@ export function TabCloseButton({ onClose }: { onClose: () => void }): React.Reac
     <span
       role="button"
       tabIndex={-1}
-      onClick={(e) => { e.stopPropagation(); onClose(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
       className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
     >
       &times;
@@ -44,7 +51,10 @@ function BranchMenuButton({ onRename }: { onRename: () => void }): React.ReactEl
     <span
       role="button"
       tabIndex={-1}
-      onClick={(e) => { e.stopPropagation(); onRename(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onRename();
+      }}
       className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
       title="Rename branch"
     >
@@ -58,10 +68,17 @@ export function Tab(props: TabProps): React.ReactElement {
     <button
       onClick={props.onSelect}
       className={`group relative flex shrink-0 items-center gap-1 rounded-t px-2.5 py-1 text-[11px] transition-colors duration-100 ${props.isActive ? 'bg-surface-base text-text-semantic-primary' : 'text-text-semantic-muted'}`}
-      style={{ borderBottom: props.isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent' }}
+      style={{
+        borderBottom: props.isActive
+          ? '2px solid var(--interactive-accent)'
+          : '2px solid transparent',
+      }}
     >
       {props.isBranch && (
-        <BranchTabIcon parentTitle={props.branchParentTitle ?? ''} messageIndex={props.branchMessageIndex ?? 0} />
+        <BranchTabIcon
+          parentTitle={props.branchParentTitle ?? ''}
+          messageIndex={props.branchMessageIndex ?? 0}
+        />
       )}
       <span className="max-w-[120px] truncate">{props.title}</span>
       {props.isBranch && props.onRename && <BranchMenuButton onRename={props.onRename} />}
@@ -280,4 +297,3 @@ export function ThreadDropdown({
     document.body,
   );
 }
-

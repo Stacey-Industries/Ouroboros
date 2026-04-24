@@ -16,11 +16,7 @@ import { resolvePtyCwd } from '../ptyCwdResolver';
 import type { PtyPersistence } from '../ptyPersistence';
 import { createPtyPersistence } from '../ptyPersistence';
 import type { ShellState } from '../ptyShellIntegration';
-import {
-  initShellState,
-  processShellData,
-  removeShellState,
-} from '../ptyShellIntegration';
+import { initShellState, processShellData, removeShellState } from '../ptyShellIntegration';
 import type {
   PtyHostEvent,
   PtyHostOutbound,
@@ -58,7 +54,10 @@ function getPersistence(): PtyPersistence {
 // ── Posting helpers ──
 
 declare const process: NodeJS.Process & {
-  parentPort: { postMessage: (msg: unknown) => void; on: (e: 'message', cb: (m: unknown) => void) => void };
+  parentPort: {
+    postMessage: (msg: unknown) => void;
+    on: (e: 'message', cb: (m: unknown) => void) => void;
+  };
 };
 
 function post(msg: PtyHostOutbound): void {
@@ -72,6 +71,16 @@ function postError(requestId: string, err: unknown): void {
 
 // ── Handlers ──
 
+function persistSpawnedSession(inst: PtySpawnInstruction): void {
+  const persistence = getPersistence();
+  if (!persistence.isEnabled()) return;
+  persistence.saveSession({
+    id: inst.id, cwd: inst.cwd, shellPath: inst.shell, shellArgs: inst.args,
+    cols: inst.cols, rows: inst.rows, windowId: inst.windowId,
+    envHash: '', createdAt: Date.now(), lastSeenAt: Date.now(),
+  });
+}
+
 function handleSpawn(requestId: string, inst: PtySpawnInstruction): void {
   if (sessions.has(inst.id)) {
     postError(requestId, `Session ${inst.id} already exists`);
@@ -79,11 +88,7 @@ function handleSpawn(requestId: string, inst: PtySpawnInstruction): void {
   }
   try {
     const proc = pty.spawn(inst.shell, inst.args, {
-      name: 'xterm-256color',
-      cols: inst.cols,
-      rows: inst.rows,
-      cwd: inst.cwd,
-      env: inst.env,
+      name: 'xterm-256color', cols: inst.cols, rows: inst.rows, cwd: inst.cwd, env: inst.env,
     });
     const state = initShellStateForSession(inst.id, inst.cwd);
     const session: PtyHostSession = {
@@ -91,18 +96,8 @@ function handleSpawn(requestId: string, inst: PtySpawnInstruction): void {
     };
     sessions.set(inst.id, session);
     attachListeners(session);
-    if (inst.startupCommand) {
-      writeOnShellReady(inst.id, proc, inst.startupCommand, sessions);
-    }
-    const persistence = getPersistence();
-    if (persistence.isEnabled()) {
-      persistence.saveSession({
-        id: inst.id, cwd: inst.cwd, shellPath: inst.shell,
-        shellArgs: inst.args, cols: inst.cols, rows: inst.rows,
-        windowId: inst.windowId, envHash: '',
-        createdAt: Date.now(), lastSeenAt: Date.now(),
-      });
-    }
+    if (inst.startupCommand) writeOnShellReady(inst.id, proc, inst.startupCommand, sessions);
+    persistSpawnedSession(inst);
     post({ type: 'spawned', requestId, id: inst.id, pid: proc.pid });
   } catch (err) {
     sessions.delete(inst.id);
@@ -137,7 +132,11 @@ function attachListeners(session: PtyHostSession): void {
 
 function disposeSessionListeners(session: PtyHostSession): void {
   for (const d of session.disposables) {
-    try { d.dispose(); } catch { /* already disposed */ }
+    try {
+      d.dispose();
+    } catch {
+      /* already disposed */
+    }
   }
   session.disposables.length = 0;
 }
@@ -199,7 +198,9 @@ async function handleGetCwd(requestId: string, id: string): Promise<void> {
 
 function handleListSessions(requestId: string): void {
   const list: PtySessionInfo[] = Array.from(sessions.values()).map((s) => ({
-    id: s.id, cwd: s.cwd, windowId: s.windowId,
+    id: s.id,
+    cwd: s.cwd,
+    windowId: s.windowId,
   }));
   post({ type: 'sessions', requestId, list });
 }
@@ -211,7 +212,11 @@ function handleGetShellState(requestId: string, id: string): void {
 
 function handleKillAll(requestId: string): void {
   for (const [id, session] of sessions) {
-    try { session.proc.kill(); } catch { /* ignore */ }
+    try {
+      session.proc.kill();
+    } catch {
+      /* ignore */
+    }
     disposeSessionListeners(session);
     removeShellState(id);
   }
@@ -222,7 +227,11 @@ function handleKillAll(requestId: string): void {
 function handleKillForWindow(requestId: string, windowId: number): void {
   for (const [id, session] of sessions) {
     if (session.windowId !== windowId) continue;
-    try { session.proc.kill(); } catch { /* ignore */ }
+    try {
+      session.proc.kill();
+    } catch {
+      /* ignore */
+    }
     disposeSessionListeners(session);
     sessions.delete(id);
     removeShellState(id);
@@ -234,22 +243,44 @@ function handleKillForWindow(requestId: string, windowId: number): void {
 
 export function dispatch(msg: PtyHostRequest): void {
   switch (msg.type) {
-    case 'spawn': handleSpawn(msg.requestId, msg.instruction); return;
-    case 'write': handleWrite(msg.id, msg.data); return;
-    case 'resize': handleResize(msg.id, msg.cols, msg.rows); return;
-    case 'kill': handleKill(msg.requestId, msg.id); return;
-    case 'getCwd': handleGetCwd(msg.requestId, msg.id).catch((e) => postError(msg.requestId, e)); return;
-    case 'listSessions': handleListSessions(msg.requestId); return;
-    case 'getShellState': handleGetShellState(msg.requestId, msg.id); return;
-    case 'killAll': handleKillAll(msg.requestId); return;
-    case 'killForWindow': handleKillForWindow(msg.requestId, msg.windowId); return;
+    case 'spawn':
+      handleSpawn(msg.requestId, msg.instruction);
+      return;
+    case 'write':
+      handleWrite(msg.id, msg.data);
+      return;
+    case 'resize':
+      handleResize(msg.id, msg.cols, msg.rows);
+      return;
+    case 'kill':
+      handleKill(msg.requestId, msg.id);
+      return;
+    case 'getCwd':
+      handleGetCwd(msg.requestId, msg.id).catch((e) => postError(msg.requestId, e));
+      return;
+    case 'listSessions':
+      handleListSessions(msg.requestId);
+      return;
+    case 'getShellState':
+      handleGetShellState(msg.requestId, msg.id);
+      return;
+    case 'killAll':
+      handleKillAll(msg.requestId);
+      return;
+    case 'killForWindow':
+      handleKillForWindow(msg.requestId, msg.windowId);
+      return;
   }
 }
 
 /** Reset all session state — used by tests. */
 export function _resetForTests(): void {
   for (const [, session] of sessions) {
-    try { session.proc.kill(); } catch { /* ignore */ }
+    try {
+      session.proc.kill();
+    } catch {
+      /* ignore */
+    }
     disposeSessionListeners(session);
   }
   sessions.clear();
@@ -273,4 +304,4 @@ function bootstrap(): void {
 bootstrap();
 
 // Re-export type aliases used at runtime so the bundler can resolve them.
-export type { PtyHostEvent,PtyHostRequest, PtyHostResponse };
+export type { PtyHostEvent, PtyHostRequest, PtyHostResponse };

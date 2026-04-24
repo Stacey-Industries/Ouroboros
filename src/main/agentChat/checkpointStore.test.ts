@@ -170,7 +170,12 @@ describe('CheckpointStore GC (trimToMax)', () => {
         filesChanged: [],
       });
     }
-    s.create({ threadId: 'thread-safe', messageId: 'msg-1', commitHash: 'safe1', filesChanged: [] });
+    s.create({
+      threadId: 'thread-safe',
+      messageId: 'msg-1',
+      commitHash: 'safe1',
+      filesChanged: [],
+    });
     s.trimToMax('thread-gc', 2);
     expect(s.list('thread-safe')).toHaveLength(1);
   });

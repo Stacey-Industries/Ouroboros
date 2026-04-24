@@ -63,7 +63,13 @@ describe('extractSessionId', () => {
 // ── Severity ─────────────────────────────────────────────────────────────────
 
 describe('severityForSymbols', () => {
-  const sym = (id: string) => ({ id, filePath: 'f.ts', name: id, type: 'function' as const, line: 1 });
+  const sym = (id: string) => ({
+    id,
+    filePath: 'f.ts',
+    name: id,
+    type: 'function' as const,
+    line: 1,
+  });
 
   it('returns info when either side has no symbols', () => {
     expect(severityForSymbols([], [sym('a')])).toBe('info');
@@ -92,12 +98,16 @@ describe('shouldClearDismiss', () => {
 
   it('returns true when side A adds a file already in side B', () => {
     const dismissed = { filesA: new Set(['a.ts']), filesB: new Set(['a.ts', 'b.ts']) };
-    expect(shouldClearDismiss(dismissed, new Set(['a.ts', 'b.ts']), new Set(['a.ts', 'b.ts']))).toBe(true);
+    expect(
+      shouldClearDismiss(dismissed, new Set(['a.ts', 'b.ts']), new Set(['a.ts', 'b.ts'])),
+    ).toBe(true);
   });
 
   it('returns true when side B adds a file already in side A', () => {
     const dismissed = { filesA: new Set(['a.ts', 'b.ts']), filesB: new Set(['a.ts']) };
-    expect(shouldClearDismiss(dismissed, new Set(['a.ts', 'b.ts']), new Set(['a.ts', 'b.ts']))).toBe(true);
+    expect(
+      shouldClearDismiss(dismissed, new Set(['a.ts', 'b.ts']), new Set(['a.ts', 'b.ts'])),
+    ).toBe(true);
   });
 
   it('returns false when side A adds non-overlapping file', () => {
@@ -145,7 +155,13 @@ describe('getSessionsForRoot', () => {
 // ── buildOverlapSymbols ───────────────────────────────────────────────────────
 
 describe('buildOverlapSymbols', () => {
-  const sym = (id: string) => ({ id, filePath: 'f.ts', name: id, type: 'function' as const, line: 1 });
+  const sym = (id: string) => ({
+    id,
+    filePath: 'f.ts',
+    name: id,
+    type: 'function' as const,
+    line: 1,
+  });
 
   it('returns symbols present in both sets', () => {
     const result = buildOverlapSymbols([sym('fn1'), sym('fn2')], [sym('fn2'), sym('fn3')]);

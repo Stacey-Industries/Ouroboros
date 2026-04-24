@@ -30,6 +30,13 @@ interface CodexModelsCacheFile {
 
 const FALLBACK_CODEX_MODELS: CodexModelOption[] = [
   {
+    id: 'gpt-5.5',
+    name: 'gpt-5.5',
+    description: 'Frontier model for complex coding, research, and real-world work.',
+    reasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+    contextWindow: 272000,
+  },
+  {
     id: 'gpt-5.4',
     name: 'gpt-5.4',
     description: 'Latest frontier agentic coding model.',

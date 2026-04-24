@@ -6,7 +6,12 @@ export interface ResizeHandleProps {
   direction: 'horizontal' | 'vertical';
   panel: PanelId;
   currentSize: number;
-  onResizeStart: (panel: PanelId, direction: 'horizontal' | 'vertical', startValue: number, startPos: number) => void;
+  onResizeStart: (
+    panel: PanelId,
+    direction: 'horizontal' | 'vertical',
+    startValue: number,
+    startPos: number,
+  ) => void;
   onDoubleClick: (panel: PanelId) => void;
   minSize?: number;
   maxSize?: number;
@@ -44,7 +49,8 @@ const HANDLE_LAYOUTS: Record<ResizeDirection, HandleLayout> = {
   },
   horizontal: {
     ariaOrientation: 'horizontal',
-    containerClassName: 'group relative flex-shrink-0 h-[5px] cursor-row-resize select-none z-10 w-full',
+    containerClassName:
+      'group relative flex-shrink-0 h-[5px] cursor-row-resize select-none z-10 w-full',
     hitAreaClassName: 'absolute inset-x-0 -top-1 -bottom-1',
     lineClassName: `
       absolute inset-x-0 top-[2px] h-[1px]

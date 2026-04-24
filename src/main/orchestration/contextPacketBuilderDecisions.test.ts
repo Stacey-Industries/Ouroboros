@@ -163,21 +163,23 @@ describe('emitDecisionsForPacket', () => {
   it('calls recordTurnStart with normalised includedFiles and sessionId', () => {
     const file = makeRankedFile('src/I.ts', 60);
     const selection = makeSelection([file]);
-    emitDecisionsForPacket('trace-7', selection, [file], 'sess-99', '/workspace');
+    emitDecisionsForPacket('trace-7', selection, [file], {
+      sessionId: 'sess-99',
+      workspaceRoot: '/workspace',
+    });
 
     expect(mockRecordTurnStart).toHaveBeenCalledWith(
       'trace-7',
       'trace-7',
       [{ fileId: 'src/i.ts', path: 'src/I.ts' }],
-      'sess-99',
-      '/workspace',
+      { sessionId: 'sess-99', workspaceRoot: '/workspace' },
     );
   });
 
   it('normalises fileId using the workspace root when provided', () => {
     const file = makeRankedFile('/workspace/src/J.ts', 50);
     const selection = makeSelection([file]);
-    emitDecisionsForPacket('trace-8', selection, [file], '', '/workspace');
+    emitDecisionsForPacket('trace-8', selection, [file], { workspaceRoot: '/workspace' });
 
     const [, , final] = mockEmitContextDecisions.mock.calls[0];
     // /workspace/src/j.ts with root /workspace → src/j.ts

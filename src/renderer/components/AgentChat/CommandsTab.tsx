@@ -1,7 +1,12 @@
 import React, { useCallback, useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
-import { CommandItem, InlineCreateForm, ScopeToggle, type ScopeValue } from './ClaudeConfigPanelParts';
+import {
+  CommandItem,
+  InlineCreateForm,
+  ScopeToggle,
+  type ScopeValue,
+} from './ClaudeConfigPanelParts';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -14,7 +19,11 @@ export interface CommandsTabProps {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function hasAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && 'rulesAndSkills' in window.electronAPI;
+  return (
+    typeof window !== 'undefined' &&
+    'electronAPI' in window &&
+    'rulesAndSkills' in window.electronAPI
+  );
 }
 
 function scopeToClaudeScope(scope: ScopeValue): 'global' | 'project' {
@@ -88,7 +97,12 @@ function CommandList({
   return (
     <>
       {commands.map((cmd) => (
-        <CommandItem key={`${cmd.scope}:${cmd.id}`} command={cmd} onOpen={onOpen} onDelete={onDelete} />
+        <CommandItem
+          key={`${cmd.scope}:${cmd.id}`}
+          command={cmd}
+          onOpen={onOpen}
+          onDelete={onDelete}
+        />
       ))}
     </>
   );
@@ -107,10 +121,7 @@ export function CommandsTab({
   const handleCreate = useCommandCreate(scope, projectRoot, onOpenFile);
   const handleDelete = useCommandDelete(scope, projectRoot);
 
-  const onDelete = useCallback(
-    (id: string) => handleDelete(id),
-    [handleDelete],
-  );
+  const onDelete = useCallback((id: string) => handleDelete(id), [handleDelete]);
 
   return (
     <div className="flex flex-col gap-0">

@@ -19,10 +19,7 @@ function makePayload(overrides: Partial<HookPayload> = {}): HookPayload {
 describe('dispatchUserPrompt', () => {
   it('dispatches CONVERSATION_TURN with type prompt', () => {
     const dispatch = vi.fn();
-    dispatchUserPrompt(
-      makePayload({ data: { message: 'Hello agent' } }),
-      dispatch,
-    );
+    dispatchUserPrompt(makePayload({ data: { message: 'Hello agent' } }), dispatch);
     expect(dispatch).toHaveBeenCalledOnce();
     const action = dispatch.mock.calls[0][0];
     expect(action.type).toBe('CONVERSATION_TURN');
@@ -77,10 +74,7 @@ describe('dispatchElicitationResult', () => {
 
   it('falls back to response field', () => {
     const dispatch = vi.fn();
-    dispatchElicitationResult(
-      makePayload({ data: { response: 'yes' } }),
-      dispatch,
-    );
+    dispatchElicitationResult(makePayload({ data: { response: 'yes' } }), dispatch);
     expect(dispatch.mock.calls[0][0].turn.content).toBe('yes');
   });
 });
@@ -109,7 +103,10 @@ describe('null data payload handling', () => {
 
   it('dispatchElicitationResult handles undefined data gracefully', () => {
     const dispatch = vi.fn();
-    dispatchElicitationResult(makePayload({ type: 'elicitation_result', data: undefined }), dispatch);
+    dispatchElicitationResult(
+      makePayload({ type: 'elicitation_result', data: undefined }),
+      dispatch,
+    );
     expect(dispatch).toHaveBeenCalledOnce();
     const action = dispatch.mock.calls[0][0];
     expect(action.turn.type).toBe('elicitation_result');
@@ -119,7 +116,12 @@ describe('null data payload handling', () => {
   it('dispatchUserPrompt preserves sessionId and timestamp', () => {
     const dispatch = vi.fn();
     dispatchUserPrompt(
-      makePayload({ type: 'user_prompt_submit', sessionId: 'my-sess', timestamp: 9999, data: undefined }),
+      makePayload({
+        type: 'user_prompt_submit',
+        sessionId: 'my-sess',
+        timestamp: 9999,
+        data: undefined,
+      }),
       dispatch,
     );
     const action = dispatch.mock.calls[0][0];

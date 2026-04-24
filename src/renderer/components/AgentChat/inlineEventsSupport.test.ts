@@ -9,10 +9,7 @@ import { buildInlineEvents, eventsInSlot } from './inlineEventsSupport';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-function makeSession(
-  id: string,
-  overrides: Partial<AgentSession> = {},
-): AgentSession {
+function makeSession(id: string, overrides: Partial<AgentSession> = {}): AgentSession {
   return {
     id,
     taskLabel: 'test task',

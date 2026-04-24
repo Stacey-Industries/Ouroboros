@@ -22,11 +22,15 @@ import type { ContextFeatures } from './contextTypes';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
-function makeMockWriter(): DecisionWriter & { recorded: Parameters<DecisionWriter['recordDecision']>[0][] } {
+function makeMockWriter(): DecisionWriter & {
+  recorded: Parameters<DecisionWriter['recordDecision']>[0][];
+} {
   const recorded: Parameters<DecisionWriter['recordDecision']>[0][] = [];
   return {
     recorded,
-    recordDecision: vi.fn((d) => { recorded.push(d); }),
+    recordDecision: vi.fn((d) => {
+      recorded.push(d);
+    }),
     flushPendingWrites: vi.fn(async () => undefined),
     closeDecisionWriter: vi.fn(async () => undefined),
   };
@@ -103,11 +107,7 @@ describe('emitContextDecisions — basic emission', () => {
     initContextSignalCollector(writer);
 
     const feat = makeFeatures({ score: 95, pagerank_score: 0.42 });
-    emitContextDecisions(
-      'trace-3',
-      [feat],
-      [{ fileId: 'src/c.ts', score: 95, included: true }],
-    );
+    emitContextDecisions('trace-3', [feat], [{ fileId: 'src/c.ts', score: 95, included: true }]);
 
     expect(writer.recorded[0].features).toMatchObject({
       score: 95,
@@ -136,8 +136,12 @@ describe('emitContextDecisions — basic emission', () => {
 });
 
 describe('emitContextDecisions — features shorter than final', () => {
-  beforeEach(() => { _setFlagGetterForTests(() => true); });
-  afterEach(() => { _resetFlagGetterForTests(); });
+  beforeEach(() => {
+    _setFlagGetterForTests(() => true);
+  });
+  afterEach(() => {
+    _resetFlagGetterForTests();
+  });
 
   it('synthesises a zero-reasons feature vector for entries beyond the features array', () => {
     const writer = makeMockWriter();
@@ -160,8 +164,12 @@ describe('emitContextDecisions — features shorter than final', () => {
 });
 
 describe('emitContextDecisions — empty final list', () => {
-  beforeEach(() => { _setFlagGetterForTests(() => true); });
-  afterEach(() => { _resetFlagGetterForTests(); });
+  beforeEach(() => {
+    _setFlagGetterForTests(() => true);
+  });
+  afterEach(() => {
+    _resetFlagGetterForTests();
+  });
 
   it('emits nothing when final is empty', () => {
     const writer = makeMockWriter();
@@ -174,8 +182,12 @@ describe('emitContextDecisions — empty final list', () => {
 });
 
 describe('emitContextDecisions — feature flag off', () => {
-  beforeEach(() => { _setFlagGetterForTests(() => false); });
-  afterEach(() => { _resetFlagGetterForTests(); });
+  beforeEach(() => {
+    _setFlagGetterForTests(() => false);
+  });
+  afterEach(() => {
+    _resetFlagGetterForTests();
+  });
 
   it('is a no-op when context.decisionLogging is false', () => {
     const writer = makeMockWriter();
@@ -192,8 +204,12 @@ describe('emitContextDecisions — feature flag off', () => {
 });
 
 describe('emitContextDecisions — no writer', () => {
-  beforeEach(() => { _setFlagGetterForTests(() => true); });
-  afterEach(() => { _resetFlagGetterForTests(); });
+  beforeEach(() => {
+    _setFlagGetterForTests(() => true);
+  });
+  afterEach(() => {
+    _resetFlagGetterForTests();
+  });
 
   it('does not throw when no writer is injected and singleton is null', async () => {
     // Reset the injected writer by calling initContextSignalCollector with a
@@ -205,9 +221,11 @@ describe('emitContextDecisions — no writer', () => {
     // feasible without vi.mock rewiring, so we use the flag-off path instead.
     _setFlagGetterForTests(() => false);
     expect(() =>
-      emitContextDecisions('trace-8', [makeFeatures()], [
-        { fileId: 'src/h.ts', score: 10, included: true },
-      ]),
+      emitContextDecisions(
+        'trace-8',
+        [makeFeatures()],
+        [{ fileId: 'src/h.ts', score: 10, included: true }],
+      ),
     ).not.toThrow();
   });
 });

@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
-import {
-  getDefaultShellForPlatform,
-  TerminalSectionContent,
-} from './TerminalSectionParts';
+import { getDefaultShellForPlatform, TerminalSectionContent } from './TerminalSectionParts';
 
 interface TerminalSectionProps {
   draft: AppConfig;

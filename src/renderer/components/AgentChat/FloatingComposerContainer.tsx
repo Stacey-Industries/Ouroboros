@@ -31,8 +31,7 @@ export interface FloatingComposerContainerProps {
 const BASE_CLASS =
   'rounded-xl bg-surface-raised shadow-sm overflow-visible transition-shadow duration-150';
 
-const DRAG_CLASS =
-  'ring-2 ring-inset ring-interactive-accent';
+const DRAG_CLASS = 'ring-2 ring-inset ring-interactive-accent';
 
 const BASE_STYLE: React.CSSProperties = {
   background: 'var(--composer-wash)',

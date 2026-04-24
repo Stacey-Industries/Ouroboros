@@ -75,7 +75,10 @@ export function useDirectoryDiagnostic(dirPath: string): DiagnosticSeverity | un
       const normalizedPath = filePath.replace(/\\/g, '/');
       if (normalizedPath.startsWith(prefix)) {
         const p = SEVERITY_PRIORITY[severity] ?? 0;
-        if (p > worstP) { worstP = p; worst = severity; }
+        if (p > worstP) {
+          worstP = p;
+          worst = severity;
+        }
       }
     }
     return worst;

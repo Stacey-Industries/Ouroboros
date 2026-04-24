@@ -10,14 +10,16 @@ import type {
 import { ORCHESTRATION_PROVIDER_SESSION_EVENT } from './appEventNames';
 import { subscribeToOrchestrationUiEvents } from './orchestrationEventSubscriptions';
 
-const CustomEventImpl = globalThis.CustomEvent ?? class<T = unknown> extends Event {
-  detail: T;
+const CustomEventImpl =
+  globalThis.CustomEvent ??
+  class<T = unknown> extends Event {
+    detail: T;
 
-  constructor(type: string, init?: CustomEventInit<T>) {
-    super(type);
-    this.detail = init?.detail as T;
-  }
-};
+    constructor(type: string, init?: CustomEventInit<T>) {
+      super(type);
+      this.detail = init?.detail as T;
+    }
+  };
 
 function createState(overrides: Partial<OrchestrationState> = {}): OrchestrationState {
   return {
@@ -30,7 +32,9 @@ function createState(overrides: Partial<OrchestrationState> = {}): Orchestration
   };
 }
 
-function createVerificationSummary(overrides: Partial<VerificationSummary> = {}): VerificationSummary {
+function createVerificationSummary(
+  overrides: Partial<VerificationSummary> = {},
+): VerificationSummary {
   return {
     profile: 'default',
     status: 'failed',
@@ -152,7 +156,10 @@ describe('subscribeToOrchestrationUiEvents', () => {
         action: expect.objectContaining({ label: 'Open' }),
       }),
     );
-    expect(notify).toHaveBeenCalledWith({ title: 'Orchestration update', body: 'Orchestration failed: formatter crashed' });
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Orchestration update',
+      body: 'Orchestration failed: formatter crashed',
+    });
   });
 
   it('surfaces provider failures and announces provider sessions only once', () => {
@@ -178,14 +185,18 @@ describe('subscribeToOrchestrationUiEvents', () => {
     providerCallback?.(providerEvent);
     providerCallback?.(providerEvent);
 
-    expect(toast).toHaveBeenCalledWith('Provider error: connection dropped', 'error', { duration: 7000 });
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
-      type: ORCHESTRATION_PROVIDER_SESSION_EVENT,
-      detail: expect.objectContaining({
-        provider: 'claude-code',
-        session: expect.objectContaining({ sessionId: 'provider-session-1' }),
+    expect(toast).toHaveBeenCalledWith('Provider error: connection dropped', 'error', {
+      duration: 7000,
+    });
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ORCHESTRATION_PROVIDER_SESSION_EVENT,
+        detail: expect.objectContaining({
+          provider: 'claude-code',
+          session: expect.objectContaining({ sessionId: 'provider-session-1' }),
+        }),
       }),
-    }));
+    );
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
 
@@ -199,27 +210,37 @@ describe('subscribeToOrchestrationUiEvents', () => {
     });
 
     verificationCallback?.(createVerificationSummary());
-    resultCallback?.(createResult({
-      message: 'Applied edits and verification passed.',
-      providerArtifact: {
-        provider: 'claude-code',
-        status: 'completed',
-        submittedAt: 1,
-        session: {
+    resultCallback?.(
+      createResult({
+        message: 'Applied edits and verification passed.',
+        providerArtifact: {
           provider: 'claude-code',
-          sessionId: 'provider-session-2',
+          status: 'completed',
+          submittedAt: 1,
+          session: {
+            provider: 'claude-code',
+            sessionId: 'provider-session-2',
+          },
         },
-      },
-    }));
+      }),
+    );
 
-    expect(toast).toHaveBeenCalledWith('Verification failed: lint failed', 'warning', { duration: 6000 });
+    expect(toast).toHaveBeenCalledWith('Verification failed: lint failed', 'warning', {
+      duration: 6000,
+    });
     expect(toast).toHaveBeenCalledWith(
       'Applied edits and verification passed.',
       'success',
       expect.objectContaining({ action: expect.objectContaining({ label: 'Open' }) }),
     );
-    expect(notify).toHaveBeenCalledWith({ title: 'Orchestration verification', body: 'Verification failed: lint failed' });
-    expect(notify).toHaveBeenCalledWith({ title: 'Orchestration result', body: 'Applied edits and verification passed.' });
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Orchestration verification',
+      body: 'Verification failed: lint failed',
+    });
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Orchestration result',
+      body: 'Applied edits and verification passed.',
+    });
   });
 
   it('announces provider sessions attached to session updates', () => {
@@ -231,19 +252,23 @@ describe('subscribeToOrchestrationUiEvents', () => {
       seenVerifications: new Set(),
     });
 
-    sessionCallback?.(createSession({
-      providerSession: {
-        provider: 'claude-code',
-        sessionId: 'provider-session-3',
-      },
-    }));
-
-    expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
-      type: ORCHESTRATION_PROVIDER_SESSION_EVENT,
-      detail: expect.objectContaining({
-        orchestrationSessionId: 'session-1',
-        taskId: 'task-1',
+    sessionCallback?.(
+      createSession({
+        providerSession: {
+          provider: 'claude-code',
+          sessionId: 'provider-session-3',
+        },
       }),
-    }));
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: ORCHESTRATION_PROVIDER_SESSION_EVENT,
+        detail: expect.objectContaining({
+          orchestrationSessionId: 'session-1',
+          taskId: 'task-1',
+        }),
+      }),
+    );
   });
 });

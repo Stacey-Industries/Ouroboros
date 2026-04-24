@@ -139,7 +139,9 @@ describe('buildAgentChatExtApi', () => {
     const t = makeTransport();
     const api = buildAgentChatExtApi(t);
     await api.getThreadCostRollup({ threadId: 'thread-1' });
-    expect(t.invoke).toHaveBeenCalledWith('agentChat:getThreadCostRollup', { threadId: 'thread-1' });
+    expect(t.invoke).toHaveBeenCalledWith('agentChat:getThreadCostRollup', {
+      threadId: 'thread-1',
+    });
   });
 });
 

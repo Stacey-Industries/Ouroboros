@@ -57,7 +57,11 @@ export function SessionNotesPreview({ notes }: { notes: string }): React.ReactEl
   );
 }
 
-export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement<unknown> | null {
+export function SessionErrorBanner({
+  error,
+}: {
+  error?: string;
+}): React.ReactElement<unknown> | null {
   if (!error) return null;
   return (
     <div
@@ -117,6 +121,7 @@ export function ExpandedToolView({
     <div>
       {cardView === 'feed' ? (
         <ToolCallFeed
+          sessionId={session.id}
           toolCalls={session.toolCalls}
           conversationTurns={session.conversationTurns}
         />

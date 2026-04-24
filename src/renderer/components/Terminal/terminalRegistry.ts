@@ -7,29 +7,29 @@
  * to thread refs through the entire component tree.
  */
 
-import type { Terminal } from '@xterm/xterm'
+import type { Terminal } from '@xterm/xterm';
 
 /** Map of sessionId -> xterm Terminal instance */
-const registry = new Map<string, Terminal>()
+const registry = new Map<string, Terminal>();
 
 export function registerTerminal(sessionId: string, terminal: Terminal): void {
-  registry.set(sessionId, terminal)
+  registry.set(sessionId, terminal);
 }
 
 export function unregisterTerminal(sessionId: string): void {
-  registry.delete(sessionId)
+  registry.delete(sessionId);
 }
 
 /** Clear a terminal's screen buffer. */
 export function clearTerminal(sessionId?: string): void {
-  let term: Terminal | undefined
+  let term: Terminal | undefined;
   if (sessionId) {
-    term = registry.get(sessionId)
+    term = registry.get(sessionId);
   } else {
-    const first = registry.values().next()
-    term = first.done ? undefined : first.value
+    const first = registry.values().next();
+    term = first.done ? undefined : first.value;
   }
-  if (term) term.clear()
+  if (term) term.clear();
 }
 
 /**
@@ -37,34 +37,34 @@ export function clearTerminal(sessionId?: string): void {
  * If sessionId is not provided, reads from the first registered terminal.
  */
 export function getTerminalLines(sessionId?: string, lineCount = 200): string[] {
-  let term: Terminal | undefined
+  let term: Terminal | undefined;
 
   if (sessionId) {
-    term = registry.get(sessionId)
+    term = registry.get(sessionId);
   } else {
     // Default to first registered terminal
-    const first = registry.values().next()
-    term = first.done ? undefined : first.value
+    const first = registry.values().next();
+    term = first.done ? undefined : first.value;
   }
 
-  if (!term) return []
+  if (!term) return [];
 
-  const buffer = term.buffer.active
-  const totalRows = buffer.length
-  const startRow = Math.max(0, totalRows - lineCount)
-  const lines: string[] = []
+  const buffer = term.buffer.active;
+  const totalRows = buffer.length;
+  const startRow = Math.max(0, totalRows - lineCount);
+  const lines: string[] = [];
 
   for (let i = startRow; i < totalRows; i++) {
-    const line = buffer.getLine(i)
+    const line = buffer.getLine(i);
     if (line) {
-      lines.push(line.translateToString(true))
+      lines.push(line.translateToString(true));
     }
   }
 
   // Trim trailing empty lines
   while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
-    lines.pop()
+    lines.pop();
   }
 
-  return lines
+  return lines;
 }

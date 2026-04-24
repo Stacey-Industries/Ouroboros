@@ -67,9 +67,12 @@ interface ContentProps {
   showChangeSummary: boolean;
 }
 
-function AssistantBody(
-  { message, isStreaming, showRaw, onStop }: Pick<ContentProps, 'message' | 'isStreaming' | 'showRaw' | 'onStop'>,
-): React.ReactElement {
+function AssistantBody({
+  message,
+  isStreaming,
+  showRaw,
+  onStop,
+}: Pick<ContentProps, 'message' | 'isStreaming' | 'showRaw' | 'onStop'>): React.ReactElement {
   if (showRaw) {
     return (
       <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded bg-surface-inset px-3 py-2 font-mono text-xs text-text-semantic-primary">
@@ -78,7 +81,9 @@ function AssistantBody(
     );
   }
   if (message.blocks?.length) {
-    return <AssistantBlocksContent blocks={message.blocks} isStreaming={isStreaming} onStop={onStop} />;
+    return (
+      <AssistantBlocksContent blocks={message.blocks} isStreaming={isStreaming} onStop={onStop} />
+    );
   }
   if (isStreaming) return <StreamingStatusMessage onStop={onStop} />;
   return <MessageMarkdown content={message.content || ' '} />;
@@ -136,7 +141,12 @@ function CollapseButton({ collapsed, onToggle }: CollapseButtonProps): React.Rea
   );
 }
 
-function CollapseToggle({ message, isStreaming, collapsed, onToggle }: {
+function CollapseToggle({
+  message,
+  isStreaming,
+  collapsed,
+  onToggle,
+}: {
   message: AgentChatMessageRecord;
   isStreaming: boolean;
   collapsed: boolean;
@@ -181,7 +191,11 @@ function AssistantMessageHeader(props: HeaderProps): React.ReactElement | null {
         onToggleRaw={props.onToggleRaw}
         onQuote={props.onQuote}
         reactionsSlot={
-          <ReactionBar messageId={props.message.id} threadId={props.message.threadId} reactions={reactions} />
+          <ReactionBar
+            messageId={props.message.id}
+            threadId={props.message.threadId}
+            reactions={reactions}
+          />
         }
       />
     </div>
@@ -215,7 +229,11 @@ interface AssistantStreamingState {
 function useAssistantStreamingState(message: AgentChatMessageRecord): AssistantStreamingState {
   const msg = message as StreamingMsg;
   const isStreaming = msg._streaming === true && (msg._streamingState?.isStreaming ?? false);
-  return { isStreaming, onStop: msg._streamingState?.onStop, hiddenHeader: msg._streaming === true };
+  return {
+    isStreaming,
+    onStop: msg._streamingState?.onStop,
+    hiddenHeader: msg._streaming === true,
+  };
 }
 
 interface AssistantMessageProps {
@@ -243,7 +261,10 @@ function useAssistantRenderState(props: AssistantMessageProps): AssistantRenderS
   const streaming = useAssistantStreamingState(props.message);
   const snapshotHash = props.message.orchestration?.preSnapshotHash;
   const showChangeSummary = shouldShowChangeSummary(
-    streaming.isStreaming, snapshotHash, props.workspaceRoot, props.message.blocks,
+    streaming.isStreaming,
+    snapshotHash,
+    props.workspaceRoot,
+    props.message.blocks,
   );
   const [showRaw, setShowRaw] = useState(false);
   const onToggleRaw = useCallback(() => setShowRaw((v) => !v), []);
@@ -254,7 +275,17 @@ function useAssistantRenderState(props: AssistantMessageProps): AssistantRenderS
   });
   const { density } = useDensity();
   const paddingClass = density === 'compact' ? 'py-0.5' : 'py-1';
-  return { streaming, snapshotHash, showChangeSummary, showRaw, onToggleRaw, collapsed, toggleCollapsed, quoteMessage, paddingClass };
+  return {
+    streaming,
+    snapshotHash,
+    showChangeSummary,
+    showRaw,
+    onToggleRaw,
+    collapsed,
+    toggleCollapsed,
+    quoteMessage,
+    paddingClass,
+  };
 }
 
 export const AssistantMessage = React.memo(function AssistantMessage(
@@ -265,23 +296,32 @@ export const AssistantMessage = React.memo(function AssistantMessage(
     <div className={`group flex justify-start ${s.paddingClass}`}>
       <div className={`w-full max-w-full ${ASSISTANT_GUTTER}`}>
         <AssistantMessageHeader
-          message={props.message} hidden={s.streaming.hiddenHeader}
-          showRaw={s.showRaw} onToggleRaw={s.onToggleRaw}
+          message={props.message}
+          hidden={s.streaming.hiddenHeader}
+          showRaw={s.showRaw}
+          onToggleRaw={s.onToggleRaw}
           onQuote={s.quoteMessage}
-          onBranch={props.onBranch} onRevert={props.onRevert}
+          onBranch={props.onBranch}
+          onRevert={props.onRevert}
           onRerunSuccess={props.onRerunSuccess}
         />
         {!s.collapsed && (
           <AssistantMessageContent
-            message={props.message} isStreaming={s.streaming.isStreaming} showRaw={s.showRaw}
-            onStop={s.streaming.onStop} workspaceRoot={props.workspaceRoot}
-            snapshotHash={s.snapshotHash} onOpenLinkedDetails={props.onOpenLinkedDetails}
+            message={props.message}
+            isStreaming={s.streaming.isStreaming}
+            showRaw={s.showRaw}
+            onStop={s.streaming.onStop}
+            workspaceRoot={props.workspaceRoot}
+            snapshotHash={s.snapshotHash}
+            onOpenLinkedDetails={props.onOpenLinkedDetails}
             showChangeSummary={s.showChangeSummary}
           />
         )}
         <CollapseToggle
-          message={props.message} isStreaming={s.streaming.isStreaming}
-          collapsed={s.collapsed} onToggle={s.toggleCollapsed}
+          message={props.message}
+          isStreaming={s.streaming.isStreaming}
+          collapsed={s.collapsed}
+          onToggle={s.toggleCollapsed}
         />
       </div>
     </div>

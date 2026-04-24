@@ -61,11 +61,7 @@ import { LayoutPresetResolverProvider } from './LayoutPresetResolverProvider';
 function makeWrapper(sessionId = 'test-session'): React.FC<{ children: React.ReactNode }> {
   // eslint-disable-next-line react/prop-types
   return function Wrapper({ children }) {
-    return React.createElement(
-      LayoutPresetResolverProvider,
-      { sessionId },
-      children,
-    );
+    return React.createElement(LayoutPresetResolverProvider, { sessionId }, children);
   };
 }
 
@@ -132,9 +128,12 @@ describe('persistence round-trip — swapSlots persists via setCustomLayout', ()
       await new Promise<void>((resolve) => setTimeout(resolve, 400));
     });
 
-    await waitFor(() => {
-      expect(mockSetCustomLayout).toHaveBeenCalledWith('sess-swap', expect.any(Object));
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(mockSetCustomLayout).toHaveBeenCalledWith('sess-swap', expect.any(Object));
+      },
+      { timeout: 2000 },
+    );
   });
 });
 

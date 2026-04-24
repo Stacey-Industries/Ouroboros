@@ -32,7 +32,11 @@ vi.mock('./AgentChatComposer', () => ({
     isSending: boolean;
     draft: string;
   }) => (
-    <div data-testid="mock-composer" data-can-send={String(props.canSend)} data-is-sending={String(props.isSending)}>
+    <div
+      data-testid="mock-composer"
+      data-can-send={String(props.canSend)}
+      data-is-sending={String(props.isSending)}
+    >
       <button
         data-testid="submit-btn"
         onClick={() => void props.onSubmit()}
@@ -53,7 +57,15 @@ vi.mock('./researchCommands', () => ({
 }));
 
 vi.mock('./ComposerProfile', () => ({
-  ComposerProfile: () => null,
+  ComposerProfile: (props: { onSwitch: (profileId: string) => void }) => (
+    <button
+      data-testid="mock-profile-switch"
+      type="button"
+      onClick={() => props.onSwitch('profile-1')}
+    >
+      Switch profile
+    </button>
+  ),
 }));
 
 vi.mock('./McpChatToggles', () => ({
@@ -67,11 +79,7 @@ vi.mock('./ToolToggles', () => ({
 // ─── Import after mocks ───────────────────────────────────────────────────────
 
 import { ComposerSection } from './AgentChatComposerSection';
-import {
-  buildFollowupPrompt,
-  parseResearchCommand,
-  runResearchAndPin,
-} from './researchCommands';
+import { buildFollowupPrompt, parseResearchCommand, runResearchAndPin } from './researchCommands';
 
 // ─── electronAPI mock ─────────────────────────────────────────────────────────
 
@@ -209,5 +217,71 @@ describe('ComposerSection — research intercept', () => {
     screen.getByTestId('submit-btn').click();
     await vi.waitFor(() => expect(props.onSend).toHaveBeenCalledTimes(1));
     expect(runResearchAndPin).not.toHaveBeenCalled();
+  });
+});
+
+describe('ComposerSection — draft profile handoff', () => {
+  it('stores a profile switch in chatOverrides before a session exists', async () => {
+    const onChatOverridesChange = vi.fn();
+    render(
+      <ComposerSection
+        {...makeProps({
+          activeSessionId: null,
+          chatOverrides: { model: 'gpt-5.4', effort: 'medium', permissionMode: 'default' },
+          onChatOverridesChange,
+        })}
+      />,
+    );
+
+    screen.getByTestId('mock-profile-switch').click();
+
+    expect(onChatOverridesChange).toHaveBeenCalledWith({
+      model: 'gpt-5.4',
+      effort: 'medium',
+      permissionMode: 'default',
+      profileId: 'profile-1',
+    });
+    expect(mockElectronAPI.sessionCrud.setProfile).not.toHaveBeenCalled();
+  });
+
+  it('applies the staged profile to the first real session when it appears', async () => {
+    mockElectronAPI.sessionCrud.list.mockResolvedValue({
+      success: true,
+      sessions: [{ id: 'sess-2' }],
+    });
+    const onChatOverridesChange = vi.fn();
+    const { rerender } = render(
+      <ComposerSection
+        {...makeProps({
+          activeSessionId: null,
+          chatOverrides: {
+            model: 'gpt-5.4',
+            effort: 'medium',
+            permissionMode: 'default',
+            profileId: 'profile-1',
+          },
+          onChatOverridesChange,
+        })}
+      />,
+    );
+
+    rerender(
+      <ComposerSection
+        {...makeProps({
+          activeSessionId: 'sess-2',
+          chatOverrides: {
+            model: 'gpt-5.4',
+            effort: 'medium',
+            permissionMode: 'default',
+            profileId: 'profile-1',
+          },
+          onChatOverridesChange,
+        })}
+      />,
+    );
+
+    await vi.waitFor(() =>
+      expect(mockElectronAPI.sessionCrud.setProfile).toHaveBeenCalledWith('sess-2', 'profile-1'),
+    );
   });
 });

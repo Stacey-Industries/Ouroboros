@@ -37,10 +37,7 @@ vi.mock('../logger', () => ({
 
 // ─── Import after mocks ───────────────────────────────────────────────────────
 
-import {
-  cleanupPushTokenHandler,
-  registerPushTokenHandler,
-} from './pushTokenHandlers';
+import { cleanupPushTokenHandler, registerPushTokenHandler } from './pushTokenHandlers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -150,9 +147,7 @@ describe('handleRegisterPushToken — happy path', () => {
       platform: 'ios',
     });
     expect(result).toMatchObject({ success: true });
-    expect(mocks.addDevice).toHaveBeenCalledWith(
-      expect.objectContaining({ pushPlatform: 'ios' }),
-    );
+    expect(mocks.addDevice).toHaveBeenCalledWith(expect.objectContaining({ pushPlatform: 'ios' }));
   });
 
   it('never logs the raw token value', async () => {
@@ -165,7 +160,9 @@ describe('handleRegisterPushToken — happy path', () => {
       ...mocks.logInfo.mock.calls,
       ...mocks.logWarn.mock.calls,
       ...mocks.logError.mock.calls,
-    ].flat().join(' ');
+    ]
+      .flat()
+      .join(' ');
     expect(allLogArgs).not.toContain(rawToken);
     expect(allLogArgs).toContain(rawToken.slice(0, 8));
   });

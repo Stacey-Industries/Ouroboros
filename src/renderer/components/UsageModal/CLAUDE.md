@@ -1,6 +1,4 @@
 <!-- claude-md-auto:start -->
-The CLAUDE.md already exists for this directory. Based on reading the files, the existing content is accurate. Here it is as final output:
-
 # UsageModal — Claude Code token/cost usage dashboard
 
 Displays token consumption and estimated cost from `~/.claude` local session data. Two independent UI variants live in this directory.
@@ -52,6 +50,7 @@ Both hit `window.electronAPI.usage.getSummary()` but use **separate utility file
 | `usage.getSessionDetail(sessionId)` | `UsageCurrentTab` |
 
 Types: `SessionUsage`, `UsageSummary`, `SessionDetail`, `WindowedUsage`, `UsageAPI` — all from `../../types/electron.d.ts`.
+
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

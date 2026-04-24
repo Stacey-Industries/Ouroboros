@@ -40,14 +40,14 @@ vi.mock('../orchestration/workspaceReadList', () => ({
 // ─── MCP handler mock — controls which server IDs are "registered" ─────────────
 
 const { mockGetRegisteredMcpServerIds } = vi.hoisted(() => ({
-  mockGetRegisteredMcpServerIds: vi.fn<(projectRoot?: string) => Promise<string[]>>(
-    async () => ['server-a', 'server-b'],
-  ),
+  mockGetRegisteredMcpServerIds: vi.fn<(projectRoot?: string) => Promise<string[]>>(async () => [
+    'server-a',
+    'server-b',
+  ]),
 }));
 
 vi.mock('./mcp', () => ({
-  getRegisteredMcpServerIds: (projectRoot?: string) =>
-    mockGetRegisteredMcpServerIds(projectRoot),
+  getRegisteredMcpServerIds: (projectRoot?: string) => mockGetRegisteredMcpServerIds(projectRoot),
 }));
 
 // ─── Session store mock ────────────────────────────────────────────────────────
@@ -87,7 +87,9 @@ function makeInMemoryStore(): SessionStore {
   const data: Session[] = [];
   return openSessionStore({
     read: () => [...data],
-    write: (sessions) => { data.splice(0, data.length, ...sessions); },
+    write: (sessions) => {
+      data.splice(0, data.length, ...sessions);
+    },
   });
 }
 
@@ -125,10 +127,10 @@ describe('sessionCrud:setMcpOverrides — allowlist validation', () => {
 
   it('accepts all-known server IDs and stores them', async () => {
     const handler = captureHandler('sessionCrud:setMcpOverrides');
-    const result = await handler?.(makeEvent(), {
+    const result = (await handler?.(makeEvent(), {
       sessionId: session.id,
       mcpServerOverrides: ['server-a'],
-    }) as { success: boolean };
+    })) as { success: boolean };
 
     expect(result.success).toBe(true);
     const updated = store.getById(session.id);
@@ -137,20 +139,20 @@ describe('sessionCrud:setMcpOverrides — allowlist validation', () => {
 
   it('accepts an empty override list (no servers — valid)', async () => {
     const handler = captureHandler('sessionCrud:setMcpOverrides');
-    const result = await handler?.(makeEvent(), {
+    const result = (await handler?.(makeEvent(), {
       sessionId: session.id,
       mcpServerOverrides: [],
-    }) as { success: boolean };
+    })) as { success: boolean };
 
     expect(result.success).toBe(true);
   });
 
   it('rejects a list containing one unknown server ID', async () => {
     const handler = captureHandler('sessionCrud:setMcpOverrides');
-    const result = await handler?.(makeEvent(), {
+    const result = (await handler?.(makeEvent(), {
       sessionId: session.id,
       mcpServerOverrides: ['server-a', 'evil-server'],
-    }) as { success: boolean; error?: string; unknownIds?: string[] };
+    })) as { success: boolean; error?: string; unknownIds?: string[] };
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('unknown-mcp-server');
@@ -159,10 +161,10 @@ describe('sessionCrud:setMcpOverrides — allowlist validation', () => {
 
   it('rejects a list where all server IDs are unknown', async () => {
     const handler = captureHandler('sessionCrud:setMcpOverrides');
-    const result = await handler?.(makeEvent(), {
+    const result = (await handler?.(makeEvent(), {
       sessionId: session.id,
       mcpServerOverrides: ['ghost-1', 'ghost-2'],
-    }) as { success: boolean; error?: string; unknownIds?: string[] };
+    })) as { success: boolean; error?: string; unknownIds?: string[] };
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('unknown-mcp-server');

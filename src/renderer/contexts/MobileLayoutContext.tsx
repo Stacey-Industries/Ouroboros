@@ -52,12 +52,24 @@ function useMobileOverlayState(): MobileOverlayState {
     setActiveSheetView(null);
   }, []);
 
-  return { isDrawerOpen, openDrawer, closeDrawer, isSheetOpen, activeSheetView, openSheet, closeSheet };
+  return {
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+    isSheetOpen,
+    activeSheetView,
+    openSheet,
+    closeSheet,
+  };
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-export function MobileLayoutProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function MobileLayoutProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   const panel = useMobileActivePanel();
   const overlay = useMobileOverlayState();
 
@@ -86,11 +98,7 @@ export function MobileLayoutProvider({ children }: { children: React.ReactNode }
     ],
   );
 
-  return (
-    <MobileLayoutContext.Provider value={value}>
-      {children}
-    </MobileLayoutContext.Provider>
-  );
+  return <MobileLayoutContext.Provider value={value}>{children}</MobileLayoutContext.Provider>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────

@@ -186,7 +186,10 @@ export interface CodexAppServerJsonRpcFailure {
   error: CodexAppServerJsonRpcError;
 }
 
-export interface CodexAppServerJsonRpcNotification<TMethod extends string = string, TParams = unknown> {
+export interface CodexAppServerJsonRpcNotification<
+  TMethod extends string = string,
+  TParams = unknown,
+> {
   method: TMethod;
   params: TParams;
 }
@@ -221,7 +224,10 @@ export interface CodexAppServerMethodMap {
 }
 
 export type CodexAppServerClientMethod = keyof CodexAppServerMethodMap;
-export type CodexAppServerClientNotification = CodexAppServerJsonRpcNotification<'initialized', undefined>;
+export type CodexAppServerClientNotification = CodexAppServerJsonRpcNotification<
+  'initialized',
+  undefined
+>;
 
 export type CodexAppServerServerRequest =
   | CodexAppServerJsonRpcRequest<

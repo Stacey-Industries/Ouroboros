@@ -145,7 +145,11 @@ function DialogContent({
       </h3>
       <form onSubmit={handleSubmit}>
         <BranchNameInput inputRef={inputRef} name={name} saving={saving} onChange={setName} />
-        {error && <p className="mb-2 text-xs text-status-error" role="alert">{error}</p>}
+        {error && (
+          <p className="mb-2 text-xs text-status-error" role="alert">
+            {error}
+          </p>
+        )}
         <DialogFormButtons saving={saving} nameIsEmpty={!name.trim()} onClose={onClose} />
       </form>
     </div>
@@ -202,7 +206,9 @@ export function BranchRenameDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       aria-hidden="false"
     >
       <DialogContent

@@ -68,6 +68,7 @@ export interface AgentChatModelState {
   defaultProvider: 'claude-code' | 'codex' | 'anthropic-api';
   modelProviders: ModelProvider[];
   codexModels: CodexModelOption[];
+  codexAppServerTransport: boolean;
 }
 
 /* ── Message queue ────────────────────────────────── */
@@ -94,9 +95,7 @@ export interface AgentChatActions {
   onRevert: (message: AgentChatMessageRecord) => void;
   /** Wave 22 Phase F — called when a re-run branch succeeds; navigates to the new thread. */
   onRerunSuccess: (newThreadId: string) => void;
-  onOpenLinkedDetails: (
-    link?: AgentChatOrchestrationLink,
-  ) => Promise<void>;
+  onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onOpenLinkedTask: () => void;
   onSend: () => Promise<void>;
   onStop: () => Promise<void>;

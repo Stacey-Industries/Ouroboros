@@ -9,24 +9,24 @@
 
 export interface ChangedSymbol {
   /** Node ID (qualified_name) */
-  id: string
-  name: string
-  label: string
-  filePath: string | null
-  startLine: number | null
+  id: string;
+  name: string;
+  label: string;
+  filePath: string | null;
+  startLine: number | null;
   /** How many hops from a directly changed file (0 = in changed file, 1-2 = transitive) */
-  hopDepth: number
+  hopDepth: number;
 }
 
 // ─── Session change detection result ─────────────────────────────────────────
 
 export interface ChangedSymbolsForSession {
   /** Project name scoping this result */
-  projectName: string
+  projectName: string;
   /** Files from sessionFiles that had changed mtime or hash */
-  changedFiles: string[]
+  changedFiles: string[];
   /** All symbols in changed files + their transitive callers (up to N=2 hops) */
-  affectedSymbols: ChangedSymbol[]
+  affectedSymbols: ChangedSymbol[];
   /** Total blast radius (unique symbol count) */
-  blastRadius: number
+  blastRadius: number;
 }

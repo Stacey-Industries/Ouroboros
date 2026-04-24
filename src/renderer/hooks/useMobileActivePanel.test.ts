@@ -31,30 +31,42 @@ describe('useMobileActivePanel', () => {
 
   it('setActivePanel updates the panel', () => {
     const { result, unmount } = renderHook(() => useMobileActivePanel());
-    act(() => { result.current.setActivePanel('files'); });
+    act(() => {
+      result.current.setActivePanel('files');
+    });
     expect(result.current.activePanel).toBe('files');
     unmount();
   });
 
   it('FOCUS_AGENT_CHAT_EVENT flips panel to "chat"', () => {
     const { result, unmount } = renderHook(() => useMobileActivePanel());
-    act(() => { result.current.setActivePanel('terminal'); });
-    act(() => { dispatch(FOCUS_AGENT_CHAT_EVENT); });
+    act(() => {
+      result.current.setActivePanel('terminal');
+    });
+    act(() => {
+      dispatch(FOCUS_AGENT_CHAT_EVENT);
+    });
     expect(result.current.activePanel).toBe('chat');
     unmount();
   });
 
   it('OPEN_AGENT_CHAT_PANEL_EVENT flips panel to "chat"', () => {
     const { result, unmount } = renderHook(() => useMobileActivePanel());
-    act(() => { result.current.setActivePanel('editor'); });
-    act(() => { dispatch(OPEN_AGENT_CHAT_PANEL_EVENT); });
+    act(() => {
+      result.current.setActivePanel('editor');
+    });
+    act(() => {
+      dispatch(OPEN_AGENT_CHAT_PANEL_EVENT);
+    });
     expect(result.current.activePanel).toBe('chat');
     unmount();
   });
 
   it('FOCUS_TERMINAL_SESSION_EVENT flips panel to "terminal"', () => {
     const { result, unmount } = renderHook(() => useMobileActivePanel());
-    act(() => { dispatch(FOCUS_TERMINAL_SESSION_EVENT); });
+    act(() => {
+      dispatch(FOCUS_TERMINAL_SESSION_EVENT);
+    });
     expect(result.current.activePanel).toBe('terminal');
     unmount();
   });

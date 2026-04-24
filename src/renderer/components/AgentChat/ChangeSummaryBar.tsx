@@ -117,7 +117,11 @@ function CompletedHeaderRow(p: HeaderRowProps): React.ReactElement {
         onClick={p.onRestore}
         disabled={p.isRestoring}
         className="mr-2 shrink-0 border-none bg-none p-0 text-[10px] text-status-warning hover:text-status-error disabled:opacity-50"
-        style={{ background: 'none', border: 'none', cursor: p.isRestoring ? 'default' : 'pointer' }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: p.isRestoring ? 'default' : 'pointer',
+        }}
         title="Restore to before this agent turn"
       >
         {p.isRestoring ? '↺ Restoring…' : '↺ Restore'}
@@ -154,27 +158,20 @@ export function CompletedChangeSummaryBar({
     () => dispatchDiffReview(sessionId, snapshotHash, projectRoot, tally?.filesChanged),
     [projectRoot, sessionId, snapshotHash, tally?.filesChanged],
   );
+  const handleToggleExpanded = useCallback(() => {
+    setExpanded((v) => !v);
+    if (expanded) setSelectedFile(null);
+  }, [expanded]);
   return (
     <div className="mt-2 overflow-hidden rounded border border-border-semantic bg-surface-raised">
-      <CompletedHeaderRow
-        fileCount={fileCount}
-        expanded={expanded}
-        tally={tally}
-        isRestoring={isRestoring}
-        onToggleExpanded={() => { setExpanded((v) => !v); if (expanded) setSelectedFile(null); }}
-        onOpenFullReview={openFullReview}
-        onRestore={startConfirm}
-      />
+      <CompletedHeaderRow fileCount={fileCount} expanded={expanded} tally={tally}
+        isRestoring={isRestoring} onToggleExpanded={handleToggleExpanded}
+        onOpenFullReview={openFullReview} onRestore={startConfirm} />
       {isConfirming && (
         <RestoreConfirmDialog onConfirm={() => void confirmRestore()} onCancel={cancelConfirm} />
       )}
-      <CompletedChangeFileList
-        expanded={expanded}
-        tally={tally}
-        projectRoot={projectRoot}
-        selectedFile={selectedFile}
-        onSelectFile={(file) => setSelectedFile(selectedFile === file ? null : file)}
-      />
+      <CompletedChangeFileList expanded={expanded} tally={tally} projectRoot={projectRoot}
+        selectedFile={selectedFile} onSelectFile={(file) => setSelectedFile(selectedFile === file ? null : file)} />
     </div>
   );
 }

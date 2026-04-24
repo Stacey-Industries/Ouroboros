@@ -47,9 +47,11 @@ describe('useTokenOverrides', () => {
   });
 
   it('sets font overrides', () => {
-    mockUseConfig.mockReturnValue(makeConfig({
-      fonts: { editor: 'JetBrains Mono', chat: 'Inter', terminal: 'Fira Code' },
-    }));
+    mockUseConfig.mockReturnValue(
+      makeConfig({
+        fonts: { editor: 'JetBrains Mono', chat: 'Inter', terminal: 'Fira Code' },
+      }),
+    );
     renderHook(() => useTokenOverrides());
     expect(getProp('--font-editor')).toBe('JetBrains Mono');
     expect(getProp('--font-chat')).toBe('Inter');
@@ -57,9 +59,11 @@ describe('useTokenOverrides', () => {
   });
 
   it('sets customTokens as CSS custom properties', () => {
-    mockUseConfig.mockReturnValue(makeConfig({
-      customTokens: { '--surface-base': '#1a1a2e', '--text-primary': '#eee' }, // hardcoded: test data — arbitrary hex to verify customTokens passthrough
-    }));
+    mockUseConfig.mockReturnValue(
+      makeConfig({
+        customTokens: { '--surface-base': '#1a1a2e', '--text-primary': '#eee' }, // hardcoded: test data — arbitrary hex to verify customTokens passthrough
+      }),
+    );
     renderHook(() => useTokenOverrides());
     expect(getProp('--surface-base')).toBe('#1a1a2e'); // hardcoded: test data — asserting stored value
     expect(getProp('--text-primary')).toBe('#eee'); // hardcoded: test data — asserting stored value

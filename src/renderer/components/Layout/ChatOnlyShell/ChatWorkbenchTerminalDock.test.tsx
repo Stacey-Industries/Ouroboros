@@ -15,8 +15,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ChatWorkbenchTerminalDock } from './ChatWorkbenchTerminalDock';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
+import { ChatWorkbenchTerminalDock } from './ChatWorkbenchTerminalDock';
 
 vi.mock('../../Terminal/TerminalManager', () => ({
   TerminalManager: (props: { sessions: unknown[]; activeSessionId: string | null }) => (
@@ -34,7 +34,9 @@ vi.mock('../../shared/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-function makeTerminal(overrides: Partial<UseTerminalSessionsReturn> = {}): UseTerminalSessionsReturn {
+function makeTerminal(
+  overrides: Partial<UseTerminalSessionsReturn> = {},
+): UseTerminalSessionsReturn {
   const base: UseTerminalSessionsReturn = {
     sessions: [],
     activeSessionId: null,

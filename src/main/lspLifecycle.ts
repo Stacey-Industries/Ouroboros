@@ -217,10 +217,7 @@ function registerDiagnosticsListener(instance: LspServerInstance): void {
 
 async function initializeConnection(instance: LspServerInstance): Promise<void> {
   instance.connection.listen();
-  await instance.connection.sendRequest(
-    LSP_INITIALIZE,
-    createInitializeParams(instance.root),
-  );
+  await instance.connection.sendRequest(LSP_INITIALIZE, createInitializeParams(instance.root));
   instance.connection.sendNotification(LSP_INITIALIZED, {});
   registerDiagnosticsListener(instance);
 }
@@ -279,7 +276,11 @@ export async function startServer(root: string, language: string): Promise<LspAc
     servers.delete(key);
     // Kill orphaned process + connection to prevent fd leak
     if (processHandle) {
-      try { processHandle.kill(); } catch { /* already dead */ }
+      try {
+        processHandle.kill();
+      } catch {
+        /* already dead */
+      }
     }
     const message = error instanceof Error ? error.message : String(error);
     log.error(`Failed to start ${language} server:`, message);

@@ -175,7 +175,9 @@ interface LogEntriesProps {
   calls: ToolCallEvent[];
 }
 
-const LogEntries = memo(function LogEntries({ calls }: LogEntriesProps): React.ReactElement<unknown> {
+const LogEntries = memo(function LogEntries({
+  calls,
+}: LogEntriesProps): React.ReactElement<unknown> {
   if (calls.length === 0) {
     return (
       <p className="px-3 py-3 text-[10px] italic text-[var(--text-faint)]">

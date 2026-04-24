@@ -8,10 +8,7 @@
 
 import { ipcMain } from 'electron';
 
-import {
-  clearSystemPromptForSession,
-  getSystemPromptForSession,
-} from '../ptyAgentBridge';
+import { clearSystemPromptForSession, getSystemPromptForSession } from '../ptyAgentBridge';
 
 // ---- Types ----------------------------------------------------------------
 

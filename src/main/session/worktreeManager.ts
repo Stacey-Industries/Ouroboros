@@ -52,7 +52,10 @@ async function checkDiskSpace(dirPath: string): Promise<void> {
     // fs.statfs is available in Node 18+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const statfs = (fs as any).statfs as
-      | ((path: string, cb: (err: NodeJS.ErrnoException | null, stats: { bfree: number; bsize: number }) => void) => void)
+      | ((
+          path: string,
+          cb: (err: NodeJS.ErrnoException | null, stats: { bfree: number; bsize: number }) => void,
+        ) => void)
       | undefined;
 
     if (typeof statfs !== 'function') {

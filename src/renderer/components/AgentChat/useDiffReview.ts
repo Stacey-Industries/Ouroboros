@@ -20,10 +20,13 @@ export interface UseDiffReviewResult {
  * Loads the diff summary from orchestration IPC when available, otherwise
  * provides an empty file list. Tracks per-file accept/reject status.
  */
-type DiffSummaryApi = { getDiffSummary?: (id: string) => Promise<{ success: boolean; files?: DiffFile[] }> };
+type DiffSummaryApi = {
+  getDiffSummary?: (id: string) => Promise<{ success: boolean; files?: DiffFile[] }>;
+};
 
 function getDiffSummaryApi(): DiffSummaryApi | undefined {
-  return (window as unknown as { electronAPI?: { orchestration?: DiffSummaryApi } }).electronAPI?.orchestration;
+  return (window as unknown as { electronAPI?: { orchestration?: DiffSummaryApi } }).electronAPI
+    ?.orchestration;
 }
 
 function buildInitialStatuses(loadedFiles: DiffFile[]): Record<string, FileReviewStatus> {
@@ -73,19 +76,35 @@ function useDiffLoad(
     }
     const cancelled = { current: false };
     setIsLoading(true);
-    void fetchDiffSummary(orchestrationSessionId, cancelled, { setFiles, setFileStatuses, setIsLoading });
-    return () => { cancelled.current = true; };
+    void fetchDiffSummary(orchestrationSessionId, cancelled, {
+      setFiles,
+      setFileStatuses,
+      setIsLoading,
+    });
+    return () => {
+      cancelled.current = true;
+    };
   }, [orchestrationSessionId, setFiles, setFileStatuses, setIsLoading]);
 }
 
-function useFileStatusActions(setFileStatuses: (updater: (prev: Record<string, FileReviewStatus>) => Record<string, FileReviewStatus>) => void) {
-  const acceptFile = useCallback((path: string) => {
-    setFileStatuses((prev) => ({ ...prev, [path]: 'accepted' }));
-  }, [setFileStatuses]);
+function useFileStatusActions(
+  setFileStatuses: (
+    updater: (prev: Record<string, FileReviewStatus>) => Record<string, FileReviewStatus>,
+  ) => void,
+) {
+  const acceptFile = useCallback(
+    (path: string) => {
+      setFileStatuses((prev) => ({ ...prev, [path]: 'accepted' }));
+    },
+    [setFileStatuses],
+  );
 
-  const rejectFile = useCallback((path: string) => {
-    setFileStatuses((prev) => ({ ...prev, [path]: 'rejected' }));
-  }, [setFileStatuses]);
+  const rejectFile = useCallback(
+    (path: string) => {
+      setFileStatuses((prev) => ({ ...prev, [path]: 'rejected' }));
+    },
+    [setFileStatuses],
+  );
 
   const acceptAll = useCallback(() => {
     setFileStatuses((prev) => {

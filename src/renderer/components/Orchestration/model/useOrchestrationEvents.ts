@@ -10,7 +10,10 @@ import {
   updateSessionsWithVerification,
 } from '../useOrchestrationModel.helpers';
 
-export function useOrchestrationEvents(projectRoot: string | null, setters: OrchestrationStateStore): void {
+export function useOrchestrationEvents(
+  projectRoot: string | null,
+  setters: OrchestrationStateStore,
+): void {
   useEffect(() => {
     if (!hasElectronAPI()) {
       return;
@@ -27,7 +30,9 @@ export function useOrchestrationEvents(projectRoot: string | null, setters: Orch
           return;
         case 'verification_updated':
           setters.setLatestVerificationSummary(event.summary);
-          setters.setSessions((previous) => updateSessionsWithVerification(previous, event.sessionId, event.summary));
+          setters.setSessions((previous) =>
+            updateSessionsWithVerification(previous, event.sessionId, event.summary),
+          );
           return;
         case 'session_updated':
           if (!sessionMatchesProjectRoot(event.session, projectRoot)) {

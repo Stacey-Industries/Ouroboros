@@ -20,9 +20,7 @@ const { mockSend, mockIsDestroyed, mockHandle, mockRemoveHandler } = vi.hoisted(
 
 vi.mock('electron', () => ({
   BrowserWindow: {
-    getAllWindows: vi.fn(() => [
-      { isDestroyed: mockIsDestroyed, webContents: { send: mockSend } },
-    ]),
+    getAllWindows: vi.fn(() => [{ isDestroyed: mockIsDestroyed, webContents: { send: mockSend } }]),
   },
   ipcMain: {
     handle: mockHandle,
@@ -72,12 +70,17 @@ function makeInMemoryStore(): ProfileStore {
       const idx = profiles.findIndex((x) => x.id === p.id);
       const now = Date.now();
       const saved = { ...p, updatedAt: now, createdAt: idx < 0 ? now : p.createdAt };
-      if (idx < 0) profiles.push(saved); else profiles.splice(idx, 1, saved);
+      if (idx < 0) profiles.push(saved);
+      else profiles.splice(idx, 1, saved);
       return saved;
     },
-    delete: (id) => { profiles = profiles.filter((p) => p.id !== id); },
-    // eslint-disable-next-line security/detect-object-injection -- test fixture; root is a controlled string from tests, not user input
-    setDefaultProfile: (root, profileId) => { defaults[root] = profileId; },
+    delete: (id) => {
+      profiles = profiles.filter((p) => p.id !== id);
+    },
+    setDefaultProfile: (root, profileId) => {
+      // eslint-disable-next-line security/detect-object-injection -- test fixture; root is a controlled string from tests, not user input
+      defaults[root] = profileId;
+    },
     // eslint-disable-next-line security/detect-object-injection -- test fixture; same rationale
     getDefaultProfile: (root) => defaults[root] ?? null,
   };
@@ -110,7 +113,7 @@ describe('profileCrud:upsert — lint error gate', () => {
       enabledTools: ['Read', 'Bash'],
     });
 
-    const res = await invoke('profileCrud:upsert', { profile }) as {
+    const res = (await invoke('profileCrud:upsert', { profile })) as {
       success: boolean;
       error?: string;
       lintItems?: ProfileLint[];
@@ -141,7 +144,7 @@ describe('profileCrud:upsert — lint error gate', () => {
       enabledTools: ['Read', 'Write'],
     });
 
-    const res = await invoke('profileCrud:upsert', { profile }) as { success: boolean };
+    const res = (await invoke('profileCrud:upsert', { profile })) as { success: boolean };
     expect(res.success).toBe(true);
   });
 
@@ -151,7 +154,7 @@ describe('profileCrud:upsert — lint error gate', () => {
       enabledTools: ['Read', 'Bash', 'Write'],
     });
 
-    const res = await invoke('profileCrud:upsert', { profile }) as { success: boolean };
+    const res = (await invoke('profileCrud:upsert', { profile })) as { success: boolean };
     expect(res.success).toBe(true);
   });
 
@@ -160,7 +163,7 @@ describe('profileCrud:upsert — lint error gate', () => {
       enabledTools: ['Read', 'Grep', 'Glob'],
     });
 
-    const res = await invoke('profileCrud:upsert', { profile }) as { success: boolean };
+    const res = (await invoke('profileCrud:upsert', { profile })) as { success: boolean };
     expect(res.success).toBe(true);
   });
 

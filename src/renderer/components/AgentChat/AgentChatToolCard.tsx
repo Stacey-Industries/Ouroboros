@@ -1,6 +1,10 @@
-import type { AgentChatSubToolActivity } from '@shared/types/agentChat';
+import type {
+  AgentChatSubAgentTranscriptEntry,
+  AgentChatSubToolActivity,
+} from '@shared/types/agentChat';
 import React, { useState } from 'react';
 
+import { AgentChatSubAgentTranscript } from './AgentChatSubAgentTranscript';
 import { AgentChatSubToolList } from './AgentChatSubToolList';
 import { ToolDetails, ToolHeader } from './AgentChatToolCardSupport';
 import { useWorkspaceVariant } from './WorkspaceVariantContext';
@@ -43,6 +47,8 @@ export interface AgentChatToolCardProps {
   editSummary?: { oldLines: number; newLines: number };
   /** Nested subagent tool calls (for Agent/Task tools). */
   subTools?: AgentChatSubToolActivity[];
+  /** Nested subagent prose/thinking transcript. */
+  subAgentTranscript?: AgentChatSubAgentTranscriptEntry[];
 }
 
 export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
@@ -191,6 +197,9 @@ function ToolCardBody(props: ToolCardBodyProps): React.ReactElement {
       {!props.collapsed && props.subTools && props.subTools.length > 0 && (
         <AgentChatSubToolList subTools={props.subTools} />
       )}
+      {!props.collapsed && props.subAgentTranscript && props.subAgentTranscript.length > 0 && (
+        <AgentChatSubAgentTranscript entries={props.subAgentTranscript} />
+      )}
     </div>
   );
 }
@@ -204,5 +213,12 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard(
   const containerClass = buildContainerClass(variant, hasError);
   // IDE mode uses an inline style for the error border (token fallback); chat-only uses a class.
   const useInlineErrorBorder = variant === 'ide' && hasError;
-  return <ToolCardBody {...props} {...state} containerClass={containerClass} useInlineErrorBorder={useInlineErrorBorder} />;
+  return (
+    <ToolCardBody
+      {...props}
+      {...state}
+      containerClass={containerClass}
+      useInlineErrorBorder={useInlineErrorBorder}
+    />
+  );
 });

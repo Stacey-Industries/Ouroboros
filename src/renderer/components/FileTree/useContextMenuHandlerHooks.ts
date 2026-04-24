@@ -6,9 +6,8 @@
 import React, { useCallback } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
-import type { BulkMenuHandlers, ContextMenuHandlers } from './contextMenuControllerHelpers';
+import type { ContextMenuHandlers } from './contextMenuControllerHelpers';
 import type { TreeNode } from './FileTreeItem';
-import { useFileTreeStore } from './fileTreeStore';
 
 type ToastFn = ReturnType<typeof useToastContext>['toast'];
 type TreeNodeAction = (node: TreeNode) => void;
@@ -46,7 +45,11 @@ function getParentDirectory(node: TreeNode): string {
   return node.isDirectory ? node.path : node.path.replace(/[\\/][^\\/]+$/, '');
 }
 
-function useNodeAction(node: TreeNode | null, onClose: () => void, action?: TreeNodeAction): () => void {
+function useNodeAction(
+  node: TreeNode | null,
+  onClose: () => void,
+  action?: TreeNodeAction,
+): () => void {
   return useCallback(() => {
     if (!node || !action) return;
     action(node);
@@ -54,7 +57,11 @@ function useNodeAction(node: TreeNode | null, onClose: () => void, action?: Tree
   }, [action, node, onClose]);
 }
 
-function useParentDirectoryAction(node: TreeNode | null, onClose: () => void, action: DirectoryAction): () => void {
+function useParentDirectoryAction(
+  node: TreeNode | null,
+  onClose: () => void,
+  action: DirectoryAction,
+): () => void {
   return useCallback(() => {
     if (!node) return;
     onClose();
@@ -62,13 +69,24 @@ function useParentDirectoryAction(node: TreeNode | null, onClose: () => void, ac
   }, [action, node, onClose]);
 }
 
-function useClipboardAction({ message, node, onClose, resolveValue, toast }: {
-  message: string; node: TreeNode | null; onClose: () => void;
-  resolveValue: (node: TreeNode) => string; toast: ToastFn;
+function useClipboardAction({
+  message,
+  node,
+  onClose,
+  resolveValue,
+  toast,
+}: {
+  message: string;
+  node: TreeNode | null;
+  onClose: () => void;
+  resolveValue: (node: TreeNode) => string;
+  toast: ToastFn;
 }): () => void {
   return useCallback(() => {
     if (!node) return;
-    void navigator.clipboard.writeText(resolveValue(node)).then(() => { toast(message, 'success'); });
+    void navigator.clipboard.writeText(resolveValue(node)).then(() => {
+      toast(message, 'success');
+    });
     onClose();
   }, [message, node, onClose, resolveValue, toast]);
 }
@@ -76,7 +94,9 @@ function useClipboardAction({ message, node, onClose, resolveValue, toast }: {
 function useOpenInTerminalAction(node: TreeNode | null, onClose: () => void): () => void {
   return useCallback(() => {
     if (!node) return;
-    window.dispatchEvent(new CustomEvent('agent-ide:new-terminal', { detail: { cwd: getParentDirectory(node) } }));
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:new-terminal', { detail: { cwd: getParentDirectory(node) } }),
+    );
     onClose();
   }, [node, onClose]);
 }
@@ -89,11 +109,16 @@ function useRevealInFileManagerAction(node: TreeNode | null, onClose: () => void
   }, [node, onClose]);
 }
 
-async function performDeletion(pathsToDelete: string[], nodeName: string, nodePath: string, toast: ToastFn) {
+async function performDeletion(
+  pathsToDelete: string[],
+  nodeName: string,
+  nodePath: string,
+  toast: ToastFn,
+) {
   const undoItems: import('./useFileTreeUndo').UndoItem[] = [];
   const deleted: string[] = [];
   for (const filePath of pathsToDelete) {
-    const name = filePath === nodePath ? nodeName : filePath.split(/[\\/]/).pop() ?? filePath;
+    const name = filePath === nodePath ? nodeName : (filePath.split(/[\\/]/).pop() ?? filePath);
     const result = await window.electronAPI.files.softDelete?.(filePath);
     if (result?.success && result.tempPath) {
       deleted.push(filePath);
@@ -105,91 +130,104 @@ async function performDeletion(pathsToDelete: string[], nodeName: string, nodePa
   return { deleted, undoItems };
 }
 
-function useDeleteAction(opts: Pick<ContextMenuHandlerOptions, 'confirmingDelete' | 'node' | 'onClose' | 'onDeleted' | 'onMultiDeleted' | 'onPushUndo' | 'selectedPaths' | 'setConfirmingDelete' | 'toast'>): () => void {
-  const { confirmingDelete, node, onClose, onDeleted, onMultiDeleted, onPushUndo, selectedPaths, setConfirmingDelete, toast } = opts;
+type DeleteActionOpts = Pick<
+  ContextMenuHandlerOptions,
+  | 'confirmingDelete'
+  | 'node'
+  | 'onClose'
+  | 'onDeleted'
+  | 'onMultiDeleted'
+  | 'onPushUndo'
+  | 'selectedPaths'
+  | 'setConfirmingDelete'
+  | 'toast'
+>;
+
+function buildCombinedPaths(
+  node: TreeNode,
+  selectedPaths: Set<string> | undefined,
+): Set<string> {
+  return selectedPaths && selectedPaths.size > 0
+    ? new Set([...selectedPaths, node.path])
+    : new Set([node.path]);
+}
+
+interface DeletionResultOpts {
+  deleted: string[];
+  undoItems: import('./useFileTreeUndo').UndoItem[];
+  combined: Set<string>;
+  node: TreeNode;
+  onDeleted: (n: TreeNode) => void;
+  onMultiDeleted: ((paths: string[]) => void) | undefined;
+  onPushUndo: ((items: import('./useFileTreeUndo').UndoItem[]) => void) | undefined;
+  toast: ToastFn;
+}
+
+function applyDeletionResult(opts: DeletionResultOpts): void {
+  const { deleted, undoItems, combined, node, onDeleted, onMultiDeleted, onPushUndo, toast } = opts;
+  if (deleted.length === 0) return;
+  if (combined.size > 1 && onMultiDeleted) onMultiDeleted(deleted);
+  else onDeleted(node);
+  onPushUndo?.(undoItems);
+  const label = deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`;
+  toast(`Deleted ${label} — Ctrl+Z to undo`, 'success');
+}
+
+function useDeleteAction(opts: DeleteActionOpts): () => void {
+  const {
+    confirmingDelete, node, onClose, onDeleted, onMultiDeleted,
+    onPushUndo, selectedPaths, setConfirmingDelete, toast,
+  } = opts;
   return useCallback(() => {
     if (!node) return;
     if (!confirmingDelete) { setConfirmingDelete(true); return; }
-    const combined = selectedPaths && selectedPaths.size > 0 ? new Set([...selectedPaths, node.path]) : new Set([node.path]);
-    const pathsToDelete = Array.from(combined);
-    void performDeletion(pathsToDelete, node.name, node.path, toast).then(({ deleted, undoItems }) => {
-      if (deleted.length === 0) return;
-      if (combined.size > 1 && onMultiDeleted) onMultiDeleted(deleted); else onDeleted(node);
-      onPushUndo?.(undoItems);
-      toast(`Deleted ${deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`} — Ctrl+Z to undo`, 'success');
-    });
+    const combined = buildCombinedPaths(node, selectedPaths);
+    void performDeletion(Array.from(combined), node.name, node.path, toast).then(
+      ({ deleted, undoItems }) => {
+        applyDeletionResult({
+          deleted, undoItems, combined, node,
+          onDeleted, onMultiDeleted, onPushUndo, toast,
+        });
+      },
+    );
     onClose();
-  }, [confirmingDelete, node, onClose, onDeleted, onMultiDeleted, onPushUndo, selectedPaths, setConfirmingDelete, toast]);
+  }, [
+    confirmingDelete, node, onClose, onDeleted, onMultiDeleted,
+    onPushUndo, selectedPaths, setConfirmingDelete, toast,
+  ]);
+}
+
+function useFileActions(
+  node: TreeNode | null,
+  onClose: () => void,
+  opts: Pick<ContextMenuHandlerOptions, 'onNewFile' | 'onNewFolder' | 'onRename' | 'onBookmarkToggle' | 'onStage' | 'onUnstage' | 'toast'>,
+) {
+  const { onNewFile, onNewFolder, onRename, onBookmarkToggle, onStage, onUnstage, toast } = opts;
+  return {
+    handleCopyPath: useClipboardAction({ message: 'Copied path to clipboard', node, onClose, resolveValue: (n) => n.path, toast }),
+    handleCopyRelativePath: useClipboardAction({ message: 'Copied relative path to clipboard', node, onClose, resolveValue: (n) => n.relativePath, toast }),
+    handleOpenInTerminal: useOpenInTerminalAction(node, onClose),
+    handleRevealInFileManager: useRevealInFileManagerAction(node, onClose),
+    handleBookmarkToggle: useNodeAction(node, onClose, onBookmarkToggle),
+    handleStage: useNodeAction(node, onClose, onStage),
+    handleUnstage: useNodeAction(node, onClose, onUnstage),
+    handleNewFile: useParentDirectoryAction(node, onClose, onNewFile),
+    handleNewFolder: useParentDirectoryAction(node, onClose, onNewFolder),
+    handleRename: useNodeAction(node, onClose, onRename),
+  };
 }
 
 export function useContextMenuHandlers(options: ContextMenuHandlerOptions): ContextMenuHandlers {
-  const { node, onBookmarkToggle, onClose, onDeleted, onMultiDeleted, onPushUndo, onNewFile, onNewFolder, onRename, onStage, onUnstage, selectedPaths, setConfirmingDelete, toast, confirmingDelete } = options;
-  const handleCopyPath = useClipboardAction({ message: 'Copied path to clipboard', node, onClose, resolveValue: (n) => n.path, toast });
-  const handleCopyRelativePath = useClipboardAction({ message: 'Copied relative path to clipboard', node, onClose, resolveValue: (n) => n.relativePath, toast });
-  const handleOpenInTerminal = useOpenInTerminalAction(node, onClose);
-  const handleRevealInFileManager = useRevealInFileManagerAction(node, onClose);
-  const handleBookmarkToggle = useNodeAction(node, onClose, onBookmarkToggle);
-  const handleStage = useNodeAction(node, onClose, onStage);
-  const handleUnstage = useNodeAction(node, onClose, onUnstage);
-  const handleNewFile = useParentDirectoryAction(node, onClose, onNewFile);
-  const handleNewFolder = useParentDirectoryAction(node, onClose, onNewFolder);
-  const handleRename = useNodeAction(node, onClose, onRename);
-  const handleDelete = useDeleteAction({ confirmingDelete, node, onClose, onDeleted, onMultiDeleted, onPushUndo, selectedPaths, setConfirmingDelete, toast });
-  return { handleBookmarkToggle, handleCopyPath, handleCopyRelativePath, handleDelete, handleNewFile, handleNewFolder, handleOpenInTerminal, handleRename, handleRevealInFileManager, handleStage, handleUnstage };
+  const {
+    node, onClose, onDeleted, onMultiDeleted, onPushUndo,
+    selectedPaths, setConfirmingDelete, toast, confirmingDelete,
+  } = options;
+  const fileActions = useFileActions(node, onClose, options);
+  const handleDelete = useDeleteAction({
+    confirmingDelete, node, onClose, onDeleted, onMultiDeleted,
+    onPushUndo, selectedPaths, setConfirmingDelete, toast,
+  });
+  return { ...fileActions, handleDelete };
 }
 
-function useBulkDelete(args: BulkHandlerArgs): () => void {
-  const selectedPaths = useFileTreeStore((s) => s.selectedPaths);
-  const clearSelection = useFileTreeStore((s) => s.clearSelection);
-  const { confirmingDelete, setConfirmingDelete, onClose, onDeleted, toast } = args;
-
-  return useCallback(() => {
-    if (!confirmingDelete) { setConfirmingDelete(true); return; }
-    const paths = Array.from(selectedPaths);
-    const deduped = paths.filter((p) => !paths.some((o) => o !== p && (p.startsWith(o + '/') || p.startsWith(o + '\\'))));
-    void Promise.all(deduped.map((path) => window.electronAPI.files.delete(path))).then((results) => {
-      const succeeded = results.filter((r) => r.success).length;
-      const failed = results.filter((r) => !r.success).length;
-      toast(failed === 0 ? `Deleted ${succeeded} items` : `Deleted ${succeeded}, failed ${failed}`, failed === 0 ? 'success' : 'error');
-      for (let i = 0; i < deduped.length; i++) {
-        if (results[i].success) onDeleted({ name: deduped[i].split(/[\\/]/).pop() ?? '', path: deduped[i], relativePath: '', isDirectory: false, depth: 0 } as TreeNode);
-      }
-      clearSelection();
-    });
-    onClose();
-  }, [confirmingDelete, selectedPaths, clearSelection, onClose, onDeleted, setConfirmingDelete, toast]);
-}
-
-export function useBulkHandlers(args: BulkHandlerArgs): BulkMenuHandlers {
-  const selectedPaths = useFileTreeStore((s) => s.selectedPaths);
-  const { onClose, toast, root } = args;
-  const handleBulkDelete = useBulkDelete(args);
-
-  const handleBulkCopyPaths = useCallback(() => {
-    void navigator.clipboard.writeText(Array.from(selectedPaths).join('\n')).then(() => { toast(`Copied ${selectedPaths.size} paths`, 'success'); });
-    onClose();
-  }, [selectedPaths, onClose, toast]);
-
-  const handleBulkOpen = useCallback(() => {
-    const paths = Array.from(selectedPaths);
-    if (paths.length > 20 && !window.confirm(`Open ${paths.length} files? This may slow down the editor.`)) { onClose(); return; }
-    for (const path of paths) window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { path } }));
-    onClose();
-  }, [selectedPaths, onClose]);
-
-  const handleBulkStage = useCallback(() => {
-    const paths = Array.from(selectedPaths);
-    void Promise.all(paths.map((p) => { const rel = p.startsWith(root) ? p.slice(root.length).replace(/^[\\/]/, '') : p; return window.electronAPI.git.stage(root, rel); }))
-      .then((results) => { toast(`Staged ${results.filter((r) => r.success).length} files`, 'success'); });
-    onClose();
-  }, [selectedPaths, root, onClose, toast]);
-
-  const handleBulkUnstage = useCallback(() => {
-    const paths = Array.from(selectedPaths);
-    void Promise.all(paths.map((p) => { const rel = p.startsWith(root) ? p.slice(root.length).replace(/^[\\/]/, '') : p; return window.electronAPI.git.unstage(root, rel); }))
-      .then((results) => { toast(`Unstaged ${results.filter((r) => r.success).length} files`, 'success'); });
-    onClose();
-  }, [selectedPaths, root, onClose, toast]);
-
-  return { handleBulkDelete, handleBulkCopyPaths, handleBulkOpen, handleBulkStage, handleBulkUnstage };
-}
+export { useBulkHandlers } from './useContextMenuBulkHooks';

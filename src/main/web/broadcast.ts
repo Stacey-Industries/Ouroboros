@@ -6,8 +6,8 @@
  * the same events.
  */
 
-import { getAllActiveWindows } from '../windowManager'
-import { broadcastToWebClients } from './webServer'
+import { getAllActiveWindows } from '../windowManager';
+import { broadcastToWebClients } from './webServer';
 
 /**
  * Broadcasts an event to all Electron BrowserWindows and all connected
@@ -21,7 +21,7 @@ export function broadcast(channel: string, payload: unknown): void {
   for (const win of getAllActiveWindows()) {
     try {
       if (!win.isDestroyed()) {
-        win.webContents.mainFrame.send(channel, payload)
+        win.webContents.mainFrame.send(channel, payload);
       }
     } catch {
       // Render frame disposed — safe to skip
@@ -29,5 +29,5 @@ export function broadcast(channel: string, payload: unknown): void {
   }
 
   // Send to WebSocket clients
-  broadcastToWebClients(channel, payload)
+  broadcastToWebClients(channel, payload);
 }

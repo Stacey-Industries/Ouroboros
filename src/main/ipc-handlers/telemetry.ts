@@ -124,9 +124,7 @@ function buildHarPayload(sessionId: string): unknown {
   const store = getTelemetryStore();
   const events = store ? store.queryEvents({ sessionId, limit: 1000 }) : [];
   const traces = store ? store.queryTraces(sessionId, 1000) : [];
-  const outcomes = events.flatMap((ev) =>
-    store ? store.queryOutcomes(ev.id) : [],
-  );
+  const outcomes = events.flatMap((ev) => (store ? store.queryOutcomes(ev.id) : []));
   return {
     _telemetryExport: { version: '1', exportedAt: new Date().toISOString() },
     sessionId,
@@ -144,7 +142,7 @@ function handleExportTrace(args: unknown): HandlerResult<{ filePath: string }> {
   const payload = buildHarPayload(sessionId);
   const ts = Date.now();
   const fileName = `ouroboros-trace-${sessionId.slice(0, 8)}-${ts}.${format === 'har' ? 'har' : 'json'}`;
-   
+
   const downloadsDir = app.getPath('downloads');
   const filePath = path.join(downloadsDir, fileName);
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted path from app.getPath('downloads')

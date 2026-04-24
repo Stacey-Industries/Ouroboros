@@ -68,7 +68,13 @@ export function useRerunVerificationAction(
         fallback: 'Unable to rerun verification.',
         successMessage: 'Verification rerun requested.',
       },
-      session ? () => window.electronAPI.orchestration.rerunVerification(session.id, session.request.verificationProfile) : null,
+      session
+        ? () =>
+            window.electronAPI.orchestration.rerunVerification(
+              session.id,
+              session.request.verificationProfile,
+            )
+        : null,
     );
   }, [runAction, session, setters]);
 }
@@ -80,17 +86,18 @@ export function useTaskMutationAction(
   mode: 'pause' | 'cancel',
 ): () => Promise<void> {
   return useCallback(async (): Promise<void> => {
-    const config = mode === 'pause'
-      ? {
-        pendingMessage: 'Pausing orchestration task...',
-        fallback: 'Unable to pause orchestration task.',
-        successMessage: 'Orchestration task paused.',
-      }
-      : {
-        pendingMessage: 'Cancelling orchestration task...',
-        fallback: 'Unable to cancel orchestration task.',
-        successMessage: 'Orchestration task cancelled.',
-      };
+    const config =
+      mode === 'pause'
+        ? {
+            pendingMessage: 'Pausing orchestration task...',
+            fallback: 'Unable to pause orchestration task.',
+            successMessage: 'Orchestration task paused.',
+          }
+        : {
+            pendingMessage: 'Cancelling orchestration task...',
+            fallback: 'Unable to cancel orchestration task.',
+            successMessage: 'Orchestration task cancelled.',
+          };
     const run = !taskId
       ? null
       : mode === 'pause'
@@ -100,6 +107,9 @@ export function useTaskMutationAction(
   }, [mode, runAction, setters, taskId]);
 }
 
-export function resolveTaskId(activeTaskId: string | undefined, latestSession: TaskSessionRecord | null): string | undefined {
+export function resolveTaskId(
+  activeTaskId: string | undefined,
+  latestSession: TaskSessionRecord | null,
+): string | undefined {
   return activeTaskId ?? latestSession?.taskId;
 }

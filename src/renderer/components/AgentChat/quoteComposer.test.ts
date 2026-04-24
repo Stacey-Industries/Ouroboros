@@ -7,11 +7,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  buildQuoteText,
-  dispatchQuoteEvent,
-  QUOTE_EVENT_NAME,
-} from './quoteComposer';
+import { buildQuoteText, dispatchQuoteEvent, QUOTE_EVENT_NAME } from './quoteComposer';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -73,7 +69,9 @@ describe('buildQuoteText', () => {
 describe('dispatchQuoteEvent', () => {
   it('dispatches agent-ide:quote-to-composer on window', () => {
     const received: CustomEvent[] = [];
-    const handler = (e: Event): void => { received.push(e as CustomEvent); };
+    const handler = (e: Event): void => {
+      received.push(e as CustomEvent);
+    };
     window.addEventListener(QUOTE_EVENT_NAME, handler);
 
     dispatchQuoteEvent('hello quote');

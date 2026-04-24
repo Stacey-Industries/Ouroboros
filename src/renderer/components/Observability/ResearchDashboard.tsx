@@ -67,7 +67,11 @@ const BAR_GAP = 4;
 const LABEL_W = 80;
 const CHART_W = 160;
 
-interface BarRowProps { datum: BarDatum; index: number; maxValue: number }
+interface BarRowProps {
+  datum: BarDatum;
+  index: number;
+  maxValue: number;
+}
 
 function BarRow({ datum, index, maxValue }: BarRowProps): React.ReactElement {
   const y = index * (BAR_H + BAR_GAP);
@@ -132,15 +136,17 @@ function MetricCard({
   );
 }
 
-function BigNumber({ value, label }: { value: string | number; label?: string }): React.ReactElement {
+function BigNumber({
+  value,
+  label,
+}: {
+  value: string | number;
+  label?: string;
+}): React.ReactElement {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-2xl font-bold tabular-nums text-text-semantic-primary">
-        {value}
-      </span>
-      {label && (
-        <span className="text-xs text-text-semantic-muted">{label}</span>
-      )}
+      <span className="text-2xl font-bold tabular-nums text-text-semantic-primary">{value}</span>
+      {label && <span className="text-xs text-text-semantic-muted">{label}</span>}
     </div>
   );
 }
@@ -156,7 +162,11 @@ function SubStat({ label, value }: { label: string; value: string | number }): R
 
 // ─── Cards ────────────────────────────────────────────────────────────────────
 
-function InvocationsCard({ inv }: { inv: ResearchDashboardMetrics['invocations'] }): React.ReactElement {
+function InvocationsCard({
+  inv,
+}: {
+  inv: ResearchDashboardMetrics['invocations'];
+}): React.ReactElement {
   const triggerData: BarDatum[] = [
     { label: 'hook', value: inv.byTrigger.hook },
     { label: 'fact-claim', value: inv.byTrigger['fact-claim'] },
@@ -181,10 +191,7 @@ function CacheCard({ inv }: { inv: ResearchDashboardMetrics['invocations'] }): R
   return (
     <MetricCard title="Cache Hit Rate">
       <div className="flex items-baseline gap-1.5">
-        <span
-          className="text-2xl font-bold tabular-nums"
-          style={{ color }}
-        >
+        <span className="text-2xl font-bold tabular-nums" style={{ color }}>
           {pct}%
         </span>
       </div>
@@ -192,7 +199,11 @@ function CacheCard({ inv }: { inv: ResearchDashboardMetrics['invocations'] }): R
   );
 }
 
-function LatencyCard({ inv }: { inv: ResearchDashboardMetrics['invocations'] }): React.ReactElement {
+function LatencyCard({
+  inv,
+}: {
+  inv: ResearchDashboardMetrics['invocations'];
+}): React.ReactElement {
   return (
     <MetricCard title="Latency">
       <BigNumber value={Math.round(inv.avgLatencyMs)} label="ms avg" />
@@ -221,7 +232,11 @@ function OutcomesCard({ out }: { out: ResearchDashboardMetrics['outcomes'] }): R
   );
 }
 
-function CorrelationCard({ corr }: { corr: ResearchDashboardMetrics['correlated'] }): React.ReactElement {
+function CorrelationCard({
+  corr,
+}: {
+  corr: ResearchDashboardMetrics['correlated'];
+}): React.ReactElement {
   const fpPct = Math.round(corr.falsePositiveRate * 100);
   const fpColor = fpPct < 15 ? 'var(--status-success)' : 'var(--status-error)';
 
@@ -240,7 +255,11 @@ function CorrelationCard({ corr }: { corr: ResearchDashboardMetrics['correlated'
   );
 }
 
-function CorrectionsCard({ corr }: { corr: ResearchDashboardMetrics['corrections'] }): React.ReactElement {
+function CorrectionsCard({
+  corr,
+}: {
+  corr: ResearchDashboardMetrics['corrections'];
+}): React.ReactElement {
   return (
     <MetricCard title="Corrections">
       <BigNumber value={corr.total} label="captured" />
@@ -306,7 +325,9 @@ export function ResearchDashboard(): React.ReactElement {
     }
   }, []);
 
-  useEffect(() => { void load(range); }, [range, load]);
+  useEffect(() => {
+    void load(range);
+  }, [range, load]);
 
   return (
     <div className="flex h-full flex-col bg-surface-base text-text-semantic-primary">

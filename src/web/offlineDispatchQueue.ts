@@ -63,9 +63,7 @@ function writeQueue(queue: QueuedOfflineDispatch[]): void {
  * Add a dispatch request to the offline queue.
  * Returns the queued entry (with generated uuid as id) or { error: 'queue-full' }.
  */
-export async function enqueueOfflineDispatch(
-  req: DispatchRequest,
-): Promise<EnqueueResult> {
+export async function enqueueOfflineDispatch(req: DispatchRequest): Promise<EnqueueResult> {
   const queue = readQueue();
   if (queue.length >= MAX_QUEUE_SIZE) {
     return { error: 'queue-full' };

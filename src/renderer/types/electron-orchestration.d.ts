@@ -2,7 +2,7 @@ import type {
   OrchestrationAPI as MainOrchestrationAPI,
   OrchestrationEvent,
   TaskResult,
-} from '../../main/orchestration/types'
+} from '../../main/orchestration/types';
 
 export type {
   ContextBudgetConstraints,
@@ -63,15 +63,15 @@ export type {
   VerificationStepKind,
   VerificationSummary,
   WorkspaceRootFact,
-} from '../../main/orchestration/types'
+} from '../../main/orchestration/types';
 
 export interface OrchestrationAPI extends MainOrchestrationAPI {
-  onTaskResult: (callback: (result: TaskResult) => void) => () => void
-  onEvent: (callback: (event: OrchestrationEvent) => void) => () => void
+  onTaskResult: (callback: (result: TaskResult) => void) => () => void;
+  onEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
 }
 
 export type {
   OrchestrationEventChannel,
   OrchestrationEventType,
   OrchestrationInvokeChannel,
-} from '../../main/orchestration/events'
+} from '../../main/orchestration/events';

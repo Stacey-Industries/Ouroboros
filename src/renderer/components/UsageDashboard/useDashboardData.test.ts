@@ -10,9 +10,7 @@ import { useDashboardData } from './useDashboardData';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeGlobalResult(
-  overrides: Partial<{ success: boolean; error: string }> = {},
-) {
+function makeGlobalResult(overrides: Partial<{ success: boolean; error: string }> = {}) {
   return {
     success: true,
     rollup: {
@@ -65,8 +63,9 @@ describe('useDashboardData', () => {
   });
 
   it('sets error when IPC returns success:false', async () => {
-    (window.electronAPI.agentChat.getGlobalCostRollup as ReturnType<typeof vi.fn>)
-      .mockResolvedValue({ success: false, error: 'DB error' });
+    (
+      window.electronAPI.agentChat.getGlobalCostRollup as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ success: false, error: 'DB error' });
     const { result } = renderHook(() => useDashboardData());
     await act(async () => {});
     expect(result.current.error).toBe('DB error');
@@ -74,8 +73,7 @@ describe('useDashboardData', () => {
   });
 
   it('exposes setTimeRange and re-fetches on change', async () => {
-    const mockFn = window.electronAPI.agentChat
-      .getGlobalCostRollup as ReturnType<typeof vi.fn>;
+    const mockFn = window.electronAPI.agentChat.getGlobalCostRollup as ReturnType<typeof vi.fn>;
     const { result } = renderHook(() => useDashboardData());
     await act(async () => {});
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -89,8 +87,7 @@ describe('useDashboardData', () => {
   });
 
   it('re-fetches when refresh() is called', async () => {
-    const mockFn = window.electronAPI.agentChat
-      .getGlobalCostRollup as ReturnType<typeof vi.fn>;
+    const mockFn = window.electronAPI.agentChat.getGlobalCostRollup as ReturnType<typeof vi.fn>;
     const { result } = renderHook(() => useDashboardData());
     await act(async () => {});
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -101,8 +98,7 @@ describe('useDashboardData', () => {
   });
 
   it('passes undefined timeRange payload for "all" selection', async () => {
-    const mockFn = window.electronAPI.agentChat
-      .getGlobalCostRollup as ReturnType<typeof vi.fn>;
+    const mockFn = window.electronAPI.agentChat.getGlobalCostRollup as ReturnType<typeof vi.fn>;
     const { result } = renderHook(() => useDashboardData());
     await act(async () => {});
     expect(result.current.timeRange).toBe('all');

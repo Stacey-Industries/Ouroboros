@@ -8,7 +8,10 @@ import type {
   VerificationSummary,
 } from '../../../types/electron';
 import type { OrchestrationStateStore } from '../useOrchestrationModel.helpers';
-import { buildOrchestrationStore, useStableOrchestrationSetters } from './useOrchestrationStore.parts';
+import {
+  buildOrchestrationStore,
+  useStableOrchestrationSetters,
+} from './useOrchestrationStore.parts';
 
 export interface OrchestrationStoreState {
   loading: boolean;
@@ -28,7 +31,9 @@ export interface OrchestrationStore extends OrchestrationStoreState {
   setters: OrchestrationStateStore;
 }
 
-function useOrchestrationStateValues(projectRoot: string | null): OrchestrationStoreState & OrchestrationStateStore {
+function useOrchestrationStateValues(
+  projectRoot: string | null,
+): OrchestrationStoreState & OrchestrationStateStore {
   const [loading, setLoading] = useState(Boolean(projectRoot));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +43,8 @@ function useOrchestrationStateValues(projectRoot: string | null): OrchestrationS
   const [sessions, setSessions] = useState<TaskSessionRecord[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [providerEvent, setProviderEvent] = useState<ProviderProgressEvent | null>(null);
-  const [latestVerificationSummary, setLatestVerificationSummary] = useState<VerificationSummary | null>(null);
+  const [latestVerificationSummary, setLatestVerificationSummary] =
+    useState<VerificationSummary | null>(null);
   const [latestResult, setLatestResult] = useState<TaskResult | null>(null);
 
   return {

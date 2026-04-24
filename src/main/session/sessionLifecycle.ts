@@ -9,15 +9,9 @@ import type { Session } from './session';
 // session.created / session.activated / session.archived are internal IDE
 // lifecycle events not present in the wire-format HookEventType union.
 // We cast through unknown so the telemetry store accepts them.
-type LifecycleEventType =
-  | 'session.created'
-  | 'session.activated'
-  | 'session.archived';
+type LifecycleEventType = 'session.created' | 'session.activated' | 'session.archived';
 
-function emitLifecycleEvent(
-  session: Session,
-  eventType: LifecycleEventType,
-): void {
+function emitLifecycleEvent(session: Session, eventType: LifecycleEventType): void {
   const store = getTelemetryStore();
   if (!store) return;
   const payload: HookPayload = {

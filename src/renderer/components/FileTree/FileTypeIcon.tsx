@@ -16,7 +16,7 @@ import {
   resolveIconThemeAppearance,
 } from './fileIconThemeResolver';
 import type { IconSpec } from './fileTypeData';
-import { folderColor,resolveSpec } from './fileTypeData';
+import { folderColor, resolveSpec } from './fileTypeData';
 import {
   CfgIcon,
   CssIcon,
@@ -129,9 +129,7 @@ export interface FileTypeIconProps {
   filename: string;
 }
 
-export function FileTypeIcon({
-  filename,
-}: FileTypeIconProps): React.ReactElement {
+export function FileTypeIcon({ filename }: FileTypeIconProps): React.ReactElement {
   const { activeTheme } = useFileIconThemes();
   const { theme } = useTheme();
   const appearance = resolveIconThemeAppearance(theme.id);
@@ -153,10 +151,7 @@ export interface FolderTypeIconProps {
   open: boolean;
 }
 
-export function FolderTypeIcon({
-  name,
-  open,
-}: FolderTypeIconProps): React.ReactElement {
+export function FolderTypeIcon({ name, open }: FolderTypeIconProps): React.ReactElement {
   const { activeTheme } = useFileIconThemes();
   const { theme } = useTheme();
   const appearance = resolveIconThemeAppearance(theme.id);

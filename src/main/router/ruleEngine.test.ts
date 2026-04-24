@@ -22,7 +22,10 @@ describe('ruleEngine', () => {
 
   describe('H1 — answering assistant question', () => {
     it('matches short answer when assistant ended with ?', () => {
-      const r = routeByRules('Private, and Ouroboros', 'Repo name? Visibility — public or private?');
+      const r = routeByRules(
+        'Private, and Ouroboros',
+        'Repo name? Visibility — public or private?',
+      );
       expect(r).toMatchObject({ tier: 'HAIKU', rule: 'H1' });
     });
 
