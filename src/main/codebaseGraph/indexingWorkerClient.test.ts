@@ -13,7 +13,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class MockWorker extends EventEmitter {
   static lastInstance: MockWorker | null = null;
-  postMessage = vi.fn();
+  postMessage = vi.fn((msg: { type?: string }) => {
+    if (msg?.type === 'dispose') {
+      queueMicrotask(() => this.emit('exit', 0));
+    }
+  });
   terminate = vi.fn().mockResolvedValue(0);
 
   constructor() {
@@ -163,13 +167,11 @@ describe('IndexingWorkerClient', () => {
     await expect(p1).rejects.toThrow('disposed');
   });
 
-  it('dispose waits for worker termination', async () => {
+  it('dispose sends a graceful dispose message and waits for exit', async () => {
     const p1 = client.runIndex(makeOptions());
-    let resolveTerminate: (value: number) => void = () => undefined;
-    const terminatePromise = new Promise<number>((resolve) => {
-      resolveTerminate = resolve;
-    });
-    MockWorker.lastInstance!.terminate.mockReturnValueOnce(terminatePromise);
+    const worker = MockWorker.lastInstance!;
+    // Stop the default auto-exit behavior so we can observe pending dispose.
+    worker.postMessage.mockImplementation(() => undefined);
 
     let settled = false;
     const disposePromise = client.dispose().then(() => {
@@ -180,9 +182,34 @@ describe('IndexingWorkerClient', () => {
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    resolveTerminate(1);
+    const disposeCall = worker.postMessage.mock.calls.find(
+      (call) => (call[0] as { type?: string })?.type === 'dispose',
+    );
+    expect(disposeCall).toBeDefined();
+
+    worker.emit('exit', 0);
     await disposePromise;
     expect(settled).toBe(true);
+    expect(worker.terminate).not.toHaveBeenCalled();
+  });
+
+  it('dispose falls back to terminate when the worker does not exit', async () => {
+    vi.useFakeTimers();
+    try {
+      const p1 = client.runIndex(makeOptions());
+      const worker = MockWorker.lastInstance!;
+      worker.postMessage.mockImplementation(() => undefined);
+
+      const disposePromise = client.dispose();
+      await expect(p1).rejects.toThrow('disposed');
+
+      expect(worker.terminate).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2000);
+      await disposePromise;
+      expect(worker.terminate).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

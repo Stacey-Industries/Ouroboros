@@ -20,7 +20,12 @@ export interface IndexRepositoryRequest {
   options: IndexRequestOptions;
 }
 
-export type IndexingWorkerRequest = IndexRepositoryRequest;
+export interface DisposeRequest {
+  type: 'dispose';
+  requestId: string;
+}
+
+export type IndexingWorkerRequest = IndexRepositoryRequest | DisposeRequest;
 
 // ── Worker → Main ────────────────────────────────────────────────────────────
 
@@ -43,7 +48,13 @@ export interface WorkerErrorMessage {
   stack?: string;
 }
 
+export interface WorkerDisposedMessage {
+  type: 'disposed';
+  requestId: string;
+}
+
 export type IndexingWorkerResponse =
   | WorkerProgressMessage
   | WorkerResultMessage
-  | WorkerErrorMessage;
+  | WorkerErrorMessage
+  | WorkerDisposedMessage;

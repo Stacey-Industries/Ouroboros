@@ -3,46 +3,41 @@ import './bootstrap';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 
-import { closeThreadStore } from './agentChat/threadStore';
 import { migrateSecretsIfNeeded } from './auth/secretMigration';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
-import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoller';
+import { startClaudeUsagePoller } from './claudeUsagePoller';
 import { getConfigValue, setConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
-import { closeCostHistoryDb } from './costHistory';
 import { initialiseCrashReporter } from './crashReporter';
-import { shutdownExtensionHost } from './extensionHost/extensionHostProxy';
 import { initExtensions } from './extensionsApi';
 import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
 import { injectIntoProjectSettings, removeFromProjectSettings, startInternalMcpServer } from './internalMcp';
-import { cleanupIpcHandlers } from './ipc';
 import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
-import { bootstrapApp, bootstrapCrashReporter, bootstrapProcessHandlers, closeEditProvenance, configureAutoUpdater, disposeCodebaseGraph, ensureSingleInstance, initCodebaseGraph, initEditProvenance, scheduleJsonlRetentionPurge, seedGithubTokenWithRetry, writeCrashLog } from './mainStartup';
-import { shutdownMcpHost, startMcpHost, stopMcpHost } from './mcpHost/mcpHostProxy';
+import { performWillQuitShutdown } from './mainShutdown';
+import { bootstrapApp, bootstrapCrashReporter, bootstrapProcessHandlers, configureAutoUpdater, ensureSingleInstance, initCodebaseGraph, initEditProvenance, scheduleJsonlRetentionPurge, seedGithubTokenWithRetry, writeCrashLog } from './mainStartup';
+import { startMcpHost, stopMcpHost } from './mcpHost/mcpHostProxy';
 import { buildApplicationMenu } from './menu';
-import { closeDecisionWriter, initDecisionWriter } from './orchestration/contextDecisionWriter';
-import { closeOutcomeWriter, initOutcomeWriter } from './orchestration/contextOutcomeWriter';
+import { initDecisionWriter } from './orchestration/contextDecisionWriter';
+import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { killAllWarm } from './orchestration/providers/claudeWarmProcessManager';
-import { shutdownCodexAppServerProcesses } from './orchestration/providers/codexAppServerProcess';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 import { cleanupPerfSubscriber, clearPerfSubscribers, initializePerfMetrics, markStartup, startPerfMetrics as startManagedPerfMetrics, stopPerfMetrics as stopManagedPerfMetrics } from './perfMetrics';
-import { deleteTokenFile, generatePipeTokens, setTokenFilePath } from './pipeAuth';
+import { generatePipeTokens, setTokenFilePath } from './pipeAuth';
 import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandler';
 import { registerBuiltinProviders } from './providerBootstrap';
 import { killAllPtySessions } from './pty';
-import { closeCorrectionWriter, initCorrectionWriter } from './research/correctionWriter';
+import { initCorrectionWriter } from './research/correctionWriter';
 import { scheduleResearchCachePurge } from './research/researchCacheScheduler';
-import { closeResearchOutcomeWriter, initResearchOutcomeWriter } from './research/researchOutcomeWriter';
-import { clearQualityTimers } from './router/qualitySignalCollector';
-import { loadRetrainedWeightsIfAvailable, observeDatasetGrowth, stopObserving as stopRetrainObserver } from './router/retrainTrigger';
-import { closeSessionServices, initSessionServices } from './session/sessionStartup';
+import { initResearchOutcomeWriter } from './research/researchOutcomeWriter';
+import { loadRetrainedWeightsIfAvailable, observeDatasetGrowth } from './router/retrainTrigger';
+import { initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
-import { closeOutcomeObserver, closeTelemetryStore, getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
+import { getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
@@ -278,14 +273,6 @@ async function initializeApplication(): Promise<void> {
 setupThreadProtocol();
 app.whenReady().then(initializeApplication);
 
-async function tryShutdown(label: string, fn: () => Promise<void>): Promise<void> {
-  try {
-    await fn();
-  } catch (err) {
-    log.warn(`${label} shutdown error:`, err);
-  }
-}
-
 app.on('window-all-closed', async () => {
   stopJankDetector();
   stopTokenRefreshManager();
@@ -302,26 +289,20 @@ app.on('window-all-closed', async () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('will-quit', async () => {
-  closeSessionServices();
-  await closeDecisionWriter();
-  await closeOutcomeWriter();
-  await closeResearchOutcomeWriter();
-  await closeCorrectionWriter();
-  closeOutcomeObserver();
-  closeTelemetryStore();
-  closeEditProvenance();
-  stopRetrainObserver();
-  clearQualityTimers();
-  await stopClaudeUsagePoller();
-  await cleanupIpcHandlers();
-  closeCostHistoryDb();
-  closeThreadStore();
-  deleteTokenFile();
-  await tryShutdown('codebase-graph', disposeCodebaseGraph);
-  await tryShutdown('codex-app-server', shutdownCodexAppServerProcesses);
-  await tryShutdown('extension-host', shutdownExtensionHost);
-  await tryShutdown('mcp-host', shutdownMcpHost);
+let shutdownInProgress = false;
+let shutdownComplete = false;
+
+app.on('will-quit', (event) => {
+  if (shutdownComplete) return;
+  event.preventDefault();
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
+  void performWillQuitShutdown()
+    .catch((err) => log.warn('[main] will-quit shutdown error:', err))
+    .finally(() => {
+      shutdownComplete = true;
+      app.quit();
+    });
 });
 
 app.on('web-contents-created', (_event, contents) => {

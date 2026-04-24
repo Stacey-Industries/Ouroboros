@@ -15,6 +15,7 @@ import { GraphDatabase } from './graphDatabase';
 import { IndexingPipeline } from './indexingPipeline';
 import type { IndexingProgress } from './indexingPipelineTypes';
 import type {
+  DisposeRequest,
   IndexingWorkerRequest,
   IndexingWorkerResponse,
   IndexRepositoryRequest,
@@ -26,6 +27,7 @@ import { TreeSitterParser } from './treeSitterParser';
 let db: GraphDatabase | null = null;
 let parser: TreeSitterParser | null = null;
 let pipeline: IndexingPipeline | null = null;
+let disposed = false;
 
 function getOrInitPipeline(): IndexingPipeline {
   if (pipeline) return pipeline;
@@ -33,6 +35,22 @@ function getOrInitPipeline(): IndexingPipeline {
   parser = new TreeSitterParser();
   pipeline = new IndexingPipeline(db, parser);
   return pipeline;
+}
+
+function disposeResources(): void {
+  try {
+    parser?.dispose();
+  } catch {
+    /* parser cleanup best-effort */
+  }
+  try {
+    db?.close();
+  } catch {
+    /* db close best-effort */
+  }
+  parser = null;
+  db = null;
+  pipeline = null;
 }
 
 // ── Messaging helpers ─────────────────────────────────────────────────────────
@@ -44,6 +62,10 @@ function post(msg: IndexingWorkerResponse): void {
 // ── Request handler ───────────────────────────────────────────────────────────
 
 async function handleIndexRepository(req: IndexRepositoryRequest): Promise<void> {
+  if (disposed) {
+    post({ type: 'error', requestId: req.requestId, message: 'Worker is disposed' });
+    return;
+  }
   const pl = getOrInitPipeline();
 
   const onProgress = (progress: IndexingProgress): void => {
@@ -54,11 +76,22 @@ async function handleIndexRepository(req: IndexRepositoryRequest): Promise<void>
   post({ type: 'result', requestId: req.requestId, result });
 }
 
+function handleDispose(req: DisposeRequest): void {
+  disposed = true;
+  disposeResources();
+  post({ type: 'disposed', requestId: req.requestId });
+  // Exit on next tick so the ack message flushes before the worker thread dies.
+  setImmediate(() => process.exit(0));
+}
+
 async function handleMessage(msg: IndexingWorkerRequest): Promise<void> {
   try {
     switch (msg.type) {
       case 'indexRepository':
         await handleIndexRepository(msg);
+        break;
+      case 'dispose':
+        handleDispose(msg);
         break;
       default: {
         const unknownMsg = msg as IndexingWorkerRequest;

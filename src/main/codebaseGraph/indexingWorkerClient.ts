@@ -62,11 +62,37 @@ export class IndexingWorkerClient {
     this.queue = [];
     this.busy = false;
     if (!worker) return;
+    await this.shutdownWorker(worker);
+  }
+
+  private async shutdownWorker(worker: Worker): Promise<void> {
+    const gracefulExit = this.waitForGracefulExit(worker);
+    try {
+      worker.postMessage({ type: 'dispose', requestId: `dispose-${this.nextId++}` });
+    } catch {
+      /* worker may already be exiting */
+    }
+    const exited = await gracefulExit;
+    if (exited) return;
     try {
       await worker.terminate();
     } catch {
       /* already gone */
     }
+  }
+
+  private waitForGracefulExit(worker: Worker): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        worker.off('exit', onExit);
+        resolve(false);
+      }, 2000);
+      const onExit = (): void => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      worker.once('exit', onExit);
+    });
   }
 
   // ── Worker lifecycle ────────────────────────────────────────────────────────
@@ -124,6 +150,9 @@ export class IndexingWorkerClient {
         break;
       case 'error':
         this.settle(msg.requestId, (p) => p.reject(new Error(msg.message)));
+        break;
+      case 'disposed':
+        // Ack — graceful shutdown completion is observed via the worker 'exit' event.
         break;
     }
   }
