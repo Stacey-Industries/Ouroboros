@@ -1,8 +1,23 @@
-# Roadmap Session Handoff — 2026-04-17
+# Roadmap Session Handoff — 2026-04-26 (updated for Wave 47)
 
-> **ROADMAP COMPLETE.**
->
-> All planned waves (15–38, plus Wave 40 cleanup) have shipped. Wave 39 is formally closed as skipped (contingent wave — telemetry did not justify a dedicated classifier). No further waves are queued. This document is the final handoff for the Ouroboros development roadmap.
+> **Wave 47 shipped** on 2026-04-26 (chat workbench follow-through). Active development continues. See wave-47 result brief at `roadmap/auto-briefs/wave-47-result.md`.
+
+---
+
+## Wave 47 soak checklist
+
+These items should be evaluated after Wave 47 has been running in production for a week:
+
+- **`layout.chatWorkbench` flag default** — currently `false`. Flip to `true` when soak confirms no regressions in the adaptive surface policy, compare mode, and HTML preview sandbox.
+- **Rail default open** — `useChatWorkbenchLayout` now defaults `railOpen: true`. Verify this feels correct for new workbench users (not too cramped on narrow displays).
+- **Compare mode eligibility** — `useWorkbenchCompare.canCompare` requires `status === 'active'`, non-primary, and `linkedThreadId` present. If users can't enter compare mode because sessions lack thread links, widen the eligibility.
+- **HTML preview local assets** — the `allow-same-origin` sandbox restriction means relative URLs (images, CSS) don't resolve. If this is too limiting for agent-generated HTML artifacts, consider a controlled asset-proxy endpoint rather than relaxing the sandbox.
+- **Timeline window** — `useWorkbenchTimeline` entries are windowed per session. If the window is too small for long-running sessions, expand the cap.
+- **Deferred agent-end** — `useAgentEvents.endSession.ts` defers parent-end until all child events arrive. If this causes sessions to stay in `running` state too long, tune the `FORCE_FINALIZE_DELAY_MS`.
+
+---
+
+## Previous state (Wave 40 handoff, still accurate for baseline)
 
 ---
 

@@ -19,10 +19,10 @@ describe('useChatWorkbenchLayout', () => {
     window.localStorage.clear();
   });
 
-  it('returns the default closed layout state', () => {
+  it('returns the default layout state with rail open', () => {
     const { result } = renderHook(() => useChatWorkbenchLayout());
 
-    expect(result.current.railOpen).toBe(false);
+    expect(result.current.railOpen).toBe(true);
     expect(result.current.artifactOpen).toBe(false);
     expect(result.current.utilityOpen).toBe(false);
     expect(result.current.activeUtilityTab).toBe('activity');
@@ -53,7 +53,7 @@ describe('useChatWorkbenchLayout', () => {
 
     const { result } = renderHook(() => useChatWorkbenchLayout());
 
-    expect(result.current.railOpen).toBe(false);
+    expect(result.current.railOpen).toBe(true);
     expect(result.current.artifactOpen).toBe(false);
     expect(result.current.utilityOpen).toBe(false);
     expect(result.current.activeUtilityTab).toBe('activity');
@@ -73,8 +73,9 @@ describe('useChatWorkbenchLayout', () => {
       expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
     });
 
+    // toggleRail starts from true (default) → false
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}')).toEqual({
-      railOpen: true,
+      railOpen: false,
       artifactOpen: true,
       utilityOpen: true,
       activeUtilityTab: 'subagents',

@@ -86,14 +86,17 @@ When `isImmersive` is false, `InnerAppLayout` mounts instead (existing IDE shell
 ```
 ChatWorkbenchShell
   ├─ ChatOnlyTitleBar
-  ├─ WorkbenchRail
-  ├─ AgentChatWorkspace (still primary, variant="chat-only")
-  ├─ ChatWorkbenchArtifactPane
-  ├─ ChatWorkbenchUtilityDrawer
-  │    ├─ WorkbenchApprovalPanel
-  │    ├─ DiffReviewPanel
-  │    └─ WorkbenchActivityPanel (activity + subagent summaries)
-  ├─ ChatWorkbenchTerminalDock
+  ├─ ChatWorkbenchBody
+  │    ├─ WorkbenchRail (grouped: active / background / recent-chat; open by default)
+  │    ├─ AgentChatWorkspace (primary, variant="chat-only")
+  │    ├─ ChatWorkbenchComparePane (inspect-only secondary pane, optional)
+  │    ├─ ChatWorkbenchArtifactPane (with ArtifactHistoryList)
+  │    ├─ ChatWorkbenchUtilityDrawer
+  │    │    ├─ WorkbenchApprovalPanel
+  │    │    ├─ DiffReviewPanel
+  │    │    ├─ WorkbenchTimelinePanel (activity timeline)
+  │    │    └─ SubagentTranscriptPanel (subagent transcript drill-in)
+  │    └─ ChatWorkbenchTerminalDock
   └─ existing shell overlays (settings, shortcuts, command palette, diff overlay)
 ```
 
@@ -114,3 +117,9 @@ The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`
 - **Wave 46 Phase A-D**: workbench shell scaffold, session-first rail, terminal dock, artifact pane.
 - **Wave 46 Phase E**: `ChatWorkbenchUtilityDrawer` replaces the placeholder drawer with approvals, review, activity, and subagent tabs.
 - **Wave 46 Phase F**: integration coverage for drawer auto-open flows and docs updates.
+- **Wave 47 Phase A**: `WorkbenchRail` session-first IA — grouped active/background/recent-chat sections, distinct "New session" and "Launch agent" buttons, `useWorkbenchAttention` for derived attention state, `useWorkbenchSessionActivation` for real activation bridge.
+- **Wave 47 Phase B**: adaptive surface policy (`useWorkbenchSurfacePolicy`), artifact history stack (`useArtifactHistoryStack`), `ArtifactHistoryList`, layout persistence via `useChatWorkbenchLayout`.
+- **Wave 47 Phase C**: timeline inspector (`useWorkbenchTimeline` decomposed into `.entries.ts` + `.helpers.ts`), `WorkbenchTimelinePanel`, subagent transcript drill-in (`SubagentTranscriptPanel` with reset/clear), deferred agent-end model.
+- **Wave 47 Phase D**: side-by-side compare — `ChatWorkbenchComparePane` with scoped isolated store (`useScopedWorkbenchWorkspace`), `useWorkbenchCompare` for eligibility and target state, compare affordance in `WorkbenchRail`.
+- **Wave 47 Phase E**: sandboxed HTML preview — `HtmlPreview.tsx` using strict `<iframe srcDoc sandbox="">`, `ContentRouter` routing, `useFileViewerState` `isHtml` derivation.
+- **Wave 47 Phase F**: integration coverage (`ChatWorkbenchFollowThrough.integration.test.tsx`), rail default open, docs updates.

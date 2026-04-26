@@ -22,7 +22,7 @@ export interface ChatWorkbenchLayoutApi extends ChatWorkbenchLayoutState {
 }
 
 const DEFAULT_STATE: ChatWorkbenchLayoutState = {
-  railOpen: false,
+  railOpen: true,
   artifactOpen: false,
   utilityOpen: false,
   activeUtilityTab: 'activity',

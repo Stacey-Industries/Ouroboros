@@ -17,15 +17,29 @@ const isImmersive = isChatWindow || immersiveFlag;
 
 `ChatOnlyTitleBar` + horizontal `ChatOnlyBody` (persistent `ChatHistorySidebar` + `AgentChatWorkspace` with `ChatStatusChipRow` beneath the composer) + `ChatOnlyStatusBar` + overlays (`ChatOnlyDiffOverlay`, `ChatOnlySettingsOverlay`, `KeyboardShortcutCheatSheet`, `CommandPalette`). Sidebar cycles pinned (280px) → collapsed (48px rail) → hidden (off-canvas `ChatOnlySessionDrawer` fallback); mode persists in `config.layout.chatSidebarMode`.
 
-## Chat workbench variant (Wave 46)
+## Chat workbench variant (Wave 46 + Wave 47 follow-through)
 
-Gated by `layout.chatWorkbench`. Replaces the history-first body with a session-first `WorkbenchRail`, keeps `AgentChatWorkspace` central, and adds three selective IDE reuses around it:
+Gated by `layout.chatWorkbench`. Replaces the history-first body with a session-first workstation layout.
 
-- `ChatWorkbenchArtifactPane` — file/diff preview
-- `ChatWorkbenchUtilityDrawer` — approvals, review, activity, subagents
+**Rail IA (Wave 47):** `WorkbenchRail` groups sessions into three sections — active, background (live but not focused), and recent chats. Background sessions show attention state (unseen completion, pending approval, failure). `useWorkbenchAttention` derives attention state; `useWorkbenchSessionActivation` owns the activation bridge through `sessionCrud.activate`. Distinct "New session" and "Launch agent" affordances in the rail header.
+
+**Adaptive surface policy (Wave 47):** `useWorkbenchSurfacePolicy` is the single gatekeeper for when artifact/utility/terminal surfaces open. It keys every trigger and suppresses re-open loops after user dismissal until a materially new event arrives. Layout defaults: rail open, artifact + utility closed.
+
+**Artifact history (Wave 47):** `useArtifactHistoryStack` tracks recently touched files/diffs per active session. `ChatWorkbenchArtifactPane` shows the history stack with selection affordances.
+
+**Timeline inspector (Wave 47):** `useWorkbenchTimeline` (decomposed into `.entries.ts` + `.helpers.ts`) normalizes agent events, tool calls, approvals, and diff milestones into an inspectable feed. `WorkbenchTimelinePanel` renders it in the utility drawer activity tab.
+
+**Subagent transcript drill-in (Wave 47):** `SubagentTranscriptPanel` resolves and displays the transcript for the selected subagent tool call. The "Clear selection" affordance resets the panel for re-use.
+
+**Compare mode (Wave 47):** `ChatWorkbenchComparePane` mounts a secondary `AgentChatWorkspace` in inspect-only mode with an isolated store (`useScopedWorkbenchWorkspace`). The primary pane owns artifact/utility surfaces; the secondary is read-only. `useWorkbenchCompare` manages eligibility (active, non-primary, has a linked thread) and compare-target state.
+
+**HTML preview (Wave 47):** `HtmlPreview.tsx` renders agent-generated HTML via `<iframe srcDoc>` with the strictest `sandbox=""` (no scripts, no same-origin, no navigation, no popups, no forms, no modals). Local relative assets do not resolve — a non-blocking banner informs the user. `ContentRouter` checks `isHtml` before `isMarkdown`; `.html`/`.htm` files always get the sandboxed preview.
+
+**Surfaces:**
+- `ChatWorkbenchArtifactPane` — file/diff preview + artifact history
+- `ChatWorkbenchUtilityDrawer` — approvals, review, timeline activity, subagent transcript
 - `ChatWorkbenchTerminalDock` — shared terminal manager in a bottom dock
-
-The utility drawer auto-opens on new approvals, new diff review, and `agent-ide:open-subagent-panel`.
+- `ChatWorkbenchComparePane` — optional inspect-only secondary session pane
 
 ## Keyboard shortcuts
 
