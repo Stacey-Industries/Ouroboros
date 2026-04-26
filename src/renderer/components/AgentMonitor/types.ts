@@ -53,6 +53,18 @@ export interface AgentSession {
   failedCompactions?: number;
   /** Notification messages received during this session. */
   notifications?: string[];
+  /**
+   * Captured end data when AGENT_END arrived but live subagents are still
+   * running. The parent stays in 'running' status until the last child
+   * finishes (or the safety timeout fires), then this gets applied. Transient
+   * state — never persisted to disk.
+   */
+  pendingEnd?: {
+    error?: string;
+    timestamp: number;
+    costUsd?: number;
+    deferredAt: number;
+  };
 }
 
 export interface SubToolCallEvent {

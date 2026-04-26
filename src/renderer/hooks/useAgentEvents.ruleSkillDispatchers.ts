@@ -11,14 +11,27 @@ import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/elect
 import type { AgentAction } from './useAgentEvents.helpers';
 import { extractSkillInfo } from './useAgentEvents.payload';
 
+/**
+ * Safety window before forcing a deferred parent's end. If a subagent crashes
+ * without firing `agent_end`, the parent would otherwise stay 'running' forever.
+ */
+const FORCE_FINALIZE_TIMEOUT_MS = 30_000;
+
 export function dispatchAgentEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+  const sessionId = payload.sessionId;
   dispatch({
     type: 'AGENT_END',
-    sessionId: payload.sessionId,
+    sessionId,
     timestamp: payload.timestamp,
     error: payload.error,
     costUsd: payload.costUsd,
   });
+  // The reducer defers this end if live subagents exist. Schedule a forced
+  // finalize so a stuck or crashed child can't pin the parent in the active
+  // list forever. The forced action is a no-op when not deferred.
+  setTimeout(() => {
+    dispatch({ type: 'AGENT_END_FORCE_FINALIZE', sessionId });
+  }, FORCE_FINALIZE_TIMEOUT_MS);
 }
 
 export function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {

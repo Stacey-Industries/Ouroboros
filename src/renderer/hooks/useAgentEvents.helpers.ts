@@ -4,7 +4,7 @@ import type {
   ToolCallEvent,
 } from '../components/AgentMonitor/types';
 import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
-import { endSession } from './useAgentEvents.endSession';
+import { endSession, forceFinalizeEnd } from './useAgentEvents.endSession';
 import {
   type CompactionAction,
   type ConversationTurnAction,
@@ -46,10 +46,7 @@ import {
   type TaskCompletedAction,
   type TaskCreatedAction,
 } from './useAgentEvents.taskReducers';
-import {
-  finishToolCall,
-  startToolCall,
-} from './useAgentEvents.toolCallReducers';
+import { finishToolCall, startToolCall } from './useAgentEvents.toolCallReducers';
 
 export interface PendingSubagentStamp {
   parentSessionId: string;
@@ -91,6 +88,7 @@ export type AgentAction =
       output?: string;
     }
   | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string; costUsd?: number }
+  | { type: 'AGENT_END_FORCE_FINALIZE'; sessionId: string }
   | { type: 'TOKEN_UPDATE'; sessionId: string; usage: TokenUsage; model?: string }
   | { type: 'LINK_SUBAGENT'; parentSessionId: string; childSessionId: string }
   | { type: 'RECORD_SUBAGENT_TOOL'; parentSessionId: string; timestamp: number }
@@ -126,6 +124,8 @@ export function reducer(state: AgentState, action: AgentAction): AgentState {
       return finishToolCall(state, action);
     case 'AGENT_END':
       return endSession(state, action);
+    case 'AGENT_END_FORCE_FINALIZE':
+      return forceFinalizeEnd(state, action);
     case 'TOKEN_UPDATE':
       return updateTokenUsage(state, action);
     case 'SUBTOOL_UPDATE':
@@ -215,6 +215,7 @@ function updateExistingSession(state: AgentState, action: AgentStartAction): Age
     model: action.model ?? session.model,
     parentSessionId: action.parentSessionId ?? session.parentSessionId,
     external: action.external ?? session.external,
+    restored: false,
   }));
 }
 
@@ -258,7 +259,6 @@ function startSession(state: AgentState, action: AgentStartAction): AgentState {
     pendingSubagentTimestamps: updatedTimestamps,
   };
 }
-
 
 /* endSession and its helpers are in useAgentEvents.endSession.ts (line-count budget). */
 

@@ -257,6 +257,40 @@ describe('ChatWorkbenchUtilityDrawer', () => {
     expect(screen.getByTestId('subagent-transcript').textContent).toContain('child-2');
   });
 
+  it('resets from a resolved transcript back to the empty state via Clear selection', () => {
+    currentSessions = [
+      {
+        id: 'child-reset',
+        taskLabel: 'Reset test',
+        status: 'running',
+        startedAt: 6_000,
+        parentSessionId: 'parent-reset',
+        toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
+      },
+    ];
+
+    window.dispatchEvent(
+      new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, {
+        detail: { toolCallId: 'tool-reset', parentSessionId: 'parent-reset', timestamp: 5_900 },
+      }),
+    );
+
+    render(
+      <ChatWorkbenchUtilityDrawer activeTab="subagents" onSelectTab={vi.fn()} onClose={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('workbench-subagent-panel')).toBeTruthy();
+    expect(screen.getByTestId('subagent-transcript').textContent).toContain('child-reset');
+
+    fireEvent.click(screen.getByText('Clear selection'));
+
+    expect(
+      screen.getByText('Select a Task handoff to inspect a subagent transcript.'),
+    ).toBeTruthy();
+  });
+
   it('shows a resolver fallback and can clear the subagent selection', () => {
     window.dispatchEvent(
       new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, {
