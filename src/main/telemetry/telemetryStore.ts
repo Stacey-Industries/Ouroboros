@@ -320,7 +320,9 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
 export function initTelemetryStore(userDataDir: string): void {
   if (singleton) return;
   try {
-    setConfigReader(() => getConfigValue('telemetry')?.structured ?? false);
+    // Wave 53: default to true when the key is absent so fresh installs capture
+    // events; existing users with explicit `structured: false` keep their opt-out.
+    setConfigReader(() => getConfigValue('telemetry')?.structured ?? true);
   } catch {
     // Config not available (e.g. test environment) — flag stays off
   }

@@ -5,7 +5,6 @@
  * Re-exported from config.ts so all consumer import paths remain unchanged.
  */
 
-
 /** Wave 38 Phase A+C — platform-level settings: onboarding, language, update channel, crash reporter, changelog gate.
  *  Phase C adds dismissedEmptyStates for persistent "don't show again" dismiss.
  *  Wave 41 Phase K adds crashReports.allowInsecure (default false). */
@@ -243,6 +242,8 @@ export interface RouterSettings {
   paranoidMode: boolean;
   /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
   llmJudgeSampleRate: number;
+  /** Wave 53 — log shadow router decision even when user overrides the model. */
+  shadowMode?: boolean;
 }
 
 export interface AgentTemplate {

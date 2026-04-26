@@ -51,30 +51,11 @@ interface RouterOverrideResult {
   traceId?: string | null;
 }
 
-function logOverrideIfDiffers(
+function runShadowRouting(
   request: AgentChatSendMessageRequest,
-  previousAssistantMessage?: string,
-): void {
-  const routerConfig = getConfigValue('routerSettings');
-  if (!routerConfig?.enabled) return;
-  const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
-  if (decision && decision.model !== request.overrides?.model) {
-    logRouterOverride(decision.tier, request.overrides!.model!, request.content.slice(0, 100));
-  }
-}
-
-function applyRouterOverride(
-  request: AgentChatSendMessageRequest,
-  previousAssistantMessage?: string,
-): RouterOverrideResult {
-  if (request.overrides?.model) {
-    logOverrideIfDiffers(request, previousAssistantMessage);
-    return { overrides: request.overrides, routedBy: 'user' };
-  }
-
-  const routerConfig = getConfigValue('routerSettings');
-  if (!routerConfig?.enabled) return { overrides: request.overrides };
-
+  previousAssistantMessage: string | undefined,
+  routerConfig: ReturnType<typeof getConfigValue<'routerSettings'>>,
+): { traceId?: string | null; tier?: string } {
   try {
     shadowRouteChatPrompt({
       prompt: request.content,
@@ -90,8 +71,47 @@ function applyRouterOverride(
     interactionType: 'chat',
     workspaceRoot: request.workspaceRoot,
   });
+  return { traceId, tier: decision?.tier };
+}
 
-  if (!decision) return { overrides: request.overrides, traceId };
+function applyOverridePath(
+  request: AgentChatSendMessageRequest,
+  previousAssistantMessage: string | undefined,
+): RouterOverrideResult {
+  // Wave 53: even when the user overrides the model, run feature extraction +
+  // decision logging in shadow mode so router-decisions.jsonl gets a feature-
+  // populated entry on every prompt. The override still wins for model selection.
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.enabled || routerConfig.shadowMode === false) {
+    if (routerConfig?.enabled) {
+      // shadow disabled — preserve legacy log-override-if-differs behavior
+      const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
+      if (decision && decision.model !== request.overrides?.model) {
+        logRouterOverride(decision.tier, request.overrides!.model!, request.content.slice(0, 100));
+      }
+    }
+    return { overrides: request.overrides, routedBy: 'user-override' };
+  }
+
+  const { traceId, tier } = runShadowRouting(request, previousAssistantMessage, routerConfig);
+  return { overrides: request.overrides, routedBy: 'user-override', tier, traceId };
+}
+
+function applyRouterOverride(
+  request: AgentChatSendMessageRequest,
+  previousAssistantMessage?: string,
+): RouterOverrideResult {
+  if (request.overrides?.model) {
+    return applyOverridePath(request, previousAssistantMessage);
+  }
+
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.enabled) return { overrides: request.overrides };
+
+  const { traceId, tier } = runShadowRouting(request, previousAssistantMessage, routerConfig);
+  // Re-derive decision for routedBy (shadow already logged it; this is cheap).
+  const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
+  if (!decision) return { overrides: request.overrides, traceId, tier };
 
   log.info('[router] injecting model override:', decision.model);
   return {
@@ -184,15 +204,16 @@ export function resolveSendOptions(
     traceId: routerTraceId,
   } = applyRouterOverride(request, previousAssistantMessage);
 
-  if (routerTraceId) {
-    trackChatTurn({ traceId: routerTraceId, threadId: request.threadId, prompt: request.content });
-    flushAnnotations();
-  }
-
   // Wave 29.5 Phase B (H1): outcomeTraceId is always set so every send produces
   // training rows regardless of router state. Router-on path uses the router's id
   // (already logged via logRoutingDecision); router-off path mints a fresh UUID.
   const outcomeTraceId = routerTraceId ?? randomUUID();
+
+  // Wave 53: gate quality-signal emission on outcomeTraceId (always set) rather
+  // than routerTraceId (often null pre-shadow-mode). This unblocks regenerate /
+  // correction detection for every chat turn, not just router-routed ones.
+  trackChatTurn({ traceId: outcomeTraceId, threadId: request.threadId, prompt: request.content });
+  flushAnnotations();
 
   const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
   if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);

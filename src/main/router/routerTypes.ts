@@ -193,6 +193,15 @@ export interface RouterSettings {
   paranoidMode: boolean;
   /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
   llmJudgeSampleRate: number;
+  /**
+   * Wave 53 — when true, run feature extraction + decision logging on every
+   * prompt even when the user supplied a manual model override. The override
+   * still wins for actual model selection; the shadow decision is logged with
+   * `routedBy: 'user-override'` so quality signals can correlate.
+   * Defaults to true. Optional for backwards-compat with the
+   * configTypes.RouterSettings shape (older config blobs may lack this key).
+   */
+  shadowMode?: boolean;
 }
 
 export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
@@ -203,6 +212,7 @@ export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   layer2ConfidenceThreshold: 0.6,
   paranoidMode: false,
   llmJudgeSampleRate: 0,
+  shadowMode: true,
 };
 
 /* ── Feature list (canonical, shared by TS extractor + Python trainer) */

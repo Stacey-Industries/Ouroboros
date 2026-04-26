@@ -292,7 +292,7 @@ describe('resolveSendOptions', () => {
 
     expect(routePromptSyncMock).toHaveBeenCalled();
     expect(result.model).toBe('claude-haiku-4-5-20251001');
-    expect(result.routedBy).toBe('user');
+    expect(result.routedBy).toBe('user-override');
   });
 
   it('resolves "auto" effort to "medium" when the router selects SONNET', () => {
@@ -408,7 +408,7 @@ describe('resolveSendOptions', () => {
           layer3Enabled: true,
           layer2ConfidenceThreshold: 0.6,
           paranoidMode: false,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any;
       }
       return undefined as never;
