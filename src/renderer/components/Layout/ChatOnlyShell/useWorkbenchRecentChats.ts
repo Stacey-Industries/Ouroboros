@@ -44,6 +44,40 @@ function dedupeThreads(threads: AgentChatThreadRecord[]): AgentChatThreadRecord[
   return [...byId.values()];
 }
 
+interface BuildRecentChatItemOptions {
+  thread: AgentChatThreadRecord;
+  sessions: SessionRecord[];
+  activeThreadId: string | null;
+  now: number;
+  attentionByThreadId: Record<string, WorkbenchAttentionState>;
+}
+
+function buildRecentChatItem({
+  thread,
+  sessions,
+  activeThreadId,
+  now,
+  attentionByThreadId,
+}: BuildRecentChatItemOptions): WorkbenchRecentChatItem {
+  const linkedSessionId = resolveThreadSessionId(thread, sessions);
+  return {
+    kind: 'recent-chat',
+    id: thread.id,
+    threadId: thread.id,
+    projectLabel: projectBasename(thread.workspaceRoot),
+    projectRoot: thread.workspaceRoot,
+    title: chatTitle(thread),
+    shortId: thread.id.slice(0, 8),
+    lastUpdatedLabel: relativeTime(thread.updatedAt, now),
+    messageCount: thread.messages.filter((message) => message.role === 'user').length,
+    isActive: thread.id === activeThreadId,
+    isPinned: Boolean(thread.pinned),
+    linkedSessionId,
+    attention: attentionByThreadId[thread.id] ?? NONE_ATTENTION,
+    rawThread: thread,
+  };
+}
+
 function compareRecentChats(left: WorkbenchRecentChatItem, right: WorkbenchRecentChatItem): number {
   if (left.isActive !== right.isActive) return left.isActive ? -1 : 1;
   if (left.isPinned !== right.isPinned) return left.isPinned ? -1 : 1;
@@ -93,35 +127,17 @@ export function useWorkbenchRecentChats(
   const sessions = options.sessions ?? sessionsState.sessions;
   const threads = options.threads ?? storeThreads;
   const activeThreadId = options.activeThreadId ?? storeActiveThread?.id ?? null;
-  const attentionByThreadId = options.attentionByThreadId ?? {};
   const now = options.now ?? Date.now();
 
   const items = useMemo(() => {
+    const attentionByThreadId = options.attentionByThreadId ?? {};
     const visibleThreads = dedupeThreads(threads).filter((thread) => !thread.deletedAt);
 
     return visibleThreads
-      .map((thread) => {
-        const linkedSessionId = resolveThreadSessionId(thread, sessions);
-        return {
-          kind: 'recent-chat',
-          id: thread.id,
-          threadId: thread.id,
-          projectLabel: projectBasename(thread.workspaceRoot),
-          projectRoot: thread.workspaceRoot,
-          title: chatTitle(thread),
-          shortId: thread.id.slice(0, 8),
-          lastUpdatedLabel: relativeTime(thread.updatedAt, now),
-          messageCount: thread.messages.filter((message) => message.role === 'user').length,
-          isActive: thread.id === activeThreadId,
-          isPinned: Boolean(thread.pinned),
-          linkedSessionId,
-          attention: attentionByThreadId[thread.id] ?? NONE_ATTENTION,
-          rawThread: thread,
-        } satisfies WorkbenchRecentChatItem;
-      })
+      .map((thread) => buildRecentChatItem({ thread, sessions, activeThreadId, now, attentionByThreadId }))
       .filter((item) => item.linkedSessionId === null)
       .sort(compareRecentChats);
-  }, [activeThreadId, attentionByThreadId, now, sessions, threads]);
+  }, [activeThreadId, now, options.attentionByThreadId, sessions, threads]);
 
   return { items };
 }

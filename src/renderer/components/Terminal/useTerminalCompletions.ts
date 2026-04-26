@@ -174,9 +174,9 @@ function useApplyCompletion(params: ApplyCompletionParams): (value: string, type
   );
 }
 
-function useTabCompletion(
+function createTabCompletionCallback(
   params: TabCompletionParams,
-): Pick<CompletionActions, 'handleTabCompletion' | 'handleTabCompletionRef'> {
+): () => Promise<void> {
   const {
     currentLineRef,
     isHistorySuggestionRef,
@@ -190,8 +190,7 @@ function useTabCompletion(
     setCompletionPos,
     setCompletionVisible,
   } = params;
-  const handleTabCompletionRef = useRef<(() => Promise<void>) | null>(null);
-  const handleTabCompletion = useCallback(async () => {
+  return async () => {
     isHistorySuggestionRef.current = false;
     await syncCwd(sessionId, cwdRef);
     const line = currentLineRef.current;
@@ -212,19 +211,19 @@ function useTabCompletion(
       setCompletionPos,
       setCompletionVisible,
     });
-  }, [
-    completionIndexRef,
-    completionVisibleRef,
-    completionsRef,
-    currentLineRef,
-    cwdRef,
-    isHistorySuggestionRef,
-    sessionId,
-    setCompletions,
-    setCompletionIndex,
-    setCompletionPos,
-    setCompletionVisible,
-  ]);
+  };
+}
+
+function useTabCompletion(
+  params: TabCompletionParams,
+): Pick<CompletionActions, 'handleTabCompletion' | 'handleTabCompletionRef'> {
+  const paramsRef = useRef(params);
+  useEffect(() => { paramsRef.current = params; });
+  const handleTabCompletionRef = useRef<(() => Promise<void>) | null>(null);
+  const handleTabCompletion = useCallback(
+    () => createTabCompletionCallback(paramsRef.current)(),
+    [],
+  );
   useEffect(() => {
     handleTabCompletionRef.current = handleTabCompletion;
   }, [handleTabCompletion]);

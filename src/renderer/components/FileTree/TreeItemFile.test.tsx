@@ -1,17 +1,21 @@
+// @vitest-environment jsdom
 /**
  * TreeItemFile.test.tsx — smoke tests for TreeItemFile.
  */
 
-import { render } from '@testing-library/react';
+import { cleanup,render } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach,describe, expect, it, vi } from 'vitest';
 
 import type { TreeNode } from './FileTreeItem';
 import { TreeItemFile } from './TreeItemFile';
 
-// FileTypeIcon uses IPC — stub it out
+afterEach(cleanup);
+
+// FileTypeIcon uses IPC — stub it out. Don't render filename as text;
+// it would collide with HighlightedName's text in getByText queries.
 vi.mock('./FileTypeIcon', () => ({
-  FileTypeIcon: ({ filename }: { filename: string }) => <span data-testid="icon">{filename}</span>,
+  FileTypeIcon: ({ filename }: { filename: string }) => <span data-testid="icon" data-filename={filename} />,
 }));
 
 // InlineEditInput depends on DOM focus — stub for unit tests

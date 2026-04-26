@@ -174,16 +174,17 @@ type ImmerSet = Parameters<Parameters<typeof immer>[0]>[0];
 const fileTreeStateCreator = immer((set: ImmerSet) => ({
   ...INITIAL_STATE,
   ...createFileTreeActions(set as Parameters<typeof createFileTreeActions>[0]),
-})) as ReturnType<typeof immer>;
+}));
 
 export const useFileTreeStore = create<FileTreeState>()(
-  persist(fileTreeStateCreator, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  persist(fileTreeStateCreator as any, {
     name: 'file-tree-store',
     /**
      * Only persist UI preferences — not ephemeral data like tree nodes,
      * git status, selection, or edit state.
      */
-    partialize: (state) => ({
+    partialize: (state: FileTreeState) => ({
       expandedPaths: state.expandedPaths,
       sortMode: state.sortMode,
       filter: state.filter,

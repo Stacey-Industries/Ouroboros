@@ -149,6 +149,47 @@ function createClaudeTemplateHandler(
   };
 }
 
+function buildDomEventEntriesArray(args: {
+  setTheme: AppEventDeps['setTheme'];
+  setMaterialVariant: AppEventDeps['setMaterialVariant'];
+  handleProjectChange: AppEventDeps['handleProjectChange'];
+  spawnSession: AppEventDeps['spawnSession'];
+  spawnClaudeSession: AppEventDeps['spawnClaudeSession'];
+  setFilePickerOpen: AppEventDeps['setFilePickerOpen'];
+  setSymbolSearchOpen: AppEventDeps['setSymbolSearchOpen'];
+  projectRoot: AppEventDeps['projectRoot'];
+  toast: ToastFn;
+}): WindowEventEntry[] {
+  const {
+    setTheme,
+    setMaterialVariant,
+    handleProjectChange,
+    spawnSession,
+    spawnClaudeSession,
+    setFilePickerOpen,
+    setSymbolSearchOpen,
+    projectRoot,
+    toast,
+  } = args;
+
+  return [
+    ['agent-ide:set-theme', createThemeHandler(setTheme)],
+    ['agent-ide:set-material-variant', createMaterialVariantHandler(setMaterialVariant)],
+    ['agent-ide:open-usage', emitUsagePanel],
+    ['agent-ide:open-folder', createFolderHandler(handleProjectChange)],
+    ['agent-ide:new-terminal', createNewTerminalHandler(spawnSession)],
+    ['agent-ide:new-claude-terminal', () => { void spawnClaudeSession(); }],
+    ['agent-ide:clear-active-terminal', () => clearTerminal()],
+    ['agent-ide:open-file-picker', createBooleanOpener(setFilePickerOpen)],
+    ['agent-ide:open-symbol-search', createBooleanOpener(setSymbolSearchOpen)],
+    ['agent-ide:open-diff-review', createDiffReviewHandler()],
+    ['agent-ide:spawn-claude-template', createClaudeTemplateHandler(spawnClaudeSession)],
+    [RESUME_LATEST_AGENT_CHAT_THREAD_EVENT, createResumeLatestAgentChatThreadHandler({ projectRoot, toast })],
+    [OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT, createOpenLatestAgentChatDetailsHandler({ projectRoot, toast })],
+    [SHOW_SYSTEM_PROMPT_EVENT, emitSystemPromptPanel],
+  ];
+}
+
 function createDomEventEntries(args: {
   projectRoot: AppEventDeps['projectRoot'];
   setTheme: AppEventDeps['setTheme'];
@@ -160,45 +201,7 @@ function createDomEventEntries(args: {
   setSymbolSearchOpen: AppEventDeps['setSymbolSearchOpen'];
   toast: ToastFn;
 }): WindowEventEntry[] {
-  const {
-    projectRoot,
-    setTheme,
-    setMaterialVariant,
-    handleProjectChange,
-    spawnSession,
-    spawnClaudeSession,
-    setFilePickerOpen,
-    setSymbolSearchOpen,
-    toast,
-  } = args;
-
-  return [
-    ['agent-ide:set-theme', createThemeHandler(setTheme)],
-    ['agent-ide:set-material-variant', createMaterialVariantHandler(setMaterialVariant)],
-    ['agent-ide:open-usage', emitUsagePanel],
-    ['agent-ide:open-folder', createFolderHandler(handleProjectChange)],
-    ['agent-ide:new-terminal', createNewTerminalHandler(spawnSession)],
-    [
-      'agent-ide:new-claude-terminal',
-      () => {
-        void spawnClaudeSession();
-      },
-    ],
-    ['agent-ide:clear-active-terminal', () => clearTerminal()],
-    ['agent-ide:open-file-picker', createBooleanOpener(setFilePickerOpen)],
-    ['agent-ide:open-symbol-search', createBooleanOpener(setSymbolSearchOpen)],
-    ['agent-ide:open-diff-review', createDiffReviewHandler()],
-    ['agent-ide:spawn-claude-template', createClaudeTemplateHandler(spawnClaudeSession)],
-    [
-      RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
-      createResumeLatestAgentChatThreadHandler({ projectRoot, toast }),
-    ],
-    [
-      OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
-      createOpenLatestAgentChatDetailsHandler({ projectRoot, toast }),
-    ],
-    [SHOW_SYSTEM_PROMPT_EVENT, emitSystemPromptPanel],
-  ];
+  return buildDomEventEntriesArray(args);
 }
 
 export function useMenuEvents(
@@ -224,9 +227,19 @@ export function useMenuEvents(
   }, [handleProjectChange, openPalette, spawnSession]);
 }
 
-export function useDomEventListeners(deps: AppEventDeps): void {
-  const { toast } = useToastContext();
-  const seenAgentChatStatusesRef = useRef<Set<string>>(new Set());
+interface UseDomEventListenerEffectOptions {
+  projectRoot: AppEventDeps['projectRoot'];
+  setTheme: AppEventDeps['setTheme'];
+  setMaterialVariant: AppEventDeps['setMaterialVariant'];
+  handleProjectChange: AppEventDeps['handleProjectChange'];
+  spawnSession: AppEventDeps['spawnSession'];
+  spawnClaudeSession: AppEventDeps['spawnClaudeSession'];
+  setFilePickerOpen: AppEventDeps['setFilePickerOpen'];
+  setSymbolSearchOpen: AppEventDeps['setSymbolSearchOpen'];
+  toast: ToastFn;
+}
+
+function useDomEventListenerEffect(opts: UseDomEventListenerEffectOptions): void {
   const {
     projectRoot,
     setTheme,
@@ -236,8 +249,8 @@ export function useDomEventListeners(deps: AppEventDeps): void {
     spawnClaudeSession,
     setFilePickerOpen,
     setSymbolSearchOpen,
-  } = deps;
-
+    toast,
+  } = opts;
   useEffect(() => {
     return registerWindowEvents(
       createDomEventEntries({
@@ -263,6 +276,33 @@ export function useDomEventListeners(deps: AppEventDeps): void {
     setSymbolSearchOpen,
     toast,
   ]);
+}
+
+export function useDomEventListeners(deps: AppEventDeps): void {
+  const { toast } = useToastContext();
+  const seenAgentChatStatusesRef = useRef<Set<string>>(new Set());
+  const {
+    projectRoot,
+    setTheme,
+    setMaterialVariant,
+    handleProjectChange,
+    spawnSession,
+    spawnClaudeSession,
+    setFilePickerOpen,
+    setSymbolSearchOpen,
+  } = deps;
+
+  useDomEventListenerEffect({
+    projectRoot,
+    setTheme,
+    setMaterialVariant,
+    handleProjectChange,
+    spawnSession,
+    spawnClaudeSession,
+    setFilePickerOpen,
+    setSymbolSearchOpen,
+    toast,
+  });
 
   useEffect(() => {
     if (!hasElectronAPI()) {

@@ -1,31 +1,25 @@
 import type { Terminal } from '@xterm/xterm';
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
-import type { ShellIntegrationAddon, ShellIntegrationEvent } from './shellIntegrationAddon';
+import type { ShellIntegrationEvent } from './shellIntegrationAddon';
 import type {
   CommandBlock,
   UseCommandBlocksOptions,
   UseCommandBlocksResult,
 } from './useCommandBlocks';
-
-interface CommandBlockRefs {
-  blocks: CommandBlock[];
-  currentBlock: CommandBlock | null;
-  heuristicTimer: ReturnType<typeof setTimeout> | null;
-  osc133Active: boolean | null;
-  pendingPromptRow: number | null;
-}
-
-interface CommandBlockState {
-  blocks: CommandBlock[];
-  activeBlockIndex: number;
-  osc133Active: boolean | null;
-  refs: MutableRefObject<CommandBlockRefs>;
-  setActiveBlockIndex: Dispatch<SetStateAction<number>>;
-  setBlocks: Dispatch<SetStateAction<CommandBlock[]>>;
-  setOsc133Active: Dispatch<SetStateAction<boolean | null>>;
-}
+import {
+  type CommandBlockRefs,
+  type CommandBlockState,
+  useBlockOutput,
+  useDataHandler,
+  useNavigateNext,
+  useNavigatePrev,
+  useNavigateTo,
+  useOsc133Handler,
+  useOsc633Subscription,
+  useResetBlocks,
+  useToggleCollapse,
+} from './useCommandBlocksHandlers';
 
 const DEFAULT_PROMPT_PATTERNS = [
   /^(?:\S+@\S+[:\s][^$]*|)\$\s$/,
@@ -252,100 +246,6 @@ function handleHeuristicData(
   scheduleHeuristicCheck(state, getAbsoluteRow(term), term, customPattern);
 }
 
-function useOsc133Handler(
-  enabled: boolean,
-  state: CommandBlockState,
-): UseCommandBlocksResult['handleOsc133'] {
-  return useCallback(
-    (sequence, param, term) => {
-      if (enabled) handleOscSequence(state, sequence, param, term);
-    },
-    [enabled, state],
-  );
-}
-
-function useDataHandler(
-  enabled: boolean,
-  state: CommandBlockState,
-  customPattern: RegExp | null,
-): UseCommandBlocksResult['handleData'] {
-  return useCallback(
-    (data, term) => {
-      if (!enabled || state.refs.current.osc133Active === true) return;
-      handleHeuristicData(state, data, term, customPattern);
-    },
-    [customPattern, enabled, state],
-  );
-}
-
-function useNavigateTo(state: CommandBlockState): UseCommandBlocksResult['navigateTo'] {
-  return useCallback(
-    (index, term) => {
-      const block = state.refs.current.blocks[index];
-      if (!block) return;
-      state.setActiveBlockIndex(index);
-      term.scrollToLine(block.startLine);
-    },
-    [state],
-  );
-}
-
-function useNavigateNext(
-  activeBlockIndex: number,
-  refs: MutableRefObject<CommandBlockRefs>,
-  navigateTo: UseCommandBlocksResult['navigateTo'],
-): UseCommandBlocksResult['navigateNext'] {
-  return useCallback(
-    (term) => {
-      navigateTo(Math.min(activeBlockIndex + 1, refs.current.blocks.length - 1), term);
-    },
-    [activeBlockIndex, navigateTo, refs],
-  );
-}
-
-function useNavigatePrev(
-  activeBlockIndex: number,
-  navigateTo: UseCommandBlocksResult['navigateTo'],
-): UseCommandBlocksResult['navigatePrev'] {
-  return useCallback(
-    (term) => {
-      navigateTo(Math.max(activeBlockIndex - 1, 0), term);
-    },
-    [activeBlockIndex, navigateTo],
-  );
-}
-
-function useToggleCollapse(state: CommandBlockState): UseCommandBlocksResult['toggleCollapse'] {
-  return useCallback(
-    (blockId) => {
-      const index = state.refs.current.blocks.findIndex((block) => block.id === blockId);
-      if (index < 0) return;
-      state.refs.current.blocks[index].collapsed = !state.refs.current.blocks[index].collapsed;
-      commitBlocks(state, [...state.refs.current.blocks]);
-    },
-    [state],
-  );
-}
-
-function useBlockOutput(): UseCommandBlocksResult['getBlockOutput'] {
-  return useCallback((block, term) => {
-    const lines: string[] = [];
-    for (let row = block.outputStartLine; row <= block.endLine; row++)
-      lines.push(getLineText(term, row));
-    return lines.join('\n');
-  }, []);
-}
-
-function useResetBlocks(state: CommandBlockState): UseCommandBlocksResult['reset'] {
-  return useCallback(() => {
-    state.refs.current.blocks = [];
-    state.refs.current.currentBlock = null;
-    clearHeuristicTimer(state);
-    state.refs.current.pendingPromptRow = null;
-    state.setBlocks([]);
-    state.setActiveBlockIndex(-1);
-  }, [state]);
-}
 
 // ── OSC 633 (ShellIntegrationAddon) bridge ──────────────────────────────────
 
@@ -381,43 +281,29 @@ function handleOsc633Event(event: ShellIntegrationEvent, state: CommandBlockStat
   }
 }
 
-/**
- * Hook that subscribes to the ShellIntegrationAddon's events when available.
- * When OSC 633 events are detected, they take priority over manual OSC 133 parsing.
- */
-function useOsc633Subscription(
-  enabled: boolean,
-  state: CommandBlockState,
-  addonRef?: { current: ShellIntegrationAddon | null },
-): void {
-  useEffect(() => {
-    if (!enabled || !addonRef?.current) return;
-
-    const addon = addonRef.current;
-    const unsubscribe = addon.onEvent((event) => {
-      handleOsc633Event(event, state);
-    });
-
-    return unsubscribe;
-  }, [enabled, addonRef, state]);
-}
-
 export function useCommandBlocksController(
   options: UseCommandBlocksOptions,
 ): UseCommandBlocksResult {
   const state = useCommandBlockState();
   const customPattern = compilePromptPattern(options.promptPattern);
-  const handleOsc133 = useOsc133Handler(options.enabled, state);
-  const handleData = useDataHandler(options.enabled, state, customPattern);
+  const handleOsc133 = useOsc133Handler(options.enabled, state, (seq, param, term) =>
+    handleOscSequence(state, seq, param, term),
+  );
+  const handleData = useDataHandler(
+    options.enabled,
+    state,
+    customPattern,
+    (data, term, pattern) => handleHeuristicData(state, data, term, pattern),
+  );
   const navigateTo = useNavigateTo(state);
   const navigateNext = useNavigateNext(state.activeBlockIndex, state.refs, navigateTo);
   const navigatePrev = useNavigatePrev(state.activeBlockIndex, navigateTo);
   const toggleCollapse = useToggleCollapse(state);
   const getBlockOutput = useBlockOutput();
-  const reset = useResetBlocks(state);
+  const reset = useResetBlocks(state, (s) => clearHeuristicTimer(s));
 
   // Subscribe to OSC 633 events when ShellIntegrationAddon is available
-  useOsc633Subscription(options.enabled, state, options.shellIntegrationAddonRef);
+  useOsc633Subscription(options.enabled, state, (event) => handleOsc633Event(event, state), options.shellIntegrationAddonRef);
 
   return {
     blocks: state.blocks,

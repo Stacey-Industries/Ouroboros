@@ -2,7 +2,7 @@
  * Queue actions hook extracted from useAgentChatWorkspace to stay within max-lines.
  * Manages per-thread queued messages (messages sent while agent is busy).
  */
-import { type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
+import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface QueuedMessage {
   id: string;
@@ -71,11 +71,14 @@ export function useQueueActions(activeThreadId: string | null, setDraft: (v: str
     [setForThread],
   );
 
-  return {
-    queuedMessages,
-    setQueuedMessages: setForThread,
-    addToQueue,
-    editQueuedMessage,
-    deleteQueuedMessage,
-  };
+  return useMemo(
+    () => ({
+      queuedMessages,
+      setQueuedMessages: setForThread,
+      addToQueue,
+      editQueuedMessage,
+      deleteQueuedMessage,
+    }),
+    [queuedMessages, setForThread, addToQueue, editQueuedMessage, deleteQueuedMessage],
+  );
 }

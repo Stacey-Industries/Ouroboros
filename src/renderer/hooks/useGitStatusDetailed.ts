@@ -60,30 +60,17 @@ function setupDetailedFileWatcher(
   }
 }
 
-export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDetailedReturn {
-  const [status, setStatus] = useState<DetailedGitStatus>(EMPTY_STATUS);
-  const [isRepo, setIsRepo] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isRepoRef = useRef(false);
-  const rootRef = useRef(projectRoot);
-  rootRef.current = projectRoot;
+interface UseGitStatusEffectOptions {
+  projectRoot: string | null;
+  setStatus: React.Dispatch<React.SetStateAction<DetailedGitStatus>>;
+  setIsRepo: React.Dispatch<React.SetStateAction<boolean>>;
+  isRepoRef: React.MutableRefObject<boolean>;
+  intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
+  fetchStatus: (root: string) => Promise<void>;
+}
 
-  const fetchStatus = useCallback(async (root: string): Promise<void> => {
-    if (!isRepoRef.current) return;
-    try {
-      const result = await window.electronAPI.git.statusDetailed(root);
-      if (result.success)
-        setStatus({ staged: toMap(result.staged), unstaged: toMap(result.unstaged) });
-    } catch {
-      /* silently ignore */
-    }
-  }, []);
-
-  const refresh = useCallback(() => {
-    const root = rootRef.current;
-    if (root && isRepoRef.current) void fetchStatus(root);
-  }, [fetchStatus]);
-
+function useGitStatusEffect(options: UseGitStatusEffectOptions): void {
+  const { projectRoot, setStatus, setIsRepo, isRepoRef, intervalRef, fetchStatus } = options;
   useEffect(() => {
     if (!projectRoot) {
       resetDetailedState(setStatus, setIsRepo, isRepoRef);
@@ -113,7 +100,34 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
       }
       cleanupWatcher?.();
     };
-  }, [projectRoot, fetchStatus]);
+  }, [projectRoot, fetchStatus, setStatus, setIsRepo, isRepoRef, intervalRef]);
+}
+
+export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDetailedReturn {
+  const [status, setStatus] = useState<DetailedGitStatus>(EMPTY_STATUS);
+  const [isRepo, setIsRepo] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isRepoRef = useRef(false);
+  const rootRef = useRef(projectRoot);
+  rootRef.current = projectRoot;
+
+  const fetchStatus = useCallback(async (root: string): Promise<void> => {
+    if (!isRepoRef.current) return;
+    try {
+      const result = await window.electronAPI.git.statusDetailed(root);
+      if (result.success)
+        setStatus({ staged: toMap(result.staged), unstaged: toMap(result.unstaged) });
+    } catch {
+      /* silently ignore */
+    }
+  }, []);
+
+  const refresh = useCallback(() => {
+    const root = rootRef.current;
+    if (root && isRepoRef.current) void fetchStatus(root);
+  }, [fetchStatus]);
+
+  useGitStatusEffect({ projectRoot, setStatus, setIsRepo, isRepoRef, intervalRef, fetchStatus });
 
   return { status, isRepo, refresh };
 }

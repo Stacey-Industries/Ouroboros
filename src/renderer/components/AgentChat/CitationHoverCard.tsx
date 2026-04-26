@@ -181,7 +181,7 @@ function CardHeader({ raw, onOpen }: { raw: string; onOpen: () => void }): React
   );
 }
 
-function CardBody({ loading, error, snippet, startLine, targetLine }: { loading: boolean; error: string | null; snippet: string | null; startLine: number; targetLine: number | undefined }): React.ReactElement {
+function CardBody({ loading, error, snippet, startLine, targetLine }: { loading: boolean; error: string | null; snippet: string[] | null; startLine: number; targetLine: number | undefined }): React.ReactElement {
   return (
     <div className="overflow-auto" style={{ maxHeight: 240 }}>
       {loading && <p className="px-3 py-2 text-xs text-text-semantic-muted">Loading…</p>}

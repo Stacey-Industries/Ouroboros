@@ -5,6 +5,7 @@ import {
   ErrorBanner,
   LoadingState,
   NoProjectState,
+  ORCHESTRATION_TABS,
   OrchestrationHeader,
   type OrchestrationTab,
   OrchestrationTabBar,
@@ -163,7 +164,7 @@ export function OrchestrationPanelLoaded(props: {
       }}
     >
       <OrchestrationHeader {...headerProps} />
-      <OrchestrationTabBar activeTab={props.activeTab} onSelect={props.onSelectTab} />
+      <OrchestrationTabBar activeTab={props.activeTab} onSelect={props.onSelectTab} tabs={ORCHESTRATION_TABS} />
       <ErrorBanner message={props.model.error} />
       <div className="flex-1 overflow-y-auto px-5 py-5">
         {props.model.loading ? (

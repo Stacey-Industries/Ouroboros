@@ -10,12 +10,13 @@
  * Subscribe to subagent:updated IPC to stay live.
  */
 
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import type { SubagentRecord } from '../../types/electron';
 import { formatCost, formatDuration, formatTime } from './SubagentPanel.helpers';
+import { CancelButton } from './SubagentPanel.parts';
 import { SubagentStatusChip } from './SubagentStatusChip';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -35,30 +36,6 @@ interface HeaderProps {
   onClose?: () => void;
   onCancel?: () => void;
   cancelling?: boolean;
-}
-
-interface CancelBtnProps {
-  onCancel: () => void;
-  cancelling?: boolean;
-}
-
-function CancelButton({ onCancel, cancelling }: CancelBtnProps): React.ReactElement {
-  return (
-    <button
-      className="text-[10px] px-1.5 py-0.5 rounded transition-colors text-status-error"
-      onClick={onCancel}
-      aria-label="Cancel subagent"
-      disabled={cancelling}
-      style={{
-        background: 'var(--status-error-subtle)',
-        border: '1px solid var(--status-error)',
-        cursor: cancelling ? 'not-allowed' : 'pointer',
-        opacity: cancelling ? 0.6 : 1,
-      }}
-    >
-      {cancelling ? 'Cancelling…' : 'Cancel'}
-    </button>
-  );
 }
 
 function SubagentPanelHeader({
@@ -159,6 +136,36 @@ interface MessageListProps {
   messages: SubagentRecord['messages'];
 }
 
+function SubagentMessageListBody({
+  scrollRef,
+  virtualizer,
+  messages,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+  messages: SubagentRecord['messages'];
+}): React.ReactElement {
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+        {virtualizer.getVirtualItems().map((item) => {
+          const msg = messages[item.index];
+          return (
+            <div
+              key={item.index}
+              style={{ position: 'absolute', top: item.start, left: 0, right: 0 }}
+              ref={virtualizer.measureElement}
+              data-index={item.index}
+            >
+              <SubagentMessageRow role={msg.role} content={msg.content} at={msg.at} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SubagentMessageList({ messages }: MessageListProps): React.ReactElement {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -182,25 +189,7 @@ function SubagentMessageList({ messages }: MessageListProps): React.ReactElement
     );
   }
 
-  return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
-      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
-        {virtualizer.getVirtualItems().map((item) => {
-          const msg = messages[item.index];
-          return (
-            <div
-              key={item.index}
-              style={{ position: 'absolute', top: item.start, left: 0, right: 0 }}
-              ref={virtualizer.measureElement}
-              data-index={item.index}
-            >
-              <SubagentMessageRow role={msg.role} content={msg.content} at={msg.at} />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  return <SubagentMessageListBody scrollRef={scrollRef} virtualizer={virtualizer} messages={messages} />;
 }
 
 // ─── Empty + error states ─────────────────────────────────────────────────────

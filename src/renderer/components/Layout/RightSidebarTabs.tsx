@@ -343,7 +343,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
         onSelectThread={onSelectThread} onDeleteThread={onDeleteThread}
       />
       {isPhone && <MobileSecondarySheet viewContent={viewContent} />}
-      <CompareProviders isOpen={comparePanel.isOpen} onClose={comparePanel.close} projectPath={projectPath} />
+      <CompareProviders isOpen={comparePanel.isOpen} onClose={comparePanel.close} projectPath={projectPath ?? ''} />
       <AwesomeRefPanel isOpen={awesomePanel.isOpen} onClose={awesomePanel.close} />
     </div>
   );

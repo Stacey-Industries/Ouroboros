@@ -5,7 +5,7 @@
  * No-op when sessionId is empty — never pollutes config with blank keys.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type MutableRefObject,useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SerializedSlotNode } from '../../types/electron-layout';
 
@@ -21,6 +21,47 @@ function hasApi(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window && 'layout' in window.electronAPI;
 }
 
+function loadCustomLayout(
+  sessionId: string,
+  mountedRef: MutableRefObject<boolean>,
+  setSavedTree: (tree: SerializedSlotNode | null) => void,
+): void {
+  if (!sessionId || !hasApi()) return;
+  void window.electronAPI.layout.getCustomLayout(sessionId).then((result) => {
+    if (mountedRef.current && result.success && result.tree !== undefined) {
+      setSavedTree(result.tree ?? null);
+    }
+  });
+}
+
+function saveCustomLayout(
+  sessionId: string,
+  mountedRef: MutableRefObject<boolean>,
+  debounceRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  tree: SerializedSlotNode,
+): void {
+  if (!sessionId || !hasApi()) return;
+  if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+  debounceRef.current = setTimeout(() => {
+    if (!mountedRef.current) return;
+    void window.electronAPI.layout.setCustomLayout(sessionId, tree);
+  }, DEBOUNCE_MS);
+}
+
+function clearCustomLayout(
+  sessionId: string,
+  debounceRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  setSavedTree: (tree: SerializedSlotNode | null) => void,
+): void {
+  if (!sessionId || !hasApi()) return;
+  if (debounceRef.current !== null) {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+  }
+  setSavedTree(null);
+  void window.electronAPI.layout.deleteCustomLayout(sessionId);
+}
+
 export function useCustomLayoutPersistence(sessionId: string): CustomLayoutPersistence {
   const [savedTree, setSavedTree] = useState<SerializedSlotNode | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,39 +75,22 @@ export function useCustomLayoutPersistence(sessionId: string): CustomLayoutPersi
   }, []);
 
   useEffect(() => {
-    if (!sessionId || !hasApi()) return;
-    void window.electronAPI.layout.getCustomLayout(sessionId).then((result) => {
-      if (!mountedRef.current) return;
-      if (result.success && result.tree !== undefined) setSavedTree(result.tree ?? null);
-    });
+    loadCustomLayout(sessionId, mountedRef, setSavedTree);
   }, [sessionId]);
 
   const save = useCallback(
     (tree: SerializedSlotNode) => {
-      if (!sessionId || !hasApi()) return;
-      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        if (!mountedRef.current) return;
-        void window.electronAPI.layout.setCustomLayout(sessionId, tree);
-      }, DEBOUNCE_MS);
+      saveCustomLayout(sessionId, mountedRef, debounceRef, tree);
     },
     [sessionId],
   );
 
   const clear = useCallback(() => {
-    if (!sessionId || !hasApi()) return;
-    if (debounceRef.current !== null) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    setSavedTree(null);
-    void window.electronAPI.layout.deleteCustomLayout(sessionId);
+    clearCustomLayout(sessionId, debounceRef, setSavedTree);
   }, [sessionId]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    };
+  useEffect(() => () => {
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
   }, []);
 
   return { savedTree, save, clear };

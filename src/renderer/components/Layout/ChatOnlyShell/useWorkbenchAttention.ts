@@ -240,15 +240,15 @@ function pruneCacheKeys(cache: Map<string, AttentionCacheEntry>, keys: string[])
 }
 
 export function useWorkbenchAttention(options: UseWorkbenchAttentionOptions = {}): UseWorkbenchAttentionResult {
-  const sessions = options.sessions ?? [];
-  const threads = options.threads ?? [];
-  const activeSessionId = options.activeSessionId ?? null;
-  const activeThreadId = options.activeThreadId ?? null;
-  const approvalRequests = options.approvalRequests ?? [];
   const sessionCacheRef = useRef(new Map<string, AttentionCacheEntry>());
   const chatCacheRef = useRef(new Map<string, AttentionCacheEntry>());
 
   return useMemo(() => {
+    const sessions = options.sessions ?? [];
+    const threads = options.threads ?? [];
+    const activeSessionId = options.activeSessionId ?? null;
+    const activeThreadId = options.activeThreadId ?? null;
+    const approvalRequests = options.approvalRequests ?? [];
     const approvalCounts = buildApprovalCounts(approvalRequests);
     const index = buildSessionThreadIndex(threads, activeThreadId);
     const sessionTargets = sessions.map((session) => ({
@@ -269,5 +269,11 @@ export function useWorkbenchAttention(options: UseWorkbenchAttentionOptions = {}
       sessionAttentionById: buildTargetMap(sessionTargets, sessionCacheRef.current),
       chatAttentionById: buildTargetMap(chatTargets, chatCacheRef.current),
     };
-  }, [activeSessionId, activeThreadId, approvalRequests, sessions, threads]);
+  }, [
+    options.activeSessionId,
+    options.activeThreadId,
+    options.approvalRequests,
+    options.sessions,
+    options.threads,
+  ]);
 }

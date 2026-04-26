@@ -151,13 +151,39 @@ export function FontDropdown({
     [onChange, options],
   );
 
-  const handleCustomInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(e.target.value);
-    },
-    [onChange],
+  return (
+    <FontDropdownContent
+      customValue={customValue}
+      isCustom={isCustom}
+      label={label}
+      onCustomInput={(e) => onChange(e.target.value)}
+      onSelectChange={handleSelectChange}
+      options={options}
+      selectId={selectId}
+      selectedId={selectedId}
+    />
   );
+}
 
+function FontDropdownContent({
+  customValue,
+  isCustom,
+  label,
+  onCustomInput,
+  onSelectChange,
+  options,
+  selectId,
+  selectedId,
+}: {
+  customValue: string;
+  isCustom: boolean;
+  label: string;
+  onCustomInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelectChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: FontOption[];
+  selectId: string;
+  selectedId: string;
+}): React.ReactElement {
   return (
     <div>
       <label htmlFor={selectId} style={labelStyle}>
@@ -168,10 +194,10 @@ export function FontDropdown({
         options={options}
         selectedId={selectedId}
         label={label}
-        onChange={handleSelectChange}
+        onChange={onSelectChange}
       />
       {isCustom && (
-        <CustomFontInput customValue={customValue} label={label} onChange={handleCustomInput} />
+        <CustomFontInput customValue={customValue} label={label} onChange={onCustomInput} />
       )}
     </div>
   );

@@ -4,7 +4,7 @@
  * Extracted from InnerApp to reduce complexity.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceLayout } from '../types/electron';
 
@@ -82,6 +82,81 @@ function mergeCurrentStateIntoLayout(layout: WorkspaceLayout): WorkspaceLayout {
   return { ...layout, panelSizes: sizes, visiblePanels: buildVisiblePanels(collapse) };
 }
 
+function buildSelectAndSaveHandlers(
+  setWorkspaceLayouts: React.Dispatch<React.SetStateAction<WorkspaceLayout[]>>,
+  setActiveLayoutName: React.Dispatch<React.SetStateAction<string>>,
+): {
+  handleSelectLayout: (layout: WorkspaceLayout) => void;
+  handleSaveLayout: (name: string) => void;
+} {
+  return {
+    handleSelectLayout: (layout: WorkspaceLayout) => {
+      setActiveLayoutName(layout.name);
+      window.dispatchEvent(new CustomEvent('agent-ide:apply-layout', { detail: layout }));
+      persistActiveLayout(layout.name);
+    },
+    handleSaveLayout: (name: string) => {
+      const newLayout = buildLayoutFromCurrentState(name);
+      setWorkspaceLayouts((prev) => {
+        const u = [...prev, newLayout];
+        persistLayouts(u);
+        return u;
+      });
+      setActiveLayoutName(name);
+      persistActiveLayout(name);
+    },
+  };
+}
+
+function buildUpdateAndDeleteHandlers(
+  setWorkspaceLayouts: React.Dispatch<React.SetStateAction<WorkspaceLayout[]>>,
+  setActiveLayoutName: React.Dispatch<React.SetStateAction<string>>,
+): {
+  handleUpdateLayout: (name: string) => void;
+  handleDeleteLayout: (name: string) => void;
+} {
+  return {
+    handleUpdateLayout: (name: string) => {
+      setWorkspaceLayouts((prev) => {
+        const updated = prev.map((l) => (l.name === name ? mergeCurrentStateIntoLayout(l) : l));
+        persistLayouts(updated);
+        return updated;
+      });
+    },
+    handleDeleteLayout: (name: string) => {
+      setWorkspaceLayouts((prev) => {
+        const u = prev.filter((l) => l.name !== name);
+        persistLayouts(u);
+        return u;
+      });
+      setActiveLayoutName((prev) => {
+        if (prev === name) {
+          persistActiveLayout('Default');
+          return 'Default';
+        }
+        return prev;
+      });
+    },
+  };
+}
+
+function buildLayoutHandlers(
+  setWorkspaceLayouts: React.Dispatch<React.SetStateAction<WorkspaceLayout[]>>,
+  setActiveLayoutName: React.Dispatch<React.SetStateAction<string>>,
+): {
+  handleSelectLayout: (layout: WorkspaceLayout) => void;
+  handleSaveLayout: (name: string) => void;
+  handleUpdateLayout: (name: string) => void;
+  handleDeleteLayout: (name: string) => void;
+} {
+  const selectSave = buildSelectAndSaveHandlers(setWorkspaceLayouts, setActiveLayoutName);
+  const updateDelete = buildUpdateAndDeleteHandlers(setWorkspaceLayouts, setActiveLayoutName);
+  return {
+    ...selectSave,
+    ...updateDelete,
+  };
+}
+
 export function useWorkspaceLayouts(): UseWorkspaceLayoutsReturn {
   const [workspaceLayouts, setWorkspaceLayouts] = useState<WorkspaceLayout[]>([]);
   const [activeLayoutName, setActiveLayoutName] = useState('Default');
@@ -91,45 +166,14 @@ export function useWorkspaceLayouts(): UseWorkspaceLayoutsReturn {
     void loadLayoutsFromConfig(setWorkspaceLayouts, setActiveLayoutName);
   }, []);
 
-  const handleSelectLayout = useCallback((layout: WorkspaceLayout) => {
-    setActiveLayoutName(layout.name);
-    window.dispatchEvent(new CustomEvent('agent-ide:apply-layout', { detail: layout }));
-    persistActiveLayout(layout.name);
-  }, []);
-
-  const handleSaveLayout = useCallback((name: string) => {
-    const newLayout = buildLayoutFromCurrentState(name);
-    setWorkspaceLayouts((prev) => {
-      const u = [...prev, newLayout];
-      persistLayouts(u);
-      return u;
-    });
-    setActiveLayoutName(name);
-    persistActiveLayout(name);
-  }, []);
-
-  const handleUpdateLayout = useCallback((name: string) => {
-    setWorkspaceLayouts((prev) => {
-      const updated = prev.map((l) => (l.name === name ? mergeCurrentStateIntoLayout(l) : l));
-      persistLayouts(updated);
-      return updated;
-    });
-  }, []);
-
-  const handleDeleteLayout = useCallback((name: string) => {
-    setWorkspaceLayouts((prev) => {
-      const u = prev.filter((l) => l.name !== name);
-      persistLayouts(u);
-      return u;
-    });
-    setActiveLayoutName((prev) => {
-      if (prev === name) {
-        persistActiveLayout('Default');
-        return 'Default';
-      }
-      return prev;
-    });
-  }, []);
+  // setState identities are stable across renders (React guarantees), so we
+  // can compute handlers once. Without this memo, every render produces new
+  // function references, which cascades into useLayoutCommands' effect deps
+  // and creates an infinite registerCommand → setCommands → re-render loop.
+  const { handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout } = useMemo(
+    () => buildLayoutHandlers(setWorkspaceLayouts, setActiveLayoutName),
+    [],
+  );
 
   return {
     workspaceLayouts,

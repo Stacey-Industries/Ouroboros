@@ -191,19 +191,65 @@ function startStatusPolling({
   }, POLL_INTERVAL_MS);
 }
 
-export function useGitStatus(
-  projectRoot: string | null,
-  { enabled = true }: UseGitStatusOptions = {},
-): UseGitStatusReturn {
-  const [gitStatus, setGitStatus] = useState<Map<string, GitFileStatus>>(new Map());
-  const [isRepo, setIsRepo] = useState(false);
+interface RunGitStatusEffectArgs {
+  refs: GitStatusRefs;
+  projectRoot: string | null;
+  enabled: boolean;
+  scheduleRefresh: (root: string, delayMs?: number) => void;
+  setIsRepo: React.Dispatch<React.SetStateAction<boolean>>;
+  setGitStatus: React.Dispatch<React.SetStateAction<Map<string, GitFileStatus>>>;
+}
+
+function setupStatusWatchers(
+  args: RunGitStatusEffectArgs,
+  projectRoot: string,
+  disposedRef: { value: boolean },
+): { cleanupWatcher: (() => void) | null; cleanupVisibility: () => void } {
+  const { refs, scheduleRefresh, setIsRepo, setGitStatus } = args;
+  const cleanupWatcher = setupFileChangeWatcher(
+    scheduleRefresh,
+    refs.isRepoRef,
+    refs.currentRootRef,
+    projectRoot,
+  );
+  const cleanupVisibility = setupVisibilityWatchers(
+    projectRoot,
+    scheduleRefresh,
+    refs.isRepoRef,
+    refs.currentRootRef,
+  );
+  window.electronAPI.git.isRepo(projectRoot).then((result) => {
+    if (disposedRef.value || refs.currentRootRef.current !== projectRoot) return;
+    startStatusPolling({ refs, projectRoot, scheduleRefresh, setIsRepo, setGitStatus,
+      repo: !!(result.success && result.isRepo) });
+  });
+  return { cleanupWatcher, cleanupVisibility };
+}
+
+function runGitStatusEffect(args: RunGitStatusEffectArgs): (() => void) {
+  const { refs, projectRoot, enabled, setIsRepo, setGitStatus } = args;
+  resetGitStatusRefs(refs, enabled ? projectRoot : null);
+  setIsRepo(false);
+  setGitStatus(new Map());
+  if (!projectRoot || !enabled) return () => {};
+
+  const disposedRef = { value: false };
+  const { cleanupWatcher, cleanupVisibility } = setupStatusWatchers(args, projectRoot, disposedRef);
+
+  return () => {
+    disposedRef.value = true;
+    cleanupGitStatusEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility);
+  };
+}
+
+function useGitStatusRefs(): React.MutableRefObject<GitStatusRefs> {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRepoRef = useRef(false);
   const currentRootRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const pendingRef = useRef(false);
-  const refsRef = useRef<GitStatusRefs>({
+  return useRef<GitStatusRefs>({
     intervalRef,
     timeoutRef,
     isRepoRef,
@@ -211,7 +257,12 @@ export function useGitStatus(
     inFlightRef,
     pendingRef,
   });
+}
 
+function useGitStatusCallbacks(
+  refsRef: React.MutableRefObject<GitStatusRefs>,
+  setGitStatus: React.Dispatch<React.SetStateAction<Map<string, GitFileStatus>>>,
+): { scheduleRefresh: (root: string, delayMs?: number) => void } {
   const fetchStatus = useCallback(async (root: string): Promise<void> => {
     const refs = refsRef.current;
     if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
@@ -220,7 +271,7 @@ export function useGitStatus(
       return;
     }
     await executeStatusFetch(root, refs, setGitStatus, fetchStatus);
-  }, []);
+  }, [refsRef, setGitStatus]);
 
   const scheduleRefresh = useCallback(
     (root: string, delayMs: number = 0): void => {
@@ -236,47 +287,31 @@ export function useGitStatus(
         void fetchStatus(root);
       }, delayMs);
     },
-    [fetchStatus],
+    [fetchStatus, refsRef],
   );
 
+  return { scheduleRefresh };
+}
+
+export function useGitStatus(
+  projectRoot: string | null,
+  { enabled = true }: UseGitStatusOptions = {},
+): UseGitStatusReturn {
+  const [gitStatus, setGitStatus] = useState<Map<string, GitFileStatus>>(new Map());
+  const [isRepo, setIsRepo] = useState(false);
+  const refsRef = useGitStatusRefs();
+  const { scheduleRefresh } = useGitStatusCallbacks(refsRef, setGitStatus);
+
   useEffect(() => {
-    const refs = refsRef.current;
-    resetGitStatusRefs(refs, enabled ? projectRoot : null);
-    setIsRepo(false);
-    setGitStatus(new Map());
-    if (!projectRoot || !enabled) return;
-
-    let disposed = false;
-    const cleanupWatcher = setupFileChangeWatcher(
-      scheduleRefresh,
-      refs.isRepoRef,
-      refs.currentRootRef,
+    return runGitStatusEffect({
+      refs: refsRef.current,
       projectRoot,
-    );
-    const cleanupVisibility = setupVisibilityWatchers(
-      projectRoot,
+      enabled,
       scheduleRefresh,
-      refs.isRepoRef,
-      refs.currentRootRef,
-    );
-
-    window.electronAPI.git.isRepo(projectRoot).then((result) => {
-      if (disposed || refs.currentRootRef.current !== projectRoot) return;
-      startStatusPolling({
-        refs,
-        projectRoot,
-        scheduleRefresh,
-        setIsRepo,
-        setGitStatus,
-        repo: !!(result.success && result.isRepo),
-      });
+      setIsRepo,
+      setGitStatus,
     });
-
-    return () => {
-      disposed = true;
-      cleanupGitStatusEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility);
-    };
-  }, [enabled, projectRoot, scheduleRefresh]);
+  }, [enabled, projectRoot, refsRef, scheduleRefresh]);
 
   return { gitStatus, isRepo };
 }

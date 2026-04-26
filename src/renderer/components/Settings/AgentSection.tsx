@@ -8,6 +8,7 @@ import React from 'react';
 import type { AppConfig } from '../../types/electron';
 import type { ContextSettings } from './AgentContextPacketSection';
 import { AgentContextPacketSection } from './AgentContextPacketSection';
+import { DEFAULT_ROUTER_SETTINGS, RouterSettingsGroup } from './AgentSectionRouter';
 import {
   claudeSectionBudgetInputStyle,
   claudeSectionHeaderTextStyle,
@@ -29,31 +30,20 @@ type AgentChatSettings = NonNullable<AppConfig['agentChatSettings']>;
 type ContextLayerSettings = NonNullable<AppConfig['contextLayer']>;
 type RouterSettings = NonNullable<AppConfig['routerSettings']>;
 
-const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
-  enabled: true,
-  layer1Enabled: true,
-  layer2Enabled: true,
-  layer3Enabled: true,
-  layer2ConfidenceThreshold: 0.6,
-  paranoidMode: false,
-  llmJudgeSampleRate: 0,
-};
+type AgentChatUpdateFn = <K extends keyof AgentChatSettings>(
+  field: K,
+  value: AgentChatSettings[K],
+) => void;
 
-function AgentChatSettingsGroup({
+function AgentChatProviderSelects({
   settings,
   updateSetting,
 }: {
   settings: AgentChatSettings;
-  updateSetting: <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => void;
+  updateSetting: AgentChatUpdateFn;
 }): React.ReactElement {
   return (
     <>
-      <div>
-        <SectionLabel>Agent Chat</SectionLabel>
-        <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
-          Configure agent chat behavior, providers, and verification.
-        </p>
-      </div>
       <SelectSection
         description="Choose the default provider for agent chat requests."
         label="Default provider"
@@ -72,17 +62,25 @@ function AgentChatSettingsGroup({
         label="Verification profile"
         title="Verification Profile"
         value={settings.defaultVerificationProfile ?? 'default'}
-        onChange={(value) =>
-          updateSetting(
-            'defaultVerificationProfile',
-            value as AgentChatSettings['defaultVerificationProfile'],
-          )
-        }
+        onChange={(value) => updateSetting('defaultVerificationProfile', value as AgentChatSettings['defaultVerificationProfile'])}
       >
         <option value="fast">fast</option>
         <option value="default">default</option>
         <option value="full">full</option>
       </SelectSection>
+    </>
+  );
+}
+
+function AgentChatViewSelects({
+  settings,
+  updateSetting,
+}: {
+  settings: AgentChatSettings;
+  updateSetting: AgentChatUpdateFn;
+}): React.ReactElement {
+  return (
+    <>
       <SelectSection
         description="Whether the agent gathers context automatically or waits for manual selection."
         label="Context behavior"
@@ -107,6 +105,19 @@ function AgentChatSettingsGroup({
         <option value="chat">Chat</option>
         <option value="monitor">Monitor</option>
       </SelectSection>
+    </>
+  );
+}
+
+function AgentChatTogglesGroup({
+  settings,
+  updateSetting,
+}: {
+  settings: AgentChatSettings;
+  updateSetting: AgentChatUpdateFn;
+}): React.ReactElement {
+  return (
+    <>
       <ToggleSection
         checked={settings.showAdvancedControls ?? false}
         description="Reveal provider and verification overrides in the chat composer without an extra click."
@@ -121,6 +132,28 @@ function AgentChatSettingsGroup({
         title="Open Details on Failure"
         onChange={(value) => updateSetting('openDetailsOnFailure', value)}
       />
+    </>
+  );
+}
+
+function AgentChatSettingsGroup({
+  settings,
+  updateSetting,
+}: {
+  settings: AgentChatSettings;
+  updateSetting: AgentChatUpdateFn;
+}): React.ReactElement {
+  return (
+    <>
+      <div>
+        <SectionLabel>Agent Chat</SectionLabel>
+        <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
+          Configure agent chat behavior, providers, and verification.
+        </p>
+      </div>
+      <AgentChatProviderSelects settings={settings} updateSetting={updateSetting} />
+      <AgentChatViewSelects settings={settings} updateSetting={updateSetting} />
+      <AgentChatTogglesGroup settings={settings} updateSetting={updateSetting} />
     </>
   );
 }
@@ -156,168 +189,33 @@ function ContextLayerSettingsGroup({
   );
 }
 
-type RouterUpdateFn = <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => void;
-
-function RouterThresholdSection({
-  settings,
-  updateSetting,
-}: {
-  settings: RouterSettings;
-  updateSetting: RouterUpdateFn;
-}): React.ReactElement {
-  return (
-    <section>
-      <SectionLabel>Router Classifier Threshold</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Minimum classifier confidence required before accepting a layer-2 routing result. Range: 0.0
-        to 1.0.
-      </p>
-      <input
-        type="number"
-        min={0}
-        max={1}
-        step={0.05}
-        value={settings.layer2ConfidenceThreshold}
-        onChange={(event) => updateRouterThreshold(event.target.value, updateSetting)}
-        aria-label="Router classifier confidence threshold"
-        className="text-text-semantic-primary"
-        style={claudeSectionBudgetInputStyle}
-      />
-    </section>
-  );
-}
-
-function LlmJudgeSampleRateSection({
-  settings,
-  updateSetting,
-}: {
-  settings: RouterSettings;
-  updateSetting: RouterUpdateFn;
-}): React.ReactElement {
-  const rate = settings.llmJudgeSampleRate ?? 0;
-  const label = rate === 0 ? 'Disabled' : `${Math.round(rate * 100)}%`;
-
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    const parsed = Number.parseFloat(event.target.value);
-    if (!Number.isFinite(parsed)) {
-      return;
-    }
-    updateSetting('llmJudgeSampleRate', Math.min(1, Math.max(0, parsed)));
-  }
-
-  return (
-    <section>
-      <SectionLabel>LLM Judge Sample Rate</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.
-        Currently: <span className="text-text-semantic-primary">{label}</span>
-      </p>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.05}
-        value={rate}
-        onChange={handleChange}
-        aria-label="LLM judge sample rate"
-        style={sliderStyle}
-      />
-    </section>
-  );
-}
-
-function RouterToggles({
-  settings,
-  updateSetting,
-}: {
-  settings: RouterSettings;
-  updateSetting: RouterUpdateFn;
-}): React.ReactElement {
-  return (
-    <>
-      <ToggleSection
-        checked={settings.layer2Enabled}
-        description="Use the statistical classifier when the rule engine does not produce a routing decision."
-        label="Enable router classifier"
-        title="Router Classifier"
-        onChange={(value) => updateSetting('layer2Enabled', value)}
-      />
-      <RouterThresholdSection settings={settings} updateSetting={updateSetting} />
-      <ToggleSection
-        checked={settings.layer3Enabled}
-        description="Reserved for the future async fallback layer. The current synchronous router path does not use this yet."
-        label="Enable layer 3 fallback"
-        title="Router Layer 3"
-        onChange={(value) => updateSetting('layer3Enabled', value)}
-      />
-      <ToggleSection
-        checked={settings.paranoidMode}
-        description="Force Opus for all Agent Chat requests regardless of prompt classification."
-        label="Enable paranoid mode"
-        title="Router Paranoid Mode"
-        onChange={(value) => updateSetting('paranoidMode', value)}
-      />
-      <LlmJudgeSampleRateSection settings={settings} updateSetting={updateSetting} />
-    </>
-  );
-}
-
-function RouterSettingsGroup({
-  settings,
-  updateSetting,
-}: {
-  settings: RouterSettings;
-  updateSetting: RouterUpdateFn;
-}): React.ReactElement {
-  return (
-    <>
-      <SectionLabel style={{ marginTop: '8px' }}>Model Router</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Agent Chat can automatically choose between Haiku, Sonnet, and Opus when the model picker is
-        set to Auto.
-      </p>
-      <ToggleSection
-        checked={settings.enabled}
-        description="Enable automatic model routing for Agent Chat requests that do not explicitly choose a model."
-        label="Enable model router"
-        title="Automatic Model Routing"
-        onChange={(value) => updateSetting('enabled', value)}
-      />
-      <ToggleSection
-        checked={settings.layer1Enabled}
-        description="Use deterministic rules and slash-command mappings as the first routing layer."
-        label="Enable router rule engine"
-        title="Router Rule Engine"
-        onChange={(value) => updateSetting('layer1Enabled', value)}
-      />
-      <RouterToggles settings={settings} updateSetting={updateSetting} />
-    </>
-  );
-}
-
 export function AgentSection({ draft, onChange }: AgentSectionProps): React.ReactElement {
   const agentChatSettings = draft.agentChatSettings ?? {};
   const contextLayerSettings = draft.contextLayer ?? {};
   const contextSettings = draft.context ?? {};
   const routerSettings = { ...DEFAULT_ROUTER_SETTINGS, ...(draft.routerSettings ?? {}) };
+
   const updateAgentChat = <K extends keyof AgentChatSettings>(
     field: K,
     value: AgentChatSettings[K],
   ) => {
     onChange('agentChatSettings', { ...agentChatSettings, [field]: value });
   };
+
   const updateContextLayer = <K extends keyof ContextLayerSettings>(
     field: K,
     value: ContextLayerSettings[K],
   ) => {
     onChange('contextLayer', { ...contextLayerSettings, [field]: value });
   };
+
   const updateRouterSettings = <K extends keyof RouterSettings>(
     field: K,
     value: RouterSettings[K],
   ) => {
     onChange('routerSettings', { ...routerSettings, [field]: value });
   };
+
   const updateContext = <K extends keyof ContextSettings>(field: K, value: ContextSettings[K]) => {
     onChange('context', { ...contextSettings, [field]: value });
   };
@@ -356,15 +254,15 @@ function BackgroundJobsSection({ draft, onChange }: AgentSectionProps): React.Re
       </p>
       <div style={concurrencyRowStyle}>
         <input
-          type="number"
-          min={BACKGROUND_JOBS_MIN}
-          max={BACKGROUND_JOBS_MAX}
-          step={1}
-          value={draft.backgroundJobsMaxConcurrent ?? 2}
-          onChange={handleChange}
           aria-label="Background jobs max concurrency"
           className="text-text-semantic-primary"
+          max={BACKGROUND_JOBS_MAX}
+          min={BACKGROUND_JOBS_MIN}
+          step={1}
           style={claudeSectionBudgetInputStyle}
+          type="number"
+          value={draft.backgroundJobsMaxConcurrent ?? 2}
+          onChange={handleChange}
         />
         <span className="text-text-semantic-faint" style={restartHintStyle}>
           Applies on next restart
@@ -382,23 +280,6 @@ function AgentFeaturesGroup({ draft, onChange }: AgentSectionProps): React.React
     </>
   );
 }
-
-function updateRouterThreshold(
-  rawValue: string,
-  updateSetting: <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => void,
-): void {
-  const parsed = Number.parseFloat(rawValue);
-  if (!Number.isFinite(parsed)) {
-    return;
-  }
-  const clamped = Math.min(1, Math.max(0, parsed));
-  updateSetting('layer2ConfidenceThreshold', clamped);
-}
-
-const sliderStyle: CSSProperties = {
-  width: '100%',
-  accentColor: 'var(--interactive-accent)',
-};
 
 const concurrencyRowStyle: CSSProperties = {
   display: 'flex',

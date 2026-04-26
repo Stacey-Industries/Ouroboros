@@ -101,21 +101,20 @@ function useControllerState() {
   const [mentionRanges, setMentionRanges] = useState<UserSelectedFileRange[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const pendingResendRef = useRef<QueuedResend | null>(null);
-  return {
-    draft,
-    setDraft,
-    isSending,
-    setIsSending,
-    pendingUserMessage,
-    setPendingUserMessage,
-    contextFilePaths,
-    setContextFilePaths,
-    mentionRanges,
-    setMentionRanges,
-    attachments,
-    setAttachments,
-    pendingResendRef,
-  };
+  // Memoize so the controller-level useMemo can detect stability — without
+  // this, a fresh object literal every render cascades into model + slashCmd
+  // re-creation and triggers an infinite Zustand setState loop in storeSync.
+  return useMemo(
+    () => ({
+      draft, setDraft, isSending, setIsSending,
+      pendingUserMessage, setPendingUserMessage,
+      contextFilePaths, setContextFilePaths,
+      mentionRanges, setMentionRanges,
+      attachments, setAttachments,
+      pendingResendRef,
+    }),
+    [draft, isSending, pendingUserMessage, contextFilePaths, mentionRanges, attachments],
+  );
 }
 
 function usePendingUserMessageClearEffect(
@@ -193,7 +192,13 @@ function useAgentChatWorkspaceController(projectRoot: string | null, readOnly: b
     activeThread,
   );
 
-  return { activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState };
+  // Without this memo, the controller object is reconstructed every render,
+  // which cascades through buildActionArgs → useAgentChatActions → buildModel
+  // → slashCmd → useWorkspaceStoreSync, producing an infinite render loop.
+  return useMemo(
+    () => ({ activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState }),
+    [activeThread, state, modelSettings, overrides, queue, threadState],
+  );
 }
 
 /**
@@ -234,6 +239,20 @@ function buildActionArgs(
     setError: controller.threadState.setError,
     setThreads: controller.threadState.setThreads,
   };
+}
+
+function usePreferredThreadSelection(
+  threadState: ReturnType<typeof useThreadState>,
+  preferredThreadId?: string | null,
+): void {
+  const { activeThreadId, setActiveThreadId, threads } = threadState;
+
+  useEffect(() => {
+    if (!preferredThreadId) return;
+    if (!threads.some((thread) => thread.id === preferredThreadId)) return;
+    if (activeThreadId === preferredThreadId) return;
+    setActiveThreadId(preferredThreadId);
+  }, [activeThreadId, preferredThreadId, setActiveThreadId, threads]);
 }
 
 interface BuildModelArgs {
@@ -279,21 +298,14 @@ export function useAgentChatWorkspace(
 ): AgentChatWorkspaceModel {
   const controller = useAgentChatWorkspaceController(projectRoot, readOnly);
   const { commands } = useRulesAndSkills(projectRoot);
-  const actions = useAgentChatActions(buildActionArgs(controller, projectRoot));
+  const actionArgs = useMemo(
+    () => buildActionArgs(controller, projectRoot),
+    [controller, projectRoot],
+  );
+  const actions = useAgentChatActions(actionArgs);
   const hooks = useWorkspaceHooks(controller, actions);
   useFlushPendingResend(controller, projectRoot);
-
-  useEffect(() => {
-    if (!preferredThreadId) return;
-    if (!controller.threadState.threads.some((thread) => thread.id === preferredThreadId)) return;
-    if (controller.threadState.activeThreadId === preferredThreadId) return;
-    controller.threadState.setActiveThreadId(preferredThreadId);
-  }, [
-    controller.threadState.activeThreadId,
-    controller.threadState.setActiveThreadId,
-    controller.threadState.threads,
-    preferredThreadId,
-  ]);
+  usePreferredThreadSelection(controller.threadState, preferredThreadId);
 
   return useMemo(
     () => buildModel({ controller, actions, hooks, projectRoot, commands }),

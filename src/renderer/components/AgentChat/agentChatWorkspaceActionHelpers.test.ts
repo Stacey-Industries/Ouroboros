@@ -16,8 +16,8 @@ describe('getErrorMessage', () => {
 
 describe('getThreadIdForSend', () => {
   it('returns undefined for draft thread ids', () => {
-    // Draft IDs start with 'draft-'
-    expect(getThreadIdForSend('draft-abc')).toBeUndefined();
+    // Draft IDs use the __draft: prefix (see DRAFT_ID_PREFIX in useAgentChatDraftPersistence.ts)
+    expect(getThreadIdForSend('__draft:abc')).toBeUndefined();
   });
   it('returns the id for real thread ids', () => {
     expect(getThreadIdForSend('real-thread-id')).toBe('real-thread-id');

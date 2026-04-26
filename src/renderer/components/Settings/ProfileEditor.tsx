@@ -11,25 +11,17 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import type { EffortLevel, PermissionMode, Profile, ProfileProviderId } from '../../types/electron';
+import type { EffortLevel, PermissionMode, Profile } from '../../types/electron';
 import { LintWarnings, useProfileLint } from './profileEditorLint';
+import { ProfileEditorFields } from './ProfileEditorParts';
 import { ProfileEditorProviderPicker, useMultiProvider } from './ProfileEditorProviderPicker';
 import {
   cancelBtnStyle,
-  checkItemStyle,
-  checklistWrapStyle,
   editorTitleStyle,
   editorWrapStyle,
   errorStyle,
-  fieldRowStyle,
   footerStyle,
-  inputStyle,
-  labelStyle,
   saveBtnStyle,
-  segmentActiveStyle,
-  segmentedWrapStyle,
-  segmentStyle,
-  textareaStyle,
 } from './profileEditorStyles';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -46,13 +38,13 @@ export const ALL_TOOLS = [
   'MultiEdit',
 ] as const;
 
-const EFFORT_OPTIONS: Array<{ value: EffortLevel; label: string }> = [
+export const EFFORT_OPTIONS: Array<{ value: EffortLevel; label: string }> = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
 ];
 
-const PERMISSION_OPTIONS: Array<{ value: PermissionMode; label: string }> = [
+export const PERMISSION_OPTIONS: Array<{ value: PermissionMode; label: string }> = [
   { value: 'normal', label: 'Normal' },
   { value: 'plan', label: 'Plan' },
   { value: 'bypass', label: 'Bypass' },
@@ -66,7 +58,7 @@ export interface ProfileEditorProps {
   onCancel: () => void;
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateId(): string {
   return `profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -85,6 +77,8 @@ function buildInitial(profile: Profile | null): Partial<Profile> {
   }
   return { ...profile };
 }
+
+// ─── useMcpServers ────────────────────────────────────────────────────────────
 
 interface McpEntry {
   name: string;
@@ -105,121 +99,7 @@ function useMcpServers(): string[] {
   return names;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FieldRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div style={fieldRowStyle}>
-      <label className="text-text-semantic-secondary" style={labelStyle}>
-        {label}
-      </label>
-      <div style={{ flex: 1 }}>{children}</div>
-    </div>
-  );
-}
-
-function SegmentedControl<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: Array<{ value: T; label: string }>;
-  value: T | undefined;
-  onChange: (v: T) => void;
-}): React.ReactElement {
-  return (
-    <div style={segmentedWrapStyle}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={
-            value === opt.value ? 'text-text-semantic-primary' : 'text-text-semantic-muted'
-          }
-          style={value === opt.value ? segmentActiveStyle : segmentStyle}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ToolsChecklist({
-  enabled,
-  onChange,
-}: {
-  enabled: string[] | undefined;
-  onChange: (tools: string[]) => void;
-}): React.ReactElement {
-  const all = enabled ?? [...ALL_TOOLS];
-  function toggle(tool: string): void {
-    if (all.includes(tool)) {
-      onChange(all.filter((t) => t !== tool));
-    } else {
-      onChange([...all, tool]);
-    }
-  }
-  return (
-    <div style={checklistWrapStyle}>
-      {ALL_TOOLS.map((tool) => (
-        <label key={tool} style={checkItemStyle} className="text-text-semantic-secondary">
-          <input
-            type="checkbox"
-            checked={all.includes(tool)}
-            onChange={() => toggle(tool)}
-            style={{ marginRight: 6 }}
-          />
-          {tool}
-        </label>
-      ))}
-    </div>
-  );
-}
-
-function McpChecklist({
-  servers,
-  enabled,
-  onChange,
-}: {
-  servers: string[];
-  enabled: string[] | undefined;
-  onChange: (servers: string[]) => void;
-}): React.ReactElement | null {
-  if (servers.length === 0) return null;
-  const active = enabled ?? [];
-  function toggle(name: string): void {
-    if (active.includes(name)) {
-      onChange(active.filter((n) => n !== name));
-    } else {
-      onChange([...active, name]);
-    }
-  }
-  return (
-    <div style={checklistWrapStyle}>
-      {servers.map((name) => (
-        <label key={name} style={checkItemStyle} className="text-text-semantic-secondary">
-          <input
-            type="checkbox"
-            checked={active.includes(name)}
-            onChange={() => toggle(name)}
-            style={{ marginRight: 6 }}
-          />
-          {name}
-        </label>
-      ))}
-    </div>
-  );
-}
-
-// ─── Editor state hook ────────────────────────────────────────────────────────
+// ─── useEditorState ───────────────────────────────────────────────────────────
 
 interface EditorState {
   draft: Partial<Profile>;
@@ -262,113 +142,39 @@ function useEditorState(profile: Profile | null, onSave: (p: Profile) => void): 
   return { draft, saving, error, set, handleSave };
 }
 
-// ─── ProfileEditorFields ──────────────────────────────────────────────────────
+// ─── ProfileEditorFooter ──────────────────────────────────────────────────────
 
-interface FieldsProps {
-  draft: Partial<Profile>;
-  mcpServers: string[];
-  multiProvider: boolean;
-  set: <K extends keyof Profile>(key: K, value: Profile[K]) => void;
-}
-
-function ProfileEditorTextFields({
-  draft,
-  set,
-}: Omit<FieldsProps, 'mcpServers' | 'multiProvider'>): React.ReactElement {
+function ProfileEditorFooter({
+  saving,
+  canSave,
+  onCancel,
+  onSave,
+}: {
+  saving: boolean;
+  canSave: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}): React.ReactElement {
   return (
-    <>
-      <FieldRow label="Name">
-        <input
-          type="text"
-          value={draft.name ?? ''}
-          onChange={(e) => set('name', e.target.value)}
-          placeholder="Profile name"
-          className="text-text-semantic-primary"
-          style={inputStyle}
-          autoComplete="off"
-        />
-      </FieldRow>
-      <FieldRow label="Description">
-        <input
-          type="text"
-          value={draft.description ?? ''}
-          onChange={(e) => set('description', e.target.value)}
-          placeholder="Optional description"
-          className="text-text-semantic-secondary"
-          style={inputStyle}
-        />
-      </FieldRow>
-      <FieldRow label="Model">
-        <input
-          type="text"
-          value={draft.model ?? ''}
-          onChange={(e) => set('model', e.target.value || undefined)}
-          placeholder="e.g. claude-sonnet-4-6 (leave blank for default)"
-          className="text-text-semantic-secondary"
-          style={inputStyle}
-        />
-      </FieldRow>
-      <FieldRow label="Effort">
-        <SegmentedControl
-          options={EFFORT_OPTIONS}
-          value={draft.effort}
-          onChange={(v) => set('effort', v)}
-        />
-      </FieldRow>
-      <FieldRow label="Permission">
-        <SegmentedControl
-          options={PERMISSION_OPTIONS}
-          value={draft.permissionMode}
-          onChange={(v) => set('permissionMode', v)}
-        />
-      </FieldRow>
-    </>
-  );
-}
-
-function ProfileEditorFields({
-  draft,
-  mcpServers,
-  multiProvider,
-  set,
-}: FieldsProps): React.ReactElement {
-  return (
-    <>
-      <ProfileEditorTextFields draft={draft} set={set} />
-      <FieldRow label="System prompt">
-        <textarea
-          value={draft.systemPromptAddendum ?? ''}
-          rows={3}
-          onChange={(e) => set('systemPromptAddendum', e.target.value || undefined)}
-          placeholder="Optional prompt addendum appended to system prompt"
-          className="text-text-semantic-secondary"
-          style={textareaStyle}
-        />
-      </FieldRow>
-      <FieldRow label="Tools">
-        <ToolsChecklist
-          enabled={draft.enabledTools}
-          onChange={(tools) => set('enabledTools', tools)}
-        />
-      </FieldRow>
-      {mcpServers.length > 0 && (
-        <FieldRow label="MCP servers">
-          <McpChecklist
-            servers={mcpServers}
-            enabled={draft.mcpServers}
-            onChange={(servers) => set('mcpServers', servers)}
-          />
-        </FieldRow>
-      )}
-      {multiProvider && (
-        <FieldRow label="Provider">
-          <ProfileEditorProviderPicker
-            value={draft.providerId as ProfileProviderId | undefined}
-            onChange={(id) => set('providerId', id)}
-          />
-        </FieldRow>
-      )}
-    </>
+    <div style={footerStyle}>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={saving}
+        className="text-text-semantic-muted"
+        style={cancelBtnStyle}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        style={saveBtnStyle(canSave)}
+      >
+        {saving ? 'Saving…' : 'Save profile'}
+      </button>
+    </div>
   );
 }
 
@@ -402,25 +208,16 @@ export function ProfileEditor({
         set={set}
       />
       <LintWarnings lints={lints} />
-      <div style={footerStyle}>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={saving}
-          className="text-text-semantic-muted"
-          style={cancelBtnStyle}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={!canSave}
-          style={saveBtnStyle(canSave)}
-        >
-          {saving ? 'Saving…' : 'Save profile'}
-        </button>
-      </div>
+      <ProfileEditorFooter
+        saving={saving}
+        canSave={canSave}
+        onCancel={onCancel}
+        onSave={() => void handleSave()}
+      />
     </div>
   );
 }
+
+// ─── Re-exports for backward compatibility ────────────────────────────────────
+
+export { ProfileEditorProviderPicker };

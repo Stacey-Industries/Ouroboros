@@ -152,17 +152,20 @@ export function useThreadState({ projectRoot }: ThreadStateArgs) {
 
   useInitialThreadReload(reloadThreads);
 
-  return {
-    activeThreadId,
-    error,
-    isLoading,
-    projectRootRef,
-    reloadThreads,
-    setActiveThreadId,
-    setError,
-    setThreads,
-    threads,
-  };
+  return useMemo(
+    () => ({
+      activeThreadId,
+      error,
+      isLoading,
+      projectRootRef,
+      reloadThreads,
+      setActiveThreadId,
+      setError,
+      setThreads,
+      threads,
+    }),
+    [activeThreadId, error, isLoading, projectRootRef, reloadThreads, threads],
+  );
 }
 
 function subscribeThreadUpdates(

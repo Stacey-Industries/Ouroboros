@@ -18,24 +18,11 @@ export interface UseStartupTimingsResult {
   reload: () => void;
 }
 
-export function useStartupTimings(): UseStartupTimingsResult {
-  const [timings, setTimings] = useState<StartupMark[]>([]);
-  const isComplete = timings.length >= EXPECTED_PHASE_COUNT;
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchTimings = useCallback(() => {
-    window.electronAPI?.perf
-      ?.getStartupTimings?.()
-      .then((result) => {
-        if (result.success && result.timings) {
-          setTimings(result.timings);
-        }
-      })
-      .catch(() => {
-        /* silent — handler may not yet be registered */
-      });
-  }, []);
-
+function useStartupTimingsPoll(
+  fetchTimings: () => void,
+  intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+  setTimings: React.Dispatch<React.SetStateAction<StartupMark[]>>,
+): void {
   useEffect(() => {
     fetchTimings();
 
@@ -58,7 +45,28 @@ export function useStartupTimings(): UseStartupTimingsResult {
         clearInterval(intervalRef.current);
       }
     };
-  }, [fetchTimings]);
+  }, [fetchTimings, intervalRef, setTimings]);
+}
+
+export function useStartupTimings(): UseStartupTimingsResult {
+  const [timings, setTimings] = useState<StartupMark[]>([]);
+  const isComplete = timings.length >= EXPECTED_PHASE_COUNT;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchTimings = useCallback(() => {
+    window.electronAPI?.perf
+      ?.getStartupTimings?.()
+      .then((result) => {
+        if (result.success && result.timings) {
+          setTimings(result.timings);
+        }
+      })
+      .catch(() => {
+        /* silent — handler may not yet be registered */
+      });
+  }, []);
+
+  useStartupTimingsPoll(fetchTimings, intervalRef, setTimings);
 
   const reload = useCallback(() => {
     fetchTimings();

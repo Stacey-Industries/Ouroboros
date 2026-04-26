@@ -160,29 +160,106 @@ export function UsageExportPane(): React.ReactElement {
     useUsageExport();
 
   return (
+    <UsageExportPaneContent
+      handleExport={handleExport}
+      lastExport={lastExport}
+      outputPath={outputPath}
+      setOutputPath={setOutputPath}
+      setWindowOpt={setWindowOpt}
+      status={status}
+      windowOpt={windowOpt}
+    />
+  );
+}
+
+function UsageExportPaneContent({
+  handleExport,
+  lastExport,
+  outputPath,
+  setOutputPath,
+  setWindowOpt,
+  status,
+  windowOpt,
+}: {
+  handleExport: () => void;
+  lastExport: LastExportInfo | null;
+  outputPath: string;
+  setOutputPath: React.Dispatch<React.SetStateAction<string>>;
+  setWindowOpt: React.Dispatch<React.SetStateAction<WindowOption>>;
+  status: ExportStatus;
+  windowOpt: WindowOption;
+}): React.ReactElement {
+  return (
     <div style={{ padding: '16px 0', maxWidth: 540 }}>
+      <UsageExportPaneHeader />
+      <UsageExportPaneWindowSection onChange={setWindowOpt} value={windowOpt} />
+      <UsageExportPanePathSection outputPath={outputPath} setOutputPath={setOutputPath} />
+      <UsageExportPaneActions handleExport={handleExport} status={status} />
+      <ExportStatusRow status={status} />
+      <LastExportReadout info={lastExport} />
+    </div>
+  );
+}
+
+function UsageExportPaneHeader(): React.ReactElement {
+  return (
+    <>
       <SectionLabel>Export Usage Data</SectionLabel>
       <p className="text-text-semantic-muted" style={{ fontSize: 13, marginBottom: 16 }}>
         Exports cost history as newline-delimited JSON (JSONL). One session per line.
       </p>
-      <div style={{ marginBottom: 16 }}>
-        <SectionLabel>Time window</SectionLabel>
-        <WindowPicker onChange={setWindowOpt} value={windowOpt} />
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <SectionLabel>Output file path</SectionLabel>
-        <input
-          className="text-text-semantic-primary"
-          onChange={(e) => setOutputPath(e.target.value)}
-          placeholder="Absolute path or filename"
-          style={inputStyle}
-          type="text"
-          value={outputPath}
-        />
-        <p className="text-text-semantic-muted" style={{ fontSize: 11, marginTop: 4 }}>
-          Must be an absolute path. Parent directory must exist.
-        </p>
-      </div>
+    </>
+  );
+}
+
+function UsageExportPaneWindowSection({
+  onChange,
+  value,
+}: {
+  onChange: React.Dispatch<React.SetStateAction<WindowOption>>;
+  value: WindowOption;
+}): React.ReactElement {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <SectionLabel>Time window</SectionLabel>
+      <WindowPicker onChange={onChange} value={value} />
+    </div>
+  );
+}
+
+function UsageExportPanePathSection({
+  outputPath,
+  setOutputPath,
+}: {
+  outputPath: string;
+  setOutputPath: React.Dispatch<React.SetStateAction<string>>;
+}): React.ReactElement {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <SectionLabel>Output file path</SectionLabel>
+      <input
+        className="text-text-semantic-primary"
+        onChange={(e) => setOutputPath(e.target.value)}
+        placeholder="Absolute path or filename"
+        style={inputStyle}
+        type="text"
+        value={outputPath}
+      />
+      <p className="text-text-semantic-muted" style={{ fontSize: 11, marginTop: 4 }}>
+        Must be an absolute path. Parent directory must exist.
+      </p>
+    </div>
+  );
+}
+
+function UsageExportPaneActions({
+  handleExport,
+  status,
+}: {
+  handleExport: () => void;
+  status: ExportStatus;
+}): React.ReactElement {
+  return (
       <button
         className="text-text-semantic-primary"
         disabled={status.kind === 'busy'}
@@ -192,9 +269,6 @@ export function UsageExportPane(): React.ReactElement {
       >
         {status.kind === 'busy' ? 'Exporting…' : 'Export now'}
       </button>
-      <ExportStatusRow status={status} />
-      <LastExportReadout info={lastExport} />
-    </div>
   );
 }
 

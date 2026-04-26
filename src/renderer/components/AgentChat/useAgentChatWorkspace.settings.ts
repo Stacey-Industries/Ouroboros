@@ -3,7 +3,7 @@
  * Loads and subscribes to claude/codex model configuration from electron config.
  */
 import log from 'electron-log/renderer';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 
@@ -87,12 +87,15 @@ export function useModelSettings() {
     return undefined;
   }, []);
 
-  return {
-    settingsModel,
-    codexSettingsModel,
-    defaultProvider,
-    modelProviders,
-    codexModels,
-    codexAppServerTransport,
-  };
+  return useMemo(
+    () => ({
+      settingsModel,
+      codexSettingsModel,
+      defaultProvider,
+      modelProviders,
+      codexModels,
+      codexAppServerTransport,
+    }),
+    [settingsModel, codexSettingsModel, defaultProvider, modelProviders, codexModels, codexAppServerTransport],
+  );
 }

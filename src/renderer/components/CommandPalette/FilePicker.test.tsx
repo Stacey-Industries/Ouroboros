@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { render } from '@testing-library/react';
+import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FilePicker } from './FilePicker';
@@ -8,15 +11,17 @@ describe('FilePicker', () => {
     expect(typeof FilePicker).toBe('function');
   });
 
-  it('returns null when isOpen is false (no DOM render needed)', () => {
-    // Call the component directly as a function to test the early-return guard
-    // without needing full electron API mock or DOM setup.
-    const result = FilePicker({
-      isOpen: false,
-      onClose: vi.fn(),
-      projectRoot: null,
-      onSelectFile: vi.fn(),
-    });
-    expect(result).toBeNull();
+  it('returns null when isOpen is false', () => {
+    // Direct function call would fail (useState requires a React renderer).
+    // Use render() and verify nothing is mounted in the DOM.
+    const { container } = render(
+      <FilePicker
+        isOpen={false}
+        onClose={vi.fn()}
+        projectRoot={null}
+        onSelectFile={vi.fn()}
+      />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 });

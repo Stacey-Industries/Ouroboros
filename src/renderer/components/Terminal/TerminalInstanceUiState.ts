@@ -86,6 +86,35 @@ export function useContextMenuState(terminalRef: React.RefObject<Terminal | null
   return { contextMenu, handleContextMenu, closeContextMenu };
 }
 
+function usePendingPasteHandlers(
+  pendingPaste: string | null,
+  setPendingPaste: React.Dispatch<React.SetStateAction<string | null>>,
+  sessionId: string,
+): {
+  handlePasteConfirm: () => void;
+  handlePasteSingleLine: () => void;
+  handlePasteCancel: () => void;
+} {
+  const handlePasteConfirm = useCallback(() => {
+    if (pendingPaste) {
+      void writeChunkedPaste(sessionId, pendingPaste);
+    }
+    setPendingPaste(null);
+  }, [pendingPaste, sessionId, setPendingPaste]);
+
+  const handlePasteSingleLine = useCallback(() => {
+    if (pendingPaste) {
+      const collapsed = pendingPaste.replace(/[\r\n]+/g, ' ').trim();
+      void writeChunkedPaste(sessionId, collapsed);
+    }
+    setPendingPaste(null);
+  }, [pendingPaste, sessionId, setPendingPaste]);
+
+  const handlePasteCancel = useCallback(() => setPendingPaste(null), [setPendingPaste]);
+
+  return { handlePasteConfirm, handlePasteSingleLine, handlePasteCancel };
+}
+
 export function usePendingPaste(sessionId: string): {
   pendingPaste: string | null;
   setPendingPaste: React.Dispatch<React.SetStateAction<string | null>>;
@@ -94,23 +123,11 @@ export function usePendingPaste(sessionId: string): {
   handlePasteCancel: () => void;
 } {
   const [pendingPaste, setPendingPaste] = useState<string | null>(null);
-
-  const handlePasteConfirm = useCallback(() => {
-    if (pendingPaste) {
-      void writeChunkedPaste(sessionId, pendingPaste);
-    }
-    setPendingPaste(null);
-  }, [pendingPaste, sessionId]);
-
-  const handlePasteSingleLine = useCallback(() => {
-    if (pendingPaste) {
-      const collapsed = pendingPaste.replace(/[\r\n]+/g, ' ').trim();
-      void writeChunkedPaste(sessionId, collapsed);
-    }
-    setPendingPaste(null);
-  }, [pendingPaste, sessionId]);
-
-  const handlePasteCancel = useCallback(() => setPendingPaste(null), []);
+  const { handlePasteConfirm, handlePasteSingleLine, handlePasteCancel } = usePendingPasteHandlers(
+    pendingPaste,
+    setPendingPaste,
+    sessionId,
+  );
 
   useEffect(() => {
     if (!pendingPaste) {

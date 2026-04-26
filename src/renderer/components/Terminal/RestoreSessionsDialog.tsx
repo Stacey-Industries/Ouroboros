@@ -111,6 +111,43 @@ interface DialogContentProps extends Props {
   onToggle: (id: string) => void;
 }
 
+function DialogContentBody({
+  sessions,
+  selected,
+  onToggle,
+  onRestoreAll,
+  onRestoreSelected,
+  onDiscard,
+  count,
+}: Omit<DialogContentProps, 'onDismiss'> & { count: number }): React.ReactElement {
+  return (
+    <>
+      <p className="mb-3 text-xs text-text-semantic-secondary">
+        Ouroboros saved {count} terminal session{count !== 1 ? 's' : ''} from your last run.
+        Restoring will open fresh shells with the same working directory. Running processes cannot
+        be resumed.
+      </p>
+      <div className="mb-4 max-h-48 overflow-y-auto rounded border border-border-subtle bg-surface-inset">
+        {sessions.map((s) => (
+          <SessionRow
+            key={s.id}
+            session={s}
+            selected={selected.has(s.id)}
+            onToggle={() => onToggle(s.id)}
+          />
+        ))}
+      </div>
+      <ActionButtons
+        count={count}
+        selectedCount={selected.size}
+        onRestoreAll={onRestoreAll}
+        onRestoreSelected={() => onRestoreSelected([...selected])}
+        onDiscard={onDiscard}
+      />
+    </>
+  );
+}
+
 function DialogContent({
   sessions,
   selected,
@@ -135,27 +172,14 @@ function DialogContent({
           ✕
         </button>
       </div>
-      <p className="mb-3 text-xs text-text-semantic-secondary">
-        Ouroboros saved {count} terminal session{count !== 1 ? 's' : ''} from your last run.
-        Restoring will open fresh shells with the same working directory. Running processes cannot
-        be resumed.
-      </p>
-      <div className="mb-4 max-h-48 overflow-y-auto rounded border border-border-subtle bg-surface-inset">
-        {sessions.map((s) => (
-          <SessionRow
-            key={s.id}
-            session={s}
-            selected={selected.has(s.id)}
-            onToggle={() => onToggle(s.id)}
-          />
-        ))}
-      </div>
-      <ActionButtons
-        count={count}
-        selectedCount={selected.size}
+      <DialogContentBody
+        sessions={sessions}
+        selected={selected}
+        onToggle={onToggle}
         onRestoreAll={onRestoreAll}
-        onRestoreSelected={() => onRestoreSelected([...selected])}
+        onRestoreSelected={onRestoreSelected}
         onDiscard={onDiscard}
+        count={count}
       />
     </div>
   );

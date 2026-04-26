@@ -94,6 +94,59 @@ interface MenuItemDef {
   separator?: boolean;
 }
 
+function createCopyItem(terminal: Terminal, hasSelection: boolean, onClose: () => void): MenuItemDef {
+  return {
+    label: 'Copy',
+    shortcut: 'Ctrl+C',
+    disabled: !hasSelection,
+    action() {
+      const sel = terminal.getSelection();
+      if (sel) void navigator.clipboard.writeText(sel);
+      onClose();
+    },
+  };
+}
+
+function createPasteItem(sessionId: string, terminal: Terminal, onClose: () => void): MenuItemDef {
+  return {
+    label: 'Paste',
+    shortcut: 'Ctrl+V',
+    separator: true,
+    action() {
+      void navigator.clipboard.readText().then((t) => {
+        if (t) {
+          void writeChunkedPaste(sessionId, t);
+          terminal.focus();
+        }
+      });
+      onClose();
+    },
+  };
+}
+
+function createSelectAllItem(terminal: Terminal, onClose: () => void): MenuItemDef {
+  return {
+    label: 'Select All',
+    shortcut: 'Ctrl+A',
+    separator: true,
+    action() {
+      terminal.selectAll();
+      onClose();
+    },
+  };
+}
+
+function createClearItem(sessionId: string, onClose: () => void): MenuItemDef {
+  return {
+    label: 'Clear',
+    shortcut: 'Ctrl+L',
+    action() {
+      void window.electronAPI.pty.write(sessionId, '\x0c');
+      onClose();
+    },
+  };
+}
+
 function buildMenuItems(
   terminal: Terminal,
   sessionId: string,
@@ -101,47 +154,10 @@ function buildMenuItems(
   onClose: () => void,
 ): MenuItemDef[] {
   return [
-    {
-      label: 'Copy',
-      shortcut: 'Ctrl+C',
-      disabled: !hasSelection,
-      action() {
-        const sel = terminal.getSelection();
-        if (sel) void navigator.clipboard.writeText(sel);
-        onClose();
-      },
-    },
-    {
-      label: 'Paste',
-      shortcut: 'Ctrl+V',
-      separator: true,
-      action() {
-        void navigator.clipboard.readText().then((t) => {
-          if (t) {
-            void writeChunkedPaste(sessionId, t);
-            terminal.focus();
-          }
-        });
-        onClose();
-      },
-    },
-    {
-      label: 'Select All',
-      shortcut: 'Ctrl+A',
-      separator: true,
-      action() {
-        terminal.selectAll();
-        onClose();
-      },
-    },
-    {
-      label: 'Clear',
-      shortcut: 'Ctrl+L',
-      action() {
-        void window.electronAPI.pty.write(sessionId, '\x0c');
-        onClose();
-      },
-    },
+    createCopyItem(terminal, hasSelection, onClose),
+    createPasteItem(sessionId, terminal, onClose),
+    createSelectAllItem(terminal, onClose),
+    createClearItem(sessionId, onClose),
   ];
 }
 

@@ -5,7 +5,45 @@ import { deriveStateFromSession } from '../useOrchestrationModel.helpers';
 import { useSessionSelection, useTaskControlActions } from './useOrchestrationActions';
 import { useOrchestrationEvents } from './useOrchestrationEvents';
 import { useRefreshSessions } from './useOrchestrationRefresh';
+import type { OrchestrationStore } from './useOrchestrationStore';
 import { useOrchestrationStore } from './useOrchestrationStore';
+
+type SessionDerivedArgs = {
+  store: OrchestrationStore;
+  latestSession: OrchestrationStore['sessions'][number] | null;
+  session: OrchestrationStore['sessions'][number] | null;
+  refresh: () => Promise<void>;
+  selectSession: ReturnType<typeof useSessionSelection>;
+  actions: ReturnType<typeof useTaskControlActions>;
+};
+
+function buildModelReturn(args: SessionDerivedArgs): UseOrchestrationModelReturn {
+  const { store, latestSession, session, refresh, selectSession, actions } = args;
+  return {
+    loading: store.loading,
+    refreshing: store.refreshing,
+    error: store.error,
+    actionError: store.actionError,
+    actionMessage: store.actionMessage,
+    state: store.state ?? deriveStateFromSession(session),
+    latestSession,
+    session,
+    sessions: store.sessions,
+    selectedSessionId: store.selectedSessionId,
+    providerEvent: store.providerEvent,
+    verificationSummary:
+      session?.lastVerificationSummary ??
+      session?.latestResult?.verificationSummary ??
+      store.latestVerificationSummary,
+    latestResult: session?.latestResult ?? store.latestResult,
+    refresh,
+    selectSession,
+    resumeLatest: actions.resumeLatest,
+    rerunVerification: actions.rerunVerification,
+    pauseActive: actions.pauseActive,
+    cancelActive: actions.cancelActive,
+  };
+}
 
 export function useOrchestrationModelCore(projectRoot: string | null): UseOrchestrationModelReturn {
   const store = useOrchestrationStore(projectRoot);
@@ -32,28 +70,5 @@ export function useOrchestrationModelCore(projectRoot: string | null): UseOrches
 
   useOrchestrationEvents(projectRoot, store.setters);
 
-  return {
-    loading: store.loading,
-    refreshing: store.refreshing,
-    error: store.error,
-    actionError: store.actionError,
-    actionMessage: store.actionMessage,
-    state: store.state ?? deriveStateFromSession(session),
-    latestSession,
-    session,
-    sessions: store.sessions,
-    selectedSessionId: store.selectedSessionId,
-    providerEvent: store.providerEvent,
-    verificationSummary:
-      session?.lastVerificationSummary ??
-      session?.latestResult?.verificationSummary ??
-      store.latestVerificationSummary,
-    latestResult: session?.latestResult ?? store.latestResult,
-    refresh,
-    selectSession,
-    resumeLatest: actions.resumeLatest,
-    rerunVerification: actions.rerunVerification,
-    pauseActive: actions.pauseActive,
-    cancelActive: actions.cancelActive,
-  };
+  return buildModelReturn({ store, latestSession, session, refresh, selectSession, actions });
 }

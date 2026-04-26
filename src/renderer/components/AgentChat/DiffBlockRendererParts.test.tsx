@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * DiffBlockRendererParts.test.tsx — Smoke tests for extracted diff row components.
  */

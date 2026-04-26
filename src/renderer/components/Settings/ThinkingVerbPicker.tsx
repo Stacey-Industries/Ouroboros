@@ -85,6 +85,43 @@ function patchTheming(
 
 // ── Model hook ────────────────────────────────────────────────────────────────
 
+function useThinkingVerbCallbacks(
+  set: ConfigSet,
+  theming: AppConfig['theming'],
+  verbs: string[],
+) {
+  const handleVerbsChange = useCallback(
+    (next: string[]) => { patchTheming(set, theming, { thinkingVerbs: next }); },
+    [set, theming],
+  );
+  const handleOverrideToggle = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const override = e.target.checked ? (verbs[0] ?? DEFAULT_THINKING_VERBS[0]) : '';
+      patchTheming(set, theming, { verbOverride: override });
+    },
+    [set, theming, verbs],
+  );
+  const handleOverrideInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      patchTheming(set, theming, { verbOverride: e.target.value });
+    },
+    [set, theming],
+  );
+  const handleSpinnerChange = useCallback(
+    (chars: string) => { patchTheming(set, theming, { spinnerChars: chars }); },
+    [set, theming],
+  );
+  const handleReset = useCallback(() => {
+    void set('theming', {
+      ...(theming ?? {}),
+      thinkingVerbs: Array.from(DEFAULT_THINKING_VERBS),
+      spinnerChars: DEFAULT_SPINNER_CHARS,
+      verbOverride: '',
+    });
+  }, [set, theming]);
+  return { handleVerbsChange, handleOverrideToggle, handleOverrideInput, handleSpinnerChange, handleReset };
+}
+
 function useThinkingVerbPickerModel() {
   const { config, set } = useConfig();
   const theming = config?.theming;
@@ -95,56 +132,11 @@ function useThinkingVerbPickerModel() {
   const verbOverride = theming?.verbOverride ?? '';
   const hasOverride = verbOverride.trim().length > 0;
   const spinnerChars = theming?.spinnerChars ?? DEFAULT_SPINNER_CHARS;
+  const callbacks = useThinkingVerbCallbacks(set, theming, verbs);
 
-  const handleVerbsChange = useCallback(
-    (next: string[]) => {
-      patchTheming(set, theming, { thinkingVerbs: next });
-    },
-    [set, theming],
-  );
-
-  const handleOverrideToggle = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const override = e.target.checked ? (verbs[0] ?? DEFAULT_THINKING_VERBS[0]) : '';
-      patchTheming(set, theming, { verbOverride: override });
-    },
-    [set, theming, verbs],
-  );
-
-  const handleOverrideInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      patchTheming(set, theming, { verbOverride: e.target.value });
-    },
-    [set, theming],
-  );
-
-  const handleSpinnerChange = useCallback(
-    (chars: string) => {
-      patchTheming(set, theming, { spinnerChars: chars });
-    },
-    [set, theming],
-  );
-
-  const handleReset = useCallback(() => {
-    void set('theming', {
-      ...(theming ?? {}),
-      thinkingVerbs: Array.from(DEFAULT_THINKING_VERBS),
-      spinnerChars: DEFAULT_SPINNER_CHARS,
-      verbOverride: '',
-    });
-  }, [set, theming]);
-
-  return {
-    verbs,
-    verbOverride,
-    hasOverride,
-    spinnerChars,
-    handleVerbsChange,
-    handleOverrideToggle,
-    handleOverrideInput,
-    handleSpinnerChange,
-    handleReset,
-  };
+  return useMemo(() => ({
+    verbs, verbOverride, hasOverride, spinnerChars, ...callbacks,
+  }), [verbs, verbOverride, hasOverride, spinnerChars, callbacks]);
 }
 
 // ── ThinkingVerbPicker ────────────────────────────────────────────────────────

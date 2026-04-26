@@ -35,20 +35,46 @@ type CaptureResolution =
   | { conflictId: string | null; shortcut: string; type: 'preview' }
   | null;
 
-export function useKeybindingCapture(
+interface CaptureMemoParts {
+  capturingId: string | null;
+  capturedKeys: string;
+  conflictId: string | null;
+  cancelCapture: () => void;
+  commitShortcut: (actionId: string, shortcut: string) => void;
+  resetToDefault: (actionId: string) => void;
+  startCapture: (actionId: string) => void;
+}
+
+function useKeybindingCaptureMemo({
+  capturingId,
+  capturedKeys,
+  conflictId,
+  cancelCapture,
+  commitShortcut,
+  resetToDefault,
+  startCapture,
+}: CaptureMemoParts): CaptureModel {
+  return {
+    capturedKeys,
+    capturingId,
+    conflictId,
+    cancelCapture,
+    commitShortcut,
+    resetToDefault,
+    startCapture,
+  };
+}
+
+function useCaptureActions(
   keybindings: Record<string, string>,
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void,
-): CaptureModel {
-  const [capturingId, setCapturingId] = useState<string | null>(null);
-  const [capturedKeys, setCapturedKeys] = useState('');
-  const [conflictId, setConflictId] = useState<string | null>(null);
-  const captureRef = useCaptureSnapshot(capturingId, capturedKeys, conflictId);
-
+  setCapturedKeys: Dispatch<SetStateAction<string>>,
+  setCapturingId: Dispatch<SetStateAction<string | null>>,
+) {
   const cancelCapture = useCallback(() => {
     setCapturingId(null);
     setCapturedKeys('');
-    setConflictId(null);
-  }, []);
+  }, [setCapturingId, setCapturedKeys]);
 
   const commitShortcut = useCallback(
     (actionId: string, shortcut: string) => {
@@ -70,28 +96,28 @@ export function useKeybindingCapture(
   const startCapture = useCallback((actionId: string) => {
     setCapturingId(actionId);
     setCapturedKeys('');
-    setConflictId(null);
-  }, []);
+  }, [setCapturingId, setCapturedKeys]);
 
-  useCaptureEffect({
-    captureRef,
-    capturingId,
-    cancelCapture,
-    commitShortcut,
-    keybindings,
-    setCapturedKeys,
-    setConflictId,
+  return { cancelCapture, commitShortcut, resetToDefault, startCapture };
+}
+
+export function useKeybindingCapture(
+  keybindings: Record<string, string>,
+  onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void,
+): CaptureModel {
+  const [capturingId, setCapturingId] = useState<string | null>(null);
+  const [capturedKeys, setCapturedKeys] = useState('');
+  const [conflictId, setConflictId] = useState<string | null>(null);
+  const captureRef = useCaptureSnapshot(capturingId, capturedKeys, conflictId);
+  const { cancelCapture, commitShortcut, resetToDefault, startCapture } = useCaptureActions(
+    keybindings, onChange, setCapturedKeys, setCapturingId,
+  );
+
+  useCaptureEffect({ captureRef, capturingId, cancelCapture, commitShortcut, keybindings, setCapturedKeys, setConflictId });
+
+  return useKeybindingCaptureMemo({
+    capturingId, capturedKeys, conflictId, cancelCapture, commitShortcut, resetToDefault, startCapture,
   });
-
-  return {
-    capturedKeys,
-    capturingId,
-    conflictId,
-    cancelCapture,
-    commitShortcut,
-    resetToDefault,
-    startCapture,
-  };
 }
 
 function useCaptureSnapshot(

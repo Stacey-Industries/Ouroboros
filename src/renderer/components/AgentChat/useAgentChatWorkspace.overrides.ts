@@ -2,7 +2,7 @@
  * Per-thread chat override hooks extracted from useAgentChatWorkspace to stay within max-lines.
  * Manages chat overrides per thread, persisting them in a ref-based map.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ChatOverrides } from './ChatControlsBar';
 import { isDraftThreadId } from './useAgentChatDraftPersistence';
@@ -97,5 +97,8 @@ export function usePerThreadOverrides(
     previousThreadIdRef.current = activeThreadId;
   }, [activeThreadEffort, activeThreadId, activeThreadModel]);
 
-  return { chatOverrides, setChatOverrides };
+  return useMemo(
+    () => ({ chatOverrides, setChatOverrides }),
+    [chatOverrides, setChatOverrides],
+  );
 }

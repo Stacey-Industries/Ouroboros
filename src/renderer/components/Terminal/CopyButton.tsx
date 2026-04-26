@@ -83,9 +83,19 @@ export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactE
 
   if (!visible) return <></>;
 
+  return <CopyButtonContent copied={copied} onCopy={handleCopy} />;
+}
+
+function CopyButtonContent({
+  copied,
+  onCopy,
+}: {
+  copied: boolean;
+  onCopy: () => void;
+}): React.ReactElement {
   return (
     <button
-      onClick={handleCopy}
+      onClick={onCopy}
       title={copied ? 'Copied!' : 'Copy terminal output'}
       className={
         copied

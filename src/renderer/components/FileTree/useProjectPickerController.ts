@@ -95,8 +95,8 @@ function buildPickerResult(
     busy: boolean;
     containerRef: React.RefObject<HTMLDivElement | null>;
     toggleOpen: () => void;
-    openFolder: () => void;
-    addFolder: () => void;
+    openFolder: () => Promise<void>;
+    addFolder: () => Promise<void>;
     selectRecent: (path: string) => void;
     recents: string[];
   },

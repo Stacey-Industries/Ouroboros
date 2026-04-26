@@ -12,7 +12,7 @@ import type { CollapseState, CollapseTarget } from './usePanelCollapse';
 
 // ── WindowControls ────────────────────────────────────────────────────────────
 
-function MinimizeBtn({ base, api }: { base: string; api: ReturnType<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
+function MinimizeBtn({ base, api }: { base: string; api: NonNullable<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
   return (
     <button className={`${base} hover:bg-[rgba(255,255,255,0.08)] text-text-semantic-muted`}
       onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize"
@@ -22,7 +22,7 @@ function MinimizeBtn({ base, api }: { base: string; api: ReturnType<typeof windo
   );
 }
 
-function MaximizeBtn({ base, api }: { base: string; api: ReturnType<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
+function MaximizeBtn({ base, api }: { base: string; api: NonNullable<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
   return (
     <button className={`${base} hover:bg-[rgba(255,255,255,0.08)] text-text-semantic-muted`}
       onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize"
@@ -34,7 +34,7 @@ function MaximizeBtn({ base, api }: { base: string; api: ReturnType<typeof windo
   );
 }
 
-function CloseBtn({ base, api }: { base: string; api: ReturnType<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
+function CloseBtn({ base, api }: { base: string; api: NonNullable<typeof window.electronAPI>['app'] | undefined }): React.ReactElement {
   return (
     <button className={`${base} hover:bg-[#e81123] hover:text-white text-text-semantic-muted`}
       onClick={() => api?.closeWindow()} title="Close" aria-label="Close"

@@ -2,22 +2,14 @@ import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
 import {
-  claudeSectionAddButtonStyle,
-  claudeSectionAddDirectoryRowStyle,
   claudeSectionDangerCopyStyle,
   claudeSectionDangerRowStyle,
   claudeSectionDangerSectionStyle,
   claudeSectionDangerTextStyle,
   claudeSectionDangerTitleStyle,
-  claudeSectionDirectoryListStyle,
-  claudeSectionDirectoryRowStyle,
-  claudeSectionDirectoryTextStyle,
   claudeSectionHeaderTextStyle,
   claudeSectionModelHelpStyle,
-  claudeSectionRemoveDirectoryButtonStyle,
   claudeSectionRootStyle,
-  claudeSectionSectionDescriptionStyle,
-  claudeSectionTextInputStyle,
 } from './claudeSectionContentStyles';
 import {
   SelectSection,
@@ -25,6 +17,7 @@ import {
   TextInputSection,
   ToggleSection,
 } from './ClaudeSectionControls';
+import { WorkspaceSection } from './CodexSectionDirectories';
 import { SectionLabel } from './settingsStyles';
 import {
   CODEX_APPROVAL_POLICIES,
@@ -227,81 +220,6 @@ function ExecutionSection({
       <CodexTransportSection draft={draft} onChange={onChange} />
       <ProfileSection model={model} />
       <SearchSection model={model} />
-    </>
-  );
-}
-
-function AdditionalDirectoriesSection({ model }: { model: CodexSectionModel }): React.ReactElement {
-  return (
-    <section>
-      <SectionLabel>Additional Directories</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Extra directories Codex can write to in addition to the primary workspace.
-      </p>
-      {model.settings.addDirs.length > 0 && (
-        <div style={claudeSectionDirectoryListStyle}>
-          {model.settings.addDirs.map((directory, index) => (
-            <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}>
-              <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>
-                {directory}
-              </span>
-              <button
-                onClick={() => model.removeDir(index)}
-                aria-label={`Remove ${directory}`}
-                className="text-text-semantic-muted"
-                style={claudeSectionRemoveDirectoryButtonStyle}
-              >
-                x
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={claudeSectionAddDirectoryRowStyle}>
-        <input
-          type="text"
-          value={model.newDir}
-          onChange={(event) => model.setNewDir(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              model.addDir();
-            }
-          }}
-          placeholder="/path/to/directory"
-          aria-label="New Codex directory path"
-          className="text-text-semantic-primary"
-          style={{ ...claudeSectionTextInputStyle, flex: 1 }}
-        />
-        <button
-          onClick={model.addDir}
-          disabled={!model.canAddDir}
-          style={claudeSectionAddButtonStyle(model.canAddDir)}
-        >
-          Add
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React.ReactElement {
-  return (
-    <ToggleSection
-      checked={model.settings.skipGitRepoCheck}
-      description="Allow Codex to run even when the selected folder is not a git repository."
-      label="Skip git repo check"
-      title="Skip Git Repo Check"
-      onChange={(value) => model.updateSetting('skipGitRepoCheck', value)}
-    />
-  );
-}
-
-function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactElement {
-  return (
-    <>
-      <AdditionalDirectoriesSection model={model} />
-      <SkipGitRepoCheckSection model={model} />
     </>
   );
 }

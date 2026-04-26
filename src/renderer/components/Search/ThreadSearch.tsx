@@ -9,78 +9,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AgentChatSearchResult } from '../../types/electron-agent-chat.d';
+import { dispatchOpenThread, ThreadSearchBody } from './ThreadSearch.parts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ThreadSearchProps {
   onClose?: () => void;
-}
-
-interface ResultCardProps {
-  result: AgentChatSearchResult;
-  isSelected: boolean;
-  onSelect: () => void;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function dispatchOpenThread(threadId: string, messageId?: string): void {
-  window.dispatchEvent(
-    new CustomEvent('agent-ide:open-thread', { detail: { threadId, messageId } }),
-  );
-}
-
-function resultCardClassName(isSelected: boolean): string {
-  return [
-    'cursor-pointer rounded px-3 py-2 text-sm transition-colors',
-    isSelected
-      ? 'bg-interactive-selection text-text-semantic-primary'
-      : 'hover:bg-surface-hover text-text-semantic-secondary',
-  ].join(' ');
-}
-
-function renderSnippet(snippet?: string): React.ReactNode {
-  if (!snippet) return null;
-  return (
-    <p className="mt-0.5 truncate text-xs text-text-semantic-muted">
-      {snippet.replace(/<\/?b>/g, '')}
-    </p>
-  );
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function ResultCard({ result, isSelected, onSelect }: ResultCardProps): React.ReactElement {
-  const handleClick = useCallback(() => {
-    onSelect();
-    dispatchOpenThread(result.threadId, result.messageId);
-  }, [result.threadId, result.messageId, onSelect]);
-
-  const handleKey = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleClick();
-      }
-    },
-    [handleClick],
-  );
-
-  return (
-    <div
-      role="option"
-      aria-selected={isSelected}
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={handleKey}
-      className={resultCardClassName(isSelected)}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-medium text-text-semantic-primary">{result.threadId}</span>
-      </div>
-      {renderSnippet(result.snippet)}
-    </div>
-  );
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -193,41 +127,16 @@ export function ThreadSearch({ onClose }: ThreadSearchProps): React.ReactElement
   const onSelect = useCallback((i: number) => setState((s) => ({ ...s, selectedIdx: i })), []);
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <input
-        ref={inputRef}
-        type="search"
-        placeholder="Search threads..."
-        value={state.query}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        className={[
-          'w-full rounded border border-border-semantic bg-surface-inset px-3 py-1.5',
-          'text-sm text-text-semantic-primary placeholder:text-text-semantic-faint',
-          'outline-none focus:border-border-accent',
-        ].join(' ')}
-      />
-      {state.loading && <p className="px-1 text-xs text-text-semantic-muted">Searching...</p>}
-      {!state.loading && state.query.trim() && state.results.length === 0 && (
-        <p className="px-1 text-xs text-text-semantic-muted">No results</p>
-      )}
-      {state.results.length > 0 && (
-        <div role="listbox" className="flex flex-col gap-0.5">
-          {state.results.map((r, i) => (
-            <ResultCard
-              key={`${r.threadId}-${i}`}
-              result={r}
-              isSelected={i === state.selectedIdx}
-              onSelect={() => onSelect(i)}
-            />
-          ))}
-        </div>
-      )}
-      {state.hasMore && (
-        <p className="px-1 text-xs text-text-semantic-muted">
-          Showing {state.results.length} results — narrow your search to see all
-        </p>
-      )}
-    </div>
+    <ThreadSearchBody
+      query={state.query}
+      loading={state.loading}
+      hasMore={state.hasMore}
+      results={state.results}
+      selectedIdx={state.selectedIdx}
+      inputRef={inputRef}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onSelect={onSelect}
+    />
   );
 }

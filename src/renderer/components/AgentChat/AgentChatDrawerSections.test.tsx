@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * AgentChatDrawerSections.test.tsx — Smoke tests for extracted drawer section components.
  */

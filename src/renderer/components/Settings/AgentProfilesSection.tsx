@@ -11,6 +11,20 @@
 import React, { useState } from 'react';
 
 import type { AppConfig, Profile } from '../../types/electron';
+import { useProfileActions } from './AgentProfilesSection.actions';
+import {
+  emptyStyle,
+  headerActionsStyle,
+  headerBtnStyle,
+  headerRowStyle,
+  listStyle,
+  noProjectStyle,
+  pickerLabelStyle,
+  pickerRowStyle,
+  selectStyle,
+  toastStyle,
+  wrapStyle,
+} from './AgentProfilesSection.styles';
 import {
   ImportModal,
   ProfileRow,
@@ -46,6 +60,18 @@ function DefaultProfilePicker({
       </p>
     );
   }
+  return <DefaultProfilePickerContent defaultId={defaultId} onSetDefault={onSetDefault} profiles={profiles} />;
+}
+
+function DefaultProfilePickerContent({
+  defaultId,
+  onSetDefault,
+  profiles,
+}: {
+  defaultId: string | null;
+  onSetDefault: (id: string) => Promise<void>;
+  profiles: Profile[];
+}): React.ReactElement {
   return (
     <div style={pickerRowStyle}>
       <label className="text-text-semantic-secondary" style={pickerLabelStyle}>
@@ -105,51 +131,6 @@ function ProfileList({
       ))}
     </div>
   );
-}
-
-// ─── Action handlers (extracted to reduce function complexity) ────────────────
-
-function useProfileActions(reload: () => Promise<void>) {
-  const [toast, setToast] = useState<string | null>(null);
-
-  function showToast(msg: string): void {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  async function handleDelete(profile: Profile): Promise<void> {
-    const res = await window.electronAPI.profileCrud.delete(profile.id);
-    if (!res.success) showToast(res.error ?? 'Delete failed');
-  }
-
-  async function handleExport(profile: Profile): Promise<void> {
-    const res = await window.electronAPI.profileCrud.export(profile.id);
-    if (!res.success || !res.json) {
-      showToast('Export failed');
-      return;
-    }
-    await navigator.clipboard.writeText(res.json);
-    showToast(`"${profile.name}" copied to clipboard.`);
-  }
-
-  async function handleImport(json: string): Promise<void> {
-    const res = await window.electronAPI.profileCrud.import(json);
-    if (!res.success) throw new Error(res.error ?? 'Import failed');
-    showToast('Profile imported.');
-  }
-
-  function makeDuplicate(profile: Profile): Profile {
-    return {
-      ...profile,
-      id: `profile-${Date.now()}`,
-      name: `${profile.name} (copy)`,
-      builtIn: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-  }
-
-  return { toast, showToast, handleDelete, handleExport, handleImport, makeDuplicate, reload };
 }
 
 // ─── Header row ──────────────────────────────────────────────────────────────
@@ -221,7 +202,7 @@ export function AgentProfilesSection({ draft }: AgentProfilesSectionProps): Reac
   const { profiles, reload } = useProfileList();
   const projectRoot = draft.defaultProjectRoot ?? '';
   const { defaultId, setDefault } = useDefaultProfile(projectRoot);
-  const actions = useProfileActions(reload);
+  const actions = useProfileActions();
   const [editTarget, setEditTarget] = useState<Profile | null | undefined>(undefined);
   const [showImport, setShowImport] = useState(false);
   const isEditing = editTarget !== undefined;
@@ -234,97 +215,106 @@ export function AgentProfilesSection({ draft }: AgentProfilesSectionProps): Reac
       setShowImport(false);
     });
   }
+
   return (
-    <div style={wrapStyle}>
-      {actions.toast && (
-        <div className="text-text-semantic-primary" style={toastStyle}>
-          {actions.toast}
-        </div>
-      )}
-      <ProfileSectionHeader
-        isEditing={isEditing}
-        onNewProfile={() => setEditTarget(null)}
-        onImport={() => setShowImport(true)}
-      />
-      {isEditing && (
-        <ProfileEditor
-          profile={editTarget}
-          onSave={handleSaved}
-          onCancel={() => setEditTarget(undefined)}
-        />
-      )}
-      <ProfileList
-        profiles={profiles}
-        onEdit={(p) => setEditTarget(p)}
-        onDuplicate={(p) => setEditTarget(actions.makeDuplicate(p))}
-        onDelete={(p) => void actions.handleDelete(p)}
-        onExport={(p) => void actions.handleExport(p)}
-      />
-      <DefaultSection
-        projectRoot={projectRoot}
-        profiles={profiles}
-        defaultId={defaultId}
-        onSetDefault={setDefault}
-      />
-      {showImport && (
-        <ImportModal onImport={handleImportDone} onClose={() => setShowImport(false)} />
-      )}
-    </div>
+    <AgentProfilesSectionContent
+      actions={actions}
+      defaultId={defaultId}
+      editTarget={editTarget}
+      isEditing={isEditing}
+      onImportDone={handleImportDone}
+      onNewProfile={() => setEditTarget(null)}
+      onProfileCancel={() => setEditTarget(undefined)}
+      onProfileChange={setEditTarget}
+      onProfileSaved={handleSaved}
+      onSetDefault={setDefault}
+      profiles={profiles}
+      projectRoot={projectRoot}
+      setShowImport={setShowImport}
+      showImport={showImport}
+    />
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+function AgentProfilesSectionBody({
+  actions,
+  defaultId,
+  editTarget,
+  isEditing,
+  onNewProfile,
+  onProfileCancel,
+  onProfileChange,
+  onProfileSaved,
+  onSetDefault,
+  profiles,
+  projectRoot,
+  setShowImport,
+}: {
+  actions: ReturnType<typeof useProfileActions>;
+  defaultId: string | null;
+  editTarget: Profile | null | undefined;
+  isEditing: boolean;
+  onNewProfile: () => void;
+  onProfileCancel: () => void;
+  onProfileChange: React.Dispatch<React.SetStateAction<Profile | null | undefined>>;
+  onProfileSaved: () => void;
+  onSetDefault: (id: string) => Promise<void>;
+  profiles: Profile[];
+  projectRoot: string;
+  setShowImport: React.Dispatch<React.SetStateAction<boolean>>;
+}): React.ReactElement {
+  return <>
+    <ProfileSectionHeader isEditing={isEditing} onImport={() => setShowImport(true)} onNewProfile={onNewProfile} />
+    {isEditing && <ProfileEditor profile={editTarget ?? null} onCancel={onProfileCancel} onSave={onProfileSaved} />}
+    <ProfileList onDelete={(p) => void actions.handleDelete(p)} onDuplicate={(p) => onProfileChange(actions.makeDuplicate(p))} onEdit={(p) => onProfileChange(p)} onExport={(p) => void actions.handleExport(p)} profiles={profiles} />
+    <DefaultSection defaultId={defaultId} onSetDefault={onSetDefault} profiles={profiles} projectRoot={projectRoot} />
+  </>;
+}
 
-const wrapStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' };
+function AgentProfilesSectionImport({
+  onImport,
+  setShowImport,
+}: {
+  onImport: (json: string) => Promise<void>;
+  setShowImport: React.Dispatch<React.SetStateAction<boolean>>;
+}): React.ReactElement {
+  return <ImportModal onClose={() => setShowImport(false)} onImport={onImport} />;
+}
 
-const headerRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-};
-
-const headerActionsStyle: React.CSSProperties = { display: 'flex', gap: '8px' };
-
-const headerBtnStyle: React.CSSProperties = {
-  padding: '4px 10px',
-  borderRadius: '5px',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  fontSize: '12px',
-  cursor: 'pointer',
-};
-
-const listStyle: React.CSSProperties = {
-  border: '1px solid var(--border-default)',
-  borderRadius: '6px',
-  overflow: 'hidden',
-};
-
-const emptyStyle: React.CSSProperties = { fontSize: '12px', fontStyle: 'italic' };
-
-const toastStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-  fontSize: '12px',
-};
-
-const pickerRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-};
-
-const pickerLabelStyle: React.CSSProperties = { fontSize: '12px', flexShrink: 0 };
-
-const selectStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '6px 10px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-base)',
-  fontSize: '12px',
-};
-
-const noProjectStyle: React.CSSProperties = { fontSize: '12px', fontStyle: 'italic' };
+function AgentProfilesSectionContent({
+  actions,
+  defaultId,
+  editTarget,
+  isEditing,
+  onImportDone,
+  onNewProfile,
+  onProfileCancel,
+  onProfileChange,
+  onProfileSaved,
+  onSetDefault,
+  profiles,
+  projectRoot,
+  setShowImport,
+  showImport,
+}: {
+  actions: ReturnType<typeof useProfileActions>;
+  defaultId: string | null;
+  editTarget: Profile | null | undefined;
+  isEditing: boolean;
+  onImportDone: (json: string) => Promise<void>;
+  onNewProfile: () => void;
+  onProfileCancel: () => void;
+  onProfileChange: React.Dispatch<React.SetStateAction<Profile | null | undefined>>;
+  onProfileSaved: () => void;
+  onSetDefault: (id: string) => Promise<void>;
+  profiles: Profile[];
+  projectRoot: string;
+  setShowImport: React.Dispatch<React.SetStateAction<boolean>>;
+  showImport: boolean;
+}): React.ReactElement {
+  return <div style={wrapStyle}>
+    {actions.toast && <div className="text-text-semantic-primary" style={toastStyle}>{actions.toast}</div>}
+    <AgentProfilesSectionBody actions={actions} defaultId={defaultId} editTarget={editTarget} isEditing={isEditing} onNewProfile={onNewProfile} onProfileCancel={onProfileCancel} onProfileChange={onProfileChange} onProfileSaved={onProfileSaved} onSetDefault={onSetDefault} profiles={profiles} projectRoot={projectRoot} setShowImport={setShowImport} />
+    {showImport && <AgentProfilesSectionImport onImport={onImportDone} setShowImport={setShowImport} />}
+  </div>;
+}

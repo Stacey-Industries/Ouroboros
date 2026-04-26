@@ -113,6 +113,36 @@ function DetailHeader({
   );
 }
 
+function buildDetailFields(job: DispatchJob, promptPreview: string) {
+  return [
+    { label: 'Title', value: job.request.title, testId: 'detail-title' },
+    {
+      label: 'Prompt',
+      value: (
+        <pre
+          style={{
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '11px',
+          }}
+        >
+          {promptPreview}
+        </pre>
+      ),
+      testId: 'detail-prompt',
+    },
+    { label: 'Project', value: job.request.projectPath, testId: 'detail-project' },
+    ...(job.request.worktreeName
+      ? [{ label: 'Worktree', value: job.request.worktreeName, testId: 'detail-worktree' }]
+      : []),
+    { label: 'Created', value: formatTs(job.createdAt), testId: 'detail-created' },
+    ...(job.startedAt ? [{ label: 'Started', value: formatTs(job.startedAt), testId: 'detail-started' }] : []),
+    ...(job.endedAt ? [{ label: 'Ended', value: formatTs(job.endedAt), testId: 'detail-ended' }] : []),
+    ...(job.error ? [{ label: 'Error', value: job.error, testId: 'detail-error' }] : []),
+  ];
+}
+
 // ── DispatchJobDetail ─────────────────────────────────────────────────────────
 
 export interface DispatchJobDetailProps {
@@ -128,44 +158,14 @@ export function DispatchJobDetail({
 }: DispatchJobDetailProps): React.ReactElement {
   const promptPreview =
     job.request.prompt.length > 200 ? `${job.request.prompt.slice(0, 200)}…` : job.request.prompt;
+  const detailFields = buildDetailFields(job, promptPreview);
 
   return (
     <div style={{ ...SCROLLABLE_BODY_STYLE, display: 'flex', flexDirection: 'column' }}>
       <DetailHeader job={job} onClose={onClose} onCancel={onCancel} />
-
-      <DetailField label="Title" value={job.request.title} testId="detail-title" />
-      <DetailField
-        label="Prompt"
-        value={
-          <pre
-            style={{
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
-            }}
-          >
-            {promptPreview}
-          </pre>
-        }
-        testId="detail-prompt"
-      />
-      <DetailField label="Project" value={job.request.projectPath} testId="detail-project" />
-
-      {job.request.worktreeName && (
-        <DetailField label="Worktree" value={job.request.worktreeName} testId="detail-worktree" />
-      )}
-
-      <DetailField label="Created" value={formatTs(job.createdAt)} testId="detail-created" />
-      {job.startedAt && (
-        <DetailField label="Started" value={formatTs(job.startedAt)} testId="detail-started" />
-      )}
-      {job.endedAt && (
-        <DetailField label="Ended" value={formatTs(job.endedAt)} testId="detail-ended" />
-      )}
-      {job.error && <DetailField label="Error" value={job.error} testId="detail-error" />}
-
-      {/* Log tail — stubbed; full PTY/agent-event subscription deferred to a future wave */}
+      {detailFields.map((field) => (
+        <DetailField key={field.testId} label={field.label} value={field.value} testId={field.testId} />
+      ))}
       <div
         style={STUB_NOTICE_STYLE}
         className="text-text-semantic-muted"

@@ -73,17 +73,9 @@ export function useStableOrchestrationSetters(
         setLatestResult,
       }),
     [
-      setActionError,
-      setActionMessage,
-      setError,
-      setLatestResult,
-      setLatestVerificationSummary,
-      setLoading,
-      setProviderEvent,
-      setRefreshing,
-      setSelectedSessionId,
-      setSessions,
-      setState,
+      setActionError, setActionMessage, setError, setLatestResult,
+      setLatestVerificationSummary, setLoading, setProviderEvent,
+      setRefreshing, setSelectedSessionId, setSessions, setState,
     ],
   );
 }

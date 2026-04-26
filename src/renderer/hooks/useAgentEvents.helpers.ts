@@ -28,13 +28,9 @@ import {
   type SkillStartAction,
 } from './useAgentEvents.ruleSkillReducers';
 import {
-  ensureSession,
-  findToolCallIndex,
   hasSession,
   loadPersistedSessions,
   omitPendingLink,
-  resolveStaleToolCalls,
-  trimToolCalls,
   updateSession,
 } from './useAgentEvents.session-utils';
 import {
@@ -50,6 +46,10 @@ import {
   type TaskCompletedAction,
   type TaskCreatedAction,
 } from './useAgentEvents.taskReducers';
+import {
+  finishToolCall,
+  startToolCall,
+} from './useAgentEvents.toolCallReducers';
 
 export interface PendingSubagentStamp {
   parentSessionId: string;
@@ -259,60 +259,6 @@ function startSession(state: AgentState, action: AgentStartAction): AgentState {
   };
 }
 
-function startToolCall(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'TOOL_START' }>,
-): AgentState {
-  const baseState = ensureSession(state, action.sessionId, action.toolCall.timestamp);
-  return updateSession(baseState, action.sessionId, (session) => {
-    const existingIndex = session.toolCalls.findIndex((tc) => tc.id === action.toolCall.id);
-    if (existingIndex >= 0) {
-      const existing = session.toolCalls[existingIndex];
-      const toolCalls = session.toolCalls.map((tc, index) =>
-        index === existingIndex
-          ? {
-              ...existing,
-              toolName: action.toolCall.toolName,
-              input: action.toolCall.input,
-              timestamp: action.toolCall.timestamp,
-            }
-          : tc,
-      );
-      return { ...session, toolCalls };
-    }
-    const isDuplicate = session.toolCalls.some(
-      (tc) =>
-        tc.toolName === action.toolCall.toolName &&
-        tc.input === action.toolCall.input &&
-        Math.abs(tc.timestamp - action.toolCall.timestamp) < 2000 &&
-        tc.status === 'pending',
-    );
-    if (isDuplicate) return session;
-    return {
-      ...session,
-      toolCalls: trimToolCalls([
-        ...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp),
-        action.toolCall,
-      ]),
-    };
-  });
-}
-
-function finishToolCall(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'TOOL_END' }>,
-): AgentState {
-  return updateSession(state, action.sessionId, (session) => {
-    const targetIndex = findToolCallIndex(session.toolCalls, action.toolCallId, action.toolName);
-    if (targetIndex < 0) return session;
-    const toolCalls = session.toolCalls.map((tc, i) =>
-      i === targetIndex
-        ? { ...tc, duration: action.duration, status: action.status, output: action.output }
-        : tc,
-    );
-    return { ...session, toolCalls };
-  });
-}
 
 /* endSession and its helpers are in useAgentEvents.endSession.ts (line-count budget). */
 

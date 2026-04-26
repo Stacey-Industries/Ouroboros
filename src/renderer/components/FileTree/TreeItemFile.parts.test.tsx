@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * TreeItemFile.parts.test.tsx — smoke tests for TreeItemFile.parts.tsx
  */

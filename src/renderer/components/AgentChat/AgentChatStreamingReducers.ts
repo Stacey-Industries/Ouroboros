@@ -181,8 +181,13 @@ function applyDeltaChunk(
   chunk: AgentChatStreamChunk,
   seenIds: Map<string, Set<string>>,
 ): AgentChatStreamingState | null {
-  if (chunk.timestamp !== undefined) {
-    const chunkId = `${chunk.type}:${chunk.timestamp}:${chunk.blockIndex ?? ''}`;
+  // Prefer the bridge-stamped monotonic `seq` when present — `timestamp` is
+  // millisecond-precision and collides for providers that emit multiple
+  // deltas per ms on the same block (Codex app-server). Fall back to
+  // timestamp for chunks from older buffered sessions that pre-date `seq`.
+  const uniqueKey = chunk.seq !== undefined ? `s${chunk.seq}` : chunk.timestamp;
+  if (uniqueKey !== undefined) {
+    const chunkId = `${chunk.type}:${uniqueKey}:${chunk.blockIndex ?? ''}`;
     if (isDuplicateChunk(seenIds, chunk.messageId, chunkId)) {
       return { ...prev, _seenChunkIds: seenIds };
     }

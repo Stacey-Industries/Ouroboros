@@ -86,39 +86,71 @@ function MemoryRow({
 }): React.ReactElement {
   return (
     <tr>
-      <td style={tdStyle}>
-        <span style={decision === 'allow' ? allowBadgeStyle : denyBadgeStyle}>
-          {decision === 'allow' ? 'Allow' : 'Deny'}
-        </span>
-      </td>
-      <td style={tdStyle}>
-        <span className="text-text-semantic-primary" style={{ fontFamily: 'var(--font-mono)' }}>
-          {entry.toolName}
-        </span>
-      </td>
-      <td
-        style={{
-          ...tdStyle,
-          maxWidth: '320px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <span className="text-text-semantic-muted" title={entry.keyPreview}>
-          {entry.keyPreview}
-        </span>
-      </td>
-      <td style={{ ...tdStyle, textAlign: 'right' }}>
-        <button
-          style={revokeBtnStyle}
-          onClick={() => onRevoke(entry.hash)}
-          aria-label={`Revoke ${decision} rule for ${entry.toolName}: ${entry.keyPreview}`}
-        >
-          Revoke
-        </button>
-      </td>
+      <MemoryRowDecisionCell decision={decision} />
+      <MemoryRowToolCell toolName={entry.toolName} />
+      <MemoryRowPreviewCell preview={entry.keyPreview} />
+      <MemoryRowActionCell decision={decision} entry={entry} onRevoke={onRevoke} />
     </tr>
+  );
+}
+
+function MemoryRowDecisionCell({ decision }: { decision: 'allow' | 'deny' }): React.ReactElement {
+  return (
+    <td style={tdStyle}>
+      <span style={decision === 'allow' ? allowBadgeStyle : denyBadgeStyle}>
+        {decision === 'allow' ? 'Allow' : 'Deny'}
+      </span>
+    </td>
+  );
+}
+
+function MemoryRowToolCell({ toolName }: { toolName: string }): React.ReactElement {
+  return (
+    <td style={tdStyle}>
+      <span className="text-text-semantic-primary" style={{ fontFamily: 'var(--font-mono)' }}>
+        {toolName}
+      </span>
+    </td>
+  );
+}
+
+function MemoryRowPreviewCell({ preview }: { preview: string }): React.ReactElement {
+  return (
+    <td
+      style={{
+        ...tdStyle,
+        maxWidth: '320px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span className="text-text-semantic-muted" title={preview}>
+        {preview}
+      </span>
+    </td>
+  );
+}
+
+function MemoryRowActionCell({
+  decision,
+  entry,
+  onRevoke,
+}: {
+  decision: 'allow' | 'deny';
+  entry: ApprovalMemoryEntry;
+  onRevoke: (hash: string) => void;
+}): React.ReactElement {
+  return (
+    <td style={{ ...tdStyle, textAlign: 'right' }}>
+      <button
+        style={revokeBtnStyle}
+        onClick={() => onRevoke(entry.hash)}
+        aria-label={`Revoke ${decision} rule for ${entry.toolName}: ${entry.keyPreview}`}
+      >
+        Revoke
+      </button>
+    </td>
   );
 }
 

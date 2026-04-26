@@ -1,11 +1,13 @@
 /**
+ * @vitest-environment jsdom
+ *
  * Smoke tests for TitleBar.controls.tsx — WindowControls, NotificationBell, PanelToggleBar.
  */
 
+import { render } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { render } from '../../../_test_utils/renderWithProviders';
 import { NotificationBell, PanelToggleBar, WindowControls } from './TitleBar.controls';
 
 vi.mock('../../contexts/ToastContext', () => ({

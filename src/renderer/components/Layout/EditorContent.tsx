@@ -280,7 +280,7 @@ function useEditorState() {
   return { fvm, mbEvents, activeMB, fileActions, excerptActions, rightFileActions, splitDrag, editorActions, projectRoot };
 }
 
-function SplitView({ fvm, fileActions, rightFileActions, splitDrag, editorActions, projectRoot }: ReturnType<typeof useEditorState>): React.ReactElement {
+function SplitView({ fvm, fileActions, rightFileActions, splitDrag, editorActions, projectRoot }: Pick<ReturnType<typeof useEditorState>, 'fvm' | 'fileActions' | 'rightFileActions' | 'splitDrag' | 'editorActions' | 'projectRoot'>): React.ReactElement {
   return (
     <div ref={splitDrag.containerRef} style={{ display: 'flex', flex: 1, minHeight: 0, height: '100%' }}>
       <SplitContentView leftFile={fvm.activeFile} rightFile={fvm.rightFile} projectRoot={projectRoot}

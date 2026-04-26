@@ -7,7 +7,26 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import type { Profile } from '../../types/electron';
+import {
+  actionBtnStyle,
+  actionsStyle,
+  badgeRowStyle,
+  badgeStyle,
+  builtInLabelStyle,
+  cancelBtnStyle,
+  deleteBtnStyle,
+  importBtnStyle,
+  modalCardStyle,
+  modalDescStyle,
+  modalFooterStyle,
+  modalOverlayStyle,
+  modalTextareaStyle,
+  nameStyle,
+  profileRowStyle,
+} from './AgentProfilesSectionStyles';
 import { ProfileEditor } from './ProfileEditor';
+
+export { deleteBtnStyle, profileRowStyle };
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
@@ -35,60 +54,70 @@ export function Badge({
 
 // ─── ProfileRowActions ────────────────────────────────────────────────────────
 
-export function ProfileRowActions({
-  isBuiltIn,
-  onEdit,
-  onDuplicate,
-  onDelete,
-  onExport,
-}: {
+interface ProfileRowActionsProps {
   isBuiltIn: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onExport: () => void;
-}): React.ReactElement {
+}
+
+function ProfileActionButtons({
+  isBuiltIn,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onExport,
+}: ProfileRowActionsProps): React.ReactElement {
   return (
-    <div style={actionsStyle}>
-      <button
-        type="button"
-        onClick={onEdit}
-        style={actionBtnStyle}
-        className="text-text-semantic-muted"
-      >
+    <>
+      <button type="button" onClick={onEdit} style={actionBtnStyle} className="text-text-semantic-muted">
         Edit
       </button>
-      <button
-        type="button"
-        onClick={onDuplicate}
-        style={actionBtnStyle}
-        className="text-text-semantic-muted"
-      >
+      <button type="button" onClick={onDuplicate} style={actionBtnStyle} className="text-text-semantic-muted">
         Dup
       </button>
-      <button
-        type="button"
-        onClick={onExport}
-        style={actionBtnStyle}
-        className="text-text-semantic-muted"
-      >
+      <button type="button" onClick={onExport} style={actionBtnStyle} className="text-text-semantic-muted">
         Export
       </button>
       {!isBuiltIn && (
-        <button
-          type="button"
-          onClick={onDelete}
-          style={deleteBtnStyle}
-          className="text-status-error"
-        >
+        <button type="button" onClick={onDelete} style={deleteBtnStyle} className="text-status-error">
           Delete
         </button>
       )}
+    </>
+  );
+}
+
+export function ProfileRowActions(props: ProfileRowActionsProps): React.ReactElement {
+  return (
+    <div style={actionsStyle}>
+      <ProfileActionButtons {...props} />
     </div>
   );
 }
 
 // ─── ProfileRow ───────────────────────────────────────────────────────────────
+
+interface ProfileRowProps {
+  profile: Profile;
+  isLast: boolean;
+  onEdit: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onExport: () => void;
+}
+
+function ProfileBadges({ profile }: { profile: Profile }): React.ReactElement {
+  const toolCount = profile.enabledTools?.length;
+  return (
+    <div style={badgeRowStyle}>
+      {profile.model && <Badge label={profile.model.replace('claude-', '')} tone="accent" />}
+      {profile.effort && <Badge label={profile.effort} tone="neutral" />}
+      {toolCount !== undefined && <Badge label={`${toolCount} tools`} tone="neutral" />}
+    </div>
+  );
+}
 
 export function ProfileRow({
   profile,
@@ -97,15 +126,7 @@ export function ProfileRow({
   onDuplicate,
   onDelete,
   onExport,
-}: {
-  profile: Profile;
-  isLast: boolean;
-  onEdit: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onExport: () => void;
-}): React.ReactElement {
-  const toolCount = profile.enabledTools?.length;
+}: ProfileRowProps): React.ReactElement {
   return (
     <div
       style={{
@@ -122,11 +143,7 @@ export function ProfileRow({
           </span>
         )}
       </span>
-      <div style={badgeRowStyle}>
-        {profile.model && <Badge label={profile.model.replace('claude-', '')} tone="accent" />}
-        {profile.effort && <Badge label={profile.effort} tone="neutral" />}
-        {toolCount !== undefined && <Badge label={`${toolCount} tools`} tone="neutral" />}
-      </div>
+      <ProfileBadges profile={profile} />
       <ProfileRowActions
         isBuiltIn={Boolean(profile.builtIn)}
         onEdit={onEdit}
@@ -171,6 +188,32 @@ function ImportModalBody({
   );
 }
 
+function ImportModalFooter({
+  json,
+  onClose,
+  onImport,
+}: {
+  json: string;
+  onClose: () => void;
+  onImport: () => void;
+}): React.ReactElement {
+  return (
+    <div style={modalFooterStyle}>
+      <button type="button" onClick={onClose} style={cancelBtnStyle} className="text-text-semantic-muted">
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onImport}
+        disabled={!json.trim()}
+        style={importBtnStyle(json.trim().length > 0)}
+      >
+        Import
+      </button>
+    </div>
+  );
+}
+
 export function ImportModal({
   onImport,
   onClose,
@@ -197,24 +240,7 @@ export function ImportModal({
           Import Profile
         </div>
         <ImportModalBody json={json} setJson={setJson} error={error} />
-        <div style={modalFooterStyle}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={cancelBtnStyle}
-            className="text-text-semantic-muted"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleImport()}
-            disabled={!json.trim()}
-            style={importBtnStyle(json.trim().length > 0)}
-          >
-            Import
-          </button>
-        </div>
+        <ImportModalFooter json={json} onClose={onClose} onImport={() => void handleImport()} />
       </div>
     </div>
   );
@@ -286,113 +312,4 @@ export function useDefaultProfile(projectRoot: string): {
   );
 
   return { defaultId, setDefault };
-}
-
-// ─── Styles (shared) ──────────────────────────────────────────────────────────
-
-const badgeStyle: React.CSSProperties = {
-  fontSize: '10px',
-  padding: '1px 6px',
-  borderRadius: '4px',
-  fontFamily: 'var(--font-mono)',
-  whiteSpace: 'nowrap',
-};
-
-const actionsStyle: React.CSSProperties = { display: 'flex', gap: '4px', flexShrink: 0 };
-
-const actionBtnStyle: React.CSSProperties = {
-  padding: '3px 8px',
-  borderRadius: '4px',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  fontSize: '11px',
-  cursor: 'pointer',
-};
-
-export const deleteBtnStyle: React.CSSProperties = {
-  ...actionBtnStyle,
-  borderColor: 'var(--status-error)',
-};
-
-export const profileRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '9px 12px',
-  gap: '10px',
-  background: 'var(--surface-raised)',
-};
-
-const nameStyle: React.CSSProperties = {
-  flex: 1,
-  fontSize: '13px',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  minWidth: 0,
-};
-
-const builtInLabelStyle: React.CSSProperties = { fontSize: '10px', fontStyle: 'italic' };
-
-const badgeRowStyle: React.CSSProperties = { display: 'flex', gap: '4px', flexShrink: 0 };
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
-const modalCardStyle: React.CSSProperties = {
-  width: '480px',
-  padding: '20px',
-  borderRadius: '10px',
-  border: '1px solid var(--border-default)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-};
-
-const modalDescStyle: React.CSSProperties = { fontSize: '12px' };
-
-const modalTextareaStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-base)',
-  fontSize: '12px',
-  fontFamily: 'var(--font-mono)',
-  resize: 'vertical',
-  outline: 'none',
-};
-
-const modalFooterStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '8px',
-};
-
-const cancelBtnStyle: React.CSSProperties = {
-  padding: '6px 14px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  fontSize: '12px',
-  cursor: 'pointer',
-};
-
-function importBtnStyle(enabled: boolean): React.CSSProperties {
-  return {
-    padding: '6px 14px',
-    borderRadius: '6px',
-    border: '1px solid var(--interactive-accent)',
-    background: enabled ? 'var(--interactive-accent)' : 'var(--surface-raised)',
-    color: enabled ? 'var(--text-on-accent)' : 'var(--text-muted)',
-    fontSize: '12px',
-    fontWeight: 600,
-    cursor: enabled ? 'pointer' : 'not-allowed',
-  };
 }

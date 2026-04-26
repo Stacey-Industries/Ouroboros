@@ -85,24 +85,99 @@ function ProviderFormFields({ onAdd, onCancel }: ProviderFormFieldsProps): React
   const canSave = name.trim().length > 0 && baseUrl.trim().length > 0;
 
   return (
-    <div style={formContainerStyle}>
-      <PresetSelector value={preset} onChange={handlePresetChange} />
-      <FormField label="Name" value={name} onChange={setName} placeholder="e.g. MiniMax" />
-      <FormField
-        label="Base URL"
-        value={baseUrl}
-        onChange={setBaseUrl}
-        placeholder="https://api.example.com/v1"
-      />
-      <PasswordField label="API Key" value={apiKey} onChange={setApiKey} placeholder="sk-..." />
-      <div style={formButtonRowStyle}>
-        <button style={formActionButtonStyle(canSave)} onClick={handleSave} disabled={!canSave}>
-          Save
-        </button>
-        <button style={formActionButtonStyle(false)} onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
+    <ProviderFormFieldsContent
+      apiKey={apiKey}
+      baseUrl={baseUrl}
+      canSave={canSave}
+      name={name}
+      onApiKeyChange={setApiKey}
+      onBaseUrlChange={setBaseUrl}
+      onCancel={onCancel}
+      onNameChange={setName}
+      onPresetChange={handlePresetChange}
+      onSave={handleSave}
+      preset={preset}
+    />
+  );
+}
+
+function ProviderFormFieldsContent({
+  apiKey,
+  baseUrl,
+  canSave,
+  name,
+  onApiKeyChange,
+  onBaseUrlChange,
+  onCancel,
+  onNameChange,
+  onPresetChange,
+  onSave,
+  preset,
+}: {
+  apiKey: string;
+  baseUrl: string;
+  canSave: boolean;
+  name: string;
+  onApiKeyChange: (v: string) => void;
+  onBaseUrlChange: (v: string) => void;
+  onCancel: () => void;
+  onNameChange: (v: string) => void;
+  onPresetChange: (v: string) => void;
+  onSave: () => void;
+  preset: string;
+}): React.ReactElement {
+  return <div style={formContainerStyle}>
+    <ProviderFormInputs apiKey={apiKey} baseUrl={baseUrl} name={name} onApiKeyChange={onApiKeyChange} onBaseUrlChange={onBaseUrlChange} onNameChange={onNameChange} onPresetChange={onPresetChange} preset={preset} />
+    <ProviderFormActions canSave={canSave} onCancel={onCancel} onSave={onSave} />
+  </div>;
+}
+
+function ProviderFormInputs({
+  apiKey,
+  baseUrl,
+  name,
+  onApiKeyChange,
+  onBaseUrlChange,
+  onNameChange,
+  onPresetChange,
+  preset,
+}: {
+  apiKey: string;
+  baseUrl: string;
+  name: string;
+  onApiKeyChange: (v: string) => void;
+  onBaseUrlChange: (v: string) => void;
+  onNameChange: (v: string) => void;
+  onPresetChange: (v: string) => void;
+  preset: string;
+}): React.ReactElement {
+  return (
+    <>
+      <PresetSelector value={preset} onChange={onPresetChange} />
+      <FormField label="Name" value={name} onChange={onNameChange} placeholder="e.g. MiniMax" />
+      <FormField label="Base URL" value={baseUrl} onChange={onBaseUrlChange} placeholder="https://api.example.com/v1" />
+      <PasswordField label="API Key" value={apiKey} onChange={onApiKeyChange} placeholder="sk-..." />
+    </>
+  );
+}
+
+function ProviderFormActions({
+  canSave,
+  onCancel,
+  onSave,
+}: {
+  canSave: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}): React.ReactElement {
+  return (
+    <div style={formButtonRowStyle}>
+      <button style={formActionButtonStyle(canSave)} onClick={onSave} disabled={!canSave}>
+        Save
+      </button>
+      <button style={formActionButtonStyle(false)} onClick={onCancel}>
+        Cancel
+      </button>
     </div>
   );
 }

@@ -71,6 +71,27 @@ function useCodexMenuPosition(
   return menuPos;
 }
 
+function CodexMenuItems({ models, onSelect }: { models: CodexModelOption[]; onSelect: (id: string) => void }): React.ReactElement {
+  return (
+    <>
+      <div className="px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted">
+        Select Codex model
+      </div>
+      {models.map((model) => (
+        <button
+          key={model.id}
+          role="menuitem"
+          className="w-full cursor-pointer px-3 py-1 text-left text-[11px] text-text-semantic-primary transition-colors duration-100 hover:bg-surface-raised"
+          onClick={() => onSelect(model.id)}
+          title={model.description}
+        >
+          {model.name}
+        </button>
+      ))}
+    </>
+  );
+}
+
 function CodexMenuPanel({
   menuRef,
   menuPos,
@@ -98,20 +119,7 @@ function CodexMenuPanel({
         ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
       }}
     >
-      <div className="px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted">
-        Select Codex model
-      </div>
-      {models.map((model) => (
-        <button
-          key={model.id}
-          role="menuitem"
-          className="w-full cursor-pointer px-3 py-1 text-left text-[11px] text-text-semantic-primary transition-colors duration-100 hover:bg-surface-raised"
-          onClick={() => onSelect(model.id)}
-          title={model.description}
-        >
-          {model.name}
-        </button>
-      ))}
+      <CodexMenuItems models={models} onSelect={onSelect} />
     </div>,
     document.body,
   );

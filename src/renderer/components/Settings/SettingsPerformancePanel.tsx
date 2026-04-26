@@ -11,37 +11,36 @@ import React, { useState } from 'react';
 import { useRuntimeMetrics } from '../../hooks/useRuntimeMetrics';
 import { useStartupHistory } from '../../hooks/useStartupHistory';
 import { useStartupTimings } from '../../hooks/useStartupTimings';
-import type { RuntimeMetrics, StartupHistoryRecord, StartupMark } from '../../types/electron';
+import type { StartupHistoryRecord, StartupMark } from '../../types/electron';
+import {
+  lastPhaseMs,
+  phaseLabel,
+  relativeMs,
+  type RuntimeMetricsSectionProps,
+  secondsAgo,
+  type StartupTimingsSectionProps,
+  totalMs,
+} from './SettingsPerformancePanelHelpers';
+import {
+  cellStyle,
+  chevronStyle,
+  descStyle,
+  hintStyle,
+  historyToggleStyle,
+  inlineLinkStyle,
+  metricLabelStyle,
+  metricRowStyle,
+  metricsGridStyle,
+  metricValueStyle,
+  sectionStyle,
+  tableStyle,
+  thStyle,
+  totalRowStyle,
+  updatedStyle,
+} from './SettingsPerformancePanelStyles';
 import { SectionLabel } from './settingsStyles';
 
 // ── Startup Timings ────────────────────────────────────────────────────────
-
-function phaseLabel(phase: StartupMark['phase']): string {
-  const labels: Record<StartupMark['phase'], string> = {
-    'app-ready': 'App ready',
-    'window-ready': 'Window ready',
-    'ipc-ready': 'IPC ready',
-    'services-ready': 'Services ready',
-    'renderer-bundle-loaded': 'Renderer bundle loaded',
-    'react-root-created': 'React root created',
-    'first-render': 'First render',
-  };
-  return labels[phase] ?? phase;
-}
-
-function relativeMs(timings: StartupMark[], index: number): number {
-  if (timings.length === 0 || index >= timings.length) return 0;
-  const first = BigInt(timings[0].tsNs);
-  const current = BigInt(timings[index].tsNs);
-  return Number(current - first) / 1e6;
-}
-
-function totalMs(timings: StartupMark[]): number {
-  if (timings.length < 2) return 0;
-  const first = BigInt(timings[0].tsNs);
-  const last = BigInt(timings[timings.length - 1].tsNs);
-  return Number(last - first) / 1e6;
-}
 
 function TimingRow({ mark, relMs }: { mark: StartupMark; relMs: number }): React.ReactElement {
   return (
@@ -74,12 +73,6 @@ function TotalRow({ ms }: { ms: number }): React.ReactElement {
       <td style={cellStyle} />
     </tr>
   );
-}
-
-interface StartupTimingsSectionProps {
-  timings: StartupMark[];
-  isComplete: boolean;
-  onReload: () => void;
 }
 
 function TimingsTable({
@@ -156,10 +149,6 @@ function StartupTimingsSection({
 
 // ── Runtime Metrics ────────────────────────────────────────────────────────
 
-function secondsAgo(date: Date): number {
-  return Math.round((Date.now() - date.getTime()) / 1000);
-}
-
 function MetricRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div style={metricRowStyle}>
@@ -171,11 +160,6 @@ function MetricRow({ label, value }: { label: string; value: string }): React.Re
       </span>
     </div>
   );
-}
-
-interface RuntimeMetricsSectionProps {
-  metrics: RuntimeMetrics | null;
-  lastUpdated: Date | null;
 }
 
 function RuntimeMetricsSection({
@@ -214,11 +198,6 @@ function RuntimeMetricsSection({
 
 // ── Startup History ────────────────────────────────────────────────────────
 
-function lastPhaseMs(record: StartupHistoryRecord): number {
-  if (record.timings.length === 0) return 0;
-  return record.timings[record.timings.length - 1].deltaMs;
-}
-
 function DeltaCell({ curr, prev }: { curr: number; prev: number | undefined }): React.ReactElement {
   if (prev === undefined) return <td style={cellStyle} />;
   const diff = curr - prev;
@@ -235,6 +214,30 @@ function DeltaCell({ curr, prev }: { curr: number; prev: number | undefined }): 
       {sign}
       {diff.toFixed(0)} ms
     </td>
+  );
+}
+
+function HistoryRow({
+  rec,
+  index,
+  records,
+}: {
+  rec: StartupHistoryRecord;
+  index: number;
+  records: StartupHistoryRecord[];
+}): React.ReactElement {
+  const ms = lastPhaseMs(rec);
+  const prevMs = index > 0 ? lastPhaseMs(records[index - 1]) : undefined;
+  return (
+    <tr key={rec.ts}>
+      <td className="text-text-semantic-primary" style={cellStyle}>
+        {new Date(rec.ts).toLocaleString()}
+      </td>
+      <td className="text-text-semantic-secondary" style={{ ...cellStyle, textAlign: 'right' }}>
+        {ms.toFixed(0)} ms
+      </td>
+      <DeltaCell curr={ms} prev={prevMs} />
+    </tr>
   );
 }
 
@@ -261,24 +264,9 @@ function HistoryTable({ records }: { records: StartupHistoryRecord[] }): React.R
         </tr>
       </thead>
       <tbody>
-        {records.map((rec, i) => {
-          const ms = lastPhaseMs(rec);
-          const prevMs = i > 0 ? lastPhaseMs(records[i - 1]) : undefined;
-          return (
-            <tr key={rec.ts}>
-              <td className="text-text-semantic-primary" style={cellStyle}>
-                {new Date(rec.ts).toLocaleString()}
-              </td>
-              <td
-                className="text-text-semantic-secondary"
-                style={{ ...cellStyle, textAlign: 'right' }}
-              >
-                {ms.toFixed(0)} ms
-              </td>
-              <DeltaCell curr={ms} prev={prevMs} />
-            </tr>
-          );
-        })}
+        {records.map((rec, i) => (
+          <HistoryRow key={rec.ts} rec={rec} index={i} records={records} />
+        ))}
       </tbody>
     </table>
   );
@@ -341,64 +329,3 @@ export function SettingsPerformancePanel(): React.ReactElement {
     </div>
   );
 }
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-
-const sectionStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px' };
-const descStyle: React.CSSProperties = { fontSize: '12px', lineHeight: 1.5, margin: '0 0 8px' };
-const hintStyle: React.CSSProperties = { fontSize: '12px', margin: 0 };
-const inlineLinkStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  padding: 0,
-  cursor: 'pointer',
-  fontSize: '12px',
-  textDecoration: 'underline',
-};
-const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  fontSize: '12px',
-};
-const cellStyle: React.CSSProperties = {
-  padding: '5px 8px',
-  borderBottom: '1px solid var(--border-subtle)',
-};
-const thStyle: React.CSSProperties = {
-  fontWeight: 600,
-  fontSize: '11px',
-  textAlign: 'left',
-};
-const totalRowStyle: React.CSSProperties = {
-  borderTop: '2px solid var(--border-default)',
-};
-const metricsGridStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '6px',
-};
-const metricRowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'baseline',
-  fontSize: '12px',
-};
-const metricLabelStyle: React.CSSProperties = { fontSize: '12px' };
-const metricValueStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: '12px',
-  fontVariantNumeric: 'tabular-nums',
-};
-const updatedStyle: React.CSSProperties = { fontSize: '11px', margin: '4px 0 0' };
-const historyToggleStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: '100%',
-  background: 'none',
-  border: 'none',
-  padding: 0,
-  cursor: 'pointer',
-  textAlign: 'left',
-};
-const chevronStyle: React.CSSProperties = { fontSize: '10px', marginLeft: '8px' };

@@ -5,6 +5,7 @@ import { useGitDiff } from '../../hooks/useGitDiff';
 import { useSymbolOutline } from '../../hooks/useSymbolOutline';
 import { useTheme } from '../../hooks/useTheme';
 import type { BlameLine, DiffLineInfo } from '../../types/electron';
+import type { ConflictBlock } from './ConflictResolver.model';
 import { getLanguage } from './fileViewerUtils';
 import { useFileViewerKeyboard } from './useFileViewerKeyboard';
 import {

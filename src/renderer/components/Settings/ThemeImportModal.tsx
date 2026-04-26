@@ -9,13 +9,18 @@
  * Cancel reverts to the customTokens value that existed when the modal opened.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import { useConfig } from '../../hooks/useConfig';
-import { parseVsCodeTheme, type VsCodeThemeImportResult } from '../../themes/vsCodeImport';
-import type { AppConfig } from '../../types/electron';
 import { type ImportTab, ThemeImportModalBody } from './ThemeImportModalBody';
 import { ThemeImportSummary } from './ThemeImportSummary';
+import {
+  getCustomTokens,
+  type ImportActions,
+  type ImportState,
+  useImportState,
+  writeCustomTokens,
+} from './useThemeImportState';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,21 +28,6 @@ interface ThemeImportModalProps {
   onClose: () => void;
 }
 type ModalPhase = 'input' | 'success';
-type ConfigSet = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<void>;
-
-// ── Config helpers ────────────────────────────────────────────────────────────
-
-function getCustomTokens(cfg: AppConfig | null): Record<string, string> {
-  return cfg?.theming?.customTokens ?? {};
-}
-
-function writeCustomTokens(
-  set: ConfigSet,
-  cfg: AppConfig | null,
-  tokens: Record<string, string>,
-): void {
-  void set('theming', { ...(cfg?.theming ?? {}), customTokens: tokens });
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -97,110 +87,28 @@ interface FooterProps {
   onCancel: () => void;
 }
 
-function ModalFooter({
-  phase,
-  importDisabled,
-  onImport,
-  onKeep,
-  onReset,
-  onCancel,
-}: FooterProps): React.ReactElement {
-  if (phase === 'success') {
-    return (
-      <div style={footerStyle}>
-        <button onClick={onReset} style={btnStyle(false)} type="button">
-          Reset
-        </button>
-        <button onClick={onCancel} style={btnStyle(false)} type="button">
-          Cancel
-        </button>
-        <button onClick={onKeep} style={btnStyle(true)} type="button">
-          Keep
-        </button>
-      </div>
-    );
-  }
+function ModalFooterSuccess({ onReset, onCancel, onKeep }: Pick<FooterProps, 'onReset' | 'onCancel' | 'onKeep'>): React.ReactElement {
   return (
     <div style={footerStyle}>
-      <button onClick={onCancel} style={btnStyle(false)} type="button">
-        Cancel
-      </button>
-      <button
-        disabled={importDisabled}
-        onClick={onImport}
-        style={{ ...btnStyle(true), opacity: importDisabled ? 0.5 : 1 }}
-        type="button"
-      >
-        Import
-      </button>
+      <button onClick={onReset} style={btnStyle(false)} type="button">Reset</button>
+      <button onClick={onCancel} style={btnStyle(false)} type="button">Cancel</button>
+      <button onClick={onKeep} style={btnStyle(true)} type="button">Keep</button>
     </div>
   );
 }
 
-// ── useImportState ────────────────────────────────────────────────────────────
-
-interface ImportState {
-  activeTab: ImportTab;
-  pasteValue: string;
-  phase: ModalPhase;
-  importResult: VsCodeThemeImportResult | null;
-  error: string | null;
-}
-
-interface ImportActions {
-  setActiveTab: (t: ImportTab) => void;
-  setPasteValue: (v: string) => void;
-  handleImport: () => void;
-  handleReset: () => void;
-}
-
-function useImportState(
-  set: ConfigSet,
-  config: AppConfig | null,
-  previousTokensRef: React.MutableRefObject<Record<string, string>>,
-): ImportState & ImportActions {
-  const [activeTab, setActiveTab] = useState<ImportTab>('paste');
-  const [pasteValue, setPasteValue] = useState('');
-  const [phase, setPhase] = useState<ModalPhase>('input');
-  const [importResult, setImportResult] = useState<VsCodeThemeImportResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function handleImport(): void {
-    const input = pasteValue.trim();
-    if (!input) {
-      setError('Please paste a VS Code theme JSON or upload a .json file.');
-      return;
-    }
-    const result = parseVsCodeTheme(input);
-    if ('error' in result) {
-      setError(result.error);
-      return;
-    }
-    setError(null);
-    setImportResult(result);
-    setPhase('success');
-    writeCustomTokens(set, config, result.tokens);
+function ModalFooter({ phase, importDisabled, onImport, onKeep, onReset, onCancel }: FooterProps): React.ReactElement {
+  if (phase === 'success') {
+    return <ModalFooterSuccess onReset={onReset} onCancel={onCancel} onKeep={onKeep} />;
   }
-
-  function handleReset(): void {
-    writeCustomTokens(set, config, previousTokensRef.current);
-    setPhase('input');
-    setImportResult(null);
-    setPasteValue('');
-    setError(null);
-  }
-
-  return {
-    activeTab,
-    pasteValue,
-    phase,
-    importResult,
-    error,
-    setActiveTab,
-    setPasteValue,
-    handleImport,
-    handleReset,
-  };
+  return (
+    <div style={footerStyle}>
+      <button onClick={onCancel} style={btnStyle(false)} type="button">Cancel</button>
+      <button disabled={importDisabled} onClick={onImport} style={{ ...btnStyle(true), opacity: importDisabled ? 0.5 : 1 }} type="button">
+        Import
+      </button>
+    </div>
+  );
 }
 
 // ── ModalCard ─────────────────────────────────────────────────────────────────
@@ -211,46 +119,38 @@ interface CardProps extends ImportState, ImportActions {
   cardRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function ModalCard({
-  activeTab,
-  pasteValue,
-  phase,
-  importResult,
-  error,
-  setActiveTab,
-  setPasteValue,
-  handleImport,
-  handleReset,
-  onClose,
-  revert,
-  cardRef,
-}: CardProps): React.ReactElement {
-  function handleFileLoad(content: string): void {
-    setPasteValue(content);
-    setActiveTab('paste');
-  }
+function ModalCardHeader(): React.ReactElement {
   return (
-    <div ref={cardRef} style={cardStyle}>
-      <div>
-        <h2
-          style={{
-            fontSize: '15px',
-            fontWeight: 600,
-            color: 'var(--text-text-semantic-primary)',
-            margin: 0,
-          }}
-        >
-          Import VS Code Theme
-        </h2>
-        <p style={{ fontSize: '12px', color: 'var(--text-text-semantic-muted)', margin: 0 }}>
-          Paste a VS Code theme JSON or upload a .json file to preview and apply it.
-        </p>
-      </div>
+    <div>
+      <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-text-semantic-primary)', margin: 0 }}>
+        Import VS Code Theme
+      </h2>
+      <p style={{ fontSize: '12px', color: 'var(--text-text-semantic-muted)', margin: 0 }}>
+        Paste a VS Code theme JSON or upload a .json file to preview and apply it.
+      </p>
+    </div>
+  );
+}
+
+function makeFileLoadHandler(
+  setPasteValue: (v: string) => void,
+  setActiveTab: (t: ImportTab) => void,
+): (content: string) => void {
+  return (content: string) => { setPasteValue(content); setActiveTab('paste'); };
+}
+
+function ModalCardContent({
+  activeTab, pasteValue, phase, importResult, error,
+  setActiveTab, setPasteValue, handleImport, handleReset, onClose, revert,
+}: Omit<CardProps, 'cardRef'>): React.ReactElement {
+  return (
+    <>
+      <ModalCardHeader />
       {phase === 'input' && (
         <ThemeImportModalBody
           activeTab={activeTab}
           error={error}
-          onFileLoad={handleFileLoad}
+          onFileLoad={makeFileLoadHandler(setPasteValue, setActiveTab)}
           onPasteChange={setPasteValue}
           onTabChange={setActiveTab}
           pasteValue={pasteValue}
@@ -264,6 +164,18 @@ function ModalCard({
         onKeep={onClose}
         onReset={handleReset}
         phase={phase}
+      />
+    </>
+  );
+}
+
+function ModalCard({ activeTab, pasteValue, phase, importResult, error, setActiveTab, setPasteValue, handleImport, handleReset, onClose, revert, cardRef }: CardProps): React.ReactElement {
+  return (
+    <div ref={cardRef} style={cardStyle}>
+      <ModalCardContent
+        activeTab={activeTab} pasteValue={pasteValue} phase={phase} importResult={importResult}
+        error={error} setActiveTab={setActiveTab} setPasteValue={setPasteValue}
+        handleImport={handleImport} handleReset={handleReset} onClose={onClose} revert={revert}
       />
     </div>
   );
@@ -290,9 +202,7 @@ export function ThemeImportModal({ onClose }: ThemeImportModalProps): React.Reac
   }, [set, config, onClose]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') revert();
-    },
+    (e: React.KeyboardEvent) => { if (e.key === 'Escape') revert(); },
     [revert],
   );
 
@@ -301,13 +211,7 @@ export function ThemeImportModal({ onClose }: ThemeImportModalProps): React.Reac
   }
 
   return (
-    <div
-      aria-modal="true"
-      onClick={handleScrimClick}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      style={scrimStyle}
-    >
+    <div aria-modal="true" onClick={handleScrimClick} onKeyDown={handleKeyDown} role="dialog" style={scrimStyle}>
       <ModalCard {...state} cardRef={cardRef} onClose={onClose} revert={revert} />
     </div>
   );

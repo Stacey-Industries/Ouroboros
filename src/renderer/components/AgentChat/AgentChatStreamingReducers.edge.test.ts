@@ -96,6 +96,38 @@ describe('duplicate chunk guard', () => {
     expect(state2.blocks.filter((b) => b.kind === 'text')).toHaveLength(2);
   });
 
+  it('treats chunks with distinct seq as non-duplicates even when timestamp collides', () => {
+    // Regression: Codex app-server emits per-token deltas, often >1 per ms on
+    // the same blockIndex. Without `seq`, the ms-precision timestamp key
+    // collides and later deltas are silently dropped as "duplicates", which
+    // shows up as words cut off mid-stream.
+    const base: AgentChatStreamChunk = {
+      type: 'text_delta',
+      messageId: 'm1',
+      blockIndex: 0,
+      timestamp: 7000,
+    };
+    const s1 = applyChunk(INITIAL_STATE, { ...base, seq: 1, textDelta: 'Hel' })!;
+    const s2 = applyChunk(s1, { ...base, seq: 2, textDelta: 'lo ' })!;
+    const s3 = applyChunk(s2, { ...base, seq: 3, textDelta: 'world' })!;
+    const block = s3.blocks[0];
+    expect((block as { kind: 'text'; content: string }).content).toBe('Hello world');
+  });
+
+  it('still dedups when seq matches (true replay of the same chunk)', () => {
+    const chunk: AgentChatStreamChunk = {
+      type: 'text_delta',
+      messageId: 'm1',
+      blockIndex: 0,
+      timestamp: 8000,
+      seq: 42,
+      textDelta: 'once',
+    };
+    const s1 = applyChunk(INITIAL_STATE, chunk)!;
+    const s2 = applyChunk(s1, chunk)!;
+    expect((s2.blocks[0] as { kind: 'text'; content: string }).content).toBe('once');
+  });
+
   it('clears seen IDs on complete so replay can re-deliver the same chunks', () => {
     const delta = makeTextChunk({ timestamp: 6000 });
     const complete: AgentChatStreamChunk = {

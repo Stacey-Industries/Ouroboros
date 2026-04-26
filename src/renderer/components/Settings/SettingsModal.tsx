@@ -1,16 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import { useConfig } from '../../hooks/useConfig';
 import type { AppConfig } from '../../types/electron';
 import { searchEntries } from './searchHelpers';
 import type { SettingsEntry } from './settingsEntries';
+import { resolveTab, useSettingsModalSelection } from './SettingsModal.selection';
 import { SettingsModalPortal } from './SettingsModalParts';
 import {
   getDefaultSubTab,
   getMainTabForSubTab,
   type MainTabId,
   type TabId,
-  TABS,
 } from './settingsTabs';
 import { type SettingsDraftApi, useSettingsDraft } from './useSettingsDraft';
 
@@ -23,30 +23,99 @@ export interface SettingsModalProps {
 function useSettingsModalState(isOpen: boolean, onClose: () => void, initialTab: string) {
   const { config } = useConfig();
   const api = useSettingsDraft();
-  const resolved = resolveTab(initialTab);
-  const [activeMainTab, setActiveMainTab] = useState<MainTabId>(resolved.mainTab);
-  const [activeSubTab, setActiveSubTab] = useState<TabId>(resolved.subTab);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const cancelRef = useRef<() => void>(() => undefined);
-  cancelRef.current = () => api.handleCancel(onClose);
-  const handleMainTabChange = (main: MainTabId): void => {
-    setActiveMainTab(main);
-    setActiveSubTab(getDefaultSubTab(main));
-  };
-  const handleResultClick = (entry: SettingsEntry): void => {
-    const sub = entry.section as TabId;
-    setSearchQuery('');
-    setActiveMainTab(getMainTabForSubTab(sub));
-    setActiveSubTab(sub);
-  };
-  useOpenCloseEffect({
+  const controls = useSettingsModalControls(api, onClose, initialTab);
+  const isSearching = controls.searchQuery.trim().length > 0;
+  useSettingsModalEffects({
+    api,
     config,
     initialTab,
     isOpen,
+    isSearching,
+    onCancelRef: controls.cancelRef,
+    searchInputRef: controls.searchInputRef,
+    setActiveMainTab: controls.setActiveMainTab,
+    setActiveSubTab: controls.setActiveSubTab,
+    setIsMounted: controls.setIsMounted,
+    setIsVisible: controls.setIsVisible,
+    setSearchQuery: controls.setSearchQuery,
+  });
+  return {
     api,
+    activeMainTab: controls.activeMainTab,
+    activeSubTab: controls.activeSubTab,
+    setActiveSubTab: controls.setActiveSubTab,
+    cancelRef: controls.cancelRef,
+    isSearching,
+    isMounted: controls.isMounted,
+    isVisible: controls.isVisible,
+    handleMainTabChange: controls.handleMainTabChange,
+    handleResultClick: controls.handleResultClick,
+    searchInputRef: controls.searchInputRef,
+    searchQuery: controls.searchQuery,
+    setSearchQuery: controls.setSearchQuery,
+  };
+}
+
+function useSettingsModalControls(
+  api: SettingsDraftApi,
+  onClose: () => void,
+  initialTab: string,
+): {
+  activeMainTab: MainTabId;
+  activeSubTab: TabId;
+  cancelRef: React.MutableRefObject<() => void>;
+  handleMainTabChange: (main: MainTabId) => void;
+  handleResultClick: (entry: SettingsEntry) => void;
+  isMounted: boolean;
+  isVisible: boolean;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  searchQuery: string;
+  setActiveMainTab: React.Dispatch<React.SetStateAction<MainTabId>>;
+  setActiveSubTab: React.Dispatch<React.SetStateAction<TabId>>;
+  setIsMounted: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+} {
+  const selection = useSettingsModalSelection(api, onClose, initialTab);
+  const handleMainTabChange = useCallback((main: MainTabId): void => {
+    selection.setActiveMainTab(main);
+    selection.setActiveSubTab(getDefaultSubTab(main));
+  }, [selection]);
+  const handleResultClick = useCallback((entry: SettingsEntry): void => {
+    const sub = entry.section as TabId;
+    selection.setSearchQuery('');
+    selection.setActiveMainTab(getMainTabForSubTab(sub));
+    selection.setActiveSubTab(sub);
+  }, [selection]);
+  return {
+    ...selection,
+    handleMainTabChange,
+    handleResultClick,
+  };
+}
+function useSettingsModalEffects({
+  api,
+  config,
+  initialTab,
+  isOpen,
+  isSearching,
+  onCancelRef,
+  searchInputRef,
+  setActiveMainTab,
+  setActiveSubTab,
+  setIsMounted,
+  setIsVisible,
+  setSearchQuery,
+}: OpenCloseEffectArgs & {
+  onCancelRef: React.MutableRefObject<() => void>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  isSearching: boolean;
+}): void {
+  useOpenCloseEffect({
+    api,
+    config,
+    initialTab,
+    isOpen,
     setActiveMainTab,
     setActiveSubTab,
     setIsMounted,
@@ -54,29 +123,7 @@ function useSettingsModalState(isOpen: boolean, onClose: () => void, initialTab:
     setSearchQuery,
   });
   useExternalChangeEffect({ isOpen, setDraft: api.setDraft });
-  const isSearching = searchQuery.trim().length > 0;
-  useKeyboardEffect({
-    isOpen,
-    isSearching,
-    onCancelRef: cancelRef,
-    searchInputRef,
-    setSearchQuery,
-  });
-  return {
-    api,
-    activeMainTab,
-    activeSubTab,
-    setActiveSubTab,
-    cancelRef,
-    isSearching,
-    isMounted,
-    isVisible,
-    handleMainTabChange,
-    handleResultClick,
-    searchInputRef,
-    searchQuery,
-    setSearchQuery,
-  };
+  useKeyboardEffect({ isOpen, isSearching, onCancelRef, searchInputRef, setSearchQuery });
 }
 
 export function SettingsModal({
@@ -109,11 +156,6 @@ export function SettingsModal({
       setSearchQuery={s.setSearchQuery}
     />
   );
-}
-
-function resolveTab(initialTab: string): { mainTab: MainTabId; subTab: TabId } {
-  const sub = (TABS.some((tab) => tab.id === initialTab) ? initialTab : 'general') as TabId;
-  return { mainTab: getMainTabForSubTab(sub), subTab: sub };
 }
 
 interface OpenCloseEffectArgs {

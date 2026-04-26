@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * fileTypeIcons-extra.test.tsx — smoke tests for fileTypeIcons-extra.tsx
  */

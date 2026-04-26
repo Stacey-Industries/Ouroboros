@@ -145,33 +145,7 @@ async function restoreSessionContent(
   }
 }
 
-export function useTerminalPersistence({
-  sessionId,
-  terminalRef,
-  serializeAddonRef,
-  projectRoot,
-  cwd,
-}: UseTerminalPersistenceArgs): PersistenceActions {
-  const projectRootRef = useRef(projectRoot);
-  const cwdRef = useRef(cwd ?? '');
-  useEffect(() => {
-    projectRootRef.current = projectRoot;
-    cwdRef.current = cwd ?? '';
-  }, [projectRoot, cwd]);
-
-  const saveSession = useCallback(async () => {
-    const addon = serializeAddonRef.current;
-    const root = projectRootRef.current;
-    if (!addon || !root) return;
-    await saveSessionToFile(addon, sessionId, root, cwdRef.current);
-  }, [sessionId, serializeAddonRef]);
-  const restoreSession = useCallback(async (): Promise<boolean> => {
-    const terminal = terminalRef.current;
-    const root = projectRootRef.current;
-    if (!terminal || !root) return false;
-    return restoreSessionContent(terminal, sessionId, root);
-  }, [sessionId, terminalRef]);
-
+function usePersistenceSaveEffects(sessionId: string, saveSession: () => Promise<void>): void {
   useEffect(() => {
     const cleanup = window.electronAPI.pty.onExit(sessionId, () => {
       void saveSession();
@@ -199,6 +173,36 @@ export function useTerminalPersistence({
       void saveSession();
     };
   }, [saveSession]);
+}
+
+export function useTerminalPersistence({
+  sessionId,
+  terminalRef,
+  serializeAddonRef,
+  projectRoot,
+  cwd,
+}: UseTerminalPersistenceArgs): PersistenceActions {
+  const projectRootRef = useRef(projectRoot);
+  const cwdRef = useRef(cwd ?? '');
+  useEffect(() => {
+    projectRootRef.current = projectRoot;
+    cwdRef.current = cwd ?? '';
+  }, [projectRoot, cwd]);
+
+  const saveSession = useCallback(async () => {
+    const addon = serializeAddonRef.current;
+    const root = projectRootRef.current;
+    if (!addon || !root) return;
+    await saveSessionToFile(addon, sessionId, root, cwdRef.current);
+  }, [sessionId, serializeAddonRef]);
+  const restoreSession = useCallback(async (): Promise<boolean> => {
+    const terminal = terminalRef.current;
+    const root = projectRootRef.current;
+    if (!terminal || !root) return false;
+    return restoreSessionContent(terminal, sessionId, root);
+  }, [sessionId, terminalRef]);
+
+  usePersistenceSaveEffects(sessionId, saveSession);
 
   return { saveSession, restoreSession };
 }

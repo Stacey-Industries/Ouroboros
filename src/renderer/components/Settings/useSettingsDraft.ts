@@ -63,6 +63,30 @@ interface DraftSaveHandlersArgs {
   setSaveError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+async function runSave({
+  draft,
+  set,
+  setTheme,
+  setShowBgGradient,
+  originalThemeRef,
+  originalGradientRef,
+  setIsSaving,
+  setSaveError,
+}: DraftSaveHandlersArgs & { draft: AppConfig }): Promise<void> {
+  setIsSaving(true);
+  setSaveError(null);
+  try {
+    await persistDraft(draft, set);
+    await applyThemeAndFont(draft, setTheme, setShowBgGradient);
+    originalThemeRef.current = draft.activeTheme ?? null;
+    originalGradientRef.current = draft.showBgGradient ?? true;
+  } catch (err) {
+    setSaveError(err instanceof Error ? err.message : 'Failed to save settings.');
+  } finally {
+    setIsSaving(false);
+  }
+}
+
 function useDraftSaveHandlers({
   draft,
   set,
@@ -84,19 +108,7 @@ function useDraftSaveHandlers({
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!draft) return;
-    setIsSaving(true);
-    setSaveError(null);
-
-    try {
-      await persistDraft(draft, set);
-      await applyThemeAndFont(draft, setTheme, setShowBgGradient);
-      originalThemeRef.current = draft.activeTheme ?? null;
-      originalGradientRef.current = draft.showBgGradient ?? true;
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save settings.');
-    } finally {
-      setIsSaving(false);
-    }
+    await runSave({ draft, set, setTheme, setShowBgGradient, originalThemeRef, originalGradientRef, setIsSaving, setSaveError });
   }, [
     draft,
     originalGradientRef,

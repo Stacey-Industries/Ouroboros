@@ -12,18 +12,16 @@
  */
 
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import React, { useCallback, useState } from 'react';
+import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import React, { useState } from 'react';
 
 import type { SessionFolder, SessionRecord } from '../../types/electron';
-import { SessionRow } from './SessionRow';
+import {
+  type FolderBucketProps,
+  FolderTreeShell,
+  FolderTreeView,
+  UNCATEGORIZED_ID,
+} from './FolderTree.parts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,203 +35,12 @@ export interface FolderTreeProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const UNCATEGORIZED_ID = '__uncategorized__';
-
 function folderForSession(sessionId: string, folders: SessionFolder[]): string | null {
   return folders.find((f) => f.sessionIds.includes(sessionId))?.id ?? null;
 }
 
 function sortedFolders(folders: SessionFolder[]): SessionFolder[] {
   return [...folders].sort((a, b) => a.order - b.order);
-}
-
-// ─── FolderHeader ─────────────────────────────────────────────────────────────
-
-interface FolderActionButtonProps {
-  onClick: () => void;
-  label: string;
-  icon: string;
-  hoverClass: string;
-}
-
-function FolderActionButton({
-  onClick,
-  label,
-  icon,
-  hoverClass,
-}: FolderActionButtonProps): React.ReactElement {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={`shrink-0 text-xs text-text-semantic-faint ${hoverClass} transition-colors px-1`}
-    >
-      {icon}
-    </button>
-  );
-}
-
-interface FolderHeaderProps {
-  label: string;
-  count: number;
-  expanded: boolean;
-  onToggle: () => void;
-  onRename?: () => void;
-  onDelete?: () => void;
-}
-
-function FolderHeader({
-  label,
-  count,
-  expanded,
-  onToggle,
-  onRename,
-  onDelete,
-}: FolderHeaderProps): React.ReactElement {
-  return (
-    <div className="flex items-center gap-1 px-2 py-1 select-none">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-1 flex-1 min-w-0 text-left text-xs font-semibold
-          text-text-semantic-secondary hover:text-text-semantic-primary transition-colors"
-        aria-expanded={expanded}
-      >
-        <span className="shrink-0">{expanded ? '▾' : '▸'}</span>
-        <span className="truncate">{label}</span>
-        <span className="text-text-semantic-faint ml-1">({count})</span>
-      </button>
-      {onRename && (
-        <FolderActionButton
-          onClick={onRename}
-          label={`Rename folder ${label}`}
-          icon="✎"
-          hoverClass="hover:text-text-semantic-primary"
-        />
-      )}
-      {onDelete && (
-        <FolderActionButton
-          onClick={onDelete}
-          label={`Delete folder ${label}`}
-          icon="✕"
-          hoverClass="hover:text-status-error"
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── DropZone ─────────────────────────────────────────────────────────────────
-
-interface DropZoneProps {
-  id: string;
-  isOver: boolean;
-  isEmpty: boolean;
-  children: React.ReactNode;
-}
-
-function DropZone({ id, isOver, isEmpty, children }: DropZoneProps): React.ReactElement {
-  const borderCls = isOver
-    ? 'border border-dashed border-interactive-accent bg-interactive-accent-subtle'
-    : 'border border-transparent';
-  return (
-    <div data-dropzone-id={id} className={`rounded transition-colors ${borderCls}`}>
-      {isEmpty && !isOver && (
-        <p className="px-4 py-2 text-xs text-text-semantic-faint italic">
-          No sessions yet — drag one here
-        </p>
-      )}
-      {children}
-    </div>
-  );
-}
-
-// ─── DraggableRow ─────────────────────────────────────────────────────────────
-
-interface DraggableRowProps {
-  session: SessionRecord;
-  isActive: boolean;
-  isDragging: boolean;
-  onClick: (id: string) => void;
-  onRestored?: () => void;
-}
-
-function DraggableRow({
-  session,
-  isActive,
-  isDragging,
-  onClick,
-  onRestored,
-}: DraggableRowProps): React.ReactElement {
-  return (
-    <div
-      data-draggable-id={session.id}
-      style={{ opacity: isDragging ? 0.4 : 1 }}
-      className="transition-opacity"
-    >
-      <SessionRow session={session} isActive={isActive} onClick={onClick} onRestored={onRestored} />
-    </div>
-  );
-}
-
-// ─── FolderBucket ─────────────────────────────────────────────────────────────
-
-interface FolderBucketProps {
-  bucketId: string;
-  label: string;
-  sessions: SessionRecord[];
-  activeSessionId: string | null;
-  draggingSessionId: string | null;
-  overBucketId: string | null;
-  onSessionClick: (id: string) => void;
-  onRestored?: () => void;
-  onRename?: () => void;
-  onDelete?: () => void;
-}
-
-function FolderBucket({
-  bucketId,
-  label,
-  sessions,
-  activeSessionId,
-  draggingSessionId,
-  overBucketId,
-  onSessionClick,
-  onRestored,
-  onRename,
-  onDelete,
-}: FolderBucketProps): React.ReactElement {
-  const [expanded, setExpanded] = useState(true);
-  const toggle = useCallback(() => setExpanded((v) => !v), []);
-  const isOver = overBucketId === bucketId;
-
-  return (
-    <div>
-      <FolderHeader
-        label={label}
-        count={sessions.length}
-        expanded={expanded}
-        onToggle={toggle}
-        onRename={onRename}
-        onDelete={onDelete}
-      />
-      {expanded && (
-        <DropZone id={bucketId} isOver={isOver} isEmpty={sessions.length === 0}>
-          {sessions.map((s) => (
-            <DraggableRow
-              key={s.id}
-              session={s}
-              isActive={s.id === activeSessionId}
-              isDragging={s.id === draggingSessionId}
-              onClick={onSessionClick}
-              onRestored={onRestored}
-            />
-          ))}
-        </DropZone>
-      )}
-    </div>
-  );
 }
 
 // ─── Folder mutation helpers (module-level to stay within per-function limit) ──
@@ -269,15 +76,11 @@ function useFolderDndState() {
   return { draggingId, setDraggingId, overBucketId, setOverBucketId, sensors };
 }
 
-// ─── Module-level session-to-folder mapper ────────────────────────────────────
-
 function mapSessionsForFolder(folder: SessionFolder, sessions: SessionRecord[]): SessionRecord[] {
   return folder.sessionIds
     .map((id) => sessions.find((s) => s.id === id))
     .filter((s): s is SessionRecord => s !== undefined);
 }
-
-// ─── FolderTree ───────────────────────────────────────────────────────────────
 
 function buildBucketProps(
   folder: SessionFolder,
@@ -297,6 +100,56 @@ function buildBucketProps(
   };
 }
 
+function buildTreeBuckets(
+  folders: SessionFolder[],
+  sessions: SessionRecord[],
+  shared: Pick<
+    FolderBucketProps,
+    'activeSessionId' | 'draggingSessionId' | 'overBucketId' | 'onSessionClick' | 'onRestored'
+  >,
+  ): FolderBucketProps[] {
+  return sortedFolders(folders).map((folder) => buildBucketProps(folder, sessions, shared));
+}
+
+function useFolderTreeModel({
+  folders,
+  sessions,
+  activeSessionId,
+  draggingId,
+  overBucketId,
+  onSessionClick,
+  onRestored,
+}: {
+  folders: SessionFolder[];
+  sessions: SessionRecord[];
+  activeSessionId: string | null;
+  draggingId: string | null;
+  overBucketId: string | null;
+  onSessionClick: (sessionId: string) => void;
+  onRestored?: () => void;
+}): {
+  draggingSession: SessionRecord | null;
+  uncategorized: SessionRecord[];
+  buckets: FolderBucketProps[];
+  shared: Pick<
+    FolderBucketProps,
+    'activeSessionId' | 'draggingSessionId' | 'overBucketId' | 'onSessionClick' | 'onRestored'
+  >;
+} {
+  const shared = {
+    activeSessionId,
+    draggingSessionId: draggingId,
+    overBucketId,
+    onSessionClick,
+    onRestored,
+  };
+  const draggingSession = draggingId ? (sessions.find((s) => s.id === draggingId) ?? null) : null;
+  const categorized = new Set(folders.flatMap((f) => f.sessionIds));
+  const uncategorized = sessions.filter((s) => !categorized.has(s.id));
+  const buckets = buildTreeBuckets(folders, sessions, shared);
+  return { draggingSession, uncategorized, buckets, shared };
+}
+
 export function FolderTree({
   folders,
   sessions,
@@ -305,21 +158,11 @@ export function FolderTree({
   onRestored,
 }: FolderTreeProps): React.ReactElement {
   const { draggingId, setDraggingId, overBucketId, setOverBucketId, sensors } = useFolderDndState();
-  const draggingSession = draggingId ? (sessions.find((s) => s.id === draggingId) ?? null) : null;
-  const categorized = new Set(folders.flatMap((f) => f.sessionIds));
-  const uncategorized = sessions.filter((s) => !categorized.has(s.id));
-  const shared = {
-    activeSessionId,
-    draggingSessionId: draggingId,
-    overBucketId,
-    onSessionClick,
-    onRestored,
-  };
+  const { draggingSession, uncategorized, buckets, shared } = useFolderTreeModel({ folders, sessions, activeSessionId, draggingId, overBucketId, onSessionClick, onRestored });
 
   return (
-    <DndContext
+    <FolderTreeShell
       sensors={sensors}
-      collisionDetection={closestCenter}
       onDragStart={(e: DragStartEvent) => setDraggingId(String(e.active.id))}
       onDragOver={(e: DragOverEvent) => setOverBucketId(e.over ? String(e.over.id) : null)}
       onDragEnd={(e: DragEndEvent) => {
@@ -330,22 +173,11 @@ export function FolderTree({
         if (to) resolveMove(sid, to, folders);
       }}
     >
-      <FolderBucket
-        {...shared}
-        bucketId={UNCATEGORIZED_ID}
-        label="Uncategorized"
-        sessions={uncategorized}
+      <FolderTreeView
+        uncategorized={{ ...shared, bucketId: UNCATEGORIZED_ID, label: 'Uncategorized', sessions: uncategorized }}
+        buckets={buckets}
+        draggingSession={draggingSession}
       />
-      {sortedFolders(folders).map((folder) => (
-        <FolderBucket key={folder.id} {...buildBucketProps(folder, sessions, shared)} />
-      ))}
-      <DragOverlay>
-        {draggingSession && (
-          <div className="opacity-90 shadow-lg rounded border border-border-accent bg-surface-raised">
-            <SessionRow session={draggingSession} isActive={false} onClick={() => undefined} />
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+    </FolderTreeShell>
   );
 }

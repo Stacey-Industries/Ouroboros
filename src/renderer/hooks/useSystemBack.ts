@@ -58,6 +58,45 @@ function showExitToast(): void {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+function createBackButtonHandler(args: {
+  activePanelRef: React.MutableRefObject<MobilePanel>;
+  isDrawerOpenRef: React.MutableRefObject<boolean>;
+  isSheetOpenRef: React.MutableRefObject<boolean>;
+  closeDrawer: () => void;
+  closeSheet: () => void;
+  setActivePanel: (panel: MobilePanel) => void;
+  exitPendingRef: React.MutableRefObject<boolean>;
+  exitTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+}): () => void {
+  const { activePanelRef, isDrawerOpenRef, isSheetOpenRef, closeDrawer, closeSheet, setActivePanel, exitPendingRef, exitTimerRef } = args;
+  return () => {
+    if (isDrawerOpenRef.current) {
+      closeDrawer();
+      return;
+    }
+    if (isSheetOpenRef.current) {
+      closeSheet();
+      return;
+    }
+    const target = BACK_PANEL[activePanelRef.current];
+    if (target !== null) {
+      setActivePanel(target);
+      return;
+    }
+    if (exitPendingRef.current) {
+      if (exitTimerRef.current !== null) clearTimeout(exitTimerRef.current);
+      void App.exitApp();
+      return;
+    }
+    exitPendingRef.current = true;
+    showExitToast();
+    exitTimerRef.current = setTimeout(() => {
+      exitPendingRef.current = false;
+      exitTimerRef.current = null;
+    }, 2000);
+  };
+}
+
 export function useSystemBack(): void {
   const { activePanel, setActivePanel, isDrawerOpen, closeDrawer, isSheetOpen, closeSheet } =
     useMobileLayout();
@@ -65,7 +104,6 @@ export function useSystemBack(): void {
   const exitPendingRef = useRef(false);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep current values in refs so the listener closure is always fresh.
   const activePanelRef = useRef(activePanel);
   const isDrawerOpenRef = useRef(isDrawerOpen);
   const isSheetOpenRef = useRef(isSheetOpen);
@@ -83,41 +121,23 @@ export function useSystemBack(): void {
   useEffect(() => {
     if (!isNative()) return;
 
-    const handle = App.addListener('backButton', () => {
-      // Priority 1: close drawer / sheet.
-      if (isDrawerOpenRef.current) {
-        closeDrawer();
-        return;
-      }
-      if (isSheetOpenRef.current) {
-        closeSheet();
-        return;
-      }
-
-      // Priority 2: cycle panel back.
-      const target = BACK_PANEL[activePanelRef.current];
-      if (target !== null) {
-        setActivePanel(target);
-        return;
-      }
-
-      // Priority 3: exit flow (chat is the home panel).
-      if (exitPendingRef.current) {
-        if (exitTimerRef.current !== null) clearTimeout(exitTimerRef.current);
-        void App.exitApp();
-        return;
-      }
-      exitPendingRef.current = true;
-      showExitToast();
-      exitTimerRef.current = setTimeout(() => {
-        exitPendingRef.current = false;
-        exitTimerRef.current = null;
-      }, 2000);
+    const backHandler = createBackButtonHandler({
+      activePanelRef,
+      isDrawerOpenRef,
+      isSheetOpenRef,
+      closeDrawer,
+      closeSheet,
+      setActivePanel,
+      exitPendingRef,
+      exitTimerRef,
     });
+    const handle = App.addListener('backButton', backHandler);
+    const timerRefAtMount = exitTimerRef;
 
     return () => {
       void handle.then((h) => h.remove());
-      if (exitTimerRef.current !== null) clearTimeout(exitTimerRef.current);
+      const timer = timerRefAtMount.current;
+      if (timer !== null) clearTimeout(timer);
     };
-  }, [closeDrawer, closeSheet, setActivePanel]);
+  }, [closeDrawer, closeSheet, setActivePanel, exitTimerRef]);
 }

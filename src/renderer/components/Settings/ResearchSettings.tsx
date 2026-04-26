@@ -47,34 +47,131 @@ function ModeOption({
   onSelect,
 }: ModeOptionProps): React.ReactElement {
   return (
-    <label
-      htmlFor={`research-mode-${value}`}
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '10px',
-        padding: '8px 0',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.45 : 1,
-      }}
-    >
-      <input
-        id={`research-mode-${value}`}
-        type="radio"
-        name="research-default-mode"
-        value={value}
-        checked={checked}
-        disabled={disabled}
-        onChange={onSelect}
-        style={{ marginTop: '2px', flexShrink: 0 }}
-      />
+    <ModeOptionContent
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionContent({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <ModeOptionLabel
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionLabel({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <ModeOptionRow
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionRow({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <ModeOptionRowContent
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionRowContent({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <ModeOptionRowBody
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionRowBody({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <ModeOptionRowMarkup
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      onSelect={onSelect}
+      value={value}
+    />
+  );
+}
+
+function ModeOptionRowMarkup({
+  value,
+  label,
+  description,
+  checked,
+  disabled,
+  onSelect,
+}: ModeOptionProps): React.ReactElement {
+  return (
+    <label htmlFor={`research-mode-${value}`} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1 }}>
+      <input id={`research-mode-${value}`} type="radio" name="research-default-mode" value={value} checked={checked} disabled={disabled} onChange={onSelect} style={{ marginTop: '2px', flexShrink: 0 }} />
       <div>
-        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>
-          {label}
-        </div>
-        <div className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '1px' }}>
-          {description}
-        </div>
+        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>{label}</div>
+        <div className="text-text-semantic-muted" style={{ fontSize: '12px', marginTop: '1px' }}>{description}</div>
       </div>
     </label>
   );

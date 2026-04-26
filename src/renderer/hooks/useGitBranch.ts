@@ -157,15 +157,49 @@ async function executeBranchFetch(
   }
 }
 
-export function useGitBranch(projectRoot: string | null): UseGitBranchReturn {
-  const [branch, setBranch] = useState<string | null>(null);
+interface RunGitBranchEffectArgs {
+  refs: GitBranchRefs;
+  projectRoot: string | null;
+  scheduleRefresh: (root: string, delayMs?: number) => void;
+}
+
+function runGitBranchEffect({ refs, projectRoot, scheduleRefresh }: RunGitBranchEffectArgs): (() => void) {
+  resetGitBranchRefs(refs, projectRoot);
+  if (!projectRoot) return () => {};
+
+  let disposed = false;
+  const cleanupWatcher = setupFileChangeWatcher(
+    scheduleRefresh,
+    refs.isRepoRef,
+    refs.currentRootRef,
+    projectRoot,
+  );
+  const cleanupVisibility = setupVisibilityWatchers(
+    projectRoot,
+    scheduleRefresh,
+    refs.isRepoRef,
+    refs.currentRootRef,
+  );
+
+  window.electronAPI.git.isRepo(projectRoot).then((result) => {
+    if (disposed || refs.currentRootRef.current !== projectRoot) return;
+    if (result.success && result.isRepo) startBranchPolling(refs, projectRoot, scheduleRefresh);
+  });
+
+  return () => {
+    disposed = true;
+    cleanupGitBranchEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility);
+  };
+}
+
+function useGitBranchRefs(): React.MutableRefObject<GitBranchRefs> {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRepoRef = useRef(false);
   const currentRootRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const pendingRef = useRef(false);
-  const refsRef = useRef<GitBranchRefs>({
+  return useRef<GitBranchRefs>({
     intervalRef,
     timeoutRef,
     isRepoRef,
@@ -173,7 +207,12 @@ export function useGitBranch(projectRoot: string | null): UseGitBranchReturn {
     inFlightRef,
     pendingRef,
   });
+}
 
+function useGitBranchCallbacks(
+  refsRef: React.MutableRefObject<GitBranchRefs>,
+  setBranch: React.Dispatch<React.SetStateAction<string | null>>,
+): { scheduleRefresh: (root: string, delayMs?: number) => void } {
   const fetchBranch = useCallback(async (root: string): Promise<void> => {
     const refs = refsRef.current;
     if (!refs.isRepoRef.current || refs.currentRootRef.current !== root) return;
@@ -182,7 +221,7 @@ export function useGitBranch(projectRoot: string | null): UseGitBranchReturn {
       return;
     }
     await executeBranchFetch(root, refs, setBranch, fetchBranch);
-  }, []);
+  }, [refsRef, setBranch]);
 
   const scheduleRefresh = useCallback(
     (root: string, delayMs: number = 0): void => {
@@ -198,39 +237,24 @@ export function useGitBranch(projectRoot: string | null): UseGitBranchReturn {
         void fetchBranch(root);
       }, delayMs);
     },
-    [fetchBranch],
+    [fetchBranch, refsRef],
   );
 
+  return { scheduleRefresh };
+}
+
+export function useGitBranch(projectRoot: string | null): UseGitBranchReturn {
+  const [branch, setBranch] = useState<string | null>(null);
+  const refsRef = useGitBranchRefs();
+  const { scheduleRefresh } = useGitBranchCallbacks(refsRef, setBranch);
+
   useEffect(() => {
-    const refs = refsRef.current;
-    resetGitBranchRefs(refs, projectRoot);
-    setBranch(null);
-    if (!projectRoot) return;
-
-    let disposed = false;
-    const cleanupWatcher = setupFileChangeWatcher(
-      scheduleRefresh,
-      refs.isRepoRef,
-      refs.currentRootRef,
-      projectRoot,
-    );
-    const cleanupVisibility = setupVisibilityWatchers(
+    return runGitBranchEffect({
+      refs: refsRef.current,
       projectRoot,
       scheduleRefresh,
-      refs.isRepoRef,
-      refs.currentRootRef,
-    );
-
-    window.electronAPI.git.isRepo(projectRoot).then((result) => {
-      if (disposed || refs.currentRootRef.current !== projectRoot) return;
-      if (result.success && result.isRepo) startBranchPolling(refs, projectRoot, scheduleRefresh);
     });
-
-    return () => {
-      disposed = true;
-      cleanupGitBranchEffect(refs, projectRoot, cleanupWatcher, cleanupVisibility);
-    };
-  }, [projectRoot, scheduleRefresh]);
+  }, [projectRoot, refsRef, scheduleRefresh]);
 
   return { branch };
 }

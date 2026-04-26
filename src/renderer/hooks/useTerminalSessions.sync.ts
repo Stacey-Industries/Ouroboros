@@ -3,21 +3,18 @@ import { useEffect, useRef } from 'react';
 
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import { hasElectronAPI, serializeSavedSessionSnapshots } from './useTerminalSessions.effects';
+import type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
+import {
+  attemptCodexCapture,
+  readSessionSnapshot,
+} from './useTerminalSessions.sync.helpers';
+export type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
 type RecordingSessionSetter = Dispatch<SetStateAction<Set<string>>>;
 
 const SESSION_PERSIST_DEBOUNCE_MS = 750;
 const SESSION_PERSIST_SAFETY_MS = 30000;
-
-interface SavedSessionSnapshot {
-  cwd: string;
-  title: string;
-  isClaude?: boolean;
-  isCodex?: boolean;
-  claudeSessionId?: string;
-  codexThreadId?: string;
-}
 
 function getRunningSessions(sessions: TerminalSession[]): TerminalSession[] {
   return sessions.filter((session) => session.status === 'running');
@@ -93,23 +90,38 @@ function usePersistRefs(sessions: TerminalSession[]): {
   };
 }
 
-export function usePersistSessions(
-  sessions: TerminalSession[],
+function usePersistSessionsSeedEffect(
   enabled: boolean,
   persistedSessionsSeed: string | null,
+  lastPersistedSerializedRef: MutableRefObject<string | null>,
 ): void {
-  const persistRefs = usePersistRefs(sessions);
-  const { sessionsRef, persistInFlightRef, hasPendingPersistRef } = persistRefs;
-  const { lastPersistedSerializedRef } = persistRefs;
-  const runningTopologySignature = buildRunningTopologySignature(getRunningSessions(sessions));
-
   useEffect(() => {
     if (!enabled || persistedSessionsSeed === null) return;
     if (lastPersistedSerializedRef.current !== null) return;
-
     lastPersistedSerializedRef.current = persistedSessionsSeed;
   }, [enabled, persistedSessionsSeed, lastPersistedSerializedRef]);
+}
 
+interface UsePersistSessionsDebounceEffectOptions {
+  enabled: boolean;
+  runningTopologySignature: string;
+  sessionsRef: MutableRefObject<TerminalSession[]>;
+  lastPersistedSerializedRef: MutableRefObject<string | null>;
+  persistInFlightRef: MutableRefObject<boolean>;
+  hasPendingPersistRef: MutableRefObject<boolean>;
+}
+
+function usePersistSessionsDebounceEffect(
+  options: UsePersistSessionsDebounceEffectOptions,
+): void {
+  const {
+    enabled,
+    runningTopologySignature,
+    sessionsRef,
+    lastPersistedSerializedRef,
+    persistInFlightRef,
+    hasPendingPersistRef,
+  } = options;
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
     const timeout = setTimeout(() => {
@@ -129,7 +141,26 @@ export function usePersistSessions(
     persistInFlightRef,
     hasPendingPersistRef,
   ]);
+}
 
+interface UsePersistSessionsSafetyEffectOptions {
+  enabled: boolean;
+  sessionsRef: MutableRefObject<TerminalSession[]>;
+  lastPersistedSerializedRef: MutableRefObject<string | null>;
+  persistInFlightRef: MutableRefObject<boolean>;
+  hasPendingPersistRef: MutableRefObject<boolean>;
+}
+
+function usePersistSessionsSafetyEffect(
+  options: UsePersistSessionsSafetyEffectOptions,
+): void {
+  const {
+    enabled,
+    sessionsRef,
+    lastPersistedSerializedRef,
+    persistInFlightRef,
+    hasPendingPersistRef,
+  } = options;
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
     const interval = setInterval(() => {
@@ -144,24 +175,32 @@ export function usePersistSessions(
   }, [enabled, sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef]);
 }
 
-function createSessionSnapshot(session: TerminalSession, cwd: string): SavedSessionSnapshot {
-  return {
-    cwd,
-    title: session.title,
-    isClaude: session.isClaude === true,
-    isCodex: session.isCodex === true,
-    claudeSessionId: session.claudeSessionId,
-    codexThreadId: session.codexThreadId,
-  };
-}
+export function usePersistSessions(
+  sessions: TerminalSession[],
+  enabled: boolean,
+  persistedSessionsSeed: string | null,
+): void {
+  const persistRefs = usePersistRefs(sessions);
+  const { sessionsRef, persistInFlightRef, hasPendingPersistRef } = persistRefs;
+  const { lastPersistedSerializedRef } = persistRefs;
+  const runningTopologySignature = buildRunningTopologySignature(getRunningSessions(sessions));
 
-async function readSessionSnapshot(session: TerminalSession): Promise<SavedSessionSnapshot> {
-  try {
-    const result = await window.electronAPI.pty.getCwd(session.id);
-    return createSessionSnapshot(session, result.cwd ?? '');
-  } catch {
-    return createSessionSnapshot(session, '');
-  }
+  usePersistSessionsSeedEffect(enabled, persistedSessionsSeed, lastPersistedSerializedRef);
+  usePersistSessionsDebounceEffect({
+    enabled,
+    runningTopologySignature,
+    sessionsRef,
+    lastPersistedSerializedRef,
+    persistInFlightRef,
+    hasPendingPersistRef,
+  });
+  usePersistSessionsSafetyEffect({
+    enabled,
+    sessionsRef,
+    lastPersistedSerializedRef,
+    persistInFlightRef,
+    hasPendingPersistRef,
+  });
 }
 
 export function useClaudeSessionCapture(
@@ -186,15 +225,7 @@ export function useClaudeSessionCapture(
   }, [pendingClaudeAssocRef, setSessions]);
 }
 
-export interface PendingCodexCapture {
-  ptyId: string;
-  cwd: string;
-  spawnedAt: number;
-  retries: number;
-}
-
 const CODEX_CAPTURE_INTERVAL_MS = 3000;
-const CODEX_CAPTURE_MAX_RETRIES = 3;
 
 export function useCodexSessionCapture(
   pendingCodexAssocRef: MutableRefObject<PendingCodexCapture[]>,
@@ -213,35 +244,6 @@ export function useCodexSessionCapture(
 
     return () => clearInterval(intervalId);
   }, [pendingCodexAssocRef, setSessions]);
-}
-
-async function attemptCodexCapture(
-  entry: PendingCodexCapture,
-  pendingRef: MutableRefObject<PendingCodexCapture[]>,
-  setSessions: SessionSetter,
-): Promise<void> {
-  try {
-    const result = await window.electronAPI.codex.resolveThreadId({
-      cwd: entry.cwd,
-      spawnedAfter: entry.spawnedAt,
-    });
-    if (result.success && result.threadId) {
-      pendingRef.current = pendingRef.current.filter((e) => e.ptyId !== entry.ptyId);
-      setSessions((prev) =>
-        prev.map((s) => (s.id === entry.ptyId ? { ...s, codexThreadId: result.threadId } : s)),
-      );
-      return;
-    }
-  } catch {
-    // IPC error — treat as retry
-  }
-  const retries = entry.retries + 1;
-  if (retries >= CODEX_CAPTURE_MAX_RETRIES) {
-    pendingRef.current = pendingRef.current.filter((e) => e.ptyId !== entry.ptyId);
-    return;
-  }
-  const idx = pendingRef.current.findIndex((e) => e.ptyId === entry.ptyId);
-  if (idx >= 0) pendingRef.current[idx] = { ...entry, retries };
 }
 
 function applyRecordingState(

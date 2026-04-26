@@ -61,6 +61,33 @@ function buildTerminalControl(args: {
   };
 }
 
+function buildSessionManagerResult(args: {
+  sessions: TerminalSession[];
+  activeSessionId: string | null;
+  setActiveSessionId: (id: string | null) => void;
+  actions: ReturnType<typeof useSessionManagerActions>;
+  recordingSessions: Set<string>;
+  terminalControl: AppLayoutProps['terminalControl'];
+}): SessionManagerResult {
+  const { sessions, activeSessionId, setActiveSessionId, actions, recordingSessions, terminalControl } = args;
+  return {
+    sessions,
+    activeSessionId,
+    setActiveSessionId,
+    spawnSession: actions.spawnSession,
+    spawnClaudeSession: actions.spawnClaudeSession,
+    handleTerminalClose: actions.handleTerminalClose,
+    handleTerminalRestart: actions.handleTerminalRestart,
+    handleTerminalTitleChange: actions.handleTerminalTitleChange,
+    handleTerminalReorder: actions.handleTerminalReorder,
+    handleSplit: actions.handleSplit,
+    handleCloseSplit: actions.handleCloseSplit,
+    recordingSessions,
+    handleToggleRecording: actions.handleToggleRecording,
+    terminalControl,
+  };
+}
+
 export function useSessionManager(): SessionManagerResult {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -86,20 +113,12 @@ export function useSessionManager(): SessionManagerResult {
     handleTerminalClose: actions.handleTerminalClose,
     handleTerminalReorder: actions.handleTerminalReorder,
   });
-  return {
+  return buildSessionManagerResult({
     sessions,
     activeSessionId,
     setActiveSessionId,
-    spawnSession: actions.spawnSession,
-    spawnClaudeSession: actions.spawnClaudeSession,
-    handleTerminalClose: actions.handleTerminalClose,
-    handleTerminalRestart: actions.handleTerminalRestart,
-    handleTerminalTitleChange: actions.handleTerminalTitleChange,
-    handleTerminalReorder: actions.handleTerminalReorder,
-    handleSplit: actions.handleSplit,
-    handleCloseSplit: actions.handleCloseSplit,
+    actions,
     recordingSessions,
-    handleToggleRecording: actions.handleToggleRecording,
     terminalControl,
-  };
+  });
 }

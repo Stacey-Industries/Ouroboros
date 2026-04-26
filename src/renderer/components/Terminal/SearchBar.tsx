@@ -66,15 +66,32 @@ function useSearchState(searchAddon: SearchAddon) {
   return { inputRef, query, setQuery, matchInfo, setMatchInfo };
 }
 
-export function TerminalSearchBar({
-  searchAddon,
-  onClose,
-}: TerminalSearchBarProps): React.ReactElement {
-  const { inputRef, query, setQuery, matchInfo, setMatchInfo } = useSearchState(searchAddon);
+interface SearchCallbacks {
+  findNext: () => void;
+  findPrev: () => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+}
 
+interface SearchCallbacksParams {
+  query: string;
+  searchAddon: SearchAddon;
+  setQuery: (v: string) => void;
+  setMatchInfo: (v: null) => void;
+  onClose: () => void;
+}
+
+function useSearchCallbacks({
+  query,
+  searchAddon,
+  setQuery,
+  setMatchInfo,
+  onClose,
+}: SearchCallbacksParams): SearchCallbacks {
   const findNext = useCallback(() => {
     if (query) searchAddon.findNext(query);
   }, [query, searchAddon]);
+
   const findPrev = useCallback(() => {
     if (query) searchAddon.findPrevious(query);
   }, [query, searchAddon]);
@@ -83,10 +100,7 @@ export function TerminalSearchBar({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
       setQuery(v);
-      if (v) {
-        searchAddon.findNext(v);
-        return;
-      }
+      if (v) { searchAddon.findNext(v); return; }
       searchAddon.clearDecorations();
       setMatchInfo(null);
     },
@@ -95,11 +109,7 @@ export function TerminalSearchBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        searchAddon.clearDecorations();
-        onClose();
-        return;
-      }
+      if (e.key === 'Escape') { searchAddon.clearDecorations(); onClose(); return; }
       if (e.key === 'Enter') {
         if (e.shiftKey) findPrev();
         else findNext();
@@ -108,12 +118,71 @@ export function TerminalSearchBar({
     [onClose, findNext, findPrev, searchAddon],
   );
 
-  const matchLabel = matchInfo
-    ? matchInfo.resultCount > 0
-      ? `${matchInfo.resultIndex + 1} of ${matchInfo.resultCount}`
-      : 'No results'
-    : '';
+  return { findNext, findPrev, handleInputChange, handleKeyDown };
+}
 
+interface SearchNavButtonsProps {
+  findPrev: () => void;
+  findNext: () => void;
+  searchAddon: SearchAddon;
+  onClose: () => void;
+}
+
+function SearchNavButtons({
+  findPrev,
+  findNext,
+  searchAddon,
+  onClose,
+}: SearchNavButtonsProps): React.ReactElement {
+  return (
+    <>
+      <button
+        onClick={findPrev}
+        title="Previous match (Shift+Enter)"
+        className="text-text-semantic-primary"
+        style={navBtnStyle}
+      >
+        &#x25B2;
+      </button>
+      <button
+        onClick={findNext}
+        title="Next match (Enter)"
+        className="text-text-semantic-primary"
+        style={navBtnStyle}
+      >
+        &#x25BC;
+      </button>
+      <button
+        onClick={() => { searchAddon.clearDecorations(); onClose(); }}
+        title="Close (Escape)"
+        className="text-text-semantic-primary"
+        style={{ ...navBtnStyle, marginLeft: 4 }}
+      >
+        &#x2715;
+      </button>
+    </>
+  );
+}
+
+interface TerminalSearchBarViewProps extends SearchCallbacks {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  query: string;
+  matchLabel: string;
+  searchAddon: SearchAddon;
+  onClose: () => void;
+}
+
+function TerminalSearchBarView({
+  inputRef,
+  query,
+  matchLabel,
+  handleInputChange,
+  handleKeyDown,
+  findPrev,
+  findNext,
+  onClose,
+  searchAddon,
+}: TerminalSearchBarViewProps): React.ReactElement {
   return (
     <div
       className="bg-surface-panel border border-border-semantic"
@@ -134,33 +203,40 @@ export function TerminalSearchBar({
           {matchLabel}
         </span>
       )}
-      <button
-        onClick={findPrev}
-        title="Previous match (Shift+Enter)"
-        className="text-text-semantic-primary"
-        style={navBtnStyle}
-      >
-        &#x25B2;
-      </button>
-      <button
-        onClick={findNext}
-        title="Next match (Enter)"
-        className="text-text-semantic-primary"
-        style={navBtnStyle}
-      >
-        &#x25BC;
-      </button>
-      <button
-        onClick={() => {
-          searchAddon.clearDecorations();
-          onClose();
-        }}
-        title="Close (Escape)"
-        className="text-text-semantic-primary"
-        style={{ ...navBtnStyle, marginLeft: 4 }}
-      >
-        &#x2715;
-      </button>
+      <SearchNavButtons
+        findPrev={findPrev}
+        findNext={findNext}
+        searchAddon={searchAddon}
+        onClose={onClose}
+      />
     </div>
+  );
+}
+
+export function TerminalSearchBar({
+  searchAddon,
+  onClose,
+}: TerminalSearchBarProps): React.ReactElement {
+  const { inputRef, query, setQuery, matchInfo, setMatchInfo } = useSearchState(searchAddon);
+  const callbacks = useSearchCallbacks({ query, searchAddon, setQuery, setMatchInfo, onClose });
+
+  const matchLabel = matchInfo
+    ? matchInfo.resultCount > 0
+      ? `${matchInfo.resultIndex + 1} of ${matchInfo.resultCount}`
+      : 'No results'
+    : '';
+
+  return (
+    <TerminalSearchBarView
+      inputRef={inputRef}
+      query={query}
+      matchLabel={matchLabel}
+      handleInputChange={callbacks.handleInputChange}
+      handleKeyDown={callbacks.handleKeyDown}
+      findPrev={callbacks.findPrev}
+      findNext={callbacks.findNext}
+      onClose={onClose}
+      searchAddon={searchAddon}
+    />
   );
 }

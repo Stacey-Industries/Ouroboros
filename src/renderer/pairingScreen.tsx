@@ -14,11 +14,11 @@
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import { initDeepLinkListener, readPairingQueryParams } from '../web/capacitor/deepLinks';
-import { isNative } from '../web/capacitor/index';
 import { scanPairingQr } from '../web/capacitor/qrScanner';
 import { getDeviceFingerprint, setRefreshToken } from '../web/tokenStorage';
+import { PairingCard, type PairingFormProps } from './pairingScreen.parts';
 import { buildScanOutcomeHandler } from './pairingScreen.scanHandler';
-import { FIELD_HIGHLIGHT_BORDER, PREFILL_HIGHLIGHT_MS, S } from './pairingScreen.styles';
+import { PREFILL_HIGHLIGHT_MS, S } from './pairingScreen.styles';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,18 +31,6 @@ interface PairResponse {
 interface PairingScreenProps {
   host: string;
   port: number;
-}
-
-interface PairingFormProps {
-  code: string;
-  label: string;
-  loading: boolean;
-  displayHost: string;
-  highlight: boolean;
-  codeRef: React.RefObject<HTMLInputElement | null>;
-  onCodeChange: (v: string) => void;
-  onLabelChange: (v: string) => void;
-  onSubmit: (e: FormEvent) => void;
 }
 
 // ─── usePrefill ───────────────────────────────────────────────────────────────
@@ -167,100 +155,6 @@ async function submitPairing(opts: SubmitPairingOpts): Promise<void> {
 
 // ─── Pairing form sub-components ─────────────────────────────────────────────
 
-function CodeInput({
-  codeRef,
-  value,
-  disabled,
-  highlight,
-  onChange,
-}: {
-  codeRef: React.RefObject<HTMLInputElement | null>;
-  value: string;
-  disabled: boolean;
-  highlight: boolean;
-  onChange: (v: string) => void;
-}): React.ReactElement {
-  const fieldStyle = highlight ? { ...S.field, border: FIELD_HIGHLIGHT_BORDER } : S.field;
-  return (
-    <>
-      <label style={S.label} htmlFor="pair-code">
-        Pairing code
-      </label>
-      <input
-        ref={codeRef}
-        id="pair-code"
-        style={fieldStyle}
-        type="text"
-        inputMode="numeric"
-        pattern="\d{6}"
-        maxLength={6}
-        placeholder="000000"
-        value={value}
-        autoComplete="one-time-code"
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        disabled={disabled}
-        required
-      />
-    </>
-  );
-}
-
-function PairingForm(props: PairingFormProps): React.ReactElement {
-  const {
-    code,
-    label,
-    loading,
-    displayHost,
-    highlight,
-    codeRef,
-    onCodeChange,
-    onLabelChange,
-    onSubmit,
-  } = props;
-  return (
-    <form onSubmit={onSubmit}>
-      <label style={S.label} htmlFor="pair-host">
-        Host
-      </label>
-      <input
-        id="pair-host"
-        style={{ ...S.field, ...S.fieldReadonly }}
-        value={displayHost}
-        readOnly
-        tabIndex={-1}
-      />
-      <CodeInput
-        codeRef={codeRef}
-        value={code}
-        disabled={loading}
-        highlight={highlight}
-        onChange={onCodeChange}
-      />
-      <label style={S.label} htmlFor="pair-label">
-        Device name (optional)
-      </label>
-      <input
-        id="pair-label"
-        style={{ ...S.field, letterSpacing: 'normal' }}
-        type="text"
-        maxLength={64}
-        placeholder="Mobile device"
-        value={label}
-        onChange={(e) => onLabelChange(e.target.value)}
-        disabled={loading}
-      />
-      <button
-        type="submit"
-        style={loading ? { ...S.button, ...S.buttonDisabled } : S.button}
-        disabled={loading}
-      >
-        {loading && <span style={S.spinner} aria-hidden="true" />}
-        {loading ? 'Pairing\u2026' : 'Pair'}
-      </button>
-    </form>
-  );
-}
-
 // ─── Root state hook ──────────────────────────────────────────────────────────
 
 interface ScreenState {
@@ -316,27 +210,6 @@ function usePairingScreenState(): ScreenState {
   };
 }
 
-// ─── Scan QR button ───────────────────────────────────────────────────────────
-
-interface ScanQrButtonProps {
-  isScanning: boolean;
-  onScan: () => void;
-}
-
-function ScanQrButton({ isScanning, onScan }: ScanQrButtonProps): React.ReactElement {
-  return (
-    <button
-      type="button"
-      style={isScanning ? { ...S.scanButton, ...S.buttonDisabled } : S.scanButton}
-      disabled={isScanning}
-      onClick={onScan}
-      aria-label="Scan QR code"
-    >
-      {isScanning ? 'Opening scanner\u2026' : 'Scan QR code'}
-    </button>
-  );
-}
-
 // ─── Scan wiring hook ─────────────────────────────────────────────────────────
 
 function useScanQr(state: ScreenState): () => void {
@@ -353,39 +226,6 @@ function useScanQr(state: ScreenState): () => void {
     });
     void scanPairingQr().then(handler);
   }, [setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef]);
-}
-
-// ─── Card body ────────────────────────────────────────────────────────────────
-
-interface PairingCardProps {
-  formProps: PairingFormProps;
-  isScanning: boolean;
-  displayError: string;
-  onScan: () => void;
-}
-
-function PairingCard({
-  formProps,
-  isScanning,
-  displayError,
-  onScan,
-}: PairingCardProps): React.ReactElement {
-  return (
-    <div style={S.card}>
-      <div style={S.wordmark}>Ouroboros</div>
-      <h1 style={S.heading}>Pair this device</h1>
-      <p style={S.sub}>
-        Enter the 6-digit code shown in Desktop &rarr; Settings &rarr; Mobile Access.
-      </p>
-      <PairingForm {...formProps} />
-      {isNative() && <ScanQrButton isScanning={isScanning} onScan={onScan} />}
-      {displayError && (
-        <div style={S.error} role="alert">
-          {humanizeError(displayError)}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── Root component ────────────────────────────────────────────────────────────
@@ -418,7 +258,7 @@ export function PairingScreen({ host, port }: PairingScreenProps): React.ReactEl
       <PairingCard
         formProps={formProps}
         isScanning={isScanning}
-        displayError={submitError || errorMsg}
+        displayError={humanizeError(submitError || errorMsg)}
         onScan={handleScan}
       />
     </div>

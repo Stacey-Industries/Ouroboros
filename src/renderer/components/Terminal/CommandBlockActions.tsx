@@ -156,20 +156,36 @@ function shouldShowExplain(
   );
 }
 
-export function CommandBlockActions({
+function CollapseButton({
   block,
-  sessionId,
+  onToggleCollapse,
+}: {
+  block: CommandBlock;
+  onToggleCollapse: (blockId: string) => void;
+}): React.ReactElement | null {
+  const canCollapse = block.complete && block.endLine - block.startLine > 1;
+  if (!canCollapse) return null;
+  return (
+    <ActionButton
+      onClick={() => onToggleCollapse(block.id)}
+      title={block.collapsed ? 'Expand output' : 'Collapse output'}
+    >
+      <CollapseIcon collapsed={block.collapsed} />
+      {block.collapsed ? 'Expand' : 'Collapse'}
+    </ActionButton>
+  );
+}
+
+function ActionButtonsContent({
+  block,
   onCopyOutput,
   onCopyCommand,
   onToggleCollapse,
   onExplainError,
-}: CommandBlockActionsProps): React.ReactElement {
-  const handleRerun = useCallback(() => {
-    if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n');
-  }, [block.command, sessionId]);
-  const canCollapse = block.complete && block.endLine - block.startLine > 1;
+  handleRerun,
+}: Omit<CommandBlockActionsProps, 'sessionId'> & { handleRerun: () => void }): React.ReactElement {
   return (
-    <div style={actionsBarStyle}>
+    <>
       {block.command && (
         <ActionButton onClick={() => onCopyCommand(block)} title="Copy command">
           <CopyIcon /> Cmd
@@ -190,15 +206,32 @@ export function CommandBlockActions({
           <ExplainIcon /> Explain
         </ActionButton>
       )}
-      {canCollapse && (
-        <ActionButton
-          onClick={() => onToggleCollapse(block.id)}
-          title={block.collapsed ? 'Expand output' : 'Collapse output'}
-        >
-          <CollapseIcon collapsed={block.collapsed} />
-          {block.collapsed ? 'Expand' : 'Collapse'}
-        </ActionButton>
-      )}
+      <CollapseButton block={block} onToggleCollapse={onToggleCollapse} />
+    </>
+  );
+}
+
+export function CommandBlockActions({
+  block,
+  sessionId,
+  onCopyOutput,
+  onCopyCommand,
+  onToggleCollapse,
+  onExplainError,
+}: CommandBlockActionsProps): React.ReactElement {
+  const handleRerun = useCallback(() => {
+    if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n');
+  }, [block.command, sessionId]);
+  return (
+    <div style={actionsBarStyle}>
+      <ActionButtonsContent
+        block={block}
+        onCopyOutput={onCopyOutput}
+        onCopyCommand={onCopyCommand}
+        onToggleCollapse={onToggleCollapse}
+        onExplainError={onExplainError}
+        handleRerun={handleRerun}
+      />
     </div>
   );
 }

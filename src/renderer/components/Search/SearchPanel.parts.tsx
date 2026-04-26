@@ -1,11 +1,4 @@
-/**
- * SearchPanel.parts — sub-components for the project-wide search panel.
- */
-
 import React from 'react';
-
-// ── SearchInput ───────────────────────────────────────────────────────────────
-
 interface SearchInputProps {
   value: string;
   onChange: (v: string) => void;
@@ -47,9 +40,6 @@ export function SearchInput({ value, onChange, inputRef }: SearchInputProps): Re
     />
   );
 }
-
-// ── SearchToggle ──────────────────────────────────────────────────────────────
-
 interface SearchToggleProps {
   label: string;
   title: string;
@@ -95,9 +85,6 @@ export function SearchToggle({
     </button>
   );
 }
-
-// ── SearchToggleBar ───────────────────────────────────────────────────────────
-
 interface SearchToggleBarProps {
   isRegex: boolean;
   caseSensitive: boolean;
@@ -138,9 +125,6 @@ export function SearchToggleBar({
     </div>
   );
 }
-
-// ── FilterInputs ──────────────────────────────────────────────────────────────
-
 interface FilterInputsProps {
   includeGlob: string;
   excludeGlob: string;
@@ -191,6 +175,55 @@ const FILTER_LABEL_STYLE: React.CSSProperties = {
   width: '50px',
 };
 
+function FilterToggle({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      className="flex items-center gap-1 text-text-semantic-faint hover:text-text-semantic-muted border-none bg-transparent cursor-pointer"
+      style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-ui)', padding: '2px 0' }}
+      onClick={onToggle}
+      aria-expanded={expanded}
+    >
+      <span
+        style={{
+          transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+          transition: 'transform 120ms',
+          display: 'inline-block',
+        }}
+      >
+        ▾
+      </span>
+      <span>Files to include/exclude</span>
+    </button>
+  );
+}
+
+function FilterField({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>
+        {label}
+      </span>
+      <FilterInput value={value} placeholder={placeholder} onChange={onChange} />
+    </div>
+  );
+}
+
 export function FilterInputs({
   includeGlob,
   excludeGlob,
@@ -201,59 +234,45 @@ export function FilterInputs({
 }: FilterInputsProps): React.ReactElement {
   return (
     <div className="flex flex-col gap-1">
-      <button
-        className="flex items-center gap-1 text-text-semantic-faint hover:text-text-semantic-muted border-none bg-transparent cursor-pointer"
-        style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-ui)', padding: '2px 0' }}
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span
-          style={{
-            transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-            transition: 'transform 120ms',
-            display: 'inline-block',
-          }}
-        >
-          ▾
-        </span>
-        <span>Files to include/exclude</span>
-      </button>
+      <FilterToggle expanded={expanded} onToggle={onToggle} />
       {expanded && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>
-              Include
-            </span>
-            <FilterInput
-              value={includeGlob}
-              placeholder="e.g. *.ts,src/**"
-              onChange={onIncludeChange}
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-text-semantic-faint" style={FILTER_LABEL_STYLE}>
-              Exclude
-            </span>
-            <FilterInput
-              value={excludeGlob}
-              placeholder="e.g. **/node_modules"
-              onChange={onExcludeChange}
-            />
-          </div>
+          <FilterField
+            label="Include"
+            value={includeGlob}
+            placeholder="e.g. *.ts,src/**"
+            onChange={onIncludeChange}
+          />
+          <FilterField
+            label="Exclude"
+            value={excludeGlob}
+            placeholder="e.g. **/node_modules"
+            onChange={onExcludeChange}
+          />
         </div>
       )}
     </div>
   );
 }
-
-// ── SearchStatus ──────────────────────────────────────────────────────────────
-
 interface SearchStatusProps {
   query: string;
   resultCount: number;
   fileCount: number;
   isSearching: boolean;
   error: string | null;
+}
+
+const SEARCH_STATUS_STYLE: React.CSSProperties = {
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-ui)',
+  padding: '4px 8px',
+  flexShrink: 0,
+};
+
+function getSearchStatusText(query: string, resultCount: number, fileCount: number): string | null {
+  if (!query || query.length < 2) return null;
+  if (resultCount === 0) return `No results found for '${query}'`;
+  return `${resultCount} result${resultCount !== 1 ? 's' : ''} in ${fileCount} file${fileCount !== 1 ? 's' : ''}`;
 }
 
 export function SearchStatus({
@@ -263,60 +282,24 @@ export function SearchStatus({
   isSearching,
   error,
 }: SearchStatusProps): React.ReactElement | null {
-  const style: React.CSSProperties = {
-    fontSize: '0.6875rem',
-    fontFamily: 'var(--font-ui)',
-    padding: '4px 8px',
-    flexShrink: 0,
-  };
-
   if (error) {
     return (
-      <div className="text-status-error" style={style}>
+      <div className="text-status-error" style={SEARCH_STATUS_STYLE}>
         {error}
       </div>
     );
   }
-
   if (isSearching) {
-    return (
-      <div className="text-text-semantic-muted" style={style}>
-        Searching…
-      </div>
-    );
+    return <div className="text-text-semantic-muted" style={SEARCH_STATUS_STYLE}>Searching…</div>;
   }
-
-  if (!query || query.length < 2) return null;
-
-  if (resultCount === 0) {
-    return (
-      <div className="text-text-semantic-muted" style={style}>
-        {`No results found for '${query}'`}
-      </div>
-    );
-  }
-
-  return (
-    <div className="text-text-semantic-muted" style={style}>
-      {`${resultCount} result${resultCount !== 1 ? 's' : ''} in ${fileCount} file${fileCount !== 1 ? 's' : ''}`}
+  const text = getSearchStatusText(query, resultCount, fileCount);
+  return text ? (
+    <div className="text-text-semantic-muted" style={SEARCH_STATUS_STYLE}>
+      {text}
     </div>
-  );
+  ) : null;
 }
 
-// ── TruncatedWarning ──────────────────────────────────────────────────────────
-
 export function TruncatedWarning(): React.ReactElement {
-  return (
-    <div
-      className="bg-status-warning-subtle text-status-warning"
-      style={{
-        fontSize: '0.6875rem',
-        fontFamily: 'var(--font-ui)',
-        padding: '6px 8px',
-        flexShrink: 0,
-      }}
-    >
-      Results capped at 500. Refine your search.
-    </div>
-  );
+  return <div className="bg-status-warning-subtle text-status-warning" style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-ui)', padding: '6px 8px', flexShrink: 0 }}>Results capped at 500. Refine your search.</div>;
 }

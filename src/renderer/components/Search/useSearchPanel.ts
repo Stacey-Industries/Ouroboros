@@ -5,7 +5,7 @@
  * responses from stale (superseded) requests.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { SearchOptions, SearchResultItem } from '../../types/electron-runtime-apis';
 
@@ -61,6 +61,21 @@ interface SearchSetters {
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setTruncated: React.Dispatch<React.SetStateAction<boolean>>;
   setQueryState: React.Dispatch<React.SetStateAction<string>>;
+}
+
+interface SearchPanelActionDeps {
+  projectRoot: string;
+  query: string;
+  options: SearchOptions;
+  debounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  requestIdRef: React.MutableRefObject<number>;
+  setQueryState: React.Dispatch<React.SetStateAction<string>>;
+  setOptions: React.Dispatch<React.SetStateAction<SearchOptions>>;
+  setResults: React.Dispatch<React.SetStateAction<SearchResultItem[]>>;
+  setGroupedResults: React.Dispatch<React.SetStateAction<Map<string, SearchResultItem[]>>>;
+  setIsSearching: React.Dispatch<React.SetStateAction<boolean>>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+  setTruncated: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -123,9 +138,8 @@ function useRunSearch(
           s.setIsSearching(false);
           s.setError(err instanceof Error ? err.message : 'Search failed');
         });
-       
     },
-    [projectRoot],
+    [projectRoot, requestIdRef, s],
   );
 }
 
@@ -179,6 +193,94 @@ function useGlobSetters(
   return { setIncludeGlob, setExcludeGlob };
 }
 
+interface SearchPanelActions {
+  setQuery: (q: string) => void;
+  setOption: <K extends keyof SearchOptions>(key: K, value: SearchOptions[K]) => void;
+  setIncludeGlob: (glob: string) => void;
+  setExcludeGlob: (glob: string) => void;
+  clearResults: () => void;
+}
+
+function useSearchPanelSetters({
+  setResults,
+  setGroupedResults,
+  setIsSearching,
+  setError,
+  setTruncated,
+  setQueryState,
+}: SearchPanelActionDeps): SearchSetters {
+  return useMemo(
+    () => ({
+      setResults,
+      setGroupedResults,
+      setIsSearching,
+      setError,
+      setTruncated,
+      setQueryState,
+    }),
+    [setError, setGroupedResults, setIsSearching, setQueryState, setResults, setTruncated],
+  );
+}
+
+function useSearchQueryAction(
+  _query: string,
+  options: SearchOptions,
+  scheduleSearch: (q: string, opts: SearchOptions) => void,
+  setQueryState: React.Dispatch<React.SetStateAction<string>>,
+): (q: string) => void {
+  return useCallback(
+    (q: string) => {
+      setQueryState(q);
+      scheduleSearch(q, options);
+    },
+    [options, scheduleSearch, setQueryState],
+  );
+}
+
+function useSearchOptionAction(
+  query: string,
+  scheduleSearch: (q: string, opts: SearchOptions) => void,
+  setOptions: React.Dispatch<React.SetStateAction<SearchOptions>>,
+): SearchPanelActions['setOption'] {
+  return useCallback(
+    <K extends keyof SearchOptions>(key: K, value: SearchOptions[K]) => {
+      setOptions((prev) => {
+        const next = { ...prev, [key]: value };
+        scheduleSearch(query, next);
+        return next;
+      });
+    },
+    [query, scheduleSearch, setOptions],
+  );
+}
+
+function useClearSearchResultsAction(
+  debounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  requestIdRef: React.MutableRefObject<number>,
+  setters: SearchSetters,
+): () => void {
+  return useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    requestIdRef.current += 1;
+    setters.setQueryState('');
+    resetSearch(setters);
+  }, [debounceRef, requestIdRef, setters]);
+}
+
+function useSearchPanelActions(deps: SearchPanelActionDeps): SearchPanelActions {
+  const setters = useSearchPanelSetters(deps);
+  const runSearch = useRunSearch(deps.projectRoot, deps.requestIdRef, setters);
+  const scheduleSearch = useScheduleSearch(deps.debounceRef, runSearch);
+  const { setIncludeGlob, setExcludeGlob } = useGlobSetters(deps.query, deps.setOptions, scheduleSearch);
+  return {
+    setQuery: useSearchQueryAction(deps.query, deps.options, scheduleSearch, deps.setQueryState),
+    setOption: useSearchOptionAction(deps.query, scheduleSearch, deps.setOptions),
+    setIncludeGlob,
+    setExcludeGlob,
+    clearResults: useClearSearchResultsAction(deps.debounceRef, deps.requestIdRef, setters),
+  };
+}
+
 // ── Main hook ─────────────────────────────────────────────────────────────────
 
 export function useSearchPanel(projectRoot: string): UseSearchPanelReturn {
@@ -193,52 +295,27 @@ export function useSearchPanel(projectRoot: string): UseSearchPanelReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
-  const s: SearchSetters = {
+  const actions = useSearchPanelActions({
+    projectRoot,
+    query,
+    options,
+    debounceRef,
+    requestIdRef,
+    setQueryState,
+    setOptions,
     setResults,
     setGroupedResults,
     setIsSearching,
     setError,
     setTruncated,
-    setQueryState,
-  };
-
-  const runSearch = useRunSearch(projectRoot, requestIdRef, s);
-  const scheduleSearch = useScheduleSearch(debounceRef, runSearch);
-  const { setIncludeGlob, setExcludeGlob } = useGlobSetters(query, setOptions, scheduleSearch);
-
-  const setQuery = useCallback(
-    (q: string) => {
-      setQueryState(q);
-      scheduleSearch(q, options);
-    },
-    [options, scheduleSearch],
-  );
-
-  const setOption = useCallback(
-    <K extends keyof SearchOptions>(key: K, value: SearchOptions[K]) => {
-      setOptions((prev) => {
-        const next = { ...prev, [key]: value };
-        scheduleSearch(query, next);
-        return next;
-      });
-    },
-    [query, scheduleSearch],
-  );
-
-  const clearResults = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    requestIdRef.current += 1;
-    setQueryState('');
-    resetSearch(s);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
 
   return {
     state: { query, options, results, groupedResults, isSearching, error, truncated },
-    setQuery,
-    setOption,
-    setIncludeGlob,
-    setExcludeGlob,
-    clearResults,
+    setQuery: actions.setQuery,
+    setOption: actions.setOption,
+    setIncludeGlob: actions.setIncludeGlob,
+    setExcludeGlob: actions.setExcludeGlob,
+    clearResults: actions.clearResults,
   };
 }
