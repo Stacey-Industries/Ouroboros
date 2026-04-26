@@ -8,7 +8,7 @@ import { resolveInternalMcpScope } from './internalMcpScope';
 const mockGet = vi.mocked(getConfigValue);
 
 function configure(map: Record<string, unknown>) {
-  mockGet.mockImplementation((key: string) => (key in map ? map[key as keyof typeof map] : undefined));
+  mockGet.mockImplementation(((key: string) => (key in map ? map[key as keyof typeof map] : undefined)) as never);
 }
 
 describe('resolveInternalMcpScope', () => {
