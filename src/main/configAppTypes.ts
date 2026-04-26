@@ -155,6 +155,8 @@ export interface AppConfig {
   routerLastRetrainCount: number;
   /** Enable the internal MCP server that exposes IDE tools to Claude Code sessions */
   internalMcpEnabled: boolean;
+  /** Wave 48 Phase B — when to inject the Ouroboros MCP entry. Default 'task-gated'. */
+  internalMcpScope?: 'always' | 'task-gated' | 'never';
   /** Wave 3B feature flag — route PTY through PtyHost utility process */
   usePtyHost: boolean;
   /** Wave 3B feature flag — route extensions through ExtensionHost utility process */

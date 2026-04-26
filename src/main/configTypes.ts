@@ -223,7 +223,7 @@ export interface ContextScoringSettings {
   /** Enable LLM-based context reranking via Haiku subprocess. Default on. */
   rerankerEnabled?: boolean;
   /** Wave 31 Phase E — lean packet mode: drop project_structure, cap relevant_code to 6 files. */
-  packetMode?: 'full' | 'lean';
+  packetMode?: 'full' | 'lean' | 'auto';
   /** Wave 31 Phase D — use learned logistic classifier for context ranking instead of additive path. */
   learnedRanker?: boolean;
 }

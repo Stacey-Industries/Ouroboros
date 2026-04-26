@@ -270,7 +270,7 @@ export interface AppConfig {
     pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number };
     decisionLogging?: boolean;
     rerankerEnabled?: boolean;
-    packetMode?: 'full' | 'lean';
+    packetMode?: 'full' | 'lean' | 'auto';
   };
   /** Wave 33a Phase A — mobile client pairing + device registry. */
   mobileAccess?: {

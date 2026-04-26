@@ -20,6 +20,7 @@ import {
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
 import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
+import { tapGraphUsage } from './hooksGraphUsageTap';
 import {
   enrichFromPermissionRequest,
   handleConfigChange,
@@ -260,11 +261,16 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
   clearApprovalRulesForEndedSession(payload);
+  runHookTaps(payload);
+}
+
+function runHookTaps(payload: HookPayload): void {
   tapConflictMonitor(payload, sessionCwdMap);
   tapEditProvenance(payload);
   tapContextOutcomeObserver(payload);
   tapSubagentTracker(payload);
   tapPreToolResearch(payload);
+  tapGraphUsage(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -316,11 +322,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   flushPendingQueue(windows);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
-  tapConflictMonitor(payload, sessionCwdMap);
-  tapEditProvenance(payload);
-  tapContextOutcomeObserver(payload);
-  tapSubagentTracker(payload);
-  tapPreToolResearch(payload);
+  runHookTaps(payload);
 }
 
 export function getHooksAddress(): string | null {

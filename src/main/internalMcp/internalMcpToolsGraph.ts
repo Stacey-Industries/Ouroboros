@@ -23,8 +23,7 @@ import type { McpToolDefinition } from './internalMcpTypes';
 
 export const getArchitectureTool: McpToolDefinition = {
   name: 'get_architecture',
-  description:
-    'Get a high-level architectural overview: project name, languages, frameworks, module count, and cross-module dependency graph.',
+  description: 'High-level overview: project name, languages, modules, cross-module deps.',
   inputSchema: { type: 'object', properties: {} },
   async handler(_args, workspaceRoot) {
     const repoMap = await readRepoMap(workspaceRoot);
@@ -40,8 +39,7 @@ export const getArchitectureTool: McpToolDefinition = {
 
 export const getCodebaseContextTool: McpToolDefinition = {
   name: 'get_codebase_context',
-  description:
-    'Get a combined orientation snapshot: architecture overview + top modules with descriptions. Use at the start of a session to orient quickly.',
+  description: 'Architecture + top-modules snapshot. Call once to orient at session start.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -102,8 +100,7 @@ export const getCodebaseContextTool: McpToolDefinition = {
 
 export const searchSymbolsTool: McpToolDefinition = {
   name: 'search_symbols',
-  description:
-    'Search for exported functions, classes, interfaces, and types by name across the entire codebase. Returns symbol name, kind, signature, module, and file location.',
+  description: 'Find exported symbols by name. Returns kind, signature, module, location.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -144,8 +141,7 @@ export const searchSymbolsTool: McpToolDefinition = {
 
 export const getSymbolTool: McpToolDefinition = {
   name: 'get_symbol',
-  description:
-    'Get detailed information about a specific exported symbol: its full signature, which module it belongs to, and its file location.',
+  description: 'Detailed info for one exported symbol: signature, module, location.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -181,8 +177,7 @@ export const getSymbolTool: McpToolDefinition = {
 
 export const traceImportsTool: McpToolDefinition = {
   name: 'trace_imports',
-  description:
-    'Show the import dependency graph for a module — which modules it imports from and which modules import from it. Note: these are file-level import edges, not function-call edges.',
+  description: 'Module import graph: imports and imported_by. File-level edges, not call edges.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -221,8 +216,7 @@ export const traceImportsTool: McpToolDefinition = {
 
 export const detectChangesTool: McpToolDefinition = {
   name: 'detect_changes',
-  description:
-    'Show which modules contain uncommitted git changes and which exported symbols are in those files. Useful for understanding the blast radius of current work.',
+  description: 'Modules with uncommitted changes + their exported symbols. Use for blast-radius checks.',
   inputSchema: { type: 'object', properties: {} },
   async handler(_args, workspaceRoot) {
     const ctrl = getContextLayerController();

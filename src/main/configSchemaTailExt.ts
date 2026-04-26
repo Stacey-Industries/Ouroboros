@@ -167,7 +167,7 @@ export const tailSchemaExt = {
       decisionLogging: { type: 'boolean', default: true }, // Wave 24 Phase A
       rerankerEnabled: { type: 'boolean', default: false }, // Wave 24 Phase C — off by default
       /** Wave 31 Phase E — lean packet mode: drop project_structure, cap relevant_code to 6 files. */
-      packetMode: { type: 'string', enum: ['full', 'lean'], default: 'full' },
+      packetMode: { type: 'string', enum: ['full', 'lean', 'auto'], default: 'auto' },
       /** Wave 31 Phase D — learned ranker: use classifier score for top-N. Default false. */
       learnedRanker: { type: 'boolean', default: false },
     },
@@ -177,7 +177,7 @@ export const tailSchemaExt = {
       pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 },
       decisionLogging: true,
       rerankerEnabled: false,
-      packetMode: 'full',
+      packetMode: 'auto',
       learnedRanker: false,
     },
   },
