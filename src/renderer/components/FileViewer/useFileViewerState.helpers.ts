@@ -42,6 +42,7 @@ export interface ViewerUiState {
 export interface ViewerDerivedState {
   isClaudeMd: boolean;
   isMarkdown: boolean;
+  isHtml: boolean;
   hasDiff: boolean;
   diffBaseContent: string | null;
 }
@@ -155,6 +156,7 @@ function createViewerFrameState({
     collapsedFolds: folds.collapsedFolds,
     isClaudeMd: derived.isClaudeMd,
     isMarkdown: derived.isMarkdown,
+    isHtml: derived.isHtml,
     hasDiff: derived.hasDiff,
     diffBaseContent: derived.diffBaseContent,
     toggleFold: folds.toggleFold,

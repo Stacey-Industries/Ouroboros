@@ -75,6 +75,7 @@ export interface FileViewerState {
   collapsedFolds: Set<number>;
   isClaudeMd: boolean;
   isMarkdown: boolean;
+  isHtml: boolean;
   hasDiff: boolean;
   diffBaseContent: string | null;
   diffLines: DiffLineInfo[];
@@ -227,6 +228,7 @@ function useViewerDerivedState(
   return {
     isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath),
     isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath),
+    isHtml: filePath != null && /\.html?$/i.test(filePath),
     hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content,
     diffBaseContent,
   };
@@ -252,9 +254,18 @@ function useViewerData(
   showBlame: boolean,
 ): ViewerData {
   'use no memo';
-  const { highlightedHtml, highlightLang } = useHighlighting(input.filePath, input.content, ideThemeId);
+  const { highlightedHtml, highlightLang } = useHighlighting(
+    input.filePath,
+    input.content,
+    ideThemeId,
+  );
   const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
-  const diffBaseContent = useGitDiffBaseContent(input.projectRoot ?? null, input.filePath, input.content, diffLines);
+  const diffBaseContent = useGitDiffBaseContent(
+    input.projectRoot ?? null,
+    input.filePath,
+    input.content,
+    diffLines,
+  );
   const effectiveDiffLines = useEffectiveDiffLines(diffLines, diffBaseContent, input.content);
   const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
   const { foldableLines } = useFoldRanges(input.content);
@@ -264,6 +275,15 @@ function useViewerData(
     input.filePath ? getLanguage(input.filePath) : 'text',
   );
   const diffMap = useMemo(() => createDiffMap(effectiveDiffLines), [effectiveDiffLines]);
-  return { highlightedHtml, highlightLang, diffBaseContent, diffLines: effectiveDiffLines, diffMap, blameLines, foldableLines, scrollMetrics, outlineSymbols };
+  return {
+    highlightedHtml,
+    highlightLang,
+    diffBaseContent,
+    diffLines: effectiveDiffLines,
+    diffMap,
+    blameLines,
+    foldableLines,
+    scrollMetrics,
+    outlineSymbols,
+  };
 }
-

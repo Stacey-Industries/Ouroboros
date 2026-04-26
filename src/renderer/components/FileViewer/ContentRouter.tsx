@@ -50,6 +50,8 @@ export interface ContentRouterProps {
   showHistory: boolean;
   /** Is markdown file */
   isMarkdown: boolean;
+  /** Is HTML file — gates HTML preview in renderPreviewContent */
+  isHtml: boolean;
   /** Has diff */
   hasDiff: boolean;
   /** Original content for diff */
