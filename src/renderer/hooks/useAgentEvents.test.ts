@@ -160,6 +160,67 @@ describe('dispatchNewEventTypes module exports', () => {
   });
 });
 
+describe('AGENT_START on a restored session', () => {
+  const RESTORED_SESSION = {
+    ...BASE_SESSION,
+    id: 'sess-resumed',
+    status: 'complete' as const,
+    completedAt: 1500,
+    restored: true,
+  };
+
+  it('clears the restored flag when a persisted session resumes', () => {
+    const state: AgentState = { ...initialAgentState, sessions: [RESTORED_SESSION] };
+    const next = reducer(state, {
+      type: 'AGENT_START',
+      sessionId: 'sess-resumed',
+      taskLabel: 'Resumed thread',
+      timestamp: 2000,
+    });
+    expect(next.sessions[0].status).toBe('running');
+    expect(next.sessions[0].restored).toBe(false);
+    expect(next.sessions[0].completedAt).toBeUndefined();
+  });
+
+  it('does not affect restored flag on unrelated sessions', () => {
+    const otherRestored = { ...RESTORED_SESSION, id: 'sess-other' };
+    const state: AgentState = {
+      ...initialAgentState,
+      sessions: [RESTORED_SESSION, otherRestored],
+    };
+    const next = reducer(state, {
+      type: 'AGENT_START',
+      sessionId: 'sess-resumed',
+      taskLabel: 'Resumed thread',
+      timestamp: 2000,
+    });
+    const resumed = next.sessions.find((s) => s.id === 'sess-resumed');
+    const other = next.sessions.find((s) => s.id === 'sess-other');
+    expect(resumed?.restored).toBe(false);
+    expect(other?.restored).toBe(true);
+  });
+
+  it('post-resume status puts the session in the active bucket predicate', () => {
+    // Bucketing is by status, not by `restored`. Mirror useDerivedSessions's
+    // predicate to assert the resume → bucket transition end-to-end.
+    const isCurrent = (s: { status: string }) => s.status === 'running' || s.status === 'idle';
+    const isHistorical = (s: { status: string }) => s.status === 'complete' || s.status === 'error';
+
+    const state: AgentState = { ...initialAgentState, sessions: [RESTORED_SESSION] };
+    expect(state.sessions.filter(isCurrent)).toHaveLength(0);
+    expect(state.sessions.filter(isHistorical)).toHaveLength(1);
+
+    const next = reducer(state, {
+      type: 'AGENT_START',
+      sessionId: 'sess-resumed',
+      taskLabel: 'Resumed thread',
+      timestamp: 2000,
+    });
+    expect(next.sessions.filter(isCurrent)).toHaveLength(1);
+    expect(next.sessions.filter(isHistorical)).toHaveLength(0);
+  });
+});
+
 describe('vi mock placeholder', () => {
   it('is a valid test file recognized by vitest', () => {
     expect(vi).toBeDefined();

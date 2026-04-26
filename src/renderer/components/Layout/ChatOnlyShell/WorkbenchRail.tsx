@@ -22,12 +22,13 @@ export interface WorkbenchRailProps
     UseWorkbenchSessionsOptions,
     Omit<UseWorkbenchRecentChatsOptions, 'sessions' | 'attentionByThreadId'> {
   approvalRequests?: ApprovalRequest[];
-  onSelectSession?: (sessionId: string) => void;
-  onSelectRecentChat?: (threadId: string) => void;
-  onCreateSession?: () => void;
-  onCompareSession?: (sessionId: string) => void;
   canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
+  onCompareSession?: (sessionId: string) => void;
+  onCreateSession?: () => void;
+  onLaunchAgent?: () => void;
+  onSelectRecentChat?: (threadId: string) => void;
+  onSelectSession?: (sessionId: string) => void;
   title?: string;
 }
 
@@ -52,18 +53,49 @@ function countLabel(sessionCount: number, chatCount: number): string {
   return `${sessionLabel} · ${chatCount} chat${chatCount === 1 ? '' : 's'}`;
 }
 
+const RAIL_BTN_CLASS =
+  'rounded border border-stroke-default bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary';
+
+interface RailHeaderActionsProps {
+  onCreateSession?: () => void;
+  onLaunchAgent?: () => void;
+}
+
+function RailHeaderActions({
+  onCreateSession,
+  onLaunchAgent,
+}: RailHeaderActionsProps): React.ReactElement | null {
+  if (!onCreateSession && !onLaunchAgent) return null;
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      {onCreateSession && (
+        <button type="button" className={RAIL_BTN_CLASS} onClick={onCreateSession}>
+          New session
+        </button>
+      )}
+      {onLaunchAgent && (
+        <button type="button" className={RAIL_BTN_CLASS} onClick={onLaunchAgent}>
+          Launch agent
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface RailHeaderProps {
-  title: string;
-  sessionCount: number;
   chatCount: number;
   onCreateSession?: () => void;
+  onLaunchAgent?: () => void;
+  sessionCount: number;
+  title: string;
 }
 
 function RailHeader({
-  title,
-  sessionCount,
   chatCount,
   onCreateSession,
+  onLaunchAgent,
+  sessionCount,
+  title,
 }: RailHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-stroke-default px-3 py-3">
@@ -75,106 +107,171 @@ function RailHeader({
           {countLabel(sessionCount, chatCount)}
         </p>
       </div>
-      {onCreateSession && (
-        <button
-          type="button"
-          className="rounded border border-stroke-default bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
-          onClick={onCreateSession}
-        >
-          New
-        </button>
-      )}
+      <RailHeaderActions onCreateSession={onCreateSession} onLaunchAgent={onLaunchAgent} />
     </div>
   );
 }
 
 interface RailBodyProps {
-  sessionState: UseWorkbenchSessionsResult;
-  recentChats: UseWorkbenchRecentChatsResult['items'];
-  onSelectSession: (sessionId: string) => void;
-  onSelectRecentChat?: (threadId: string) => void;
-  onCompareSession?: (sessionId: string) => void;
-  canCompareSession?: (item: import('./useWorkbenchSessions').WorkbenchSessionItem) => boolean;
+  canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
+  onCompareSession?: (sessionId: string) => void;
+  onSelectRecentChat?: (threadId: string) => void;
+  onSelectSession: (sessionId: string) => void;
+  recentChats: UseWorkbenchRecentChatsResult['items'];
+  sessionState: UseWorkbenchSessionsResult;
 }
 
 function RailBody({
-  sessionState,
-  recentChats,
-  onSelectSession,
-  onSelectRecentChat,
-  onCompareSession,
   canCompareSession,
   compareSessionId,
+  onCompareSession,
+  onSelectRecentChat,
+  onSelectSession,
+  recentChats,
+  sessionState,
 }: RailBodyProps): React.ReactElement {
-  const totalSessionCount = sessionState.activeItems.length + sessionState.backgroundItems.length;
-  if (totalSessionCount === 0 && recentChats.length === 0)
+  const total = sessionState.activeItems.length + sessionState.backgroundItems.length;
+  if (total === 0 && recentChats.length === 0)
     return <EmptyState isLoading={sessionState.isLoading} />;
   return (
     <WorkbenchRailSections
       activeSessions={sessionState.activeItems}
       backgroundSessions={sessionState.backgroundItems}
-      recentChats={recentChats}
-      onSelectSession={onSelectSession}
-      onSelectRecentChat={onSelectRecentChat}
-      onCompareSession={onCompareSession}
       canCompareSession={canCompareSession}
       compareSessionId={compareSessionId}
+      onCompareSession={onCompareSession}
+      onSelectRecentChat={onSelectRecentChat}
+      onSelectSession={onSelectSession}
+      recentChats={recentChats}
     />
   );
 }
 
 interface RailStateResult {
-  sessionState: UseWorkbenchSessionsResult;
-  recentChats: UseWorkbenchRecentChatsResult['items'];
-  totalSessionCount: number;
   handleSelectSession: (sessionId: string) => void;
+  recentChats: UseWorkbenchRecentChatsResult['items'];
+  sessionState: UseWorkbenchSessionsResult;
+  totalSessionCount: number;
 }
 
-type RailOptions = UseWorkbenchSessionsOptions & Omit<UseWorkbenchRecentChatsOptions, 'sessions' | 'attentionByThreadId'>;
+type RailOptions = UseWorkbenchSessionsOptions &
+  Omit<UseWorkbenchRecentChatsOptions, 'sessions' | 'attentionByThreadId'>;
 
-function useRailState(options: RailOptions, approvalRequests: ApprovalRequest[] | undefined, onSelectSession: ((id: string) => void) | undefined): RailStateResult {
+function useRailState(
+  options: RailOptions,
+  approvalRequests: ApprovalRequest[] | undefined,
+  onSelectSession: ((id: string) => void) | undefined,
+): RailStateResult {
   const approvalState = useApprovalContext();
   const resolvedApprovals = approvalRequests ?? approvalState.requests;
   const attention = useWorkbenchAttention({
-    sessions: options.sessions,
-    threads: options.threads,
     activeSessionId: options.activeSessionId,
     activeThreadId: options.activeThreadId,
     approvalRequests: resolvedApprovals,
+    sessions: options.sessions,
+    threads: options.threads,
   });
-  const sessionState = useWorkbenchSessions({ ...options, attentionBySessionId: attention.sessionAttentionById });
+  const sessionState = useWorkbenchSessions({
+    ...options,
+    attentionBySessionId: attention.sessionAttentionById,
+  });
   const recentChatsState = useWorkbenchRecentChats({
     ...options,
-    sessions: sessionState.items.map((item) => item.rawSession),
     attentionByThreadId: attention.chatAttentionById,
+    sessions: sessionState.items.map((item) => item.rawSession),
   });
   const handleSelectSession = useCallback(
     (sessionId: string) => {
-      if (onSelectSession) { onSelectSession(sessionId); return; }
+      if (onSelectSession) {
+        onSelectSession(sessionId);
+        return;
+      }
       window.dispatchEvent(new CustomEvent(SESSION_SWITCH_EVENT, { detail: { sessionId } }));
     },
     [onSelectSession],
   );
   return {
-    sessionState,
-    recentChats: recentChatsState.items,
-    totalSessionCount: sessionState.activeItems.length + sessionState.backgroundItems.length,
     handleSelectSession,
+    recentChats: recentChatsState.items,
+    sessionState,
+    totalSessionCount: sessionState.activeItems.length + sessionState.backgroundItems.length,
   };
 }
 
-export function WorkbenchRail({ onSelectSession, onSelectRecentChat, onCreateSession, onCompareSession, canCompareSession, compareSessionId, title = 'Workbench', approvalRequests, ...options }: WorkbenchRailProps): React.ReactElement {
-  const { sessionState, recentChats, totalSessionCount, handleSelectSession } = useRailState(options, approvalRequests, onSelectSession);
+interface RailViewProps extends RailStateResult {
+  canCompareSession?: (item: WorkbenchSessionItem) => boolean;
+  compareSessionId?: string | null;
+  onCompareSession?: (sessionId: string) => void;
+  onCreateSession?: () => void;
+  onLaunchAgent?: () => void;
+  onSelectRecentChat?: (threadId: string) => void;
+  title: string;
+}
+
+function RailView({
+  canCompareSession,
+  compareSessionId,
+  handleSelectSession,
+  onCompareSession,
+  onCreateSession,
+  onLaunchAgent,
+  onSelectRecentChat,
+  recentChats,
+  sessionState,
+  title,
+  totalSessionCount,
+}: RailViewProps): React.ReactElement {
   return (
-    <aside className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-stroke-default bg-surface-panel/95" data-testid="workbench-rail">
-      <RailHeader title={title} sessionCount={totalSessionCount} chatCount={recentChats.length} onCreateSession={onCreateSession} />
+    <aside
+      className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-stroke-default bg-surface-panel/95"
+      data-testid="workbench-rail"
+    >
+      <RailHeader
+        chatCount={recentChats.length}
+        onCreateSession={onCreateSession}
+        onLaunchAgent={onLaunchAgent}
+        sessionCount={totalSessionCount}
+        title={title}
+      />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <RailBody sessionState={sessionState} recentChats={recentChats} onSelectSession={handleSelectSession}
-          onSelectRecentChat={onSelectRecentChat} onCompareSession={onCompareSession}
-          canCompareSession={canCompareSession} compareSessionId={compareSessionId}
+        <RailBody
+          canCompareSession={canCompareSession}
+          compareSessionId={compareSessionId}
+          onCompareSession={onCompareSession}
+          onSelectRecentChat={onSelectRecentChat}
+          onSelectSession={handleSelectSession}
+          recentChats={recentChats}
+          sessionState={sessionState}
         />
       </div>
     </aside>
+  );
+}
+
+export function WorkbenchRail({
+  approvalRequests,
+  canCompareSession,
+  compareSessionId,
+  onCompareSession,
+  onCreateSession,
+  onLaunchAgent,
+  onSelectRecentChat,
+  onSelectSession,
+  title = 'Workbench',
+  ...options
+}: WorkbenchRailProps): React.ReactElement {
+  const state = useRailState(options, approvalRequests, onSelectSession);
+  return (
+    <RailView
+      {...state}
+      canCompareSession={canCompareSession}
+      compareSessionId={compareSessionId}
+      onCompareSession={onCompareSession}
+      onCreateSession={onCreateSession}
+      onLaunchAgent={onLaunchAgent}
+      onSelectRecentChat={onSelectRecentChat}
+      title={title}
+    />
   );
 }

@@ -25,11 +25,7 @@ const rootStyle: React.CSSProperties = {
   backgroundColor: 'transparent',
 };
 
-const bodyStyle: React.CSSProperties = {
-  display: 'flex',
-  flex: 1,
-  minHeight: 0,
-};
+const bodyStyle: React.CSSProperties = { display: 'flex', flex: 1, minHeight: 0 };
 
 interface FileViewerChromeProps extends FileViewerProps {
   s: FileViewerState;
@@ -154,12 +150,13 @@ function ChromeHeader({
     <>
       {isDirtyOnDisk && <DirtyBanner onReload={onReload} />}
       <FileViewerToolbar {...toolbarProps} />
-      {(s.hasDiff || s.isMarkdown) && (
+      {(s.hasDiff || s.isMarkdown || s.isHtml) && (
         <ViewModeBar
           viewMode={s.viewMode}
           setViewMode={s.setViewMode}
           hasDiff={s.hasDiff}
           isMarkdown={s.isMarkdown}
+          isHtml={s.isHtml}
         />
       )}
     </>
@@ -177,23 +174,60 @@ interface ChromeBodyProps {
   onDirtyChange?: (dirty: boolean) => void;
   codeViewProps: Omit<CodeViewProps, 'scrollRef' | 'codeRef'>;
   s: FileViewerState;
-  /** Forwarded from useViewportBreakpoint() — gates mobile fallback */
   viewport: ReturnType<typeof useViewportBreakpoint>;
-  /** Forwarded from useMobilePrimaryFlag() — gates mobile fallback */
   mobilePrimaryFlag: boolean;
 }
 
-function buildContentRouterProps(p: ChromeBodyProps) {
-  const { filePath, content, projectRoot, originalContent, diffBaseContent, onSave, onContentChange, onDirtyChange, codeViewProps, s, viewport, mobilePrimaryFlag } = p;
+function buildRouterStateProps(s: FileViewerState) {
   return {
-    viewMode: s.viewMode, editMode: s.editMode, isClaudeMd: s.isClaudeMd,
-    claudeMdEnhanced: s.claudeMdEnhanced, filePath, content, ideThemeId: s.ideThemeId,
-    projectRoot, onSave, onContentChange, onDirtyChange, showHistory: s.showHistory,
-    isMarkdown: s.isMarkdown, hasDiff: s.hasDiff, originalContent, diffBaseContent,
-    conflictBlocks: s.conflictBlocks, handleConflictResolved: s.handleConflictResolved,
-    codeViewProps, scrollRef: s.scrollRef, codeRef: s.codeRef, wordWrap: s.wordWrap,
-    showMinimap: s.showMinimap, showBlame: s.showBlame, formatOnSave: s.formatOnSave,
-    viewport, mobilePrimaryFlag,
+    viewMode: s.viewMode,
+    editMode: s.editMode,
+    isClaudeMd: s.isClaudeMd,
+    claudeMdEnhanced: s.claudeMdEnhanced,
+    ideThemeId: s.ideThemeId,
+    showHistory: s.showHistory,
+    isMarkdown: s.isMarkdown,
+    isHtml: s.isHtml,
+    hasDiff: s.hasDiff,
+    conflictBlocks: s.conflictBlocks,
+    handleConflictResolved: s.handleConflictResolved,
+    scrollRef: s.scrollRef,
+    codeRef: s.codeRef,
+    wordWrap: s.wordWrap,
+    showMinimap: s.showMinimap,
+    showBlame: s.showBlame,
+    formatOnSave: s.formatOnSave,
+  };
+}
+
+function buildContentRouterProps(p: ChromeBodyProps) {
+  const {
+    filePath,
+    content,
+    projectRoot,
+    originalContent,
+    diffBaseContent,
+    onSave,
+    onContentChange,
+    onDirtyChange,
+    codeViewProps,
+    s,
+    viewport,
+    mobilePrimaryFlag,
+  } = p;
+  return {
+    ...buildRouterStateProps(s),
+    filePath,
+    content,
+    projectRoot,
+    onSave,
+    onContentChange,
+    onDirtyChange,
+    originalContent,
+    diffBaseContent,
+    codeViewProps,
+    viewport,
+    mobilePrimaryFlag,
   };
 }
 
@@ -225,41 +259,59 @@ function StatusFooter({
   );
 }
 
-function useChromeSetup(
-  s: FileViewerState,
-  onSave: FileViewerChromeProps['onSave'],
-) {
+function useChromeSetup(p: FileViewerChromeProps) {
   const viewport = useViewportBreakpoint();
   const mobilePrimaryFlag = useMobilePrimaryFlag();
-  const { setEditMode } = s;
+  const { setEditMode } = p.s;
   const handleEditorSave = useCallback(
-    (c: string) => { onSave?.(c); setEditMode(false); },
-    [onSave, setEditMode],
+    (c: string) => {
+      p.onSave?.(c);
+      setEditMode(false);
+    },
+    [p.onSave, setEditMode],
   );
-  return { viewport, mobilePrimaryFlag, handleEditorSave };
+  const codeViewProps = buildCodeViewProps({
+    s: p.s,
+    lines: p.lines,
+    lineCount: p.lineCount,
+    gutterWidth: p.gutterWidth,
+    shikiLines: p.shikiLines,
+    rows: p.rows,
+  });
+  return { viewport, mobilePrimaryFlag, handleEditorSave, codeViewProps };
 }
 
-export const FileViewerChrome = memo(function FileViewerChrome({
-  filePath, content, projectRoot, originalContent,
-  onSave, onContentChange, onCancelEdit,
-  isDirtyOnDisk, onReload, isDirty, s,
-  lines, lineCount, gutterWidth, shikiLines, rows,
-}: FileViewerChromeProps): React.ReactElement {
-  const { viewport, mobilePrimaryFlag, handleEditorSave } = useChromeSetup(s, onSave);
-  const codeViewProps = buildCodeViewProps({ s, lines, lineCount, gutterWidth, shikiLines, rows });
+export const FileViewerChrome = memo(function FileViewerChrome(
+  p: FileViewerChromeProps,
+): React.ReactElement {
+  const { viewport, mobilePrimaryFlag, handleEditorSave, codeViewProps } = useChromeSetup(p);
   return (
-    <div ref={s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
+    <div ref={p.s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
       <ChromeHeader
-        projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload}
-        currentContent={content} isDirty={isDirty} onSave={onSave} onCancelEdit={onCancelEdit} s={s}
+        projectRoot={p.projectRoot}
+        isDirtyOnDisk={p.isDirtyOnDisk}
+        onReload={p.onReload}
+        currentContent={p.content}
+        isDirty={p.isDirty}
+        onSave={p.onSave}
+        onCancelEdit={p.onCancelEdit}
+        s={p.s}
       />
       <ChromeBody
-        filePath={filePath} content={content} projectRoot={projectRoot}
-        originalContent={originalContent} diffBaseContent={s.diffBaseContent}
-        onSave={handleEditorSave} onContentChange={onContentChange} onDirtyChange={undefined}
-        codeViewProps={codeViewProps} s={s} viewport={viewport} mobilePrimaryFlag={mobilePrimaryFlag}
+        filePath={p.filePath}
+        content={p.content}
+        projectRoot={p.projectRoot}
+        originalContent={p.originalContent}
+        diffBaseContent={p.s.diffBaseContent}
+        onSave={handleEditorSave}
+        onContentChange={p.onContentChange}
+        onDirtyChange={undefined}
+        codeViewProps={codeViewProps}
+        s={p.s}
+        viewport={viewport}
+        mobilePrimaryFlag={mobilePrimaryFlag}
       />
-      {filePath && <StatusFooter filePath={filePath} lineCount={lineCount} s={s} />}
+      {p.filePath && <StatusFooter filePath={p.filePath} lineCount={p.lineCount} s={p.s} />}
     </div>
   );
 });

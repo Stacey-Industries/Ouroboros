@@ -82,8 +82,18 @@ function useDerivedSessions(sessions: AgentSession[]): {
     () => sessions.filter((s) => s.status === 'running').length,
     [sessions],
   );
-  const currentSessions = useMemo(() => sessions.filter((s) => !s.restored), [sessions]);
-  const historicalSessions = useMemo(() => sessions.filter((s) => s.restored === true), [sessions]);
+  // Bucket by activity status, not by origin. A session that was loaded from
+  // disk and then resumed (status flips back to 'running') belongs in the
+  // active list, not the previous-sessions dropdown. The `restored` flag
+  // remains an origin marker for cost-dedup and UI labelling.
+  const currentSessions = useMemo(
+    () => sessions.filter((s) => s.status === 'running' || s.status === 'idle'),
+    [sessions],
+  );
+  const historicalSessions = useMemo(
+    () => sessions.filter((s) => s.status === 'complete' || s.status === 'error'),
+    [sessions],
+  );
   return { activeCount, currentSessions, historicalSessions };
 }
 

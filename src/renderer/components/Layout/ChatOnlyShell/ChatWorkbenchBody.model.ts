@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
+import { OPEN_MULTI_SESSION_EVENT } from '../../../hooks/appEventNames';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
@@ -36,6 +37,7 @@ export interface WorkbenchContextState {
 
 export interface WorkbenchHandlers {
   handleCreateSession: () => Promise<void>;
+  handleLaunchAgent: () => void;
   handleSelectRecentChat: (threadId: string) => void;
   handleSelectSession: (sessionId: string) => void;
 }
@@ -112,6 +114,9 @@ export function useWorkbenchHandlers(
     if (!session) return;
     await activation.activateSession(session.id);
   }, [activation]);
+  const handleLaunchAgent = React.useCallback((): void => {
+    window.dispatchEvent(new CustomEvent(OPEN_MULTI_SESSION_EVENT));
+  }, []);
   const handleSelectSession = React.useCallback(
     (sessionId: string) => {
       void activation.activateSession(sessionId);
@@ -125,7 +130,7 @@ export function useWorkbenchHandlers(
     [selectThread],
   );
 
-  return { handleCreateSession, handleSelectRecentChat, handleSelectSession };
+  return { handleCreateSession, handleLaunchAgent, handleSelectRecentChat, handleSelectSession };
 }
 
 export function useActiveApprovalSessionIds(

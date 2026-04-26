@@ -1,10 +1,18 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import type {
   AgentChatThreadRecord,
   ApprovalRequest,
   SessionRecord,
 } from '../../../types/electron';
+import {
+  type AttentionCacheEntry,
+  type AttentionCaches,
+  buildApprovalCounts,
+  buildSessionThreadIndex,
+  buildTargetMap,
+  pruneCacheKeys,
+} from './useWorkbenchAttention.helpers';
 
 export type WorkbenchAttentionKind =
   | 'none'
@@ -22,26 +30,6 @@ export interface WorkbenchAttentionState {
   isSticky: boolean;
 }
 
-interface SessionThreadIndex {
-  activeThread: AgentChatThreadRecord | null;
-  byConversationId: Map<string, AgentChatThreadRecord>;
-  bySessionId: Map<string, AgentChatThreadRecord[]>;
-  sessionIds: Set<string>;
-}
-
-interface AttentionTarget {
-  cacheKey: string;
-  isActive: boolean;
-  approvalCount: number;
-  thread: AgentChatThreadRecord | null;
-}
-
-interface AttentionCacheEntry {
-  status: AgentChatThreadRecord['status'] | null;
-  threadKey: string | null;
-  unseenThreadKey: string | null;
-}
-
 export interface UseWorkbenchAttentionOptions {
   sessions?: SessionRecord[];
   threads?: AgentChatThreadRecord[];
@@ -53,72 +41,12 @@ export interface UseWorkbenchAttentionOptions {
 export interface UseWorkbenchAttentionResult {
   sessionAttentionById: Record<string, WorkbenchAttentionState>;
   chatAttentionById: Record<string, WorkbenchAttentionState>;
-}
-
-const NONE_ATTENTION: WorkbenchAttentionState = {
-  kind: 'none',
-  rank: 0,
-  label: null,
-  tone: 'neutral',
-  isSticky: false,
-};
-
-interface AttentionStateArgs {
-  kind: WorkbenchAttentionKind;
-  tone: WorkbenchAttentionState['tone'];
-  label: string | null;
-  rank: number;
-  isSticky: boolean;
-}
-
-function attentionState(args: AttentionStateArgs): WorkbenchAttentionState {
-  return {
-    kind: args.kind,
-    tone: args.tone,
-    label: args.label,
-    rank: args.rank,
-    isSticky: args.isSticky,
-  };
-}
-
-function threadUpdatedAt(thread: AgentChatThreadRecord | null): number {
-  return thread?.updatedAt ?? 0;
-}
-
-function buildSessionThreadIndex(
-  threads: AgentChatThreadRecord[],
-  activeThreadId: string | null,
-): SessionThreadIndex {
-  const byConversationId = new Map<string, AgentChatThreadRecord>();
-  const bySessionId = new Map<string, AgentChatThreadRecord[]>();
-  const activeThread = activeThreadId
-    ? (threads.find((thread) => thread.id === activeThreadId) ?? null)
-    : null;
-
-  for (const thread of threads) {
-    byConversationId.set(thread.id, thread);
-    const sessionId = thread.latestOrchestration?.sessionId;
-    if (!sessionId) continue;
-    const list = bySessionId.get(sessionId) ?? [];
-    list.push(thread);
-    bySessionId.set(sessionId, list);
-  }
-
-  for (const list of bySessionId.values()) {
-    list.sort((left, right) => threadUpdatedAt(right) - threadUpdatedAt(left));
-  }
-
-  return {
-    activeThread,
-    byConversationId,
-    bySessionId,
-    sessionIds: new Set(bySessionId.keys()),
-  };
+  snoozeSession: (sessionId: string, durationMs: number) => void;
 }
 
 export function resolveSessionThread(
   session: SessionRecord,
-  index: SessionThreadIndex,
+  index: ReturnType<typeof buildSessionThreadIndex>,
   activeSessionId: string | null,
 ): AgentChatThreadRecord | null {
   if (session.conversationThreadId) {
@@ -140,140 +68,130 @@ export function resolveThreadSessionId(
   thread: AgentChatThreadRecord,
   sessions: SessionRecord[],
 ): string | null {
-  const conversationOwner = sessions.find((session) => session.conversationThreadId === thread.id);
-  if (conversationOwner) return conversationOwner.id;
+  const owner = sessions.find((s) => s.conversationThreadId === thread.id);
+  if (owner) return owner.id;
   const sessionId = thread.latestOrchestration?.sessionId;
-  return sessions.some((session) => session.id === sessionId) ? (sessionId ?? null) : null;
+  return sessions.some((s) => s.id === sessionId) ? (sessionId ?? null) : null;
 }
 
-function buildApprovalCounts(approvals: ApprovalRequest[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const request of approvals) {
-    counts.set(request.sessionId, (counts.get(request.sessionId) ?? 0) + 1);
-  }
-  return counts;
+interface SessionTargetsArgs {
+  sessions: SessionRecord[];
+  activeSessionId: string | null;
+  approvalCounts: Map<string, number>;
+  threads: AgentChatThreadRecord[];
+  activeThreadId: string | null;
 }
 
-function isBusyStatus(status: AgentChatThreadRecord['status'] | null | undefined): boolean {
-  return status === 'submitting' || status === 'running' || status === 'verifying';
-}
-
-function isCompletedStatus(status: AgentChatThreadRecord['status'] | null | undefined): boolean {
-  return status === 'complete' || status === 'cancelled';
-}
-
-function toThreadKey(thread: AgentChatThreadRecord | null): string | null {
-  return thread ? `${thread.id}:${thread.updatedAt}` : null;
-}
-
-function deriveAttention(target: AttentionTarget, hasUnseenCompletion: boolean): WorkbenchAttentionState {
-  const status = target.thread?.status ?? null;
-  if (target.approvalCount > 0) {
-    const label = target.approvalCount === 1 ? 'Approval' : `${target.approvalCount} approvals`;
-    return attentionState({ kind: 'approval', tone: 'warning', label, rank: 5, isSticky: true });
-  }
-  if (status === 'failed')
-    return attentionState({ kind: 'failed', tone: 'error', label: 'Failure', rank: 4, isSticky: true });
-  if (status === 'needs_review')
-    return attentionState({ kind: 'review', tone: 'warning', label: 'Review', rank: 3, isSticky: true });
-  if (hasUnseenCompletion)
-    return attentionState({ kind: 'completed-unseen', tone: 'success', label: 'Completed', rank: 2, isSticky: true });
-  if (isBusyStatus(status))
-    return attentionState({ kind: 'live', tone: 'accent', label: 'Live', rank: 1, isSticky: false });
-  return NONE_ATTENTION;
-}
-
-function isTerminalStatus(status: AgentChatThreadRecord['status'] | null): boolean {
-  return status === 'failed' || status === 'needs_review';
-}
-
-function didJustComplete(
-  previous: AttentionCacheEntry | undefined,
-  currentStatus: AgentChatThreadRecord['status'] | null,
-): boolean {
-  return isBusyStatus(previous?.status) && isCompletedStatus(currentStatus);
-}
-
-function resolveUnseenThreadKey(
-  previous: AttentionCacheEntry | undefined,
-  target: AttentionTarget,
-  currentStatus: AgentChatThreadRecord['status'] | null,
-  currentThreadKey: string | null,
-): string | null {
-  if (!currentThreadKey || target.isActive || isBusyStatus(currentStatus)) return null;
-  if (isTerminalStatus(currentStatus)) return null;
-  if (!target.isActive && didJustComplete(previous, currentStatus)) return currentThreadKey;
-  return previous?.unseenThreadKey === currentThreadKey ? previous.unseenThreadKey : null;
-}
-
-function updateCacheEntry(
-  previous: AttentionCacheEntry | undefined,
-  target: AttentionTarget,
-): AttentionCacheEntry {
-  const currentStatus = target.thread?.status ?? null;
-  const currentThreadKey = toThreadKey(target.thread);
-  const unseenThreadKey = resolveUnseenThreadKey(previous, target, currentStatus, currentThreadKey);
-  return { status: currentStatus, threadKey: currentThreadKey, unseenThreadKey };
-}
-
-function buildTargetMap(
-  targets: AttentionTarget[],
-  cache: Map<string, AttentionCacheEntry>,
-): Record<string, WorkbenchAttentionState> {
-  const result: Record<string, WorkbenchAttentionState> = {};
-  for (const target of targets) {
-    const nextEntry = updateCacheEntry(cache.get(target.cacheKey), target);
-    cache.set(target.cacheKey, nextEntry);
-    result[target.cacheKey] = deriveAttention(
-      target,
-      nextEntry.unseenThreadKey === nextEntry.threadKey,
-    );
-  }
-  return result;
-}
-
-function pruneCacheKeys(cache: Map<string, AttentionCacheEntry>, keys: string[]): void {
-  const allowed = new Set(keys);
-  for (const key of [...cache.keys()]) {
-    if (!allowed.has(key)) cache.delete(key);
-  }
-}
-
-export function useWorkbenchAttention(options: UseWorkbenchAttentionOptions = {}): UseWorkbenchAttentionResult {
-  const sessionCacheRef = useRef(new Map<string, AttentionCacheEntry>());
-  const chatCacheRef = useRef(new Map<string, AttentionCacheEntry>());
-
-  return useMemo(() => {
-    const sessions = options.sessions ?? [];
-    const threads = options.threads ?? [];
-    const activeSessionId = options.activeSessionId ?? null;
-    const activeThreadId = options.activeThreadId ?? null;
-    const approvalRequests = options.approvalRequests ?? [];
-    const approvalCounts = buildApprovalCounts(approvalRequests);
-    const index = buildSessionThreadIndex(threads, activeThreadId);
-    const sessionTargets = sessions.map((session) => ({
+function buildSessionTargets(args: SessionTargetsArgs) {
+  const index = buildSessionThreadIndex(args.threads, args.activeThreadId);
+  return {
+    index,
+    sessionTargets: args.sessions.map((session) => ({
       cacheKey: session.id,
-      isActive: session.id === activeSessionId,
-      approvalCount: approvalCounts.get(session.id) ?? 0,
-      thread: resolveSessionThread(session, index, activeSessionId),
-    }));
-    const chatTargets = threads.filter((thread) => !thread.deletedAt).map((thread) => ({
+      isActive: session.id === args.activeSessionId,
+      approvalCount: args.approvalCounts.get(session.id) ?? 0,
+      thread: resolveSessionThread(session, index, args.activeSessionId),
+    })),
+  };
+}
+
+function buildChatTargets(
+  threads: AgentChatThreadRecord[],
+  sessions: SessionRecord[],
+  activeThreadId: string | null,
+  approvalCounts: Map<string, number>,
+) {
+  return threads
+    .filter((t) => !t.deletedAt)
+    .map((thread) => ({
       cacheKey: thread.id,
       isActive: thread.id === activeThreadId,
       approvalCount: approvalCounts.get(resolveThreadSessionId(thread, sessions) ?? '') ?? 0,
       thread,
     }));
-    pruneCacheKeys(sessionCacheRef.current, sessionTargets.map((target) => target.cacheKey));
-    pruneCacheKeys(chatCacheRef.current, chatTargets.map((target) => target.cacheKey));
-    return {
-      sessionAttentionById: buildTargetMap(sessionTargets, sessionCacheRef.current),
-      chatAttentionById: buildTargetMap(chatTargets, chatCacheRef.current),
-    };
-  }, [
-    options.activeSessionId,
-    options.activeThreadId,
-    options.approvalRequests,
-    options.sessions,
-    options.threads,
-  ]);
+}
+
+interface ComputeMapsArgs {
+  sessions: SessionRecord[];
+  threads: AgentChatThreadRecord[];
+  activeSessionId: string | null;
+  activeThreadId: string | null;
+  approvalRequests: ApprovalRequest[];
+  caches: AttentionCaches;
+}
+
+function buildAttentionMaps(
+  sessionTargets: ReturnType<typeof buildSessionTargets>['sessionTargets'],
+  chatTargets: ReturnType<typeof buildChatTargets>,
+  caches: AttentionCaches,
+  now: number,
+): Pick<UseWorkbenchAttentionResult, 'sessionAttentionById' | 'chatAttentionById'> {
+  pruneCacheKeys(
+    caches.sessionCache,
+    sessionTargets.map((t) => t.cacheKey),
+  );
+  pruneCacheKeys(
+    caches.chatCache,
+    chatTargets.map((t) => t.cacheKey),
+  );
+  return {
+    sessionAttentionById: buildTargetMap(
+      sessionTargets,
+      caches.sessionCache,
+      caches.snoozeMap,
+      now,
+    ),
+    chatAttentionById: buildTargetMap(chatTargets, caches.chatCache, caches.snoozeMap, now),
+  };
+}
+
+function computeMaps(
+  args: ComputeMapsArgs,
+): Pick<UseWorkbenchAttentionResult, 'sessionAttentionById' | 'chatAttentionById'> {
+  const approvalCounts = buildApprovalCounts(args.approvalRequests);
+  const { sessionTargets } = buildSessionTargets({
+    sessions: args.sessions,
+    activeSessionId: args.activeSessionId,
+    approvalCounts,
+    threads: args.threads,
+    activeThreadId: args.activeThreadId,
+  });
+  const chatTargets = buildChatTargets(
+    args.threads,
+    args.sessions,
+    args.activeThreadId,
+    approvalCounts,
+  );
+  return buildAttentionMaps(sessionTargets, chatTargets, args.caches, Date.now());
+}
+
+export function useWorkbenchAttention(
+  options: UseWorkbenchAttentionOptions = {},
+): UseWorkbenchAttentionResult {
+  const cachesRef = useRef<AttentionCaches>({
+    sessionCache: new Map<string, AttentionCacheEntry>(),
+    chatCache: new Map<string, AttentionCacheEntry>(),
+    snoozeMap: new Map<string, number>(),
+  });
+
+  const snoozeSession = useCallback((sessionId: string, durationMs: number): void => {
+    cachesRef.current.snoozeMap.set(sessionId, Date.now() + durationMs);
+  }, []);
+
+  const { sessions, threads, activeSessionId, activeThreadId, approvalRequests } = options;
+
+  const maps = useMemo(
+    () =>
+      computeMaps({
+        sessions: sessions ?? [],
+        threads: threads ?? [],
+        activeSessionId: activeSessionId ?? null,
+        activeThreadId: activeThreadId ?? null,
+        approvalRequests: approvalRequests ?? [],
+        caches: cachesRef.current,
+      }),
+    [sessions, threads, activeSessionId, activeThreadId, approvalRequests],
+  );
+
+  return { ...maps, snoozeSession };
 }

@@ -15,6 +15,7 @@ import {
   OPEN_AWESOME_REF_EVENT,
   OPEN_COMPARE_PROVIDERS_EVENT,
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+  OPEN_MULTI_SESSION_EVENT,
   OPEN_USAGE_DASHBOARD_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
 } from './appEventNames';
@@ -134,7 +135,7 @@ export function useMultiSessionCommand(registerCommand: (cmd: Command) => void):
       category: 'terminal',
       icon: '\u2B58',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-multi-session'));
+        window.dispatchEvent(new CustomEvent(OPEN_MULTI_SESSION_EVENT));
       },
     });
   }, [registerCommand]);

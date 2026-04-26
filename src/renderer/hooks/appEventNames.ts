@@ -48,3 +48,4 @@ export const CYCLE_CHAT_SIDEBAR_MODE_EVENT = 'agent-ide:cycle-chat-sidebar-mode'
 // Wave 44 Phase C — chat-only modal overlays
 export const OPEN_SETTINGS_EVENT = 'agent-ide:open-settings-modal';
 export const TOGGLE_SHORTCUT_CHEATSHEET_EVENT = 'agent-ide:toggle-shortcut-cheatsheet';
+export const OPEN_MULTI_SESSION_EVENT = 'agent-ide:open-multi-session';

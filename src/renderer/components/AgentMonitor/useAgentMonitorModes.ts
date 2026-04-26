@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { OPEN_MULTI_SESSION_EVENT } from '../../hooks/appEventNames';
+
 export interface AgentMonitorModes {
   compareMode: boolean;
   compareSessionIds: [string | null, string | null];
@@ -28,8 +30,8 @@ function useMultiSessionDOMEvent(
       setCompareMode(false);
       setCostMode(false);
     };
-    window.addEventListener('agent-ide:open-multi-session', onOpenMultiSession);
-    return () => window.removeEventListener('agent-ide:open-multi-session', onOpenMultiSession);
+    window.addEventListener(OPEN_MULTI_SESSION_EVENT, onOpenMultiSession);
+    return () => window.removeEventListener(OPEN_MULTI_SESSION_EVENT, onOpenMultiSession);
   }, [setMultiSessionMode, setCompareMode, setCostMode]);
 }
 
@@ -37,7 +39,10 @@ function useModeToggleHandlers(
   setCompareMode: React.Dispatch<React.SetStateAction<boolean>>,
   setCostMode: React.Dispatch<React.SetStateAction<boolean>>,
   setMultiSessionMode: React.Dispatch<React.SetStateAction<'off' | 'launcher' | 'monitor'>>,
-): Pick<AgentMonitorModes, 'handleToggleCompare' | 'handleToggleCost' | 'handleToggleMultiSession'> {
+): Pick<
+  AgentMonitorModes,
+  'handleToggleCompare' | 'handleToggleCost' | 'handleToggleMultiSession'
+> {
   return {
     handleToggleCompare: useCallback(() => {
       setCompareMode((value) => !value);
@@ -62,10 +67,13 @@ function useMultiSessionHandlers(
   setMultiBatchLabels: React.Dispatch<React.SetStateAction<string[]>>,
 ): Pick<AgentMonitorModes, 'handleMultiSessionClose' | 'handleMultiSessionLaunched'> {
   return {
-    handleMultiSessionLaunched: useCallback((labels: string[]) => {
-      setMultiBatchLabels(labels);
-      setMultiSessionMode('monitor');
-    }, [setMultiBatchLabels, setMultiSessionMode]),
+    handleMultiSessionLaunched: useCallback(
+      (labels: string[]) => {
+        setMultiBatchLabels(labels);
+        setMultiSessionMode('monitor');
+      },
+      [setMultiBatchLabels, setMultiSessionMode],
+    ),
     handleMultiSessionClose: useCallback(() => {
       setMultiSessionMode('off');
       setMultiBatchLabels([]);

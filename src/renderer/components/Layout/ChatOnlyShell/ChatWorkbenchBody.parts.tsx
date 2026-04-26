@@ -135,6 +135,7 @@ export function WorkbenchRailSurface({
       onCreateSession={() => {
         void handlers.handleCreateSession();
       }}
+      onLaunchAgent={handlers.handleLaunchAgent}
       onSelectSession={handlers.handleSelectSession}
       onSelectRecentChat={handlers.handleSelectRecentChat}
       onCompareSession={compare.openCompare}

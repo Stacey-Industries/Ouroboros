@@ -5,6 +5,7 @@ export interface ViewModeBarProps {
   setViewMode: (mode: 'code' | 'diff' | 'preview') => void;
   hasDiff: boolean;
   isMarkdown: boolean;
+  isHtml: boolean;
 }
 
 const containerStyle: React.CSSProperties = {
@@ -34,31 +35,41 @@ function modeButtonStyle(active: boolean, borderRadius: string): React.CSSProper
   };
 }
 
-function codeRadius(hasDiff: boolean, isMarkdown: boolean): string {
-  if (hasDiff || isMarkdown) return '4px 0 0 4px';
+function canPreview(isMarkdown: boolean, isHtml: boolean): boolean {
+  return isMarkdown || isHtml;
+}
+
+function codeRadius(hasDiff: boolean, isMarkdown: boolean, isHtml: boolean): string {
+  if (hasDiff || canPreview(isMarkdown, isHtml)) return '4px 0 0 4px';
   return '4px';
 }
 
-function diffRadius(isMarkdown: boolean): string {
-  return isMarkdown ? '0' : '0 4px 4px 0';
+function diffRadius(isMarkdown: boolean, isHtml: boolean): string {
+  return canPreview(isMarkdown, isHtml) ? '0' : '0 4px 4px 0';
+}
+
+function previewTitle(isMarkdown: boolean): string {
+  return isMarkdown ? 'Show markdown preview' : 'Show HTML preview';
 }
 
 /**
  * Code / Diff / Preview mode toggle bar.
- * Only rendered when diff is available or file is markdown.
+ * Rendered when diff is available or file supports preview (markdown or HTML).
  */
 export const ViewModeBar = memo(function ViewModeBar({
   viewMode,
   setViewMode,
   hasDiff,
   isMarkdown,
+  isHtml,
 }: ViewModeBarProps): React.ReactElement {
+  const showPreview = canPreview(isMarkdown, isHtml);
   return (
     <div style={containerStyle}>
       <button
         onClick={() => setViewMode('code')}
         title="Show code (Ctrl+D to toggle diff)"
-        style={modeButtonStyle(viewMode === 'code', codeRadius(hasDiff, isMarkdown))}
+        style={modeButtonStyle(viewMode === 'code', codeRadius(hasDiff, isMarkdown, isHtml))}
       >
         Code
       </button>
@@ -66,15 +77,15 @@ export const ViewModeBar = memo(function ViewModeBar({
         <button
           onClick={() => setViewMode('diff')}
           title="Show diff (Ctrl+D to toggle)"
-          style={modeButtonStyle(viewMode === 'diff', diffRadius(isMarkdown))}
+          style={modeButtonStyle(viewMode === 'diff', diffRadius(isMarkdown, isHtml))}
         >
           Diff
         </button>
       )}
-      {isMarkdown && (
+      {showPreview && (
         <button
           onClick={() => setViewMode('preview')}
-          title="Show markdown preview"
+          title={previewTitle(isMarkdown)}
           style={modeButtonStyle(viewMode === 'preview', '0 4px 4px 0')}
         >
           Preview

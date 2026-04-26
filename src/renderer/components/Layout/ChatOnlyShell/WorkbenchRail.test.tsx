@@ -215,4 +215,44 @@ describe('WorkbenchRail', () => {
     fireEvent.click(screen.getByTestId('workbench-session-compare'));
     expect(onCompareSession).toHaveBeenCalledWith('session-2');
   });
+
+  it('calls onLaunchAgent when "Launch agent" is clicked and does NOT call onCreateSession', () => {
+    const onCreateSession = vi.fn();
+    const onLaunchAgent = vi.fn();
+    mockUseWorkbenchSessions.mockReturnValue({
+      items: [],
+      activeItems: [],
+      backgroundItems: [],
+      activeSessionId: null,
+      isLoading: false,
+      refresh: vi.fn(),
+    });
+    mockUseWorkbenchRecentChats.mockReturnValue({ items: [] });
+
+    render(<WorkbenchRail onCreateSession={onCreateSession} onLaunchAgent={onLaunchAgent} />);
+
+    fireEvent.click(screen.getByText('Launch agent'));
+    expect(onLaunchAgent).toHaveBeenCalledOnce();
+    expect(onCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('calls onCreateSession when "New session" is clicked and does NOT call onLaunchAgent', () => {
+    const onCreateSession = vi.fn();
+    const onLaunchAgent = vi.fn();
+    mockUseWorkbenchSessions.mockReturnValue({
+      items: [],
+      activeItems: [],
+      backgroundItems: [],
+      activeSessionId: null,
+      isLoading: false,
+      refresh: vi.fn(),
+    });
+    mockUseWorkbenchRecentChats.mockReturnValue({ items: [] });
+
+    render(<WorkbenchRail onCreateSession={onCreateSession} onLaunchAgent={onLaunchAgent} />);
+
+    fireEvent.click(screen.getByText('New session'));
+    expect(onCreateSession).toHaveBeenCalledOnce();
+    expect(onLaunchAgent).not.toHaveBeenCalled();
+  });
 });
