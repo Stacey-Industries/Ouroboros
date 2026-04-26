@@ -31,7 +31,8 @@ export type TabId =
   | 'promptDiff'
   | 'usageExport'
   | 'awesomeRef'
-  | 'platform';
+  | 'platform'
+  | 'telemetry';
 
 export interface Tab {
   id: TabId;
@@ -66,6 +67,7 @@ export const TABS: Tab[] = [
   { id: 'usageExport', label: 'Export Usage' },
   { id: 'awesomeRef', label: 'Awesome Ouroboros' },
   { id: 'platform', label: 'Platform' },
+  { id: 'telemetry', label: 'Telemetry' },
 ];
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
@@ -107,7 +109,15 @@ export const MAIN_TABS: MainTab[] = [
   {
     id: 'general',
     label: 'General',
-    subtabs: ['general', 'hooks', 'integrations', 'performance', 'mobileAccess', 'platform'],
+    subtabs: [
+      'general',
+      'hooks',
+      'integrations',
+      'performance',
+      'mobileAccess',
+      'platform',
+      'telemetry',
+    ],
   },
 ];
 
