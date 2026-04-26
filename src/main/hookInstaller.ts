@@ -2,12 +2,15 @@
  * hookInstaller.ts — Auto-installs Claude Code hook scripts on first launch.
  *
  * Behaviour:
- *  - Copies platform-appropriate scripts into ~/.claude/hooks/
- *  - On macOS/Linux: chmod +x the .sh scripts
+ *  - Copies cross-platform .mjs scripts (+ shared lib/) into ~/.claude/hooks/
  *  - Writes a version marker (~/.claude/hooks/.agent-ide-version)
  *  - Skips installation if the version marker matches CURRENT_HOOK_VERSION
+ *  - Removes legacy .ps1/.sh scripts on first .mjs install (best-effort)
  *  - Respects config.autoInstallHooks — if false, does nothing
  *  - Shows an Electron notification on first install
+ *
+ * Hooks are Node ESM scripts requiring `node` in PATH. Claude Code itself
+ * already requires Node, so this is a soft prerequisite.
  */
 
 import crypto from 'crypto';
@@ -34,9 +37,8 @@ export function invalidateHookVersionCache(): void {
 export function getCurrentHookVersion(): string {
   if (_cachedVersion) return _cachedVersion;
   const assetsDir = getAssetsHooksDir();
-  const hooks = getPlatformHooks();
   const hash = crypto.createHash('sha256');
-  for (const entry of hooks) {
+  for (const entry of MJS_HOOKS) {
     const filePath = path.join(assetsDir, entry.src);
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from known assets dir + manifest entry
@@ -56,35 +58,45 @@ const VERSION_MARKER_FILE = '.agent-ide-version';
 // ─── Hook file manifests ──────────────────────────────────────────────────────
 
 interface HookEntry {
-  /** Source filename inside assets/hooks/ */
+  /** Source path relative to assets/hooks/ (may include subdirs like 'lib/x.mjs') */
   src: string;
-  /** Destination filename inside ~/.claude/hooks/ */
+  /** Destination path relative to ~/.claude/hooks/ */
   dest: string;
-  /** Make executable (macOS/Linux .sh scripts) */
-  executable: boolean;
 }
 
-const WINDOWS_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.ps1', dest: 'pre_tool_use.ps1', executable: false },
-  { src: 'post_tool_use.ps1', dest: 'post_tool_use.ps1', executable: false },
-  { src: 'agent_start.ps1', dest: 'agent_start.ps1', executable: false },
-  { src: 'agent_end.ps1', dest: 'agent_end.ps1', executable: false },
-  { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false },
-  { src: 'session_stop.ps1', dest: 'session_stop.ps1', executable: false },
-  { src: 'instructions_loaded.ps1', dest: 'instructions_loaded.ps1', executable: false },
-  { src: 'statusline_capture.ps1', dest: 'statusline_capture.ps1', executable: false },
-  { src: 'generic_hook.ps1', dest: 'generic_hook.ps1', executable: false },
+/**
+ * Cross-platform .mjs hook manifest. Replaces the previous WINDOWS_HOOKS /
+ * UNIX_HOOKS split since Node runs everywhere PowerShell and Bash do.
+ */
+const MJS_HOOKS: HookEntry[] = [
+  { src: 'lib/ouroboros.mjs', dest: 'lib/ouroboros.mjs' },
+  { src: 'lib/signals.mjs', dest: 'lib/signals.mjs' },
+  { src: 'pre_tool_use.mjs', dest: 'pre_tool_use.mjs' },
+  { src: 'post_tool_use.mjs', dest: 'post_tool_use.mjs' },
+  { src: 'agent_start.mjs', dest: 'agent_start.mjs' },
+  { src: 'agent_end.mjs', dest: 'agent_end.mjs' },
+  { src: 'session_start.mjs', dest: 'session_start.mjs' },
+  { src: 'session_stop.mjs', dest: 'session_stop.mjs' },
+  { src: 'instructions_loaded.mjs', dest: 'instructions_loaded.mjs' },
+  { src: 'statusline_capture.mjs', dest: 'statusline_capture.mjs' },
+  { src: 'generic_hook.mjs', dest: 'generic_hook.mjs' },
 ];
 
-const UNIX_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.sh', dest: 'pre_tool_use.sh', executable: true },
-  { src: 'post_tool_use.sh', dest: 'post_tool_use.sh', executable: true },
-  { src: 'agent_start.sh', dest: 'agent_start.sh', executable: true },
-  { src: 'session_start.sh', dest: 'session_start.sh', executable: true },
-  { src: 'instructions_loaded.sh', dest: 'instructions_loaded.sh', executable: true },
-  { src: 'generic_hook.sh', dest: 'generic_hook.sh', executable: true },
-  { src: 'session_stop.sh', dest: 'session_stop.sh', executable: true },
-  { src: 'agent_end.sh', dest: 'agent_end.sh', executable: true },
+/**
+ * Legacy filenames cleaned up on first .mjs install. The version-marker bump
+ * (content-hash drives reinstall) ensures every existing user upgrades.
+ */
+const LEGACY_HOOKS = [
+  'pre_tool_use.ps1', 'pre_tool_use.sh',
+  'post_tool_use.ps1', 'post_tool_use.sh',
+  'agent_start.ps1', 'agent_start.sh',
+  'agent_end.ps1', 'agent_end.sh',
+  'session_start.ps1', 'session_start.sh',
+  'session_stop.ps1', 'session_stop.sh',
+  'instructions_loaded.ps1', 'instructions_loaded.sh',
+  'statusline_capture.ps1',
+  'generic_hook.ps1', 'generic_hook.sh',
+  '_token-lookup.ps1', '_token-lookup.sh',
 ];
 
 // ─── Claude Code hook event types to register ────────────────────────────────
@@ -118,10 +130,6 @@ function getAssetsHooksDir(): string {
   }
 
   return candidates[1];
-}
-
-function getPlatformHooks(): HookEntry[] {
-  return process.platform === 'win32' ? WINDOWS_HOOKS : UNIX_HOOKS;
 }
 
 export function readClaudeSettings(settingsPath: string): Record<string, unknown> {
@@ -235,21 +243,32 @@ async function installHookFile(
     return;
   }
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from hooks dir + manifest entry
+  await fsPromises.mkdir(path.dirname(destPath), { recursive: true });
   await fsPromises.copyFile(srcPath, destPath);
 
-  if (entry.executable && process.platform !== 'win32') {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from hooks dir + hook manifest entry
-    await fsPromises.chmod(destPath, 0o755);
-  }
-
   log.info(`installed ${entry.dest} -> ${destPath}`);
+}
+
+async function removeLegacyHooks(hooksDir: string): Promise<void> {
+  await Promise.all(
+    LEGACY_HOOKS.map(async (name) => {
+      const filePath = path.join(hooksDir, name);
+      try {
+        await fsPromises.rm(filePath, { force: true });
+      } catch {
+        /* best-effort */
+      }
+    }),
+  );
 }
 
 async function installHookFiles(assetsDir: string, hooksDir: string): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/hooks
   await fsPromises.mkdir(hooksDir, { recursive: true });
 
-  await Promise.all(getPlatformHooks().map((entry) => installHookFile(entry, assetsDir, hooksDir)));
+  await removeLegacyHooks(hooksDir);
+  await Promise.all(MJS_HOOKS.map((entry) => installHookFile(entry, assetsDir, hooksDir)));
 }
 
 async function writeVersionMarker(markerPath: string): Promise<void> {
@@ -331,14 +350,21 @@ export async function hooksAreUpToDate(): Promise<boolean> {
   return (await readVersionMarker(markerPath)) === getCurrentHookVersion();
 }
 
-/** Removes all installed hook scripts and the version marker. */
+/** Removes all installed hook scripts (current + legacy) and the version marker. */
 export function uninstallHooks(): void {
   const hooksDir = getClaudeHooksDir();
-  const allHooks = [...WINDOWS_HOOKS, ...UNIX_HOOKS];
 
-  for (const entry of allHooks) {
+  for (const entry of MJS_HOOKS) {
     const destPath = path.join(hooksDir, entry.dest);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from hooks dir + hook manifest entry
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from hooks dir + manifest entry
+    if (fs.existsSync(destPath)) {
+      fs.rmSync(destPath, { force: true });
+    }
+  }
+
+  for (const name of LEGACY_HOOKS) {
+    const destPath = path.join(hooksDir, name);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from hooks dir + legacy manifest
     if (fs.existsSync(destPath)) {
       fs.rmSync(destPath, { force: true });
     }

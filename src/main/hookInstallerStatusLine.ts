@@ -15,11 +15,8 @@ import log from './logger';
 // ─── Status-line helpers ──────────────────────────────────────────────────────
 
 export function buildStatusLineCommand(hooksDir: string): string {
-  const scriptPath = path.join(hooksDir, 'statusline_capture.ps1');
-  if (process.platform === 'win32') {
-    return `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`;
-  }
-  return path.join(hooksDir, 'statusline_capture.sh');
+  const scriptPath = path.join(hooksDir, 'statusline_capture.mjs');
+  return `node "${scriptPath}"`;
 }
 
 export function isOuroborosStatusLine(

@@ -20,7 +20,11 @@
       "Read(//c/Users/coles/.claude/**)",
       "Bash(rm -f \"C:\\\\Users\\\\coles\\\\.claude\\\\hooks\\\\haiku_verify_lint_debug.log\")",
       "Bash(\"C:\\\\Web App\\\\Agent IDE\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"C:\\\\Web App\\\\Agent IDE\\\\__smoke_haiku_verify.ts\")",
-      "Bash(echo \"---exit: $?---\")"
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(mkdir -p 'C:/Web App/Agent IDE/assets/hooks/lib')",
+      "Bash(cp C:/Users/coles/.claude/hooks/lib/ouroboros.mjs 'C:/Web App/Agent IDE/assets/hooks/lib/ouroboros.mjs')",
+      "Bash(cp C:/Users/coles/.claude/hooks/lib/signals.mjs 'C:/Web App/Agent IDE/assets/hooks/lib/signals.mjs')",
+      "Bash(cp C:/Users/coles/.claude/hooks/__TRACKED_VAR__ 'C:/Web App/Agent IDE/assets/hooks/__TRACKED_VAR__')"
     ]
   }
 }

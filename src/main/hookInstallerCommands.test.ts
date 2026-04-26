@@ -84,17 +84,17 @@ describe('buildHookCommands', () => {
     expect(cmds['TaskCreated']).toContain('task_created');
   });
 
-  it('bespoke commands reference the correct script files', () => {
+  it('bespoke commands reference the correct .mjs script files', () => {
     const cmds = buildHookCommands(hooksDir);
-    if (process.platform === 'win32') {
-      expect(cmds['PreToolUse']).toContain('pre_tool_use.ps1');
-      expect(cmds['Stop']).toContain('session_stop.ps1');
-      expect(cmds['SubagentStop']).toContain('agent_end.ps1');
-    } else {
-      expect(cmds['PreToolUse']).toBe(path.join(hooksDir, 'pre_tool_use.sh'));
-      expect(cmds['Stop']).toBe(path.join(hooksDir, 'session_stop.sh'));
-      expect(cmds['SubagentStop']).toBe(path.join(hooksDir, 'agent_end.sh'));
-    }
+    expect(cmds['PreToolUse']).toContain('pre_tool_use.mjs');
+    expect(cmds['Stop']).toContain('session_stop.mjs');
+    expect(cmds['SubagentStop']).toContain('agent_end.mjs');
+  });
+
+  it('emits cross-platform `node "..."` invocations', () => {
+    const cmds = buildHookCommands(hooksDir);
+    expect(cmds['PreToolUse']).toMatch(/^node "/);
+    expect(cmds['TaskCreated']).toMatch(/^node "/);
   });
 });
 

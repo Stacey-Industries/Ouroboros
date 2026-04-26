@@ -44,22 +44,13 @@ import {
 const HOOKS_DIR = path.join(process.env['HOME'] ?? 'C:\\Users\\test', '.claude', 'hooks');
 
 describe('buildStatusLineCommand', () => {
-  it('returns a powershell command on win32', () => {
-    const origPlatform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+  it('returns a cross-platform node invocation referencing the .mjs script', () => {
     const cmd = buildStatusLineCommand(HOOKS_DIR);
-    expect(cmd).toContain('powershell');
-    expect(cmd).toContain('statusline_capture.ps1');
-    Object.defineProperty(process, 'platform', { value: origPlatform, configurable: true });
-  });
-
-  it('returns a shell script path on non-win32', () => {
-    const origPlatform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
-    const cmd = buildStatusLineCommand(HOOKS_DIR);
-    expect(cmd).toContain('statusline_capture.sh');
+    expect(cmd).toMatch(/^node "/);
+    expect(cmd).toContain('statusline_capture.mjs');
     expect(cmd).not.toContain('powershell');
-    Object.defineProperty(process, 'platform', { value: origPlatform, configurable: true });
+    expect(cmd).not.toContain('.ps1');
+    expect(cmd).not.toContain('.sh');
   });
 });
 
