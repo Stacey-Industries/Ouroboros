@@ -69,8 +69,8 @@ describe('tailSchemaExt — context', () => {
     expect((tailSchemaExt.context.default as Record<string, unknown>).pagerank).toBe(true);
   });
 
-  it('default has packetMode: full', () => {
-    expect((tailSchemaExt.context.default as Record<string, unknown>).packetMode).toBe('full');
+  it('default has packetMode: auto', () => {
+    expect((tailSchemaExt.context.default as Record<string, unknown>).packetMode).toBe('auto');
   });
 });
 

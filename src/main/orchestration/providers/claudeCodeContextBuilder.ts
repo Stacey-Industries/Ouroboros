@@ -7,6 +7,7 @@ import path from 'path';
 import { getConfigValue } from '../../config';
 import { getModelBudgets } from '../contextPacketBuilderSupport';
 import type { ContextPacket } from '../types';
+import { classifyGoal, type GoalShape } from './goalClassifier';
 import type { ProviderLaunchContext, ProviderResumeContext } from './providerAdapter';
 import type { StreamJsonToolUseBlock } from './streamJsonTypes';
 
@@ -152,8 +153,11 @@ export function buildTerminalSection(packet: ContextPacket): string {
   return lines.join('\n');
 }
 
-function resolvePacketMode(): 'full' | 'lean' {
-  return getConfigValue('context')?.packetMode ?? 'full';
+function resolvePacketMode(goalHint?: GoalShape): 'full' | 'lean' {
+  const configured = getConfigValue('context')?.packetMode;
+  if (configured === 'full' || configured === 'lean') return configured;
+  if (goalHint === 'casual') return 'lean';
+  return 'full';
 }
 
 function buildXmlSections(packet: ContextPacket, model: string, isLean: boolean): string[] {
@@ -190,7 +194,8 @@ export function buildXmlContextBlock(
 ): string {
   const packet = context.contextPacket;
   if (!packet) return '';
-  const isLean = resolvePacketMode() === 'lean';
+  const goalHint = classifyGoal(context.request?.goal);
+  const isLean = resolvePacketMode(goalHint) === 'lean';
   const sections: string[] = [];
   // Pinned context injected first — prefix-cacheable, appears before file candidates
   if (packet.pinnedContext)
