@@ -3,6 +3,7 @@
  * Converts Codex exec events into ProviderProgressEvents for the sink.
  */
 import log from '../../logger';
+import { getEditProvenanceStore } from '../editProvenance';
 import type {
   CodexAgentMessageItem,
   CodexCommandExecutionItem,
@@ -112,11 +113,25 @@ function handleCommandCompleted(item: CodexCommandExecutionItem, ctx: CodexEmitC
   });
 }
 
+function recordCodexEditProvenance(paths: string[]): void {
+  const store = getEditProvenanceStore();
+  if (!store) return;
+  for (const filePath of paths) {
+    try {
+      store.markAgentEdit(filePath);
+    } catch (err) {
+      log.warn('[codex:provenance] markAgentEdit failed', err);
+    }
+  }
+}
+
 function handleFileChangeItem(item: CodexFileChangeItem, ctx: CodexEmitCtx): void {
   const changes = (item.changes ?? []).filter(
     (c): c is CodexFileChange & { path: string } =>
       typeof c.path === 'string' && c.path.trim().length > 0,
   );
+  // Wave 53 Phase C — record Codex agent edits alongside Claude Code's hook tap.
+  recordCodexEditProvenance(changes.map((c) => c.path));
   for (const change of changes) {
     const blockIndex = ctx.blockIndexRef.value++;
     const name = mapFileChangeKindToTool(change.kind);
