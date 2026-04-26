@@ -38,7 +38,7 @@ import { migrateGraphStore } from './migrateGraphStore';
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function getFs() {
-  return (await import('fs')) as {
+  return (await import('fs')) as unknown as {
     existsSync: ReturnType<typeof vi.fn>;
     readFileSync: ReturnType<typeof vi.fn>;
     renameSync: ReturnType<typeof vi.fn>;
@@ -46,7 +46,7 @@ async function getFs() {
 }
 
 async function getDb() {
-  return (await import('./database')) as {
+  return (await import('./database')) as unknown as {
     openDatabase: ReturnType<typeof vi.fn>;
     closeDatabase: ReturnType<typeof vi.fn>;
     getSchemaVersion: ReturnType<typeof vi.fn>;

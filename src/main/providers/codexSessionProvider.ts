@@ -32,6 +32,7 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import type { CodexExecEvent } from '../orchestration/providers/codexExecRunner';
 import { spawnCodexExecProcess } from '../orchestration/providers/codexExecRunner';
+import type { CodexExecResult } from '../orchestration/providers/codexExecRunnerHelpers';
 import type {
   CodexAgentMessageItem,
   CodexItemCompletedEvent,
@@ -137,7 +138,7 @@ function buildOnEvent(sessionId: string) {
 
 function handleCodexResult(
   sessionId: string,
-  result: Awaited<ReturnType<ReturnType<typeof spawnCodexExecProcess>['result']['then']>>,
+  result: CodexExecResult,
 ): void {
   if (result.usage) {
     publishEvent(sessionId, makeEvent('cost-update', sessionId, {

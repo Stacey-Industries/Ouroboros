@@ -110,7 +110,7 @@ describe('cypherEngineSqlHelpers', () => {
   describe('pushWhereParam', () => {
     it('wraps CONTAINS value with % on both sides', () => {
       const params: unknown[] = [];
-      pushWhereParam(params, { alias: 'n', property: 'name', operator: 'CONTAINS', value: 'foo' });
+      pushWhereParam(params, { alias: 'n', property: 'name', operator: 'CONTAINS', value: 'foo', conjunction: null });
       expect(params).toEqual(['%foo%']);
     });
 
@@ -121,6 +121,7 @@ describe('cypherEngineSqlHelpers', () => {
         property: 'name',
         operator: 'STARTS WITH',
         value: 'foo',
+        conjunction: null,
       });
       expect(params).toEqual(['foo%']);
     });
@@ -132,13 +133,14 @@ describe('cypherEngineSqlHelpers', () => {
         property: 'name',
         operator: 'ENDS WITH',
         value: 'foo',
+        conjunction: null,
       });
       expect(params).toEqual(['%foo']);
     });
 
     it('passes through value unchanged for equality operators', () => {
       const params: unknown[] = [];
-      pushWhereParam(params, { alias: 'n', property: 'name', operator: '=', value: 'foo' });
+      pushWhereParam(params, { alias: 'n', property: 'name', operator: '=', value: 'foo', conjunction: null });
       expect(params).toEqual(['foo']);
     });
   });

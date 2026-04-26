@@ -135,7 +135,7 @@ function wireProcEvents(
   proc: Awaited<ReturnType<typeof import('node-pty')['spawn']>>,
   sessionId: string,
   opts: WireOpts,
-): { dataSub: unknown; exitSub: unknown } {
+): { dataSub: import('node-pty').IDisposable; exitSub: import('node-pty').IDisposable } {
   const { bridge, tracker, cleanupSession } = opts;
   let earlyOutput = '';
   const dataSub = proc.onData((data: string) => {

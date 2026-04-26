@@ -100,7 +100,7 @@ function sanitizeConfigValue(key: keyof AppConfig): unknown {
   if (key === 'webAccessToken' || key === 'webAccessPassword') return '';
   const value = getConfigValue(key);
   if (key === 'modelProviders' && Array.isArray(value)) {
-    return (value as Array<Record<string, unknown>>).map((p) => ({
+    return (value as unknown as Array<Record<string, unknown>>).map((p) => ({
       ...p,
       apiKey: p.apiKey ? '••••••••' : '',
     }));

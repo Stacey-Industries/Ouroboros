@@ -116,7 +116,7 @@ export class IndexingPipeline {
   }
 
   private async runEnrichmentPasses(
-    ctx: { projectName: string; indexedFiles: IndexedFile[]; gitCommitFiles: Map<string, string[]> },
+    ctx: { projectName: string; indexedFiles: IndexedFile[]; gitCommitFiles: string[][] | null },
     report: (p: string) => void,
     timings: Record<string, number>,
   ): Promise<void> {
