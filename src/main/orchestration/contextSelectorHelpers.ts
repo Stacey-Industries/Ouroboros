@@ -100,12 +100,7 @@ export function addCandidateFactory(opts: {
     if (!filePath) return;
     if (excludedKeys.has(toPathKey(filePath)))
       return void pushOmitted(omittedCandidates, omittedKeys, filePath, 'Excluded by request');
-    addReason(
-      getOrCreateCandidate(candidates, filePath),
-      kind,
-      detail,
-      getWeight(kind),
-    );
+    addReason(getOrCreateCandidate(candidates, filePath), kind, detail, getWeight(kind));
   };
 }
 export function addBaseCandidates(
