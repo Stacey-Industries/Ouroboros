@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('./logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-
-import { classifyShape, tapGraphUsage } from './hooksGraphUsageTap';
 import type { HookPayload } from './hooks';
+import { classifyShape, tapGraphUsage } from './hooksGraphUsageTap';
+
+vi.mock('./logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 describe('classifyShape', () => {
   it('classifies bare identifier Grep as symbol', () => {

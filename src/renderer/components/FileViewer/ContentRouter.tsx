@@ -9,6 +9,7 @@ import { CommitHistory } from './CommitHistory';
 import type { ConflictBlock } from './ConflictResolver';
 import { ConflictResolver } from './ConflictResolver';
 import { DiffView } from './DiffView';
+import { HtmlPreview } from './HtmlPreview';
 import { InlineEditor } from './InlineEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { MonacoDiffEditor } from './MonacoDiffEditor';
@@ -193,11 +194,17 @@ function renderHistoryContent(props: ContentRouterProps): React.ReactElement | n
 }
 
 function renderPreviewContent(props: ContentRouterProps): React.ReactElement | null {
-  if (props.viewMode !== 'preview' || !props.isMarkdown || props.content == null) {
-    return null;
+  if (props.viewMode !== 'preview' || props.content == null) return null;
+  if (props.isHtml) {
+    return renderPanel(
+      <HtmlPreview content={props.content} filePath={props.filePath} />,
+      previewPanelStyle,
+    );
   }
-
-  return renderPanel(<MarkdownPreview content={props.content} />, previewPanelStyle);
+  if (props.isMarkdown) {
+    return renderPanel(<MarkdownPreview content={props.content} />, previewPanelStyle);
+  }
+  return null;
 }
 
 function renderDiffContent(props: ContentRouterProps): React.ReactElement | null {

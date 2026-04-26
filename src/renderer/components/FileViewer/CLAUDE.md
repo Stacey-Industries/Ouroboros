@@ -13,7 +13,7 @@ FileViewerManager (Context provider — owns tab state, open/close/save logic)
             │    ├─ MonacoDiffEditor (side-by-side diff)
             │    ├─ InlineEditor (legacy CodeMirror fallback)
             │    ├─ ClaudeMdEditor (specialized CLAUDE.md editor)
-            │    ├─ CommitHistory / MarkdownPreview / DiffView / ConflictResolver
+            │    ├─ CommitHistory / MarkdownPreview / HtmlPreview / DiffView / ConflictResolver
             │    └─ CodeView (legacy Shiki read-only viewer)
             ├─ SymbolOutline (side panel)
             └─ StatusBar
@@ -66,3 +66,25 @@ Files follow a consistent suffixing pattern:
 - **Hooks from parent**: `useTheme`, `useGitDiff`, `useGitBlame`, `useSymbolOutline` (in `src/renderer/hooks/`)
 - **IPC**: `files:readFile`, `files:saveFile`, `files:watchDir` via `window.electronAPI`
 - **Types**: `OpenFile`, `SplitState` from `FileViewerManager.internal.ts`; `DiffLineInfo`, `BufferExcerpt`, `MultiBufferConfig` from `electron.d.ts`
+
+## Preview Safety
+
+### Supported preview types
+
+| Extension | Preview component | Notes |
+|-----------|-------------------|-------|
+| `.md`, `.markdown` | `MarkdownPreview` | DOMPurify-sanitized, rendered inline |
+| `.html`, `.htm` | `HtmlPreview` | Sandboxed `<iframe srcDoc>` — see below |
+
+### HTML preview sandbox policy (`HtmlPreview.tsx`)
+
+- Content is delivered via `<iframe srcDoc>` — **not** `src`, **not** `dangerouslySetInnerHTML`. The content runs in an isolated browsing context.
+- `sandbox=""` — the strictest possible sandbox. No permissions are granted. Specifically excluded:
+  - `allow-scripts` — untrusted agent-generated HTML must not execute JavaScript.
+  - `allow-same-origin` — removing this means the iframe cannot access parent-origin storage, cookies, or DOM. Relative assets (images, CSS) will not resolve as a result; a banner informs the user.
+  - `allow-top-navigation` — prevents the iframe from navigating the parent window.
+  - `allow-popups` — no browser-chrome spawning from agent content.
+  - `allow-forms` — no form submission from sandboxed content.
+  - `allow-modals` — no `alert()`/`confirm()` from agent content.
+- **Local-asset limitation**: relative `src=`/`href=` URLs do not resolve because `allow-same-origin` is withheld. A non-blocking banner is shown; the HTML still renders.
+- **Precedence rule**: `ContentRouter` checks `isHtml` before `isMarkdown`. Files with both extensions (unusual) get HTML preview. This is intentional — `.html` files should not be rendered as Markdown.
