@@ -203,6 +203,8 @@ export const tailSchema = {
       paranoidMode: { type: 'boolean', default: false },
       /** Fraction of routing decisions sampled for LLM judge scoring (0 = disabled). */
       llmJudgeSampleRate: { type: 'number', minimum: 0, maximum: 1, default: 0 },
+      /** Wave 53 — log shadow router decision even when user overrides the model. */
+      shadowMode: { type: 'boolean', default: true },
     },
     default: {
       enabled: true,
@@ -212,6 +214,7 @@ export const tailSchema = {
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
       llmJudgeSampleRate: 0,
+      shadowMode: true,
     },
   },
   routerLastRetrainCount: {
@@ -268,11 +271,16 @@ export const tailSchema = {
     },
     default: { gcEnabled: true, gcDaysThreshold: 90 },
   },
-  /** Wave 15 — structured telemetry feature flag and retention policy */
+  /**
+   * Wave 15 / Wave 53 — structured telemetry feature flag and retention policy.
+   * `structured` is local-only; data stored in userData and never transmitted.
+   * `remote` is reserved for future remote transmission; explicit opt-in required.
+   */
   telemetry: {
     type: 'object',
     properties: {
-      structured: { type: 'boolean', default: false },
+      structured: { type: 'boolean', default: true },
+      remote: { type: 'boolean', default: false },
       retentionDays: { type: 'number', default: 30 },
     },
   },

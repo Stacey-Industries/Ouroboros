@@ -29,6 +29,7 @@ import { ResearchSettings } from './ResearchSettings';
 import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
 import { SystemPromptPane } from './SystemPromptPane';
+import { TelemetrySection } from './TelemetrySection';
 import { TerminalSection } from './TerminalSection';
 import { UsageExportPane } from './UsageExportPane';
 import { WorkspaceReadListSection } from './WorkspaceReadListSection';
@@ -75,6 +76,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   usageExport: () => <UsageExportPane />,
   awesomeRef: () => <AwesomeRefSettingsPane />,
   platform: ({ draft, onChange }) => <PlatformSection draft={draft} onChange={onChange} />,
+  telemetry: ({ draft, onChange }) => <TelemetrySection draft={draft} onChange={onChange} />,
 };
 
 export function SettingsTabContent({

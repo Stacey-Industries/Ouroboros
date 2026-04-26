@@ -175,8 +175,8 @@ export interface AppConfig {
   authOnboardingDismissed: boolean;
   /** Codebase graph settings (GC, etc.) */
   codebaseGraph: CodebaseGraphSettings;
-  /** Wave 15 — structured telemetry feature flag and retention policy */
-  telemetry?: { structured?: boolean; retentionDays?: number };
+  /** Wave 15 / Wave 53 — structured telemetry feature flag and retention policy */
+  telemetry?: { structured?: boolean; remote?: boolean; retentionDays?: number };
   /** Wave 16 — persisted Session records */
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
