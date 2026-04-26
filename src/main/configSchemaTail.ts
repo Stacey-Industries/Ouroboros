@@ -222,6 +222,12 @@ export const tailSchema = {
     type: 'boolean',
     default: true,
   },
+  /** Wave 48 Phase B — gate Ouroboros MCP injection per spawn. */
+  internalMcpScope: {
+    type: 'string',
+    enum: ['always', 'task-gated', 'never'],
+    default: 'task-gated',
+  },
   autoCheckpoint: {
     type: 'boolean',
     default: true,
