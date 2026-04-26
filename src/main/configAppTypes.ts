@@ -157,6 +157,8 @@ export interface AppConfig {
   internalMcpEnabled: boolean;
   /** Wave 48 Phase B — when to inject the Ouroboros MCP entry. Default 'task-gated'. */
   internalMcpScope?: 'always' | 'task-gated' | 'never';
+  /** Wave 48 Phase D — use --mcp-config + --strict-mcp-config on each spawn (default true). */
+  internalMcpUseStrictConfig?: boolean;
   /** Wave 3B feature flag — route PTY through PtyHost utility process */
   usePtyHost: boolean;
   /** Wave 3B feature flag — route extensions through ExtensionHost utility process */

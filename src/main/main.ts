@@ -15,6 +15,7 @@ import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
 import { injectIntoProjectSettings, removeFromProjectSettings, startInternalMcpServer } from './internalMcp';
+import { clearInternalMcpPort, setInternalMcpPort } from './internalMcp/internalMcpPortRegistry';
 import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
@@ -105,11 +106,13 @@ async function startInternalMcp(): Promise<void> {
       return;
     }
     internalMcpStop = stopMcpHost;
+    setInternalMcpPort(res.port);
     await injectIntoProjectSettings(workspaceRoot, res.port);
     return;
   }
   const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
   internalMcpStop = handle.stop;
+  setInternalMcpPort(handle.port);
   await injectIntoProjectSettings(workspaceRoot, handle.port);
 }
 
@@ -122,6 +125,7 @@ async function stopInternalMcp(): Promise<void> {
       log.warn('[internal-mcp] failed to remove from settings:', err);
     }
   }
+  clearInternalMcpPort();
   if (internalMcpStop) {
     await internalMcpStop();
     internalMcpStop = null;

@@ -21,18 +21,11 @@ vi.mock('../contextPacketBuilderSupport', () => ({
 }));
 
 import { getConfigValue } from '../../config';
-import {
-  buildXmlContextBlock,
-  buildProjectStructureSection,
-  buildRelevantCodeSection,
-} from './claudeCodeContextBuilder';
-import { classifyGoal } from './goalClassifier';
 import { resolveInternalMcpScope } from '../../internalMcp/internalMcpScope';
-import {
-  shouldSendWorkspaceState,
-  _resetWorkspaceStateDedupe,
-} from './workspaceStateDedupe';
+import { buildXmlContextBlock } from './claudeCodeContextBuilder';
+import { classifyGoal } from './goalClassifier';
 import type { ProviderLaunchContext } from './providerAdapter';
+import { _resetWorkspaceStateDedupe, shouldSendWorkspaceState } from './workspaceStateDedupe';
 
 const mockGetConfig = vi.mocked(getConfigValue);
 
@@ -54,7 +47,6 @@ function buildTestPacket(options: {
 } = {}) {
   const {
     fileCount = 8,
-    workspaceStateContent = 'branch="main" changed_files="3" errors="0" warnings="2"',
     includeProjectStructure = true,
     includeSystemInstructions = true,
   } = options;

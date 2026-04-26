@@ -22,6 +22,7 @@ import {
   type ProviderProgressSink,
   type ProviderResumeContext,
 } from './providerAdapter';
+import { resolveMcpConfigPathForLaunch } from './scopedMcpConfig';
 import type { StreamJsonEvent, StreamJsonResultEvent } from './streamJsonTypes';
 
 export function pickLaunchValue(...values: Array<string | undefined>): string | undefined {
@@ -45,24 +46,15 @@ export type ResolvedSettings = { resolvedModel: string | undefined; effort: stri
 export function resolveEffectiveSettings(context: ProviderLaunchContext | ProviderResumeContext, settings: ClaudeCliSettings): ResolvedSettings {
   const resolvedModel = pickLaunchValue(context.request.model, settings.model);
   const effort = pickLaunchValue(context.request.effort, settings.effort);
-  const permissionMode =
-    pickLaunchValue(context.request.permissionMode, settings.permissionMode) ?? 'default';
-  const providerEnv =
-    resolvedModel && resolvedModel.includes(':') ? resolveModelEnv(resolvedModel) : {};
+  const permissionMode = pickLaunchValue(context.request.permissionMode, settings.permissionMode) ?? 'default';
+  const providerEnv = resolvedModel && resolvedModel.includes(':') ? resolveModelEnv(resolvedModel) : {};
   const isProviderRouted = Object.keys(providerEnv).length > 0;
   // Wave 26 Phase D: per-session/profile tool whitelist overrides the global setting.
-  const requestAllowedTools = context.request.allowedTools;
-  const effectiveAllowedTools =
-    requestAllowedTools !== undefined ? requestAllowedTools : settings.allowedTools;
+  const allowedTools = context.request.allowedTools !== undefined ? context.request.allowedTools : settings.allowedTools;
   return {
     resolvedModel,
     effort,
-    effectiveSettings: {
-      ...settings,
-      model: isProviderRouted ? '' : (resolvedModel ?? ''),
-      permissionMode,
-      allowedTools: effectiveAllowedTools,
-    },
+    effectiveSettings: { ...settings, model: isProviderRouted ? '' : (resolvedModel ?? ''), permissionMode, allowedTools },
     providerEnv,
     isProviderRouted,
   };
@@ -124,6 +116,11 @@ export function scheduleClaudeLaunch(
       args.resolvedModel ?? '',
     );
     const continueSession = 'providerSession' in args.context && !resumeId ? true : undefined;
+    const mcpConfigPath = await resolveMcpConfigPathForLaunch(
+      args.context.request.goal,
+      args.context.taskId,
+      args.invocationTempPaths,
+    );
     return launchHeadless({
       context: args.context,
       prompt,
@@ -136,6 +133,7 @@ export function scheduleClaudeLaunch(
       effort: args.effort,
       providerEnv: args.isProviderRouted ? args.providerEnv : undefined,
       eventHandler: args.eventHandler,
+      mcpConfigPath,
     }).result;
   })();
 }
@@ -171,31 +169,20 @@ interface BuildLaunchScheduleArgsOpts {
 }
 
 function buildLaunchScheduleArgs(opts: BuildLaunchScheduleArgsOpts): ScheduleClaudeLaunchArgs {
-  const {
-    context,
-    cwd,
-    sessionRef,
-    sink,
-    resolved,
-    effectiveResumeSessionId,
-    eventHandler,
-    getCancelledBeforeLaunch,
-    invocationTempPaths,
-  } = opts;
   return {
-    context,
-    cwd,
-    sessionRef,
-    sink,
-    invocationTempPaths,
-    resolvedModel: resolved.resolvedModel,
-    effectiveResumeSessionId,
-    effectiveSettings: resolved.effectiveSettings,
-    eventHandler,
-    effort: resolved.effort,
-    providerEnv: resolved.providerEnv,
-    isProviderRouted: resolved.isProviderRouted,
-    getCancelledBeforeLaunch,
+    context: opts.context,
+    cwd: opts.cwd,
+    sessionRef: opts.sessionRef,
+    sink: opts.sink,
+    invocationTempPaths: opts.invocationTempPaths,
+    resolvedModel: opts.resolved.resolvedModel,
+    effectiveResumeSessionId: opts.effectiveResumeSessionId,
+    effectiveSettings: opts.resolved.effectiveSettings,
+    eventHandler: opts.eventHandler,
+    effort: opts.resolved.effort,
+    providerEnv: opts.resolved.providerEnv,
+    isProviderRouted: opts.resolved.isProviderRouted,
+    getCancelledBeforeLaunch: opts.getCancelledBeforeLaunch,
   };
 }
 

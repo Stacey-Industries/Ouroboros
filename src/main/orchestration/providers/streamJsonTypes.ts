@@ -117,6 +117,12 @@ export interface StreamJsonSpawnOptions {
   addDirs?: string[];
   /** Spend cap in USD passed to --max-budget-usd. Only emitted when > 0. */
   maxBudgetUsd?: number;
+  /**
+   * Wave 48 Phase D — path to a scoped MCP config JSON file.
+   * When set, appends --mcp-config <path> and --strict-mcp-config so the
+   * spawned claude sees only the servers listed in that file.
+   */
+  mcpConfigPath?: string;
   env?: Record<string, string>;
   onEvent?: (event: StreamJsonEvent) => void;
   /** Optional trace ID for orchestration_traces telemetry. Generated internally if omitted. */

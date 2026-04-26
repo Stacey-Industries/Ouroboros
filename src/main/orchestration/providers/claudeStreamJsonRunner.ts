@@ -25,6 +25,12 @@ export interface StreamJsonArgs {
   args: string[];
 }
 
+function appendMcpConfigFlags(cliArgs: string[], options: StreamJsonSpawnOptions): void {
+  if (options.mcpConfigPath) {
+    cliArgs.push('--mcp-config', options.mcpConfigPath, '--strict-mcp-config');
+  }
+}
+
 function appendSettingFlags(cliArgs: string[], options: StreamJsonSpawnOptions): void {
   if (options.warmMode) cliArgs.push('--input-format', 'stream-json');
   if (options.allowedTools) cliArgs.push('--allowedTools', options.allowedTools);
@@ -38,6 +44,7 @@ function appendSettingFlags(cliArgs: string[], options: StreamJsonSpawnOptions):
   if (typeof options.maxBudgetUsd === 'number' && options.maxBudgetUsd > 0) {
     cliArgs.push('--max-budget-usd', String(options.maxBudgetUsd));
   }
+  appendMcpConfigFlags(cliArgs, options);
 }
 
 export function buildStreamJsonArgs(options: StreamJsonSpawnOptions): StreamJsonArgs {

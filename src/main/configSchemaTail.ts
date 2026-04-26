@@ -231,6 +231,11 @@ export const tailSchema = {
     enum: ['always', 'task-gated', 'never'],
     default: 'task-gated',
   },
+  /** Wave 48 Phase D — use --mcp-config + --strict-mcp-config on each spawn (default true). */
+  internalMcpUseStrictConfig: {
+    type: 'boolean',
+    default: true,
+  },
   autoCheckpoint: {
     type: 'boolean',
     default: true,

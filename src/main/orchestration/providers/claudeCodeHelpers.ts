@@ -157,6 +157,7 @@ export function launchHeadless(args: {
   effort?: string;
   providerEnv?: Record<string, string>;
   eventHandler?: (event: StreamJsonEvent) => void;
+  mcpConfigPath?: string;
 }): { result: Promise<StreamJsonResultEvent> } {
   if (args.settings.useWarmProcess && !args.resumeSessionId && !args.continueSession) {
     return launchWarm(args);
@@ -171,6 +172,7 @@ export function launchHeadless(args: {
     effort: args.effort || undefined,
     env: { ...args.providerEnv, OUROBOROS_CHAT_SESSION: '1' },
     onEvent: handler,
+    mcpConfigPath: args.mcpConfigPath,
   });
   activeProcesses.set(args.context.taskId, handle);
   return { result: handle.result };
