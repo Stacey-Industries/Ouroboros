@@ -16,7 +16,7 @@
  * chat-only mode (Wave 42 design).
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_SESSION_DRAWER_EVENT } from '../../../hooks/appEventNames';
@@ -29,6 +29,7 @@ import { useCommandPalette } from '../../CommandPalette/useCommandPalette';
 import { useCommandRegistry } from '../../CommandPalette/useCommandRegistry';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { ChatHistorySidebar } from './ChatHistorySidebar';
+import { filterCommandsForChatShell } from './chatOnlyCommandFilter';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySessionDrawer } from './ChatOnlySessionDrawer';
 import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
@@ -230,6 +231,9 @@ export function ChatOnlyShell({ terminal }: ChatOnlyShellProps = {}): React.Reac
   // Wave 44 Phase C: command palette wired at shell level (Ctrl+K).
   const { isOpen: paletteOpen, close: closePalette } = useCommandPalette();
   const { commands, recentIds, execute } = useCommandRegistry();
+  // Wave 46 Phase F: filter IDE-only commands that are no-ops in chat-only and
+  // chat-workbench shells (toggle-sidebar, split-editor, in-shell git review).
+  const filteredCommands = useMemo(() => filterCommandsForChatShell(commands), [commands]);
 
   const args: ShellRenderArgs = {
     terminal,
@@ -237,7 +241,7 @@ export function ChatOnlyShell({ terminal }: ChatOnlyShellProps = {}): React.Reac
     shell,
     sidebarMode,
     palette: { open: paletteOpen, close: closePalette },
-    commandApi: { commands, recentIds, execute },
+    commandApi: { commands: filteredCommands, recentIds, execute },
   };
 
   return (
