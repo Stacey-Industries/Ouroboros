@@ -18,7 +18,7 @@ This roadmap plans the next twelve waves of Ouroboros development, spanning thre
 
 The ordering is **foundation-first**. Instrumentation, the session primitive, and the layout preset engine all land before any user-visible "big reveal." Visible features are built on verified foundations. No quick wins; no feature flags hiding half-built work.
 
-This document is descriptive, not prescriptive at the line level. Each wave's "Scope" section is concrete enough to brief a planning session; wave-specific design docs (in `plan/`) are expected to precede implementation.
+This document is descriptive, not prescriptive at the line level. Each wave's "Scope" section is concrete enough to brief a planning session; wave-specific design docs (in `roadmap/`) are expected to precede implementation.
 
 ---
 
@@ -1015,7 +1015,7 @@ Decisions required before wave work begins, with proposed owners and deadlines:
 | Q7 | Whether to integrate internal-code-memory research (codebase-memory graph queries) into the same research pipeline or keep them fully separate. Design discussion argued separate; Wave 20 implementation needs the final call. | Author | Before Wave 20 |
 | Q8 | Version numbering: do Waves 15–22 stay on v1.x with minor bumps per visible wave, or move to v2.x once chat-primary lands? | Author | Before Wave 18 release |
 
-Each open question is scoped small enough that a design doc in `plan/` can resolve it before the corresponding wave begins.
+Each open question is scoped small enough that a design doc in `roadmap/` can resolve it before the corresponding wave begins.
 
 ---
 

@@ -17,7 +17,10 @@
       "Bash(cp \"/mnt/c/Web App/Agent IDE/assets/hooks/pre_tool_use.ps1\" /mnt/c/Users/coles/.claude/hooks/pre_tool_use.ps1)",
       "Read(//mnt/c/Users/coles/.claude/hooks/**)",
       "Bash(mkdir -p ~/.claude/notes)",
-      "Read(//c/Users/coles/.claude/**)"
+      "Read(//c/Users/coles/.claude/**)",
+      "Bash(rm -f \"C:\\\\Users\\\\coles\\\\.claude\\\\hooks\\\\haiku_verify_lint_debug.log\")",
+      "Bash(\"C:\\\\Web App\\\\Agent IDE\\\\node_modules\\\\.bin\\\\eslint.cmd\" \"C:\\\\Web App\\\\Agent IDE\\\\__smoke_haiku_verify.ts\")",
+      "Bash(echo \"---exit: $?---\")"
     ]
   }
 }

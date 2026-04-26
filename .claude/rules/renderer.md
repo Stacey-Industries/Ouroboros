@@ -8,6 +8,8 @@
 
 **NEVER hardcode hex (`#fff`), `rgb()`, or `rgba()` values in components.** Use design tokens instead. The pre-commit hook will block commits with new hardcoded colors in renderer files.
 
+**Glass / always-on transparency.** Native window-manager transparency is always enabled (mica-electron on Windows, vibrancy on macOS). At runtime, the theme bridge forces `--bg`, `--bg-secondary`, and `--term-bg` transparent. UI surfaces must not assume opaque backgrounds for those tokens; when an opaque background is genuinely required (text contrast against arbitrary content beneath), use the `*-solid` variant (e.g. `var(--bg-solid)` or `bg-surface-static`).
+
 **Token system** (defined in `src/renderer/styles/tokens.css`, registered in `globals.css @theme`):
 
 | Need | Token / Tailwind class |

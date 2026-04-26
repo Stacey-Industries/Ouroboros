@@ -43,7 +43,7 @@
   },
   "mcpServers": {
     "ouroboros": {
-      "url": "http://127.0.0.1:56242/sse"
+      "url": "http://127.0.0.1:53186/sse"
     }
   }
 }

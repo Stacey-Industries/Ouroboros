@@ -2011,7 +2011,7 @@ No wave relaxes any of these. If an implementation legitimately needs a violatio
 | Q14 | Provider abstraction scope: include tool-call shape normalization, or accept per-provider quirks at adapter level | Author | Before Wave 36 design doc |
 | Q15 | Multi-level subagent visualization (Wave 27): cap at one level or support nesting | Author | During Wave 27 impl |
 
-Each question is scoped small enough that a design doc in `plan/` can resolve it before the corresponding wave begins.
+Each question is scoped small enough that a design doc in `roadmap/` can resolve it before the corresponding wave begins.
 
 ---
 
