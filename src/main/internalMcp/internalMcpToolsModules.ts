@@ -96,8 +96,7 @@ export async function listSourceFiles(dirPath: string, workspaceRoot: string): P
 
 export const searchModulesTool: McpToolDefinition = {
   name: 'search_modules',
-  description:
-    'Search for modules in the codebase by name, path, or keyword. Returns module IDs, labels, paths, file counts, and AI descriptions.',
+  description: 'Find modules by name, path, or keyword. Returns id, label, path, file count, summary.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -154,8 +153,7 @@ export const searchModulesTool: McpToolDefinition = {
 
 export const getModuleTool: McpToolDefinition = {
   name: 'get_module',
-  description:
-    'Get full details for a specific module: AI summary, responsibilities, gotchas, exported symbols, and structural info.',
+  description: 'Module detail: summary, responsibilities, gotchas, exported symbols, structural info.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -201,8 +199,7 @@ export const getModuleTool: McpToolDefinition = {
 
 export const listModulesTool: McpToolDefinition = {
   name: 'list_modules',
-  description:
-    'List all modules in the codebase with brief descriptions. Use this to orient yourself before diving into specific modules.',
+  description: 'List all modules with brief descriptions. Use to orient before diving in.',
   inputSchema: {
     type: 'object',
     properties: {

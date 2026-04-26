@@ -161,8 +161,8 @@ function buildIndexingTools(context: GraphToolContext): McpToolDefinition[] {
     { name: 'list_projects', description: 'List all indexed projects with node/edge counts and last index time.', inputSchema: TOOL_SCHEMAS.list_projects, handler: async () => handleListProjects(context) },
     { name: 'delete_project', description: 'Remove a project and all its graph data. Irreversible.', inputSchema: TOOL_SCHEMAS.delete_project, handler: async (a: Record<string, unknown>) => handleDeleteProject(a, context) },
     { name: 'index_status', description: 'Get the current indexing status for a project.', inputSchema: TOOL_SCHEMAS.index_status, handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context) },
-    { name: 'get_graph_schema', description: 'Get the graph schema: node label counts, edge type counts, relationship patterns, and sample names.', inputSchema: TOOL_SCHEMAS.get_graph_schema, handler: async () => handleGetGraphSchema(context) },
-    { name: 'ingest_traces', description: 'Ingest traces to add/strengthen HTTP_CALLS edges. Accepts {fromId, toId, type, weight?}[] as JSON string.', inputSchema: TOOL_SCHEMAS.ingest_traces, handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context) },
+    { name: 'get_graph_schema', description: 'Graph schema: node/edge counts, relationship patterns, sample names.', inputSchema: TOOL_SCHEMAS.get_graph_schema, handler: async () => handleGetGraphSchema(context) },
+    { name: 'ingest_traces', description: 'Add/strengthen HTTP_CALLS edges. Accepts {fromId,toId,type,weight?}[] JSON.', inputSchema: TOOL_SCHEMAS.ingest_traces, handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context) },
   ];
 }
 

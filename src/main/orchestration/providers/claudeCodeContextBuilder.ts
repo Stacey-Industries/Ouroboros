@@ -10,6 +10,7 @@ import type { ContextPacket } from '../types';
 import { classifyGoal, type GoalShape } from './goalClassifier';
 import type { ProviderLaunchContext, ProviderResumeContext } from './providerAdapter';
 import type { StreamJsonToolUseBlock } from './streamJsonTypes';
+import { shouldSendWorkspaceState } from './workspaceStateDedupe';
 
 const LEAN_MAX_FILES = 6;
 
@@ -217,7 +218,10 @@ export function buildResumeContextBlock(context: ProviderResumeContext): string 
   const sections: string[] = [];
   if (packet.pinnedContext)
     sections.push('<pinned_context>\n' + packet.pinnedContext + '</pinned_context>');
-  sections.push('<ide_context>', buildWorkspaceStateSection(packet), '</ide_context>');
+  const wsBlock = buildWorkspaceStateSection(packet);
+  if (shouldSendWorkspaceState(context.sessionId, wsBlock)) {
+    sections.push('<ide_context>', wsBlock, '</ide_context>');
+  }
   const output = sections.filter(Boolean).join('\n\n');
   return appendExtraPacketSections(output, packet, false);
 }
