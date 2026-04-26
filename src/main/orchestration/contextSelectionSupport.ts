@@ -5,6 +5,7 @@ import path from 'path';
 import { getToolServerToken } from '../pipeAuth';
 import { terminalOutputBuffer } from '../ptyOutputBuffer';
 import type { DirtyBufferSnapshot, EditorSelectionRange, LiveIdeState } from './types';
+export type { LiveIdeState } from './types';
 
 export interface ContextFileSnapshot {
   filePath: string;

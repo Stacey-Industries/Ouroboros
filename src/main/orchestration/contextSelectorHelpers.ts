@@ -1,6 +1,7 @@
 import path from 'path';
 
 import {
+  type ContextFileSnapshot,
   escapeRegExp,
   resolveWorkspaceFile,
   toPathKey,
