@@ -13,6 +13,8 @@ import {
   APPROVAL_REQUEST_METHODS,
   buildApprovalResponse,
   buildInitializeParams,
+  buildSandboxPolicy,
+  buildThreadStartParams,
   buildTurnStartParams,
   type CodexAppServerClient,
   emitBridgeStatus,
@@ -40,7 +42,7 @@ describe('buildTurnStartParams', () => {
       cwd: '/work',
       model: 'gpt-5',
       prompt: 'hello',
-      settings: { approvalPolicy: 'on-request' } as never,
+      settings: { approvalPolicy: 'on-request', sandbox: 'workspace-write' } as never,
       threadId: 'thread-1',
     });
     expect(params).toMatchObject({
@@ -49,10 +51,13 @@ describe('buildTurnStartParams', () => {
       model: 'gpt-5',
       threadId: 'thread-1',
       input: [{ type: 'text', text: 'hello' }],
+      sandboxPolicy: { type: 'workspaceWrite' },
     });
   });
 
-  it('maps dangerous bypass settings to never approval policy for app-server turns', () => {
+  it('maps dangerous bypass settings to dangerFullAccess + never approvalPolicy', () => {
+    // No `dangerouslyBypassApprovalsAndSandbox` field exists in the app-server
+    // schema — bypass is encoded via sandboxPolicy + approvalPolicy instead.
     const params = buildTurnStartParams({
       cwd: '/work',
       model: 'gpt-5',
@@ -64,11 +69,112 @@ describe('buildTurnStartParams', () => {
       } as never,
       threadId: 'thread-1',
     });
-
     expect(params).toMatchObject({
       approvalPolicy: 'never',
-      dangerouslyBypassApprovalsAndSandbox: true,
-      sandbox: 'workspace-write',
+      sandboxPolicy: { type: 'dangerFullAccess' },
+    });
+    expect(params).not.toHaveProperty('dangerouslyBypassApprovalsAndSandbox');
+    expect(params).not.toHaveProperty('sandbox');
+  });
+
+  it('forwards reasoningEffort as effort', () => {
+    const params = buildTurnStartParams({
+      cwd: '/work',
+      model: 'gpt-5',
+      prompt: 'hello',
+      settings: {
+        approvalPolicy: 'on-request',
+        sandbox: 'workspace-write',
+        reasoningEffort: 'high',
+      } as never,
+      threadId: 'thread-1',
+    });
+    expect(params.effort).toBe('high');
+  });
+
+  it('omits effort when reasoningEffort is empty', () => {
+    const params = buildTurnStartParams({
+      cwd: '/work',
+      model: 'gpt-5',
+      prompt: 'hello',
+      settings: {
+        approvalPolicy: 'on-request',
+        sandbox: 'workspace-write',
+        reasoningEffort: '',
+      } as never,
+      threadId: 'thread-1',
+    });
+    expect(params).not.toHaveProperty('effort');
+  });
+});
+
+describe('buildSandboxPolicy', () => {
+  it('maps read-only → { type: readOnly }', () => {
+    expect(
+      buildSandboxPolicy({ sandbox: 'read-only', dangerouslyBypassApprovalsAndSandbox: false } as never),
+    ).toEqual({ type: 'readOnly' });
+  });
+
+  it('maps workspace-write → { type: workspaceWrite }', () => {
+    expect(
+      buildSandboxPolicy({
+        sandbox: 'workspace-write',
+        dangerouslyBypassApprovalsAndSandbox: false,
+      } as never),
+    ).toEqual({ type: 'workspaceWrite' });
+  });
+
+  it('maps danger-full-access → { type: dangerFullAccess }', () => {
+    expect(
+      buildSandboxPolicy({
+        sandbox: 'danger-full-access',
+        dangerouslyBypassApprovalsAndSandbox: false,
+      } as never),
+    ).toEqual({ type: 'dangerFullAccess' });
+  });
+
+  it('bypass flag overrides any sandbox setting to dangerFullAccess', () => {
+    expect(
+      buildSandboxPolicy({
+        sandbox: 'read-only',
+        dangerouslyBypassApprovalsAndSandbox: true,
+      } as never),
+    ).toEqual({ type: 'dangerFullAccess' });
+  });
+});
+
+describe('buildThreadStartParams', () => {
+  it('passes sandbox as string enum (not policy object) — thread/start uses SandboxMode', () => {
+    const params = buildThreadStartParams({
+      cwd: '/work',
+      model: 'gpt-5.4',
+      settings: {
+        approvalPolicy: 'on-request',
+        sandbox: 'read-only',
+        dangerouslyBypassApprovalsAndSandbox: false,
+      } as never,
+    });
+    expect(params).toEqual({
+      approvalPolicy: 'on-request',
+      cwd: '/work',
+      model: 'gpt-5.4',
+      sandbox: 'read-only',
+    });
+  });
+
+  it('bypass is encoded as sandbox=danger-full-access + approvalPolicy=never', () => {
+    const params = buildThreadStartParams({
+      cwd: '/work',
+      model: 'gpt-5.4',
+      settings: {
+        approvalPolicy: 'on-request',
+        sandbox: 'workspace-write',
+        dangerouslyBypassApprovalsAndSandbox: true,
+      } as never,
+    });
+    expect(params).toMatchObject({
+      approvalPolicy: 'never',
+      sandbox: 'danger-full-access',
     });
   });
 });

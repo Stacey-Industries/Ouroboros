@@ -38,6 +38,50 @@ export function buildInitializeParams(): Record<string, unknown> {
   };
 }
 
+/**
+ * Build a `SandboxPolicy` tagged-union value for `turn/start`.
+ *
+ * The Codex app-server schema (Codex ≥0.122) expects `sandboxPolicy` as a
+ * discriminated-union object, NOT the hyphenated string form that
+ * `thread/start.sandbox` accepts. See `codex app-server generate-json-schema`.
+ * Bypass is encoded here (no separate boolean field exists in the protocol).
+ */
+export function buildSandboxPolicy(settings: CodexCliSettings): Record<string, unknown> {
+  if (settings.dangerouslyBypassApprovalsAndSandbox) {
+    return { type: 'dangerFullAccess' };
+  }
+  if (settings.sandbox === 'read-only') return { type: 'readOnly' };
+  if (settings.sandbox === 'danger-full-access') return { type: 'dangerFullAccess' };
+  return { type: 'workspaceWrite' };
+}
+
+/**
+ * Build params for `thread/start`. The thread-level `sandbox` field IS the
+ * hyphenated string form (`SandboxMode` enum in the schema), distinct from
+ * `turn/start.sandboxPolicy`. Sending the policy here sets the thread default
+ * so the very first turn respects it instead of inheriting Codex's workspace-
+ * write default.
+ */
+export function buildThreadStartParams(args: {
+  cwd: string;
+  model: string;
+  settings: CodexCliSettings;
+}): Record<string, unknown> {
+  const sandbox = args.settings.dangerouslyBypassApprovalsAndSandbox
+    ? 'danger-full-access'
+    : args.settings.sandbox;
+  const approvalPolicy = shouldAutoApproveServerApproval(args.settings)
+    ? 'never'
+    : args.settings.approvalPolicy;
+  const params: Record<string, unknown> = {
+    approvalPolicy,
+    cwd: args.cwd,
+    sandbox,
+  };
+  if (args.model) params.model = args.model;
+  return params;
+}
+
 export function buildTurnStartParams(args: {
   cwd: string;
   model: string;
@@ -48,15 +92,16 @@ export function buildTurnStartParams(args: {
   const approvalPolicy = shouldAutoApproveServerApproval(args.settings)
     ? 'never'
     : args.settings.approvalPolicy;
-  return {
+  const params: Record<string, unknown> = {
     approvalPolicy,
     cwd: args.cwd,
-    dangerouslyBypassApprovalsAndSandbox: args.settings.dangerouslyBypassApprovalsAndSandbox,
     input: [{ text: args.prompt, type: 'text' }],
     model: args.model,
-    sandbox: args.settings.sandbox,
+    sandboxPolicy: buildSandboxPolicy(args.settings),
     threadId: args.threadId,
   };
+  if (args.settings.reasoningEffort) params.effort = args.settings.reasoningEffort;
+  return params;
 }
 
 export function shouldAutoApproveServerApproval(settings: CodexCliSettings): boolean {

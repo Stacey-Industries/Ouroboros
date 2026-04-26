@@ -3,7 +3,15 @@
  * pure helpers extracted from chatOrchestrationBridgeProgress.ts.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// chatOrchestrationBridgeProgressHelpers imports chatOrchestrationBridgeMonitor,
+// which transitively pulls in hooks.ts → telemetry → threadStore, which calls
+// app.getPath('userData') at module load — undefined outside Electron.
+// Mock the monitor to cut the import chain before it reaches electron.
+vi.mock('./chatOrchestrationBridgeMonitor', () => ({
+  emitStreamChunk: vi.fn(),
+}));
 
 import { findContextForProgress, logFirstChunk } from './chatOrchestrationBridgeProgressHelpers';
 import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';

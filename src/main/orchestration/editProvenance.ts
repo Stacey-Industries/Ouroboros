@@ -35,12 +35,25 @@ interface ProvenanceLine {
   role: 'agent' | 'user';
   ts: number;
   correlationId?: string;
+  /**
+   * Set when this user edit is detected as a correction-of-agent-edit.
+   * Captures elapsed ms between the prior agent edit and this user edit.
+   * Only present on user-role lines that fall within [debounce, correctionWindow].
+   */
+  correctionDeltaMs?: number;
 }
 
-// ─── Agent-edit debounce window ───────────────────────────────────────────────
+// ─── Edit-correlation windows ─────────────────────────────────────────────────
 
 /** User edits within this window after an agent edit are suppressed (agent flush). */
 const AGENT_EDIT_WINDOW_MS = 2_000;
+
+/**
+ * User edits beyond the debounce window but within this window after an agent
+ * edit are flagged as corrections — implicit quality signal that the agent's
+ * output needed user fixup.
+ */
+const CORRECTION_WINDOW_MS = 60_000;
 
 // ─── JSONL persistence ────────────────────────────────────────────────────────
 
@@ -105,14 +118,19 @@ export function createEditProvenanceStore(userDataDir: string): EditProvenanceSt
   function markUserEdit(filePath: string): void {
     const norm = path.normalize(filePath);
     const entry = memory.get(norm) ?? { lastAgentEditAt: 0, lastUserEditAt: 0 };
-    const age = Date.now() - entry.lastAgentEditAt;
-    if (entry.lastAgentEditAt > 0 && age < AGENT_EDIT_WINDOW_MS) {
-      log.info(`[editProvenance] suppressed user edit (agent wrote ${age}ms ago): ${norm}`);
+    const ageSinceAgent = Date.now() - entry.lastAgentEditAt;
+    if (entry.lastAgentEditAt > 0 && ageSinceAgent < AGENT_EDIT_WINDOW_MS) {
+      log.info(`[editProvenance] suppressed user edit (agent wrote ${ageSinceAgent}ms ago): ${norm}`);
       return;
     }
     entry.lastUserEditAt = Date.now();
     memory.set(norm, entry);
-    appendLine(jsonlPath, { path: norm, role: 'user', ts: entry.lastUserEditAt });
+    const line: ProvenanceLine = { path: norm, role: 'user', ts: entry.lastUserEditAt };
+    if (entry.lastAgentEditAt > 0 && ageSinceAgent <= CORRECTION_WINDOW_MS) {
+      line.correctionDeltaMs = ageSinceAgent;
+      log.info(`[editProvenance] correction detected (${ageSinceAgent}ms after agent edit): ${norm}`);
+    }
+    appendLine(jsonlPath, line);
     log.info(`[editProvenance] user edit: ${norm}`);
   }
 

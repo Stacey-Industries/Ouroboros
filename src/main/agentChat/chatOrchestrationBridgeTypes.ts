@@ -41,6 +41,12 @@ export interface ActiveStreamContext {
   model?: string;
   /** Buffered chunks for replay on reconnect. Capped at 500 most recent. */
   bufferedChunks: AgentChatStreamChunk[];
+  /**
+   * Monotonic per-turn chunk counter stamped onto each emitted chunk's `seq`
+   * field. Ensures renderer dedup keys stay unique even when multiple chunks
+   * share the same ms-precision timestamp.
+   */
+  chunkSequence: number;
   /** Accumulated tool activity for smart title generation */
   toolsUsed: Array<{ name: string; filePath?: string }>;
   /** Accumulated content blocks for message persistence — mirrors streaming blocks */

@@ -37,6 +37,7 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'agentChat:reRunFromMessage':     { class: 'paired-write', timeoutClass: 'long' },
   'agentChat:removeMessageReaction':{ class: 'paired-write', timeoutClass: 'normal' },
   'agentChat:renameBranch':         { class: 'paired-write', timeoutClass: 'normal' },
+  'agentChat:injectMidTurn':        { class: 'paired-write', timeoutClass: 'normal' },
   'agentChat:revertToSnapshot':     { class: 'paired-write', timeoutClass: 'normal' },
   'agentChat:sendMessage':          { class: 'paired-write', timeoutClass: 'long' },
   'agentChat:setMessageCollapsed':  { class: 'paired-write', timeoutClass: 'normal' },

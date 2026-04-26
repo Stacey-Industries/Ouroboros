@@ -76,12 +76,15 @@ export const PROP_TO_COLUMN: Record<string, string> = {
 
 // ─── parseMatch helpers ───────────────────────────────────────────────────────
 
- 
-const VARPATH_OUT =
-  /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i;
- 
-const VARPATH_IN =
-  /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)\s*\*\s*(\d+)\s*\.\.\s*(\d+)\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i;
+const IDENT = '[A-Za-z_][A-Za-z0-9_$]*'
+const VARPATH_OUT = new RegExp(
+  `^\\((${IDENT})(?::(${IDENT}))?\\)\\s*-\\[\\s*:?(?:(${IDENT}))\\s*\\*\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*->\\s*\\((${IDENT})(?::(${IDENT}))?\\)$`,
+  'i',
+)
+const VARPATH_IN = new RegExp(
+  `^\\((${IDENT})(?::(${IDENT}))?\\)\\s*<-\\[\\s*:?(?:(${IDENT}))\\s*\\*\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*-\\s*\\((${IDENT})(?::(${IDENT}))?\\)$`,
+  'i',
+)
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
 const HOP_OUT = /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)?\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking

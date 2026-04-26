@@ -40,7 +40,7 @@ const watchIgnored = [
   '**/dist/**',
   '**/coverage/**',
   '**/docs/**',
-  '**/plan/**',
+  '**/roadmap/**',
   '**/ai/**',
   '**/stats/**',
   '**/.vite/**',

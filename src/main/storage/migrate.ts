@@ -18,8 +18,9 @@ import {
   runTransaction,
   setSchemaVersion,
 } from './database';
+import { migrateGraphStore } from './migrateGraphStore';
 
-export { migrateGraphStore } from './migrateGraphStore';
+export { migrateGraphStore };
 
 // ── Thread Store migration ─────────────────────────────────────────────────
 

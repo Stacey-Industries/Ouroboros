@@ -106,6 +106,58 @@ describe('createEditProvenanceStore', () => {
     }
   });
 
+  it('records correctionDeltaMs when user edits within the correction window', () => {
+    vi.useFakeTimers();
+    try {
+      const store = createEditProvenanceStore(tmpDir);
+      vi.setSystemTime(1_000_000);
+      store.markAgentEdit('/repo/src/correction.ts');
+
+      // 5s later — beyond debounce, within correction window
+      vi.setSystemTime(1_005_000);
+      store.markUserEdit('/repo/src/correction.ts');
+      store.close();
+
+      const jsonlPath = path.join(tmpDir, 'edit-provenance.jsonl');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test tmp dir
+      const lines = fs.readFileSync(jsonlPath, 'utf-8').trim().split('\n');
+      const userLine = JSON.parse(lines[lines.length - 1]) as {
+        role: string;
+        correctionDeltaMs?: number;
+      };
+      expect(userLine.role).toBe('user');
+      expect(userLine.correctionDeltaMs).toBe(5_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('omits correctionDeltaMs when user edit is outside the correction window', () => {
+    vi.useFakeTimers();
+    try {
+      const store = createEditProvenanceStore(tmpDir);
+      vi.setSystemTime(1_000_000);
+      store.markAgentEdit('/repo/src/late.ts');
+
+      // 90s later — beyond correction window
+      vi.setSystemTime(1_090_000);
+      store.markUserEdit('/repo/src/late.ts');
+      store.close();
+
+      const jsonlPath = path.join(tmpDir, 'edit-provenance.jsonl');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test tmp dir
+      const lines = fs.readFileSync(jsonlPath, 'utf-8').trim().split('\n');
+      const userLine = JSON.parse(lines[lines.length - 1]) as {
+        role: string;
+        correctionDeltaMs?: number;
+      };
+      expect(userLine.role).toBe('user');
+      expect(userLine.correctionDeltaMs).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('compacts JSONL on load — latest timestamps win per role', () => {
     const jsonlPath = path.join(tmpDir, 'edit-provenance.jsonl');
     // Write two agent edits for the same path — second timestamp should win

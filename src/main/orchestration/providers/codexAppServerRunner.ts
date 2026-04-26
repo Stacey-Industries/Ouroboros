@@ -10,6 +10,7 @@ import {
   APPROVAL_REQUEST_METHODS,
   buildApprovalResponse,
   buildInitializeParams,
+  buildThreadStartParams,
   buildTurnStartParams,
   type CodexAppServerClient,
   type CodexAppServerRuntime,
@@ -79,7 +80,7 @@ async function ensureInitialized(client: CodexAppServerClient, sessionKey: strin
 
 async function resolveResumeOrStart(
   client: CodexAppServerClient,
-  cwd: string,
+  startParams: Record<string, unknown>,
   resumeThreadId: string,
 ): Promise<string | null> {
   try {
@@ -87,7 +88,7 @@ async function resolveResumeOrStart(
     return parseThreadId(result) ?? resumeThreadId;
   } catch (error) {
     if (!shouldRetryCodexWithoutResume(error)) throw error;
-    const result = await client.request('thread/start', { cwd });
+    const result = await client.request('thread/start', startParams);
     return parseThreadId(result);
   }
 }
@@ -95,14 +96,18 @@ async function resolveResumeOrStart(
 async function ensureThread(
   client: CodexAppServerClient,
   sessionKey: string,
-  cwd: string,
-  resumeThreadId: string | undefined,
+  args: CodexAppServerTurnArgs,
 ): Promise<string> {
   const state = runtimeStateBySessionKey.get(sessionKey) ?? { initialized: true, threadId: null };
   if (state.threadId) return state.threadId;
-  const threadId = resumeThreadId
-    ? await resolveResumeOrStart(client, cwd, resumeThreadId)
-    : parseThreadId(await client.request('thread/start', { cwd }));
+  const startParams = buildThreadStartParams({
+    cwd: args.cwd,
+    model: args.model,
+    settings: args.settings,
+  });
+  const threadId = args.resumeThreadId
+    ? await resolveResumeOrStart(client, startParams, args.resumeThreadId)
+    : parseThreadId(await client.request('thread/start', startParams));
   if (!threadId) throw new Error('Codex app-server did not return a thread id.');
   state.threadId = threadId;
   runtimeStateBySessionKey.set(sessionKey, state);
@@ -260,7 +265,7 @@ async function prepareTurnRuntime(
   await ensureInitialized(client, sessionKey);
   const prompt = buildPrompt(args.context, args.model, Boolean(args.resumeThreadId));
   const mapper = buildCodexAppServerEventMapper(args.sink, args.sessionRef);
-  const threadId = await ensureThread(client, sessionKey, args.cwd, args.resumeThreadId);
+  const threadId = await ensureThread(client, sessionKey, args);
   const partial = {
     args,
     sessionKey,

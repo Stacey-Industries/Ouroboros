@@ -18,6 +18,7 @@ import type {
 } from '../renderer/types/electron';
 import { agentChatApi } from './preloadSupplementalAgentChatApis';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
+import type { SupplementalApiKey } from './preloadSupplementalApiKeys';
 import { folderCrudApi } from './preloadSupplementalFolderApis';
 import { graphApi } from './preloadSupplementalGraphApis';
 import { layoutApi } from './preloadSupplementalLayoutApis';
@@ -29,51 +30,6 @@ import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 import { sessionCrudApi } from './preloadSupplementalSessionApis';
 import { subagentApi } from './preloadSupplementalSubagentApis';
 import { workspaceReadListApi } from './preloadSupplementalWorkspaceReadListApis';
-
-type SupplementalApiKey =
-  | 'approval'
-  | 'sessions'
-  | 'cost'
-  | 'usage'
-  | 'shellHistory'
-  | 'updater'
-  | 'crash'
-  | 'perf'
-  | 'symbol'
-  | 'lsp'
-  | 'window'
-  | 'extensions'
-  | 'mcp'
-  | 'mcpStore'
-  | 'extensionStore'
-  | 'context'
-  | 'ideTools'
-  | 'codemode'
-  | 'agentChat'
-  | 'orchestration'
-  | 'contextLayer'
-  | 'claudeMd'
-  | 'router'
-  | 'rulesAndSkills'
-  | 'ai'
-  | 'embedding'
-  | 'telemetry'
-  | 'observability'
-  | 'workspace'
-  | 'system2'
-  | 'sessionCrud'
-  | 'folderCrud'
-  | 'pinnedContext'
-  | 'profileCrud'
-  | 'research'
-  | 'workspaceReadList'
-  | 'subagent'
-  | 'layout'
-  | 'graph'
-  | 'mobileAccess'
-  | 'compareProviders'
-  | 'ecosystem'
-  | 'marketplace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 

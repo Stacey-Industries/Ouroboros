@@ -38,6 +38,7 @@ function makeCtx(overrides: Partial<ActiveStreamContext> = {}): ActiveStreamCont
     accumulatedText: '',
     firstChunkEmitted: false,
     bufferedChunks: [],
+    chunkSequence: 0,
     toolsUsed: [],
     accumulatedBlocks: [],
     monitorStartEmitted: false,

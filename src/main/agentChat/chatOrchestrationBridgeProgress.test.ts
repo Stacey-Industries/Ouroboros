@@ -54,6 +54,7 @@ function makeCtx(overrides: Partial<ActiveStreamContext> = {}): ActiveStreamCont
     firstChunkEmitted: false,
     model: 'sonnet',
     bufferedChunks: [],
+    chunkSequence: 0,
     toolsUsed: [],
     accumulatedBlocks: [],
     monitorStartEmitted: false,

@@ -9,7 +9,6 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron';
 
 import type {
-  AppConfig,
   AppTheme,
   AuthState,
   ElectronAPI,
@@ -17,6 +16,7 @@ import type {
   GitHubLoginEvent,
   HookPayload,
 } from '../renderer/types/electron';
+import { subscribeToConfigExternalChange } from './preloadConfigSubscriptions';
 import { supplementalApis } from './preloadSupplementalApis';
 import { wave6StubApis } from './preloadWave6Stubs';
 
@@ -95,33 +95,6 @@ const configAPI: ElectronAPI['config'] = {
 
   onExternalChange: (callback) => subscribeToConfigExternalChange(callback),
 };
-
-// Single shared IPC subscription with fan-out. Many components/hooks call
-// `onExternalChange`; without this, each subscriber installs its own
-// `ipcRenderer.on` listener and we hit the EventEmitter default-cap warning
-// at 11 listeners. Maintain one underlying listener and dispatch to a Set
-// of callbacks instead.
-const externalChangeCallbacks = new Set<(config: AppConfig) => void>();
-let externalChangeListenerInstalled = false;
-
-function subscribeToConfigExternalChange(callback: (config: AppConfig) => void): () => void {
-  externalChangeCallbacks.add(callback);
-  if (!externalChangeListenerInstalled) {
-    externalChangeListenerInstalled = true;
-    ipcRenderer.on('config:externalChange', (_event, config: AppConfig) => {
-      for (const cb of externalChangeCallbacks) {
-        try {
-          cb(config);
-        } catch {
-          /* ignore subscriber errors */
-        }
-      }
-    });
-  }
-  return () => {
-    externalChangeCallbacks.delete(callback);
-  };
-}
 
 // â”€â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

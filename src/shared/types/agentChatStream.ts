@@ -28,6 +28,13 @@ export interface AgentChatStreamChunk {
   messageId: string;
   threadId?: string;
   timestamp?: number;
+  /**
+   * Monotonic per-turn sequence stamped by the bridge at emit time. Used as
+   * the dedup key on the renderer — `timestamp` alone (ms precision) collides
+   * for providers that stream multiple deltas per ms on the same block
+   * (e.g. Codex app-server's per-token `item/agentMessage/delta` events).
+   */
+  seq?: number;
   textDelta?: string;
   thinkingDelta?: string;
   blockIndex?: number;

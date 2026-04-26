@@ -151,7 +151,12 @@ describe('buildChangedFiles', () => {
 // ---------------------------------------------------------------------------
 
 vi.mock('child_process', () => ({
-  execFile: vi.fn(),
+  // Default implementation immediately calls the callback with an error so
+  // promises resolve/reject rather than hanging forever waiting for a real git
+  // binary that isn't available in the test environment.
+  execFile: vi.fn((_cmd, _args, _opts, cb) => {
+    cb(new Error('git not available in test environment'), '', '');
+  }),
 }));
 
 // buildRecentCommits and buildGitDiffSummary rely on child_process.execFile

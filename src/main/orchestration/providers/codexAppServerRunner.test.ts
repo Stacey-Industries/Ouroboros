@@ -354,8 +354,109 @@ describe('codexAppServerRunner', () => {
     expect(client.requests).toEqual(
       expect.arrayContaining([
         { method: 'thread/resume', params: { threadId: 'thr-stale' } },
-        { method: 'thread/start', params: { cwd: 'C:/repo' } },
+        expect.objectContaining({
+          method: 'thread/start',
+          params: expect.objectContaining({
+            cwd: 'C:/repo',
+            sandbox: 'workspace-write',
+            approvalPolicy: 'on-request',
+            model: 'gpt-5.4',
+          }),
+        }),
       ]),
     );
+  });
+
+  // ── Permission mode → turn/start schema regression tests ─────────────────────
+  //
+  // These assert the wire shape matches Codex's `codex app-server generate-json-schema`
+  // output (v2/TurnStartParams.json). Previously, the builder sent the wrong
+  // field names (`sandbox: string`, `dangerouslyBypassApprovalsAndSandbox`),
+  // so only accept-edits appeared to work — it happened to match the server
+  // default. The FakeClient echoes params blindly, so without these assertions
+  // a regression here is invisible.
+
+  async function captureTurnStartParams(settings: {
+    sandbox: 'read-only' | 'workspace-write' | 'danger-full-access';
+    approvalPolicy: 'untrusted' | 'on-request' | 'never';
+    dangerouslyBypassApprovalsAndSandbox: boolean;
+    reasoningEffort?: string;
+  }): Promise<Record<string, unknown>> {
+    const client = new FakeClient();
+    setCodexAppServerRuntimeForTests({ ensureClient: async () => client });
+    const { result } = await runCodexAppServerTurn({
+      context: makeContext(),
+      cwd: 'C:/repo',
+      model: 'gpt-5.4',
+      resumeThreadId: undefined,
+      sessionRef: createProviderSessionReference('codex', { requestId: 'req-1' }),
+      settings: {
+        model: 'gpt-5.4',
+        reasoningEffort: settings.reasoningEffort ?? '',
+        profile: '',
+        addDirs: [],
+        search: false,
+        skipGitRepoCheck: false,
+        ...settings,
+      },
+      sink: { emit: () => undefined },
+    });
+    await result;
+    const turnStart = client.requests.find((r) => r.method === 'turn/start');
+    if (!turnStart?.params) throw new Error('turn/start not captured');
+    return turnStart.params;
+  }
+
+  it('encodes plan mode as sandboxPolicy { type: readOnly }', async () => {
+    const params = await captureTurnStartParams({
+      sandbox: 'read-only',
+      approvalPolicy: 'on-request',
+      dangerouslyBypassApprovalsAndSandbox: false,
+    });
+    expect(params.sandboxPolicy).toEqual({ type: 'readOnly' });
+    expect(params.approvalPolicy).toBe('on-request');
+    expect(params).not.toHaveProperty('sandbox');
+    expect(params).not.toHaveProperty('dangerouslyBypassApprovalsAndSandbox');
+  });
+
+  it('encodes acceptEdits as sandboxPolicy { type: workspaceWrite }', async () => {
+    const params = await captureTurnStartParams({
+      sandbox: 'workspace-write',
+      approvalPolicy: 'on-request',
+      dangerouslyBypassApprovalsAndSandbox: false,
+    });
+    expect(params.sandboxPolicy).toEqual({ type: 'workspaceWrite' });
+    expect(params.approvalPolicy).toBe('on-request');
+  });
+
+  it('encodes workspace-auto as workspaceWrite + approvalPolicy never', async () => {
+    const params = await captureTurnStartParams({
+      sandbox: 'workspace-write',
+      approvalPolicy: 'never',
+      dangerouslyBypassApprovalsAndSandbox: false,
+    });
+    expect(params.sandboxPolicy).toEqual({ type: 'workspaceWrite' });
+    expect(params.approvalPolicy).toBe('never');
+  });
+
+  it('encodes bypassPermissions as dangerFullAccess + approvalPolicy never', async () => {
+    const params = await captureTurnStartParams({
+      sandbox: 'workspace-write',
+      approvalPolicy: 'on-request',
+      dangerouslyBypassApprovalsAndSandbox: true,
+    });
+    expect(params.sandboxPolicy).toEqual({ type: 'dangerFullAccess' });
+    expect(params.approvalPolicy).toBe('never');
+    expect(params).not.toHaveProperty('dangerouslyBypassApprovalsAndSandbox');
+  });
+
+  it('forwards reasoningEffort as effort on turn/start', async () => {
+    const params = await captureTurnStartParams({
+      sandbox: 'workspace-write',
+      approvalPolicy: 'on-request',
+      dangerouslyBypassApprovalsAndSandbox: false,
+      reasoningEffort: 'high',
+    });
+    expect(params.effort).toBe('high');
   });
 });

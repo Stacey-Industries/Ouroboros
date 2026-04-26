@@ -28,6 +28,14 @@ export function emitStreamChunk(
   chunk: AgentChatStreamChunk,
   ctx?: ActiveStreamContext,
 ): void {
+  // Stamp monotonic seq so renderer dedup survives sub-ms chunk bursts
+  // (e.g. Codex app-server per-token deltas). Safe to mutate — chunk is
+  // built fresh at each emit site and the same reference is stored in
+  // bufferedChunks below, so replay carries the same seq.
+  if (ctx && chunk.seq === undefined) {
+    ctx.chunkSequence += 1;
+    chunk.seq = ctx.chunkSequence;
+  }
   if (
     ctx &&
     chunk.type !== 'complete' &&

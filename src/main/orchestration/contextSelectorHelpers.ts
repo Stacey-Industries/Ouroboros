@@ -1,7 +1,6 @@
 import path from 'path';
 
 import {
-  type ContextFileSnapshot,
   escapeRegExp,
   resolveWorkspaceFile,
   toPathKey,
@@ -17,7 +16,6 @@ import type {
   RepoFacts,
   TaskRequest,
 } from './types';
-
 export interface MutableCandidate {
   filePath: string;
   reasons: ContextSelectionReason[];
@@ -31,13 +29,11 @@ export interface NormalizedSelection {
   includedFiles: string[];
   excludedFiles: string[];
 }
-
 const CONFIDENCE_ORDER = new Map<ContextConfidence, number>([
   ['high', 0],
   ['medium', 1],
   ['low', 2],
 ]);
-
 export function addReason(
   candidate: MutableCandidate,
   kind: ContextReasonKind,
@@ -48,7 +44,6 @@ export function addReason(
   if (candidate.reasons.some((reason) => `${reason.kind}:${reason.detail}` === reasonKey)) return;
   candidate.reasons.push({ kind, weight, detail });
 }
-
 function sortReasons(reasons: ContextSelectionReason[]): ContextSelectionReason[] {
   return [...reasons].sort((left, right) => {
     if (right.weight !== left.weight) return right.weight - left.weight;
@@ -56,11 +51,9 @@ function sortReasons(reasons: ContextSelectionReason[]): ContextSelectionReason[
     return left.detail.localeCompare(right.detail);
   });
 }
-
 function scoreCandidate(reasons: ContextSelectionReason[]): number {
   return reasons.reduce((total, reason) => total + reason.weight, 0);
 }
-
 function confidenceFor(reasons: ContextSelectionReason[], score: number): ContextConfidence {
   if (
     reasons.some((reason) =>
@@ -72,7 +65,6 @@ function confidenceFor(reasons: ContextSelectionReason[], score: number): Contex
     return 'high';
   return score >= 35 || reasons.length >= 2 ? 'medium' : 'low';
 }
-
 export function getOrCreateCandidate(
   candidates: Map<string, MutableCandidate>,
   filePath: string,
@@ -84,7 +76,6 @@ export function getOrCreateCandidate(
   candidates.set(key, next);
   return next;
 }
-
 export function pushOmitted(
   target: OmittedContextCandidate[],
   seen: Set<string>,
@@ -96,7 +87,40 @@ export function pushOmitted(
   seen.add(key);
   target.push({ filePath, reason });
 }
-
+export function addCandidateFactory(opts: {
+  candidates: Map<string, MutableCandidate>;
+  excludedKeys: Set<string>;
+  omittedCandidates: OmittedContextCandidate[];
+  omittedKeys: Set<string>;
+  getWeight: (kind: ContextReasonKind) => number;
+}): (filePath: string, kind: ContextReasonKind, detail: string) => void {
+  const { candidates, excludedKeys, omittedCandidates, omittedKeys, getWeight } = opts;
+  return (filePath, kind, detail) => {
+    if (!filePath) return;
+    if (excludedKeys.has(toPathKey(filePath)))
+      return void pushOmitted(omittedCandidates, omittedKeys, filePath, 'Excluded by request');
+    addReason(
+      getOrCreateCandidate(candidates, filePath),
+      kind,
+      detail,
+      getWeight(kind),
+    );
+  };
+}
+export function addBaseCandidates(
+  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void,
+  selection: NormalizedSelection,
+  liveIdeState: LiveIdeState,
+): void {
+  for (const filePath of selection.selectedFiles)
+    addCandidate(filePath, 'user_selected', 'Explicitly selected for this task');
+  for (const filePath of selection.pinnedFiles)
+    addCandidate(filePath, 'pinned', 'Pinned into the context set');
+  for (const filePath of selection.includedFiles)
+    addCandidate(filePath, 'included', 'Included by request context settings');
+  for (const filePath of liveIdeState.dirtyFiles)
+    addCandidate(filePath, 'dirty_buffer', 'Unsaved editor changes are present');
+}
 export async function normalizeSelection(
   request: TaskRequest,
   workspaceRoots: string[],
@@ -111,7 +135,6 @@ export async function normalizeSelection(
   const excludedFiles = uniqueFiles(await normalize(request.contextSelection?.excludedFiles ?? []));
   return { selectedFiles, pinnedFiles, includedFiles, excludedFiles };
 }
-
 export async function resolveRecentEdits(
   repoFacts: RepoFacts,
   workspaceRoots: string[],
@@ -129,7 +152,6 @@ export async function resolveRecentEdits(
     ]),
   );
 }
-
 export async function resolveDiagnosticFiles(
   repoFacts: RepoFacts,
   workspaceRoots: string[],
@@ -142,7 +164,6 @@ export async function resolveDiagnosticFiles(
     ),
   );
 }
-
 export async function resolveDiffFiles(
   repoFacts: RepoFacts,
   workspaceRoots: string[],
@@ -155,7 +176,6 @@ export async function resolveDiffFiles(
     ),
   );
 }
-
 export function rankCandidates(candidates: Map<string, MutableCandidate>): RankedContextFile[] {
   return Array.from(candidates.values())
     .map((candidate) => {
@@ -181,6 +201,41 @@ export function rankCandidates(candidates: Map<string, MutableCandidate>): Ranke
       return left.filePath.localeCompare(right.filePath);
     });
 }
+export function buildSeedFiles(
+  selection: NormalizedSelection,
+  liveIdeState: LiveIdeState,
+  diffFiles: string[],
+  diagnosticFiles: string[],
+): string[] {
+  return uniqueFiles([
+    ...selection.selectedFiles,
+    ...selection.pinnedFiles,
+    ...selection.includedFiles,
+    ...liveIdeState.openFiles,
+    ...liveIdeState.dirtyFiles,
+    ...diffFiles,
+    ...diagnosticFiles,
+    ...(liveIdeState.activeFile ? [liveIdeState.activeFile] : []),
+  ]);
+}
+export function findKeywordMatches(
+  filePath: string,
+  content: string | null,
+  keywords: string[],
+): string[] {
+  const pathValue = filePath.toLowerCase();
+  const matches: string[] = [];
+  for (const keyword of keywords) {
+    if (
+      pathValue.includes(keyword) ||
+      // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp above
+      (content && new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(content))
+    ) {
+      matches.push(keyword);
+    }
+  }
+  return matches;
+}
 
 export function findRelatedSeeds(
   candidate: MutableCandidate,
@@ -203,63 +258,6 @@ export function findRelatedSeeds(
     if (related.size === 3) break;
   }
   return Array.from(related);
-}
-
-export function buildSeedFiles(
-  selection: NormalizedSelection,
-  liveIdeState: LiveIdeState,
-  diffFiles: string[],
-  diagnosticFiles: string[],
-): string[] {
-  return uniqueFiles([
-    ...selection.selectedFiles,
-    ...selection.pinnedFiles,
-    ...selection.includedFiles,
-    ...liveIdeState.openFiles,
-    ...liveIdeState.dirtyFiles,
-    ...diffFiles,
-    ...diagnosticFiles,
-    ...(liveIdeState.activeFile ? [liveIdeState.activeFile] : []),
-  ]);
-}
-
-export function extractKeywords(
-  goal: string,
-  stopWords: ReadonlySet<string>,
-  limit = 12,
-): string[] {
-  const tokens: string[] = [];
-  for (const raw of goal.split(/\s+/)) {
-    const stripped = raw.replace(/^[^\w]+|[^\w]+$/g, '');
-    if (!stripped) continue;
-    for (const part of stripped.split(/[-_]+/)) {
-      for (const sub of part.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ')) {
-        tokens.push(sub.toLowerCase());
-      }
-    }
-  }
-  return [
-    ...new Set(tokens.filter((t) => t.length >= 3 && !stopWords.has(t) && !/^\d+$/.test(t))),
-  ].slice(0, limit);
-}
-
-export function findKeywordMatches(
-  filePath: string,
-  content: string | null,
-  keywords: string[],
-): string[] {
-  const pathValue = filePath.toLowerCase();
-  const matches: string[] = [];
-  for (const keyword of keywords) {
-    if (
-      pathValue.includes(keyword) ||
-      // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp above
-      (content && new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(content))
-    ) {
-      matches.push(keyword);
-    }
-  }
-  return matches;
 }
 
 function extractImportSpecifiers(content: string | null): string[] {

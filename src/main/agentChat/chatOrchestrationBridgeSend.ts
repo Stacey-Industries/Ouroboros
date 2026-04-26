@@ -118,6 +118,7 @@ export function buildStreamContext({
     firstChunkEmitted: false,
     model: pending.taskRequest.model,
     bufferedChunks: [],
+    chunkSequence: 0,
     toolsUsed: [],
     accumulatedBlocks: [],
     monitorStartEmitted: false,

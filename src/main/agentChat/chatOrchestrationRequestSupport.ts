@@ -196,6 +196,15 @@ export function resolveSendOptions(
 
   const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
   if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);
+  // Without app-server transport, Codex only supports non-interactive modes.
+  // acceptEdits and plan require the app-server IPC channel; clamp to auto.
+  if (provider === 'codex') {
+    const interactiveModes = new Set(['acceptEdits', 'plan']);
+    if (interactiveModes.has(resolved.permissionMode)) {
+      const appServerEnabled = getConfigValue('ecosystem')?.codexAppServerTransport === true;
+      if (!appServerEnabled) resolved.permissionMode = 'auto';
+    }
+  }
   resolved.outcomeTraceId = outcomeTraceId;
   return resolved;
 }
