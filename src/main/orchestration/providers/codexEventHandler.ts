@@ -3,6 +3,10 @@
  * Converts Codex exec events into ProviderProgressEvents for the sink.
  */
 import log from '../../logger';
+import {
+  observeToolCallBySession,
+  recordTurnEndBySession,
+} from '../contextOutcomeObserver';
 import { getEditProvenanceStore } from '../editProvenance';
 import type {
   CodexAgentMessageItem,
@@ -125,13 +129,28 @@ function recordCodexEditProvenance(paths: string[]): void {
   }
 }
 
+function observeCodexToolTouches(sessionId: string | undefined, paths: string[]): void {
+  if (!sessionId) return;
+  for (const filePath of paths) {
+    try {
+      observeToolCallBySession(sessionId, 'Edit', { file_path: filePath });
+    } catch (err) {
+      log.warn('[codex:context-outcome] observeToolCallBySession failed', err);
+    }
+  }
+}
+
 function handleFileChangeItem(item: CodexFileChangeItem, ctx: CodexEmitCtx): void {
   const changes = (item.changes ?? []).filter(
     (c): c is CodexFileChange & { path: string } =>
       typeof c.path === 'string' && c.path.trim().length > 0,
   );
   // Wave 53 Phase C — record Codex agent edits alongside Claude Code's hook tap.
-  recordCodexEditProvenance(changes.map((c) => c.path));
+  const paths = changes.map((c) => c.path);
+  recordCodexEditProvenance(paths);
+  // Wave 53 Phase E — Codex doesn't traverse the named-pipe hook, so attribute
+  // edit-tool touches to the active context-outcome turn directly.
+  observeCodexToolTouches(ctx.sessionRef.sessionId, paths);
   for (const change of changes) {
     const blockIndex = ctx.blockIndexRef.value++;
     const name = mapFileChangeKindToTool(change.kind);
@@ -171,6 +190,33 @@ function handleItemCompleted(event: CodexItemCompletedEvent, ctx: CodexEmitCtx):
     return handleFileChangeItem(event.item as CodexFileChangeItem, ctx);
 }
 
+function handleThreadStarted(
+  event: CodexThreadStartedEvent,
+  sessionRef: SessionRef,
+): void {
+  if (event.thread_id) {
+    sessionRef.sessionId = event.thread_id;
+    log.info(`[codex-diag] thread.started → captured thread_id=${event.thread_id}`);
+  }
+}
+
+function handleTurnCompleted(
+  event: CodexTurnCompletedEvent,
+  sessionRef: SessionRef,
+): { inputTokens: number; outputTokens: number } | undefined {
+  // Wave 53 Phase E — flush context outcomes for the just-finished Codex turn.
+  if (sessionRef.sessionId) {
+    try {
+      recordTurnEndBySession(sessionRef.sessionId);
+    } catch (err) {
+      log.warn('[codex:context-outcome] recordTurnEndBySession failed', err);
+    }
+  }
+  const usage = event.usage;
+  if (!usage) return undefined;
+  return { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 };
+}
+
 export function buildCodexEventHandler(
   sink: ProviderProgressSink,
   sessionRef: SessionRef,
@@ -188,28 +234,15 @@ export function buildCodexEventHandler(
   let lastUsage: { inputTokens: number; outputTokens: number } | undefined;
 
   const handler = (event: CodexExecEvent): void => {
-    if (event.type === 'thread.started') {
-      const e = event as CodexThreadStartedEvent;
-      if (e.thread_id) {
-        sessionRef.sessionId = e.thread_id;
-        log.info(`[codex-diag] thread.started → captured thread_id=${e.thread_id}`);
-      }
-      return;
-    }
+    if (event.type === 'thread.started')
+      return handleThreadStarted(event as CodexThreadStartedEvent, sessionRef);
     if (event.type === 'item.started')
       return handleItemStarted(event as CodexItemStartedEvent, ctx);
     if (event.type === 'item.completed')
       return handleItemCompleted(event as CodexItemCompletedEvent, ctx);
     if (event.type === 'turn.completed') {
-      const usage = (event as CodexTurnCompletedEvent).usage;
-      if (usage) {
-        lastUsage = {
-          // Cache-hit tokens are billable, but they do not represent additional
-          // live context occupancy in the current prompt window.
-          inputTokens: usage.input_tokens ?? 0,
-          outputTokens: usage.output_tokens ?? 0,
-        };
-      }
+      const usage = handleTurnCompleted(event as CodexTurnCompletedEvent, sessionRef);
+      if (usage) lastUsage = usage;
     }
   };
 
