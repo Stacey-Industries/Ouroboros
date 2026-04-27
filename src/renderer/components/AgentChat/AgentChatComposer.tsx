@@ -28,6 +28,7 @@ import {
 import { noop } from './AgentChatComposerSupport';
 import { AgentChatContextBar } from './AgentChatContextBar';
 import type { ChatOverrides } from './ChatControlsBar';
+import { ComposerContextPreview } from './ComposerContextPreview';
 import { FloatingComposerContainer } from './FloatingComposerContainer';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
@@ -279,6 +280,13 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const variant = useWorkspaceVariant();
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
+      {variant === 'chat-only' && (
+        <ComposerContextPreview
+          pinnedFiles={composerProps.pinnedFiles}
+          chatOverrides={chatOverrides}
+          settingsModel={settingsModel}
+        />
+      )}
       <FloatingComposerContainer
         isDragging={attachmentHandlers.isDragging}
         onDragOver={attachmentHandlers.handleDragOver}
