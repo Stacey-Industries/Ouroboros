@@ -1,5 +1,7 @@
 # Wave 48 — Token Baseline Quick Wins
-## Implementation Plan (DRAFT)
+**Status:** ✅ COMPLETED — 2026-04-26 · Released as part of v2.7.0 · Result: `roadmap/auto-briefs/wave-48-result.md`
+
+## Implementation Plan
 
 **Version target:** v2.7.0 (minor — IDE-spawned Claude Code baseline reduction)
 **Feature flags:** new `context.leanForSimpleGoals` (default `true`), new `internalMcpScope` (`always` | `task-gated`, default `task-gated`), new `workspaceState.dedupe` (default `true`)

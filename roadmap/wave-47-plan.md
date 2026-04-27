@@ -1,4 +1,6 @@
 # Wave 47 — Chat Workbench Follow-Through
+**Status:** ✅ COMPLETED — 2026-04-26 · Released as v2.7.0 · Result: `roadmap/auto-briefs/wave-47-result.md` · Audit (defects fixed by Wave 58): `roadmap/wave-47-audit.md`
+
 ## Implementation Plan
 
 **Version target:** v2.6.0 (minor — complete the workstation follow-through that Wave 46 intentionally deferred)

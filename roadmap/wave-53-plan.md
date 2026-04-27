@@ -1,5 +1,7 @@
 # Wave 53 — Telemetry Recovery & Router Signal Restoration
-## Implementation Plan (DRAFT)
+**Status:** ✅ COMPLETED (Phases A/B/C/E/G; Phases D/F deferred — historical corpus analysis) — 2026-04-26 · Released as part of v2.7.0 · Result: `roadmap/auto-briefs/wave-53-result.md`
+
+## Implementation Plan
 
 **Version target:** v2.8.2 (patch — activate existing instrumentation, analyze historical corpus)
 **Feature flags:** flip `telemetry.structured` default `false` → `true`; new `telemetry.remote` default `false` for future remote-transmit toggle; new `router.shadowMode` default `true`
