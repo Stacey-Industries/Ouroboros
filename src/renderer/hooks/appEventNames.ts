@@ -49,3 +49,19 @@ export const CYCLE_CHAT_SIDEBAR_MODE_EVENT = 'agent-ide:cycle-chat-sidebar-mode'
 export const OPEN_SETTINGS_EVENT = 'agent-ide:open-settings-modal';
 export const TOGGLE_SHORTCUT_CHEATSHEET_EVENT = 'agent-ide:toggle-shortcut-cheatsheet';
 export const OPEN_MULTI_SESSION_EVENT = 'agent-ide:open-multi-session';
+// Wave 59 Phase E — chat search overlay
+export const OPEN_CHAT_SEARCH_EVENT = 'agent-ide:open-chat-search-overlay';
+// Wave 59 Phase C — workbench top menu bar events
+export const WORKBENCH_NEW_SESSION_EVENT = 'agent-ide:workbench-new-session';
+export const WORKBENCH_NEW_CHAT_EVENT = 'agent-ide:workbench-new-chat';
+export const WORKBENCH_OPEN_PROJECT_EVENT = 'agent-ide:workbench-open-project';
+export const WORKBENCH_TOGGLE_OUTER_RAIL_EVENT = 'agent-ide:workbench-toggle-outer-rail';
+export const WORKBENCH_TOGGLE_INNER_SIDEBAR_EVENT = 'agent-ide:workbench-toggle-inner-sidebar';
+export const WORKBENCH_TOGGLE_UTILITY_DRAWER_EVENT = 'agent-ide:workbench-toggle-utility-drawer';
+export const WORKBENCH_TOGGLE_TERMINAL_DOCK_EVENT = 'agent-ide:workbench-toggle-terminal-dock';
+export const WORKBENCH_TOGGLE_ARTIFACT_PANE_EVENT = 'agent-ide:workbench-toggle-artifact-pane';
+export const WORKBENCH_OPEN_CHAT_SEARCH_EVENT = 'agent-ide:open-chat-search';
+export const WORKBENCH_FIND_NEXT_EVENT = 'agent-ide:workbench-find-next';
+export const WORKBENCH_FIND_PREV_EVENT = 'agent-ide:workbench-find-prev';
+// Wave 59 Phase H — HTML preview discoverability
+export const OPEN_ARTIFACT_PREVIEW_EVENT = 'agent-ide:open-artifact-preview';

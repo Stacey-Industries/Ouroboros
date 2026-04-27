@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { OPEN_MULTI_SESSION_EVENT } from '../../../hooks/appEventNames';
+import {
+  OPEN_MULTI_SESSION_EVENT,
+  WORKBENCH_OPEN_CHAT_SEARCH_EVENT,
+} from '../../../hooks/appEventNames';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { CommandPalette } from '../../CommandPalette/CommandPalette';
 import type { Command } from '../../CommandPalette/types';
@@ -9,6 +12,7 @@ import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
+import { ChatSearchOverlay } from './ChatSearchOverlay';
 import { ChatWorkbenchBody } from './ChatWorkbenchBody';
 import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
@@ -49,11 +53,7 @@ function useMultiSessionLauncherState(): {
   return { launcherOpen, closeLauncher };
 }
 
-function MultiSessionOverlay({
-  onClose,
-}: {
-  onClose: () => void;
-}): React.ReactElement {
+function MultiSessionOverlay({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <div
       className="fixed inset-0 z-[900] flex items-center justify-center bg-surface-overlay/60"
@@ -71,6 +71,40 @@ function MultiSessionOverlay({
   );
 }
 
+// ── Chat search overlay state ─────────────────────────────────────────────────
+
+function useChatSearchState(projectRoot: string | null): {
+  searchOpen: boolean;
+  closeSearch: () => void;
+  projectRoot: string | null;
+} {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeSearch = useCallback((): void => {
+    setSearchOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const handleEvent = (): void => {
+      setSearchOpen(true);
+    };
+    window.addEventListener(WORKBENCH_OPEN_CHAT_SEARCH_EVENT, handleEvent);
+    return () => window.removeEventListener(WORKBENCH_OPEN_CHAT_SEARCH_EVENT, handleEvent);
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent): void => {
+      if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  return { searchOpen, closeSearch, projectRoot };
+}
+
 // ── ShellOverlays ─────────────────────────────────────────────────────────────
 
 interface ShellOverlaysProps {
@@ -83,6 +117,9 @@ interface ShellOverlaysProps {
   commands: Command[];
   recentIds: string[];
   execute: (command: Command) => Promise<void>;
+  searchOpen: boolean;
+  closeSearch: () => void;
+  projectRoot: string | null;
 }
 
 function ShellOverlays({
@@ -95,6 +132,9 @@ function ShellOverlays({
   commands,
   recentIds,
   execute,
+  searchOpen,
+  closeSearch,
+  projectRoot,
 }: ShellOverlaysProps): React.ReactElement {
   return (
     <>
@@ -109,6 +149,7 @@ function ShellOverlays({
         onExecute={execute}
       />
       {launcherOpen && <MultiSessionOverlay onClose={closeLauncher} />}
+      {searchOpen && <ChatSearchOverlay projectRoot={projectRoot} onClose={closeSearch} />}
     </>
   );
 }
@@ -169,14 +210,29 @@ function ShellChrome({
 
 const SHELL_BG = 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)';
 
-export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactElement {
+function useShellState(props: ChatWorkbenchShellProps): {
+  cycleMode: () => void;
+  mode: ReturnType<typeof useChatSidebarMode>['mode'];
+  layout: ReturnType<typeof useChatWorkbenchLayout>;
+  dock: ReturnType<typeof useTerminalDockState>;
+  launcherOpen: boolean;
+  closeLauncher: () => void;
+  searchOpen: boolean;
+  closeSearch: () => void;
+} {
   const { mode, cycleMode } = useChatSidebarMode();
   const layout = useChatWorkbenchLayout();
   const dock = useTerminalDockState();
   const { launcherOpen, closeLauncher } = useMultiSessionLauncherState();
-  const { closeDiffOverlay, closePalette, commands, diffOverlayOpen } = props;
-  const { execute, openDiffOverlay, paletteOpen, projectRoot, recentIds } = props;
-  const { terminal, toggleDrawer } = props;
+  const { searchOpen, closeSearch } = useChatSearchState(props.projectRoot);
+  return { cycleMode, mode, layout, dock, launcherOpen, closeLauncher, searchOpen, closeSearch };
+}
+
+export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactElement {
+  const { cycleMode, mode, layout, dock, launcherOpen, closeLauncher, searchOpen, closeSearch } =
+    useShellState(props);
+  const { closeDiffOverlay, closePalette, commands, diffOverlayOpen, execute } = props;
+  const { openDiffOverlay, paletteOpen, projectRoot, recentIds, terminal, toggleDrawer } = props;
   return (
     <div
       data-layout="app"
@@ -204,6 +260,9 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
         commands={commands}
         recentIds={recentIds}
         execute={execute}
+        searchOpen={searchOpen}
+        closeSearch={closeSearch}
+        projectRoot={projectRoot}
       />
     </div>
   );
