@@ -50,19 +50,23 @@ if (!projectRoot || !existsSync(join(projectRoot, 'package.json'))) {
   process.exit(0);
 }
 
-// Run CLAUDE.md size cap check on every commit (not gated on staged .ts files).
-const claudeMdCheck = run('npm', ['run', 'lint:claude-md', '--silent'], projectRoot);
-const claudeMdViolations = [];
-if (claudeMdCheck.code !== 0 && claudeMdCheck.out.trim()) {
-  for (const line of claudeMdCheck.out.split('\n')) {
-    if (line.trim()) claudeMdViolations.push(`  [lint:claude-md] ${line}`);
+// CLAUDE.md size cap: only block when a violating CLAUDE.md is itself staged.
+// Pre-existing over-cap files do not block unrelated commits (Phase D trims them).
+const stagedMd = run('git', ['diff', '--cached', '--name-only', '--diff-filter=d', '--', '**/CLAUDE.md'], projectRoot);
+const stagedMdFiles = stagedMd.out.split('\n').map((f) => f.trim()).filter(Boolean);
+if (stagedMdFiles.length > 0) {
+  const claudeMdCheck = run('npm', ['run', 'lint:claude-md', '--silent'], projectRoot);
+  if (claudeMdCheck.code !== 0 && claudeMdCheck.out.trim()) {
+    const claudeMdViolations = claudeMdCheck.out.split('\n')
+      .filter((l) => l.trim())
+      .filter((l) => stagedMdFiles.some((f) => l.includes(f)));
+    if (claudeMdViolations.length > 0) {
+      const msg = `Commit blocked - staged CLAUDE.md size cap violations:\n\n${claudeMdViolations.map((l) => `  [lint:claude-md] ${l}`).join('\n')}`;
+      process.stderr.write(msg + '\n');
+      process.stdout.write(msg);
+      process.exit(2);
+    }
   }
-}
-if (claudeMdViolations.length > 0) {
-  const msg = `Commit blocked - CLAUDE.md size cap violations:\n\n${claudeMdViolations.join('\n')}`;
-  process.stderr.write(msg + '\n');
-  process.stdout.write(msg);
-  process.exit(2);
 }
 
 const staged = run('git', ['diff', '--cached', '--name-only', '--diff-filter=d', '--', '*.ts', '*.tsx'], projectRoot);
