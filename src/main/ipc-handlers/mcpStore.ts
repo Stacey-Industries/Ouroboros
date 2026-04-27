@@ -12,7 +12,7 @@ import path from 'path';
 
 import { getErrorMessage } from '../agentChat/utils';
 import { store } from '../config';
-import log from '../logger';
+import { readSettingsFileWithRetry } from '../shared/settingsFileUtils';
 import {
   type McpRegistryPackage,
   type McpRegistryServer,
@@ -48,27 +48,11 @@ function getProjectSettingsPath(projectRoot: string): string {
   return path.join(projectRoot, '.claude', 'settings.json');
 }
 
-async function readSettingsFile(filePath: string): Promise<SettingsRecord> {
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from getGlobalSettingsPath/getProjectSettingsPath
-    const raw = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as SettingsRecord;
-  } catch (error: unknown) {
-    // File not found is expected — return empty settings for first-time use
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as { code: string }).code === 'ENOENT'
-    ) {
-      return {};
-    }
-    // Other errors (parse failures, permission errors) should not silently return empty —
-    // that would cause data loss when the settings are written back.
-    log.error(`Failed to read settings file ${filePath}:`, error);
-    throw error;
-  }
-}
+// readSettingsFile is provided by readSettingsFileWithRetry from ../shared/settingsFileUtils:
+// - ENOENT → {} (first-time use)
+// - EMFILE/ENFILE → retries with exponential backoff (survives fd-pressure spikes)
+// - Other errors → throws (prevents silent data loss on write-back)
+const readSettingsFile = readSettingsFileWithRetry;
 
 async function writeSettingsFile(filePath: string, data: SettingsRecord): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from getGlobalSettingsPath/getProjectSettingsPath
