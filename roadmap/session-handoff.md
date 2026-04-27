@@ -143,6 +143,18 @@ Replace `'REPLACE_WITH_PRODUCTION_KEY'` in `src/main/marketplace/trustedKeys.ts`
 
 ---
 
+## CLAUDE.md grooming workflow
+
+When a CLAUDE.md exceeds 200 lines:
+
+1. **Prefer manual trim over regeneration** for small overshoots (≤20 lines over). Drop file-role tables, subdirectory indexes, and dependency lists — these are graph-derivable.
+2. **Regenerate only after a material subsystem change** — significant reorganization, many new files, or the existing file is structurally stale. Run `generateForDirectory` via IPC or the settings panel.
+3. **Never grandfather permanently.** The `<!-- claude-md-grandfathered -->` marker is an escape hatch for CI, not a resting state. Remove it at wave close.
+
+See `docs/claude-md-lifecycle.md` for the full trim discipline, lean prompt principles, and organic growth workflow.
+
+---
+
 ## Commit and push protocol (unchanged)
 
 - Per-wave push by the parent agent after reviewing the aggregate diff.

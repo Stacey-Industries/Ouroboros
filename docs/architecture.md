@@ -608,3 +608,23 @@ interface SessionProvider {
 Multi-provider mode is gated on `config.providers.multiProvider` (default `false`). `profileSpawnHelper.ts::spawnForProfile()` routes through the registry when `Profile.providerId` is set (optional, defaults to `'claude'`).
 
 Provider compare mode (`CompareProviders.tsx`) runs two providers in parallel against the same prompt and renders a per-word diff via `wordDiff.ts`. Doubles cost — a session-remembered warning is shown before the first run.
+
+---
+
+## CLAUDE.md Generation (Wave 49)
+
+Each directory with meaningful source code has its own `CLAUDE.md`. As of Wave 49, generation defaults to **lean mode** (`claudeMdSettings.leanMode: true`).
+
+### Lean generation principles
+
+The lean prompt (`src/main/claudeMdGeneratorLeanPrompt.ts`) excludes derivable content (file-role tables, subdirectory indexes, import/export dependency lists, architecture flow diagrams) and instructs the model to **"OMIT rather than speculate"**. Only tribal knowledge — gotchas, design decisions with rationale, non-obvious invariants — belongs in CLAUDE.md. Derivable content is served on demand by the codebase graph (`get_architecture`, `search_graph`, `trace_call_path`).
+
+### Organic growth
+
+The `src/main/hooks/gotchaUpdateNudge.ts` Stop-hook passively nudges agents to document gotchas discovered during bug-fix sessions. The gotcha-maintenance rule in the project root `CLAUDE.md` is prescriptive: agents must append gotchas before completing the task.
+
+### Size cap
+
+`npm run lint:claude-md` (via `scripts/claude-md-size-check.ts`) fails on any CLAUDE.md over 200 lines without the `<!-- claude-md-grandfathered -->` marker. Pre-commit hook enforces this.
+
+See `docs/claude-md-lifecycle.md` for the full lifecycle: when to generate, when to trim, how the lean prompt is constructed, and the organic growth workflow.
