@@ -111,25 +111,39 @@ export function appendStartupRecord(timings: StartupMark[]): void {
 
 // ─── Read helpers ─────────────────────────────────────────────────────────────
 
+// ─── Concurrency diagnostics ─────────────────────────────────────────────────
+
+let _concurrentReads = 0;
+
 /** Read all parseable records from a single JSONL file using a readline stream. */
 async function readJsonlFile(filePath: string): Promise<StartupRecord[]> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
   if (!fs.existsSync(filePath)) return [];
+
+  _concurrentReads++;
+  log.info('[trace:fd] readJsonlFile open', { file: filePath, concurrent: _concurrentReads });
 
   const records: StartupRecord[] = [];
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
   const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
 
-  for await (const line of rl) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0) continue;
-    try {
-      const parsed = JSON.parse(trimmed) as StartupRecord;
-      records.push(parsed);
-    } catch {
-      log.warn('[perf] readRecentStartups: skipping malformed line in startup-timings.jsonl');
+  try {
+    for await (const line of rl) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) continue;
+      try {
+        const parsed = JSON.parse(trimmed) as StartupRecord;
+        records.push(parsed);
+      } catch {
+        log.warn('[perf] readRecentStartups: skipping malformed line in startup-timings.jsonl');
+      }
     }
+  } finally {
+    rl.close();
+    stream.destroy();
+    _concurrentReads--;
+    log.info('[trace:fd] readJsonlFile close', { file: filePath, concurrent: _concurrentReads });
   }
 
   return records;

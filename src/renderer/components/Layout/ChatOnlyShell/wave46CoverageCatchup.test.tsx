@@ -24,14 +24,13 @@
  *   AgentEventsContext, ApprovalContext (with controlled values), useSessions,
  *   useProject, useRulesAndSkills, structural chrome
  */
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ChatWorkbenchUtilityTab } from './useChatWorkbenchLayout';
 import { ChatWorkbenchUtilityDrawer } from './ChatWorkbenchUtilityDrawer';
+import type { ChatWorkbenchUtilityTab } from './useChatWorkbenchLayout';
 import { useWorkbenchSurfacePolicy } from './useWorkbenchSurfacePolicy';
-import { renderHook, act as hookAct } from '@testing-library/react';
 
 // ── Shared mocks (boundary-only) ────────────────────────────────────────────
 
@@ -118,7 +117,7 @@ describe('Surface policy — auto-open + dismissal-key flow', () => {
 
     expect(setUtilityOpen).not.toHaveBeenCalled();
 
-    hookAct(() => {
+    act(() => {
       rerender({
         approvalCount: 1,
         diffKey: null,
@@ -155,7 +154,7 @@ describe('Surface policy — auto-open + dismissal-key flow', () => {
     setUtilityOpen.mockClear();
 
     // User closes
-    hookAct(() => {
+    act(() => {
       result.current.closeUtility();
     });
 
@@ -191,12 +190,8 @@ describe('Layout persistence (useChatWorkbenchLayout)', () => {
   });
 
   it('persists tab switch to localStorage', () => {
-    const onSelectTab = vi.fn((tab: ChatWorkbenchUtilityTab) => {
-      // In a real shell the parent would rerender; simulate by re-rendering
-      _ = tab;
-    });
-    // Suppress unused var lint
-    let _ = '';
+    // vi.fn() records calls; no-op callback — the parent rerenders via rerender() below.
+    const onSelectTab = vi.fn();
 
     render(
       <ChatWorkbenchUtilityDrawer activeTab="activity" onSelectTab={onSelectTab} onClose={vi.fn()} />,

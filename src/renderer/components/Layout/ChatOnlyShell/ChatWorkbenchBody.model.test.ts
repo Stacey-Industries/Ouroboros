@@ -33,8 +33,8 @@ vi.mock('../../SessionSidebar/NewSessionButton', () => ({
   createStoredSessionFromPicker: vi.fn(),
 }));
 
-import { createStoredSessionFromPicker } from '../../SessionSidebar/NewSessionButton';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
+import { createStoredSessionFromPicker } from '../../SessionSidebar/NewSessionButton';
 
 const mockCreateStoredSessionFromPicker = vi.mocked(createStoredSessionFromPicker);
 const mockUseAgentChatStoreContext = vi.mocked(useAgentChatStoreContext);

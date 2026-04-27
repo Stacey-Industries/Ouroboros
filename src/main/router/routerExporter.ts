@@ -215,6 +215,17 @@ function streamJsonl<T>(filePath: string): Promise<T[]> {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted path derived from app.getPath('userData')
     const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    log.info('[trace:fd] routerExporter.streamJsonl open', { file: filePath });
+    let cleaned = false;
+
+    function cleanup(): void {
+      if (cleaned) return;
+      cleaned = true;
+      rl.close();
+      stream.destroy();
+      log.info('[trace:fd] routerExporter.streamJsonl close', { file: filePath });
+    }
+
     rl.on('line', (line) => {
       const trimmed = line.trim();
       if (!trimmed) return;
@@ -224,7 +235,13 @@ function streamJsonl<T>(filePath: string): Promise<T[]> {
         /* skip malformed */
       }
     });
-    rl.on('close', () => resolve(results));
-    rl.on('error', reject);
+    rl.on('close', () => {
+      cleanup();
+      resolve(results);
+    });
+    rl.on('error', (err) => {
+      cleanup();
+      reject(err);
+    });
   });
 }
