@@ -12,6 +12,7 @@ import { getConfigValue } from './config';
 import { getContextLayerController } from './contextLayer/contextLayerController';
 import { dispatchActivationEvent } from './extensions';
 import type { HookPayload } from './hooks';
+import { evaluateStop } from './hooks/gotchaUpdateNudge';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat';
 import log from './logger';
 import { trackSessionEnd } from './router/qualitySignalCollector';
@@ -71,5 +72,10 @@ export function handleSessionStop(payload: HookPayload, sessionCwdMap: Map<strin
       sessionId: payload.sessionId,
       cwd: payload.cwd ?? sessionCwdMap.get(payload.sessionId),
     });
+    try {
+      evaluateStop(payload);
+    } catch (err) {
+      log.warn('[claude-md:nudge] evaluateStop failed:', err);
+    }
   }
 }

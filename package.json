@@ -21,6 +21,7 @@
     "dist": "npm run build && electron-builder",
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint src/",
+    "lint:claude-md": "npx tsx scripts/claude-md-size-check.ts",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",

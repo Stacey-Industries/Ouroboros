@@ -50,6 +50,21 @@ if (!projectRoot || !existsSync(join(projectRoot, 'package.json'))) {
   process.exit(0);
 }
 
+// Run CLAUDE.md size cap check on every commit (not gated on staged .ts files).
+const claudeMdCheck = run('npm', ['run', 'lint:claude-md', '--silent'], projectRoot);
+const claudeMdViolations = [];
+if (claudeMdCheck.code !== 0 && claudeMdCheck.out.trim()) {
+  for (const line of claudeMdCheck.out.split('\n')) {
+    if (line.trim()) claudeMdViolations.push(`  [lint:claude-md] ${line}`);
+  }
+}
+if (claudeMdViolations.length > 0) {
+  const msg = `Commit blocked - CLAUDE.md size cap violations:\n\n${claudeMdViolations.join('\n')}`;
+  process.stderr.write(msg + '\n');
+  process.stdout.write(msg);
+  process.exit(2);
+}
+
 const staged = run('git', ['diff', '--cached', '--name-only', '--diff-filter=d', '--', '*.ts', '*.tsx'], projectRoot);
 const fileList = staged.out.split('\n').map((f) => f.trim()).filter(Boolean);
 if (fileList.length === 0) process.exit(0);

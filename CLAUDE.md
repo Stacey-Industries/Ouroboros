@@ -11,6 +11,16 @@ This project is developed from within itself. Claude Code runs as a terminal ses
 - Hot-reload (`npm run dev` / Vite HMR) updates the renderer in-place without killing the window. Main-process changes require a relaunch.
 - For renderer-only changes, ask the user to reload with `Ctrl+R`. For main-process changes, ask them to relaunch.
 
+## Gotcha maintenance rule
+
+When you discover a non-obvious constraint, surprise behavior, or load-bearing pattern during work, you MUST append a line to the nearest subsystem `CLAUDE.md`'s `## Gotchas` section before completing the task. Do this in the same commit as the fix or change that revealed the gotcha.
+
+Format: `- **<topic>**: <rule>. Reason: <why>.`
+
+Examples of what counts: a flag that must be set in a specific order, a state machine transition that looks redundant but isn't, an import that must use a specific path for a non-obvious build reason, a workaround for a third-party bug.
+
+If the discovery doesn't fit any existing CLAUDE.md, add it to the most directly affected subsystem's CLAUDE.md or, if truly cross-cutting, to this root CLAUDE.md.
+
 ## Commands
 
 - `npm run dev` — start dev server + Electron (hot-reload renderer)
