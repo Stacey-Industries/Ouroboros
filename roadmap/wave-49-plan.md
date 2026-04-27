@@ -2,7 +2,7 @@
 
 ## Implementation Plan
 
-**Status:** READY (revised 2026-04-27 to reflect verified state — original draft was based on stale line-count audit)
+**Status:** ✅ COMPLETED — 2026-04-27 · Released as v2.8.1 · Result: `roadmap/auto-briefs/wave-49-result.md`
 **Version target:** v2.8.1 (patch — generation prompt, hook, lint, docs)
 **Feature flags:** new `claudeMdSettings.leanMode` (default `true`), new `claudeMdSettings.maxLines` (default `200`)
 **Dependencies:** Wave 48 hook infra, Wave 59 shipped (v2.8.0)
