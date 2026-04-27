@@ -281,7 +281,7 @@ describe('ChatWorkbenchShell integration', () => {
     );
 
     expect(screen.getByTestId('workbench-background-approval-prompt')).toBeDefined();
-    expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
+    expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
   });
 
   it('auto-opens the review tab when diff review becomes active', () => {
