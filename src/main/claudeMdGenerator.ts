@@ -1,7 +1,9 @@
 import path from 'path';
 
+import { collectInlineWarnings } from './claudeMdGeneratorInlineWarnings';
 import {
   buildPrompt,
+  type BuildPromptOptions,
   type ClaudeMdGenerationResult,
   type ClaudeMdGenerationStatus,
   discoverDirectories,
@@ -11,6 +13,7 @@ import {
   writeClaudeMd,
 } from './claudeMdGeneratorSupport';
 import { getConfigValue, setConfigValue } from './config';
+import type { ClaudeMdSettings } from './configTypes';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
@@ -88,6 +91,22 @@ function isExcluded(relPath: string, excludeDirs: string[]): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Prompt building — extracted to keep generateForDirectory under complexity 10
+// ---------------------------------------------------------------------------
+
+async function buildDirectoryPrompt(
+  dirPath: string,
+  projectRoot: string,
+  settings: ClaudeMdSettings,
+): Promise<string> {
+  const leanMode = settings.leanMode !== false; // default true when field absent
+  const targetMaxLines = settings.maxLines ?? 150;
+  const strategy: BuildPromptOptions['strategy'] = leanMode ? 'lean' : 'legacy';
+  const inlineWarnings = leanMode ? await collectInlineWarnings(dirPath) : [];
+  return buildPrompt(dirPath, projectRoot, { strategy, inlineWarnings, targetMaxLines });
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -131,7 +150,7 @@ export async function generateForDirectory(
 
   try {
     const generated = await spawnClaudeWithRetry(
-      await buildPrompt(dirPath, projectRoot),
+      await buildDirectoryPrompt(dirPath, projectRoot, settings),
       settings.model || 'sonnet',
       projectRoot,
     );

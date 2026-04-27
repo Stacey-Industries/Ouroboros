@@ -180,6 +180,8 @@ export const tailSchema = {
       generateRoot: { type: 'boolean', default: true },
       generateSubdirs: { type: 'boolean', default: true },
       excludeDirs: { type: 'array', items: { type: 'string' }, default: [] },
+      leanMode: { type: 'boolean', default: true },
+      maxLines: { type: 'number', default: 200 },
     },
     default: {
       enabled: false,
@@ -189,6 +191,8 @@ export const tailSchema = {
       generateRoot: true,
       generateSubdirs: true,
       excludeDirs: [],
+      leanMode: true,
+      maxLines: 200,
     },
   },
   routerSettings: {

@@ -247,6 +247,8 @@ describe('configTypes — ClaudeMdSettings', () => {
       generateRoot: true,
       generateSubdirs: true,
       excludeDirs: [],
+      leanMode: true,
+      maxLines: 200,
     };
     expect(s.model).toBe('sonnet');
   });

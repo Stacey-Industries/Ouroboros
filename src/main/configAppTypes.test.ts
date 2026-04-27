@@ -96,6 +96,8 @@ describe('AppConfig — structural shape', () => {
         generateRoot: true,
         generateSubdirs: true,
         excludeDirs: [],
+        leanMode: true,
+        maxLines: 200,
       },
       modelProviders: [],
       modelSlots: { terminal: '', agentChat: '', claudeMdGeneration: '', inlineCompletion: '' },
@@ -150,8 +152,15 @@ describe('AppConfig — structural shape', () => {
 
   it('activeTheme accepts all valid theme values', () => {
     const themes: AppConfig['activeTheme'][] = [
-      'retro', 'modern', 'warp', 'cursor', 'kiro',
-      'glass', 'light', 'high-contrast', 'custom',
+      'retro',
+      'modern',
+      'warp',
+      'cursor',
+      'kiro',
+      'glass',
+      'light',
+      'high-contrast',
+      'custom',
     ];
     expect(themes).toHaveLength(9);
     expect(themes).toContain('glass');

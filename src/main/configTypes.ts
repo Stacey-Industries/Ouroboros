@@ -194,6 +194,10 @@ export interface ClaudeMdSettings {
   generateSubdirs: boolean;
   /** Directories to exclude from generation */
   excludeDirs: string[];
+  /** Wave 49 — use lean prompt that excludes derivable content (default true) */
+  leanMode: boolean;
+  /** Wave 49 — warn when generated CLAUDE.md exceeds this line count (default 200) */
+  maxLines: number;
 }
 
 export interface CodebaseGraphSettings {

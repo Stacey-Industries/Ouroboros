@@ -10,6 +10,9 @@ import { spawn } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 
+import type { InlineWarning } from './claudeMdGeneratorInlineWarnings';
+import { buildLeanPrompt } from './claudeMdGeneratorLeanPrompt';
+
 // ---------------------------------------------------------------------------
 // Types (re-exported for the main module)
 // ---------------------------------------------------------------------------
@@ -180,10 +183,20 @@ export async function readParentClaudeMd(
 }
 
 // ---------------------------------------------------------------------------
-// Prompt builder
+// Prompt builder — options
 // ---------------------------------------------------------------------------
 
-function buildPromptHeader(relPath: string, fileListStr: string): string {
+export interface BuildPromptOptions {
+  strategy?: 'lean' | 'legacy';
+  inlineWarnings?: InlineWarning[];
+  targetMaxLines?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy prompt helpers (used when strategy === 'legacy')
+// ---------------------------------------------------------------------------
+
+function buildLegacyHeader(relPath: string, fileListStr: string): string {
   return `You are generating a CLAUDE.md file for a directory in a codebase.
 
 ## Directory
@@ -195,7 +208,7 @@ ${fileListStr}
 `;
 }
 
-function buildPromptFooter(): string {
+function buildLegacyFooter(): string {
   return `## Instructions
 Generate concise, useful CLAUDE.md content for this directory. Include:
 1. A one-line summary of what this directory does
@@ -214,23 +227,51 @@ CRITICAL OUTPUT RULES:
 - The file content you emit will be used verbatim. Anything before the first heading is treated as a bug.`;
 }
 
-export async function buildPrompt(dirPath: string, projectRoot: string): Promise<string> {
+async function buildLegacyPrompt(
+  dirPath: string,
+  relPath: string,
+  keyExcerpts: string,
+  parentContent: string | null,
+): Promise<string> {
+  const fileListing = await buildFileListing(dirPath);
+  const fileListStr = fileListing
+    .map((f) => `  - ${f.name} (${f.lines} lines, ${Math.round(f.size / 1024)}KB)`)
+    .join('\n');
+
+  let prompt = buildLegacyHeader(relPath, fileListStr);
+  if (keyExcerpts) prompt += `## Key file excerpts\n${keyExcerpts}\n\n`;
+  if (parentContent)
+    prompt += `## Parent CLAUDE.md (for context)\n\`\`\`\n${parentContent.slice(0, 2000)}\n\`\`\`\n\n`;
+  prompt += buildLegacyFooter();
+  return prompt;
+}
+
+// ---------------------------------------------------------------------------
+// Public prompt builder
+// ---------------------------------------------------------------------------
+
+export async function buildPrompt(
+  dirPath: string,
+  projectRoot: string,
+  options: BuildPromptOptions = {},
+): Promise<string> {
+  const { strategy = 'lean', inlineWarnings = [], targetMaxLines = 150 } = options;
   const relPath = toForwardSlash(path.relative(projectRoot, dirPath));
   const fileListing = await buildFileListing(dirPath);
   const keyExcerpts = await readKeyFileExcerpts(dirPath, fileListing);
   const parentContent = await readParentClaudeMd(dirPath, projectRoot);
 
-  const fileListStr = fileListing
-    .map((f) => `  - ${f.name} (${f.lines} lines, ${Math.round(f.size / 1024)}KB)`)
-    .join('\n');
+  if (strategy === 'legacy') {
+    return buildLegacyPrompt(dirPath, relPath, keyExcerpts, parentContent);
+  }
 
-  let prompt = buildPromptHeader(relPath, fileListStr);
-  if (keyExcerpts) prompt += `## Key file excerpts\n${keyExcerpts}\n\n`;
-  if (parentContent)
-    prompt += `## Parent CLAUDE.md (for context)\n\`\`\`\n${parentContent.slice(0, 2000)}\n\`\`\`\n\n`;
-  prompt += buildPromptFooter();
-
-  return prompt;
+  return buildLeanPrompt({
+    dirPath,
+    relPath,
+    codeSamples: keyExcerpts,
+    inlineWarnings,
+    targetMaxLines,
+  });
 }
 
 // ---------------------------------------------------------------------------
