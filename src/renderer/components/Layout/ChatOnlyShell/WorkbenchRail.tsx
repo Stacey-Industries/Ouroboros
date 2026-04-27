@@ -68,7 +68,7 @@ function RailHeaderActions({
 }: RailHeaderActionsProps): React.ReactElement | null {
   if (!onCreateSession && !onLaunchAgent) return null;
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <div className="mt-2 flex items-center gap-1.5">
       {onCreateSession && (
         <button type="button" className={RAIL_BTN_CLASS} onClick={onCreateSession}>
           New session
@@ -76,7 +76,7 @@ function RailHeaderActions({
       )}
       {onLaunchAgent && (
         <button type="button" className={RAIL_BTN_CLASS} onClick={onLaunchAgent}>
-          Launch agent
+          Multi-Session Launch
         </button>
       )}
     </div>
@@ -99,15 +99,13 @@ function RailHeader({
   title,
 }: RailHeaderProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-border-semantic px-3 py-3">
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
-          {title}
-        </div>
-        <p className="mt-1 text-xs text-text-semantic-secondary">
-          {countLabel(sessionCount, chatCount)}
-        </p>
+    <div className="shrink-0 border-b border-border-semantic px-3 pt-3 pb-2">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
+        {title}
       </div>
+      <p className="mt-0.5 text-xs text-text-semantic-muted">
+        {countLabel(sessionCount, chatCount)}
+      </p>
       <RailHeaderActions onCreateSession={onCreateSession} onLaunchAgent={onLaunchAgent} />
     </div>
   );

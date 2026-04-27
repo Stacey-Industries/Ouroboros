@@ -216,7 +216,7 @@ describe('WorkbenchRail', () => {
     expect(onCompareSession).toHaveBeenCalledWith('session-2');
   });
 
-  it('calls onLaunchAgent when "Launch agent" is clicked and does NOT call onCreateSession', () => {
+  it('calls onLaunchAgent when "Multi-Session Launch" is clicked and does NOT call onCreateSession', () => {
     const onCreateSession = vi.fn();
     const onLaunchAgent = vi.fn();
     mockUseWorkbenchSessions.mockReturnValue({
@@ -231,7 +231,7 @@ describe('WorkbenchRail', () => {
 
     render(<WorkbenchRail onCreateSession={onCreateSession} onLaunchAgent={onLaunchAgent} />);
 
-    fireEvent.click(screen.getByText('Launch agent'));
+    fireEvent.click(screen.getByText('Multi-Session Launch'));
     expect(onLaunchAgent).toHaveBeenCalledOnce();
     expect(onCreateSession).not.toHaveBeenCalled();
   });

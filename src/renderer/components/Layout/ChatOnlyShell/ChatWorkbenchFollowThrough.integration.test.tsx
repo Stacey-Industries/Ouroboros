@@ -206,12 +206,12 @@ describe('Rail IA (real WorkbenchRail)', () => {
     expect(screen.getByTestId('workbench-rail')).toBeDefined();
   });
 
-  it('renders distinct New session and Launch agent buttons', () => {
+  it('renders distinct New session and Multi-Session Launch buttons', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     const rail = screen.getByTestId('workbench-rail');
     const labels = within(rail).getAllByRole('button').map((b) => b.textContent);
     expect(labels.some((l) => /new session/i.test(l ?? ''))).toBe(true);
-    expect(labels.some((l) => /launch agent/i.test(l ?? ''))).toBe(true);
+    expect(labels.some((l) => /multi-session launch/i.test(l ?? ''))).toBe(true);
   });
 
   it('shows session sections when sessions are present', () => {
