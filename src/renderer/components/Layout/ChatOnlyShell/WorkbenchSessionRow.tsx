@@ -2,8 +2,9 @@ import React, { useCallback } from 'react';
 
 import type { WorkbenchRecentChatItem } from './useWorkbenchRecentChats';
 import type { WorkbenchSessionItem } from './useWorkbenchSessions';
+import type { WorkbenchRowItem } from './WorkbenchRailContextMenu';
 
-export type WorkbenchRowItem = WorkbenchSessionItem | WorkbenchRecentChatItem;
+export type { WorkbenchRowItem };
 
 interface RailChip {
   label: string;
@@ -121,6 +122,7 @@ export interface WorkbenchSessionRowProps {
   item: WorkbenchRowItem;
   onSelect?: (itemId: string) => void;
   onCompare?: (itemId: string) => void;
+  onContextMenu?: (item: WorkbenchRowItem, e: React.MouseEvent) => void;
   showCompareAction?: boolean;
   compareActive?: boolean;
 }
@@ -194,45 +196,92 @@ function RowMetrics({
   );
 }
 
+function MoreButton({
+  item,
+  onContextMenu,
+}: {
+  item: WorkbenchRowItem;
+  onContextMenu: (item: WorkbenchRowItem, e: React.MouseEvent) => void;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      aria-label="More options"
+      data-testid="workbench-row-more"
+      className="ml-auto shrink-0 rounded p-0.5 text-text-semantic-faint opacity-0 transition-opacity group-hover/row:opacity-100 hover:bg-surface-hover hover:text-text-semantic-primary"
+      onClick={(e) => {
+        e.stopPropagation();
+        onContextMenu(item, e);
+      }}
+    >
+      …
+    </button>
+  );
+}
+
+interface RowHandlers {
+  handleSelect: () => void;
+  handleContextMenu: ((e: React.MouseEvent) => void) | undefined;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+}
+
+function useRowHandlers(
+  item: WorkbenchRowItem,
+  onSelect: WorkbenchSessionRowProps['onSelect'],
+  onContextMenu: WorkbenchSessionRowProps['onContextMenu'],
+): RowHandlers {
+  const handleSelect = useCallback(() => {
+    onSelect?.(item.id);
+  }, [item.id, onSelect]);
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      onContextMenu?.(item, e);
+    },
+    [item, onContextMenu],
+  );
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleSelect();
+      }
+    },
+    [handleSelect],
+  );
+  return { handleSelect, handleContextMenu: onContextMenu ? handleContextMenu : undefined, handleKeyDown };
+}
+
 export function WorkbenchSessionRow({
   item,
   onSelect,
   onCompare,
+  onContextMenu,
   showCompareAction = false,
   compareActive = false,
 }: WorkbenchSessionRowProps): React.ReactElement {
-  const handleSelect = useCallback(() => {
-    onSelect?.(item.id);
-  }, [item.id, onSelect]);
-
+  const { handleSelect, handleContextMenu, handleKeyDown } = useRowHandlers(item, onSelect, onContextMenu);
   const activeClass = item.isActive
     ? 'border-l-2 border-interactive-accent bg-interactive-selection'
     : 'border-l-2 border-transparent hover:bg-surface-hover';
-
   return (
     <div
       role="row"
       aria-selected={item.isActive}
-      className={`flex w-full flex-col gap-2 px-3 py-2 text-left transition-colors ${activeClass}`}
+      className={`group/row flex w-full flex-col gap-2 px-3 py-2 text-left transition-colors ${activeClass}`}
       onClick={handleSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          handleSelect();
-        }
-      }}
+      onContextMenu={handleContextMenu}
+      onKeyDown={handleKeyDown}
       tabIndex={0}
       data-testid="workbench-session-row"
       data-row-kind={item.kind}
       data-item-id={item.id}
     >
-      <RowTitle item={item} />
-      <RowMetrics
-        item={item}
-        onCompare={onCompare}
-        showCompareAction={showCompareAction}
-        compareActive={compareActive}
-      />
+      <div className="flex items-start gap-1">
+        <RowTitle item={item} />
+        {onContextMenu && <MoreButton item={item} onContextMenu={onContextMenu} />}
+      </div>
+      <RowMetrics item={item} onCompare={onCompare} showCompareAction={showCompareAction} compareActive={compareActive} />
     </div>
   );
 }

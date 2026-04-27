@@ -2,7 +2,10 @@ import React from 'react';
 
 import type { WorkbenchRecentChatItem } from './useWorkbenchRecentChats';
 import type { WorkbenchSessionItem } from './useWorkbenchSessions';
+import type { WorkbenchRowItem } from './WorkbenchRailContextMenu';
 import { WorkbenchSessionRow } from './WorkbenchSessionRow';
+
+type OnContextMenu = (item: WorkbenchRowItem, e: React.MouseEvent) => void;
 
 interface RailSectionProps {
   title: string;
@@ -35,6 +38,7 @@ export interface WorkbenchRailSectionsProps {
   onSelectSession?: (sessionId: string) => void;
   onSelectRecentChat?: (threadId: string) => void;
   onCompareSession?: (sessionId: string) => void;
+  onContextMenu?: OnContextMenu;
   canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
 }
@@ -44,6 +48,7 @@ interface SessionSectionsProps {
   backgroundSessions: WorkbenchSessionItem[];
   onSelectSession?: (sessionId: string) => void;
   onCompareSession?: (sessionId: string) => void;
+  onContextMenu?: OnContextMenu;
   canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
 }
@@ -52,6 +57,7 @@ interface BackgroundRowsProps {
   items: WorkbenchSessionItem[];
   onSelectSession?: (id: string) => void;
   onCompareSession?: (id: string) => void;
+  onContextMenu?: OnContextMenu;
   canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
 }
@@ -60,6 +66,7 @@ function BackgroundSessionRows({
   items,
   onSelectSession,
   onCompareSession,
+  onContextMenu,
   canCompareSession,
   compareSessionId,
 }: BackgroundRowsProps): React.ReactElement {
@@ -75,6 +82,7 @@ function BackgroundSessionRows({
           item={item}
           onSelect={onSelectSession}
           onCompare={onCompareSession}
+          onContextMenu={onContextMenu}
           showCompareAction={canCompareSession?.(item) ?? false}
           compareActive={compareSessionId === item.id}
         />
@@ -88,6 +96,7 @@ function SessionSections({
   backgroundSessions,
   onSelectSession,
   onCompareSession,
+  onContextMenu,
   canCompareSession,
   compareSessionId,
 }: SessionSectionsProps): React.ReactElement {
@@ -100,7 +109,12 @@ function SessionSections({
           testId="workbench-section-active-sessions"
         >
           {activeSessions.map((item) => (
-            <WorkbenchSessionRow key={item.id} item={item} onSelect={onSelectSession} />
+            <WorkbenchSessionRow
+              key={item.id}
+              item={item}
+              onSelect={onSelectSession}
+              onContextMenu={onContextMenu}
+            />
           ))}
         </RailSection>
       )}
@@ -109,11 +123,38 @@ function SessionSections({
           items={backgroundSessions}
           onSelectSession={onSelectSession}
           onCompareSession={onCompareSession}
+          onContextMenu={onContextMenu}
           canCompareSession={canCompareSession}
           compareSessionId={compareSessionId}
         />
       )}
     </>
+  );
+}
+
+interface RecentChatsProps {
+  items: WorkbenchRecentChatItem[];
+  onSelectRecentChat?: (threadId: string) => void;
+  onContextMenu?: OnContextMenu;
+}
+
+function RecentChatSection({
+  items,
+  onSelectRecentChat,
+  onContextMenu,
+}: RecentChatsProps): React.ReactElement | null {
+  if (items.length === 0) return null;
+  return (
+    <RailSection title="Recent Chats" itemCount={items.length} testId="workbench-section-recent-chats">
+      {items.map((item) => (
+        <WorkbenchSessionRow
+          key={item.id}
+          item={item}
+          onSelect={onSelectRecentChat}
+          onContextMenu={onContextMenu}
+        />
+      ))}
+    </RailSection>
   );
 }
 
@@ -124,6 +165,7 @@ export function WorkbenchRailSections({
   onSelectSession,
   onSelectRecentChat,
   onCompareSession,
+  onContextMenu,
   canCompareSession,
   compareSessionId,
 }: WorkbenchRailSectionsProps): React.ReactElement {
@@ -134,20 +176,15 @@ export function WorkbenchRailSections({
         backgroundSessions={backgroundSessions}
         onSelectSession={onSelectSession}
         onCompareSession={onCompareSession}
+        onContextMenu={onContextMenu}
         canCompareSession={canCompareSession}
         compareSessionId={compareSessionId}
       />
-      {recentChats.length > 0 && (
-        <RailSection
-          title="Recent Chats"
-          itemCount={recentChats.length}
-          testId="workbench-section-recent-chats"
-        >
-          {recentChats.map((item) => (
-            <WorkbenchSessionRow key={item.id} item={item} onSelect={onSelectRecentChat} />
-          ))}
-        </RailSection>
-      )}
+      <RecentChatSection
+        items={recentChats}
+        onSelectRecentChat={onSelectRecentChat}
+        onContextMenu={onContextMenu}
+      />
     </>
   );
 }
