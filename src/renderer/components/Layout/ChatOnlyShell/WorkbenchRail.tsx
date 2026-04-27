@@ -3,6 +3,7 @@ import React, { useCallback } from 'react';
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { SESSION_SWITCH_EVENT } from '../../../hooks/appEventNames';
 import type { ApprovalRequest } from '../../../types/electron';
+import { ChatOnlyUserMenu } from './ChatOnlyUserMenu';
 import { useWorkbenchAttention } from './useWorkbenchAttention';
 import {
   useWorkbenchRecentChats,
@@ -209,6 +210,14 @@ interface RailViewProps extends RailStateResult {
   title: string;
 }
 
+function RailFooter(): React.ReactElement {
+  return (
+    <div className="shrink-0 border-t border-border-semantic-subtle">
+      <ChatOnlyUserMenu />
+    </div>
+  );
+}
+
 function RailView({
   canCompareSession,
   compareSessionId,
@@ -245,6 +254,7 @@ function RailView({
           sessionState={sessionState}
         />
       </div>
+      <RailFooter />
     </aside>
   );
 }
