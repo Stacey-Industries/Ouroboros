@@ -18,6 +18,7 @@ import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import type { ChatSidebarMode } from './useChatSidebarMode';
+import { WorkbenchMenuBar } from './WorkbenchMenuBar';
 import { WorkbenchPanelToggleStrip } from './WorkbenchPanelToggleStrip';
 import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
 
@@ -326,11 +327,11 @@ function WorkbenchControls({
 export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
   const { onCycleSidebarMode, sidebarMode } = props;
+  const isWorkbench = props.onToggleRail !== undefined;
   return (
     <header
-      className="titlebar-drag flex items-center px-2 gap-2 text-text-semantic-primary select-none shrink-0"
+      className="titlebar-drag flex flex-col text-text-semantic-primary select-none shrink-0"
       style={{
-        height: 'var(--titlebar-height, 36px)',
         background: 'var(--titlebar-bg)',
         backdropFilter: 'blur(var(--material-blur))',
         WebkitBackdropFilter: 'blur(var(--material-blur))',
@@ -339,10 +340,13 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
       }}
       data-testid="chat-only-title-bar"
     >
-      <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} isWorkbench={props.onToggleRail !== undefined} />
-      <WorkbenchControls {...props} />
-      <div className="flex-1" />
-      <TitleBarRight />
+      <div className="flex items-center px-2 gap-2" style={{ height: 'var(--titlebar-height, 36px)' }}>
+        <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} isWorkbench={isWorkbench} />
+        <WorkbenchControls {...props} />
+        <div className="flex-1" />
+        <TitleBarRight />
+      </div>
+      {isWorkbench && <WorkbenchMenuBar />}
     </header>
   );
 }

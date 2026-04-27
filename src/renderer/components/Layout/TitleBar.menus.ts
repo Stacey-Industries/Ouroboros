@@ -1,5 +1,6 @@
 /**
  * TitleBar menu definitions — data-driven, extracted to keep TitleBar.tsx under 300 lines.
+ * Workbench-specific definitions live in TitleBar.workbench.menus.ts and are re-exported here.
  */
 
 import {
@@ -21,6 +22,8 @@ export interface MenuItem {
   action?: () => void;
   divider?: boolean;
   disabled?: boolean;
+  /** Nested items — renders a fly-out submenu on hover/ArrowRight. */
+  submenu?: MenuItem[];
 }
 
 export interface MenuDefinition {
@@ -33,6 +36,14 @@ function dispatchEv(name: string, detail?: unknown): void {
 }
 
 export const SEPARATOR: MenuItem = { label: '', divider: true };
+
+export function showAbout(): void {
+  void window.electronAPI?.app?.getVersion?.().then((version) => {
+    void window.electronAPI?.app?.getPlatform?.().then((platform) => {
+      window.dispatchEvent(new CustomEvent(SHOW_ABOUT_EVENT, { detail: { version, platform } }));
+    });
+  });
+}
 
 function buildFileMenu(): MenuDefinition {
   return {
@@ -119,16 +130,8 @@ function buildGoMenu(): MenuDefinition {
   return {
     label: 'Go',
     items: [
-      {
-        label: 'Go to File',
-        shortcut: 'Ctrl+P',
-        action: () => dispatchEv('agent-ide:open-file-picker'),
-      },
-      {
-        label: 'Go to Symbol',
-        shortcut: 'Ctrl+Shift+O',
-        action: () => dispatchEv('agent-ide:open-symbol-search'),
-      },
+      { label: 'Go to File', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
+      { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEv('agent-ide:open-symbol-search') },
       { label: 'Go to Line', shortcut: 'Ctrl+G', action: () => dispatchEv('agent-ide:go-to-line') },
       SEPARATOR,
       { label: 'Back', shortcut: 'Alt+Left', action: () => dispatchEv(GO_BACK_EVENT) },
@@ -141,33 +144,13 @@ function buildTerminalMenu(): MenuDefinition {
   return {
     label: 'Terminal',
     items: [
-      {
-        label: 'New Terminal',
-        shortcut: 'Ctrl+Shift+`',
-        action: () => dispatchEv('agent-ide:new-terminal'),
-      },
-      {
-        label: 'New Claude Terminal',
-        shortcut: 'Ctrl+Shift+C',
-        action: () => dispatchEv('agent-ide:new-claude-terminal'),
-      },
+      { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEv('agent-ide:new-terminal') },
+      { label: 'New Claude Terminal', shortcut: 'Ctrl+Shift+C', action: () => dispatchEv('agent-ide:new-claude-terminal') },
       { label: 'Split Terminal', action: () => dispatchEv(SPLIT_TERMINAL_EVENT) },
       SEPARATOR,
       { label: 'Clear Terminal', action: () => dispatchEv('agent-ide:clear-active-terminal') },
     ],
   };
-}
-
-function showAbout(): void {
-  void window.electronAPI?.app?.getVersion?.().then((version) => {
-    void window.electronAPI?.app?.getPlatform?.().then((platform) => {
-      window.dispatchEvent(
-        new CustomEvent(SHOW_ABOUT_EVENT, {
-          detail: { version, platform },
-        }),
-      );
-    });
-  });
 }
 
 function buildHelpMenu(): MenuDefinition {
@@ -176,8 +159,7 @@ function buildHelpMenu(): MenuDefinition {
     items: [
       {
         label: 'Documentation',
-        action: () =>
-          window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros'),
+        action: () => window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros'),
       },
       {
         label: 'Keyboard Shortcuts',
@@ -207,3 +189,7 @@ export function getMenuDefinitions(isImmersiveChat = false): MenuDefinition[] {
     buildHelpMenu(),
   ];
 }
+
+// Re-export workbench definitions so existing callers keep their import path.
+export type { WorkbenchMenuOptions } from './TitleBar.workbench.menus';
+export { getWorkbenchMenuDefinitions } from './TitleBar.workbench.menus';
