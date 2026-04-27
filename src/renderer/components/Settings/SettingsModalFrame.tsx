@@ -54,6 +54,7 @@ export function ModalCard({
       style={{
         width: '100%',
         maxWidth: '680px',
+        minHeight: '560px',
         maxHeight: 'calc(100vh - 48px)',
         display: 'flex',
         flexDirection: 'column',
