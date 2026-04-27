@@ -57,14 +57,19 @@ vi.mock('../../../contexts/FocusContext', () => ({
 
 vi.mock('../../../contexts/ApprovalContext', () => ({
   ApprovalProvider: ({ children }: React.PropsWithChildren) => <>{children}</>,
-  useApprovalContext: () => ({ pendingCount: 0 }),
+  useApprovalContext: () => ({ pendingCount: 0, requests: [] }),
 }));
 
 // FileViewer / DiffReview providers — pass-through.
 vi.mock('../../FileViewer', () => ({
   FileViewerManager: ({ children }: React.PropsWithChildren) => <>{children}</>,
   MultiBufferManager: ({ children }: React.PropsWithChildren) => <>{children}</>,
-  useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null }),
+  useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null, openFiles: [] }),
+}));
+// Wave 59: workbench is the only chat shell, so deeper hooks (useWorkbenchArtifacts)
+// import useFileViewerManager directly from the module — mock that path too.
+vi.mock('../../FileViewer/FileViewerManager', () => ({
+  useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null, openFiles: [] }),
 }));
 
 vi.mock('../../DiffReview', () => ({

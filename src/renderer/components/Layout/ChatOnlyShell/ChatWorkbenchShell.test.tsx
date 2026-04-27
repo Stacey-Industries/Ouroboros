@@ -60,7 +60,8 @@ const mockThreads: AgentChatThreadRecord[] = [
     status: 'complete',
     projectId: 'project-1',
     workspaceRoot: '/test/project',
-  },
+    messages: [],
+  } as unknown as AgentChatThreadRecord,
 ];
 
 const mockSessions = [
@@ -84,20 +85,44 @@ vi.mock('../../DiffReview/DiffReviewManager', () => ({
   useDiffReview: () => ({ state: mockDiffState }),
 }));
 
+// Wave 59: TwoTierRailSurface (workbench is now the chat shell) reads
+// project list + config + file viewer + file tree. Mock those.
+vi.mock('../../../contexts/ProjectContext', () => ({
+  useProject: () => ({
+    projectRoot: '/test/project',
+    projectName: 'project',
+    projectRoots: ['/test/project'],
+    addProjectRoot: vi.fn(),
+  }),
+}));
+vi.mock('../../../hooks/useConfig', () => ({
+  useConfig: () => ({ config: { recentProjects: [] } }),
+}));
+vi.mock('../../FileViewer/FileViewerManager', () => ({
+  useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null, openFiles: [] }),
+}));
+vi.mock('../../FileTree/FileTree', () => ({
+  FileTree: () => <div data-testid="mock-file-tree" />,
+}));
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   AgentChatWorkspace: () => <div data-testid="agent-chat-workspace" />,
 }));
 
-vi.mock('../../AgentChat/agentChatStore', () => ({
-  useAgentChatStoreContext: (
-    selector: (state: {
-      threads: AgentChatThreadRecord[];
-      onSelectThread: typeof mockSelectThread;
-    }) => unknown,
-  ) => selector({ threads: mockThreads, onSelectThread: mockSelectThread }),
-}));
+vi.mock('../../AgentChat/agentChatStore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../AgentChat/agentChatStore')>();
+  return {
+    ...actual,
+    useAgentChatStoreContext: (
+      selector: (state: {
+        threads: AgentChatThreadRecord[];
+        onSelectThread: typeof mockSelectThread;
+      }) => unknown,
+    ) => selector({ threads: mockThreads, onSelectThread: mockSelectThread }),
+  };
+});
 
 vi.mock('../../SessionSidebar/useSessions', () => ({
   useSessions: () => ({
@@ -176,6 +201,8 @@ vi.mock('./useChatWorkbenchLayout', () => ({
     artifactOpen: mockArtifactOpen,
     utilityOpen: mockUtilityOpen,
     activeUtilityTab: mockActiveUtilityTab,
+    activeProject: null,
+    projectStates: {},
     toggleRail: vi.fn(),
     setRailOpen: vi.fn(),
     toggleArtifact: vi.fn(),
@@ -183,6 +210,9 @@ vi.mock('./useChatWorkbenchLayout', () => ({
     toggleUtility: vi.fn(),
     setUtilityOpen: mockSetUtilityOpen,
     setActiveUtilityTab: mockSetActiveUtilityTab,
+    setActiveProject: vi.fn(),
+    setActiveInnerTab: vi.fn(),
+    getProjectState: vi.fn(() => ({ activeInnerTab: 'chats' as const })),
   }),
 }));
 
@@ -405,13 +435,18 @@ describe('ChatWorkbenchShell', () => {
     expect(mockSetArtifactOpen).toHaveBeenCalledWith(true);
   });
 
-  it('activates the selected rail session', () => {
+  // Wave 59 Phase B replaced WorkbenchRail with TwoTierRailSurface
+  // (OuterProjectRail + InnerSidebar). The legacy testids
+  // workbench-rail-{select,create,recent-chat} no longer exist; the
+  // equivalent flows are covered by InnerSidebarChats.test.tsx and
+  // wave59ReshapeIntegration.test.tsx.
+  it.skip('activates the selected rail session (legacy Wave 47 IA, replaced by Wave 59 Phase B)', () => {
     renderShell();
     fireEvent.click(screen.getByTestId('workbench-rail-select'));
     expect(mockActivateSession).toHaveBeenCalledWith('session-1');
   });
 
-  it('creates and activates a new session from the rail', async () => {
+  it.skip('creates and activates a new session from the rail (legacy Wave 47 IA, replaced by Wave 59 Phase B)', async () => {
     mockCreateStoredSessionFromPicker.mockResolvedValue({ id: 'session-created' });
     mockActivateSession.mockResolvedValue(true);
     renderShell();
@@ -422,7 +457,7 @@ describe('ChatWorkbenchShell', () => {
     });
   });
 
-  it('selects a recent chat directly from the rail', () => {
+  it.skip('selects a recent chat directly from the rail (legacy Wave 47 IA, replaced by Wave 59 Phase B)', () => {
     renderShell();
     fireEvent.click(screen.getByTestId('workbench-rail-recent-chat'));
     expect(mockSelectThread).toHaveBeenCalledWith('thread-1');

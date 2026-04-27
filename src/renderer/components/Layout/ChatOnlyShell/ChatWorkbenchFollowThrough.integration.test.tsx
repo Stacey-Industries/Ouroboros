@@ -199,22 +199,25 @@ afterEach(() => {
   cleanup();
 });
 
-// ── Rail IA — real WorkbenchRail renders ─────────────────────────────────────
-describe('Rail IA (real WorkbenchRail)', () => {
-  it('renders the workbench rail by default', () => {
+// ── Rail IA — Wave 59 two-tier rail ───────────────────────────────────────────
+// Wave 59 Phase B replaced WorkbenchRail (single column) with TwoTierRailSurface
+// (OuterProjectRail + InnerSidebar). Multi-Session Launch is no longer surfaced
+// as a rail button; it lives behind the OPEN_MULTI_SESSION_EVENT bus.
+describe('Rail IA (Wave 59 two-tier rail)', () => {
+  it('renders the outer project rail and inner sidebar by default', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
-    expect(screen.getByTestId('workbench-rail')).toBeDefined();
+    expect(screen.getByTestId('outer-project-rail')).toBeDefined();
+    expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 
-  it('renders distinct New session and Multi-Session Launch buttons', () => {
+  it('exposes a + New session affordance somewhere in the inner sidebar', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
-    const rail = screen.getByTestId('workbench-rail');
-    const labels = within(rail).getAllByRole('button').map((b) => b.textContent);
-    expect(labels.some((l) => /new session/i.test(l ?? ''))).toBe(true);
-    expect(labels.some((l) => /multi-session launch/i.test(l ?? ''))).toBe(true);
+    const innerSidebar = screen.getByTestId('inner-sidebar');
+    const labels = within(innerSidebar).queryAllByRole('button').map((b) => b.textContent ?? '');
+    expect(labels.some((l) => /new session/i.test(l))).toBe(true);
   });
 
-  it('shows session sections when sessions are present', () => {
+  it('renders without crashing when sessions are present', () => {
     mockSessions = [
       {
         id: 'ses-1',
@@ -227,8 +230,7 @@ describe('Rail IA (real WorkbenchRail)', () => {
       },
     ];
     render(<ChatWorkbenchShell {...buildShellProps()} />);
-    // Rail renders — no crash from empty session list with agents running
-    expect(screen.getByTestId('workbench-rail')).toBeDefined();
+    expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 });
 

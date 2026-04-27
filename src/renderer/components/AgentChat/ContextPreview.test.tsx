@@ -84,16 +84,17 @@ describe('ContextPreview', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('renders all 6 tabs when popover is open', () => {
+  it('renders all 7 tabs when popover is open', () => {
     render(<ContextPreview model={MODEL_WITH_ITEMS} isOpen={true} onToggle={vi.fn()} />);
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.length).toBe(6);
+    expect(tabs.length).toBe(7);
     // textContent includes the count badge (e.g. "Rules1"), so use startsWith
     const labels = tabs.map((t) => t.textContent?.trim() ?? '');
     expect(labels.some((l) => l.startsWith('Rules'))).toBe(true);
     expect(labels.some((l) => l.startsWith('Skills'))).toBe(true);
     expect(labels.some((l) => l.startsWith('Memory'))).toBe(true);
     expect(labels.some((l) => l.startsWith('Files'))).toBe(true);
+    expect(labels.some((l) => l.startsWith('Mentions'))).toBe(true);
     expect(labels.some((l) => l.startsWith('Tools'))).toBe(true);
     expect(labels.some((l) => l.startsWith('System'))).toBe(true);
   });

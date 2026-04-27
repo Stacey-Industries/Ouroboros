@@ -64,6 +64,29 @@ vi.mock('../../../contexts/AgentEventsContext', () => ({
   }),
 }));
 
+// Wave 59: TwoTierRailSurface (workbench is now the chat shell) reads
+// project list + config + file viewer. Mock those cross-subsystem deps.
+vi.mock('../../../contexts/ProjectContext', () => ({
+  useProject: () => ({
+    projectRoot: '/test/project',
+    projectName: 'project',
+    projectRoots: ['/test/project'],
+    addProjectRoot: vi.fn(),
+  }),
+}));
+vi.mock('../../../hooks/useConfig', () => ({
+  useConfig: () => ({ config: { recentProjects: [] } }),
+}));
+vi.mock('../../../contexts/ApprovalContext', () => ({
+  useApprovalContext: () => ({ pendingCount: approvalRequests.length, requests: approvalRequests }),
+}));
+vi.mock('../../FileViewer/FileViewerManager', () => ({
+  useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null, openFiles: [] }),
+}));
+vi.mock('../../FileTree/FileTree', () => ({
+  FileTree: () => <div data-testid="mock-file-tree" />,
+}));
+
 vi.mock('../../DiffReview/DiffReviewManager', () => ({
   useDiffReview: () => ({
     state: diffState,
@@ -89,38 +112,43 @@ vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   AgentChatWorkspace: () => <div data-testid="agent-chat-workspace" />,
 }));
 
-vi.mock('../../AgentChat/agentChatStore', () => ({
-  useAgentChatStoreContext: (
-    selector: (state: {
-      threads: Array<{
-        id: string;
-        title: string;
-        createdAt: number;
-        updatedAt: number;
-        lastActivityAt: number;
-        status: 'complete';
-        projectId: string;
-        workspaceRoot: string;
-      }>;
-      onSelectThread: typeof mockSelectThread;
-    }) => unknown,
-  ) =>
-    selector({
-      threads: [
-        {
-          id: 'thread-1',
-          title: 'Thread One',
-          createdAt: 1,
-          updatedAt: 2,
-          lastActivityAt: 2,
-          status: 'complete',
-          projectId: 'project-1',
-          workspaceRoot: '/test/project',
-        },
-      ],
-      onSelectThread: mockSelectThread,
-    }),
-}));
+vi.mock('../../AgentChat/agentChatStore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../AgentChat/agentChatStore')>();
+  return {
+    ...actual,
+    useAgentChatStoreContext: (
+      selector: (state: {
+        threads: Array<{
+          id: string;
+          title: string;
+          createdAt: number;
+          updatedAt: number;
+          lastActivityAt: number;
+          status: 'complete';
+          projectId: string;
+          workspaceRoot: string;
+        }>;
+        onSelectThread: typeof mockSelectThread;
+      }) => unknown,
+    ) =>
+      selector({
+        threads: [
+          {
+            id: 'thread-1',
+            title: 'Thread One',
+            createdAt: 1,
+            updatedAt: 2,
+            lastActivityAt: 2,
+            status: 'complete',
+            projectId: 'project-1',
+            workspaceRoot: '/test/project',
+            messages: [],
+          } as never,
+        ],
+        onSelectThread: mockSelectThread,
+      }),
+  };
+});
 
 vi.mock('../../SessionSidebar/useSessions', () => ({
   useSessions: () => ({
