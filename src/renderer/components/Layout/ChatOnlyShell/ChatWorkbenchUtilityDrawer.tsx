@@ -157,18 +157,16 @@ function DrawerContent({ activeTab }: { activeTab: ChatWorkbenchUtilityTab }): R
 }
 
 interface DrawerHeaderProps {
-  activeTab: ChatWorkbenchUtilityTab;
   onClose: () => void;
 }
 
-function DrawerHeader({ activeTab, onClose }: DrawerHeaderProps): React.ReactElement {
+function DrawerHeader({ onClose }: DrawerHeaderProps): React.ReactElement {
   return (
     <header className="flex items-center gap-2 border-b border-border-semantic px-3 py-3">
       <div className="min-w-0 flex-1">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
           Utility Drawer
         </div>
-        <div className="mt-1 text-sm text-text-semantic-primary">{tabLabel(activeTab)}</div>
       </div>
       <button
         type="button"
@@ -201,7 +199,7 @@ export function ChatWorkbenchUtilityDrawer({
       className="flex w-[360px] shrink-0 flex-col border-l border-border-semantic bg-surface-panel/95"
       data-testid="chat-workbench-utility-drawer"
     >
-      <DrawerHeader activeTab={activeTab} onClose={onClose} />
+      <DrawerHeader onClose={onClose} />
       <div className="flex flex-wrap gap-2 border-b border-border-semantic-subtle px-3 py-2">
         {DRAWER_TABS.map((tab) => (
           <TabButton

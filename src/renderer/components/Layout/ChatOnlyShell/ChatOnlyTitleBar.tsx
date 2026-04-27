@@ -166,12 +166,14 @@ interface TitleBarLeftProps {
   projectName: string;
   sidebarMode: ChatSidebarMode;
   onCycleSidebarMode: () => void;
+  isWorkbench: boolean;
 }
 
 function TitleBarLeft({
   projectName,
   sidebarMode,
   onCycleSidebarMode,
+  isWorkbench,
 }: TitleBarLeftProps): React.ReactElement {
   const icon =
     sidebarMode === 'pinned' ? (
@@ -184,16 +186,18 @@ function TitleBarLeft({
 
   return (
     <>
-      <button
-        className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        onClick={onCycleSidebarMode}
-        title={sidebarModeLabel(sidebarMode)}
-        aria-label={sidebarModeLabel(sidebarMode)}
-        data-testid="sidebar-cycle-button"
-      >
-        {icon}
-      </button>
+      {!isWorkbench && (
+        <button
+          className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          onClick={onCycleSidebarMode}
+          title={sidebarModeLabel(sidebarMode)}
+          aria-label={sidebarModeLabel(sidebarMode)}
+          data-testid="sidebar-cycle-button"
+        >
+          {icon}
+        </button>
+      )}
       {projectName && (
         <span className="text-sm font-medium text-text-semantic-primary truncate max-w-[160px]">
           {projectName}
@@ -335,7 +339,7 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
       }}
       data-testid="chat-only-title-bar"
     >
-      <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} />
+      <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} isWorkbench={props.onToggleRail !== undefined} />
       <WorkbenchControls {...props} />
       <div className="flex-1" />
       <TitleBarRight />
