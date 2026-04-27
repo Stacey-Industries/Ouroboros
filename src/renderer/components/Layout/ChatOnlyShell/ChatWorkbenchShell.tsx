@@ -59,7 +59,12 @@ function MultiSessionOverlay({
       className="fixed inset-0 z-[900] flex items-center justify-center bg-surface-overlay/60"
       data-testid="multi-session-overlay"
     >
-      <div className="h-[560px] w-[640px] overflow-hidden rounded-xl border border-border-semantic bg-surface-panel shadow-xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Multi-Session Launch"
+        className="h-[560px] w-[640px] overflow-hidden rounded-xl border border-border-semantic shadow-xl"
+      >
         <MultiSessionLauncher onClose={onClose} onLaunched={onClose} />
       </div>
     </div>
