@@ -90,7 +90,6 @@ function streamLines(filePath: string): Promise<string[]> {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted path derived from app.getPath('userData')
     const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream });
-    log.info('[trace:fd] routerStats.streamLines open', { file: filePath });
     let cleaned = false;
 
     function cleanup(): void {
@@ -98,7 +97,6 @@ function streamLines(filePath: string): Promise<string[]> {
       cleaned = true;
       rl.close();
       stream.destroy();
-      log.info('[trace:fd] routerStats.streamLines close', { file: filePath });
     }
 
     rl.on('line', (line) => {

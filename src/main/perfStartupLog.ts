@@ -111,17 +111,10 @@ export function appendStartupRecord(timings: StartupMark[]): void {
 
 // ─── Read helpers ─────────────────────────────────────────────────────────────
 
-// ─── Concurrency guard ───────────────────────────────────────────────────────
-
-let _concurrentReads = 0;
-
 /** Read all parseable records from a single JSONL file using a readline stream. */
 async function readJsonlFile(filePath: string): Promise<StartupRecord[]> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
   if (!fs.existsSync(filePath)) return [];
-
-  _concurrentReads++;
-  log.info('[trace:fd] readJsonlFile open', { file: filePath, concurrent: _concurrentReads });
 
   const records: StartupRecord[] = [];
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
@@ -142,8 +135,6 @@ async function readJsonlFile(filePath: string): Promise<StartupRecord[]> {
   } finally {
     rl.close();
     stream.destroy();
-    _concurrentReads--;
-    log.info('[trace:fd] readJsonlFile close', { file: filePath, concurrent: _concurrentReads });
   }
 
   return records;
@@ -188,7 +179,6 @@ let inFlightRead: Promise<StartupRecord[]> | null = null;
 
 export async function readRecentStartups(limit: number): Promise<StartupRecord[]> {
   if (inFlightRead) {
-    log.info('[trace:fd] readRecentStartups coalesced onto in-flight read');
     return inFlightRead;
   }
   inFlightRead = doReadRecentStartups(limit);

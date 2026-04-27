@@ -215,7 +215,6 @@ function streamJsonl<T>(filePath: string): Promise<T[]> {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted path derived from app.getPath('userData')
     const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    log.info('[trace:fd] routerExporter.streamJsonl open', { file: filePath });
     let cleaned = false;
 
     function cleanup(): void {
@@ -223,7 +222,6 @@ function streamJsonl<T>(filePath: string): Promise<T[]> {
       cleaned = true;
       rl.close();
       stream.destroy();
-      log.info('[trace:fd] routerExporter.streamJsonl close', { file: filePath });
     }
 
     rl.on('line', (line) => {
