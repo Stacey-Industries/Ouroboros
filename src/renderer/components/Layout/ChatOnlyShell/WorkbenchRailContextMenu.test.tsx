@@ -102,6 +102,29 @@ describe('WorkbenchRailContextMenu — session row', () => {
     expect(screen.getByText('Delete')).toBeTruthy();
   });
 
+  it('has role=menu on the session panel and no border-border-subtle class', () => {
+    const actions = makeActions();
+    renderMenu({
+      state: { item: makeSessionItem(), position: { x: 10, y: 10 } },
+      actions,
+      onClose: vi.fn(),
+    });
+    const panel = screen.getByTestId('workbench-session-context-menu');
+    expect(panel.getAttribute('role')).toBe('menu');
+    expect(panel.className).not.toContain('border-border-subtle');
+  });
+
+  it('menu items have role=menuitem', () => {
+    const actions = makeActions();
+    renderMenu({
+      state: { item: makeSessionItem(), position: { x: 10, y: 10 } },
+      actions,
+      onClose: vi.fn(),
+    });
+    const items = screen.getAllByRole('menuitem');
+    expect(items.length).toBeGreaterThan(0);
+  });
+
   it('calls onArchiveSession and onClose when Archive is clicked', () => {
     const actions = makeActions();
     const onClose = vi.fn();
@@ -141,6 +164,18 @@ describe('WorkbenchRailContextMenu — chat row', () => {
     expect(screen.getByText('Pin')).toBeTruthy();
     expect(screen.getByText('Rename')).toBeTruthy();
     expect(screen.getByText('Delete')).toBeTruthy();
+  });
+
+  it('has role=menu on the chat panel and no border-border-subtle class', () => {
+    const actions = makeActions();
+    renderMenu({
+      state: { item: makeChatItem(), position: { x: 10, y: 10 } },
+      actions,
+      onClose: vi.fn(),
+    });
+    const panel = screen.getByTestId('workbench-chat-context-menu');
+    expect(panel.getAttribute('role')).toBe('menu');
+    expect(panel.className).not.toContain('border-border-subtle');
   });
 
   it('shows Unpin for a pinned thread', () => {

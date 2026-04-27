@@ -52,7 +52,7 @@ const MENU_ITEM_CLS =
   'px-3 py-1.5 text-sm text-text-semantic-primary hover:bg-surface-hover cursor-pointer select-none';
 
 function MenuDivider(): React.ReactElement {
-  return <div className="my-1 border-t border-border-subtle" />;
+  return <div className="my-1 border-t border-border-semantic-subtle" />;
 }
 
 interface MenuItemProps {
@@ -63,12 +63,14 @@ interface MenuItemProps {
 
 function MenuItem({ label, danger, onClick }: MenuItemProps): React.ReactElement {
   return (
-    <div
-      className={`${MENU_ITEM_CLS}${danger ? ' hover:text-status-error' : ''}`}
+    <button
+      role="menuitem"
+      type="button"
+      className={`w-full text-left ${MENU_ITEM_CLS}${danger ? ' hover:text-status-error' : ''}`}
       onClick={onClick}
     >
       {label}
-    </div>
+    </button>
   );
 }
 
@@ -93,15 +95,21 @@ function MenuBackdrop({ onClose }: { onClose: () => void }): React.ReactElement 
 function MenuPanel({
   position,
   testId,
+  ariaLabel,
   children,
 }: {
   position: MenuPosition;
   testId: string;
+  ariaLabel: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
     <div
-      className="fixed z-[9001] min-w-[160px] rounded border border-border-subtle bg-surface-overlay py-1 shadow-lg"
+      // role="menu" triggers the global frosted-overlay rule in globals.css (bg, blur, border,
+      // border-radius). bg-surface-overlay is kept as a pre-paint fallback only.
+      role="menu"
+      aria-label={ariaLabel}
+      className="fixed z-[9001] min-w-[160px] bg-surface-overlay py-1 shadow-lg"
       style={{ top: position.y, left: position.x }}
       data-testid={testId}
     >
@@ -130,7 +138,7 @@ function SessionMenuBody({
   return (
     <>
       <MenuBackdrop onClose={onClose} />
-      <MenuPanel position={position} testId="workbench-session-context-menu">
+      <MenuPanel position={position} testId="workbench-session-context-menu" ariaLabel="Session actions">
         <MenuItem
           label="Archive"
           onClick={close(() => {
@@ -171,7 +179,7 @@ function ChatMenuBody({
   return (
     <>
       <MenuBackdrop onClose={onClose} />
-      <MenuPanel position={position} testId="workbench-chat-context-menu">
+      <MenuPanel position={position} testId="workbench-chat-context-menu" ariaLabel="Chat actions">
         <MenuItem
           label={thread.pinned ? 'Unpin' : 'Pin'}
           onClick={close(() => actions.onPinThread(thread.id, !thread.pinned))}
