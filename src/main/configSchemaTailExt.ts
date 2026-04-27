@@ -7,7 +7,8 @@
 
 export const tailSchemaExt = {
   /** Wave 17 — layout preset engine. Wave 28 — dragAndDrop, customLayouts. Wave 32 — mobilePrimary.
-   *  Wave 42 — immersiveChat. Wave 43 — chatPrimary retired. Wave 44 — chatSidebarMode. Wave 46 — chatWorkbench. */
+   *  Wave 42 — immersiveChat. Wave 43 — chatPrimary retired. Wave 44 — chatSidebarMode.
+   *  Wave 59 Phase A — chatWorkbench retired; workbench IS the chat shell. */
   layout: {
     type: 'object',
     properties: {
@@ -23,7 +24,6 @@ export const tailSchemaExt = {
       mobilePrimary: { type: 'boolean', default: false },
       immersiveChat: { type: 'boolean', default: false },
       chatSidebarMode: { type: 'string', enum: ['pinned', 'collapsed', 'hidden'], default: 'pinned' },
-      chatWorkbench: { type: 'boolean', default: false },
     },
     default: {
       presets: { v2: true },
@@ -34,7 +34,6 @@ export const tailSchemaExt = {
       mobilePrimary: false,
       immersiveChat: false,
       chatSidebarMode: 'pinned',
-      chatWorkbench: false,
     },
   },
   /** Wave 18 — edit provenance tracking feature flag */

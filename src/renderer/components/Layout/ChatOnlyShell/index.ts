@@ -10,5 +10,4 @@ export { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 export type { ChatOnlyTitleBarProps } from './ChatOnlyTitleBar';
 export { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
 export { ChatWorkbenchShell } from './ChatWorkbenchShell';
-export { useChatWorkbenchFlag } from './useChatWorkbenchFlag';
 export { useChatWorkbenchLayout } from './useChatWorkbenchLayout';

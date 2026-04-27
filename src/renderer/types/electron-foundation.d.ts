@@ -122,6 +122,35 @@ export interface WorkspaceSnapshot {
   projectRoot?: string;
 }
 
+/** Wave 30 — research auto-firing settings. */
+export interface ResearchSettings {
+  globalEnabled?: boolean;
+  defaultMode?: 'off' | 'conservative' | 'aggressive';
+  stalenessConfidenceFloor?: number;
+  factClaimEnabled?: boolean;
+  factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
+  preEditDryRunOnly?: boolean;
+  maxLatencyMs?: number;
+}
+
+/** Wave 35 — per-user theming overrides. */
+export interface ThemingOverrides {
+  accentOverride?: string;
+  verbOverride?: string;
+  thinkingVerbs?: string[];
+  spinnerChars?: string;
+  fonts?: { editor?: string; chat?: string; terminal?: string };
+  customTokens?: Record<string, string>;
+}
+
+/** Wave 37 — ecosystem moat settings. */
+export interface EcosystemSettings {
+  // prettier-ignore
+  lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string };
+  lastExport?: { path: string; at: number; rows: number };
+  codexAppServerTransport?: boolean;
+}
+
 export interface AppConfig {
   recentProjects: string[];
   defaultProjectRoot: string;
@@ -230,20 +259,13 @@ export interface AppConfig {
   useMcpHost: boolean;
   /** @internal — do not expose in Settings UI */
   routerLastRetrainCount: number;
-  /** Wave 17 — layout preset engine feature flags
-   *  Wave 28 — dragAndDrop: enable drag-and-drop pane rearrangement
-   *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px
-   *  Wave 42 — immersiveChat: single-column chat shell
-   *  Wave 43 — chatPrimary retired; use immersiveChat instead
-   *  Wave 44 — chatSidebarMode: chat history sidebar pin/collapse/hidden mode
-   *  Wave 46 — chatWorkbench: workstation scaffold inside immersive chat */
+  /** Wave 17–44 layout flags; Wave 59A chatWorkbench retired (workbench IS the chat shell). */
   layout?: {
     presets?: { v2?: boolean };
     dragAndDrop?: boolean;
     mobilePrimary?: boolean;
     immersiveChat?: boolean;
     chatSidebarMode?: 'pinned' | 'collapsed' | 'hidden';
-    chatWorkbench?: boolean;
   };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
   chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
@@ -254,15 +276,7 @@ export interface AppConfig {
   /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
   review?: { enhanced?: boolean };
   /** Wave 30 Phases G+I — research auto-firing defaults + threshold knobs. */
-  researchSettings?: {
-    globalEnabled?: boolean;
-    defaultMode?: 'off' | 'conservative' | 'aggressive';
-    stalenessConfidenceFloor?: number;
-    factClaimEnabled?: boolean;
-    factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
-    preEditDryRunOnly?: boolean;
-    maxLatencyMs?: number;
-  };
+  researchSettings?: ResearchSettings;
   /** Wave 19/24/31 — context scoring feature flags. Wave 31 Phase E adds packetMode. */
   context?: {
     provenanceWeights?: boolean;
@@ -302,33 +316,21 @@ export interface AppConfig {
       deviceId?: string;
     }>;
   };
-  /** Wave 35+36 — per-user theming overrides; providers.multiProvider gates non-Claude session providers. */
-  theming?: {
-    accentOverride?: string;
-    verbOverride?: string;
-    thinkingVerbs?: string[];
-    spinnerChars?: string;
-    fonts?: { editor?: string; chat?: string; terminal?: string };
-    customTokens?: Record<string, string>;
-  };
+  /** Wave 35+36 — per-user theming overrides; providers.multiProvider gates non-Claude providers. */
+  theming?: ThemingOverrides;
   providers?: { multiProvider?: boolean };
-  /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
-   *  Wave 45 Phase A — codexAppServerTransport gates the Codex app-server transport scaffold. */
-  ecosystem?: {
-    lastSeenSnapshot?: {
-      cliVersion: string;
-      capturedAt: number;
-      promptHash: string;
-      promptText: string;
-    };
-    lastExport?: { path: string; at: number; rows: number };
-    codexAppServerTransport?: boolean;
-  };
+  /** Wave 37/45 — ecosystem moat + codexAppServerTransport. */
+  ecosystem?: EcosystemSettings;
   /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
   platform?: PlatformConfig;
 }
 
-export type { AgentEvent, AgentEventType, HookPayload, RawApiTokenUsage } from './electron-agent-events';
+export type {
+  AgentEvent,
+  AgentEventType,
+  HookPayload,
+  RawApiTokenUsage,
+} from './electron-agent-events';
 export type { ContextLayerConfig, PlatformConfig } from './electron-config-slices';
 export type {
   BufferExcerpt,

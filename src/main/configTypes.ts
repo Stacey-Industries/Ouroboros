@@ -286,7 +286,9 @@ export interface AppLayoutConfig {
   globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[];
   mobilePrimary?: boolean;
   immersiveChat?: boolean;
-  chatWorkbench?: boolean;
+  /** Wave 59 Phase A — chatWorkbench retired. Retained as optional unknown to prevent
+   * config-schema errors when loading pre-59 user configs containing this key. */
+  chatWorkbench?: never;
 }
 
 export interface AppEcosystemConfig {

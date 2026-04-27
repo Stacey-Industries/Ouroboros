@@ -183,7 +183,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17 — layout preset engine. Wave 28D — custom layout persistence. Wave 32+ — mobilePrimary, immersiveChat, chatWorkbench. */
+  /** Wave 17 — layout preset engine. Wave 28D — custom layout persistence. Wave 32+ — mobilePrimary, immersiveChat.
+   *  Wave 59 Phase A — chatWorkbench retired; workbench IS the chat shell. */
   layout?: AppLayoutConfig;
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
