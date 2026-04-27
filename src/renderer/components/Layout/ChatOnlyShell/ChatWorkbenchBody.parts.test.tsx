@@ -27,10 +27,28 @@ vi.mock('../../../contexts/ApprovalContext', () => ({
     alwaysAllow: vi.fn(),
   }),
 }));
+vi.mock('./useWorkbenchRailActions', () => ({
+  useWorkbenchRailActions: () => ({
+    actions: {
+      onPin: vi.fn(),
+      onUnpin: vi.fn(),
+      onArchive: vi.fn(),
+      onDelete: vi.fn(),
+      onRename: vi.fn(),
+    },
+  }),
+}));
+vi.mock('../../FileTree/FileTree', () => ({
+  FileTree: () => <div data-testid="mock-file-tree" />,
+}));
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 
-import { TwoTierRailSurface, WorkbenchApprovalSurface } from './ChatWorkbenchBody.parts';
+import {
+  TwoTierRailSurface,
+  type TwoTierRailSurfaceProps,
+  WorkbenchApprovalSurface,
+} from './ChatWorkbenchBody.parts';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,6 +81,11 @@ beforeEach(() => {
       respond: vi.fn().mockResolvedValue({ success: true }),
       remember: vi.fn().mockResolvedValue({ success: true }),
     },
+    sessionCrud: {
+      list: vi.fn().mockResolvedValue({ success: true, sessions: [] }),
+      active: vi.fn().mockResolvedValue({ success: true, sessionId: null }),
+      onChanged: vi.fn().mockReturnValue(() => {}),
+    },
   } as typeof window.electronAPI;
 });
 
@@ -72,25 +95,54 @@ afterEach(() => {
 
 // ── TwoTierRailSurface ────────────────────────────────────────────────────────
 
+function makeRailProps(overrides: Partial<TwoTierRailSurfaceProps> = {}): TwoTierRailSurfaceProps {
+  return {
+    layout: makeLayout(),
+    sessionsState: { sessions: [], activeSessionId: null, refresh: vi.fn() } as never,
+    threads: [],
+    approvalRequests: [],
+    compare: { isComparing: false, compareTarget: null, beginCompare: vi.fn(), closeCompare: vi.fn() } as never,
+    handlers: {
+      handleCreateSession: vi.fn().mockResolvedValue(undefined),
+      handleLaunchAgent: vi.fn(),
+      handleSelectSession: vi.fn(),
+      handleSelectRecentChat: vi.fn(),
+    },
+    terminal: undefined,
+    dock: {
+      visible: false,
+      height: 240,
+      setVisible: vi.fn(),
+      setHeight: vi.fn(),
+      toggleVisible: vi.fn(),
+    } as never,
+    ...overrides,
+  };
+}
+
 describe('TwoTierRailSurface', () => {
   it('renders OuterProjectRail and InnerSidebar', () => {
-    render(<TwoTierRailSurface layout={makeLayout()} />);
+    render(<TwoTierRailSurface {...makeRailProps()} />);
     expect(screen.getByTestId('outer-project-rail')).toBeDefined();
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 
   it('passes activeProject=null to InnerSidebar (shows "No project")', () => {
-    render(<TwoTierRailSurface layout={makeLayout({ activeProject: null })} />);
+    render(<TwoTierRailSurface {...makeRailProps({ layout: makeLayout({ activeProject: null }) })} />);
     expect(screen.getByText('No project')).toBeDefined();
   });
 
   it('passes activeProject label to InnerSidebar header', () => {
-    render(<TwoTierRailSurface layout={makeLayout({ activeProject: '/home/user/my-app' })} />);
+    render(
+      <TwoTierRailSurface
+        {...makeRailProps({ layout: makeLayout({ activeProject: '/home/user/my-app' }) })}
+      />,
+    );
     expect(screen.getByText('my-app')).toBeDefined();
   });
 
   it('renders inner sidebar tabstrip', () => {
-    render(<TwoTierRailSurface layout={makeLayout()} />);
+    render(<TwoTierRailSurface {...makeRailProps()} />);
     expect(screen.getByTestId('inner-sidebar-tabstrip')).toBeDefined();
   });
 });

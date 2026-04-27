@@ -22,6 +22,31 @@ interface ChatWorkbenchBodyProps {
   terminal?: UseTerminalSessionsReturn;
 }
 
+type WorkbenchState = ReturnType<typeof useWorkbenchContextState>;
+type WorkbenchHandlersResult = ReturnType<typeof useWorkbenchHandlers>;
+
+interface RailSlotProps {
+  state: WorkbenchState;
+  handlers: WorkbenchHandlersResult;
+  terminal?: UseTerminalSessionsReturn;
+}
+
+function RailSlot({ state, handlers, terminal }: RailSlotProps): React.ReactElement | null {
+  if (!state.layout.railOpen) return null;
+  return (
+    <TwoTierRailSurface
+      layout={state.layout}
+      sessionsState={state.sessionsState}
+      threads={state.threads}
+      approvalRequests={state.approvalRequests}
+      compare={state.compare}
+      handlers={handlers}
+      terminal={terminal}
+      dock={state.dock}
+    />
+  );
+}
+
 export function ChatWorkbenchBody({
   dock: externalDock,
   layout: externalLayout,
@@ -32,7 +57,6 @@ export function ChatWorkbenchBody({
   const state = useWorkbenchContextState(externalLayout, externalDock);
   const handlers = useWorkbenchHandlers(state.activation, selectThread);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
-
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-workbench-body">
       <WorkbenchApprovalSurface
@@ -42,7 +66,7 @@ export function ChatWorkbenchBody({
         sessionsState={state.sessionsState}
         threads={state.threads}
       />
-      {state.layout.railOpen && <TwoTierRailSurface layout={state.layout} />}
+      <RailSlot state={state} handlers={handlers} terminal={terminal} />
       <WorkbenchMainColumn
         compare={state.compare}
         dock={state.dock}
