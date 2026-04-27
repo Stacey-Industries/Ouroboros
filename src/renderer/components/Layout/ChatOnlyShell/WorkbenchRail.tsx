@@ -5,6 +5,7 @@ import { SESSION_SWITCH_EVENT } from '../../../hooks/appEventNames';
 import type { ApprovalRequest } from '../../../types/electron';
 import { ChatOnlyUserMenu } from './ChatOnlyUserMenu';
 import { useWorkbenchAttention } from './useWorkbenchAttention';
+import { useWorkbenchRailActions } from './useWorkbenchRailActions';
 import {
   useWorkbenchRecentChats,
   type UseWorkbenchRecentChatsOptions,
@@ -16,6 +17,11 @@ import {
   type UseWorkbenchSessionsResult,
   type WorkbenchSessionItem,
 } from './useWorkbenchSessions';
+import {
+  useRowContextMenu,
+  WorkbenchRailContextMenu,
+  type WorkbenchRowItem,
+} from './WorkbenchRailContextMenu';
 import { WorkbenchRailSections } from './WorkbenchRailSections';
 
 export interface WorkbenchRailProps
@@ -92,11 +98,7 @@ interface RailHeaderProps {
 }
 
 function RailHeader({
-  chatCount,
-  onCreateSession,
-  onLaunchAgent,
-  sessionCount,
-  title,
+  chatCount, onCreateSession, onLaunchAgent, sessionCount, title,
 }: RailHeaderProps): React.ReactElement {
   return (
     <div className="shrink-0 border-b border-border-semantic px-3 pt-3 pb-2">
@@ -115,6 +117,7 @@ interface RailBodyProps {
   canCompareSession?: (item: WorkbenchSessionItem) => boolean;
   compareSessionId?: string | null;
   onCompareSession?: (sessionId: string) => void;
+  onContextMenu: (item: WorkbenchRowItem, e: React.MouseEvent) => void;
   onSelectRecentChat?: (threadId: string) => void;
   onSelectSession: (sessionId: string) => void;
   recentChats: UseWorkbenchRecentChatsResult['items'];
@@ -122,13 +125,9 @@ interface RailBodyProps {
 }
 
 function RailBody({
-  canCompareSession,
-  compareSessionId,
-  onCompareSession,
-  onSelectRecentChat,
-  onSelectSession,
-  recentChats,
-  sessionState,
+  canCompareSession, compareSessionId, onCompareSession,
+  onContextMenu, onSelectRecentChat, onSelectSession,
+  recentChats, sessionState,
 }: RailBodyProps): React.ReactElement {
   const total = sessionState.activeItems.length + sessionState.backgroundItems.length;
   if (total === 0 && recentChats.length === 0)
@@ -140,6 +139,7 @@ function RailBody({
       canCompareSession={canCompareSession}
       compareSessionId={compareSessionId}
       onCompareSession={onCompareSession}
+      onContextMenu={onContextMenu}
       onSelectRecentChat={onSelectRecentChat}
       onSelectSession={onSelectSession}
       recentChats={recentChats}
@@ -217,18 +217,12 @@ function RailFooter(): React.ReactElement {
 }
 
 function RailView({
-  canCompareSession,
-  compareSessionId,
-  handleSelectSession,
-  onCompareSession,
-  onCreateSession,
-  onLaunchAgent,
-  onSelectRecentChat,
-  recentChats,
-  sessionState,
-  title,
-  totalSessionCount,
+  canCompareSession, compareSessionId, handleSelectSession, onCompareSession,
+  onCreateSession, onLaunchAgent, onSelectRecentChat,
+  recentChats, sessionState, title, totalSessionCount,
 }: RailViewProps): React.ReactElement {
+  const { actions } = useWorkbenchRailActions();
+  const { menuState, openMenu, closeMenu } = useRowContextMenu();
   return (
     <aside
       className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-border-semantic bg-surface-panel/95"
@@ -246,6 +240,7 @@ function RailView({
           canCompareSession={canCompareSession}
           compareSessionId={compareSessionId}
           onCompareSession={onCompareSession}
+          onContextMenu={openMenu}
           onSelectRecentChat={onSelectRecentChat}
           onSelectSession={handleSelectSession}
           recentChats={recentChats}
@@ -253,21 +248,17 @@ function RailView({
         />
       </div>
       <RailFooter />
+      {menuState && (
+        <WorkbenchRailContextMenu state={menuState} actions={actions} onClose={closeMenu} />
+      )}
     </aside>
   );
 }
 
 export function WorkbenchRail({
-  approvalRequests,
-  canCompareSession,
-  compareSessionId,
-  onCompareSession,
-  onCreateSession,
-  onLaunchAgent,
-  onSelectRecentChat,
-  onSelectSession,
-  title = 'Workbench',
-  ...options
+  approvalRequests, canCompareSession, compareSessionId, onCompareSession,
+  onCreateSession, onLaunchAgent, onSelectRecentChat, onSelectSession,
+  title = 'Workbench', ...options
 }: WorkbenchRailProps): React.ReactElement {
   const state = useRailState(options, approvalRequests, onSelectSession);
   return (

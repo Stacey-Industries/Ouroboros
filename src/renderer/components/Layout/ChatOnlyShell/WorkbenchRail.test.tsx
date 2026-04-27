@@ -24,6 +24,20 @@ vi.mock('./useWorkbenchRecentChats', () => ({
   useWorkbenchRecentChats: vi.fn(),
 }));
 
+vi.mock('./useWorkbenchRailActions', () => ({
+  useWorkbenchRailActions: vi.fn(() => ({
+    actions: {
+      onDeleteSession: vi.fn(),
+      onArchiveSession: vi.fn(),
+      onDeleteThread: vi.fn(),
+      onPinThread: vi.fn(),
+      onRenameThread: vi.fn(),
+    },
+    renameTarget: null,
+    setRenameTarget: vi.fn(),
+  })),
+}));
+
 import { useWorkbenchRecentChats } from './useWorkbenchRecentChats';
 import { useWorkbenchSessions } from './useWorkbenchSessions';
 
