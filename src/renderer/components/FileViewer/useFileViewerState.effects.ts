@@ -106,15 +106,25 @@ export function useLinkHandling(
   }, [codeRef, filePath, projectRoot]);
 }
 
-export function useResetViewerUi(filePath: string | null, resetters: ViewerUiResetters): void {
+export function defaultViewModeForFile(isHtml: boolean, isMarkdown: boolean): 'code' | 'diff' | 'preview' {
+  if (isHtml || isMarkdown) return 'preview';
+  return 'code';
+}
+
+export function useResetViewerUi(
+  filePath: string | null,
+  resetters: ViewerUiResetters,
+  isHtml: boolean,
+  isMarkdown: boolean,
+): void {
   'use no memo';
   useEffect(() => {
     resetters.setShowSearch(false);
     resetters.setShowGoToLine(false);
-    resetters.setViewMode('code');
+    resetters.setViewMode(defaultViewModeForFile(isHtml, isMarkdown));
     resetters.setShowHistory(false);
     resetters.setEditMode(false);
-  }, [filePath, resetters]);
+  }, [filePath, resetters, isHtml, isMarkdown]);
 }
 
 export function useExpandFoldsForSearch(

@@ -21,6 +21,7 @@ import {
   hasFileChanges,
 } from './ChangeSummaryBar';
 import { useDensity } from './DensityContext';
+import { InlineArtifactChipBar } from './InlineArtifactChip';
 import { MessageActions } from './MessageActions';
 import { MessageMarkdown } from './MessageMarkdown';
 import { ReactionBar } from './ReactionBar';
@@ -106,6 +107,7 @@ function AssistantMessageFooter(props: ContentProps): React.ReactElement {
         />
       )}
       <MessageActionLink message={message} onOpenLinkedDetails={props.onOpenLinkedDetails} />
+      <InlineArtifactChipBar blocks={message.blocks ?? []} isStreaming={props.isStreaming} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  defaultViewModeForFile,
   useCollapsedFoldState,
   useConflictState,
   useExpandFoldsForSearch,
@@ -19,5 +20,19 @@ describe('useFileViewerState.effects', () => {
     expect(typeof useLinkHandling).toBe('function');
     expect(typeof useResetViewerUi).toBe('function');
     expect(typeof useExpandFoldsForSearch).toBe('function');
+  });
+
+  describe('defaultViewModeForFile', () => {
+    it('returns preview for HTML files', () => {
+      expect(defaultViewModeForFile(true, false)).toBe('preview');
+    });
+
+    it('returns preview for markdown files', () => {
+      expect(defaultViewModeForFile(false, true)).toBe('preview');
+    });
+
+    it('returns code for plain source files', () => {
+      expect(defaultViewModeForFile(false, false)).toBe('code');
+    });
   });
 });

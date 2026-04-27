@@ -119,7 +119,7 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
 
   useScrollReset(input.filePath, refs.scrollRef);
   useLinkHandling(refs.codeRef, input.filePath, input.projectRoot);
-  useResetViewerUi(input.filePath, useViewerUiResetters(ui));
+  useResetViewerUi(input.filePath, useViewerUiResetters(ui), derived.isHtml, derived.isMarkdown);
   useExpandFoldsForSearch(ui.showSearch, folds.setCollapsedFolds);
   useScrollToLine(input.filePath, refs.scrollRef, refs.codeRef);
   useFileViewerKeyboard(
