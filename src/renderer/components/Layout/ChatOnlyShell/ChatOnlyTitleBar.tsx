@@ -27,29 +27,49 @@ import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
 const WIN_BTN =
   'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
 
-function MinimizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
+// hardcoded: win32 hover tint — non-themeable platform chrome
+const WIN_HOVER_NEUTRAL = 'hover:bg-[rgba(255,255,255,0.08)]';
+// hardcoded: Windows close-button canonical red — non-themeable platform color
+const WIN_HOVER_CLOSE = 'hover:bg-[#e81123] hover:text-white';
+
+interface WinBtnProps {
+  onClick: () => void;
+  title: string;
+  hoverClass?: string;
+  children: React.ReactNode;
+}
+
+function WinBtn({
+  onClick,
+  title,
+  hoverClass = WIN_HOVER_NEUTRAL,
+  children,
+}: WinBtnProps): React.ReactElement {
   return (
     <button
-      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // hardcoded: win32 hover tint — non-themeable platform chrome
-      onClick={() => api?.minimizeWindow()}
-      title="Minimize"
-      aria-label="Minimize"
+      className={`${WIN_BTN} text-text-semantic-muted ${hoverClass}`}
+      onClick={onClick}
+      title={title}
+      aria-label={title}
     >
+      {children}
+    </button>
+  );
+}
+
+function MinimizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
+  return (
+    <WinBtn onClick={() => api?.minimizeWindow()} title="Minimize">
       <svg width="10" height="1" viewBox="0 0 10 1">
         <rect width="10" height="1" fill="currentColor" />
       </svg>
-    </button>
+    </WinBtn>
   );
 }
 
 function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
   return (
-    <button
-      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // hardcoded: win32 hover tint — non-themeable platform chrome
-      onClick={() => api?.toggleMaximizeWindow()}
-      title="Maximize"
-      aria-label="Maximize"
-    >
+    <WinBtn onClick={() => api?.toggleMaximizeWindow()} title="Maximize">
       <svg
         width="10"
         height="10"
@@ -60,23 +80,18 @@ function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.Rea
       >
         <rect x="0.5" y="0.5" width="9" height="9" />
       </svg>
-    </button>
+    </WinBtn>
   );
 }
 
 function CloseBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
   return (
-    <button
-      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[#e81123] hover:text-white`} // hardcoded: Windows close-button canonical red — non-themeable platform color
-      onClick={() => api?.closeWindow()}
-      title="Close"
-      aria-label="Close"
-    >
+    <WinBtn onClick={() => api?.closeWindow()} title="Close" hoverClass={WIN_HOVER_CLOSE}>
       <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
         <line x1="1" y1="1" x2="9" y2="9" />
         <line x1="9" y1="1" x2="1" y2="9" />
       </svg>
-    </button>
+    </WinBtn>
   );
 }
 
@@ -104,7 +119,7 @@ function WindowControls(): React.ReactElement | null {
 
 // ── SidebarToggleIcon ─────────────────────────────────────────────────────────
 
-function SidebarPinnedIcon(): React.ReactElement {
+function SidebarToggleIcon({ mode }: { mode: ChatSidebarMode }): React.ReactElement {
   return (
     <svg
       width="14"
@@ -116,41 +131,8 @@ function SidebarPinnedIcon(): React.ReactElement {
       strokeLinecap="round"
     >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
-      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
-    </svg>
-  );
-}
-
-function SidebarCollapsedIcon(): React.ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    >
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
-      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
-      <polyline points="3,7 4.5,8.5 3,10" />
-    </svg>
-  );
-}
-
-function SidebarHiddenIcon(): React.ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    >
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      {mode !== 'hidden' && <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />}
+      {mode === 'collapsed' && <polyline points="3,7 4.5,8.5 3,10" />}
     </svg>
   );
 }
@@ -176,15 +158,6 @@ function TitleBarLeft({
   onCycleSidebarMode,
   isWorkbench,
 }: TitleBarLeftProps): React.ReactElement {
-  const icon =
-    sidebarMode === 'pinned' ? (
-      <SidebarPinnedIcon />
-    ) : sidebarMode === 'collapsed' ? (
-      <SidebarCollapsedIcon />
-    ) : (
-      <SidebarHiddenIcon />
-    );
-
   return (
     <>
       {!isWorkbench && (
@@ -196,7 +169,7 @@ function TitleBarLeft({
           aria-label={sidebarModeLabel(sidebarMode)}
           data-testid="sidebar-cycle-button"
         >
-          {icon}
+          <SidebarToggleIcon mode={sidebarMode} />
         </button>
       )}
       {projectName && (
@@ -303,7 +276,10 @@ function WorkbenchControls({
   utilityOpen,
   onToggleArtifact,
   artifactOpen,
-}: Omit<ChatOnlyTitleBarProps, 'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'>): React.ReactElement | null {
+}: Omit<
+  ChatOnlyTitleBarProps,
+  'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'
+>): React.ReactElement | null {
   if (onToggleRail === undefined) return null;
   return (
     <>
@@ -340,8 +316,16 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
       }}
       data-testid="chat-only-title-bar"
     >
-      <div className="flex items-center px-2 gap-2" style={{ height: 'var(--titlebar-height, 36px)' }}>
-        <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} isWorkbench={isWorkbench} />
+      <div
+        className="flex items-center px-2 gap-2"
+        style={{ height: 'var(--titlebar-height, 36px)' }}
+      >
+        <TitleBarLeft
+          projectName={projectName}
+          sidebarMode={sidebarMode}
+          onCycleSidebarMode={onCycleSidebarMode}
+          isWorkbench={isWorkbench}
+        />
         <WorkbenchControls {...props} />
         <div className="flex-1" />
         <TitleBarRight />

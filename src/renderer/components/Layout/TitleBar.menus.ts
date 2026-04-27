@@ -45,27 +45,38 @@ export function showAbout(): void {
   });
 }
 
+const FILE_MENU_ITEMS: MenuItem[] = [
+  { label: 'New File', shortcut: 'Ctrl+N', action: () => dispatchEv('agent-ide:new-file') },
+  {
+    label: 'New Window',
+    shortcut: 'Ctrl+Shift+N',
+    action: () => window.electronAPI?.app?.newWindow?.(),
+  },
+  SEPARATOR,
+  { label: 'Open Folder', shortcut: 'Ctrl+O', action: () => dispatchEv('agent-ide:open-folder') },
+  {
+    label: 'Open File',
+    shortcut: 'Ctrl+P',
+    action: () => dispatchEv('agent-ide:open-file-picker'),
+  },
+  SEPARATOR,
+  { label: 'Save', shortcut: 'Ctrl+S', action: () => dispatchEv('agent-ide:save-active-file') },
+  { label: 'Save All', shortcut: 'Ctrl+Shift+S', action: () => dispatchEv(SAVE_ALL_DIRTY_EVENT) },
+  SEPARATOR,
+  { label: 'Preferences', shortcut: 'Ctrl+,', action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT) },
+  { label: 'Extension Store', action: () => dispatchEv(OPEN_EXTENSION_STORE_EVENT) },
+  { label: 'MCP Server Store', action: () => dispatchEv(OPEN_MCP_STORE_EVENT) },
+  SEPARATOR,
+  {
+    label: 'Close Tab',
+    shortcut: 'Ctrl+W',
+    action: () => dispatchEv('agent-ide:close-active-tab'),
+  },
+  { label: 'Close Window', shortcut: 'Alt+F4', action: () => window.close() },
+];
+
 function buildFileMenu(): MenuDefinition {
-  return {
-    label: 'File',
-    items: [
-      { label: 'New File', shortcut: 'Ctrl+N', action: () => dispatchEv('agent-ide:new-file') },
-      { label: 'New Window', shortcut: 'Ctrl+Shift+N', action: () => window.electronAPI?.app?.newWindow?.() },
-      SEPARATOR,
-      { label: 'Open Folder', shortcut: 'Ctrl+O', action: () => dispatchEv('agent-ide:open-folder') },
-      { label: 'Open File', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
-      SEPARATOR,
-      { label: 'Save', shortcut: 'Ctrl+S', action: () => dispatchEv('agent-ide:save-active-file') },
-      { label: 'Save All', shortcut: 'Ctrl+Shift+S', action: () => dispatchEv(SAVE_ALL_DIRTY_EVENT) },
-      SEPARATOR,
-      { label: 'Preferences', shortcut: 'Ctrl+,', action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT) },
-      { label: 'Extension Store', action: () => dispatchEv(OPEN_EXTENSION_STORE_EVENT) },
-      { label: 'MCP Server Store', action: () => dispatchEv(OPEN_MCP_STORE_EVENT) },
-      SEPARATOR,
-      { label: 'Close Tab', shortcut: 'Ctrl+W', action: () => dispatchEv('agent-ide:close-active-tab') },
-      { label: 'Close Window', shortcut: 'Alt+F4', action: () => window.close() },
-    ],
-  };
+  return { label: 'File', items: FILE_MENU_ITEMS };
 }
 
 function buildEditMenu(): MenuDefinition {
@@ -99,30 +110,75 @@ async function openDedicatedChat(): Promise<void> {
   await api.sessionCrud.openChatWindow(sessionId);
 }
 
+const VIEW_MENU_HEAD: MenuItem[] = [
+  {
+    label: 'Command Palette',
+    shortcut: 'Ctrl+Shift+P',
+    action: () => dispatchEv('agent-ide:command-palette'),
+  },
+  {
+    label: 'File Picker',
+    shortcut: 'Ctrl+P',
+    action: () => dispatchEv('agent-ide:open-file-picker'),
+  },
+  SEPARATOR,
+  {
+    label: 'Open Dedicated Chat',
+    shortcut: 'Ctrl+Shift+O',
+    action: () => {
+      void openDedicatedChat();
+    },
+  },
+];
+
+const VIEW_MENU_PANELS: MenuItem[] = [
+  SEPARATOR,
+  {
+    label: 'Toggle Sidebar',
+    shortcut: 'Ctrl+B',
+    action: () => dispatchEv('agent-ide:toggle-sidebar'),
+  },
+  { label: 'Toggle Editor', action: () => dispatchEv('agent-ide:toggle-editor') },
+  {
+    label: 'Toggle Agent Panel',
+    shortcut: 'Ctrl+\\',
+    action: () => dispatchEv('agent-ide:toggle-agent-monitor'),
+  },
+  {
+    label: 'Toggle Terminal',
+    shortcut: 'Ctrl+J',
+    action: () => dispatchEv('agent-ide:toggle-terminal'),
+  },
+  SEPARATOR,
+  {
+    label: 'Split Editor',
+    shortcut: 'Ctrl+Shift+\\',
+    action: () => dispatchEv(SPLIT_EDITOR_EVENT),
+  },
+  SEPARATOR,
+  { label: 'Zoom In', shortcut: 'Ctrl+=', action: () => window.electronAPI?.app?.zoomIn?.() },
+  { label: 'Zoom Out', shortcut: 'Ctrl+-', action: () => window.electronAPI?.app?.zoomOut?.() },
+  { label: 'Reset Zoom', shortcut: 'Ctrl+0', action: () => window.electronAPI?.app?.zoomReset?.() },
+  SEPARATOR,
+  {
+    label: 'Toggle Fullscreen',
+    shortcut: 'F11',
+    action: () => window.electronAPI?.app?.toggleFullscreen?.(),
+  },
+];
+
+function chatModeItem(isImmersiveChat: boolean): MenuItem {
+  return {
+    label: isImmersiveChat ? 'Exit Chat Mode' : 'Switch to Chat Mode',
+    shortcut: 'Ctrl+Alt+I',
+    action: () => dispatchEv(TOGGLE_IMMERSIVE_CHAT_EVENT),
+  };
+}
+
 function buildViewMenu(isImmersiveChat: boolean): MenuDefinition {
-  const chatModeLabel = isImmersiveChat ? 'Exit Chat Mode' : 'Switch to Chat Mode';
   return {
     label: 'View',
-    items: [
-      { label: 'Command Palette', shortcut: 'Ctrl+Shift+P', action: () => dispatchEv('agent-ide:command-palette') },
-      { label: 'File Picker', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
-      SEPARATOR,
-      { label: 'Open Dedicated Chat', shortcut: 'Ctrl+Shift+O', action: () => { void openDedicatedChat(); } },
-      { label: chatModeLabel, shortcut: 'Ctrl+Alt+I', action: () => dispatchEv(TOGGLE_IMMERSIVE_CHAT_EVENT) },
-      SEPARATOR,
-      { label: 'Toggle Sidebar', shortcut: 'Ctrl+B', action: () => dispatchEv('agent-ide:toggle-sidebar') },
-      { label: 'Toggle Editor', action: () => dispatchEv('agent-ide:toggle-editor') },
-      { label: 'Toggle Agent Panel', shortcut: 'Ctrl+\\', action: () => dispatchEv('agent-ide:toggle-agent-monitor') },
-      { label: 'Toggle Terminal', shortcut: 'Ctrl+J', action: () => dispatchEv('agent-ide:toggle-terminal') },
-      SEPARATOR,
-      { label: 'Split Editor', shortcut: 'Ctrl+Shift+\\', action: () => dispatchEv(SPLIT_EDITOR_EVENT) },
-      SEPARATOR,
-      { label: 'Zoom In', shortcut: 'Ctrl+=', action: () => window.electronAPI?.app?.zoomIn?.() },
-      { label: 'Zoom Out', shortcut: 'Ctrl+-', action: () => window.electronAPI?.app?.zoomOut?.() },
-      { label: 'Reset Zoom', shortcut: 'Ctrl+0', action: () => window.electronAPI?.app?.zoomReset?.() },
-      SEPARATOR,
-      { label: 'Toggle Fullscreen', shortcut: 'F11', action: () => window.electronAPI?.app?.toggleFullscreen?.() },
-    ],
+    items: [...VIEW_MENU_HEAD, chatModeItem(isImmersiveChat), ...VIEW_MENU_PANELS],
   };
 }
 
@@ -130,8 +186,16 @@ function buildGoMenu(): MenuDefinition {
   return {
     label: 'Go',
     items: [
-      { label: 'Go to File', shortcut: 'Ctrl+P', action: () => dispatchEv('agent-ide:open-file-picker') },
-      { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEv('agent-ide:open-symbol-search') },
+      {
+        label: 'Go to File',
+        shortcut: 'Ctrl+P',
+        action: () => dispatchEv('agent-ide:open-file-picker'),
+      },
+      {
+        label: 'Go to Symbol',
+        shortcut: 'Ctrl+Shift+O',
+        action: () => dispatchEv('agent-ide:open-symbol-search'),
+      },
       { label: 'Go to Line', shortcut: 'Ctrl+G', action: () => dispatchEv('agent-ide:go-to-line') },
       SEPARATOR,
       { label: 'Back', shortcut: 'Alt+Left', action: () => dispatchEv(GO_BACK_EVENT) },
@@ -144,8 +208,16 @@ function buildTerminalMenu(): MenuDefinition {
   return {
     label: 'Terminal',
     items: [
-      { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEv('agent-ide:new-terminal') },
-      { label: 'New Claude Terminal', shortcut: 'Ctrl+Shift+C', action: () => dispatchEv('agent-ide:new-claude-terminal') },
+      {
+        label: 'New Terminal',
+        shortcut: 'Ctrl+Shift+`',
+        action: () => dispatchEv('agent-ide:new-terminal'),
+      },
+      {
+        label: 'New Claude Terminal',
+        shortcut: 'Ctrl+Shift+C',
+        action: () => dispatchEv('agent-ide:new-claude-terminal'),
+      },
       { label: 'Split Terminal', action: () => dispatchEv(SPLIT_TERMINAL_EVENT) },
       SEPARATOR,
       { label: 'Clear Terminal', action: () => dispatchEv('agent-ide:clear-active-terminal') },
@@ -159,7 +231,8 @@ function buildHelpMenu(): MenuDefinition {
     items: [
       {
         label: 'Documentation',
-        action: () => window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros'),
+        action: () =>
+          window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros'),
       },
       {
         label: 'Keyboard Shortcuts',

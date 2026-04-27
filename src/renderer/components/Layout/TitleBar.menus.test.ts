@@ -67,7 +67,9 @@ describe('getWorkbenchMenuDefinitions', () => {
     });
 
     it('contains New Chat in Active Session', () => {
-      expect(findItem(getWorkbenchMenuDefinitions(), 'File', 'New Chat in Active Session')).toBeDefined();
+      expect(
+        findItem(getWorkbenchMenuDefinitions(), 'File', 'New Chat in Active Session'),
+      ).toBeDefined();
     });
 
     it('contains Open Project', () => {
@@ -108,7 +110,9 @@ describe('getWorkbenchMenuDefinitions', () => {
     });
 
     it('contains Toggle Utility Drawer', () => {
-      expect(findItem(getWorkbenchMenuDefinitions(), 'View', 'Toggle Utility Drawer')).toBeDefined();
+      expect(
+        findItem(getWorkbenchMenuDefinitions(), 'View', 'Toggle Utility Drawer'),
+      ).toBeDefined();
     });
 
     it('contains Toggle Terminal Dock', () => {
