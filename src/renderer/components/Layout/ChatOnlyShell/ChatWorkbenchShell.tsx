@@ -139,7 +139,7 @@ function ShellChrome({
         onToggleRail={layout.toggleRail}
         railOpen={layout.railOpen}
       />
-      <ChatWorkbenchBody projectRoot={projectRoot} terminal={terminal} />
+      <ChatWorkbenchBody layout={layout} projectRoot={projectRoot} terminal={terminal} />
       <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
     </>
   );
