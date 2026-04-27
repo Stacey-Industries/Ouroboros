@@ -5,8 +5,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { OptionGroup, SelectPillMenu, SelectPillMenuProps } from './SelectPill.parts';
+
 type OptionItem = { value: string; label: string };
-type OptionGroup = { label: string; options: OptionItem[] };
+
+export type { OptionGroup };
 
 export interface SelectPillProps {
   label: string;
@@ -51,26 +54,6 @@ function ChevronUp(): React.ReactElement {
   );
 }
 
-function SelectPillItem({
-  item,
-  selected,
-  onSelect,
-}: {
-  item: OptionItem;
-  selected: boolean;
-  onSelect: (value: string) => void;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(item.value)}
-      className={`block truncate px-3 py-1.5 text-left text-[11px] transition-colors duration-75 ${selected ? 'bg-interactive-accent text-text-semantic-on-accent' : 'text-text-semantic-primary hover:bg-interactive-muted'}`}
-    >
-      {item.label}
-    </button>
-  );
-}
-
 function useSelectPillWindowListeners(args: {
   open: boolean;
   close: () => void;
@@ -104,76 +87,6 @@ function useSelectPillWindowListeners(args: {
       window.removeEventListener('scroll', handleWindowChange, true);
     };
   }, [open, close, updateMenuPos, buttonRef, menuRef]);
-}
-
-function SelectPillGroupItems({
-  groups,
-  value,
-  onSelect,
-}: {
-  groups: OptionGroup[];
-  value: string;
-  onSelect: (v: string) => void;
-}): React.ReactElement {
-  return (
-    <>
-      {groups.map((group) => (
-        <div key={group.label}>
-          <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-text-semantic-faint">
-            {group.label}
-          </div>
-          {group.options.map((item) => (
-            <SelectPillItem
-              key={item.value}
-              item={item}
-              selected={value === item.value}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      ))}
-    </>
-  );
-}
-
-interface SelectPillMenuProps {
-  options?: ReadonlyArray<OptionItem>;
-  groups?: OptionGroup[];
-  defaultOption?: OptionItem;
-  value: string;
-  onSelect: (value: string) => void;
-  style?: React.CSSProperties;
-  ref?: React.Ref<HTMLDivElement>;
-}
-
-function SelectPillMenuItems({ options, groups, defaultOption, value, onSelect }: Omit<SelectPillMenuProps, 'style' | 'ref'>): React.ReactElement {
-  return (
-    <>
-      {defaultOption && <SelectPillItem item={defaultOption} selected={value === defaultOption.value} onSelect={onSelect} />}
-      {groups && <SelectPillGroupItems groups={groups} value={value} onSelect={onSelect} />}
-      {options?.map((item) => <SelectPillItem key={item.value} item={item} selected={value === item.value} onSelect={onSelect} />)}
-    </>
-  );
-}
-
-function SelectPillMenu({ options, groups, defaultOption, value, onSelect, style, ref }: SelectPillMenuProps): React.ReactElement {
-  return (
-    // WebkitAppRegion: 'no-drag' ensures this portaled popover receives pointer
-    // events even when it renders over a window-drag region (e.g. the title bar).
-    <div
-      ref={ref}
-      role="listbox"
-      className="z-[9999] max-h-[280px] overflow-x-hidden overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay py-1 shadow-xl"
-      style={{
-        backdropFilter: 'blur(24px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        ...style,
-        ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
-      }}
-    >
-      <SelectPillMenuItems options={options} groups={groups} defaultOption={defaultOption} value={value} onSelect={onSelect} />
-    </div>
-  );
 }
 
 function usePillState(onChange: (v: string) => void): {
@@ -222,7 +135,13 @@ const PILL_STYLE: React.CSSProperties = {
 };
 
 function SelectPillButton({
-  buttonRef, label, title, displayLabel, open, toggle, icon: Icon,
+  buttonRef,
+  label,
+  title,
+  displayLabel,
+  open,
+  toggle,
+  icon: Icon,
 }: {
   buttonRef: React.RefObject<HTMLButtonElement | null>;
   label: string;
@@ -233,7 +152,17 @@ function SelectPillButton({
   icon?: React.ComponentType<{ size?: number }> | null;
 }): React.ReactElement {
   return (
-    <button type="button" ref={buttonRef} onClick={toggle} aria-expanded={open} aria-haspopup="listbox" aria-label={label} className="items-center gap-1 text-[11px] transition-colors duration-150 hover:bg-surface-hover" style={PILL_STYLE} title={title ?? displayLabel}>
+    <button
+      type="button"
+      ref={buttonRef}
+      onClick={toggle}
+      aria-expanded={open}
+      aria-haspopup="listbox"
+      aria-label={label}
+      className="items-center gap-1 text-[11px] transition-colors duration-150 hover:bg-surface-hover"
+      style={PILL_STYLE}
+      title={title ?? displayLabel}
+    >
       {Icon && <Icon size={13} />}
       <span className="text-text-semantic-primary">{displayLabel}</span>
       <ChevronUp />
@@ -241,19 +170,64 @@ function SelectPillButton({
   );
 }
 
-export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title, icon: Icon }: SelectPillProps): React.ReactElement {
-  const { open, menuPos, buttonRef, menuRef, toggle, handleSelect, close, updateMenuPos } = usePillState(onChange);
+function SelectPillPortal({
+  open,
+  menuPos,
+  menuRef,
+  menuProps,
+}: {
+  open: boolean;
+  menuPos: { left: number; bottom: number; width: number } | null;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  menuProps: Omit<SelectPillMenuProps, 'style' | 'ref'>;
+}): React.ReactElement | null {
+  if (!open || !menuPos) return null;
+  return createPortal(
+    <SelectPillMenu
+      ref={menuRef}
+      {...menuProps}
+      style={{
+        position: 'fixed',
+        left: menuPos.left,
+        bottom: menuPos.bottom,
+        width: menuPos.width,
+      }}
+    />,
+    document.body,
+  );
+}
+
+export function SelectPill({
+  label: _label,
+  value,
+  options,
+  groups,
+  defaultOption,
+  onChange,
+  title,
+  icon: Icon,
+}: SelectPillProps): React.ReactElement {
+  const { open, menuPos, buttonRef, menuRef, toggle, handleSelect, close, updateMenuPos } =
+    usePillState(onChange);
   const displayLabel = getDisplayLabel(value, options, groups, defaultOption);
   useSelectPillWindowListeners({ open, close, updateMenuPos, buttonRef, menuRef });
   return (
     <>
-      <SelectPillButton buttonRef={buttonRef} label={_label} title={title} displayLabel={displayLabel} open={open} toggle={toggle} icon={Icon} />
-      {open && menuPos && createPortal(
-        <SelectPillMenu ref={menuRef} options={options} groups={groups} defaultOption={defaultOption} value={value} onSelect={handleSelect}
-          style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }}
-        />,
-        document.body,
-      )}
+      <SelectPillButton
+        buttonRef={buttonRef}
+        label={_label}
+        title={title}
+        displayLabel={displayLabel}
+        open={open}
+        toggle={toggle}
+        icon={Icon}
+      />
+      <SelectPillPortal
+        open={open}
+        menuPos={menuPos}
+        menuRef={menuRef}
+        menuProps={{ options, groups, defaultOption, value, onSelect: handleSelect }}
+      />
     </>
   );
 }

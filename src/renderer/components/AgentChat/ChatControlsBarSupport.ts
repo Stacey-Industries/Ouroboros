@@ -42,10 +42,10 @@ export function getDisplayModelName(modelId: string): string {
     const display = formatProviderModelName(providerId, modelPart);
     return display.length > 20 ? `${display.slice(0, 18)}...` : display;
   }
-  if (modelId.includes('opus') && modelId.includes('[1m]')) return 'Opus Long';
-  if (modelId.includes('opus')) return 'Opus';
-  if (modelId.includes('haiku')) return 'Haiku';
-  if (modelId.includes('sonnet')) return 'Sonnet';
+  if (modelId.includes('opus') && modelId.includes('[1m]')) return 'Opus 4.7 1M';
+  if (modelId.includes('opus')) return 'Opus 4.7';
+  if (modelId.includes('haiku')) return 'Haiku 4.5';
+  if (modelId.includes('sonnet')) return 'Sonnet 4.6';
   return modelDisplayName(modelId);
 }
 

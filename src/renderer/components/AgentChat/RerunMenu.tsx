@@ -10,11 +10,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import {
-  ANTHROPIC_OPTIONS,
-  CLAUDE_EFFORT_OPTIONS_LIMITED,
-  CLAUDE_PERMISSION_MODES,
-} from './ChatControlsBarSupport';
+import { ANTHROPIC_OPTIONS, CLAUDE_PERMISSION_MODES } from './ChatControlsBarSupport';
+import { getEffortOptions as getMatrixEffortOptions } from './modelEffortMatrix';
+import { RerunState, useRerunState } from './RerunMenu.state';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -41,34 +39,10 @@ function RerunIcon(): React.ReactElement {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface RerunOverrides {
-  model?: string;
-  effort?: string;
-  permissionMode?: string;
-}
-
 export interface RerunMenuProps {
   messageId: string;
   threadId: string;
   onSuccess?: (newThreadId: string) => void;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function hasElectronAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window;
-}
-
-function buildOverridesPayload(
-  model: string,
-  effort: string,
-  permissionMode: string,
-): RerunOverrides | undefined {
-  const ov: RerunOverrides = {};
-  if (model) ov.model = model;
-  if (effort && effort !== 'medium') ov.effort = effort;
-  if (permissionMode && permissionMode !== 'default') ov.permissionMode = permissionMode;
-  return Object.keys(ov).length > 0 ? ov : undefined;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -105,72 +79,15 @@ function OverrideSection(props: OverrideSectionProps): React.ReactElement {
   );
 }
 
-// ── State hook ────────────────────────────────────────────────────────────────
-
-interface RerunState {
-  model: string;
-  effort: string;
-  permissionMode: string;
-  busy: boolean;
-  error: string | null;
-  setModel: (v: string) => void;
-  setEffort: (v: string) => void;
-  setPermissionMode: (v: string) => void;
-  handleRerun: () => Promise<void>;
-}
-
-interface UseRerunHandlerArgs {
-  threadId: string;
-  messageId: string;
-  model: string;
-  effort: string;
-  permissionMode: string;
-  setBusy: (v: boolean) => void;
-  setError: (v: string | null) => void;
-  onSuccess?: (id: string) => void;
-  onClose?: () => void;
-}
-
-function useRerunHandler(args: UseRerunHandlerArgs): () => Promise<void> {
-  const { threadId, messageId, model, effort, permissionMode, setBusy, setError, onSuccess, onClose } = args;
-  return useCallback(async () => {
-    if (!hasElectronAPI()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const overrides = buildOverridesPayload(model, effort, permissionMode);
-      const result = await window.electronAPI.agentChat.reRunFromMessage(threadId, messageId, overrides);
-      if (!result.success) { setError(result.error ?? 'Re-run failed.'); return; }
-      onClose?.();
-      if (result.thread?.id) onSuccess?.(result.thread.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [threadId, messageId, model, effort, permissionMode, onClose, onSuccess, setBusy, setError]);
-}
-
-function useRerunState(
-  threadId: string,
-  messageId: string,
-  onSuccess?: (id: string) => void,
-  onClose?: () => void,
-): RerunState {
-  const [model, setModel] = useState('');
-  const [effort, setEffort] = useState('medium');
-  const [permissionMode, setPermissionMode] = useState('default');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const handleRerun = useRerunHandler({ threadId, messageId, model, effort, permissionMode, setBusy, setError, onSuccess, onClose });
-  return { model, effort, permissionMode, busy, error, setModel, setEffort, setPermissionMode, handleRerun };
-}
-
 // ── Dropdown body ─────────────────────────────────────────────────────────────
 
 const SEP = <div className="my-1 border-t" style={{ borderColor: 'var(--border-subtle)' }} />;
 
-function RerunDropdownFooter({ error, busy, handleRerun }: Pick<RerunState, 'error' | 'busy' | 'handleRerun'>): React.ReactElement {
+function RerunDropdownFooter({
+  error,
+  busy,
+  handleRerun,
+}: Pick<RerunState, 'error' | 'busy' | 'handleRerun'>): React.ReactElement {
   return (
     <div className="px-2 pb-2 pt-1">
       {error && <p className="mb-1 text-[10px] text-status-error">{error}</p>}
@@ -186,27 +103,74 @@ function RerunDropdownFooter({ error, busy, handleRerun }: Pick<RerunState, 'err
   );
 }
 
-function RerunDropdown(props: RerunState & { style: React.CSSProperties; menuRef: React.RefObject<HTMLDivElement | null> }): React.ReactElement {
+function buildEffortItems(modelId: string): ReadonlyArray<{ value: string; label: string }> | null {
+  const levels = getMatrixEffortOptions(modelId);
+  if (!levels) return null;
+  const labels: Record<string, string> = {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    xhigh: 'Extra High',
+    max: 'Max',
+  };
+  return levels.map((level) => ({ value: level, label: labels[level] ?? level }));
+}
+
+function RerunDropdownSections(props: RerunState): React.ReactElement {
+  const effortItems = buildEffortItems(props.model);
+  return (
+    <>
+      <OverrideSection
+        label="Model"
+        options={ANTHROPIC_OPTIONS}
+        value={props.model}
+        onChange={props.setModel}
+      />
+      {effortItems && (
+        <>
+          {SEP}
+          <OverrideSection
+            label="Effort"
+            options={effortItems}
+            value={props.effort}
+            onChange={props.setEffort}
+          />
+        </>
+      )}
+      {SEP}
+      <OverrideSection
+        label="Permission"
+        options={CLAUDE_PERMISSION_MODES}
+        value={props.permissionMode}
+        onChange={props.setPermissionMode}
+      />
+      {SEP}
+      <RerunDropdownFooter error={props.error} busy={props.busy} handleRerun={props.handleRerun} />
+    </>
+  );
+}
+
+const DROPDOWN_STYLE_BASE: React.CSSProperties = {
+  borderColor: 'var(--border-semantic)',
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+  ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
+};
+
+function RerunDropdown(
+  props: RerunState & {
+    style: React.CSSProperties;
+    menuRef: React.RefObject<HTMLDivElement | null>;
+  },
+): React.ReactElement {
   return (
     <div
       ref={props.menuRef}
       role="menu"
       className="z-[9999] w-44 rounded-md border bg-surface-overlay shadow-xl"
-      style={{
-        borderColor: 'var(--border-semantic)',
-        backdropFilter: 'blur(24px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
-        ...props.style,
-      }}
+      style={{ ...DROPDOWN_STYLE_BASE, ...props.style }}
     >
-      <OverrideSection label="Model" options={ANTHROPIC_OPTIONS} value={props.model} onChange={props.setModel} />
-      {SEP}
-      <OverrideSection label="Effort" options={CLAUDE_EFFORT_OPTIONS_LIMITED} value={props.effort} onChange={props.setEffort} />
-      {SEP}
-      <OverrideSection label="Permission" options={CLAUDE_PERMISSION_MODES} value={props.permissionMode} onChange={props.setPermissionMode} />
-      {SEP}
-      <RerunDropdownFooter error={props.error} busy={props.busy} handleRerun={props.handleRerun} />
+      <RerunDropdownSections {...props} />
     </div>
   );
 }
