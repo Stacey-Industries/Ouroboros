@@ -100,6 +100,12 @@ export function useWorkbenchContextState(): WorkbenchContextState {
   };
 }
 
+async function createThreadForSession(projectRoot: string): Promise<string | null> {
+  if (!window.electronAPI?.agentChat) return null;
+  const result = await window.electronAPI.agentChat.createThread({ workspaceRoot: projectRoot });
+  return result.success && result.thread ? result.thread.id : null;
+}
+
 export function useWorkbenchHandlers(
   activation: ActivationState,
   selectThread: (threadId: string) => void,
@@ -107,8 +113,10 @@ export function useWorkbenchHandlers(
   const handleCreateSession = React.useCallback(async (): Promise<void> => {
     const session = await createStoredSessionFromPicker();
     if (!session) return;
+    const threadId = await createThreadForSession(session.projectRoot);
     await activation.activateSession(session.id);
-  }, [activation]);
+    if (threadId) selectThread(threadId);
+  }, [activation, selectThread]);
   const handleLaunchAgent = React.useCallback((): void => {
     window.dispatchEvent(new CustomEvent(OPEN_MULTI_SESSION_EVENT));
   }, []);

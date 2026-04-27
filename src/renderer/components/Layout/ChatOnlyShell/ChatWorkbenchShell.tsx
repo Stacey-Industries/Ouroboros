@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
+import { OPEN_MULTI_SESSION_EVENT } from '../../../hooks/appEventNames';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { CommandPalette } from '../../CommandPalette/CommandPalette';
 import type { Command } from '../../CommandPalette/types';
+import { MultiSessionLauncher } from '../../MultiSession';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
@@ -26,9 +28,50 @@ interface ChatWorkbenchShellProps {
   execute: (command: Command) => Promise<void>;
 }
 
+// ── MultiSession launcher overlay ─────────────────────────────────────────────
+
+function useMultiSessionLauncherState(): {
+  launcherOpen: boolean;
+  closeLauncher: () => void;
+} {
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const closeLauncher = useCallback((): void => {
+    setLauncherOpen(false);
+  }, []);
+  useEffect(() => {
+    const handler = (): void => {
+      setLauncherOpen(true);
+    };
+    window.addEventListener(OPEN_MULTI_SESSION_EVENT, handler);
+    return () => window.removeEventListener(OPEN_MULTI_SESSION_EVENT, handler);
+  }, []);
+  return { launcherOpen, closeLauncher };
+}
+
+function MultiSessionOverlay({
+  onClose,
+}: {
+  onClose: () => void;
+}): React.ReactElement {
+  return (
+    <div
+      className="fixed inset-0 z-[900] flex items-center justify-center bg-surface-overlay/60"
+      data-testid="multi-session-overlay"
+    >
+      <div className="h-[560px] w-[640px] overflow-hidden rounded-xl border border-border-semantic bg-surface-base shadow-xl">
+        <MultiSessionLauncher onClose={onClose} onLaunched={onClose} />
+      </div>
+    </div>
+  );
+}
+
+// ── ShellOverlays ─────────────────────────────────────────────────────────────
+
 interface ShellOverlaysProps {
   diffOverlayOpen: boolean;
   closeDiffOverlay: () => void;
+  launcherOpen: boolean;
+  closeLauncher: () => void;
   paletteOpen: boolean;
   closePalette: () => void;
   commands: Command[];
@@ -39,6 +82,8 @@ interface ShellOverlaysProps {
 function ShellOverlays({
   diffOverlayOpen,
   closeDiffOverlay,
+  launcherOpen,
+  closeLauncher,
   paletteOpen,
   closePalette,
   commands,
@@ -57,9 +102,12 @@ function ShellOverlays({
         recentIds={recentIds}
         onExecute={execute}
       />
+      {launcherOpen && <MultiSessionOverlay onClose={closeLauncher} />}
     </>
   );
 }
+
+// ── ShellChrome ───────────────────────────────────────────────────────────────
 
 type ShellLayout = ReturnType<typeof useChatWorkbenchLayout>;
 
@@ -97,11 +145,14 @@ function ShellChrome({
   );
 }
 
+// ── ChatWorkbenchShell ────────────────────────────────────────────────────────
+
 const SHELL_BG = 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, none)';
 
 export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactElement {
   const { mode, cycleMode } = useChatSidebarMode();
   const layout = useChatWorkbenchLayout();
+  const { launcherOpen, closeLauncher } = useMultiSessionLauncherState();
   const { closeDiffOverlay, closePalette, commands, diffOverlayOpen } = props;
   const { execute, openDiffOverlay, paletteOpen, projectRoot, recentIds } = props;
   const { terminal, toggleDrawer } = props;
@@ -124,6 +175,8 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
       <ShellOverlays
         diffOverlayOpen={diffOverlayOpen}
         closeDiffOverlay={closeDiffOverlay}
+        launcherOpen={launcherOpen}
+        closeLauncher={closeLauncher}
         paletteOpen={paletteOpen}
         closePalette={closePalette}
         commands={commands}
