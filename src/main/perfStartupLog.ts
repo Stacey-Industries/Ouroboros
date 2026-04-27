@@ -111,7 +111,7 @@ export function appendStartupRecord(timings: StartupMark[]): void {
 
 // ─── Read helpers ─────────────────────────────────────────────────────────────
 
-// ─── Concurrency diagnostics ─────────────────────────────────────────────────
+// ─── Concurrency guard ───────────────────────────────────────────────────────
 
 let _concurrentReads = 0;
 
@@ -149,14 +149,7 @@ async function readJsonlFile(filePath: string): Promise<StartupRecord[]> {
   return records;
 }
 
-/**
- * Read the last `limit` startup records from the JSONL log.
- *
- * Reads the primary file first; if fewer than `limit` records are found,
- * continues reading from the rotation file (`.1.jsonl`) for continuity.
- * Malformed lines are skipped. Read errors return whatever was parsed.
- */
-export async function readRecentStartups(limit: number): Promise<StartupRecord[]> {
+async function doReadRecentStartups(limit: number): Promise<StartupRecord[]> {
   const logPath = resolveLogPath();
   const rotatedPath = `${logPath}.1.jsonl`;
 
@@ -178,4 +171,30 @@ export async function readRecentStartups(limit: number): Promise<StartupRecord[]
   }
 
   return records.slice(-limit);
+}
+
+/**
+ * Read the last `limit` startup records from the JSONL log.
+ *
+ * Coalesces concurrent callers onto a single in-flight read to prevent rapid
+ * settings-tab remounts from stacking multiple readline streams and exhausting
+ * the CRT per-process FD budget on Windows (default: 512).
+ *
+ * Reads the primary file first; if fewer than `limit` records are found,
+ * continues reading from the rotation file (`.1.jsonl`) for continuity.
+ * Malformed lines are skipped. Read errors return whatever was parsed.
+ */
+let inFlightRead: Promise<StartupRecord[]> | null = null;
+
+export async function readRecentStartups(limit: number): Promise<StartupRecord[]> {
+  if (inFlightRead) {
+    log.info('[trace:fd] readRecentStartups coalesced onto in-flight read');
+    return inFlightRead;
+  }
+  inFlightRead = doReadRecentStartups(limit);
+  try {
+    return await inFlightRead;
+  } finally {
+    inFlightRead = null;
+  }
 }
