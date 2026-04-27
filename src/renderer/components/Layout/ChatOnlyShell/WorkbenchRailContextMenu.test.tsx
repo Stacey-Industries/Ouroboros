@@ -71,7 +71,7 @@ function makeChatItem(thread?: AgentChatThreadRecord): WorkbenchRecentChatItem {
     isPinned: Boolean(t.pinned),
     isActive: false,
     attention: { kind: 'none', rank: 0, label: null, tone: 'neutral', isSticky: false },
-    thread: t,
+    rawThread: t,
   };
 }
 

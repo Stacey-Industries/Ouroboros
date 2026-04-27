@@ -55,9 +55,10 @@ function useWorkbenchSurfaceState(
   layout: LayoutState,
   artifacts: ReturnType<typeof useWorkbenchArtifacts>,
   diffReviewState: ReturnType<typeof useDiffReview>['state'],
+  approvalCount: number,
 ): SurfacePolicyState {
   return useWorkbenchSurfacePolicy({
-    approvalCount: 0,
+    approvalCount,
     diffKey: diffReviewState
       ? `${diffReviewState.sessionId}:${diffReviewState.snapshotHash}`
       : null,
@@ -86,7 +87,12 @@ export function useWorkbenchContextState(): WorkbenchContextState {
     refreshSessions: sessionsState.refresh,
     actions: { selectThread },
   });
-  const surfacePolicy = useWorkbenchSurfaceState(layout, artifacts, diffReviewState);
+  const surfacePolicy = useWorkbenchSurfaceState(
+    layout,
+    artifacts,
+    diffReviewState,
+    approvalRequests.length,
+  );
 
   return {
     activation,

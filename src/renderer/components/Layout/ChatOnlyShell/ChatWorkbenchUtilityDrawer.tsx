@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
+import { useProject } from '../../../contexts/ProjectContext';
+import { OPEN_FILE_EVENT } from '../../../hooks/appEventNames';
+import { useRulesAndSkills } from '../../../hooks/useRulesAndSkills';
+import { RulesTab } from '../../AgentChat/RulesTab';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { DiffReviewPanel } from '../../DiffReview/DiffReviewPanel';
 import { SubagentTranscriptPanel } from './SubagentTranscriptPanel';
@@ -17,6 +21,7 @@ export interface ChatWorkbenchUtilityDrawerProps {
 function tabLabel(tab: ChatWorkbenchUtilityTab): string {
   if (tab === 'approvals') return 'Approvals';
   if (tab === 'review') return 'Review';
+  if (tab === 'rules') return 'Rules';
   if (tab === 'subagents') return 'Subagents';
   return 'Timeline';
 }
@@ -26,6 +31,7 @@ function useTabCounts(): Record<ChatWorkbenchUtilityTab, number> {
   return {
     approvals: counts.approvals,
     review: counts.review,
+    rules: 0,
     subagents: counts.subagents,
     activity: counts.activity,
   };
@@ -114,9 +120,38 @@ function ReviewPanel(): React.ReactElement {
   );
 }
 
+function openFileInEditor(filePath: string): void {
+  window.dispatchEvent(new CustomEvent(OPEN_FILE_EVENT, { detail: { filePath } }));
+}
+
+function WorkbenchRulesPanel(): React.ReactElement {
+  const { projectRoot } = useProject();
+  const { rules, createRule } = useRulesAndSkills(projectRoot);
+  const handleCreateRule = useCallback(
+    async (type: 'claude-md' | 'agents-md'): Promise<void> => {
+      await createRule(type);
+    },
+    [createRule],
+  );
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      data-testid="workbench-rules-panel"
+    >
+      <RulesTab
+        rules={rules}
+        onOpenFile={openFileInEditor}
+        onCreateRule={handleCreateRule}
+        projectRoot={projectRoot}
+      />
+    </div>
+  );
+}
+
 function DrawerContent({ activeTab }: { activeTab: ChatWorkbenchUtilityTab }): React.ReactElement {
   if (activeTab === 'approvals') return <WorkbenchApprovalPanel />;
   if (activeTab === 'review') return <ReviewPanel />;
+  if (activeTab === 'rules') return <WorkbenchRulesPanel />;
   if (activeTab === 'subagents') return <SubagentTranscriptPanel />;
   return <WorkbenchTimelinePanel />;
 }
@@ -147,7 +182,13 @@ function DrawerHeader({ activeTab, onClose }: DrawerHeaderProps): React.ReactEle
   );
 }
 
-const DRAWER_TABS: ChatWorkbenchUtilityTab[] = ['activity', 'approvals', 'review', 'subagents'];
+const DRAWER_TABS: ChatWorkbenchUtilityTab[] = [
+  'activity',
+  'approvals',
+  'review',
+  'rules',
+  'subagents',
+];
 
 export function ChatWorkbenchUtilityDrawer({
   activeTab,

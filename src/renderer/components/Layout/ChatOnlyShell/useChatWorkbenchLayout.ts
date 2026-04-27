@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'agent-ide:chat-workbench-layout';
 
-export type ChatWorkbenchUtilityTab = 'activity' | 'review' | 'approvals' | 'subagents';
+export type ChatWorkbenchUtilityTab = 'activity' | 'review' | 'approvals' | 'rules' | 'subagents';
 
 export interface ChatWorkbenchLayoutState {
   railOpen: boolean;
@@ -30,7 +30,11 @@ const DEFAULT_STATE: ChatWorkbenchLayoutState = {
 
 function isUtilityTab(value: unknown): value is ChatWorkbenchUtilityTab {
   return (
-    value === 'activity' || value === 'review' || value === 'approvals' || value === 'subagents'
+    value === 'activity' ||
+    value === 'review' ||
+    value === 'approvals' ||
+    value === 'rules' ||
+    value === 'subagents'
   );
 }
 

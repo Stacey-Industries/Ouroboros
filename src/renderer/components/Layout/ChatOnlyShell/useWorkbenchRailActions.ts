@@ -10,6 +10,7 @@ import { useCallback, useContext, useState } from 'react';
 import type { AgentChatThreadRecord } from '../../../types/electron';
 import {
   AgentChatStoreContext,
+  type AgentChatStoreInstance,
   useAgentChatStoreContext,
 } from '../../AgentChat/agentChatStore';
 import type { AgentChatStore } from '../../AgentChat/agentChatStore.types';
@@ -18,7 +19,7 @@ import type { WorkbenchRailActions } from './WorkbenchRailContextMenu';
 // ── Store helpers (mirrors ChatHistorySidebar pattern) ────────────────────────
 
 async function syncThreadsInStore(
-  store: ReturnType<typeof useContext<typeof AgentChatStoreContext>> | null,
+  store: AgentChatStoreInstance | null,
   workspaceRoot: string | undefined,
 ): Promise<void> {
   if (!store || !workspaceRoot) return;
@@ -32,10 +33,7 @@ async function syncThreadsInStore(
   }));
 }
 
-function applyLocalDelete(
-  store: ReturnType<typeof useContext<typeof AgentChatStoreContext>> | null,
-  id: string,
-): void {
+function applyLocalDelete(store: AgentChatStoreInstance | null, id: string): void {
   if (!store) return;
   store.setState((state: AgentChatStore) => ({
     ...state,
@@ -53,7 +51,7 @@ export interface UseWorkbenchRailActionsResult {
 }
 
 function useThreadActions(
-  store: ReturnType<typeof useContext<typeof AgentChatStoreContext>> | null,
+  store: AgentChatStoreInstance | null,
   workspaceRoot: string | undefined,
   setRenameTarget: (t: AgentChatThreadRecord | null) => void,
 ): Pick<WorkbenchRailActions, 'onDeleteThread' | 'onPinThread' | 'onRenameThread'> {

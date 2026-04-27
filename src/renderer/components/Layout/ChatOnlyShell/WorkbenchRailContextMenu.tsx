@@ -163,7 +163,7 @@ function ChatMenuBody({
   actions: WorkbenchRailActions;
   onClose: () => void;
 }): React.ReactElement {
-  const thread = item.thread;
+  const thread = item.rawThread;
   const close = (fn: () => void): (() => void) => (): void => {
     fn();
     onClose();
