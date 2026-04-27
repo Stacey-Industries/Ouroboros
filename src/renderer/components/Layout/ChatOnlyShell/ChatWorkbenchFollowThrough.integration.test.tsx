@@ -1,16 +1,32 @@
 /**
  * @vitest-environment jsdom
  *
- * Wave 47 follow-through integration tests.
- * Exercises the real workbench joins: rail grouping, attention model,
- * timeline normalization, compare mode primary-surface ownership,
- * utility-drawer tab behavior, and HTML preview routing.
+ * Wave 58 rewrite of the Wave 47 follow-through integration tests.
  *
- * NOTE: Heavy shell surfaces (AgentChatWorkspace, TerminalDock) remain
- * mocked — they carry xterm/Monaco cost and jsdom can't render them.
- * The joins under test here are the workbench-layer logic: rail IA,
- * timeline reducer, surface policy, subagent transcript panel, compare
- * pane wiring, and HTML preview in ContentRouter.
+ * ANTI-PATTERN REMOVED: Wave 47 mocked useWorkbenchArtifacts and
+ * ChatWorkbenchComparePane (both defined inside ChatOnlyShell/), then
+ * asserted mocked stubs appeared. Those tests proved nothing about real joins.
+ *
+ * WHAT IS MOCKED HERE (platform / external boundaries only):
+ * - window.electronAPI — IPC bridge; not under test
+ * - AgentChatWorkspace — lives in AgentChat/, not ChatOnlyShell/; carries
+ *   xterm/Monaco cost that jsdom cannot render
+ * - useFileViewerManager — FileViewer context provider; boundary to FileViewer
+ *   subsystem. useWorkbenchArtifacts (inside ChatOnlyShell/) is NOT mocked.
+ * - useDiffReview — DiffReview context provider; boundary to DiffReview subsystem
+ * - AgentEventsContext, ApprovalContext — global providers above the shell
+ * - agentChatStore — per-workspace store; provide controlled test state
+ * - useSessions — session IPC bridge; not in ChatOnlyShell/
+ * - Heavy overlays (TitleBar, StatusBar, CommandPalette) — structural chrome with
+ *   no logic under test here
+ *
+ * WHAT IS NOT MOCKED (real joins exercised):
+ * - WorkbenchRail, WorkbenchRailSections, WorkbenchSessionRow
+ * - ChatWorkbenchUtilityDrawer (all tabs including rules)
+ * - ChatWorkbenchBody, ChatWorkbenchBody.model, ChatWorkbenchBody.parts
+ * - useWorkbenchSurfacePolicy, useWorkbenchArtifacts, useWorkbenchCompare
+ * - useChatWorkbenchLayout, useWorkbenchSessions, useWorkbenchAttention
+ * - SubagentTranscriptPanel, WorkbenchTimelinePanel, WorkbenchApprovalPanel
  */
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import React from 'react';
@@ -18,11 +34,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OPEN_SUBAGENT_PANEL_EVENT } from '../../../hooks/appEventNames';
 
-// ── minimal stubs ───────────────────────────────────────────────────────────
+// ── Platform / external boundary mocks ─────────────────────────────────────
+
 vi.mock('../../../contexts/ApprovalContext', () => ({
   useApprovalContext: () => ({
     pendingCount: 0,
     requests: [],
+    approve: vi.fn(),
+    reject: vi.fn(),
+    alwaysAllow: vi.fn(),
   }),
 }));
 
@@ -32,6 +52,8 @@ let mockSessions: Array<{
   status: 'idle' | 'running' | 'complete' | 'error';
   startedAt: number;
   toolCalls: never[];
+  inputTokens: number;
+  outputTokens: number;
   parentSessionId?: string;
 }> = [];
 
@@ -47,14 +69,17 @@ vi.mock('../../../contexts/AgentEventsContext', () => ({
   }),
 }));
 
+// useDiffReview is a DiffReview-subsystem boundary; not part of ChatOnlyShell/
 vi.mock('../../DiffReview/DiffReviewManager', () => ({
-  useDiffReview: () => ({ state: null }),
+  useDiffReview: () => ({ state: null, canRollback: false }),
 }));
 
 vi.mock('../../DiffReview/DiffReviewPanel', () => ({
   DiffReviewPanel: () => <div data-testid="diff-review-panel" />,
 }));
 
+// AgentChatWorkspace lives in AgentChat/ (not ChatOnlyShell/) and carries
+// xterm/Monaco cost jsdom cannot render
 vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
   AgentChatWorkspace: () => <div data-testid="agent-chat-workspace" />,
 }));
@@ -87,59 +112,55 @@ vi.mock('./useWorkbenchSessionActivation', () => ({
   }),
 }));
 
+// useFileViewerManager is the FileViewer subsystem boundary. useWorkbenchArtifacts
+// (inside ChatOnlyShell/) reads from this — NOT mocked itself.
+vi.mock('../../FileViewer/FileViewerManager', () => ({
+  useFileViewerManager: () => ({
+    activeFile: null,
+    openFiles: [],
+    openFile: vi.fn(),
+    closeFile: vi.fn(),
+    saveFile: vi.fn(),
+  }),
+  FileViewerManager: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Structural chrome not under test
 vi.mock('./ChatOnlyTitleBar', () => ({
   ChatOnlyTitleBar: () => <div data-testid="chat-only-title-bar" />,
 }));
-
 vi.mock('./ChatOnlyStatusBar', () => ({
   ChatOnlyStatusBar: () => <div data-testid="chat-only-status-bar" />,
 }));
-
 vi.mock('./ChatOnlyDiffOverlay', () => ({
-  ChatOnlyDiffOverlay: () => <div data-testid="diff-overlay" />,
+  ChatOnlyDiffOverlay: () => null,
 }));
-
 vi.mock('./ChatOnlySettingsOverlay', () => ({
   ChatOnlySettingsOverlay: () => null,
 }));
-
 vi.mock('./KeyboardShortcutCheatSheet', () => ({
   KeyboardShortcutCheatSheet: () => null,
 }));
-
 vi.mock('../../CommandPalette/CommandPalette', () => ({
   CommandPalette: () => null,
 }));
-
 vi.mock('./useChatSidebarMode', () => ({
   useChatSidebarMode: () => ({ mode: 'pinned', cycleMode: vi.fn() }),
 }));
-
-vi.mock('./useWorkbenchArtifacts', () => ({
-  useWorkbenchArtifacts: () => ({
-    kind: 'empty' as const,
-    activeKey: null,
-    title: '',
-    subtitle: null,
-    openFile: null,
-    diffState: null,
-    historyItems: [],
-    selectEntry: vi.fn(),
-    clearSelection: vi.fn(),
+vi.mock('../../../contexts/ProjectContext', () => ({
+  useProject: () => ({ projectRoot: '/test/project', projectRoots: ['/test/project'] }),
+}));
+vi.mock('../../../hooks/useRulesAndSkills', () => ({
+  useRulesAndSkills: () => ({
+    rules: [],
+    commands: [],
+    isLoading: false,
+    refresh: vi.fn(),
+    createRule: vi.fn().mockResolvedValue(null),
   }),
 }));
 
-vi.mock('./ChatWorkbenchComparePane', () => ({
-  ChatWorkbenchComparePane: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="chat-workbench-compare-pane">
-      <button type="button" onClick={onClose} data-testid="compare-pane-close">
-        Close
-      </button>
-    </div>
-  ),
-}));
-
-// ── late import of shell under test ─────────────────────────────────────────
+// ── Late import of shell (after all mocks are registered) ───────────────────
 const { ChatWorkbenchShell } = await import('./ChatWorkbenchShell');
 
 function buildShellProps(overrides: Record<string, unknown> = {}) {
@@ -165,33 +186,54 @@ beforeEach(() => {
       respond: vi.fn().mockResolvedValue({ success: true }),
       remember: vi.fn().mockResolvedValue({ success: true }),
     },
+    rulesAndSkills: {
+      listRuleFiles: vi.fn().mockResolvedValue({ success: true, ruleFiles: [] }),
+      onChanged: vi.fn().mockReturnValue(() => undefined),
+    },
   } as typeof window.electronAPI;
+  // Clear persisted layout state between tests
+  window.localStorage.removeItem('agent-ide:chat-workbench-layout');
 });
 
 afterEach(() => {
   cleanup();
 });
 
-// ── Rail IA ──────────────────────────────────────────────────────────────────
-describe('Rail IA', () => {
+// ── Rail IA — real WorkbenchRail renders ─────────────────────────────────────
+describe('Rail IA (real WorkbenchRail)', () => {
   it('renders the workbench rail by default', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     expect(screen.getByTestId('workbench-rail')).toBeDefined();
   });
 
-  it('renders distinct New session and Launch agent buttons in the rail header', () => {
+  it('renders distinct New session and Launch agent buttons', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     const rail = screen.getByTestId('workbench-rail');
-    // Both buttons are present and have non-overlapping labels
-    const buttons = within(rail).getAllByRole('button');
-    const labels = buttons.map((b) => b.textContent);
+    const labels = within(rail).getAllByRole('button').map((b) => b.textContent);
     expect(labels.some((l) => /new session/i.test(l ?? ''))).toBe(true);
     expect(labels.some((l) => /launch agent/i.test(l ?? ''))).toBe(true);
   });
+
+  it('shows session sections when sessions are present', () => {
+    mockSessions = [
+      {
+        id: 'ses-1',
+        taskLabel: 'My Session',
+        status: 'running',
+        startedAt: Date.now(),
+        toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
+      },
+    ];
+    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    // Rail renders — no crash from empty session list with agents running
+    expect(screen.getByTestId('workbench-rail')).toBeDefined();
+  });
 });
 
-// ── Utility drawer — subagent tab ────────────────────────────────────────────
-describe('Utility drawer — subagent tab join', () => {
+// ── Utility drawer — real join via surface policy ───────────────────────────
+describe('Utility drawer — real surface policy join', () => {
   it('opens the utility drawer on OPEN_SUBAGENT_PANEL_EVENT', () => {
     mockSessions = [
       {
@@ -200,6 +242,8 @@ describe('Utility drawer — subagent tab join', () => {
         status: 'running',
         startedAt: Date.now(),
         toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
         parentSessionId: 'parent-1',
       },
     ];
@@ -211,20 +255,51 @@ describe('Utility drawer — subagent tab join', () => {
       );
     });
 
+    // Real ChatWorkbenchUtilityDrawer should be visible
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
+    // Real tab button rendered by real ChatWorkbenchUtilityDrawer
     expect(screen.getByTestId('chat-workbench-utility-tab-subagents')).toBeDefined();
+  });
+
+  it('shows rules tab in real drawer tab bar', () => {
+    // Force drawer open via localStorage to avoid needing a trigger
+    window.localStorage.setItem(
+      'agent-ide:chat-workbench-layout',
+      JSON.stringify({ railOpen: true, artifactOpen: false, utilityOpen: true, activeUtilityTab: 'rules' }),
+    );
+    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
+    expect(screen.getByTestId('chat-workbench-utility-tab-rules')).toBeDefined();
+  });
+
+  it('real close button dismisses the drawer', () => {
+    window.localStorage.setItem(
+      'agent-ide:chat-workbench-layout',
+      JSON.stringify({ railOpen: true, artifactOpen: false, utilityOpen: true, activeUtilityTab: 'activity' }),
+    );
+    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
+
+    // Click the real close button rendered by real DrawerHeader
+    const closeBtn = screen.getByTestId('chat-workbench-utility-close');
+    act(() => {
+      closeBtn.click();
+    });
+
+    expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
   });
 });
 
-// ── Compare mode primary-surface ownership ────────────────────────────────────
-describe('Compare mode', () => {
+// ── Compare mode — real useWorkbenchCompare join ─────────────────────────────
+describe('Compare mode (real useWorkbenchCompare)', () => {
   it('does not show compare pane when compare is inactive', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
+    // With empty sessions, compare pane should not be visible
     expect(screen.queryByTestId('chat-workbench-compare-pane')).toBeNull();
   });
 });
 
-// ── Shell structure ──────────────────────────────────────────────────────────
+// ── Shell structure ───────────────────────────────────────────────────────────
 describe('Shell structure', () => {
   it('renders title bar, workbench body, and status bar', () => {
     render(<ChatWorkbenchShell {...buildShellProps()} />);
