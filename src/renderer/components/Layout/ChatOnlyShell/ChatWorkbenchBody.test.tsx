@@ -16,10 +16,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // ── External boundary mocks ───────────────────────────────────────────────────
 
 vi.mock('../../../contexts/ApprovalContext', () => ({
-  useApprovalContext: () => ({ pendingCount: 0, requests: [], approve: vi.fn(), reject: vi.fn(), alwaysAllow: vi.fn() }),
+  useApprovalContext: () => ({
+    pendingCount: 0,
+    requests: [],
+    approve: vi.fn(),
+    reject: vi.fn(),
+    alwaysAllow: vi.fn(),
+  }),
 }));
 vi.mock('../../../contexts/AgentEventsContext', () => ({
-  useAgentEventsContext: () => ({ currentSessions: [], historicalSessions: [], agents: [], activeCount: 0, clearCompleted: vi.fn(), dismiss: vi.fn(), updateNotes: vi.fn() }),
+  useAgentEventsContext: () => ({
+    currentSessions: [],
+    historicalSessions: [],
+    agents: [],
+    activeCount: 0,
+    clearCompleted: vi.fn(),
+    dismiss: vi.fn(),
+    updateNotes: vi.fn(),
+  }),
 }));
 vi.mock('../../DiffReview/DiffReviewManager', () => ({
   useDiffReview: () => ({ state: null, canRollback: false }),
@@ -42,17 +56,35 @@ vi.mock('../../SessionSidebar/useSessions', () => ({
   useSessions: () => ({ sessions: [], activeSessionId: null, refresh: vi.fn() }),
 }));
 vi.mock('./useWorkbenchSessionActivation', () => ({
-  useWorkbenchSessionActivation: () => ({ activateSession: vi.fn().mockResolvedValue(undefined), activatingSessionId: null }),
+  useWorkbenchSessionActivation: () => ({
+    activateSession: vi.fn().mockResolvedValue(undefined),
+    activatingSessionId: null,
+  }),
 }));
 vi.mock('../../FileViewer/FileViewerManager', () => ({
-  useFileViewerManager: () => ({ activeFile: null, openFiles: [], openFile: vi.fn(), closeFile: vi.fn(), saveFile: vi.fn() }),
+  useFileViewerManager: () => ({
+    activeFile: null,
+    openFiles: [],
+    openFile: vi.fn(),
+    closeFile: vi.fn(),
+    saveFile: vi.fn(),
+  }),
   FileViewerManager: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock('../../../hooks/useRulesAndSkills', () => ({
-  useRulesAndSkills: () => ({ rules: [], commands: [], isLoading: false, refresh: vi.fn(), createRule: vi.fn().mockResolvedValue(null) }),
+  useRulesAndSkills: () => ({
+    rules: [],
+    commands: [],
+    isLoading: false,
+    refresh: vi.fn(),
+    createRule: vi.fn().mockResolvedValue(null),
+  }),
 }));
 vi.mock('../../../contexts/ProjectContext', () => ({
-  useProject: () => ({ projectRoot: '/test', projectRoots: ['/test'] }),
+  useProject: () => ({ projectRoot: '/test', projectRoots: ['/test'], addProjectRoot: vi.fn() }),
+}));
+vi.mock('../../../hooks/useConfig', () => ({
+  useConfig: () => ({ config: { recentProjects: [] } }),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -66,6 +98,8 @@ function makeLayout(overrides: Partial<ChatWorkbenchLayoutState> = {}): ChatWork
     artifactOpen: false,
     utilityOpen: false,
     activeUtilityTab: 'activity',
+    activeProject: null,
+    projectStates: {},
     toggleRail: vi.fn(),
     setRailOpen: vi.fn(),
     toggleArtifact: vi.fn(),
@@ -73,6 +107,9 @@ function makeLayout(overrides: Partial<ChatWorkbenchLayoutState> = {}): ChatWork
     toggleUtility: vi.fn(),
     setUtilityOpen: vi.fn(),
     setActiveUtilityTab: vi.fn(),
+    setActiveProject: vi.fn(),
+    setActiveInnerTab: vi.fn(),
+    getProjectState: vi.fn(() => ({ activeInnerTab: 'chats' as const })),
     ...overrides,
   };
 }
@@ -95,8 +132,14 @@ const { ChatWorkbenchBody } = await import('./ChatWorkbenchBody');
 beforeEach(() => {
   window.localStorage.clear();
   window.electronAPI = {
-    approval: { respond: vi.fn().mockResolvedValue({ success: true }), remember: vi.fn().mockResolvedValue({ success: true }) },
-    rulesAndSkills: { listRuleFiles: vi.fn().mockResolvedValue({ success: true, ruleFiles: [] }), onChanged: vi.fn().mockReturnValue(() => undefined) },
+    approval: {
+      respond: vi.fn().mockResolvedValue({ success: true }),
+      remember: vi.fn().mockResolvedValue({ success: true }),
+    },
+    rulesAndSkills: {
+      listRuleFiles: vi.fn().mockResolvedValue({ success: true, ruleFiles: [] }),
+      onChanged: vi.fn().mockReturnValue(() => undefined),
+    },
   } as typeof window.electronAPI;
 });
 
@@ -106,7 +149,7 @@ afterEach(() => {
 });
 
 describe('ChatWorkbenchBody — layout prop contract', () => {
-  it('renders the workbench rail when layout.railOpen is true', () => {
+  it('renders the two-tier rail when layout.railOpen is true', () => {
     render(
       <ChatWorkbenchBody
         layout={makeLayout({ railOpen: true })}
@@ -114,10 +157,11 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
-    expect(screen.getByTestId('workbench-rail')).toBeDefined();
+    expect(screen.getByTestId('outer-project-rail')).toBeDefined();
+    expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 
-  it('hides the workbench rail when layout.railOpen is false', () => {
+  it('hides the two-tier rail when layout.railOpen is false', () => {
     render(
       <ChatWorkbenchBody
         layout={makeLayout({ railOpen: false })}
@@ -125,7 +169,8 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
-    expect(screen.queryByTestId('workbench-rail')).toBeNull();
+    expect(screen.queryByTestId('outer-project-rail')).toBeNull();
+    expect(screen.queryByTestId('inner-sidebar')).toBeNull();
   });
 
   it('renders the main workspace area regardless of rail state', () => {

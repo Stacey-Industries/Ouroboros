@@ -8,9 +8,9 @@ import {
   useWorkbenchHandlers,
 } from './ChatWorkbenchBody.model';
 import {
+  TwoTierRailSurface,
   WorkbenchApprovalSurface,
   WorkbenchMainColumn,
-  WorkbenchRailSurface,
 } from './ChatWorkbenchBody.parts';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
 import type { TerminalDockApi } from './useTerminalDockState';
@@ -42,9 +42,7 @@ export function ChatWorkbenchBody({
         sessionsState={state.sessionsState}
         threads={state.threads}
       />
-      {state.layout.railOpen && (
-        <WorkbenchRailSurface compare={state.compare} handlers={handlers} />
-      )}
+      {state.layout.railOpen && <TwoTierRailSurface layout={state.layout} />}
       <WorkbenchMainColumn
         compare={state.compare}
         dock={state.dock}

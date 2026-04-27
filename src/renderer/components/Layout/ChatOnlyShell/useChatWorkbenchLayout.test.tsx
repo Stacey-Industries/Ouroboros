@@ -74,7 +74,7 @@ describe('useChatWorkbenchLayout', () => {
     });
 
     // toggleRail starts from true (default) → false
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}')).toEqual({
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}')).toMatchObject({
       railOpen: false,
       artifactOpen: true,
       utilityOpen: true,

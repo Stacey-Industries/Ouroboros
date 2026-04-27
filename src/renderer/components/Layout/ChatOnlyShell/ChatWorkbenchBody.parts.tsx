@@ -1,5 +1,7 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useCallback, useMemo } from 'react';
 
+import { useProject } from '../../../contexts/ProjectContext';
+import { useConfig } from '../../../hooks/useConfig';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
@@ -13,8 +15,9 @@ import type {
 } from './ChatWorkbenchBody.model';
 import { ChatWorkbenchComparePane } from './ChatWorkbenchComparePane';
 import { ChatWorkbenchUtilityDrawer } from './ChatWorkbenchUtilityDrawer';
+import { InnerSidebar } from './InnerSidebar';
+import { OuterProjectRail } from './OuterProjectRail';
 import { WorkbenchApprovalPrompt } from './WorkbenchApprovalPrompt';
-import { WorkbenchRail } from './WorkbenchRail';
 
 const ChatWorkbenchTerminalDock = React.lazy(() =>
   import('./ChatWorkbenchTerminalDock').then((m) => ({ default: m.ChatWorkbenchTerminalDock })),
@@ -23,21 +26,63 @@ const ChatWorkbenchArtifactPane = React.lazy(() =>
   import('./ChatWorkbenchArtifactPane').then((m) => ({ default: m.ChatWorkbenchArtifactPane })),
 );
 
-function UnavailableTerminalDock(): React.ReactElement {
+// ── Project list helpers ───────────────────────────────────────────────────────
+
+function useWorkbenchProjects(): string[] {
+  const { projectRoots } = useProject();
+  const { config } = useConfig();
+  return useMemo(() => {
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    for (const p of [...projectRoots, ...(config?.recentProjects ?? [])]) {
+      if (p && !seen.has(p)) {
+        seen.add(p);
+        merged.push(p);
+      }
+    }
+    return merged;
+  }, [projectRoots, config?.recentProjects]);
+}
+
+// ── Two-tier rail ─────────────────────────────────────────────────────────────
+
+export function TwoTierRailSurface({ layout }: { layout: LayoutState }): React.ReactElement {
+  const projects = useWorkbenchProjects();
+  const handleSelectProject = useCallback(
+    (path: string) => layout.setActiveProject(path),
+    [layout],
+  );
+  const handleAddProject = useCallback((path: string) => layout.setActiveProject(path), [layout]);
+  const handleOpenSettings = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('agent-ide:open-settings'));
+  }, []);
+  const activeProject = layout.activeProject;
+  const projectState = layout.getProjectState(activeProject ?? '');
+  const handleSelectTab = useCallback(
+    (tab: Parameters<typeof layout.setActiveInnerTab>[1]) => {
+      if (activeProject) layout.setActiveInnerTab(activeProject, tab);
+    },
+    [layout, activeProject],
+  );
   return (
-    <section
-      className="h-40 shrink-0 border-t border-border-semantic bg-surface-panel/90 px-3 py-3"
-      data-testid="chat-workbench-terminal-dock-unavailable"
-    >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
-        Terminal
-      </div>
-      <p className="mt-2 text-sm text-text-semantic-secondary">
-        Terminal sessions are not available in this window.
-      </p>
-    </section>
+    <>
+      <OuterProjectRail
+        projects={projects}
+        activeProject={activeProject}
+        onSelectProject={handleSelectProject}
+        onAddProject={handleAddProject}
+        onOpenSettings={handleOpenSettings}
+      />
+      <InnerSidebar
+        activeProject={activeProject}
+        activeTab={projectState.activeInnerTab}
+        onSelectTab={handleSelectTab}
+      />
+    </>
   );
 }
+
+// ── Approval surface ───────────────────────────────────────────────────────────
 
 export function WorkbenchApprovalSurface({
   activeApprovalSessionIds,
@@ -64,28 +109,7 @@ export function WorkbenchApprovalSurface({
   );
 }
 
-export function WorkbenchRailSurface({
-  compare,
-  handlers,
-}: {
-  compare: CompareState;
-  handlers: WorkbenchHandlers;
-}): React.ReactElement {
-  return (
-    <WorkbenchRail
-      title="Workbench"
-      onCreateSession={() => {
-        void handlers.handleCreateSession();
-      }}
-      onLaunchAgent={handlers.handleLaunchAgent}
-      onSelectSession={handlers.handleSelectSession}
-      onSelectRecentChat={handlers.handleSelectRecentChat}
-      onCompareSession={compare.openCompare}
-      canCompareSession={compare.canCompare}
-      compareSessionId={compare.compareTarget?.sessionId ?? null}
-    />
-  );
-}
+// ── Centre pane ────────────────────────────────────────────────────────────────
 
 function WorkbenchCenterPane({
   compare,
@@ -115,6 +139,8 @@ function WorkbenchCenterPane({
   );
 }
 
+// ── Side panels ────────────────────────────────────────────────────────────────
+
 function WorkbenchSidePanels({
   layout,
   surfacePolicy,
@@ -140,6 +166,24 @@ function WorkbenchSidePanels({
   );
 }
 
+// ── Terminal surface ───────────────────────────────────────────────────────────
+
+function UnavailableTerminalDock(): React.ReactElement {
+  return (
+    <section
+      className="h-40 shrink-0 border-t border-border-semantic bg-surface-panel/90 px-3 py-3"
+      data-testid="chat-workbench-terminal-dock-unavailable"
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
+        Terminal
+      </div>
+      <p className="mt-2 text-sm text-text-semantic-secondary">
+        Terminal sessions are not available in this window.
+      </p>
+    </section>
+  );
+}
+
 function WorkbenchTerminalSurface({
   dock,
   terminal,
@@ -160,6 +204,8 @@ function WorkbenchTerminalSurface({
     </Suspense>
   );
 }
+
+// ── Main column ────────────────────────────────────────────────────────────────
 
 export function WorkbenchMainColumn({
   compare,
