@@ -18,25 +18,44 @@ import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import type { ChatSidebarMode } from './useChatSidebarMode';
+import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
 
-const WIN_BTN = 'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
+const WIN_BTN =
+  'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
 
 function MinimizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
   return (
-    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // rgba: win32 hover tint — non-themeable
-      onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
-      <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
+    <button
+      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // hardcoded: win32 hover tint — non-themeable platform chrome
+      onClick={() => api?.minimizeWindow()}
+      title="Minimize"
+      aria-label="Minimize"
+    >
+      <svg width="10" height="1" viewBox="0 0 10 1">
+        <rect width="10" height="1" fill="currentColor" />
+      </svg>
     </button>
   );
 }
 
 function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
   return (
-    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // rgba: win32 hover tint — non-themeable
-      onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1">
+    <button
+      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[rgba(255,255,255,0.08)]`} // hardcoded: win32 hover tint — non-themeable platform chrome
+      onClick={() => api?.toggleMaximizeWindow()}
+      title="Maximize"
+      aria-label="Maximize"
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1"
+      >
         <rect x="0.5" y="0.5" width="9" height="9" />
       </svg>
     </button>
@@ -45,10 +64,15 @@ function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.Rea
 
 function CloseBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
   return (
-    <button className={`${WIN_BTN} text-text-semantic-muted hover:bg-[#e81123] hover:text-white`} // hardcoded: Windows close-button canonical red — non-themeable platform color
-      onClick={() => api?.closeWindow()} title="Close" aria-label="Close">
+    <button
+      className={`${WIN_BTN} text-text-semantic-muted hover:bg-[#e81123] hover:text-white`} // hardcoded: Windows close-button canonical red — non-themeable platform color
+      onClick={() => api?.closeWindow()}
+      title="Close"
+      aria-label="Close"
+    >
       <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
-        <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+        <line x1="1" y1="1" x2="9" y2="9" />
+        <line x1="9" y1="1" x2="1" y2="9" />
       </svg>
     </button>
   );
@@ -57,12 +81,18 @@ function CloseBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactE
 function WindowControls(): React.ReactElement | null {
   const [platform, setPlatform] = useState('');
   useEffect(() => {
-    window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {});
+    window.electronAPI?.app
+      ?.getPlatform?.()
+      .then(setPlatform)
+      .catch(() => {});
   }, []);
   if (platform !== 'win32') return null;
   const api = window.electronAPI?.app;
   return (
-    <div className="flex items-stretch h-full ml-auto bg-transparent" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+    <div
+      className="flex items-stretch h-full ml-auto bg-transparent"
+      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+    >
       <MinimizeBtn api={api} />
       <MaximizeBtn api={api} />
       <CloseBtn api={api} />
@@ -243,12 +273,18 @@ export interface ChatOnlyTitleBarProps {
   onCycleSidebarMode: () => void;
   /** Current sidebar mode — controls icon and tooltip on the cycle button. */
   sidebarMode: ChatSidebarMode;
+  /** Workbench rail toggle — shows an extra icon button when provided. */
+  onToggleRail?: () => void;
+  /** Whether the workbench rail is currently open. */
+  railOpen?: boolean;
 }
 
 // ── ChatOnlyTitleBar ──────────────────────────────────────────────────────────
 
 export function ChatOnlyTitleBar({
   onCycleSidebarMode,
+  onToggleRail,
+  railOpen,
   sidebarMode,
 }: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
@@ -270,6 +306,9 @@ export function ChatOnlyTitleBar({
         sidebarMode={sidebarMode}
         onCycleSidebarMode={onCycleSidebarMode}
       />
+      {onToggleRail !== undefined && (
+        <WorkbenchRailToggleButton railOpen={railOpen ?? false} onToggle={onToggleRail} />
+      )}
       <div className="flex-1" />
       <TitleBarRight />
     </header>

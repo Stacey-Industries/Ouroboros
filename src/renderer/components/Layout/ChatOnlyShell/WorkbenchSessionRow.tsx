@@ -153,7 +153,7 @@ function CompareButton({
 }): React.ReactElement {
   const className = active
     ? 'border-interactive-accent bg-interactive-accent-subtle text-interactive-accent'
-    : 'border-stroke-default bg-surface-panel text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary';
+    : 'border-border-semantic bg-surface-panel text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary';
   return (
     <button
       type="button"

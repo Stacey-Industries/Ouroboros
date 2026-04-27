@@ -23,7 +23,7 @@ export function ChatWorkbenchBody({
   terminal,
 }: ChatWorkbenchBodyProps): React.ReactElement {
   const selectThread = useAgentChatStoreContext((state) => state.onSelectThread);
-  const state = useWorkbenchContextState(terminal);
+  const state = useWorkbenchContextState();
   const handlers = useWorkbenchHandlers(state.activation, selectThread);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
 
@@ -42,7 +42,6 @@ export function ChatWorkbenchBody({
       <WorkbenchMainColumn
         compare={state.compare}
         dock={state.dock}
-        hasTerminal={state.hasTerminal}
         layout={state.layout}
         projectRoot={projectRoot}
         surfacePolicy={state.surfacePolicy}

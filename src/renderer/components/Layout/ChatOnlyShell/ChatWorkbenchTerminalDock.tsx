@@ -68,7 +68,7 @@ function DockHeader({
   onClose: () => void;
 }): React.ReactElement {
   return (
-    <div className="flex items-center justify-between border-b border-stroke-default px-3 py-1.5">
+    <div className="flex items-center justify-between border-b border-border-semantic px-3 py-1.5">
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
         Terminal
       </div>
@@ -122,7 +122,7 @@ export function ChatWorkbenchTerminalDock({
 
   return (
     <section
-      className="flex shrink-0 flex-col border-t border-stroke-default bg-surface-panel/95"
+      className="flex shrink-0 flex-col border-t border-border-semantic bg-surface-panel/95"
       style={{ height: clampedHeight }}
       data-testid="chat-workbench-terminal-dock"
     >

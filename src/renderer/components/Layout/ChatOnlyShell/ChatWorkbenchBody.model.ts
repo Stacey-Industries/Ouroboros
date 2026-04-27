@@ -2,7 +2,6 @@ import React from 'react';
 
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { OPEN_MULTI_SESSION_EVENT } from '../../../hooks/appEventNames';
-import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
@@ -28,7 +27,6 @@ export interface WorkbenchContextState {
   approvalRequests: ApprovalRequest[];
   compare: CompareState;
   dock: DockState;
-  hasTerminal: boolean;
   layout: LayoutState;
   sessionsState: SessionsState;
   surfacePolicy: SurfacePolicyState;
@@ -71,9 +69,7 @@ function useWorkbenchSurfaceState(
   });
 }
 
-export function useWorkbenchContextState(
-  terminal?: UseTerminalSessionsReturn,
-): WorkbenchContextState {
+export function useWorkbenchContextState(): WorkbenchContextState {
   const layout = useChatWorkbenchLayout();
   const dock = useTerminalDockState();
   const artifacts = useWorkbenchArtifacts();
@@ -97,7 +93,6 @@ export function useWorkbenchContextState(
     approvalRequests,
     compare,
     dock,
-    hasTerminal: Boolean(terminal),
     layout,
     sessionsState,
     surfacePolicy,

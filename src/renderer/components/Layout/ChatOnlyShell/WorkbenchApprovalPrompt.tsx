@@ -82,7 +82,7 @@ function ActionButton({
       ? 'border-interactive-accent bg-interactive-accent text-text-on-accent'
       : tone === 'danger'
         ? 'border-status-error bg-status-error-subtle text-status-error'
-        : 'border-stroke-default bg-surface-panel text-text-semantic-secondary hover:bg-surface-hover';
+        : 'border-border-semantic bg-surface-panel text-text-semantic-secondary hover:bg-surface-hover';
   return (
     <button
       type="button"

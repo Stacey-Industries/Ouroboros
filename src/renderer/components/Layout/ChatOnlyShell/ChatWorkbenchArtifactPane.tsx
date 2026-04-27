@@ -23,14 +23,14 @@ function ArtifactPaneHeader({
   onClose: () => void;
 }): React.ReactElement {
   return (
-    <header className="flex items-center gap-3 border-b border-stroke-default px-3 py-2">
+    <header className="flex items-center gap-3 border-b border-border-semantic px-3 py-2">
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-text-semantic-primary">{title}</div>
         {subtitle && <div className="truncate text-xs text-text-semantic-tertiary">{subtitle}</div>}
       </div>
       <button
         type="button"
-        className="rounded border border-stroke-default bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
+        className="rounded border border-border-semantic bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
         onClick={onClose}
         data-testid="chat-workbench-artifact-close"
       >
@@ -103,7 +103,7 @@ function FileArtifactContent(): React.ReactElement {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="h-10 shrink-0 border-b border-stroke-default bg-surface-panel/80">
+      <div className="h-10 shrink-0 border-b border-border-semantic bg-surface-panel/80">
         <FileViewerTabs
           files={openFiles}
           activeIndex={activeIndex}
@@ -150,7 +150,7 @@ export function ChatWorkbenchArtifactPane({
 
   return (
     <aside
-      className="flex w-[340px] shrink-0 flex-col border-l border-stroke-default bg-surface-panel/95"
+      className="flex w-[340px] shrink-0 flex-col border-l border-border-semantic bg-surface-panel/95"
       data-testid="chat-workbench-artifact-pane"
     >
       <ArtifactPaneHeader title={artifact.title} subtitle={artifact.subtitle} onClose={onClose} />

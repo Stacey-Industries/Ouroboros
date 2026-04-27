@@ -54,7 +54,7 @@ function countLabel(sessionCount: number, chatCount: number): string {
 }
 
 const RAIL_BTN_CLASS =
-  'rounded border border-stroke-default bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary';
+  'rounded border border-border-semantic bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary';
 
 interface RailHeaderActionsProps {
   onCreateSession?: () => void;
@@ -98,7 +98,7 @@ function RailHeader({
   title,
 }: RailHeaderProps): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-stroke-default px-3 py-3">
+    <div className="flex items-center justify-between gap-3 border-b border-border-semantic px-3 py-3">
       <div className="min-w-0">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
           {title}
@@ -224,7 +224,7 @@ function RailView({
 }: RailViewProps): React.ReactElement {
   return (
     <aside
-      className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-stroke-default bg-surface-panel/95"
+      className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-r border-border-semantic bg-surface-panel/95"
       data-testid="workbench-rail"
     >
       <RailHeader

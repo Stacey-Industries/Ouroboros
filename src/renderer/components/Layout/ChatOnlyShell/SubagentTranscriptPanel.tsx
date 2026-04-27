@@ -41,7 +41,7 @@ function UnresolvedState({
       <div className="font-mono text-[11px] text-text-semantic-tertiary">{toolCallId}</div>
       <button
         type="button"
-        className="rounded-full border border-stroke-default bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary"
+        className="rounded-full border border-border-semantic bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary"
         onClick={onReset}
       >
         Clear selection
@@ -61,13 +61,13 @@ function ResolvedPanel({
 }): React.ReactElement {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="workbench-subagent-panel">
-      <div className="flex items-center justify-between border-b border-stroke-default px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border-semantic px-3 py-2">
         <span className="text-[11px] text-text-semantic-tertiary">
           Resolved from Task handoff {detail.toolCallId}
         </span>
         <button
           type="button"
-          className="rounded-full border border-stroke-default bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary"
+          className="rounded-full border border-border-semantic bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary"
           onClick={onReset}
         >
           Clear selection

@@ -12,7 +12,7 @@ function toneClasses(tone: 'neutral' | 'success' | 'warning' | 'error'): string 
     return 'border-status-warning bg-status-warning-subtle/60 text-status-warning';
   if (tone === 'success')
     return 'border-status-success bg-status-success-subtle/60 text-status-success';
-  return 'border-stroke-default bg-surface-panel/80 text-text-semantic-secondary';
+  return 'border-border-semantic bg-surface-panel/80 text-text-semantic-secondary';
 }
 
 function EmptyState(): React.ReactElement {
@@ -25,7 +25,7 @@ function EmptyState(): React.ReactElement {
 
 function TimelineHeader({ totalCount }: { totalCount: number }): React.ReactElement {
   return (
-    <div className="border-b border-stroke-default/80 px-3 py-2">
+    <div className="border-b border-border-semantic-subtle px-3 py-2">
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
         Timeline
       </div>

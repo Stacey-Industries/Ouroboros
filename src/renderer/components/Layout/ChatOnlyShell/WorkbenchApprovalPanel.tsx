@@ -49,7 +49,7 @@ function ApprovalButtons({
       </button>
       <button
         type="button"
-        className="rounded-full border border-stroke-default bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary disabled:opacity-60"
+        className="rounded-full border border-border-semantic bg-surface-panel px-3 py-1 text-xs font-semibold text-text-semantic-secondary disabled:opacity-60"
         disabled={busy}
         onClick={onAllowAlways}
       >

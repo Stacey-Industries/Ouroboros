@@ -23,68 +23,10 @@ const ChatWorkbenchArtifactPane = React.lazy(() =>
   import('./ChatWorkbenchArtifactPane').then((m) => ({ default: m.ChatWorkbenchArtifactPane })),
 );
 
-function ShellToggleButton({
-  label,
-  pressed,
-  onClick,
-}: {
-  label: string;
-  pressed: boolean;
-  onClick: () => void;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      className="rounded border border-stroke-default bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
-      onClick={onClick}
-      aria-pressed={pressed}
-    >
-      {label}
-    </button>
-  );
-}
-
-function WorkbenchToggleRow({
-  layout,
-  dock,
-  hasTerminal,
-}: {
-  layout: LayoutState;
-  dock: DockState;
-  hasTerminal: boolean;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center gap-2 border-b border-stroke-default bg-surface-panel/70 px-3 py-2">
-      <ShellToggleButton label="Rail" pressed={layout.railOpen} onClick={layout.toggleRail} />
-      <ShellToggleButton
-        label="Artifact"
-        pressed={layout.artifactOpen}
-        onClick={layout.toggleArtifact}
-      />
-      <ShellToggleButton
-        label="Utility"
-        pressed={layout.utilityOpen}
-        onClick={layout.toggleUtility}
-      />
-      <ShellToggleButton
-        label="Terminal"
-        pressed={hasTerminal && dock.visible}
-        onClick={dock.toggleVisible}
-      />
-      <div
-        className="ml-auto text-xs text-text-semantic-tertiary"
-        data-testid="chat-workbench-utility-tab"
-      >
-        Active utility: {layout.activeUtilityTab}
-      </div>
-    </div>
-  );
-}
-
 function UnavailableTerminalDock(): React.ReactElement {
   return (
     <section
-      className="h-40 shrink-0 border-t border-stroke-default bg-surface-panel/90 px-3 py-3"
+      className="h-40 shrink-0 border-t border-border-semantic bg-surface-panel/90 px-3 py-3"
       data-testid="chat-workbench-terminal-dock-unavailable"
     >
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
@@ -152,7 +94,7 @@ function WorkbenchCenterPane({
   compare: CompareState;
   projectRoot: string | null;
 }): React.ReactElement {
-  const workspaceClass = compare.isComparing ? 'w-1/2 border-r border-stroke-default' : 'w-full';
+  const workspaceClass = compare.isComparing ? 'w-1/2 border-r border-border-semantic' : 'w-full';
   return (
     <main className="flex min-w-0 flex-1 overflow-hidden">
       <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 gap-0 px-4 xl:px-6">
@@ -222,7 +164,6 @@ function WorkbenchTerminalSurface({
 export function WorkbenchMainColumn({
   compare,
   dock,
-  hasTerminal,
   layout,
   projectRoot,
   surfacePolicy,
@@ -230,7 +171,6 @@ export function WorkbenchMainColumn({
 }: {
   compare: CompareState;
   dock: DockState;
-  hasTerminal: boolean;
   layout: LayoutState;
   projectRoot: string | null;
   surfacePolicy: SurfacePolicyState;
@@ -238,7 +178,6 @@ export function WorkbenchMainColumn({
 }): React.ReactElement {
   return (
     <div className="flex flex-1 min-w-0 flex-col min-h-0">
-      <WorkbenchToggleRow layout={layout} dock={dock} hasTerminal={hasTerminal} />
       <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
         <WorkbenchCenterPane compare={compare} projectRoot={projectRoot} />
         <WorkbenchSidePanels layout={layout} surfacePolicy={surfacePolicy} />
