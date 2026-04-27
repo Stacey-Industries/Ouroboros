@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useWorkbenchTimeline } from './useWorkbenchTimeline';
 
@@ -36,32 +36,71 @@ function TimelineHeader({ totalCount }: { totalCount: number }): React.ReactElem
   );
 }
 
-function TimelineEntryCard({
-  entry,
-}: {
-  entry: ReturnType<typeof useWorkbenchTimeline>['entries'][number];
-}): React.ReactElement {
+// Chevron icon — rotates 90° when expanded.
+function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
-    <article className={`rounded-2xl border px-3 py-3 ${toneClasses(entry.tone)}`}>
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.1em]">
-          {entry.kindLabel}
-        </span>
-        <span className="ml-auto text-[11px] text-text-semantic-tertiary">
-          {formatTime(entry.timestamp)}
-        </span>
-      </div>
-      <div className="mt-2 flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="font-mono text-xs text-text-semantic-primary">{entry.title}</div>
-          {entry.detail && (
-            <div className="mt-1 break-words font-mono text-[11px] text-text-semantic-secondary">
-              {entry.detail}
-            </div>
-          )}
+    <svg
+      aria-hidden="true"
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      className={`shrink-0 text-text-semantic-tertiary transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
+    >
+      <path
+        d="M3 2l4 3-4 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+type EntryType = ReturnType<typeof useWorkbenchTimeline>['entries'][number];
+
+function EntryDetail({ entry }: { entry: EntryType }): React.ReactElement | null {
+  if (!entry.detail) return null;
+  return (
+    <div className="border-t border-border-semantic-subtle px-3 pb-2 pt-1.5">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1 break-words font-mono text-[11px] text-text-semantic-secondary">
+          {entry.detail}
         </div>
         <div className="shrink-0 text-[11px] text-text-semantic-tertiary">{entry.sessionLabel}</div>
       </div>
+    </div>
+  );
+}
+
+function TimelineEntryCard({ entry }: { entry: EntryType }): React.ReactElement {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <article
+      className={`rounded-2xl border ${toneClasses(entry.tone)}`}
+      data-testid="timeline-entry-card"
+      data-expanded={expanded}
+    >
+      <button
+        type="button"
+        aria-expanded={expanded}
+        className="flex w-full cursor-pointer select-none items-center gap-2 px-3 py-1.5 text-left"
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <Chevron expanded={expanded} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em]">
+          {entry.kindLabel}
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-semantic-primary">
+          {entry.title}
+        </span>
+        <span className="shrink-0 text-[11px] text-text-semantic-tertiary">
+          {formatTime(entry.timestamp)}
+        </span>
+      </button>
+      {expanded && <EntryDetail entry={entry} />}
     </article>
   );
 }

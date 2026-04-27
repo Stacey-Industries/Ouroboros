@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -135,5 +135,69 @@ describe('WorkbenchTimelinePanel', () => {
   it('shows an empty state when there are no sessions', () => {
     renderPanel();
     expect(screen.getByText('No timeline entries yet.')).toBeDefined();
+  });
+
+  it('renders entries collapsed by default (aria-expanded=false)', () => {
+    currentSessions = [
+      {
+        id: 'session-2',
+        taskLabel: 'Collapse test',
+        status: 'running',
+        startedAt: 1_000,
+        toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
+        conversationTurns: [],
+        compactions: [],
+        permissionEvents: [],
+        loadedRules: [],
+        skillExecutions: [],
+        tasks: [],
+      },
+    ];
+
+    renderPanel();
+
+    const toggleButtons = screen.getAllByRole('button');
+    expect(toggleButtons.length).toBeGreaterThan(0);
+    for (const btn of toggleButtons) {
+      expect(btn.getAttribute('aria-expanded')).toBe('false');
+    }
+  });
+
+  it('expands an entry when its toggle button is clicked', () => {
+    currentSessions = [
+      {
+        id: 'session-3',
+        taskLabel: 'Expand test',
+        status: 'complete',
+        startedAt: 1_000,
+        completedAt: 5_000,
+        toolCalls: [],
+        inputTokens: 0,
+        outputTokens: 0,
+        conversationTurns: [{ type: 'prompt', content: 'Hello detail', timestamp: 2_000 }],
+        compactions: [],
+        permissionEvents: [],
+        loadedRules: [],
+        skillExecutions: [],
+        tasks: [],
+      },
+    ];
+
+    renderPanel();
+
+    // Find the entry whose title is 'User prompt' (from the conversation turn)
+    const promptButton = screen
+      .getAllByRole('button')
+      .find((btn) => btn.textContent?.includes('User prompt'));
+    expect(promptButton).toBeDefined();
+    expect(promptButton!.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.click(promptButton!);
+
+    expect(promptButton!.getAttribute('aria-expanded')).toBe('true');
+    // Detail content is now visible
+    expect(screen.getByText('Hello detail')).toBeDefined();
   });
 });
