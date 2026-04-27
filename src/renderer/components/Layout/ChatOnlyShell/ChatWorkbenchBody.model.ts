@@ -8,7 +8,7 @@ import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { createStoredSessionFromPicker } from '../../SessionSidebar/NewSessionButton';
 import { useSessions } from '../../SessionSidebar/useSessions';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
-import { useTerminalDockState } from './useTerminalDockState';
+import type { TerminalDockApi } from './useTerminalDockState';
 import { useWorkbenchArtifacts } from './useWorkbenchArtifacts';
 import { useWorkbenchCompare } from './useWorkbenchCompare';
 import { useWorkbenchSessionActivation } from './useWorkbenchSessionActivation';
@@ -16,7 +16,7 @@ import { useWorkbenchSessions } from './useWorkbenchSessions';
 import { useWorkbenchSurfacePolicy } from './useWorkbenchSurfacePolicy';
 
 export type LayoutState = ChatWorkbenchLayoutApi;
-export type DockState = ReturnType<typeof useTerminalDockState>;
+export type DockState = TerminalDockApi;
 export type SessionsState = ReturnType<typeof useSessions>;
 export type CompareState = ReturnType<typeof useWorkbenchCompare>;
 export type ActivationState = ReturnType<typeof useWorkbenchSessionActivation>;
@@ -70,8 +70,10 @@ function useWorkbenchSurfaceState(
   });
 }
 
-export function useWorkbenchContextState(layout: LayoutState): WorkbenchContextState {
-  const dock = useTerminalDockState();
+export function useWorkbenchContextState(
+  layout: LayoutState,
+  dock: DockState,
+): WorkbenchContextState {
   const artifacts = useWorkbenchArtifacts();
   const { requests: approvalRequests } = useApprovalContext();
   const { state: diffReviewState } = useDiffReview();

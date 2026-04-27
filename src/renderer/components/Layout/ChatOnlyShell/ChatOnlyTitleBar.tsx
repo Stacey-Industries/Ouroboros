@@ -18,6 +18,7 @@ import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import type { ChatSidebarMode } from './useChatSidebarMode';
+import { WorkbenchPanelToggleStrip } from './WorkbenchPanelToggleStrip';
 import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
@@ -277,17 +278,50 @@ export interface ChatOnlyTitleBarProps {
   onToggleRail?: () => void;
   /** Whether the workbench rail is currently open. */
   railOpen?: boolean;
+  /** Workbench panel toggles — shown only in workbench mode (when onToggleRail is set). */
+  onToggleTerminal?: () => void;
+  terminalOpen?: boolean;
+  onToggleUtility?: () => void;
+  utilityOpen?: boolean;
+  onToggleArtifact?: () => void;
+  artifactOpen?: boolean;
+}
+
+// ── WorkbenchControls — rail + panel strip, workbench-mode only ───────────────
+
+function WorkbenchControls({
+  onToggleRail,
+  railOpen,
+  onToggleTerminal,
+  terminalOpen,
+  onToggleUtility,
+  utilityOpen,
+  onToggleArtifact,
+  artifactOpen,
+}: Omit<ChatOnlyTitleBarProps, 'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'>): React.ReactElement | null {
+  if (onToggleRail === undefined) return null;
+  return (
+    <>
+      <WorkbenchRailToggleButton railOpen={railOpen ?? false} onToggle={onToggleRail} />
+      {onToggleTerminal && onToggleUtility && onToggleArtifact && (
+        <WorkbenchPanelToggleStrip
+          terminalOpen={terminalOpen ?? false}
+          onToggleTerminal={onToggleTerminal}
+          utilityOpen={utilityOpen ?? false}
+          onToggleUtility={onToggleUtility}
+          artifactOpen={artifactOpen ?? false}
+          onToggleArtifact={onToggleArtifact}
+        />
+      )}
+    </>
+  );
 }
 
 // ── ChatOnlyTitleBar ──────────────────────────────────────────────────────────
 
-export function ChatOnlyTitleBar({
-  onCycleSidebarMode,
-  onToggleRail,
-  railOpen,
-  sidebarMode,
-}: ChatOnlyTitleBarProps): React.ReactElement {
+export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactElement {
   const { projectName } = useProject();
+  const { onCycleSidebarMode, sidebarMode } = props;
   return (
     <header
       className="titlebar-drag flex items-center px-2 gap-2 text-text-semantic-primary select-none shrink-0"
@@ -301,14 +335,8 @@ export function ChatOnlyTitleBar({
       }}
       data-testid="chat-only-title-bar"
     >
-      <TitleBarLeft
-        projectName={projectName}
-        sidebarMode={sidebarMode}
-        onCycleSidebarMode={onCycleSidebarMode}
-      />
-      {onToggleRail !== undefined && (
-        <WorkbenchRailToggleButton railOpen={railOpen ?? false} onToggle={onToggleRail} />
-      )}
+      <TitleBarLeft projectName={projectName} sidebarMode={sidebarMode} onCycleSidebarMode={onCycleSidebarMode} />
+      <WorkbenchControls {...props} />
       <div className="flex-1" />
       <TitleBarRight />
     </header>

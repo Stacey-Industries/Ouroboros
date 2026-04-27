@@ -13,6 +13,7 @@ import { ChatWorkbenchBody } from './ChatWorkbenchBody';
 import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
 import { useChatWorkbenchLayout } from './useChatWorkbenchLayout';
+import { useTerminalDockState } from './useTerminalDockState';
 
 interface ChatWorkbenchShellProps {
   projectRoot: string | null;
@@ -110,9 +111,11 @@ function ShellOverlays({
 // ── ShellChrome ───────────────────────────────────────────────────────────────
 
 type ShellLayout = ReturnType<typeof useChatWorkbenchLayout>;
+type ShellDock = ReturnType<typeof useTerminalDockState>;
 
 interface ShellChromeProps {
   cycleMode: () => void;
+  dock: ShellDock;
   layout: ShellLayout;
   mode: ReturnType<typeof useChatSidebarMode>['mode'];
   openDiffOverlay: () => void;
@@ -123,6 +126,7 @@ interface ShellChromeProps {
 
 function ShellChrome({
   cycleMode,
+  dock,
   layout,
   mode,
   openDiffOverlay,
@@ -138,8 +142,19 @@ function ShellChrome({
         sidebarMode={mode}
         onToggleRail={layout.toggleRail}
         railOpen={layout.railOpen}
+        onToggleTerminal={dock.toggleVisible}
+        terminalOpen={dock.visible}
+        onToggleUtility={layout.toggleUtility}
+        utilityOpen={layout.utilityOpen}
+        onToggleArtifact={layout.toggleArtifact}
+        artifactOpen={layout.artifactOpen}
       />
-      <ChatWorkbenchBody layout={layout} projectRoot={projectRoot} terminal={terminal} />
+      <ChatWorkbenchBody
+        dock={dock}
+        layout={layout}
+        projectRoot={projectRoot}
+        terminal={terminal}
+      />
       <ChatOnlyStatusBar projectRoot={projectRoot} onOpenDiffOverlay={openDiffOverlay} />
     </>
   );
@@ -152,6 +167,7 @@ const SHELL_BG = 'var(--glass-dim, none), var(--bg-glows, none), var(--bg-wash, 
 export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactElement {
   const { mode, cycleMode } = useChatSidebarMode();
   const layout = useChatWorkbenchLayout();
+  const dock = useTerminalDockState();
   const { launcherOpen, closeLauncher } = useMultiSessionLauncherState();
   const { closeDiffOverlay, closePalette, commands, diffOverlayOpen } = props;
   const { execute, openDiffOverlay, paletteOpen, projectRoot, recentIds } = props;
@@ -165,6 +181,7 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
     >
       <ShellChrome
         cycleMode={cycleMode}
+        dock={dock}
         layout={layout}
         mode={mode}
         openDiffOverlay={openDiffOverlay}

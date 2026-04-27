@@ -13,20 +13,23 @@ import {
   WorkbenchRailSurface,
 } from './ChatWorkbenchBody.parts';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
+import type { TerminalDockApi } from './useTerminalDockState';
 
 interface ChatWorkbenchBodyProps {
+  dock: TerminalDockApi;
   layout: ChatWorkbenchLayoutApi;
   projectRoot: string | null;
   terminal?: UseTerminalSessionsReturn;
 }
 
 export function ChatWorkbenchBody({
+  dock: externalDock,
   layout: externalLayout,
   projectRoot,
   terminal,
 }: ChatWorkbenchBodyProps): React.ReactElement {
   const selectThread = useAgentChatStoreContext((state) => state.onSelectThread);
-  const state = useWorkbenchContextState(externalLayout);
+  const state = useWorkbenchContextState(externalLayout, externalDock);
   const handlers = useWorkbenchHandlers(state.activation, selectThread);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
 
