@@ -1,5 +1,5 @@
 # Wave 59 — Workbench Reshape (Piebald-Inspired IA)
-**Status:** 📋 PLANNED — 2026-04-27 · Targets v2.8.0 · Replaces and retires the `chatWorkbench` feature flag
+**Status:** ✅ COMPLETED — 2026-04-27 · Released as v2.8.0 · Result: `roadmap/auto-briefs/wave-59-result.md`
 
 ## Implementation Plan
 

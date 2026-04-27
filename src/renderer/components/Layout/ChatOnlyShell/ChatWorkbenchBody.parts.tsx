@@ -109,7 +109,7 @@ function buildInnerTabContents(props: {
         activeThreadId={null}
         approvalRequests={approvalRequests}
         compareSessionId={compare.compareTarget?.sessionId ?? null}
-        onCompareSession={compare.beginCompare}
+        onCompareSession={compare.openCompare}
         onCreateSession={() => {
           void handlers.handleCreateSession();
         }}

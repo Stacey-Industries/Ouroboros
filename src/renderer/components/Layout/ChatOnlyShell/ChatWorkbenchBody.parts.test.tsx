@@ -101,7 +101,13 @@ function makeRailProps(overrides: Partial<TwoTierRailSurfaceProps> = {}): TwoTie
     sessionsState: { sessions: [], activeSessionId: null, refresh: vi.fn() } as never,
     threads: [],
     approvalRequests: [],
-    compare: { isComparing: false, compareTarget: null, beginCompare: vi.fn(), closeCompare: vi.fn() } as never,
+    compare: {
+      isComparing: false,
+      compareTarget: null,
+      canCompare: vi.fn(() => false),
+      openCompare: vi.fn(),
+      closeCompare: vi.fn(),
+    } as never,
     handlers: {
       handleCreateSession: vi.fn().mockResolvedValue(undefined),
       handleLaunchAgent: vi.fn(),
