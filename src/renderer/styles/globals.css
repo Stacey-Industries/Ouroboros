@@ -1067,6 +1067,7 @@ body {
 [role='dialog'],
 [role='alert'],
 .frosted-panel,
+[data-select-pill-menu],
 [role='listbox'][aria-label='Switch branch'],
 [role='listbox'][aria-label='Workspace layouts'],
 [role='listbox'][aria-label='Project selector'],
