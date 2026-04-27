@@ -107,6 +107,34 @@ describe('useWorkbenchHandlers', () => {
     expect(mockActivation.activateSession).not.toHaveBeenCalled();
     expect(mockSelectThread).not.toHaveBeenCalled();
   });
+
+  it('handleCreateSession creates thread then activates session and navigates to it', async () => {
+    const fakeSession = { id: 'ses-new', projectRoot: '/projects/new' };
+    mockCreateStoredSessionFromPicker.mockResolvedValue(fakeSession as never);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).electronAPI = {
+      agentChat: {
+        createThread: vi.fn().mockResolvedValue({ success: true, thread: { id: 'thread-new' } }),
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useWorkbenchHandlers(mockActivation as never, mockSelectThread),
+    );
+
+    await act(async () => {
+      await result.current.handleCreateSession();
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((window as any).electronAPI.agentChat.createThread).toHaveBeenCalledWith({
+      workspaceRoot: '/projects/new',
+    });
+    expect(mockActivation.activateSession).toHaveBeenCalledWith('ses-new');
+    // selectThread called with the newly-created thread id (non-null)
+    expect(mockSelectThread).toHaveBeenCalledWith('thread-new');
+  });
 });
 
 // ── useActiveApprovalSessionIds ───────────────────────────────────────────────
