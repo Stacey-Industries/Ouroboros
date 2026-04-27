@@ -24,7 +24,7 @@ Node.js main process for the Ouroboros IDE. Entry point is `main.ts`. Each subdi
 | `storage/`              | SQLite database layer and JSON→SQLite migration — see `storage/CLAUDE.md`                             |
 | `web/`                  | HTTP + WebSocket server for browser-based IDE access — see `web/CLAUDE.md`                            |
 | `codemode/`             | Cloudflare CodeMode integration layer — see `codemode/CLAUDE.md`                                      |
-| `hooks/`                | Stop/start hook handlers (gotcha nudge, session lifecycle) — see `hooks/CLAUDE.md`                    |
+| `hooks/`                | Stop/start hook handlers (gotcha nudge, session lifecycle)                                            |
 
 ## Key Patterns
 
