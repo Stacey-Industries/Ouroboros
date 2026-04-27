@@ -59,7 +59,7 @@ function MultiSessionOverlay({
       className="fixed inset-0 z-[900] flex items-center justify-center bg-surface-overlay/60"
       data-testid="multi-session-overlay"
     >
-      <div className="h-[560px] w-[640px] overflow-hidden rounded-xl border border-border-semantic bg-surface-base shadow-xl">
+      <div className="h-[560px] w-[640px] overflow-hidden rounded-xl border border-border-semantic bg-surface-panel shadow-xl">
         <MultiSessionLauncher onClose={onClose} onLaunched={onClose} />
       </div>
     </div>
