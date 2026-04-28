@@ -72,15 +72,18 @@ interface HookEntry {
 const MJS_HOOKS: HookEntry[] = [
   { src: 'lib/ouroboros.mjs', dest: 'lib/ouroboros.mjs' },
   { src: 'lib/signals.mjs', dest: 'lib/signals.mjs' },
+  { src: 'lib/telemetryQueueAppend.mjs', dest: 'lib/telemetryQueueAppend.mjs' },
   { src: 'pre_tool_use.mjs', dest: 'pre_tool_use.mjs' },
   { src: 'post_tool_use.mjs', dest: 'post_tool_use.mjs' },
   { src: 'agent_start.mjs', dest: 'agent_start.mjs' },
   { src: 'agent_end.mjs', dest: 'agent_end.mjs' },
   { src: 'session_start.mjs', dest: 'session_start.mjs' },
+  { src: 'session_start_spawn_cost.mjs', dest: 'session_start_spawn_cost.mjs' },
   { src: 'session_stop.mjs', dest: 'session_stop.mjs' },
   { src: 'instructions_loaded.mjs', dest: 'instructions_loaded.mjs' },
   { src: 'statusline_capture.mjs', dest: 'statusline_capture.mjs' },
   { src: 'generic_hook.mjs', dest: 'generic_hook.mjs' },
+  { src: 'user_prompt_submit_router_shadow.mjs', dest: 'user_prompt_submit_router_shadow.mjs' },
 ];
 
 /**
