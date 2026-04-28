@@ -7,14 +7,20 @@
 
 ---
 
-## Executive verdict
+## Executive verdict (FINAL — supersedes initial reading)
 
 | Question | Answer |
 |---|---|
-| Wave 54 (TS semantic operations) start gate | **Conditional Go for read-only ops; No-Go for symbol mutations.** |
+| Wave 54 (TS semantic operations) start gate | **PAUSED. Blocked on Wave 53d (graph-tool adoption fix), not greenlit.** |
 | Wave 53c Phase D (router backfill) | **No-Go this wave.** Live telemetry (restored in Wave 53) is the more durable signal. |
 
-The corpus does not support Wave 54's headline justification — Edit first-try failures are essentially zero. It does show enough grep-loop depth in substantive sessions to justify Wave 54's read-only operations (`find_references`, `get_symbol_body`). The wave's own Phase C measurement gate between Phases B and D is the right place to decide whether mutations follow.
+**Headline finding (uncovered post-initial-read):** the existing graph/symbol tool layer (`get_architecture`, `search_symbols`, `get_symbol`, `trace_imports`, `detect_changes`, `get_codebase_context` exposed via `src/main/internalMcp/`) saw **0 calls in 369 sessions**. Not "few." Not "underused." **Zero.** Across 4,601 `Grep + Glob + Read` calls, the agent reached for the graph-aware tools exactly never.
+
+This finding supersedes the initial threshold-driven verdict. The corpus *did* show high navigation cost (15.2% of sessions hit grep-loop depth ≥3, with the deepest sessions pairing depth-11 search bursts with 40+ Edits). But the threshold conclusion — "Wave 54 read-only ops are justified" — assumed agents would use new symbol tools if shipped. The 0% adoption of existing symbol tools, plus a root-cause diagnostic showing the rule documenting these tools points at names the IDE doesn't actually expose AND that the MCP server's auto-inject is broken, says the gap is **wiring**, not behavior. Until the wiring is fixed and live adoption is measured, Wave 54's new tools would inherit the same dead-letter dynamic.
+
+ADR Decision 11 captures the reframe in detail. Wave 53d is opened to fix the adoption gap; Wave 54's plan stays in `roadmap/wave-54-plan.md` with status BLOCKED on Wave 53d's outcome.
+
+The threshold-driven analysis below is preserved as historical context — the numbers are correct; the conclusion was based on an unexamined assumption (that agents would use symbol tools if available) that the broader diagnostic invalidated.
 
 ---
 
@@ -160,7 +166,9 @@ Three of these five sessions paired deep grep-loops with 40+ Edits — exactly t
 
 ---
 
-## Decision
+## Decision (HISTORICAL — superseded by executive verdict above)
+
+> **Note:** This section captures the threshold-driven decision derived directly from the corpus numbers. It is preserved as historical context. The executive verdict at the top of the report supersedes this section after the post-Phase-C diagnostic revealed the 0% graph-tool adoption gap. ADR Decision 11 documents the reframe.
 
 ### Wave 54 — TypeScript Semantic Operations
 
@@ -214,7 +222,8 @@ This split is what Wave 54's plan already contemplated. The corpus data confirms
 ## Acceptance for Phase C
 
 - [x] Decision report exists.
-- [x] Wave 54 start gate explicitly answered (Conditional Go — A+B yes, D no, C decides).
+- [x] Wave 54 start gate explicitly answered (PAUSED — blocked on Wave 53d's adoption-gap fix).
 - [x] Phase D (router backfill) explicitly answered (No-Go this wave).
 - [x] Every claim cites a number from the analyzer JSON or CSV.
 - [x] Sample-bias section present.
+- [x] 0% graph-tool adoption finding documented and reframed the verdict (ADR Decision 11).
