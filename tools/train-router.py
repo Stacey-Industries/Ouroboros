@@ -73,6 +73,14 @@ FEATURE_NAMES = [
 
 LABEL_NAMES = ["HAIKU", "SONNET", "OPUS"]
 LABEL_TO_INT = {"HAIKU": 0, "SONNET": 1, "OPUS": 2}
+INT_TO_LABEL = {v: k for k, v in LABEL_TO_INT.items()}
+
+# Minimum per-class sample count required for a usable stratified 80/20 split.
+# With test_size=0.2, 5 per class yields 4 train + 1 test per class — the
+# practical floor for stratified splitting without sklearn raising
+# "n_samples=K leaves train set empty" or similar. Below this threshold the
+# trainer exits cleanly (rc=0) and the existing weights stay in place.
+MIN_PER_CLASS_SAMPLES = 5
 
 # ---------------------------------------------------------------------------
 # Word / phrase lists — mirror featureExtractor.ts exactly
@@ -438,6 +446,32 @@ def main() -> None:
 
     records = load_and_join(input_dir)
     X, y   = prepare_dataset(records)
+
+    # Pre-check sample sufficiency before stratified split. With insufficient
+    # data, train_test_split raises ValueError (e.g. "n_samples=1 leaves train
+    # set empty"). Exit cleanly so the trigger doesn't log a spurious failure
+    # warning and the existing weights file stays in place; retrain will be
+    # re-attempted on the next interval as more signals accumulate.
+    unique_classes, class_counts = np.unique(y, return_counts=True)
+    insufficient_total = len(X) < MIN_PER_CLASS_SAMPLES * len(LABEL_TO_INT)
+    insufficient_per_class = (
+        len(unique_classes) < len(LABEL_TO_INT)
+        or class_counts.min() < MIN_PER_CLASS_SAMPLES
+    )
+    if insufficient_total or insufficient_per_class:
+        print("\n-- Skipping training: insufficient data ----------------------")
+        present_dist = {
+            INT_TO_LABEL.get(int(k), str(k)): int(v)
+            for k, v in zip(unique_classes, class_counts)
+        }
+        print(f"  Total samples after filtering : {len(X)}")
+        print(f"  Per-class counts              : {present_dist}")
+        print(
+            f"  Required per class            : {MIN_PER_CLASS_SAMPLES} "
+            f"(across all {len(LABEL_TO_INT)} classes)"
+        )
+        print("  Action : exiting cleanly; existing weights remain in place.")
+        sys.exit(0)
 
     print("\n-- Train / test split (80/20 stratified) ---------------------")
     X_train, X_test, y_train, y_test = train_test_split(
