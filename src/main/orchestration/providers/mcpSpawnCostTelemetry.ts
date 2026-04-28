@@ -51,6 +51,11 @@ function telemetryDir(): string {
   return path.join(process.env.USERPROFILE || process.env.HOME || '.', '.ouroboros', 'telemetry');
 }
 
+/** Exported for drain handler reuse — avoids duplicating the path formula. */
+export function getSpawnCostJsonlPath(): string {
+  return path.join(telemetryDir(), 'mcp-spawn-cost.jsonl');
+}
+
 function ensureDir(dir: string): boolean {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- known telemetry dir

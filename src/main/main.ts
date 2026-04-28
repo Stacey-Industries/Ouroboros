@@ -29,6 +29,7 @@ import { buildApplicationMenu } from './menu';
 import { initDecisionWriter } from './orchestration/contextDecisionWriter';
 import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { killAllWarm } from './orchestration/providers/claudeWarmProcessManager';
+import { registerSpawnCostHandler } from './orchestration/providers/spawnCostDrainHandler';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 // prettier-ignore
 import { cleanupPerfSubscriber, clearPerfSubscribers, initializePerfMetrics, markStartup, startPerfMetrics as startManagedPerfMetrics, stopPerfMetrics as stopManagedPerfMetrics } from './perfMetrics';
@@ -236,6 +237,7 @@ async function initTelemetryAndWriters(ud: string): Promise<void> {
   initEditProvenance(ud);
   scheduleJsonlRetentionPurge(ud);
   scheduleResearchCachePurge(ud);
+  registerSpawnCostHandler();
   await runParityQueueDrain();
 }
 
