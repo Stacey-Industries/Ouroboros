@@ -1,0 +1,1791 @@
+{
+  "corpusDir": "C:\\Users\\coles\\.claude\\projects\\C--Web-App-Agent-IDE",
+  "analyzedAt": "2026-04-28T01:40:58.788Z",
+  "filesScanned": 378,
+  "filesWithToolCalls": 174,
+  "skippedLines": 0,
+  "totalGrep": 1286,
+  "totalRead": 3340,
+  "totalToolCalls": 4626,
+  "symbolShaped": 283,
+  "literalShaped": 4343,
+  "unknownShaped": 0,
+  "adherenceRate": 0.9388240380458279,
+  "decision": "stay log-only",
+  "distribution": {
+    "0-20%": 0,
+    "20-40%": 0,
+    "40-60%": 1,
+    "60-80%": 8,
+    "80-100%": 165
+  },
+  "perSession": [
+    {
+      "sessionId": "439565f2-b7d6-475c-a11f-993bb30f34a0",
+      "total": 27,
+      "grepCount": 14,
+      "readCount": 13,
+      "symbolShaped": 11,
+      "literalShaped": 16,
+      "unknownShaped": 0,
+      "adherence": 0.5925925925925926
+    },
+    {
+      "sessionId": "15a14311-d5f6-4e6c-a34b-d1602adfdf54",
+      "total": 3,
+      "grepCount": 2,
+      "readCount": 1,
+      "symbolShaped": 1,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 0.6666666666666667
+    },
+    {
+      "sessionId": "278af56a-a7d9-4e77-a83d-7c726582cb54",
+      "total": 21,
+      "grepCount": 8,
+      "readCount": 13,
+      "symbolShaped": 6,
+      "literalShaped": 15,
+      "unknownShaped": 0,
+      "adherence": 0.7142857142857143
+    },
+    {
+      "sessionId": "0f9f9e56-cd9d-4075-ad15-fd74396d580a",
+      "total": 4,
+      "grepCount": 1,
+      "readCount": 3,
+      "symbolShaped": 1,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 0.75
+    },
+    {
+      "sessionId": "b7589d75-5775-4d3f-8a9f-12530b931767",
+      "total": 26,
+      "grepCount": 15,
+      "readCount": 11,
+      "symbolShaped": 6,
+      "literalShaped": 20,
+      "unknownShaped": 0,
+      "adherence": 0.7692307692307692
+    },
+    {
+      "sessionId": "c469dad3-4a1c-4b46-a24c-f3d2cc3cc173",
+      "total": 13,
+      "grepCount": 5,
+      "readCount": 8,
+      "symbolShaped": 3,
+      "literalShaped": 10,
+      "unknownShaped": 0,
+      "adherence": 0.7692307692307692
+    },
+    {
+      "sessionId": "eaf78272-44f2-4889-9165-7f4fb9cb45d6",
+      "total": 31,
+      "grepCount": 7,
+      "readCount": 24,
+      "symbolShaped": 7,
+      "literalShaped": 24,
+      "unknownShaped": 0,
+      "adherence": 0.7741935483870968
+    },
+    {
+      "sessionId": "6eb59190-f786-4091-8219-51a241c6b789",
+      "total": 47,
+      "grepCount": 25,
+      "readCount": 22,
+      "symbolShaped": 10,
+      "literalShaped": 37,
+      "unknownShaped": 0,
+      "adherence": 0.7872340425531915
+    },
+    {
+      "sessionId": "2be858a5-01d5-4a8d-b7e7-facbf02e92cc",
+      "total": 34,
+      "grepCount": 11,
+      "readCount": 23,
+      "symbolShaped": 7,
+      "literalShaped": 27,
+      "unknownShaped": 0,
+      "adherence": 0.7941176470588236
+    },
+    {
+      "sessionId": "84135587-cd63-4b58-b850-efd3f998a1e2",
+      "total": 17,
+      "grepCount": 6,
+      "readCount": 11,
+      "symbolShaped": 3,
+      "literalShaped": 14,
+      "unknownShaped": 0,
+      "adherence": 0.8235294117647058
+    },
+    {
+      "sessionId": "c40012b1-be6c-46f8-bc9e-aa387d45d728",
+      "total": 113,
+      "grepCount": 45,
+      "readCount": 68,
+      "symbolShaped": 19,
+      "literalShaped": 94,
+      "unknownShaped": 0,
+      "adherence": 0.831858407079646
+    },
+    {
+      "sessionId": "2386db4b-a86d-4da6-97db-c5c8b436ac0e",
+      "total": 6,
+      "grepCount": 3,
+      "readCount": 3,
+      "symbolShaped": 1,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 0.8333333333333334
+    },
+    {
+      "sessionId": "caaa47aa-2c56-49e2-86fa-e2b67ecf89ae",
+      "total": 6,
+      "grepCount": 3,
+      "readCount": 3,
+      "symbolShaped": 1,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 0.8333333333333334
+    },
+    {
+      "sessionId": "ff1da96e-cbbb-48b6-b0c1-5873cce7d2fd",
+      "total": 51,
+      "grepCount": 19,
+      "readCount": 32,
+      "symbolShaped": 8,
+      "literalShaped": 43,
+      "unknownShaped": 0,
+      "adherence": 0.8431372549019608
+    },
+    {
+      "sessionId": "1c36257f-1de0-4f6a-b40e-9c20fd2880e8",
+      "total": 53,
+      "grepCount": 16,
+      "readCount": 37,
+      "symbolShaped": 8,
+      "literalShaped": 45,
+      "unknownShaped": 0,
+      "adherence": 0.8490566037735849
+    },
+    {
+      "sessionId": "cf16201c-3a25-48fb-82ff-b593838e9bf5",
+      "total": 7,
+      "grepCount": 2,
+      "readCount": 5,
+      "symbolShaped": 1,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 0.8571428571428572
+    },
+    {
+      "sessionId": "2a248204-99bc-445d-bced-ced8014d3771",
+      "total": 112,
+      "grepCount": 41,
+      "readCount": 71,
+      "symbolShaped": 14,
+      "literalShaped": 98,
+      "unknownShaped": 0,
+      "adherence": 0.875
+    },
+    {
+      "sessionId": "e597be7d-084a-4e8c-9dd9-a257ffbff47a",
+      "total": 16,
+      "grepCount": 11,
+      "readCount": 5,
+      "symbolShaped": 2,
+      "literalShaped": 14,
+      "unknownShaped": 0,
+      "adherence": 0.875
+    },
+    {
+      "sessionId": "809433fd-f9dd-4ca9-8fd4-d22b8ecf1bb1",
+      "total": 25,
+      "grepCount": 6,
+      "readCount": 19,
+      "symbolShaped": 3,
+      "literalShaped": 22,
+      "unknownShaped": 0,
+      "adherence": 0.88
+    },
+    {
+      "sessionId": "44622d4f-28fa-4c37-b0f4-6c8caf7975f7",
+      "total": 80,
+      "grepCount": 33,
+      "readCount": 47,
+      "symbolShaped": 9,
+      "literalShaped": 71,
+      "unknownShaped": 0,
+      "adherence": 0.8875
+    },
+    {
+      "sessionId": "53b75663-2109-401f-927a-72e418c65f03",
+      "total": 9,
+      "grepCount": 3,
+      "readCount": 6,
+      "symbolShaped": 1,
+      "literalShaped": 8,
+      "unknownShaped": 0,
+      "adherence": 0.8888888888888888
+    },
+    {
+      "sessionId": "15d42816-20a1-4833-8efc-bad0933c4842",
+      "total": 59,
+      "grepCount": 17,
+      "readCount": 42,
+      "symbolShaped": 6,
+      "literalShaped": 53,
+      "unknownShaped": 0,
+      "adherence": 0.8983050847457628
+    },
+    {
+      "sessionId": "01feabc3-2750-4093-b914-bafe9657a0f4",
+      "total": 132,
+      "grepCount": 39,
+      "readCount": 93,
+      "symbolShaped": 13,
+      "literalShaped": 119,
+      "unknownShaped": 0,
+      "adherence": 0.9015151515151515
+    },
+    {
+      "sessionId": "6a95b179-bda1-4311-bf3f-a29281340086",
+      "total": 42,
+      "grepCount": 13,
+      "readCount": 29,
+      "symbolShaped": 4,
+      "literalShaped": 38,
+      "unknownShaped": 0,
+      "adherence": 0.9047619047619048
+    },
+    {
+      "sessionId": "b27eead2-5d1f-45ee-b3e7-79f08aa2e0ef",
+      "total": 43,
+      "grepCount": 6,
+      "readCount": 37,
+      "symbolShaped": 4,
+      "literalShaped": 39,
+      "unknownShaped": 0,
+      "adherence": 0.9069767441860466
+    },
+    {
+      "sessionId": "2d0f39bf-c6b6-426f-aa6f-e9330affbe77",
+      "total": 22,
+      "grepCount": 15,
+      "readCount": 7,
+      "symbolShaped": 2,
+      "literalShaped": 20,
+      "unknownShaped": 0,
+      "adherence": 0.9090909090909091
+    },
+    {
+      "sessionId": "d3f713a1-e8dd-475c-a2b8-dcb2ceebe111",
+      "total": 67,
+      "grepCount": 21,
+      "readCount": 46,
+      "symbolShaped": 6,
+      "literalShaped": 61,
+      "unknownShaped": 0,
+      "adherence": 0.9104477611940298
+    },
+    {
+      "sessionId": "38220ca8-18e4-4e3b-abd6-13d8c2f66ab2",
+      "total": 45,
+      "grepCount": 18,
+      "readCount": 27,
+      "symbolShaped": 4,
+      "literalShaped": 41,
+      "unknownShaped": 0,
+      "adherence": 0.9111111111111111
+    },
+    {
+      "sessionId": "9fb94925-0f02-4f70-a0ba-edf8e395a937",
+      "total": 72,
+      "grepCount": 30,
+      "readCount": 42,
+      "symbolShaped": 6,
+      "literalShaped": 66,
+      "unknownShaped": 0,
+      "adherence": 0.9166666666666666
+    },
+    {
+      "sessionId": "b7148591-ae9a-4d2f-b20b-5ac77a1cad4d",
+      "total": 12,
+      "grepCount": 6,
+      "readCount": 6,
+      "symbolShaped": 1,
+      "literalShaped": 11,
+      "unknownShaped": 0,
+      "adherence": 0.9166666666666666
+    },
+    {
+      "sessionId": "c589c0f9-b331-497d-9c22-78178e8ddbd4",
+      "total": 36,
+      "grepCount": 16,
+      "readCount": 20,
+      "symbolShaped": 3,
+      "literalShaped": 33,
+      "unknownShaped": 0,
+      "adherence": 0.9166666666666666
+    },
+    {
+      "sessionId": "797c1acc-82c5-4358-987b-7e4e05065628",
+      "total": 63,
+      "grepCount": 20,
+      "readCount": 43,
+      "symbolShaped": 5,
+      "literalShaped": 58,
+      "unknownShaped": 0,
+      "adherence": 0.9206349206349207
+    },
+    {
+      "sessionId": "76833c8e-2d78-4354-ac39-7380418fae85",
+      "total": 52,
+      "grepCount": 22,
+      "readCount": 30,
+      "symbolShaped": 4,
+      "literalShaped": 48,
+      "unknownShaped": 0,
+      "adherence": 0.9230769230769231
+    },
+    {
+      "sessionId": "a89c95dd-4fc0-4e1f-a30f-0404fec92764",
+      "total": 13,
+      "grepCount": 5,
+      "readCount": 8,
+      "symbolShaped": 1,
+      "literalShaped": 12,
+      "unknownShaped": 0,
+      "adherence": 0.9230769230769231
+    },
+    {
+      "sessionId": "99ed82b2-086d-4c16-a225-9a35b6630424",
+      "total": 53,
+      "grepCount": 19,
+      "readCount": 34,
+      "symbolShaped": 4,
+      "literalShaped": 49,
+      "unknownShaped": 0,
+      "adherence": 0.9245283018867925
+    },
+    {
+      "sessionId": "b6cc1d46-3878-47aa-b8e8-6ef52a603eb5",
+      "total": 40,
+      "grepCount": 15,
+      "readCount": 25,
+      "symbolShaped": 3,
+      "literalShaped": 37,
+      "unknownShaped": 0,
+      "adherence": 0.925
+    },
+    {
+      "sessionId": "2673c9ed-b31d-4bf0-a376-6afb733f1f3b",
+      "total": 27,
+      "grepCount": 3,
+      "readCount": 24,
+      "symbolShaped": 2,
+      "literalShaped": 25,
+      "unknownShaped": 0,
+      "adherence": 0.9259259259259259
+    },
+    {
+      "sessionId": "8689ba02-914d-4263-acaa-694d91f14321",
+      "total": 27,
+      "grepCount": 5,
+      "readCount": 22,
+      "symbolShaped": 2,
+      "literalShaped": 25,
+      "unknownShaped": 0,
+      "adherence": 0.9259259259259259
+    },
+    {
+      "sessionId": "6f6fae42-b4af-4b7d-b2f8-2a92a36ee00c",
+      "total": 41,
+      "grepCount": 12,
+      "readCount": 29,
+      "symbolShaped": 3,
+      "literalShaped": 38,
+      "unknownShaped": 0,
+      "adherence": 0.926829268292683
+    },
+    {
+      "sessionId": "a1255729-2756-4e1f-84eb-c28b23199873",
+      "total": 14,
+      "grepCount": 1,
+      "readCount": 13,
+      "symbolShaped": 1,
+      "literalShaped": 13,
+      "unknownShaped": 0,
+      "adherence": 0.9285714285714286
+    },
+    {
+      "sessionId": "df6bfff5-6319-4f7a-8965-7f2aa666ed7b",
+      "total": 14,
+      "grepCount": 9,
+      "readCount": 5,
+      "symbolShaped": 1,
+      "literalShaped": 13,
+      "unknownShaped": 0,
+      "adherence": 0.9285714285714286
+    },
+    {
+      "sessionId": "9ddffad6-7d15-40a6-82ee-3cc4867e5962",
+      "total": 44,
+      "grepCount": 20,
+      "readCount": 24,
+      "symbolShaped": 3,
+      "literalShaped": 41,
+      "unknownShaped": 0,
+      "adherence": 0.9318181818181819
+    },
+    {
+      "sessionId": "9951ada8-9daf-4d1b-aa79-fda586bd5173",
+      "total": 30,
+      "grepCount": 10,
+      "readCount": 20,
+      "symbolShaped": 2,
+      "literalShaped": 28,
+      "unknownShaped": 0,
+      "adherence": 0.9333333333333333
+    },
+    {
+      "sessionId": "d772c60b-f487-402a-829d-7a3bdeef6931",
+      "total": 46,
+      "grepCount": 19,
+      "readCount": 27,
+      "symbolShaped": 3,
+      "literalShaped": 43,
+      "unknownShaped": 0,
+      "adherence": 0.9347826086956522
+    },
+    {
+      "sessionId": "1f575030-d4a0-44c4-afa3-352ca83b85de",
+      "total": 31,
+      "grepCount": 8,
+      "readCount": 23,
+      "symbolShaped": 2,
+      "literalShaped": 29,
+      "unknownShaped": 0,
+      "adherence": 0.935483870967742
+    },
+    {
+      "sessionId": "e63788cf-cd62-4887-9e96-673b362d2c39",
+      "total": 16,
+      "grepCount": 9,
+      "readCount": 7,
+      "symbolShaped": 1,
+      "literalShaped": 15,
+      "unknownShaped": 0,
+      "adherence": 0.9375
+    },
+    {
+      "sessionId": "7c8cbe61-4068-4284-bfca-c023f50d5622",
+      "total": 100,
+      "grepCount": 33,
+      "readCount": 67,
+      "symbolShaped": 6,
+      "literalShaped": 94,
+      "unknownShaped": 0,
+      "adherence": 0.94
+    },
+    {
+      "sessionId": "53126dd6-bc59-43d1-bc72-7a6c7fd3dd7a",
+      "total": 201,
+      "grepCount": 101,
+      "readCount": 100,
+      "symbolShaped": 12,
+      "literalShaped": 189,
+      "unknownShaped": 0,
+      "adherence": 0.9402985074626866
+    },
+    {
+      "sessionId": "7bdf727c-587b-4a57-a007-a619e9044570",
+      "total": 17,
+      "grepCount": 7,
+      "readCount": 10,
+      "symbolShaped": 1,
+      "literalShaped": 16,
+      "unknownShaped": 0,
+      "adherence": 0.9411764705882353
+    },
+    {
+      "sessionId": "dafdd362-53f1-4540-881f-6b0f3c016b4c",
+      "total": 85,
+      "grepCount": 41,
+      "readCount": 44,
+      "symbolShaped": 5,
+      "literalShaped": 80,
+      "unknownShaped": 0,
+      "adherence": 0.9411764705882353
+    },
+    {
+      "sessionId": "acb33ba1-da31-4585-ba95-fb5266326aa6",
+      "total": 87,
+      "grepCount": 31,
+      "readCount": 56,
+      "symbolShaped": 5,
+      "literalShaped": 82,
+      "unknownShaped": 0,
+      "adherence": 0.9425287356321839
+    },
+    {
+      "sessionId": "2e9b96c9-f315-4773-a85e-9d2aa32f6b07",
+      "total": 18,
+      "grepCount": 10,
+      "readCount": 8,
+      "symbolShaped": 1,
+      "literalShaped": 17,
+      "unknownShaped": 0,
+      "adherence": 0.9444444444444444
+    },
+    {
+      "sessionId": "7667d554-c660-4692-8ff0-26e254cd1c0c",
+      "total": 36,
+      "grepCount": 11,
+      "readCount": 25,
+      "symbolShaped": 2,
+      "literalShaped": 34,
+      "unknownShaped": 0,
+      "adherence": 0.9444444444444444
+    },
+    {
+      "sessionId": "1a59b372-123a-402e-a9fc-ce6f1bcf38cb",
+      "total": 38,
+      "grepCount": 2,
+      "readCount": 36,
+      "symbolShaped": 2,
+      "literalShaped": 36,
+      "unknownShaped": 0,
+      "adherence": 0.9473684210526316
+    },
+    {
+      "sessionId": "3bfe6dc4-721b-4bba-ab3c-df974f7b0c02",
+      "total": 19,
+      "grepCount": 10,
+      "readCount": 9,
+      "symbolShaped": 1,
+      "literalShaped": 18,
+      "unknownShaped": 0,
+      "adherence": 0.9473684210526316
+    },
+    {
+      "sessionId": "93607615-382f-4bb2-86a6-3ff62edf4079",
+      "total": 38,
+      "grepCount": 16,
+      "readCount": 22,
+      "symbolShaped": 2,
+      "literalShaped": 36,
+      "unknownShaped": 0,
+      "adherence": 0.9473684210526316
+    },
+    {
+      "sessionId": "50325ffe-7689-4f50-b999-03b6c675bddf",
+      "total": 61,
+      "grepCount": 28,
+      "readCount": 33,
+      "symbolShaped": 3,
+      "literalShaped": 58,
+      "unknownShaped": 0,
+      "adherence": 0.9508196721311475
+    },
+    {
+      "sessionId": "b94c909e-1ff0-4282-822f-eabd4cfaff82",
+      "total": 21,
+      "grepCount": 7,
+      "readCount": 14,
+      "symbolShaped": 1,
+      "literalShaped": 20,
+      "unknownShaped": 0,
+      "adherence": 0.9523809523809523
+    },
+    {
+      "sessionId": "dc0737dd-57bf-4f64-859a-93314722e916",
+      "total": 21,
+      "grepCount": 5,
+      "readCount": 16,
+      "symbolShaped": 1,
+      "literalShaped": 20,
+      "unknownShaped": 0,
+      "adherence": 0.9523809523809523
+    },
+    {
+      "sessionId": "5f238560-e6db-4acc-9824-de81244d6399",
+      "total": 173,
+      "grepCount": 33,
+      "readCount": 140,
+      "symbolShaped": 8,
+      "literalShaped": 165,
+      "unknownShaped": 0,
+      "adherence": 0.953757225433526
+    },
+    {
+      "sessionId": "36e61456-6a17-4018-a8e4-1e565f0f78b8",
+      "total": 131,
+      "grepCount": 35,
+      "readCount": 96,
+      "symbolShaped": 6,
+      "literalShaped": 125,
+      "unknownShaped": 0,
+      "adherence": 0.9541984732824428
+    },
+    {
+      "sessionId": "d4e0ca6d-ede3-4adf-8d55-6e78705bf0ce",
+      "total": 22,
+      "grepCount": 4,
+      "readCount": 18,
+      "symbolShaped": 1,
+      "literalShaped": 21,
+      "unknownShaped": 0,
+      "adherence": 0.9545454545454546
+    },
+    {
+      "sessionId": "6b073ffb-37f1-41dc-8b9d-776cf26cd60a",
+      "total": 69,
+      "grepCount": 17,
+      "readCount": 52,
+      "symbolShaped": 3,
+      "literalShaped": 66,
+      "unknownShaped": 0,
+      "adherence": 0.9565217391304348
+    },
+    {
+      "sessionId": "b53f46ea-1007-4e21-af3d-916ac6811a45",
+      "total": 84,
+      "grepCount": 12,
+      "readCount": 72,
+      "symbolShaped": 3,
+      "literalShaped": 81,
+      "unknownShaped": 0,
+      "adherence": 0.9642857142857143
+    },
+    {
+      "sessionId": "28ce7f16-3c70-4ee9-8702-4e0e8e8efde6",
+      "total": 64,
+      "grepCount": 10,
+      "readCount": 54,
+      "symbolShaped": 2,
+      "literalShaped": 62,
+      "unknownShaped": 0,
+      "adherence": 0.96875
+    },
+    {
+      "sessionId": "f563b97d-e50a-426c-aab4-8e54f460a03f",
+      "total": 33,
+      "grepCount": 12,
+      "readCount": 21,
+      "symbolShaped": 1,
+      "literalShaped": 32,
+      "unknownShaped": 0,
+      "adherence": 0.9696969696969697
+    },
+    {
+      "sessionId": "bcf846a2-84c6-45b0-b6eb-7836ebe0710a",
+      "total": 111,
+      "grepCount": 24,
+      "readCount": 87,
+      "symbolShaped": 3,
+      "literalShaped": 108,
+      "unknownShaped": 0,
+      "adherence": 0.972972972972973
+    },
+    {
+      "sessionId": "063d0c36-5f51-433f-96fd-e45852db0074",
+      "total": 43,
+      "grepCount": 15,
+      "readCount": 28,
+      "symbolShaped": 1,
+      "literalShaped": 42,
+      "unknownShaped": 0,
+      "adherence": 0.9767441860465116
+    },
+    {
+      "sessionId": "ef1e9870-61fb-4f09-8b1b-221e0b364329",
+      "total": 43,
+      "grepCount": 11,
+      "readCount": 32,
+      "symbolShaped": 1,
+      "literalShaped": 42,
+      "unknownShaped": 0,
+      "adherence": 0.9767441860465116
+    },
+    {
+      "sessionId": "909f76f9-c1eb-4c6e-9de3-58e313233268",
+      "total": 94,
+      "grepCount": 16,
+      "readCount": 78,
+      "symbolShaped": 2,
+      "literalShaped": 92,
+      "unknownShaped": 0,
+      "adherence": 0.9787234042553191
+    },
+    {
+      "sessionId": "07c0342a-de23-4599-9501-440d58a83174",
+      "total": 104,
+      "grepCount": 46,
+      "readCount": 58,
+      "symbolShaped": 2,
+      "literalShaped": 102,
+      "unknownShaped": 0,
+      "adherence": 0.9807692307692307
+    },
+    {
+      "sessionId": "008b15ba-758c-4fd5-8531-80da9f3617c4",
+      "total": 27,
+      "grepCount": 9,
+      "readCount": 18,
+      "symbolShaped": 0,
+      "literalShaped": 27,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "03e57f5f-c6f7-401e-b3fa-e6dcdd019d3d",
+      "total": 33,
+      "grepCount": 1,
+      "readCount": 32,
+      "symbolShaped": 0,
+      "literalShaped": 33,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "08882dee-34a9-4eff-ad46-c4fbb2d4a068",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "0acf3e60-b569-408f-a51f-c7cd9dbe5cc4",
+      "total": 13,
+      "grepCount": 0,
+      "readCount": 13,
+      "symbolShaped": 0,
+      "literalShaped": 13,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "0f711eb7-7acc-46b7-8ce5-85e842d74f05",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "12e46f8c-bceb-40cb-bdfd-50e1827c55b9",
+      "total": 11,
+      "grepCount": 0,
+      "readCount": 11,
+      "symbolShaped": 0,
+      "literalShaped": 11,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "14939954-64ad-483b-a082-8521a3f07231",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "15aa201b-c72d-4ba3-8a5e-9c465dc5f5a8",
+      "total": 11,
+      "grepCount": 0,
+      "readCount": 11,
+      "symbolShaped": 0,
+      "literalShaped": 11,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "15c41268-ec4c-4615-b0cc-b9f4675f5037",
+      "total": 15,
+      "grepCount": 2,
+      "readCount": 13,
+      "symbolShaped": 0,
+      "literalShaped": 15,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "16d79fea-4b8d-46de-8e9f-35ebc9aefdec",
+      "total": 6,
+      "grepCount": 1,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "1876b375-af1d-4c21-993e-1f043275e67b",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "203d073e-064b-4442-ba7b-10dd381a3cd2",
+      "total": 25,
+      "grepCount": 0,
+      "readCount": 25,
+      "symbolShaped": 0,
+      "literalShaped": 25,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "208c1435-aa58-4d33-b667-d0cac68966b5",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "237c6833-7d45-411d-a574-b63ff3df8bfe",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "23d3447b-95dc-4cb2-ae30-0782d3d8051d",
+      "total": 7,
+      "grepCount": 0,
+      "readCount": 7,
+      "symbolShaped": 0,
+      "literalShaped": 7,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "2606e3c8-db4a-4bfc-a49a-f3744e0689ff",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "29974849-a5e1-4b77-ad27-c4d0dac6f47a",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "29b99c29-b8c8-44d9-a7e9-cccc565b91ab",
+      "total": 27,
+      "grepCount": 7,
+      "readCount": 20,
+      "symbolShaped": 0,
+      "literalShaped": 27,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "2c38c6d2-b43a-4529-a939-f8c21f8ef691",
+      "total": 60,
+      "grepCount": 4,
+      "readCount": 56,
+      "symbolShaped": 0,
+      "literalShaped": 60,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "2f5ee2af-4b41-48cb-a494-1b24b59cfc8c",
+      "total": 53,
+      "grepCount": 0,
+      "readCount": 53,
+      "symbolShaped": 0,
+      "literalShaped": 53,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3142333c-eede-4999-876b-1ebfda245d6c",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "31e28ef4-9331-443f-ae3f-2c10c03c5fbd",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3a9da0d9-6bde-48f2-b6c5-ebb84ac8428b",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3b6e1cd5-39b3-4ae2-aa74-bf1856077614",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3c8c71c5-50fe-4955-8d62-d9aa801ac1ad",
+      "total": 7,
+      "grepCount": 0,
+      "readCount": 7,
+      "symbolShaped": 0,
+      "literalShaped": 7,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3e7e959f-5ef9-44c2-bb0b-21229b4fc741",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "3f83ccb8-afe8-4e50-b487-ab613f33021d",
+      "total": 22,
+      "grepCount": 1,
+      "readCount": 21,
+      "symbolShaped": 0,
+      "literalShaped": 22,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "473a5102-9b80-4c4f-8e1f-74b45d3856a0",
+      "total": 3,
+      "grepCount": 2,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "4916b2ba-25c9-45eb-8cdc-cb80c58859fa",
+      "total": 18,
+      "grepCount": 2,
+      "readCount": 16,
+      "symbolShaped": 0,
+      "literalShaped": 18,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "501cba05-e113-4044-b675-795bb45adbd3",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "51d2c820-0a7a-447f-ae4a-de9ae309c39c",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "5574b843-cad3-4a55-88f0-e9d9d9230998",
+      "total": 13,
+      "grepCount": 0,
+      "readCount": 13,
+      "symbolShaped": 0,
+      "literalShaped": 13,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "588b27e6-4dbc-4a38-8219-978765f28216",
+      "total": 10,
+      "grepCount": 0,
+      "readCount": 10,
+      "symbolShaped": 0,
+      "literalShaped": 10,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "5a08bc9a-c910-48fe-a503-967ad97b665e",
+      "total": 29,
+      "grepCount": 1,
+      "readCount": 28,
+      "symbolShaped": 0,
+      "literalShaped": 29,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "5b52cc8d-5f75-412c-a8f1-bd74c9a23b33",
+      "total": 34,
+      "grepCount": 1,
+      "readCount": 33,
+      "symbolShaped": 0,
+      "literalShaped": 34,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "5cb936e8-d661-4f72-8a78-c81c2db7ac52",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "5e5c7253-f333-40f8-bf18-13ea8a5f22aa",
+      "total": 4,
+      "grepCount": 3,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "60aca1c7-5da3-43f4-a142-4cb23b0eed83",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6113df0e-290f-40e4-90fa-f370d9b7d488",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "61a4a883-894e-4e42-bc9d-554dae492393",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "64843618-13a9-4a9c-9085-2ef8a6d4c4c4",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "64e04ac4-b55d-4d85-a2f1-edd238c2dc8f",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "67455122-77bb-4ded-9d81-2d761347a2c3",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6975ea40-462c-4e9f-8ddc-f553377c92fd",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6981c6f9-f6cd-47b6-8fd9-5fa798f92784",
+      "total": 12,
+      "grepCount": 3,
+      "readCount": 9,
+      "symbolShaped": 0,
+      "literalShaped": 12,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6c75e597-f443-4ed5-a2cf-5fcce68b9447",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6cfe914b-4e6f-4dd4-846d-aaf9a115e27f",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6d714570-776e-4786-a956-6cb9a2d4185b",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "6fc694e4-bd19-4ac2-a0aa-efedd5f25c46",
+      "total": 4,
+      "grepCount": 2,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "7083fdbb-94c0-4ad9-a34d-dc80b1f7d46c",
+      "total": 10,
+      "grepCount": 2,
+      "readCount": 8,
+      "symbolShaped": 0,
+      "literalShaped": 10,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "755cd004-44be-4b2d-8355-85fb4002b663",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "755e98f2-4324-4238-879e-cc9a0d52903b",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "75f74cab-4c72-4791-8143-7fd7b0355425",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "79c43570-763e-4bf6-a35f-af0cccce588e",
+      "total": 108,
+      "grepCount": 0,
+      "readCount": 108,
+      "symbolShaped": 0,
+      "literalShaped": 108,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "853fcbf0-f304-4465-ac08-149a38587e72",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "85ab1067-076d-4181-84e4-c37ef664af7f",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "87791d0b-b2e4-45a3-8390-d522f788d03a",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "88362fb1-bffb-4526-bbf1-a7b911a665c5",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "8b0fdf9d-2731-41b0-a51e-57a3d72566d5",
+      "total": 22,
+      "grepCount": 6,
+      "readCount": 16,
+      "symbolShaped": 0,
+      "literalShaped": 22,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "8b137a3d-61ed-4097-89a0-642e464f71b9",
+      "total": 23,
+      "grepCount": 0,
+      "readCount": 23,
+      "symbolShaped": 0,
+      "literalShaped": 23,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "8b8ecbec-332a-4173-b1ea-b626a88c82a5",
+      "total": 7,
+      "grepCount": 0,
+      "readCount": 7,
+      "symbolShaped": 0,
+      "literalShaped": 7,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "8bbc9136-d0d5-4c41-bac1-941044ab8788",
+      "total": 7,
+      "grepCount": 0,
+      "readCount": 7,
+      "symbolShaped": 0,
+      "literalShaped": 7,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "8e4a6b43-ded0-4233-abc7-cdfc8de948a7",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "917d4194-4c26-4317-9063-7b9b0a124c06",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "971c8a76-fde9-4e84-aaf6-d748369f90c6",
+      "total": 62,
+      "grepCount": 0,
+      "readCount": 62,
+      "symbolShaped": 0,
+      "literalShaped": 62,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "9abb81e6-014f-4f1d-a0bf-81554b951c65",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "9d1085a9-c613-4920-9177-5b28475962c5",
+      "total": 5,
+      "grepCount": 1,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "a038302f-e35a-4496-83a5-b5b0906e82e7",
+      "total": 62,
+      "grepCount": 0,
+      "readCount": 62,
+      "symbolShaped": 0,
+      "literalShaped": 62,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "a1119fc4-9127-4633-9233-db9c7f0b9a30",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "a630c55d-d29a-4405-829b-2c97a1b66dc4",
+      "total": 9,
+      "grepCount": 5,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 9,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "a8295229-5d07-463d-ad98-6e70d44d6feb",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "a9269550-67d2-459e-ad58-56e0369c5a6f",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "ac60653d-3be8-4f82-9e8b-97b124c7f581",
+      "total": 8,
+      "grepCount": 0,
+      "readCount": 8,
+      "symbolShaped": 0,
+      "literalShaped": 8,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "ad42d16a-64f7-40f1-a90f-f441ce4c8e97",
+      "total": 3,
+      "grepCount": 1,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "ad9679b8-9d13-447a-9931-af36523fe116",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "af7fb7b7-f8f7-4941-b27d-c70e096d4d04",
+      "total": 9,
+      "grepCount": 3,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 9,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "b0cd9c4c-fe50-4970-b400-c7aa5b99dc5a",
+      "total": 6,
+      "grepCount": 0,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 6,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "b507c128-61ef-495c-8ee1-072c5cec41ae",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "b7598f23-f934-4ad0-bc05-e3380c5ef8a7",
+      "total": 9,
+      "grepCount": 0,
+      "readCount": 9,
+      "symbolShaped": 0,
+      "literalShaped": 9,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "b8f7d64f-75a4-4441-9aa4-9287454c469b",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "bac29da3-df8a-44ba-a7a2-3f37b0152321",
+      "total": 37,
+      "grepCount": 15,
+      "readCount": 22,
+      "symbolShaped": 0,
+      "literalShaped": 37,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "bcbd1259-a5ab-4d96-849e-443adf95279c",
+      "total": 3,
+      "grepCount": 1,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "bea7c860-1912-4ea4-9400-ce5ebda2821b",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "c1c19cd2-572a-4c1e-98af-d20089b63f30",
+      "total": 2,
+      "grepCount": 1,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "c2d703b3-cfa1-4974-a3ea-b9dd81a51bb2",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "c55f09ff-1c68-427d-a5a9-36069808deb8",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "ccc19f56-2cf1-46d7-9d9e-5d1837c013ad",
+      "total": 10,
+      "grepCount": 4,
+      "readCount": 6,
+      "symbolShaped": 0,
+      "literalShaped": 10,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "cdb4daac-38e7-4e92-832f-d0c8504d8b44",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "d581a8ff-894d-4dac-95f0-2199c1542b82",
+      "total": 9,
+      "grepCount": 0,
+      "readCount": 9,
+      "symbolShaped": 0,
+      "literalShaped": 9,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "d6ba10bf-7cb9-44a7-a202-31f2383d002e",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "d8e96167-b35d-4306-a5bd-d49bea6cba77",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "db51e123-4cc2-4e23-b0a8-c028b662b0fa",
+      "total": 51,
+      "grepCount": 21,
+      "readCount": 30,
+      "symbolShaped": 0,
+      "literalShaped": 51,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "e6868f59-2ae3-45a1-ac4b-1079b1bf586d",
+      "total": 3,
+      "grepCount": 0,
+      "readCount": 3,
+      "symbolShaped": 0,
+      "literalShaped": 3,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "e6d80428-0ade-452a-9015-760550e3a479",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "ec93bc47-1e78-436a-ac1f-e274f60fb9eb",
+      "total": 4,
+      "grepCount": 0,
+      "readCount": 4,
+      "symbolShaped": 0,
+      "literalShaped": 4,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "f1517871-ea49-4737-93ee-53d0ca7add17",
+      "total": 10,
+      "grepCount": 0,
+      "readCount": 10,
+      "symbolShaped": 0,
+      "literalShaped": 10,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "f6d61e7d-3acc-4122-9422-880fc6b5fd87",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "f7383388-3df5-403c-853e-30e3ece0030d",
+      "total": 62,
+      "grepCount": 13,
+      "readCount": 49,
+      "symbolShaped": 0,
+      "literalShaped": 62,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "f7c437c5-74ef-4b7a-895c-f2f88ad8de12",
+      "total": 5,
+      "grepCount": 0,
+      "readCount": 5,
+      "symbolShaped": 0,
+      "literalShaped": 5,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "fc346c3e-54b0-40f9-a296-d5daf104378f",
+      "total": 11,
+      "grepCount": 3,
+      "readCount": 8,
+      "symbolShaped": 0,
+      "literalShaped": 11,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "fc486904-bc7a-4d00-a531-bb4f821d7f08",
+      "total": 1,
+      "grepCount": 0,
+      "readCount": 1,
+      "symbolShaped": 0,
+      "literalShaped": 1,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "fc592c82-6a6e-4519-8d83-ec147cf6e02e",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    },
+    {
+      "sessionId": "fe51054e-305b-41fb-b5c0-d56a206f1032",
+      "total": 2,
+      "grepCount": 0,
+      "readCount": 2,
+      "symbolShaped": 0,
+      "literalShaped": 2,
+      "unknownShaped": 0,
+      "adherence": 1
+    }
+  ],
+  "sampleViolations": [
+    {
+      "sessionId": "01feabc3",
+      "tool": "Grep",
+      "pattern": "ContextSnippetSource"
+    },
+    {
+      "sessionId": "01feabc3",
+      "tool": "Grep",
+      "pattern": "LspSubsection"
+    },
+    {
+      "sessionId": "01feabc3",
+      "tool": "Grep",
+      "pattern": "registerAiHandlers"
+    },
+    {
+      "sessionId": "01feabc3",
+      "tool": "Grep",
+      "pattern": "registerAiHandlers"
+    },
+    {
+      "sessionId": "01feabc3",
+      "tool": "Grep",
+      "pattern": "inlineCompletionsEnabled"
+    }
+  ]
+}

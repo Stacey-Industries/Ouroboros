@@ -214,6 +214,7 @@ export interface AppConfig {
   marketplace?: { allowInstallOnRevocationFetchFailure?: boolean };
   /** Wave 30 Phase G+I — research auto-firing global defaults + threshold tuning knobs. */
   researchSettings?: ResearchSettings;
-  /** Wave 50 Phase B — deterministic PreToolUse hook enforcement toggles. */
-  hooks?: { enforcedRules: string[] };
+  /** Wave 50 Phase B/D — deterministic PreToolUse hook enforcement toggles.
+   *  enforceGraphFirst: reserved stub — Phase D analysis returned 93.9% adherence (stay log-only). */
+  hooks?: { enforcedRules: string[]; enforceGraphFirst?: boolean };
 }

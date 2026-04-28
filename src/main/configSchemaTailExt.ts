@@ -256,7 +256,9 @@ export const tailSchemaExt = {
     },
     default: { allowInstallOnRevocationFetchFailure: false },
   },
-  /** Wave 50 Phase B — deterministic PreToolUse enforcement. enforcedRules lists active rule names. */
+  /** Wave 50 Phase B — deterministic PreToolUse enforcement. enforcedRules lists active rule names.
+   *  Wave 50 Phase D — enforceGraphFirst reserved for future graph-routing enforcement (default false;
+   *  Phase D analysis returned 93.9% adherence → stay log-only; activate if re-run drops below 70%). */
   hooks: {
     type: 'object',
     additionalProperties: false,
@@ -266,8 +268,12 @@ export const tailSchemaExt = {
         items: { type: 'string' },
         default: ['no-secrets', 'lockfiles', 'no-minified', 'test-scope'],
       },
+      enforceGraphFirst: { type: 'boolean', default: false },
     },
-    default: { enforcedRules: ['no-secrets', 'lockfiles', 'no-minified', 'test-scope'] },
+    default: {
+      enforcedRules: ['no-secrets', 'lockfiles', 'no-minified', 'test-scope'],
+      enforceGraphFirst: false,
+    },
   },
   /** Wave 38 Phase A+C — platform-level settings: onboarding gate, language, update channel, crash reporter.
    *  Phase C adds dismissedEmptyStates.
