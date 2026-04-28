@@ -2,7 +2,7 @@
 
 ## Implementation Plan
 
-**Status:** READY (promoted from stub 2026-04-27 after Wave 53a's parity infrastructure shipped)
+**Status:** ✅ COMPLETED — 2026-04-27 · Released as v2.10.0 · Result: `roadmap/auto-briefs/wave-53b-result.md`
 **Version target:** v2.10.0 (minor — new agent capability surface; variant ranker + ranker telemetry)
 **Feature flags:** new `contextRanker.mode` (`current` | `tuned` | `experimental`, default `current`); new `contextRanker.telemetryEnabled` (default `true`)
 **Dependencies:** Wave 52 ✅ (queue infrastructure), Wave 53a ✅ (telemetry parity, post-hoc shadow router)
