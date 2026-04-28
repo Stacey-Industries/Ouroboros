@@ -17,20 +17,24 @@ These items should be evaluated after Wave 47 has been running in production for
 
 ---
 
-## Wave 52 follow-ups
+## Wave 53a follow-ups (after this wave closes)
 
-- **Manual hook installation** — add `session_start_spawn_cost.mjs` to
-  `~/.claude/settings.json` under `SessionStart`. See `docs/telemetry-parity.md`
-  "Manual hook installation" for the exact snippet. After installing: start an
-  external Claude Code session, then launch the IDE; spawn-cost records with
-  `ideSession: false` will appear in `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl`.
-- **Wave 53a** — migrate the remaining 10 hookable surfaces from
-  `roadmap/wave-52-audit.md`. Highest-leverage first item: JSONL fallback inside
-  `assets/hooks/lib/ouroboros.mjs` (~80 LOC) brings 6 `global-hookable` surfaces
-  to parity in one change. See `roadmap/wave-53a-plan.md`.
-- **Wave 53b** — original ranker measurement work (offline analysis + online
-  telemetry + variant ranker), now on the unified corpus. See
+- **Auto-install of all four hooks lands in Phase E.** Until Phase E ships, see
+  `docs/telemetry-parity.md` "Manual hook installation" for the per-surface
+  snippets. The four hooks are: `session_start_spawn_cost.mjs` (spawn-cost +
+  spawn-trace), the `hook-events` write-on-fail fallback (no dedicated entry —
+  piggybacks existing hook scripts), and
+  `user_prompt_submit_router_shadow.mjs` (router-shadow).
+- **Wave 53b** — original ranker measurement (offline analysis + variant ranker)
+  on the now-unified corpus. Use the `weightsVersion` field to split session-time
+  vs drain-time shadow records (`postHoc: true` = drain-time). See
   `roadmap/wave-53b-plan.md`.
+- **PostToolUse → file-touched-per-turn** (audit row #5 partial signal). Optional
+  one-sided context outcome signal. Wave 53b decides whether the partial data is
+  worth the maintenance cost.
+- **Codegen hook helper from TS schemas** — eliminate the comment-mirror
+  discipline. Schema becomes the single source of truth; hook helper generated.
+  Future wave.
 
 ---
 

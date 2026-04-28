@@ -42,3 +42,9 @@ architecture, hook contract, and migration recipe.
   session, dedup on `sessionId`. For surfaces that fire multiple times per
   session (e.g. graph-usage), do NOT use session-level dedup — each record is
   independently significant.
+- **Per-surface schema mirror:** every hook script that writes to the queue
+  mirrors the record shape in a comment block at the top. When the TS schema
+  changes, the hook's comment block MUST update too, and `SCHEMA_VERSION` must
+  be bumped. Drain handlers validate `schemaVersion` and skip unknown versions —
+  they don't crash, but data is silently lost. See `docs/telemetry-parity.md`
+  "Per-surface schema discipline".
