@@ -2,7 +2,7 @@
 
 ## Implementation Plan
 
-**Status:** READY (revised 2026-04-27 — path drift fixed; Phase D reshaped against richer corpus; Phase C softened to ship-without-deletion)
+**Status:** ✅ COMPLETED — 2026-04-27 · Released as v2.8.2 · Result: `roadmap/auto-briefs/wave-50-result.md`
 **Version target:** v2.8.2 (patch — shift enforcement from prompt to deterministic hooks)
 **Feature flags:** new `hooks.enforcedRules` array (default includes converted rules), new `hooks.enforceGraphFirst` (default `false`; ship enabled or not based on Phase D analysis)
 **Dependencies:** Wave 48 ✅ (telemetry tap shipped, but tap is partially broken — Phase D fixes), Wave 49 ✅ (claude-md-size lint wired, `src/main/hooks/` exists)
