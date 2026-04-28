@@ -92,6 +92,7 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 - `docs/codemode-internalmcp-routing.md` — CodeMode routing for internalMcp, configuration, telemetry, rollback (Wave 51)
 - `docs/claude-md-lifecycle.md` — CLAUDE.md generation, grooming, and organic growth
 - `docs/hook-migration.md` — rule-to-hook conversion, rollback, and escalation
+- `docs/telemetry-parity.md` — telemetry parity architecture and migration recipe
 - `ai/vision.md` — Product vision, design north stars
 - `ai/deferred.md` — Remaining unimplemented features, prioritized by area
 

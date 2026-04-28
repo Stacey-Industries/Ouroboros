@@ -17,6 +17,23 @@ These items should be evaluated after Wave 47 has been running in production for
 
 ---
 
+## Wave 52 follow-ups
+
+- **Manual hook installation** — add `session_start_spawn_cost.mjs` to
+  `~/.claude/settings.json` under `SessionStart`. See `docs/telemetry-parity.md`
+  "Manual hook installation" for the exact snippet. After installing: start an
+  external Claude Code session, then launch the IDE; spawn-cost records with
+  `ideSession: false` will appear in `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl`.
+- **Wave 53a** — migrate the remaining 10 hookable surfaces from
+  `roadmap/wave-52-audit.md`. Highest-leverage first item: JSONL fallback inside
+  `assets/hooks/lib/ouroboros.mjs` (~80 LOC) brings 6 `global-hookable` surfaces
+  to parity in one change. See `roadmap/wave-53a-plan.md`.
+- **Wave 53b** — original ranker measurement work (offline analysis + online
+  telemetry + variant ranker), now on the unified corpus. See
+  `roadmap/wave-53b-plan.md`.
+
+---
+
 ## Wave 51 follow-ups
 
 - **Soak protocol.** Run for 1 week with `codemode.enabled=true, codemode.routeInternalMcp=false`, then 1 week with `routeInternalMcp=true`. Run `npx tsx scripts/measure-mcp-token-cost.ts` against `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl` and compare per-decision medians. Flip the `routeInternalMcp` default to `true` if savings are real and no regressions surface in graph-tool reachability.
