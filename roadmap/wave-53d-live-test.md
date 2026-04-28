@@ -83,6 +83,33 @@ Either way, this is a downstream wiring bug that has to be fixed before any mean
 
 Skipped — there's nothing to observe at the agent level until the runtime errors are fixed. Once the graph context is wired correctly, repeat the smoke from a fresh Claude Code session and ask it to run `trace_call_path` against a real symbol.
 
+## Wave 53e post-fix smoke (2026-04-28)
+
+After v2.7.6's fix landed and the IDE was restarted, the orchestrator re-ran the four-tool smoke against the new server (port 61526). All four tools returned real content:
+
+| Tool | Result |
+|---|---|
+| `list_projects` (no args) | `Agent IDE: 0 nodes, 0 edges (indexed 2026-04-20T01:50:26.988Z)` |
+| `get_graph_schema` (no args) | Full schema — 11,113 Functions / 2,614 Files / 2,821 Interfaces / 728 Methods / 119 Folders / 876 Types / 12 Routes / 1 Project. Edge types: ASYNC_CALLS 1,110 / CALLS 11,610 / CONTAINS_FILE 2,614 / CONTAINS_FOLDER 119 / DEFINES 15,580 / DEFINES_METHOD 599 / HANDLES 4 / IMPORTS 7,540. |
+| `search_graph` `{"query":"injectIntoProjectSettings"}` | "Found 18,442 nodes (showing 100): ..." — returns real nodes with qualified names and file paths. |
+| `get_architecture` `{"aspects":["hotspots"]}` | Real hotspots with degree counts and `file:line` locations: `now (degree: 362) -- src/main/agentChat/threadImport.ts:26`, `delete (degree: 229) -- src/main/agentChat/checkpointStore.ts:118`, etc. |
+
+**Conclusion:** The graph-context wiring fix in Wave 53e (commit `74d9633`) is verified end-to-end. Tools work; agents that connect to the MCP server now receive real responses instead of `Cannot read properties of undefined`.
+
+### Out-of-wave observation from this smoke
+
+`list_projects` reported `0 nodes, 0 edges` from a stored timestamp of 2026-04-20, but `get_graph_schema` (called moments later, same server) reported 11K+ functions live. The project-table's `node_count` / `edge_count` columns are not being updated on incremental reindex — only on full re-index. Cosmetic for now (real query results are correct), but worth filing as a small follow-up: refresh project-table stats at the end of each indexing pass, or compute them lazily from the live counts.
+
+### Wave 54 adoption smoke — still pending the user
+
+The runtime is now functional. The remaining question is **does the agent reach for these tools when they're available?** That requires a fresh Claude Code session post-restart (this orchestrating session's tool list was frozen pre-fix). The user can verify by:
+
+1. Opening a fresh Claude Code session inside the IDE chat panel or external terminal in `C:\Web App\Agent IDE`.
+2. Asking a graph-shaped question, e.g., "Use `trace_call_path` to find callers of `injectIntoProjectSettings` in this codebase."
+3. Observing whether the agent (a) sees the tool, (b) reaches for it, (c) gets useful results.
+
+Append observations here, then finalize Wave 53d's Decision 9 with the Wave 54 verdict (Greenlit / Redesigned / Retired).
+
 ## What changes after restart
 
 The Phase C fix removes the `removeFromProjectSettings` call from `stopInternalMcp` (commit `ef80784`). On next IDE launch, `startInternalMcp` runs as before — it binds the SSE server on a random port and writes `mcpServers.ouroboros` into `.claude/settings.json` with that port. The difference is that on subsequent shutdowns, the entry is no longer cleaned. So:
