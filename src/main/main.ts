@@ -44,6 +44,7 @@ import { loadRetrainedWeightsIfAvailable, observeDatasetGrowth } from './router/
 import { initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
 import { getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
+import { registerHookEventsHandler } from './telemetry/hookEventsDrainHandler';
 import { runParityQueueDrain } from './telemetry/telemetryDrainStartup';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
@@ -238,6 +239,7 @@ async function initTelemetryAndWriters(ud: string): Promise<void> {
   scheduleJsonlRetentionPurge(ud);
   scheduleResearchCachePurge(ud);
   registerSpawnCostHandler();
+  registerHookEventsHandler();
   await runParityQueueDrain();
 }
 
