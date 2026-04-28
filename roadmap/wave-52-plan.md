@@ -2,7 +2,7 @@
 
 ## Implementation Plan
 
-**Status:** READY (reframed 2026-04-27 — original ranker-measurement scope deferred to Wave 53b once telemetry corpus is unified)
+**Status:** ✅ COMPLETED — 2026-04-27 · Released as v2.9.1 · Result: `roadmap/auto-briefs/wave-52-result.md`
 **Version target:** v2.9.1 (patch — no user-visible behavior change yet; foundation for parity)
 **Feature flags:** new `telemetry.parityQueue.enabled` (default `true` — safe to enable; queue drain is a strict-add to startup)
 **Dependencies:** Waves 48 ✅ (initial telemetry), 50 ✅ (graph tap arg-capture fix), 51 ✅ (mcpSpawnCostTelemetry — first IDE-only sink to migrate)
