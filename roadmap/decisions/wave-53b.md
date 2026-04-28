@@ -91,4 +91,91 @@ Context Ranker Measurement & Variant. Upfront decisions captured during plan rev
 
 ## End-of-wave additions
 
-(Filled in at Phase D close.)
+Filled in at Phase D close (2026-04-27). Phases A–C committed; Phase D is this doc + documentation.
+
+---
+
+## Decision 7: variant weight choice — specific overrides and rationale
+
+**Context:** Phase C needed a concrete weight scheme for the `tuned` and
+`experimental` modes. Phase A's bucket analysis informed the direction; the
+specific values required judgment.
+
+**Tuned overrides chosen:**
+
+| Reason | Current | Tuned | Delta | Rationale |
+|---|---|---|---|---|
+| `keyword_match` | 26 | 16 | −10 | Dominated the zero-hit long tail in Phase A. The most-common driver of sessions where the agent Read 12–20 files with zero overlap with the pre-loaded set. |
+| `git_diff` | 56 | 70 | +14 | Sessions that did Read pre-loaded files in Phase A's code bucket (n=18, any-hit 55.6%) frequently had git-diff-touched files in the pre-loaded set. Cheap, directionally supported. |
+| `dirty_buffer` | 68 | 78 | +10 | Same reasoning as `git_diff` at lower confidence — dirty buffers correlate non-zero with subsequent Reads but the correlation is weaker than diff. |
+| `recent_edit` | 32 | 42 | +10 | Mirror `dirty_buffer` logic at lower magnitude. |
+| `recent_user_edit` | — | 42 | — | Match `recent_edit`; added for completeness. |
+
+**Experimental overrides:** same file-state boosts, but `git_diff` goes to +19
+(75), `diagnostic` gets +18 (70), and `keyword_match` drops to 12 (−14).
+Diagnostic is boosted because a file with active errors is a near-certain Read
+target for a code task — it's a stronger editorial signal than even diff presence.
+
+**Per-bucket regression risk documented in `contextSelectorRankerVariant.ts` header:**
+If the next quarterly re-run shows the code bucket any-hit rate dropping below 50%
+(baseline 55.6%), that is the regression flag. Casual sessions (any-hit 20%) are
+unlikely to regress further since they generate almost no Read calls regardless.
+
+**Consequences:** Variant weights are a snapshot of "informed best guess." They do
+not address the structural deficit identified in Phase A (right files not in top 10
+at all). Future Bayesian or LTR approaches will supersede these specific numbers
+without changing the public interface.
+
+---
+
+## Decision 8: metric ambiguity discovered mid-wave — snippet content in `<relevant_code>`
+
+**Context:** After Phase A's analysis returned a 6.3% mean hit rate and a median of
+0%, a closer read of the data surfaced a structural ambiguity in the metric.
+
+**Finding:** The `<relevant_code>` block includes **snippet content** — not just
+file paths. If the agent needed the file's content and the snippet was adequate, it
+will not issue a Read tool call. A re-fetch rate of 0% for a session can mean either:
+(a) the snippets satisfied the agent's needs — snippets worked — or
+(b) the ranker chose unhelpful files and the agent went elsewhere entirely.
+
+These two explanations produce identical measurement outcomes under the re-fetch
+metric. The 45.8% any-hit rate and the recall@k family are more reliable signals
+because they measure whether the ranked files were useful at all, not just whether
+they needed to be re-fetched.
+
+**Decision:** Document the ambiguity explicitly. Do not change the telemetry record
+shape or the metric definitions — both any-hit and re-fetch rate are valid signals
+for different questions. The offline analyzer computes all three (re-fetch, any-hit,
+recall@k). Future analyses should lead with recall@k and any-hit rather than
+re-fetch rate alone.
+
+**Consequences:** `docs/context-ranker.md` includes a dedicated section on the
+metric ambiguity. The Phase A decision ("REDESIGN") remains valid — even under the
+most generous interpretation (snippets satisfied all needs), recall@k of 4.2% at
+k=1 still means the top-ranked file was useful in only 1 of 24 sessions.
+
+---
+
+## Decision 9: telemetry record shape is descriptive, not metric-baked
+
+**Context:** When designing the `RankerHitRecord` shape (Phase B), a question arose
+about whether to bake metric logic (e.g., recall@k for fixed k values) into the
+record, or to store raw signals and compute metrics downstream.
+
+**Pick:** Store raw signals. The `RankerHitRecord` fields are:
+- `preLoadedCount` — total pre-loaded files
+- `uniqueReadHits` — distinct pre-loaded paths that were Read
+- `totalReads` — all Read calls in the session
+- `hitsByRank` — per-rank-position hit indicator (0/1 array, length = preLoadedCount)
+- `sessionDurationMs` — wall time
+
+**Rationale:** Metric choice is still uncertain (Decision 8). Baking recall@5 or a
+specific re-fetch formula into the record would prevent future analyses from applying
+different metrics to the same data. The descriptive shape above supports re-fetch
+rate, any-hit rate, recall@k for any k, and future metrics (e.g., NDCG with graded
+relevance) without a schema change.
+
+**Consequences:** Any metric computable from the raw fields can be applied to the
+existing `ranker-hits.jsonl` corpus retroactively. Schema bump is only needed if
+new raw signals are added (e.g., per-file dwell time, snippet byte length).

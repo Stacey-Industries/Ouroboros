@@ -17,6 +17,26 @@ These items should be evaluated after Wave 47 has been running in production for
 
 ---
 
+## Wave 53b follow-ups
+
+- **Re-run offline analysis quarterly:** `npx tsx scripts/analyze-ranker-hit-rate.ts`. First
+  authoritative re-run after a quarter of unified-corpus accumulation (target: 2026-07-28). Update
+  `roadmap/wave-53b-analysis.md` with the new numbers; supersede the provisional Phase A decision.
+- **Variant soak:** when ready to test the variant ranker, set `contextRanker.mode` to `tuned` or
+  `experimental` in Settings. The online telemetry (`ranker-hits.jsonl`) records which mode was
+  active per session via the selection event. After ~100+ sessions per mode, re-run the offline
+  analyzer and filter by mode to compare any-hit rates.
+- **Graduation trigger:** when the unified corpus reaches ≥ 500 IDE-orchestrated sessions with
+  hook-side Read coverage, consider graduating from hand-tuned weights to Bayesian weight
+  optimization (separate wave). See `roadmap/wave-53b-plan.md` "Out-of-wave follow-ups."
+- **Metric ambiguity:** the re-fetch rate (6.3% in Phase A) is narrow because `<relevant_code>`
+  includes snippet content — a low re-fetch rate may mean snippets satisfied needs, not that the
+  ranker was wrong. The any-hit rate (45.8% in Phase A) and recall@k are more reliable signals.
+  Future analyses should lead with those. Record shape in `ranker-hits.jsonl` is descriptive —
+  any metric computable from the raw fields can be applied retroactively.
+
+---
+
 ## Wave 53a follow-ups (after this wave closes)
 
 - **Auto-install of all four hooks lands in Phase E.** Until Phase E ships, see
