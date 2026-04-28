@@ -1,11 +1,20 @@
 /**
  * scopedMcpConfig.ts — Builds a per-spawn scoped MCP config temp file.
  *
- * Wave 48 Phase D: instead of relying on settings inheritance, each headless
- * spawn gets a temp JSON file that lists only the MCP servers it should see.
- * The ouroboros server is included or excluded based on resolveInternalMcpScope.
- * All other user-configured MCP servers (from ~/.claude/settings.json) pass
- * through unconditionally — they are not subject to the Ouroboros scope gate.
+ * Wave 48 Phase D: each headless spawn gets a temp JSON file listing only the
+ * MCP servers it should see, replacing the global settings inheritance model.
+ *
+ * Wave 51 Phase C: the per-spawn ouroboros routing decision is now made by
+ * `internalMcpRoutingPolicy.decideInternalMcpRouting`. Three outcomes:
+ *
+ *   - 'direct-inject'           : write `{ouroboros: {url|command,args}}` into
+ *                                 the temp config (today's behavior).
+ *   - 'route-through-codemode'  : omit `ouroboros`; CodeMode's
+ *                                 `__codemode_proxy` entry (already in user
+ *                                 settings, picked up via passthrough) surfaces
+ *                                 the graph tools as `servers.ouroboros.*`.
+ *   - 'omit'                    : skip entirely (scope=never, or task-gated +
+ *                                 non-graph task).
  *
  * Returns { configPath, cleanup }.  Caller MUST call cleanup() after the
  * spawned process exits, on both success and error paths.
@@ -13,13 +22,19 @@
 
 import { readFile, unlink, writeFile } from 'fs/promises';
 import { homedir, tmpdir } from 'os';
-import { join } from 'path';
+import path, { join } from 'path';
 
 import { getConfigValue } from '../../config';
 import { getInternalMcpUrl } from '../../internalMcp/internalMcpPortRegistry';
-import { resolveInternalMcpScope } from '../../internalMcp/internalMcpScope';
+import { type InternalMcpScope, resolveInternalMcpScope } from '../../internalMcp/internalMcpScope';
+import type { InternalMcpTransport } from '../../internalMcp/internalMcpTypes';
 import log from '../../logger';
 import { classifyGoal, type GoalShape } from './goalClassifier';
+import {
+  decideInternalMcpRouting,
+  downgradeOnCodemodeFailure,
+  type RoutingDecision,
+} from './internalMcpRoutingPolicy';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +54,8 @@ interface ScopedMcpConfigResult {
   configPath: string;
   /** Deletes the temp file. Safe to call multiple times. */
   cleanup: () => Promise<void>;
+  /** Final routing outcome that produced this config (post-downgrade). */
+  routingDecision: RoutingDecision;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,28 +75,63 @@ async function readGlobalMcpServers(): Promise<McpServerMap> {
 }
 
 // ---------------------------------------------------------------------------
+// Ouroboros entry shape (transport-aware, Phase C)
+//
+// Phase B added a transport-aware builder in `internalMcpAutoInject.ts`, but
+// importing from the `internalMcp` barrel here pulls in `internalMcpServer.ts`
+// → `internalMcpTools.ts` → graph controller (which depends on Electron `app`
+// at module load). The per-spawn path runs in tests without Electron, so we
+// inline the small entry-shape decision here. The shape MUST stay in sync
+// with `buildOuroborosEntry` in `internalMcpAutoInject.ts`.
+// ---------------------------------------------------------------------------
+
+function resolveTransport(): InternalMcpTransport {
+  const cfg = getConfigValue('internalMcp') as { transport?: string } | undefined;
+  return cfg?.transport === 'stdio' ? 'stdio' : 'sse';
+}
+
+function buildOuroborosEntry(
+  ouroborosUrl: string | null,
+  mainOutDir: string,
+): McpServerEntry | null {
+  if (ouroborosUrl === null) return null;
+  const transport = resolveTransport();
+  if (transport === 'stdio') {
+    const port = portFromUrl(ouroborosUrl);
+    if (port === null) return null;
+    const stdioTransportPath = path.join(mainOutDir, 'internalMcpStdioTransport.js');
+    return { command: 'node', args: [stdioTransportPath, port] };
+  }
+  return { url: ouroborosUrl };
+}
+
+function portFromUrl(url: string): string | null {
+  const match = /:(\d+)\//.exec(url);
+  return match ? match[1] : null;
+}
+
+// ---------------------------------------------------------------------------
 // Server map assembly
 // ---------------------------------------------------------------------------
 
-function buildServerMap(
-  userServers: McpServerMap,
-  includeOuroboros: boolean,
-  ouroborosUrl: string | null,
-): McpServerMap {
-  const result: McpServerMap = {};
+interface ServerMapInputs {
+  userServers: McpServerMap;
+  decision: RoutingDecision;
+  ouroborosEntry: McpServerEntry | null;
+}
 
+function buildServerMap(inputs: ServerMapInputs): McpServerMap {
+  const result: McpServerMap = {};
   // Pass through all user servers except ouroboros (managed separately).
-  for (const [name, cfg] of Object.entries(userServers)) {
+  for (const [name, cfg] of Object.entries(inputs.userServers)) {
     if (name !== 'ouroboros') {
-      // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries of a parsed settings file, not user input
+      // eslint-disable-next-line security/detect-object-injection -- name is a parsed settings key, not user input
       result[name] = cfg;
     }
   }
-
-  if (includeOuroboros && ouroborosUrl !== null) {
-    result['ouroboros'] = { url: ouroborosUrl };
+  if (inputs.decision === 'direct-inject' && inputs.ouroborosEntry) {
+    result['ouroboros'] = inputs.ouroborosEntry;
   }
-
   return result;
 }
 
@@ -95,7 +147,7 @@ function makeTempPath(sessionId: string): string {
 
 async function writeTempConfig(configPath: string, servers: McpServerMap): Promise<void> {
   const content = JSON.stringify({ mcpServers: servers }, null, 2);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from tmpdir() + UUID + timestamp
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from tmpdir() + sessionId + timestamp
   await writeFile(configPath, content, 'utf-8');
 }
 
@@ -114,12 +166,63 @@ function makeCleanup(configPath: string): () => Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Routing decision
+// ---------------------------------------------------------------------------
+
+interface CodemodeConfig {
+  enabled?: boolean;
+  routeInternalMcp?: boolean;
+}
+
+function readCodemodeFlags(): { enabled: boolean; route: boolean } {
+  const cfg = getConfigValue('codemode') as CodemodeConfig | undefined;
+  return { enabled: cfg?.enabled === true, route: cfg?.routeInternalMcp === true };
+}
+
+function readScopeFromConfig(): InternalMcpScope {
+  const raw = getConfigValue('internalMcpScope');
+  if (raw === 'always' || raw === 'task-gated' || raw === 'never') return raw;
+  return 'task-gated';
+}
+
+function deriveRoutingDecision(opts: ScopedMcpConfigOptions): RoutingDecision {
+  const scope = resolveInternalMcpScope({ goalShape: opts.goalShape });
+  if (!scope.shouldInjectOuroboros) {
+    log.info('[scoped-mcp] omit ouroboros:', scope.reason);
+    return 'omit';
+  }
+  const flags = readCodemodeFlags();
+  const decision = decideInternalMcpRouting({
+    codemodeEnabled: flags.enabled,
+    routeInternalMcp: flags.route,
+    internalMcpScope: readScopeFromConfig(),
+    taskNeedsGraphTools: true,
+    transport: resolveTransport(),
+  });
+  const final = opts.codemodeAcquireFailed ? downgradeOnCodemodeFailure(decision) : decision;
+  log.info('[scoped-mcp] routing decision:', final, '(scope:', scope.reason + ')');
+  return final;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 export interface ScopedMcpConfigOptions {
   goalShape: GoalShape;
   sessionId: string;
+  /**
+   * Wave 51 Phase C — when the launch-path codemode acquire failed, set this
+   * so the routing policy downgrades 'route-through-codemode' to
+   * 'direct-inject'. Optional; defaults to false (no downgrade).
+   */
+  codemodeAcquireFailed?: boolean;
+  /**
+   * Absolute directory containing the main process build output. Used to
+   * resolve `internalMcpStdioTransport.js` for the stdio transport entry.
+   * Defaults to `__dirname` of the calling main module.
+   */
+  mainOutDir?: string;
 }
 
 /**
@@ -134,20 +237,29 @@ export async function buildScopedMcpConfig(
   const useStrict = getConfigValue('internalMcpUseStrictConfig');
   if (useStrict === false) return null;
 
-  const decision = resolveInternalMcpScope({ goalShape: opts.goalShape });
-  log.info('[scoped-mcp] scope decision:', decision.reason);
-
+  const decision = deriveRoutingDecision(opts);
   const [userServers, ouroborosUrl] = await Promise.all([
     readGlobalMcpServers(),
     Promise.resolve(getInternalMcpUrl()),
   ]);
 
-  const servers = buildServerMap(userServers, decision.shouldInjectOuroboros, ouroborosUrl);
+  const ouroborosEntry =
+    decision === 'direct-inject'
+      ? buildOuroborosEntry(ouroborosUrl, opts.mainOutDir ?? __dirname)
+      : null;
+  const servers = buildServerMap({ userServers, decision, ouroborosEntry });
   const configPath = makeTempPath(opts.sessionId);
   await writeTempConfig(configPath, servers);
 
   log.info('[scoped-mcp] wrote config to', configPath, '— servers:', Object.keys(servers));
-  return { configPath, cleanup: makeCleanup(configPath) };
+  return { configPath, cleanup: makeCleanup(configPath), routingDecision: decision };
+}
+
+export interface ResolveMcpConfigOptions {
+  goal: string | undefined | null;
+  sessionId: string;
+  invocationTempPaths: string[];
+  codemodeAcquireFailed?: boolean;
 }
 
 /**
@@ -155,14 +267,16 @@ export async function buildScopedMcpConfig(
  * the temp path into the invocation cleanup list, returns the path or undefined.
  */
 export async function resolveMcpConfigPathForLaunch(
-  goal: string | undefined | null,
-  sessionId: string,
-  invocationTempPaths: string[],
+  opts: ResolveMcpConfigOptions,
 ): Promise<string | undefined> {
   try {
-    const scoped = await buildScopedMcpConfig({ goalShape: classifyGoal(goal), sessionId });
+    const scoped = await buildScopedMcpConfig({
+      goalShape: classifyGoal(opts.goal),
+      sessionId: opts.sessionId,
+      codemodeAcquireFailed: opts.codemodeAcquireFailed,
+    });
     if (!scoped) return undefined;
-    invocationTempPaths.push(scoped.configPath);
+    opts.invocationTempPaths.push(scoped.configPath);
     return scoped.configPath;
   } catch (err) {
     log.warn('[scoped-mcp] config build failed; falling back to inheritance:', err);

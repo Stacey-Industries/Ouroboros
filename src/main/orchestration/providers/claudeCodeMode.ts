@@ -26,6 +26,7 @@ import {
 } from '../../codemode/codemodeManager';
 import { getConfigValue } from '../../config';
 import log from '../../logger';
+import { decideInternalMcpRouting } from './internalMcpRoutingPolicy';
 
 interface CodeModeConfig {
   enabled?: boolean;
@@ -34,6 +35,16 @@ interface CodeModeConfig {
 
 interface InternalMcpConfig {
   transport?: 'sse' | 'stdio';
+}
+
+interface ScopeConfigShape {
+  raw: 'always' | 'task-gated' | 'never';
+}
+
+function readScopeRaw(): ScopeConfigShape['raw'] {
+  const raw = getConfigValue('internalMcpScope');
+  if (raw === 'always' || raw === 'task-gated' || raw === 'never') return raw;
+  return 'task-gated';
 }
 
 /** True when CodeMode launch wiring is requested by config. */
@@ -47,12 +58,20 @@ async function resolveProxiedServerNames(projectRoot: string | undefined): Promi
   const cfg = getConfigValue('codemode') as CodeModeConfig | undefined;
   const internalMcp = getConfigValue('internalMcp') as InternalMcpConfig | undefined;
   const entries = await getMcpServers(projectRoot);
-  // Phase B hard-codes the inclusion rule: if `routeInternalMcp` is on AND
-  // the stdio transport is selected (so CodeMode's stdio client can actually
-  // connect), include 'ouroboros'. Phase C replaces this with a real policy.
-  const includeOuroboros = cfg?.routeInternalMcp === true && internalMcp?.transport === 'stdio';
+  // Phase C: delegate the inclusion rule to the routing policy. We treat the
+  // task as graph-needing (taskNeedsGraphTools=true) because at acquire-time
+  // we don't have the per-spawn goal — the launch path's per-spawn temp
+  // config is where the goal-shape gate is enforced. If the policy returns
+  // 'route-through-codemode' we add 'ouroboros' to the proxied list.
+  const decision = decideInternalMcpRouting({
+    codemodeEnabled: cfg?.enabled === true,
+    routeInternalMcp: cfg?.routeInternalMcp === true,
+    internalMcpScope: readScopeRaw(),
+    taskNeedsGraphTools: true,
+    transport: internalMcp?.transport === 'stdio' ? 'stdio' : 'sse',
+  });
   const enabled = entries.filter((e) => e.enabled).map((e) => e.name);
-  if (!includeOuroboros) return enabled.filter((n) => n !== 'ouroboros');
+  if (decision !== 'route-through-codemode') return enabled.filter((n) => n !== 'ouroboros');
   return enabled.includes('ouroboros') ? enabled : [...enabled, 'ouroboros'];
 }
 

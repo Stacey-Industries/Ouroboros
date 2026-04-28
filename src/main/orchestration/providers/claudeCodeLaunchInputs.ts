@@ -21,6 +21,8 @@ export interface LaunchInputs {
   resumeId?: string;
   mcpConfigPath?: string;
   continueSession?: true;
+  /** Wave 51 Phase C — true when the codemode acquire failed; consumed only by tests. */
+  codemodeAcquireFailed?: boolean;
 }
 
 async function resolveGoalSuffix(
@@ -46,8 +48,15 @@ function resolveResumeSessionId(args: ScheduleClaudeLaunchArgs): string | undefi
   return undefined;
 }
 
+export interface BuildLaunchInputsExtras {
+  /** Wave 51 Phase C — set when codemode acquire failed before this call;
+   *  triggers the routing-policy downgrade in scopedMcpConfig. */
+  codemodeAcquireFailed?: boolean;
+}
+
 export async function buildLaunchInputs(
   args: ScheduleClaudeLaunchArgs,
+  extras: BuildLaunchInputsExtras = {},
 ): Promise<LaunchInputs | null> {
   const goalSuffix = await resolveGoalSuffix(args.context, args.invocationTempPaths);
   if (args.getCancelledBeforeLaunch()) {
@@ -62,11 +71,12 @@ export async function buildLaunchInputs(
     args.resolvedModel ?? '',
   );
   const continueSession = 'providerSession' in args.context && !resumeId ? true : undefined;
-  const mcpConfigPath = await resolveMcpConfigPathForLaunch(
-    args.context.request.goal,
-    args.context.taskId,
-    args.invocationTempPaths,
-  );
+  const mcpConfigPath = await resolveMcpConfigPathForLaunch({
+    goal: args.context.request.goal,
+    sessionId: args.context.taskId,
+    invocationTempPaths: args.invocationTempPaths,
+    codemodeAcquireFailed: extras.codemodeAcquireFailed,
+  });
   return { prompt, resumeId, mcpConfigPath, continueSession };
 }
 

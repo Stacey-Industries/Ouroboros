@@ -102,9 +102,18 @@ export function scheduleClaudeLaunch(
   args: ScheduleClaudeLaunchArgs,
 ): Promise<ScheduleClaudeLaunchOutcome> {
   return (async () => {
-    const inputs = await buildLaunchInputs(args);
-    if (!inputs) return { result: null, codemodeHandle: { ownsLifecycle: false } };
+    // Wave 51 Phase C: acquire CodeMode BEFORE building the per-spawn MCP
+    // config so the routing policy in scopedMcpConfig can downgrade to
+    // direct-inject when the codemode acquire fails. The acquire helper is
+    // best-effort and never throws — `ownsLifecycle:false` covers both "not
+    // requested" and "requested but failed". We treat any non-ownership
+    // outcome as a potential failure and let the routing policy decide
+    // whether the downgrade applies (it only applies when the policy was
+    // actually going to route through codemode).
     const codemodeHandle = await acquireCodeModeForLaunch(args.cwd);
+    const acquireFailed = !codemodeHandle.ownsLifecycle && shouldHaveAcquired();
+    const inputs = await buildLaunchInputs(args, { codemodeAcquireFailed: acquireFailed });
+    if (!inputs) return { result: null, codemodeHandle };
     try {
       const result = await runLaunch(args, inputs);
       return { result, codemodeHandle };
@@ -113,6 +122,15 @@ export function scheduleClaudeLaunch(
       return { result: null, error, codemodeHandle };
     }
   })();
+}
+
+/**
+ * True when CodeMode launch wiring is enabled by config — used to distinguish
+ * "didn't try to acquire" (not enabled) from "tried but failed".
+ */
+function shouldHaveAcquired(): boolean {
+  const cfg = getConfigValue('codemode') as { enabled?: boolean } | undefined;
+  return cfg?.enabled === true;
 }
 
 function setupLaunchSession(
