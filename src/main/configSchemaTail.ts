@@ -291,6 +291,12 @@ export const tailSchema = {
       structured: { type: 'boolean', default: true },
       remote: { type: 'boolean', default: false },
       retentionDays: { type: 'number', default: 30 },
+      /** Wave 52 Phase B — enable the queue+drain parity pipe at startup. */
+      parityQueue: {
+        type: 'object',
+        properties: { enabled: { type: 'boolean', default: true } },
+        default: { enabled: true },
+      },
     },
   },
   /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */

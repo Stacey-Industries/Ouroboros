@@ -181,8 +181,14 @@ export interface AppConfig {
   authOnboardingDismissed: boolean;
   /** Codebase graph settings (GC, etc.) */
   codebaseGraph: CodebaseGraphSettings;
-  /** Wave 15 / Wave 53 — structured telemetry feature flag and retention policy */
-  telemetry?: { structured?: boolean; remote?: boolean; retentionDays?: number };
+  /** Wave 15 / Wave 53 — structured telemetry feature flag and retention policy.
+   *  Wave 52 Phase B adds parityQueue: queue+drain pipe for external-session parity. */
+  telemetry?: {
+    structured?: boolean;
+    remote?: boolean;
+    retentionDays?: number;
+    parityQueue?: { enabled?: boolean };
+  };
   /** Wave 16 — persisted Session records */
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
