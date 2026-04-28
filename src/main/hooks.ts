@@ -30,6 +30,7 @@ import {
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
 import { tapPreToolResearch } from './hooksPreToolResearchTap';
+import { tapRankerRead } from './hooksRankerReadTap';
 import {
   handleSessionEnd,
   handleSessionStart,
@@ -283,6 +284,7 @@ function runHookTaps(payload: HookPayload): void {
   tapSubagentTracker(payload);
   tapPreToolResearch(payload);
   tapGraphUsage(payload);
+  tapRankerRead(payload);
 }
 
 function evictOrphanedSessions(): void {

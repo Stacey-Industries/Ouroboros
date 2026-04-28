@@ -2,18 +2,16 @@ import { createHash, randomUUID } from 'crypto';
 
 import log from '../logger';
 import { emitDecisionsForPacket } from './contextPacketBuilderDecisions';
-import { buildFilePayload } from './contextPacketBuilderHelpers';
 import { extractGoalKeywords } from './contextPacketBuilderKeywords';
 import { injectPinnedContext } from './contextPacketBuilderPins';
+import { buildBudgetSummary, getModelBudgets } from './contextPacketBuilderSupport';
 import {
-  buildBudgetSummary,
-  DEFAULT_MAX_BYTES,
-  DEFAULT_TIER_BUDGET,
-  getFileTier,
-  getModelBudgets,
-} from './contextPacketBuilderSupport';
+  type BuildFilesOptions,
+  buildPacketFiles,
+  type PacketBudget,
+} from './contextPacketBuilderTiers';
+import { recordRankerSelection } from './contextRankerTelemetry';
 import { rerankRankedFiles } from './contextReranker';
-import { type ContextFileSnapshot } from './contextSelectionSupport';
 import { type ContextSelectionResult, selectContextFiles } from './contextSelector';
 import type { RepoIndexSnapshot } from './repoIndexer';
 import type {
@@ -175,137 +173,48 @@ async function enrichPacketWithContextLayer(
   return packet;
 }
 
-type OmittedCandidates = ContextPacket['omittedCandidates'];
-type PacketBudget = ReturnType<typeof buildBudgetSummary>;
-
-interface BuildFilesOptions {
-  selection: ContextSelectionResult;
-  maxFiles: number;
-  maxSnippetsPerFile: number;
-  budget: PacketBudget;
-  cache?: Map<string, ContextFileSnapshot>;
-  fullFileLineLimit?: number;
-  targetedSnippetLineLimit?: number;
-  userSelectedRanges?: import('../../shared/types/orchestrationDomain').UserSelectedFileRange[];
-}
-
-function omitOverBudget(
-  filePath: string,
-  maxFiles: number,
+function resolveFilesOpts(
+  request: TaskRequest,
+  selection: ContextSelectionResult,
   budget: PacketBudget,
-  omitted: OmittedCandidates,
-): void {
-  omitted.push({ filePath, reason: 'Excluded after ranking because maxFiles budget was reached' });
-  budget.droppedContentNotes.push(`Skipped ${filePath} because maxFiles=${maxFiles} was reached`);
-}
-
-function omitNoSnippets(filePath: string, budget: PacketBudget, omitted: OmittedCandidates): void {
-  omitted.push({ filePath, reason: 'All snippets were omitted by packet budgeting rules' });
-  budget.droppedContentNotes.push(`Omitted ${filePath} because no snippets fit within the budget`);
-}
-
-/** Build a scoped budget that caps byte usage at the given ceiling. */
-function scopedBudget(parent: PacketBudget, maxBytes: number): PacketBudget {
+): BuildFilesOptions {
+  const mb = getModelBudgets('');
   return {
-    estimatedBytes: parent.estimatedBytes,
-    estimatedTokens: parent.estimatedTokens,
-    byteLimit: Math.min(maxBytes, parent.byteLimit ?? maxBytes),
-    tokenLimit: parent.tokenLimit,
-    droppedContentNotes: parent.droppedContentNotes,
-  };
-}
-
-interface BuildTierResult {
-  files: RankedContextFile[];
-  omittedCandidates: OmittedCandidates;
-  bytesUsed: number;
-}
-
-async function buildFilesForGroup(
-  rankedFiles: RankedContextFile[],
-  opts: BuildFilesOptions,
-  tierBudget: PacketBudget,
-  currentFiles: RankedContextFile[],
-): Promise<BuildTierResult> {
-  const { maxFiles, maxSnippetsPerFile, cache } = opts;
-  const files: RankedContextFile[] = [];
-  const omittedCandidates: OmittedCandidates = [];
-  const bytesBefore = tierBudget.estimatedBytes;
-  for (const rankedFile of rankedFiles) {
-    if (currentFiles.length + files.length >= maxFiles) {
-      omitOverBudget(rankedFile.filePath, maxFiles, tierBudget, omittedCandidates);
-      continue;
-    }
-    const filePayload = await buildFilePayload({
-      rankedFile,
-      liveIdeState: opts.selection.liveIdeState,
-      maxSnippetsPerFile,
-      budget: tierBudget,
-      cache,
-      fullFileLineLimit: opts.fullFileLineLimit,
-      targetedSnippetLineLimit: opts.targetedSnippetLineLimit,
-      userSelectedRanges: opts.userSelectedRanges,
-    });
-    if (!filePayload) {
-      omitNoSnippets(rankedFile.filePath, tierBudget, omittedCandidates);
-      continue;
-    }
-    files.push(filePayload);
-  }
-  return { files, omittedCandidates, bytesUsed: tierBudget.estimatedBytes - bytesBefore };
-}
-
-async function buildPacketFiles(
-  opts: BuildFilesOptions,
-): Promise<{ files: RankedContextFile[]; omittedCandidates: OmittedCandidates }> {
-  const { selection, budget } = opts;
-  const totalByteBudget = budget.byteLimit ?? DEFAULT_MAX_BYTES;
-  const tier1Cap = Math.floor(totalByteBudget * DEFAULT_TIER_BUDGET.tier1MaxPercent);
-  const tier1Files = selection.rankedFiles.filter((f) => getFileTier(f) === 1);
-  const otherFiles = selection.rankedFiles.filter((f) => getFileTier(f) !== 1);
-  const tier1Budget = scopedBudget(budget, budget.estimatedBytes + tier1Cap);
-  const tier1Result = await buildFilesForGroup(tier1Files, opts, tier1Budget, []);
-  // Sync parent budget with tier1 consumption
-  budget.estimatedBytes = tier1Budget.estimatedBytes;
-  budget.estimatedTokens = tier1Budget.estimatedTokens;
-  const otherResult = await buildFilesForGroup(otherFiles, opts, budget, tier1Result.files);
-  budget.tierAllocation = { tier1: tier1Result.bytesUsed, tier2Plus: otherResult.bytesUsed };
-  const omittedCandidates = [...selection.omittedCandidates, ...tier1Result.omittedCandidates, ...otherResult.omittedCandidates];
-  return { files: [...tier1Result.files, ...otherResult.files], omittedCandidates };
-}
-
-type ResolveFilesOptionsInput = { request: TaskRequest; modelBudgets: ReturnType<typeof getModelBudgets>; budget: PacketBudget; selection: ContextSelectionResult; snapshotCache: Map<string, ContextFileSnapshot> };
-
-function resolveFilesOptions({ request, modelBudgets, budget, selection, snapshotCache }: ResolveFilesOptionsInput): BuildFilesOptions {
-  return {
-    selection, budget,
-    maxFiles: request.budget?.maxFiles ?? modelBudgets.maxFiles,
-    maxSnippetsPerFile: request.budget?.maxSnippetsPerFile ?? modelBudgets.maxSnippetsPerFile,
-    cache: snapshotCache,
-    fullFileLineLimit: modelBudgets.fullFileLineLimit,
-    targetedSnippetLineLimit: modelBudgets.targetedSnippetLineLimit,
+    selection,
+    budget,
+    cache: new Map(Object.entries(selection.snapshots)),
+    maxFiles: request.budget?.maxFiles ?? mb.maxFiles,
+    maxSnippetsPerFile: request.budget?.maxSnippetsPerFile ?? mb.maxSnippetsPerFile,
+    fullFileLineLimit: mb.fullFileLineLimit,
+    targetedSnippetLineLimit: mb.targetedSnippetLineLimit,
     userSelectedRanges: request.contextSelection?.userSelectedRanges,
   };
 }
 
-type SelectAndBuildInput = { request: TaskRequest; repoFacts: RepoFacts; liveIdeState?: LiveIdeState; model?: string };
-
-type SelectAndBuildResult = { selection: ContextSelectionResult; files: RankedContextFile[]; omittedCandidates: OmittedCandidates; budget: PacketBudget };
-
-async function selectAndBuildFiles(input: SelectAndBuildInput): Promise<SelectAndBuildResult> {
-  const modelBudgets = getModelBudgets(input.model ?? '');
+async function selectAndBuildFiles(input: {
+  request: TaskRequest;
+  repoFacts: RepoFacts;
+  liveIdeState?: LiveIdeState;
+  model?: string;
+}): Promise<{
+  selection: ContextSelectionResult;
+  files: RankedContextFile[];
+  omittedCandidates: ContextPacket['omittedCandidates'];
+  budget: PacketBudget;
+}> {
+  const { request } = input;
+  const mb = getModelBudgets(input.model ?? '');
   const rawSelection = await selectContextFiles(input);
   const selection: ContextSelectionResult = {
     ...rawSelection,
-    rankedFiles: await rerankRankedFiles(input.request.goal, rawSelection.rankedFiles),
+    rankedFiles: await rerankRankedFiles(request.goal, rawSelection.rankedFiles),
   };
-  const snapshotCache = new Map(Object.entries(selection.snapshots));
   const budget = buildBudgetSummary(
-    input.request.budget?.maxBytes ?? modelBudgets.maxBytes,
-    input.request.budget?.maxTokens ?? modelBudgets.maxTokens,
+    request.budget?.maxBytes ?? mb.maxBytes,
+    request.budget?.maxTokens ?? mb.maxTokens,
   );
   const { files, omittedCandidates } = await buildPacketFiles(
-    resolveFilesOptions({ request: input.request, modelBudgets, budget, selection, snapshotCache }),
+    resolveFilesOpts(request, selection, budget),
   );
   return { selection, files, omittedCandidates, budget };
 }
@@ -325,6 +234,14 @@ async function buildFullContextPacket(options: {
   const traceId = options.traceId ?? randomUUID();
   const { selection, files, omittedCandidates, budget } = await selectAndBuildFiles(options);
   emitDecisionsForPacket(traceId, selection, files);
+  // Wave 53b Phase B — observe post-rerank output; recordRankerSelection never throws.
+  if (options.sessionId)
+    recordRankerSelection({
+      sessionId: options.sessionId,
+      workspaceRoot: options.request.workspaceRoots[0] ?? '',
+      files: selection.rankedFiles,
+      totalFiles: selection.rankedFiles.length + selection.omittedCandidates.length,
+    });
   let packet: ContextPacket = {
     version: 1,
     id: randomUUID(),

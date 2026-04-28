@@ -21,6 +21,7 @@ import type { HookDecision } from './hooks/hookDecision';
 import { evaluatePreToolUse as warnTestSuite } from './hooks/warnFullTestSuite';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat';
 import log from './logger';
+import { flushSession } from './orchestration/contextRankerTelemetry';
 import { trackSessionEnd } from './router/qualitySignalCollector';
 
 // ─── PreToolUse enforcement (Wave 50 Phase B) ────────────────────────────────
@@ -94,6 +95,8 @@ export function handleSessionStart(payload: HookPayload): void {
 
 export function handleSessionEnd(payload: HookPayload): void {
   dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {});
+  // Wave 53b Phase B — flush ranker hit-rate summary for this session.
+  flushSession(payload.sessionId);
 }
 
 export function handleSessionStop(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
