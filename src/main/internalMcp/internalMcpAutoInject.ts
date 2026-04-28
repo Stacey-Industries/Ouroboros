@@ -97,7 +97,10 @@ function buildOuroborosEntry(
 }
 
 /**
- * @deprecated UNWIRED — never called from main.ts or any startup path. See index.ts for details.
+ * Upserts `mcpServers.ouroboros` into a project's `.claude/settings.json`.
+ * Wired into `main.ts` startup. Wave 51 added the `transport`/
+ * `stdioTransportPath` options so callers can opt into the stdio adapter
+ * shape (`{command, args}`) instead of the legacy SSE shape (`{url}`).
  */
 export async function injectIntoProjectSettings(
   projectRoot: string,

@@ -212,7 +212,11 @@ function createRequestHandler(
 }
 
 /**
- * @deprecated UNWIRED — never called from main.ts or any startup path. See index.ts for details.
+ * Start the internal MCP HTTP+SSE server. Wired into `main.ts` startup
+ * (gated by `internalMcpEnabled`, default true). Wave 51 added a stdio
+ * transport adapter (`internalMcpStdioTransport.ts`) that forwards stdio
+ * JSON-RPC to the same `/message` endpoint this server exposes — both
+ * transports share the tool surface defined by `getActiveTools()`.
  */
 export async function startInternalMcpServer(
   options: InternalMcpServerOptions,

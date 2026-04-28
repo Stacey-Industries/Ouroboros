@@ -657,4 +657,4 @@ Each call to `buildScopedMcpConfig` appends a record to `~/.ouroboros/telemetry/
 
 The rollup script `npx tsx scripts/measure-mcp-token-cost.ts` reads this stream, splits by routing decision, and emits a per-week markdown table of median + p25/p75 plus the 5 largest direct-inject spawns. Run it post-soak to drive the `routeInternalMcp` default flip — see `roadmap/session-handoff.md` "Wave 51 follow-ups" for the protocol.
 
-For the deeper design context (option matrix, paper-spike rationale, phase commits) see `roadmap/wave-51-plan.md`.
+For the deeper design context (option matrix, paper-spike rationale, phase commits) see `roadmap/wave-51-plan.md` and `roadmap/wave-51-decision.md`. For operator-facing configuration, telemetry reading, and rollback, see `docs/codemode-internalmcp-routing.md`.
