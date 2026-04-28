@@ -49,8 +49,15 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
     'Access-Control-Allow-Origin': '*',
   });
 
-  // Send initialized notification immediately
-  res.write('data: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n');
+  // Wave 53f: Per the MCP 2024-11-05 HTTP+SSE transport spec, the first SSE
+  // message must be an `endpoint` event announcing the URL where the client
+  // POSTs JSON-RPC messages. Without it, strict clients (Claude Code's MCP
+  // implementation included) cannot discover the message-write URL and
+  // refuse to register tools. Pre-53f the handler instead wrote a
+  // `notifications/initialized` payload, which is a *client → server*
+  // notification per the spec — the wrong-direction message caused strict
+  // clients to drop the connection. See roadmap/wave-53f-plan.md.
+  res.write('event: endpoint\ndata: /message\n\n');
 
   // Heartbeat every 30 seconds to keep the connection alive
   const heartbeat = setInterval(() => {
