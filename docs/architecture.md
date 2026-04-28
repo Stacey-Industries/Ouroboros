@@ -374,6 +374,10 @@ Claude Code Hook Script
                                 └─ AgentMonitorManager, AgentChatWorkspace
 ```
 
+#### Deterministic enforcement hooks (Wave 50)
+
+A subset of PreToolUse events runs through `runPreToolEnforcement` in `src/main/hooksSessionHandlers.ts` before reaching the renderer. The orchestrator runs four evaluators in order (`blockSecretWrites`, `blockLockfileEdits`, `blockMinifiedOperations`, `warnFullTestSuite`); the first non-pass decision wins. Deny decisions short-circuit the tool call at the harness layer with a prescriptive message; warn decisions are logged. Each evaluator gates on the `hooks.enforcedRules` config array. See `docs/hook-migration.md` for the rule-to-hook map, rollback path, and how to escalate a warning to a block.
+
 ### Background Job Queue (#103)
 
 ```

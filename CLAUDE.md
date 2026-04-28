@@ -90,6 +90,7 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 - `docs/build.md` — Build tooling, Vite config, Monaco workers, path aliases, bundle analysis
 - `docs/chat-shell.md` — Chat-only shell (Wave 42+), workbench variant (Wave 46), material theming (Wave 45)
 - `docs/claude-md-lifecycle.md` — CLAUDE.md generation, grooming, and organic growth
+- `docs/hook-migration.md` — rule-to-hook conversion, rollback, and escalation
 - `ai/vision.md` — Product vision, design north stars
 - `ai/deferred.md` — Remaining unimplemented features, prioritized by area
 

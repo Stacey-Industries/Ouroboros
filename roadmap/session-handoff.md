@@ -17,6 +17,15 @@ These items should be evaluated after Wave 47 has been running in production for
 
 ---
 
+## Wave 50 follow-ups
+
+- Original rule files at `~/.claude/rules/init-safety.md` and `~/.claude/rules/project-claude-md-template.md` remain in place pending one wave of slash-command soak. Delete after Wave 51 confirms `/init-safety` and `/claudemd` invocations are clean.
+- Project-level rules (9 files in `.claude/rules/`) classified but not converted this wave — see `roadmap/wave-50-rule-classification.md`. A future wave can convert any flagged as `hook` candidates.
+- Re-run `npx tsx scripts/analyze-graph-adherence.ts` quarterly. Activate `hooks.enforceGraphFirst` if adherence drops below 70%.
+- `warnFullTestSuite` is IDE-log-only (the agent doesn't see the warning). To make it agent-visible, surface the warn in `assets/hooks/pre_tool_use.mjs` stdout output. See `docs/hook-migration.md` for the change shape.
+
+---
+
 ## Previous state (Wave 40 handoff, still accurate for baseline)
 
 ---
