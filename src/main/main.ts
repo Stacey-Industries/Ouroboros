@@ -45,6 +45,7 @@ import { initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
 import { getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
 import { registerHookEventsHandler } from './telemetry/hookEventsDrainHandler';
+import { registerSpawnTraceHandler } from './telemetry/spawnTraceDrainHandler';
 import { runParityQueueDrain } from './telemetry/telemetryDrainStartup';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
@@ -240,6 +241,7 @@ async function initTelemetryAndWriters(ud: string): Promise<void> {
   scheduleResearchCachePurge(ud);
   registerSpawnCostHandler();
   registerHookEventsHandler();
+  registerSpawnTraceHandler();
   await runParityQueueDrain();
 }
 

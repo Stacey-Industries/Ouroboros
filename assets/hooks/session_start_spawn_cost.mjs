@@ -1,8 +1,11 @@
-// session_start_spawn_cost.mjs — Wave 52 Phase C
+// session_start_spawn_cost.mjs — Wave 52 Phase C + Wave 53a Phase B
 //
 // SessionStart hook. Reads spawn metadata from the event payload delivered via
 // stdin, computes MCP cost fields from the workspace's .claude/settings.json,
-// and enqueues a spawn-cost record for the IDE to drain on next launch.
+// and enqueues:
+//   1. a spawn-cost record (Wave 52) for MCP routing telemetry.
+//   2. a spawn-trace record (Wave 53a) for orchestration_traces parity with
+//      the IDE-side spawn trace emitted in claudeStreamJsonRunner.ts.
 //
 // Hook contract:
 //   - Input: JSON object on stdin matching Claude Code's SessionStart event.
@@ -16,10 +19,24 @@
 //   codemodeEnabled — false; hook can't inspect IDE runtime state.
 //   ideSession — false; distinguishes hook-emitted from IDE-emitted records.
 //
-// Dedup: the drain handler reads the existing mcp-spawn-cost.jsonl and skips
-// any queued record whose sessionId already appears in it (internal sessions
-// emit from both the IDE side and this hook; the IDE-side record wins).
+// Dedup: the spawn-cost drain handler reads the existing mcp-spawn-cost.jsonl
+// and skips queued records whose sessionId already appears. The spawn-trace
+// drain handler dedupes against orchestration_traces by sessionId. Internal
+// sessions emit from both the IDE side and this hook; the IDE-side record
+// wins in both cases.
+//
+// ─── Schema mirror for spawn-trace surface ───────────────────────────────────
+// Drain handler: src/main/telemetry/spawnTraceDrainHandler.ts
+// Schema source: src/main/telemetry/spawnTraceSchema.ts
+// Record shape:  { sessionId: string, argv: string[], cwdHash: string, ts: number }
+// Schema version: 1
+// Notes:
+//   - argv is captured raw here; the drain handler applies the canonical
+//     redactArgv from traceBatcher.ts before enqueueing the trace.
+//   - cwdHash is SHA-256 of cwd, first 12 hex chars.
+// ─────────────────────────────────────────────────────────────────────────────
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -27,6 +44,9 @@ import { appendToTelemetryQueue } from './lib/telemetryQueueAppend.mjs';
 
 const SURFACE = 'spawn-cost';
 const SCHEMA_VERSION = 1;
+
+const SPAWN_TRACE_SURFACE = 'spawn-trace';
+const SPAWN_TRACE_SCHEMA_VERSION = 1;
 
 /** Read all stdin bytes, resolve with string. Never throws. */
 async function readStdin() {
@@ -64,6 +84,23 @@ function computeCostFields(servers) {
     tokenEstimate: Math.floor(mcpConfigBytes / 4),
     serversIncluded,
   };
+}
+
+/**
+ * Build the spawn-trace payload. argv is taken from the event payload if
+ * available, falling back to process.argv. Either way it is captured raw —
+ * the drain handler runs canonical redaction before persisting.
+ */
+function buildSpawnTracePayload(event) {
+  const sessionId = event.session_id || event.sessionId || 'unknown';
+  const cwd = event.cwd || process.cwd();
+  const cwdHash = createHash('sha256').update(cwd).digest('hex').slice(0, 12);
+  const argv = Array.isArray(event.argv)
+    ? event.argv.map(String)
+    : Array.isArray(event.launch_args)
+      ? event.launch_args.map(String)
+      : process.argv.slice();
+  return { sessionId, argv, cwdHash, ts: Date.now() };
 }
 
 /** Build the spawn-cost payload from the event and workspace. */
@@ -104,6 +141,26 @@ async function main() {
     const ok = appendToTelemetryQueue(SURFACE, SCHEMA_VERSION, payload);
     if (!ok) {
       process.stderr.write('[spawn-cost-hook] queue append failed\n');
+    }
+
+    // Spawn-trace append is isolated from the cost path — a trace failure
+    // must not cause the user-visible spawn-cost path to fail.
+    try {
+      const tracePayload = buildSpawnTracePayload(event);
+      const traceOk = appendToTelemetryQueue(
+        SPAWN_TRACE_SURFACE,
+        SPAWN_TRACE_SCHEMA_VERSION,
+        tracePayload,
+      );
+      if (!traceOk) {
+        process.stderr.write('[spawn-trace-hook] queue append failed\n');
+      }
+    } catch (traceErr) {
+      try {
+        process.stderr.write(`[spawn-trace-hook] error: ${traceErr?.message || traceErr}\n`);
+      } catch {
+        // stderr closed — silent.
+      }
     }
   } catch (err) {
     try {
