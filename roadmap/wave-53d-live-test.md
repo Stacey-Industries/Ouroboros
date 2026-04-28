@@ -110,6 +110,34 @@ The runtime is now functional. The remaining question is **does the agent reach 
 
 Append observations here, then finalize Wave 53d's Decision 9 with the Wave 54 verdict (Greenlit / Redesigned / Retired).
 
+## Wave 54 adoption smoke run (2026-04-28, post-v2.7.6)
+
+User asked a fresh Claude Code session: *"Use `trace_call_path` to find all callers of `injectIntoProjectSettings` in this codebase."*
+
+**The agent reported neither the healthy 14-tool surface nor the degraded 6-tool fallback was loaded in its tool list.** ToolSearch returned no matches for `trace_call_path` either. The agent correctly fell back to Grep per the routing rule's "if neither surface is available, the rule is inert" guidance, found the 2 production callers + 4 test callers, and **voluntarily surfaced the adoption-gap finding back to the orchestrator** in its response.
+
+### Strong positives at the agent-behavior layer
+
+- **Tool-availability detection works.** The agent checked its tool list and correctly identified the missing surface before attempting any call.
+- **Rule-driven fallback works.** With both surfaces missing, the agent picked Grep — not Glob, not Read — and got correct results.
+- **Self-aware reporting works.** Without prompting, the agent flagged the broader adoption-gap implication for Wave 53d/53e.
+
+### Negative finding — third bug layer (server-side spec compliance)
+
+The Wave 53e fix landed end-to-end at the *server* layer (curl JSON-RPC verification, all 4 representative tools return real content), but a fresh Claude Code session does NOT register the tools in its tool list. Investigation of `src/main/internalMcp/internalMcpServer.ts` reveals two MCP-spec violations in the SSE handler:
+
+1. **Wrong-direction notification.** The server's SSE handler at line 52–53 writes `data: {"jsonrpc":"2.0","method":"notifications/initialized"}\n\n` immediately on connection. Per MCP spec (any version including 2024-11-05), `notifications/initialized` is a *client→server* notification, not server→client. Strict clients reject it as a protocol violation.
+
+2. **Missing endpoint event.** Under the 2024-11-05 HTTP+SSE transport (which the server advertises via `protocolVersion: '2024-11-05'` in its `initialize` response), the SSE stream's first message must be `event: endpoint\ndata: <postUrl>\n\n` — that's how the client discovers the POST endpoint. The server skips this entirely.
+
+Both bugs together explain why curl works (curl uses the POST endpoint directly, doesn't depend on SSE handshake) but Claude Code does not (Claude Code's MCP client follows the SSE handshake and bails when it doesn't get an `endpoint` event AND receives a malformed `notifications/initialized` it didn't expect).
+
+### Verdict
+
+**Wave 54 cannot be greenlit yet** — adoption can't be evaluated when tools never reach agent sessions. But the agent-behavior signal is positive enough that the verdict is *not* Retired either. Wave 54 stays **PAUSED on Wave 53f** (server-side SSE handshake fix). Once Wave 53f ships and tools register in fresh sessions, this smoke can be re-run to actually evaluate adoption.
+
+Estimated Wave 53f scope: ~5 lines in `internalMcpServer.ts` plus a contract test that asserts the SSE response shape matches the 2024-11-05 spec. Sub-wave-sized; could ship as a small follow-up.
+
 ## What changes after restart
 
 The Phase C fix removes the `removeFromProjectSettings` call from `stopInternalMcp` (commit `ef80784`). On next IDE launch, `startInternalMcp` runs as before — it binds the SSE server on a random port and writes `mcpServers.ouroboros` into `.claude/settings.json` with that port. The difference is that on subsequent shutdowns, the entry is no longer cleaned. So:
