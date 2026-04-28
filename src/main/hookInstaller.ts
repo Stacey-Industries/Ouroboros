@@ -22,6 +22,7 @@ import path from 'path';
 
 import { getConfigValue } from './config';
 import { buildHookCommands } from './hookInstallerCommands';
+import { registerTelemetryHooksInSettings } from './hookInstallerSettings';
 import { registerStatusLineInSettings } from './hookInstallerStatusLine';
 import log from './logger';
 
@@ -282,6 +283,11 @@ async function syncHooksIntoSettings(hooksDir: string): Promise<void> {
     registerStatusLineInSettings(hooksDir);
   } catch (err) {
     log.warn('could not update settings.json:', err);
+  }
+  try {
+    registerTelemetryHooksInSettings(hooksDir);
+  } catch (err) {
+    log.warn('could not register telemetry hooks in settings.json:', err);
   }
 }
 
