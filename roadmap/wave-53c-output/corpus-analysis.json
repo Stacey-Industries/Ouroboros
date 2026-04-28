@@ -1,0 +1,323 @@
+{
+  "corpusStats": {
+    "sessionCount": 369,
+    "dateRangeStart": "2026-03-29T06:20:56.703Z",
+    "dateRangeEnd": "2026-04-28T16:15:24.986Z",
+    "sessionsPerWeekHistogram": {
+      "2026-W17": 45,
+      "2026-W15": 30,
+      "2026-W16": 113,
+      "2026-W13": 104,
+      "2026-W14": 77
+    }
+  },
+  "intentDistribution": {
+    "bug-fix": 154,
+    "feature": 71,
+    "refactor": 21,
+    "review": 31,
+    "meta-ux": 43,
+    "continuation": 0,
+    "other": 49
+  },
+  "intentXEditFailure": {
+    "bug-fix": {
+      "mean": 0.001331639375117636,
+      "median": 0,
+      "p90": 0,
+      "n": 154
+    },
+    "feature": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 71
+    },
+    "refactor": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 21
+    },
+    "review": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 31
+    },
+    "meta-ux": {
+      "mean": 0.0016611295681063121,
+      "median": 0,
+      "p90": 0,
+      "n": 43
+    },
+    "continuation": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 0
+    },
+    "other": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 49
+    }
+  },
+  "intentXGrepDepth": {
+    "bug-fix": {
+      "mean": 0.974025974025974,
+      "median": 0,
+      "p90": 3,
+      "n": 154
+    },
+    "feature": {
+      "mean": 0.30985915492957744,
+      "median": 0,
+      "p90": 1,
+      "n": 71
+    },
+    "refactor": {
+      "mean": 0.7619047619047619,
+      "median": 0,
+      "p90": 1,
+      "n": 21
+    },
+    "review": {
+      "mean": 1.935483870967742,
+      "median": 0,
+      "p90": 5,
+      "n": 31
+    },
+    "meta-ux": {
+      "mean": 1.0465116279069768,
+      "median": 0,
+      "p90": 4,
+      "n": 43
+    },
+    "continuation": {
+      "mean": 0,
+      "median": 0,
+      "p90": 0,
+      "n": 0
+    },
+    "other": {
+      "mean": 0.9183673469387755,
+      "median": 0,
+      "p90": 4,
+      "n": 49
+    }
+  },
+  "topPromptPatternsByBucket": {
+    "bug-fix": [
+      {
+        "pattern": "none",
+        "count": 78
+      },
+      {
+        "pattern": "Read",
+        "count": 38
+      },
+      {
+        "pattern": "Bash",
+        "count": 28
+      },
+      {
+        "pattern": "Grep",
+        "count": 6
+      },
+      {
+        "pattern": "Edit",
+        "count": 3
+      }
+    ],
+    "feature": [
+      {
+        "pattern": "none",
+        "count": 39
+      },
+      {
+        "pattern": "Read",
+        "count": 25
+      },
+      {
+        "pattern": "Bash",
+        "count": 5
+      },
+      {
+        "pattern": "WebFetch",
+        "count": 1
+      },
+      {
+        "pattern": "Agent",
+        "count": 1
+      }
+    ],
+    "refactor": [
+      {
+        "pattern": "none",
+        "count": 15
+      },
+      {
+        "pattern": "Read",
+        "count": 4
+      },
+      {
+        "pattern": "Bash",
+        "count": 2
+      }
+    ],
+    "review": [
+      {
+        "pattern": "Bash",
+        "count": 16
+      },
+      {
+        "pattern": "none",
+        "count": 8
+      },
+      {
+        "pattern": "Read",
+        "count": 2
+      },
+      {
+        "pattern": "TaskUpdate",
+        "count": 2
+      },
+      {
+        "pattern": "Edit",
+        "count": 2
+      }
+    ],
+    "meta-ux": [
+      {
+        "pattern": "none",
+        "count": 24
+      },
+      {
+        "pattern": "Read",
+        "count": 6
+      },
+      {
+        "pattern": "Grep",
+        "count": 4
+      },
+      {
+        "pattern": "Bash",
+        "count": 3
+      },
+      {
+        "pattern": "Edit",
+        "count": 2
+      }
+    ],
+    "continuation": [],
+    "other": [
+      {
+        "pattern": "none",
+        "count": 30
+      },
+      {
+        "pattern": "Read",
+        "count": 8
+      },
+      {
+        "pattern": "Bash",
+        "count": 8
+      },
+      {
+        "pattern": "Grep",
+        "count": 2
+      },
+      {
+        "pattern": "Edit",
+        "count": 1
+      }
+    ]
+  },
+  "filesTouchedTopK": [
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\main.ts",
+      "sessionCount": 15
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\config.ts",
+      "sessionCount": 14
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\hooks.ts",
+      "sessionCount": 14
+    },
+    {
+      "path": "C:\\Users\\coles\\.claude\\settings.json",
+      "sessionCount": 13
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\preload\\preloadSupplementalApis.ts",
+      "sessionCount": 12
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\package.json",
+      "sessionCount": 11
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\electron.vite.config.ts",
+      "sessionCount": 11
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\claudeUsagePoller.ts",
+      "sessionCount": 10
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\renderer\\components\\AgentChat\\useAgentChatWorkspace.ts",
+      "sessionCount": 10
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\configSchemaTail.ts",
+      "sessionCount": 10
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\renderer\\App.tsx",
+      "sessionCount": 10
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\ipc.ts",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Users\\coles\\.claude\\projects\\C--Web-App-Agent-IDE\\memory\\MEMORY.md",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\renderer\\components\\AgentChat\\ChatControlsBarSupport.ts",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\roadmap\\roadmap.md",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\renderer\\types\\electron-foundation.d.ts",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\.claude\\settings.json",
+      "sessionCount": 9
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\preload\\preload.ts",
+      "sessionCount": 8
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\src\\main\\hooksNet.ts",
+      "sessionCount": 8
+    },
+    {
+      "path": "C:\\Web App\\Agent IDE\\deferredbp.md",
+      "sessionCount": 7
+    }
+  ],
+  "sampleBiasNotes": [
+    "95/369 sessions (26%) contain at least one Edit attempt."
+  ]
+}
