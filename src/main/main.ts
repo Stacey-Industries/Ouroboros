@@ -15,7 +15,7 @@ import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
 // prettier-ignore
-import { buildInjectOptions, injectIntoProjectSettings, removeFromProjectSettings, startInternalMcpServer } from './internalMcp';
+import { buildInjectOptions, injectIntoProjectSettings, startInternalMcpServer } from './internalMcp';
 import { clearInternalMcpPort, setInternalMcpPort } from './internalMcp/internalMcpPortRegistry';
 // prettier-ignore
 import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
@@ -124,14 +124,10 @@ async function startInternalMcp(): Promise<void> {
 }
 
 async function stopInternalMcp(): Promise<void> {
-  const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
-  if (workspaceRoot) {
-    try {
-      await removeFromProjectSettings(workspaceRoot);
-    } catch (err) {
-      log.warn('[internal-mcp] failed to remove from settings:', err);
-    }
-  }
+  // Wave 53d: do NOT call removeFromProjectSettings here. Each startup upserts
+  // the mcpServers.ouroboros entry with the current port; leaving a stale entry
+  // between launches is harmless (next launch overwrites). Removing it here
+  // breaks external terminal Claude Code sessions that run with the IDE shut down.
   clearInternalMcpPort();
   if (internalMcpStop) {
     await internalMcpStop();
