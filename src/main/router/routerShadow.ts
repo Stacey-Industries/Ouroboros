@@ -22,6 +22,18 @@ interface ShadowHookEvent {
   sessionId: string;
   prompt?: string;
   cwd?: string;
+  /**
+   * True when called from the drain handler post-hoc rather than live at
+   * session time. Absent (or false) for live shadow records.
+   */
+  postHoc?: boolean;
+  /**
+   * SHA-256 prefix (12 hex chars) of the classifier weights file content
+   * used to make the routing decision. Set by the drain handler so analysis
+   * can split session-time vs drain-time records by weights snapshot.
+   * Absent for live shadow records.
+   */
+  weightsVersion?: string;
 }
 
 /* ── Logger (lazy singleton, same pattern as orchestrator.ts) ─────── */
@@ -99,6 +111,8 @@ export function shadowRouteHookEvent(event: ShadowHookEvent): void {
       interactionType: 'terminal_shadow',
       sessionId: event.sessionId,
       workspaceRoot: event.cwd,
+      postHoc: event.postHoc,
+      weightsVersion: event.weightsVersion,
     },
   });
 

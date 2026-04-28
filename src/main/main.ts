@@ -24,12 +24,12 @@ import log from './logger';
 import { performWillQuitShutdown } from './mainShutdown';
 // prettier-ignore
 import { bootstrapApp, bootstrapCrashReporter, bootstrapProcessHandlers, configureAutoUpdater, ensureSingleInstance, initCodebaseGraph, initEditProvenance, scheduleJsonlRetentionPurge, seedGithubTokenWithRetry, writeCrashLog } from './mainStartup';
+import { registerAllTelemetryDrainHandlers } from './mainTelemetryHandlers';
 import { startMcpHost, stopMcpHost } from './mcpHost/mcpHostProxy';
 import { buildApplicationMenu } from './menu';
 import { initDecisionWriter } from './orchestration/contextDecisionWriter';
 import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { killAllWarm } from './orchestration/providers/claudeWarmProcessManager';
-import { registerSpawnCostHandler } from './orchestration/providers/spawnCostDrainHandler';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 // prettier-ignore
 import { cleanupPerfSubscriber, clearPerfSubscribers, initializePerfMetrics, markStartup, startPerfMetrics as startManagedPerfMetrics, stopPerfMetrics as stopManagedPerfMetrics } from './perfMetrics';
@@ -44,8 +44,6 @@ import { loadRetrainedWeightsIfAvailable, observeDatasetGrowth } from './router/
 import { initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
 import { getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
-import { registerHookEventsHandler } from './telemetry/hookEventsDrainHandler';
-import { registerSpawnTraceHandler } from './telemetry/spawnTraceDrainHandler';
 import { runParityQueueDrain } from './telemetry/telemetryDrainStartup';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
@@ -239,9 +237,7 @@ async function initTelemetryAndWriters(ud: string): Promise<void> {
   initEditProvenance(ud);
   scheduleJsonlRetentionPurge(ud);
   scheduleResearchCachePurge(ud);
-  registerSpawnCostHandler();
-  registerHookEventsHandler();
-  registerSpawnTraceHandler();
+  registerAllTelemetryDrainHandlers();
   await runParityQueueDrain();
 }
 

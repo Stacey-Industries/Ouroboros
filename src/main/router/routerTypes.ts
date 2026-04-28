@@ -167,6 +167,17 @@ export interface EnrichedRoutingLogEntry extends RoutingLogEntry {
   promptFull: string;
   /** What each layer WOULD have picked, regardless of which layer won. */
   counterfactual: CounterfactualResult;
+  /**
+   * True when the decision was made post-hoc by the drain handler rather than
+   * live at session time. Absent (or false) for live records.
+   */
+  postHoc?: boolean;
+  /**
+   * SHA-256 prefix (12 hex chars) of the classifier weights file used at
+   * decision time. Allows analysis to split records by weights snapshot.
+   * Absent for live records.
+   */
+  weightsVersion?: string;
 }
 
 /** Options passed to the enriched logger from call sites. */
@@ -174,6 +185,17 @@ export interface EnrichedLogOpts {
   sessionId?: string;
   interactionType?: InteractionType;
   workspaceRoot?: string;
+  /**
+   * True when the decision was made post-hoc by the drain handler rather than
+   * live at session time. Absent (or false) for live records.
+   */
+  postHoc?: boolean;
+  /**
+   * SHA-256 prefix (12 hex chars) of the classifier weights file used at
+   * decision time. Set by the drain handler so corpus analysis can split
+   * session-time vs drain-time decisions by weights snapshot. Absent for live.
+   */
+  weightsVersion?: string;
 }
 
 /* ── Config types ─────────────────────────────────────────────────── */

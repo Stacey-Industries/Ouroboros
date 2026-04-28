@@ -88,7 +88,7 @@ function buildEnrichedEntry(args: BuildEntryArgs): EnrichedRoutingLogEntry {
   const { prompt, decision, traceId, counterfactual, opts } = args;
   const interactionType: InteractionType = opts?.interactionType ?? 'unknown';
 
-  return {
+  const entry: EnrichedRoutingLogEntry = {
     timestamp: new Date().toISOString(),
     promptPreview: prompt.substring(0, 100),
     promptFull: prompt.substring(0, PROMPT_FULL_MAX),
@@ -109,6 +109,11 @@ function buildEnrichedEntry(args: BuildEntryArgs): EnrichedRoutingLogEntry {
     override: null,
     counterfactual,
   };
+
+  if (opts?.postHoc !== undefined) entry.postHoc = opts.postHoc;
+  if (opts?.weightsVersion !== undefined) entry.weightsVersion = opts.weightsVersion;
+
+  return entry;
 }
 
 /* ── Actual layer result builders ────────────────────────────────────── */

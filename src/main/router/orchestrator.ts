@@ -26,24 +26,47 @@ function modelForTier(tier: ModelTier): string {
   return TIER_TO_MODEL.SONNET;
 }
 
-/* ── Sync routing (Layer 1 only) ──────────────────────────────────── */
+/* ── Sync routing (Layer 1 + Layer 2, optional Layer 3) ──────────── */
+
+/** Options for routePromptSync. */
+export interface RouteOptions {
+  /**
+   * When true, skip Layer-3 (LLM fallback) and return whatever Layer-1 +
+   * Layer-2 produce. Useful for drain/post-hoc contexts where async network
+   * calls are undesirable. Layer-3 is currently not wired so this is a
+   * forward-compat guard. Live shadow path omits this flag (default false).
+   */
+  skipLayer3?: boolean;
+}
 
 /**
- * Route a prompt using only the deterministic rule engine.
- * Returns a decision, or null if the rule engine has no match and
- * higher layers are needed (which aren't wired yet).
+ * Guard check run before layer dispatch. Returns a short-circuit decision
+ * when the config mandates one, or null to proceed to layer evaluation.
+ */
+function checkPreConditions(config: RouterSettings): RoutingDecision | null | 'proceed' {
+  if (!config.enabled) return null;
+  if (config.paranoidMode) return buildDecision('OPUS', 'default', 1);
+  if (!config.layer1Enabled) return null;
+  return 'proceed';
+}
+
+/**
+ * Route a prompt through Layer-1 (rules) and Layer-2 (classifier).
+ * When skipLayer3 is false and both layers decline, Layer-3 (LLM fallback)
+ * would fire — it is not yet wired, so the function currently returns null
+ * in that case regardless of the flag.
+ *
+ * Returns a decision, or null if all layers decline.
  */
 export function routePromptSync(
   prompt: string,
   previousAssistantMessage?: string,
   settings?: RouterSettings,
+  opts?: RouteOptions,
 ): RoutingDecision | null {
   const config = settings ?? DEFAULT_ROUTER_SETTINGS;
-
-  if (!config.enabled) return null;
-  if (config.paranoidMode) return buildDecision('OPUS', 'default', 1);
-
-  if (!config.layer1Enabled) return null;
+  const pre = checkPreConditions(config);
+  if (pre !== 'proceed') return pre;
 
   const start = performance.now();
   const ruleResult = routeByRules(prompt, previousAssistantMessage);
@@ -67,7 +90,9 @@ export function routePromptSync(
   }
 
   // Layer 3 (LLM fallback) not yet wired — requires async path.
-  // Fall through to null — caller uses existing model resolution.
+  // When wired, the call site will be: `if (!opts?.skipLayer3) return runLLM(...)`.
+  // Drain handler passes skipLayer3:true to keep drain sync; live path omits it.
+  if (opts?.skipLayer3 === true) return null;
   return null;
 }
 
