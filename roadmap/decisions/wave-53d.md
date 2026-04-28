@@ -102,14 +102,21 @@ This wave fixes wiring on existing infrastructure rather than introducing new ar
 
 ---
 
-## Decision 9 (PENDING USER): Wave 54 verdict after post-restart adoption observation
+## Decision 9: Wave 54 stays PAUSED — second runtime bug surfaced by the smoke
 
-**Context:** The wave's plan said Phase E would deliver an explicit Wave 54 status (Greenlit / Redesigned / Retired) based on Phase D's adoption observations. Phase D's live observations happen after this wrap-up commit.
+**Context:** The orchestrator ran the post-restart smoke (2026-04-28, immediately after v2.7.5 shipped). Server is reachable, auto-inject lifecycle is fixed, 14 graph tools are registered and enumerable via JSON-RPC. **But every tool fails at runtime** with `"Cannot read properties of undefined (reading '<methodName>')"` — the handler closures captured a broken `GraphToolContext` at tool-registration time. Likely cause: a startup-order race where the internalMcp server registers tools before the graph controller has finished initializing, or `getGraphToolContext()` returns a partially-initialized stub that's truthy enough to choose the graph-tools path but missing its inner service references.
 
-**Status:** PENDING. The user runs the post-restart manual checklist in `roadmap/wave-53d-live-test.md`, appends adoption observations, then either:
+**Pick:** Wave 54 stays **PAUSED**. Wave 54's adoption gating cannot be evaluated while the existing graph tools return errors on every call.
 
-- **Greenlit:** Tools reach the agent AND the agent reaches for them on graph-shaped queries with useful results. Wave 54 (TS semantic operations) can ship its plan as written.
-- **Redesigned:** Tools reach the agent but the agent rarely picks them despite the routing rule. Wave 54's exposure path needs work (better descriptions, surface visibility, training-data alignment) before any new tools ship — Wave 54's spec gets revised.
-- **Retired:** Tools reach the agent and the agent ignores them entirely. Wave 54's value proposition collapses; close the wave.
+**Rationale:** The corpus's 0% adoption finding now has a clearer explanation than "agent ignores tools." Agents that received tools (via either file-injection or per-spawn `--mcp-config`) got errors back from every call. After enough error returns the agent learns to default to Grep/Read. Wave 53d closed the lifecycle hole — Wave 54 cannot run until the runtime hole is closed too.
 
-The user's appended observations on `roadmap/wave-53d-live-test.md` are the artifact that resolves this decision. When that lands, Decision 9 is finalized in a follow-up commit (or as part of the next wave's kickoff).
+This is *not* a third "two paths" finding from Phase B re-emerging — it's a third issue layer. Phase B identified the auto-inject lifecycle (file-injection path) as broken. Phase B also flagged that the per-spawn `--mcp-config` path was "intact." This smoke shows that even the intact-by-existence path was returning broken tools. The runtime context wiring is broken regardless of which injection path delivered the tools.
+
+**Consequences:**
+
+- A new wave (Wave 53e — graph-context runtime wiring) is the prerequisite to Wave 54. Scope: diagnose why `GraphToolContext` is incomplete at registration time, fix it (likely either delay tool registration until graph is ready, or capture context lazily per-call rather than at closure formation, or have `getGraphToolContext()` strictly return null until the graph is fully initialized so the fallback path is correctly chosen).
+- Wave 54's plan stays in `roadmap/wave-54-plan.md` with status BLOCKED. Blocker now reads: **Wave 53e graph-context runtime wiring fix.**
+- The "tools registered but errors at call time" pattern is exactly the kind of bug that `~/.claude/rules/debug-before-fix.md` was written for — instrumenting `getActiveTools()` and `createGraphMcpTools(context)` to log when each is called and what `context` contains will pin down the race / partial-init.
+- The smoke artifact (`roadmap/wave-53d-live-test.md`) is the durable evidence — JSON-RPC outputs preserved with exact error messages so Wave 53e's diagnostician can reproduce without re-running the smoke.
+
+**Decision 9 finalized:** Wave 54 = PAUSED on Wave 53e. Wave 53e to be opened next.

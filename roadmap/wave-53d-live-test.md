@@ -38,6 +38,51 @@ Only the `hooks` block is present. No `mcpServers` entry. This matches the Phase
 
 ---
 
+## Live smoke results (2026-04-28, post-restart)
+
+**Method:** orchestrator ran the smoke checklist directly via curl + JSON-RPC against the live MCP server, since this Claude Code session's tool list was frozen pre-fix and could not be refreshed mid-session.
+
+### What works ✅
+
+1. **`.claude/settings.json` has the auto-inject entry.** Confirmed: `mcpServers.ouroboros = {"url": "http://127.0.0.1:62683/sse"}`. Wave 53d's lifecycle fix is doing its job — the entry stays after IDE shutdown and the new launch upserted with the new random port (62683).
+2. **Server is reachable.** `GET http://127.0.0.1:62683/sse` returns HTTP 200 (streaming, expectedly times out at 3s — that's an SSE long-poll, not a failure).
+3. **Tools are registered and enumerable.** `POST /message` with `tools/list` returns 14 graph-aware tools, exactly matching the healthy-graph surface from `src/main/codebaseGraph/mcpToolHandlers.ts`:
+   - `index_repository`, `list_projects`, `delete_project`, `index_status`, `get_graph_schema`, `ingest_traces` (admin)
+   - `search_graph`, `get_architecture`, `search_code`, `get_code_snippet` (search)
+   - `trace_call_path`, `detect_changes`, `query_graph`, `manage_adr` (query)
+4. **The routing rule names match reality** for the healthy-graph case. (Wave 53d Phase A's documentation update was correct.)
+
+### What's broken ❌ — new bug surfaced by the smoke
+
+**Every single tool errors at runtime** with the same shape:
+
+| Tool | Error |
+|---|---|
+| `index_status` | `Cannot read properties of undefined (reading 'getProject')` |
+| `list_projects` | `Cannot read properties of undefined (reading 'listProjects')` |
+| `get_graph_schema` | `Cannot read properties of undefined (reading 'getGraphSchema')` |
+| `get_architecture` | `Cannot read properties of undefined (reading 'getArchitecture')` |
+| `search_graph` | `Cannot read properties of undefined (reading 'searchNodes')` |
+| `detect_changes` | `Cannot read properties of undefined (reading 'detectChanges')` |
+
+The pattern is unambiguous: handler closures captured a **broken `GraphToolContext` at tool-registration time**. The `context` object exists (otherwise we'd see a different error shape), but its inner service references — `queryEngine`, `cypherEngine`, the graph controller methods — are undefined at the moment they're called.
+
+This is consistent with a startup-order race: the internalMcp server registers tools (calling `getActiveTools()` → which calls `getGraphToolContext()`) **before** the graph controller has finished initializing. Per the IDE log, `[system2] controller initialized for Agent IDE` fired at `15:51:38.939`, ~1 second into startup. If the MCP server's tool registration happened earlier in that second, the context it captured was a stub that never got filled in.
+
+A simpler hypothesis: `getGraphToolContext()` was returning a partially-initialized object (truthy enough to choose the graph path over the fallback path, but missing the actual service references), so registration picked the graph tools but the closures were broken from the start.
+
+**This is a separate bug from Wave 53d's auto-inject fix.** Wave 53d closed the file-injection lifecycle hole. This new bug is in the runtime handler wiring — the tools reach agents but every call returns an error.
+
+### Implication for adoption
+
+Even with Wave 53d's wiring repaired, **agents calling these tools get nothing back but errors**. That fully explains the corpus's 0% adoption: the agent likely tried these tools at least occasionally over the corpus window, got errors, and learned to default to Grep/Read. Or the per-spawn `--mcp-config` path that Phase B flagged as "intact" was actually feeding broken tools the whole time.
+
+Either way, this is a downstream wiring bug that has to be fixed before any meaningful adoption measurement is possible.
+
+### Adoption observations
+
+Skipped — there's nothing to observe at the agent level until the runtime errors are fixed. Once the graph context is wired correctly, repeat the smoke from a fresh Claude Code session and ask it to run `trace_call_path` against a real symbol.
+
 ## What changes after restart
 
 The Phase C fix removes the `removeFromProjectSettings` call from `stopInternalMcp` (commit `ef80784`). On next IDE launch, `startInternalMcp` runs as before — it binds the SSE server on a random port and writes `mcpServers.ouroboros` into `.claude/settings.json` with that port. The difference is that on subsequent shutdowns, the entry is no longer cleaned. So:
