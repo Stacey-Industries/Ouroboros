@@ -159,6 +159,10 @@ export interface AppConfig {
   internalMcpScope?: 'always' | 'task-gated' | 'never';
   /** Wave 48 Phase D — use --mcp-config + --strict-mcp-config on each spawn (default true). */
   internalMcpUseStrictConfig?: boolean;
+  /** Wave 51 Phase B — internalMcp transport selector ('sse' default | 'stdio'). */
+  internalMcp?: { transport?: 'sse' | 'stdio' };
+  /** Wave 51 Phase B — CodeMode launch wiring + routing policy flag (Phase C). */
+  codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
   /** Wave 3B feature flag — route PTY through PtyHost utility process */
   usePtyHost: boolean;
   /** Wave 3B feature flag — route extensions through ExtensionHost utility process */

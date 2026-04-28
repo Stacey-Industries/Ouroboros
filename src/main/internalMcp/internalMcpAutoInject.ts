@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import log from '../logger';
+import type { InternalMcpTransport } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
 // Path helper
@@ -72,12 +73,36 @@ async function readSettings(filePath: string): Promise<SettingsRecord | null> {
 // injectIntoProjectSettings
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Transport-aware ouroboros entry builder (Wave 51 Phase B)
+// ---------------------------------------------------------------------------
+
+export interface InjectOptions {
+  transport?: InternalMcpTransport;
+  /** Absolute path to the built stdio transport script. Required when transport === 'stdio'. */
+  stdioTransportPath?: string;
+}
+
+function buildOuroborosEntry(
+  serverPort: number,
+  opts: InjectOptions,
+): { url?: string; command?: string; args?: string[] } {
+  if (opts.transport === 'stdio') {
+    if (!opts.stdioTransportPath) {
+      throw new Error('stdio transport requires stdioTransportPath');
+    }
+    return { command: 'node', args: [opts.stdioTransportPath, String(serverPort)] };
+  }
+  return { url: `http://127.0.0.1:${serverPort}/sse` };
+}
+
 /**
  * @deprecated UNWIRED — never called from main.ts or any startup path. See index.ts for details.
  */
 export async function injectIntoProjectSettings(
   projectRoot: string,
   serverPort: number,
+  options: InjectOptions = {},
 ): Promise<void> {
   const filePath = settingsPath(projectRoot);
 
@@ -91,9 +116,9 @@ export async function injectIntoProjectSettings(
     throw new Error('Could not read settings file');
   }
 
-  // Upsert mcpServers.ouroboros — use 127.0.0.1 explicitly (not localhost)
+  // Upsert mcpServers.ouroboros — entry shape depends on transport.
   const mcpServers = ((settings.mcpServers as ServerMap | undefined) ?? {}) as ServerMap;
-  mcpServers['ouroboros'] = { url: `http://127.0.0.1:${serverPort}/sse` };
+  mcpServers['ouroboros'] = buildOuroborosEntry(serverPort, options);
 
   // Remove external codebase-memory-mcp if present (now redundant)
   delete mcpServers['codebase-memory-mcp'];

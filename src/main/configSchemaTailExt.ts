@@ -275,6 +275,27 @@ export const tailSchemaExt = {
       enforceGraphFirst: false,
     },
   },
+  /** Wave 51 Phase B — internalMcp transport selector. Default 'sse' preserves
+   *  existing behavior; 'stdio' opts into the JSON-RPC subprocess wrapper. */
+  internalMcp: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      transport: { type: 'string', enum: ['sse', 'stdio'], default: 'sse' },
+    },
+    default: { transport: 'sse' },
+  },
+  /** Wave 51 Phase B — CodeMode launch wiring. Both default false; flipped on
+   *  after a soak. routeInternalMcp is consumed by Phase C's routing policy. */
+  codemode: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      enabled: { type: 'boolean', default: false },
+      routeInternalMcp: { type: 'boolean', default: false },
+    },
+    default: { enabled: false, routeInternalMcp: false },
+  },
   /** Wave 38 Phase A+C — platform-level settings: onboarding gate, language, update channel, crash reporter.
    *  Phase C adds dismissedEmptyStates.
    *  Wave 41 Phase K adds crashReports.allowInsecure (default false). */

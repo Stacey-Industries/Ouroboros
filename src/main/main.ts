@@ -14,12 +14,15 @@ import { initExtensions } from './extensionsApi';
 import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
-import { injectIntoProjectSettings, removeFromProjectSettings, startInternalMcpServer } from './internalMcp';
+// prettier-ignore
+import { buildInjectOptions, injectIntoProjectSettings, removeFromProjectSettings, startInternalMcpServer } from './internalMcp';
 import { clearInternalMcpPort, setInternalMcpPort } from './internalMcp/internalMcpPortRegistry';
+// prettier-ignore
 import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
 import { performWillQuitShutdown } from './mainShutdown';
+// prettier-ignore
 import { bootstrapApp, bootstrapCrashReporter, bootstrapProcessHandlers, configureAutoUpdater, ensureSingleInstance, initCodebaseGraph, initEditProvenance, scheduleJsonlRetentionPurge, seedGithubTokenWithRetry, writeCrashLog } from './mainStartup';
 import { startMcpHost, stopMcpHost } from './mcpHost/mcpHostProxy';
 import { buildApplicationMenu } from './menu';
@@ -27,6 +30,7 @@ import { initDecisionWriter } from './orchestration/contextDecisionWriter';
 import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { killAllWarm } from './orchestration/providers/claudeWarmProcessManager';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
+// prettier-ignore
 import { cleanupPerfSubscriber, clearPerfSubscribers, initializePerfMetrics, markStartup, startPerfMetrics as startManagedPerfMetrics, stopPerfMetrics as stopManagedPerfMetrics } from './perfMetrics';
 import { generatePipeTokens, setTokenFilePath } from './pipeAuth';
 import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandler';
@@ -99,6 +103,7 @@ async function startInternalMcp(): Promise<void> {
     log.info('[internal-mcp] no project root — skipping');
     return;
   }
+  const inject = buildInjectOptions(__dirname);
   if (getConfigValue('useMcpHost') === true) {
     const res = await startMcpHost(workspaceRoot, 0);
     if (!res.success || res.port == null) {
@@ -107,13 +112,13 @@ async function startInternalMcp(): Promise<void> {
     }
     internalMcpStop = stopMcpHost;
     setInternalMcpPort(res.port);
-    await injectIntoProjectSettings(workspaceRoot, res.port);
+    await injectIntoProjectSettings(workspaceRoot, res.port, inject);
     return;
   }
   const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
   internalMcpStop = handle.stop;
   setInternalMcpPort(handle.port);
-  await injectIntoProjectSettings(workspaceRoot, handle.port);
+  await injectIntoProjectSettings(workspaceRoot, handle.port, inject);
 }
 
 async function stopInternalMcp(): Promise<void> {
@@ -310,13 +315,19 @@ app.on('will-quit', (event) => {
 });
 
 app.on('web-contents-created', (_event, contents) => {
-  contents.on('destroyed', () => { cleanupPerfSubscriber(contents.id); });
+  contents.on('destroyed', () => {
+    cleanupPerfSubscriber(contents.id);
+  });
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
   contents.on('will-navigate', (event, url) => {
     const parsed = new URL(url);
     if (parsed.protocol === 'file:') return;
-    if (process.env.NODE_ENV !== 'development') { event.preventDefault(); return; }
-    const devOrigin = new URL(process.env['ELECTRON_RENDERER_URL'] ?? 'http://localhost:5173').origin;
+    if (process.env.NODE_ENV !== 'development') {
+      event.preventDefault();
+      return;
+    }
+    const devOrigin = new URL(process.env['ELECTRON_RENDERER_URL'] ?? 'http://localhost:5173')
+      .origin;
     if (parsed.origin !== devOrigin) event.preventDefault();
   });
 });

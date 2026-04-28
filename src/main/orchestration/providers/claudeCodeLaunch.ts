@@ -1,18 +1,16 @@
 // claudeCodeLaunch.ts — Launch coordination for the Claude Code adapter.
 
 import { type ClaudeCliSettings, getConfigValue } from '../../config';
-import log from '../../logger';
 import { resolveModelEnv } from '../../providers';
 import { getSessionStore } from '../../session/sessionStore';
-import { buildInitialPrompt } from './claudeCodeContextBuilder';
 import { buildEventHandler } from './claudeCodeEventHandler';
+import { handleLaunchError, handleLaunchSuccess } from './claudeCodeHelpers';
+import { buildLaunchInputs, runLaunch } from './claudeCodeLaunchInputs';
 import {
-  cliSessionExists,
-  handleLaunchError,
-  handleLaunchSuccess,
-  launchHeadless,
-  materializeAttachments,
-} from './claudeCodeHelpers';
+  acquireCodeModeForLaunch,
+  type CodeModeLaunchHandle,
+  releaseCodeModeForLaunch,
+} from './claudeCodeMode';
 import { activeProcesses, buildPlaceholderHandle, type CompletionArgs } from './claudeCodeState';
 import {
   createProviderArtifact,
@@ -22,7 +20,6 @@ import {
   type ProviderProgressSink,
   type ProviderResumeContext,
 } from './providerAdapter';
-import { resolveMcpConfigPathForLaunch } from './scopedMcpConfig';
 import type { StreamJsonEvent, StreamJsonResultEvent } from './streamJsonTypes';
 
 export function pickLaunchValue(...values: Array<string | undefined>): string | undefined {
@@ -41,38 +38,42 @@ function resolveTaskCwd(root: string, sessionId: string | undefined): string {
   }
 }
 
-export type ResolvedSettings = { resolvedModel: string | undefined; effort: string | undefined; effectiveSettings: ClaudeCliSettings; providerEnv: Record<string, string>; isProviderRouted: boolean };
+export type ResolvedSettings = {
+  resolvedModel: string | undefined;
+  effort: string | undefined;
+  effectiveSettings: ClaudeCliSettings;
+  providerEnv: Record<string, string>;
+  isProviderRouted: boolean;
+};
 
-export function resolveEffectiveSettings(context: ProviderLaunchContext | ProviderResumeContext, settings: ClaudeCliSettings): ResolvedSettings {
+export function resolveEffectiveSettings(
+  context: ProviderLaunchContext | ProviderResumeContext,
+  settings: ClaudeCliSettings,
+): ResolvedSettings {
   const resolvedModel = pickLaunchValue(context.request.model, settings.model);
   const effort = pickLaunchValue(context.request.effort, settings.effort);
-  const permissionMode = pickLaunchValue(context.request.permissionMode, settings.permissionMode) ?? 'default';
-  const providerEnv = resolvedModel && resolvedModel.includes(':') ? resolveModelEnv(resolvedModel) : {};
+  const permissionMode =
+    pickLaunchValue(context.request.permissionMode, settings.permissionMode) ?? 'default';
+  const providerEnv =
+    resolvedModel && resolvedModel.includes(':') ? resolveModelEnv(resolvedModel) : {};
   const isProviderRouted = Object.keys(providerEnv).length > 0;
   // Wave 26 Phase D: per-session/profile tool whitelist overrides the global setting.
-  const allowedTools = context.request.allowedTools !== undefined ? context.request.allowedTools : settings.allowedTools;
+  const allowedTools =
+    context.request.allowedTools !== undefined
+      ? context.request.allowedTools
+      : settings.allowedTools;
   return {
     resolvedModel,
     effort,
-    effectiveSettings: { ...settings, model: isProviderRouted ? '' : (resolvedModel ?? ''), permissionMode, allowedTools },
+    effectiveSettings: {
+      ...settings,
+      model: isProviderRouted ? '' : (resolvedModel ?? ''),
+      permissionMode,
+      allowedTools,
+    },
     providerEnv,
     isProviderRouted,
   };
-}
-
-async function resolveGoalSuffix(
-  context: ProviderLaunchContext | ProviderResumeContext,
-  invocationTempPaths: string[],
-): Promise<string> {
-  if (!context.request.goalAttachments?.length) return '';
-  try {
-    const materialized = await materializeAttachments(context.request.goalAttachments);
-    invocationTempPaths.push(...materialized.tempPaths);
-    return materialized.goalSuffix;
-  } catch (err) {
-    log.error('failed to materialize attachments — images will be omitted:', err);
-    return '';
-  }
 }
 
 export interface ScheduleClaudeLaunchArgs {
@@ -91,50 +92,26 @@ export interface ScheduleClaudeLaunchArgs {
   invocationTempPaths: string[];
 }
 
-function resolveResumeSessionId(args: ScheduleClaudeLaunchArgs): string | undefined {
-  const id = args.effectiveResumeSessionId;
-  if (!id) return undefined;
-  if (cliSessionExists(args.cwd, id)) return id;
-  log.info('session file pruned by CLI, falling back to conversation history:', id);
-  return undefined;
+interface ScheduleClaudeLaunchOutcome {
+  result: StreamJsonResultEvent | null;
+  error?: unknown;
+  codemodeHandle: CodeModeLaunchHandle;
 }
 
 export function scheduleClaudeLaunch(
   args: ScheduleClaudeLaunchArgs,
-): Promise<StreamJsonResultEvent | null> {
+): Promise<ScheduleClaudeLaunchOutcome> {
   return (async () => {
-    const goalSuffix = await resolveGoalSuffix(args.context, args.invocationTempPaths);
-    if (args.getCancelledBeforeLaunch()) {
-      activeProcesses.delete(args.context.taskId);
-      return null;
+    const inputs = await buildLaunchInputs(args);
+    if (!inputs) return { result: null, codemodeHandle: { ownsLifecycle: false } };
+    const codemodeHandle = await acquireCodeModeForLaunch(args.cwd);
+    try {
+      const result = await runLaunch(args, inputs);
+      return { result, codemodeHandle };
+    } catch (error) {
+      // Capture for the caller; ensures codemodeHandle survives cleanup.
+      return { result: null, error, codemodeHandle };
     }
-    const resumeId = resolveResumeSessionId(args);
-    const prompt = buildInitialPrompt(
-      args.context,
-      goalSuffix,
-      Boolean(resumeId),
-      args.resolvedModel ?? '',
-    );
-    const continueSession = 'providerSession' in args.context && !resumeId ? true : undefined;
-    const mcpConfigPath = await resolveMcpConfigPathForLaunch(
-      args.context.request.goal,
-      args.context.taskId,
-      args.invocationTempPaths,
-    );
-    return launchHeadless({
-      context: args.context,
-      prompt,
-      cwd: args.cwd,
-      settings: args.effectiveSettings,
-      sessionRef: args.sessionRef,
-      sink: args.sink,
-      resumeSessionId: resumeId,
-      continueSession,
-      effort: args.effort,
-      providerEnv: args.isProviderRouted ? args.providerEnv : undefined,
-      eventHandler: args.eventHandler,
-      mcpConfigPath,
-    }).result;
   })();
 }
 
@@ -258,8 +235,16 @@ function scheduleLaunch(opts: ScheduleLaunchOpts): void {
     invocationTempPaths,
   });
   scheduleClaudeLaunch(launchArgs).then(
-    (result) => handleLaunchSuccess(result, completionArgs),
-    (error) => handleLaunchError(error, completionArgs),
+    (outcome) => {
+      void releaseCodeModeForLaunch(outcome.codemodeHandle);
+      handleLaunchSuccess(outcome.result, completionArgs);
+    },
+    (error) => {
+      // codemode handle is unreachable on the rejection path — best-effort
+      // cleanup happens in the next launch's `acquire` (which detects an
+      // already-enabled state and recovers); intentionally not blocking here.
+      handleLaunchError(error, completionArgs);
+    },
   );
 }
 
