@@ -632,3 +632,29 @@ The `src/main/hooks/gotchaUpdateNudge.ts` Stop-hook passively nudges agents to d
 `npm run lint:claude-md` (via `scripts/claude-md-size-check.ts`) fails on any CLAUDE.md over 200 lines without the `<!-- claude-md-grandfathered -->` marker. Pre-commit hook enforces this.
 
 See `docs/claude-md-lifecycle.md` for the full lifecycle: when to generate, when to trim, how the lean prompt is constructed, and the organic growth workflow.
+
+---
+
+## MCP transport and CodeMode routing (Wave 51)
+
+The IDE has two MCP optimization mechanisms that converged in Wave 51: **CodeMode** (replaces many tool schemas with a single `execute_code` tool) and **internalMcp** (the SSE-based ouroboros server with graph tools). Phase A picked **stdio in internalMcp** as the bridge — CodeMode's `mcpClient.ts` stays stdio-only, internalMcp gained a stdio transport that mirrors the SSE tool surface.
+
+### Per-spawn routing decision
+
+For each headless spawn, `scopedMcpConfig.ts` calls `internalMcpRoutingPolicy.decideInternalMcpRouting` to pick one of three outcomes:
+
+| Decision | When | Effect on the temp MCP config |
+|---|---|---|
+| `direct-inject` | Wave 48 scope says "inject" AND (CodeMode off OR transport=sse OR routeInternalMcp=false) | Writes `{ouroboros: <entry>}` (sse `url` or stdio `command/args` based on transport flag) |
+| `route-through-codemode` | CodeMode enabled + `routeInternalMcp=true` + transport=stdio + scope says inject | Omits `ouroboros`; CodeMode's `__codemode_proxy` already exposes graph tools as `servers.ouroboros.*` |
+| `omit` | Wave 48 scope says skip (scope=`never`, or task-gated + non-graph task) | No `ouroboros` entry; user-global servers still pass through |
+
+Crash-recovery path: if `claudeCodeMode.acquireCodeModeForLaunch` reports `ownsLifecycle:false` while `codemode.enabled=true`, the policy is downgraded via `downgradeOnCodemodeFailure` so the spawn falls back to direct-inject rather than launching without graph tools.
+
+### Cost telemetry
+
+Each call to `buildScopedMcpConfig` appends a record to `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl` (see `mcpSpawnCostTelemetry.ts`). Fields include the routing decision, internalMcp scope, transport, MCP config bytes (`JSON.stringify(mcpServers).length`), server count, and a token estimate (`bytes / 4` — coarse approximation, sufficient for relative comparisons).
+
+The rollup script `npx tsx scripts/measure-mcp-token-cost.ts` reads this stream, splits by routing decision, and emits a per-week markdown table of median + p25/p75 plus the 5 largest direct-inject spawns. Run it post-soak to drive the `routeInternalMcp` default flip — see `roadmap/session-handoff.md` "Wave 51 follow-ups" for the protocol.
+
+For the deeper design context (option matrix, paper-spike rationale, phase commits) see `roadmap/wave-51-plan.md`.

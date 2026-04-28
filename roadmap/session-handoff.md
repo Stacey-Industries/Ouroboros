@@ -17,6 +17,14 @@ These items should be evaluated after Wave 47 has been running in production for
 
 ---
 
+## Wave 51 follow-ups
+
+- **Soak protocol.** Run for 1 week with `codemode.enabled=true, codemode.routeInternalMcp=false`, then 1 week with `routeInternalMcp=true`. Run `npx tsx scripts/measure-mcp-token-cost.ts` against `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl` and compare per-decision medians. Flip the `routeInternalMcp` default to `true` if savings are real and no regressions surface in graph-tool reachability.
+- **CodeMode for user-global MCP servers.** Today's IDE sessions inherit `sentry`, `github`, `stripe`, `codebase-memory-mcp`, `context7` from `~/.claude.json`. Routing those through CodeMode could replace ~10–20k of MCP schema cost with one ~500-token `execute_code`. Big win, separate wave because it touches user-global config.
+- **`internalMcp` barrel split.** `src/main/internalMcp/index.ts` pulls Electron `app` transitively, blocking unit-test imports. Phase C inlined a copy of the entry-shape logic in `scopedMcpConfig.ts` to dodge this. A follow-up could move the shape logic to a leaf module so the duplication can be removed.
+
+---
+
 ## Wave 50 follow-ups
 
 - Original rule files at `~/.claude/rules/init-safety.md` and `~/.claude/rules/project-claude-md-template.md` remain in place pending one wave of slash-command soak. Delete after Wave 51 confirms `/init-safety` and `/claudemd` invocations are clean.
