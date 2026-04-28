@@ -73,6 +73,8 @@ export default defineConfig({
           ptyHostMain: resolve(__dirname, 'src/main/ptyHost/ptyHostMain.ts'),
           extensionHostMain: resolve(__dirname, 'src/main/extensionHost/extensionHostMain.ts'),
           mcpHostMain: resolve(__dirname, 'src/main/mcpHost/mcpHostMain.ts'),
+          proxyServer: resolve(__dirname, 'src/main/codemode/proxyServer.ts'),
+          internalMcpStdioTransport: resolve(__dirname, 'src/main/internalMcp/internalMcpStdioTransport.ts'),
         }
       }
     } as any,
