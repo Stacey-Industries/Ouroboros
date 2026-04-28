@@ -30,7 +30,12 @@ import {
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
 import { tapPreToolResearch } from './hooksPreToolResearchTap';
-import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
+import {
+  handleSessionEnd,
+  handleSessionStart,
+  handleSessionStop,
+  runPreToolEnforcement,
+} from './hooksSessionHandlers';
 import { tapSubagentTracker } from './hooksSubagentTap';
 import log from './logger';
 import { shadowRouteHookEvent } from './router/routerShadow';
@@ -203,6 +208,13 @@ function dispatchLifecycleEvent(payload: HookPayload): void {
 
 function handleApprovalRequest(payload: HookPayload): void {
   if (payload.type !== 'pre_tool_use' || !payload.toolName || !payload.requestId) return;
+
+  // Wave 50 Phase B — deterministic enforcement before normal approval flow.
+  const decision = runPreToolEnforcement(payload);
+  if (decision.kind === 'deny') {
+    void respondToApproval(payload.requestId, { decision: 'reject', reason: decision.message });
+    return;
+  }
 
   if (payload.internal || !toolRequiresApproval(payload.toolName, payload.sessionId)) {
     void respondToApproval(payload.requestId, { decision: 'approve' });

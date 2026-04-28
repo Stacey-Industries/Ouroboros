@@ -23,7 +23,11 @@ export const tailSchemaExt = {
       globalCustomPresets: { type: 'array', items: { type: 'object' }, default: [] },
       mobilePrimary: { type: 'boolean', default: false },
       immersiveChat: { type: 'boolean', default: false },
-      chatSidebarMode: { type: 'string', enum: ['pinned', 'collapsed', 'hidden'], default: 'pinned' },
+      chatSidebarMode: {
+        type: 'string',
+        enum: ['pinned', 'collapsed', 'hidden'],
+        default: 'pinned',
+      },
     },
     default: {
       presets: { v2: true },
@@ -251,6 +255,19 @@ export const tailSchemaExt = {
       allowInstallOnRevocationFetchFailure: { type: 'boolean', default: false },
     },
     default: { allowInstallOnRevocationFetchFailure: false },
+  },
+  /** Wave 50 Phase B — deterministic PreToolUse enforcement. enforcedRules lists active rule names. */
+  hooks: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      enforcedRules: {
+        type: 'array',
+        items: { type: 'string' },
+        default: ['no-secrets', 'lockfiles', 'no-minified', 'test-scope'],
+      },
+    },
+    default: { enforcedRules: ['no-secrets', 'lockfiles', 'no-minified', 'test-scope'] },
   },
   /** Wave 38 Phase A+C — platform-level settings: onboarding gate, language, update channel, crash reporter.
    *  Phase C adds dismissedEmptyStates.
