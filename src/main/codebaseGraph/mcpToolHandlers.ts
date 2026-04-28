@@ -8,9 +8,7 @@
  */
 
 import type { McpToolDefinition } from '../internalMcp/internalMcpTypes';
-import type { CypherEngine } from './cypherEngine';
-import type { GraphDatabase } from './graphDatabase';
-import type { IndexingPipeline } from './indexingPipeline';
+import type { GraphToolContext } from './graphTypes';
 import {
   handleDeleteProject,
   handleGetArchitecture,
@@ -29,18 +27,8 @@ import {
   handleSearchGraph,
   handleTraceCallPath,
 } from './mcpToolHandlerHelpers';
-import type { QueryEngine } from './queryEngine';
 
-// ---- Context type -------------------------------------------------------------
-
-export interface GraphToolContext {
-  db: GraphDatabase;
-  queryEngine: QueryEngine;
-  cypherEngine: CypherEngine;
-  pipeline: IndexingPipeline;
-  projectName: string;
-  projectRoot: string;
-}
+export type { GraphToolContext };
 
 // ---- Tool schema definitions --------------------------------------------------
 
@@ -157,12 +145,42 @@ const TOOL_SCHEMAS = {
 
 function buildIndexingTools(context: GraphToolContext): McpToolDefinition[] {
   return [
-    { name: 'index_repository', description: 'Index a repository into the codebase knowledge graph.', inputSchema: TOOL_SCHEMAS.index_repository, handler: async (a: Record<string, unknown>) => handleIndexRepository(a, context) },
-    { name: 'list_projects', description: 'List all indexed projects with node/edge counts and last index time.', inputSchema: TOOL_SCHEMAS.list_projects, handler: async () => handleListProjects(context) },
-    { name: 'delete_project', description: 'Remove a project and all its graph data. Irreversible.', inputSchema: TOOL_SCHEMAS.delete_project, handler: async (a: Record<string, unknown>) => handleDeleteProject(a, context) },
-    { name: 'index_status', description: 'Get the current indexing status for a project.', inputSchema: TOOL_SCHEMAS.index_status, handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context) },
-    { name: 'get_graph_schema', description: 'Graph schema: node/edge counts, relationship patterns, sample names.', inputSchema: TOOL_SCHEMAS.get_graph_schema, handler: async () => handleGetGraphSchema(context) },
-    { name: 'ingest_traces', description: 'Add/strengthen HTTP_CALLS edges. Accepts {fromId,toId,type,weight?}[] JSON.', inputSchema: TOOL_SCHEMAS.ingest_traces, handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context) },
+    {
+      name: 'index_repository',
+      description: 'Index a repository into the codebase knowledge graph.',
+      inputSchema: TOOL_SCHEMAS.index_repository,
+      handler: async (a: Record<string, unknown>) => handleIndexRepository(a, context),
+    },
+    {
+      name: 'list_projects',
+      description: 'List all indexed projects with node/edge counts and last index time.',
+      inputSchema: TOOL_SCHEMAS.list_projects,
+      handler: async () => handleListProjects(context),
+    },
+    {
+      name: 'delete_project',
+      description: 'Remove a project and all its graph data. Irreversible.',
+      inputSchema: TOOL_SCHEMAS.delete_project,
+      handler: async (a: Record<string, unknown>) => handleDeleteProject(a, context),
+    },
+    {
+      name: 'index_status',
+      description: 'Get the current indexing status for a project.',
+      inputSchema: TOOL_SCHEMAS.index_status,
+      handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context),
+    },
+    {
+      name: 'get_graph_schema',
+      description: 'Graph schema: node/edge counts, relationship patterns, sample names.',
+      inputSchema: TOOL_SCHEMAS.get_graph_schema,
+      handler: async () => handleGetGraphSchema(context),
+    },
+    {
+      name: 'ingest_traces',
+      description: 'Add/strengthen HTTP_CALLS edges. Accepts {fromId,toId,type,weight?}[] JSON.',
+      inputSchema: TOOL_SCHEMAS.ingest_traces,
+      handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context),
+    },
   ];
 }
 
@@ -170,42 +188,99 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
   return [
     {
       name: 'search_graph',
-      description: 'Search the codebase knowledge graph for nodes by label, name pattern, file path, and more.',
+      description:
+        'Search the codebase knowledge graph for nodes by label, name pattern, file path, and more.',
       inputSchema: TOOL_SCHEMAS.search_graph,
-      handler: async (a: Record<string, unknown>) => { try { return await handleSearchGraph(a, context); } catch (err) { return `Error searching graph: ${err instanceof Error ? err.message : String(err)}`; } },
+      handler: async (a: Record<string, unknown>) => {
+        try {
+          return await handleSearchGraph(a, context);
+        } catch (err) {
+          return `Error searching graph: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      },
     },
-    { name: 'get_architecture', description: 'Get a high-level architectural overview of the codebase.', inputSchema: TOOL_SCHEMAS.get_architecture, handler: async (a: Record<string, unknown>) => handleGetArchitecture(a, context) },
-    { name: 'search_code', description: 'Search for text patterns in source files. Supports regex and file pattern filtering.', inputSchema: TOOL_SCHEMAS.search_code, handler: async (a: Record<string, unknown>) => handleSearchCode(a, context) },
-    { name: 'get_code_snippet', description: 'Get the source code for a function, class, or other symbol by its qualified name.', inputSchema: TOOL_SCHEMAS.get_code_snippet, handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context) },
+    {
+      name: 'get_architecture',
+      description: 'Get a high-level architectural overview of the codebase.',
+      inputSchema: TOOL_SCHEMAS.get_architecture,
+      handler: async (a: Record<string, unknown>) => handleGetArchitecture(a, context),
+    },
+    {
+      name: 'search_code',
+      description:
+        'Search for text patterns in source files. Supports regex and file pattern filtering.',
+      inputSchema: TOOL_SCHEMAS.search_code,
+      handler: async (a: Record<string, unknown>) => handleSearchCode(a, context),
+    },
+    {
+      name: 'get_code_snippet',
+      description:
+        'Get the source code for a function, class, or other symbol by its qualified name.',
+      inputSchema: TOOL_SCHEMAS.get_code_snippet,
+      handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
+    },
   ];
 }
 
-function buildQueryTools(context: GraphToolContext): McpToolDefinition[] {
-  const { queryEngine, cypherEngine } = context;
+function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[] {
+  const { queryEngine } = context;
   return [
     {
       name: 'trace_call_path',
-      description: 'Trace the call graph from/to a function. Shows callers, callees, or both with risk classification.',
+      description:
+        'Trace the call graph from/to a function. Shows callers, callees, or both with risk classification.',
       inputSchema: TOOL_SCHEMAS.trace_call_path,
-      handler: async (a: Record<string, unknown>) => { try { return await handleTraceCallPath(a, queryEngine); } catch (err) { return `Error tracing call path: ${err instanceof Error ? err.message : String(err)}`; } },
+      handler: async (a: Record<string, unknown>) => {
+        try {
+          return await handleTraceCallPath(a, queryEngine);
+        } catch (err) {
+          return `Error tracing call path: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      },
     },
     {
       name: 'detect_changes',
-      description: 'Map uncommitted git changes to affected graph symbols and compute blast radius.',
+      description:
+        'Map uncommitted git changes to affected graph symbols and compute blast radius.',
       inputSchema: TOOL_SCHEMAS.detect_changes,
-      handler: async (a: Record<string, unknown>) => { try { return await handleDetectChanges(a, queryEngine); } catch (err) { return `Error detecting changes: ${err instanceof Error ? err.message : String(err)}`; } },
+      handler: async (a: Record<string, unknown>) => {
+        try {
+          return await handleDetectChanges(a, queryEngine);
+        } catch (err) {
+          return `Error detecting changes: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      },
     },
+  ];
+}
+
+function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] {
+  const { cypherEngine } = context;
+  return [
     {
       name: 'query_graph',
-      description: 'Execute a Cypher-like query against the codebase graph. Read-only, results capped at 200 rows.',
+      description:
+        'Execute a Cypher-like query against the codebase graph. Read-only, results capped at 200 rows.',
       inputSchema: TOOL_SCHEMAS.query_graph,
-      handler: async (a: Record<string, unknown>) => { try { return formatQueryResult(cypherEngine.execute(a.query as string)); } catch (err) { return `Query error: ${err instanceof Error ? err.message : String(err)}`; } },
+      handler: async (a: Record<string, unknown>) => {
+        try {
+          return formatQueryResult(cypherEngine.execute(a.query as string));
+        } catch (err) {
+          return `Query error: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      },
     },
     {
       name: 'manage_adr',
       description: 'Manage Architecture Decision Records (ADR). Modes: get, store, update, delete.',
       inputSchema: TOOL_SCHEMAS.manage_adr,
-      handler: async (a: Record<string, unknown>) => { try { return await handleManageAdr(a, context); } catch (err) { return `Error managing ADR: ${err instanceof Error ? err.message : String(err)}`; } },
+      handler: async (a: Record<string, unknown>) => {
+        try {
+          return await handleManageAdr(a, context);
+        } catch (err) {
+          return `Error managing ADR: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      },
     },
   ];
 }
@@ -213,5 +288,10 @@ function buildQueryTools(context: GraphToolContext): McpToolDefinition[] {
 // ---- Factory ------------------------------------------------------------------
 
 export function createGraphMcpTools(context: GraphToolContext): McpToolDefinition[] {
-  return [...buildIndexingTools(context), ...buildSearchTools(context), ...buildQueryTools(context)];
+  return [
+    ...buildIndexingTools(context),
+    ...buildSearchTools(context),
+    ...buildTraceAndChangeTools(context),
+    ...buildCypherAndAdrTools(context),
+  ];
 }

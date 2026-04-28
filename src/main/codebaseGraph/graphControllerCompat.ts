@@ -77,8 +77,11 @@ export class GraphControllerCompat {
   indexStatus = this.getStatus.bind(this);
 
   getGraphToolContext(): GraphToolContext {
-    const { workerClient, projectRoot, projectName } = this.handle;
+    const { db, queryEngine, cypherEngine, workerClient, projectRoot, projectName } = this.handle;
     return {
+      db,
+      queryEngine,
+      cypherEngine,
       pipeline: {
         index: (options) => workerClient.runIndex({ ...options, onProgress: () => {} }),
       },

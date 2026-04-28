@@ -37,7 +37,22 @@ function makeStub(rootPath: string): GraphControllerLike & { disposed: boolean }
       return this.getStatus();
     },
     getGraphToolContext: () => ({
-      pipeline: { index: async () => ({ success: true }) },
+      db: {} as never,
+      queryEngine: {} as never,
+      cypherEngine: {} as never,
+      pipeline: {
+        index: async () => ({
+          success: true,
+          projectName: 'test',
+          filesIndexed: 0,
+          filesSkipped: 0,
+          nodesCreated: 0,
+          edgesCreated: 0,
+          durationMs: 0,
+          incremental: false,
+          errors: [],
+        }),
+      },
       projectRoot: rootPath,
       projectName: 'test',
     }),

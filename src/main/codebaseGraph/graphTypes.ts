@@ -2,6 +2,10 @@
  * graphTypes.ts — Shared types for the internal codebase graph engine.
  */
 
+import type { CypherEngine } from './cypherEngine';
+import type { GraphDatabase } from './graphDatabase';
+import type { QueryEngine } from './queryEngine';
+
 export interface GraphNode {
   id: string;
   type:
@@ -78,12 +82,27 @@ export interface GraphSchema {
 }
 
 export interface GraphToolContext {
+  db: GraphDatabase;
+  queryEngine: QueryEngine;
+  cypherEngine: CypherEngine;
+  /** Structural minimum — only .index() is consumed by MCP tool handlers. */
   pipeline: {
-    index: (options: {
+    index: (opts: {
       projectRoot: string;
+      projectName?: string;
+      incremental?: boolean;
+      onProgress?: (p: unknown) => void;
+    }) => Promise<{
+      success: boolean;
       projectName: string;
+      filesIndexed: number;
+      filesSkipped: number;
+      nodesCreated: number;
+      edgesCreated: number;
+      durationMs: number;
       incremental: boolean;
-    }) => Promise<{ success: boolean }>;
+      errors: string[];
+    }>;
   };
   projectRoot: string;
   projectName: string;

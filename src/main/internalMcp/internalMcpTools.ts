@@ -53,8 +53,7 @@ export function getActiveTools(): McpToolDefinition[] {
   const graphContext = graphCtrl?.getGraphToolContext();
 
   if (graphContext) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return createGraphMcpTools(graphContext as any);
+    return createGraphMcpTools(graphContext);
   }
 
   return ALL_TOOLS;
