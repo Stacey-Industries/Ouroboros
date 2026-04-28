@@ -71,6 +71,7 @@ Three independent caches — all module-level `Map`s:
 - **Context layer enrichment is optional**: `buildContextPacket` dynamically imports `contextLayerController` and silently catches failures — the packet is valid without enrichment.
 - **Snapshot cache never expires**: The persistent snapshot cache in `contextSelectionSupport.ts` has no TTL. It relies on callers to invalidate after file saves.
 - **`types.ts` is a barrel, not a monolith**: The 300-line ESLint limit forced a split into `typesDomain.ts` / `typesContext.ts` / `typesProvider.ts`. Import from `types.ts` as normal — it re-exports everything.
+- **Ranker mode flag (Wave 53b)**: `contextRanker.mode` selects current / tuned / experimental weight schemes. Default `current` matches pre-53b behavior. See `contextSelectorRankerVariant.ts`.
 
 ## Dependencies
 

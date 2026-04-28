@@ -276,14 +276,19 @@ export const tailSchemaExt = {
     },
   },
   /** Wave 53b Phase B — online ranker hit-rate telemetry.
-   *  Phase C adds contextRanker.mode for variant ranker selection. */
+   *  Phase C adds contextRanker.mode for variant ranker selection (default 'current'). */
   contextRanker: {
     type: 'object',
     additionalProperties: false,
     properties: {
       telemetryEnabled: { type: 'boolean', default: true },
+      mode: {
+        type: 'string',
+        enum: ['current', 'tuned', 'experimental'],
+        default: 'current',
+      },
     },
-    default: { telemetryEnabled: true },
+    default: { telemetryEnabled: true, mode: 'current' },
   },
   /** Wave 51 Phase B — internalMcp transport selector. Default 'sse' preserves
    *  existing behavior; 'stdio' opts into the JSON-RPC subprocess wrapper. */

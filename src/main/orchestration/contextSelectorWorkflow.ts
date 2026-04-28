@@ -18,6 +18,11 @@ import {
   rankCandidates,
 } from './contextSelectorHelpers';
 import { classifierRankCandidates, runShadowMode } from './contextSelectorRanker';
+import {
+  EXPERIMENTAL_WEIGHTS,
+  rankCandidatesVariant,
+  TUNED_WEIGHTS,
+} from './contextSelectorRankerVariant';
 import { buildResult } from './contextSelectorResult';
 import {
   addRepoFactCandidates,
@@ -167,12 +172,23 @@ async function buildSelectionState(options: BuildSelectionStateOptions): Promise
   });
 }
 
+function resolveRankerMode(): 'current' | 'tuned' | 'experimental' {
+  // Wave 53b Phase C — variant ranker selection. Default 'current'.
+  const rankerCfg = store.get('contextRanker') as { mode?: string } | undefined;
+  const mode = rankerCfg?.mode;
+  if (mode === 'tuned' || mode === 'experimental') return mode;
+  return 'current';
+}
+
 function finalizeRanking(
   cfg: ContextScoringSettings | undefined,
   candidates: Map<string, MutableCandidate>,
   request: TaskRequest,
 ): RankedContextFile[] {
   if (cfg?.learnedRanker === true) return classifierRankCandidates(candidates, request);
+  const mode = resolveRankerMode();
+  if (mode === 'tuned') return rankCandidatesVariant(candidates, TUNED_WEIGHTS);
+  if (mode === 'experimental') return rankCandidatesVariant(candidates, EXPERIMENTAL_WEIGHTS);
   const additiveRanked = rankCandidates(candidates);
   runShadowMode(additiveRanked, candidates, request);
   return additiveRanked;
