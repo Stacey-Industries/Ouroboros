@@ -4,6 +4,14 @@
 
 @import 'tailwindcss';
 
+/* Exclude analyzer / wave-output data files from Tailwind's auto-source scan.
+   These files contain Windows-style paths (e.g. C:\...\C--Web-App-Agent-IDE\...)
+   that Tailwind's tokenizer reads as CSS variable names, then `ke()` interprets
+   `\afa0da`-shaped path segments as 6-hex-digit Unicode escapes. When the value
+   exceeds U+10FFFF, String.fromCodePoint throws "Invalid code point" and the
+   build fails. Reproduced and fixed during Wave 53c follow-up (v2.7.4). */
+@source not "../../../roadmap/wave-*-output/**";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
