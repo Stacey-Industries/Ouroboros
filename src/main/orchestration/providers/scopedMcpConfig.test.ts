@@ -41,6 +41,20 @@ vi.mock('fs/promises', async (importOriginal) => {
   return { ...actual, readFile: wrappedReadFile };
 });
 vi.mock('../../logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+// Selective fs mock: stub the two functions mcpSpawnCostTelemetry uses so this
+// suite stops appending real records to ~/.ouroboros/telemetry/mcp-spawn-cost.jsonl.
+// Preserve everything else (existsSync, readFileSync, etc.) for production code paths.
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  const mkdirSync = vi.fn();
+  const appendFile = vi.fn((_p: unknown, _d: unknown, cb?: (err: unknown) => void) => cb?.(null));
+  return {
+    ...actual,
+    default: { ...actual, mkdirSync, appendFile },
+    mkdirSync,
+    appendFile,
+  };
+});
 
 import { buildScopedMcpConfig } from './scopedMcpConfig';
 
