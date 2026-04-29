@@ -188,12 +188,18 @@ function makeCleanup(configPath: string): () => Promise<void> {
 
 interface CodemodeConfig {
   enabled?: boolean;
+  /** Wave 53l Phase B — deprecated; ignored by routing. Kept on type for back-compat. */
   routeInternalMcp?: boolean;
+  excludeFromMultiplex?: string[];
 }
 
-function readCodemodeFlags(): { enabled: boolean; route: boolean } {
+function readCodemodeFlags(): { enabled: boolean; ouroborosExcluded: boolean } {
   const cfg = getConfigValue('codemode') as CodemodeConfig | undefined;
-  return { enabled: cfg?.enabled === true, route: cfg?.routeInternalMcp === true };
+  const excludes = cfg?.excludeFromMultiplex ?? [];
+  return {
+    enabled: cfg?.enabled === true,
+    ouroborosExcluded: excludes.includes('ouroboros'),
+  };
 }
 
 function readScopeFromConfig(): InternalMcpScope {
@@ -211,7 +217,7 @@ function deriveRoutingDecision(opts: ScopedMcpConfigOptions): RoutingDecision {
   const flags = readCodemodeFlags();
   const decision = decideInternalMcpRouting({
     codemodeEnabled: flags.enabled,
-    routeInternalMcp: flags.route,
+    ouroborosExcludedFromMultiplex: flags.ouroborosExcluded,
     internalMcpScope: readScopeFromConfig(),
     taskNeedsGraphTools: true,
     transport: resolveTransport(),

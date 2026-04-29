@@ -15,7 +15,12 @@
  *
  * The decision is a pure function of:
  *   codemodeEnabled       — `codemode.enabled` config (Phase B added)
- *   routeInternalMcp      — `codemode.routeInternalMcp` config (Phase B added)
+ *   ouroborosExcludedFromMultiplex — true when 'ouroboros' is listed in
+ *                           `codemode.excludeFromMultiplex`. Wave 53l Phase B
+ *                           replaced the old `routeInternalMcp` per-spawn
+ *                           opt-in: with user-level CodeMode multiplexing
+ *                           every user-registered server by default, the
+ *                           per-server toggle is the exclusion list.
  *   internalMcpScope      — `internalMcpScope` from Wave 48
  *   taskNeedsGraphTools   — derived from Wave 48 goal classification (true when
  *                           task-gated would inject)
@@ -34,7 +39,13 @@ export type RoutingDecision = 'direct-inject' | 'route-through-codemode' | 'omit
 
 export interface RoutingInputs {
   codemodeEnabled: boolean;
-  routeInternalMcp: boolean;
+  /**
+   * Wave 53l Phase B — true when 'ouroboros' appears in
+   * `codemode.excludeFromMultiplex`. Replaces the old `routeInternalMcp`
+   * per-spawn opt-in: user-level CodeMode multiplexes every server by
+   * default, and exclusion is the per-server escape hatch.
+   */
+  ouroborosExcludedFromMultiplex: boolean;
   internalMcpScope: InternalMcpScope;
   /** Wave 48 task signal — `true` when the spawn's goal is code-shaped (or scope='always'). */
   taskNeedsGraphTools: boolean;
@@ -58,7 +69,9 @@ function isOmitted(inputs: RoutingInputs): boolean {
  * transport flag.
  */
 function isRoutedThroughCodemode(inputs: RoutingInputs): boolean {
-  return inputs.codemodeEnabled && inputs.routeInternalMcp && inputs.transport === 'stdio';
+  if (!inputs.codemodeEnabled) return false;
+  if (inputs.ouroborosExcludedFromMultiplex) return false;
+  return inputs.transport === 'stdio';
 }
 
 /**

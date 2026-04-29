@@ -30,7 +30,13 @@ import { decideInternalMcpRouting } from './internalMcpRoutingPolicy';
 
 interface CodeModeConfig {
   enabled?: boolean;
+  /**
+   * Wave 53l Phase B — kept on the type for backward compatibility with
+   * older config files but no longer consulted by routing. Exclusion is
+   * the per-server gate now (see `excludeFromMultiplex`).
+   */
   routeInternalMcp?: boolean;
+  excludeFromMultiplex?: string[];
 }
 
 interface InternalMcpConfig {
@@ -63,9 +69,10 @@ async function resolveProxiedServerNames(projectRoot: string | undefined): Promi
   // we don't have the per-spawn goal — the launch path's per-spawn temp
   // config is where the goal-shape gate is enforced. If the policy returns
   // 'route-through-codemode' we add 'ouroboros' to the proxied list.
+  const excludes = cfg?.excludeFromMultiplex ?? [];
   const decision = decideInternalMcpRouting({
     codemodeEnabled: cfg?.enabled === true,
-    routeInternalMcp: cfg?.routeInternalMcp === true,
+    ouroborosExcludedFromMultiplex: excludes.includes('ouroboros'),
     internalMcpScope: readScopeRaw(),
     taskNeedsGraphTools: true,
     transport: internalMcp?.transport === 'stdio' ? 'stdio' : 'sse',

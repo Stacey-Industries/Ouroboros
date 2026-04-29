@@ -97,16 +97,16 @@ describe('acquireCodeModeForLaunch', () => {
   });
 
   it('omits ouroboros from proxied set when transport !== stdio', async () => {
-    setConfig({ codemode: { enabled: true, routeInternalMcp: true } });
+    setConfig({ codemode: { enabled: true } });
     await acquireCodeModeForLaunch('/proj');
     const names = enableFn.mock.calls[0][0] as string[];
     expect(names).not.toContain('ouroboros');
     expect(names).toEqual(expect.arrayContaining(['sentry', 'github']));
   });
 
-  it('includes ouroboros when transport === stdio AND routeInternalMcp', async () => {
+  it('includes ouroboros by default when transport === stdio (Wave 53l Phase B)', async () => {
     setConfig({
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
       internalMcp: { transport: 'stdio' },
     });
     await acquireCodeModeForLaunch('/proj');
@@ -114,9 +114,9 @@ describe('acquireCodeModeForLaunch', () => {
     expect(names).toContain('ouroboros');
   });
 
-  it('omits ouroboros when routeInternalMcp is false even with stdio transport', async () => {
+  it('omits ouroboros when excludeFromMultiplex contains it', async () => {
     setConfig({
-      codemode: { enabled: true, routeInternalMcp: false },
+      codemode: { enabled: true, excludeFromMultiplex: ['ouroboros'] },
       internalMcp: { transport: 'stdio' },
     });
     await acquireCodeModeForLaunch('/proj');

@@ -1,10 +1,11 @@
 /**
- * internalMcpRoutingPolicy.test.ts — Wave 51 Phase C.
+ * internalMcpRoutingPolicy.test.ts — Wave 51 Phase C, Wave 53l Phase B.
  *
- * Pure-function matrix coverage for `decideInternalMcpRouting`. The policy is
- * a small product of five inputs; this suite walks the relevant combinations
- * explicitly so a regression in any cell shows up as a focused failure rather
- * than as an obscure downstream surprise in scopedMcpConfig.
+ * Pure-function matrix coverage for `decideInternalMcpRouting`. Wave 53l
+ * Phase B replaced the per-spawn `routeInternalMcp` opt-in with the
+ * `ouroborosExcludedFromMultiplex` exclusion check — same shape, inverted
+ * semantics: route-through-codemode is the default when codemode is on,
+ * and exclusion is the per-server escape hatch.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,7 +19,7 @@ import {
 function inputs(overrides: Partial<RoutingInputs> = {}): RoutingInputs {
   return {
     codemodeEnabled: false,
-    routeInternalMcp: false,
+    ouroborosExcludedFromMultiplex: false,
     internalMcpScope: 'task-gated',
     taskNeedsGraphTools: true,
     transport: 'sse',
@@ -31,13 +32,12 @@ describe('decideInternalMcpRouting — scope=never', () => {
     expect(decideInternalMcpRouting(inputs({ internalMcpScope: 'never' }))).toBe('omit');
   });
 
-  it('returns omit even with codemode + route flag + stdio + graph task', () => {
+  it('returns omit even with codemode + stdio + graph task', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           internalMcpScope: 'never',
           codemodeEnabled: true,
-          routeInternalMcp: true,
           transport: 'stdio',
           taskNeedsGraphTools: true,
         }),
@@ -55,14 +55,13 @@ describe('decideInternalMcpRouting — scope=task-gated', () => {
     ).toBe('omit');
   });
 
-  it('omits even with codemode-route on when task does not need graph tools', () => {
+  it('omits even with codemode on when task does not need graph tools', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           internalMcpScope: 'task-gated',
           taskNeedsGraphTools: false,
           codemodeEnabled: true,
-          routeInternalMcp: true,
           transport: 'stdio',
         }),
       ),
@@ -73,17 +72,29 @@ describe('decideInternalMcpRouting — scope=task-gated', () => {
     expect(decideInternalMcpRouting(inputs({ taskNeedsGraphTools: true }))).toBe('direct-inject');
   });
 
-  it('routes through codemode when task needs tools + flags + stdio', () => {
+  it('routes through codemode by default when codemode on + stdio', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           taskNeedsGraphTools: true,
           codemodeEnabled: true,
-          routeInternalMcp: true,
           transport: 'stdio',
         }),
       ),
     ).toBe('route-through-codemode');
+  });
+
+  it('direct-inject when ouroboros is in excludeFromMultiplex', () => {
+    expect(
+      decideInternalMcpRouting(
+        inputs({
+          taskNeedsGraphTools: true,
+          codemodeEnabled: true,
+          ouroborosExcludedFromMultiplex: true,
+          transport: 'stdio',
+        }),
+      ),
+    ).toBe('direct-inject');
   });
 });
 
@@ -94,65 +105,50 @@ describe('decideInternalMcpRouting — scope=always', () => {
     ).toBe('direct-inject');
   });
 
-  it('direct-inject when codemode on but routeInternalMcp off', () => {
-    expect(
-      decideInternalMcpRouting(
-        inputs({
-          internalMcpScope: 'always',
-          codemodeEnabled: true,
-          routeInternalMcp: false,
-          transport: 'stdio',
-        }),
-      ),
-    ).toBe('direct-inject');
-  });
-
-  it('routes through codemode with both flags + stdio (regardless of task signal)', () => {
+  it('routes through codemode when codemode on + stdio (regardless of task signal)', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           internalMcpScope: 'always',
           taskNeedsGraphTools: false,
           codemodeEnabled: true,
-          routeInternalMcp: true,
           transport: 'stdio',
         }),
       ),
     ).toBe('route-through-codemode');
   });
+
+  it('direct-inject when codemode on + stdio but ouroboros excluded', () => {
+    expect(
+      decideInternalMcpRouting(
+        inputs({
+          internalMcpScope: 'always',
+          codemodeEnabled: true,
+          ouroborosExcludedFromMultiplex: true,
+          transport: 'stdio',
+        }),
+      ),
+    ).toBe('direct-inject');
+  });
 });
 
 describe('decideInternalMcpRouting — transport guard', () => {
-  it('falls back to direct-inject when route flag on but transport is sse', () => {
+  it('falls back to direct-inject when codemode on but transport is sse', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           codemodeEnabled: true,
-          routeInternalMcp: true,
           transport: 'sse',
         }),
       ),
     ).toBe('direct-inject');
   });
 
-  it('falls back to direct-inject when codemode enabled but routeInternalMcp off', () => {
-    expect(
-      decideInternalMcpRouting(
-        inputs({
-          codemodeEnabled: true,
-          routeInternalMcp: false,
-          transport: 'stdio',
-        }),
-      ),
-    ).toBe('direct-inject');
-  });
-
-  it('falls back to direct-inject when codemode disabled', () => {
+  it('falls back to direct-inject when codemode disabled (stdio ignored)', () => {
     expect(
       decideInternalMcpRouting(
         inputs({
           codemodeEnabled: false,
-          routeInternalMcp: true,
           transport: 'stdio',
         }),
       ),
@@ -183,15 +179,25 @@ describe('decideInternalMcpRouting — full matrix smoke', () => {
       want: 'direct-inject',
     },
     {
-      name: 'task-gated + code + codemode on + route on + stdio → routed',
+      name: 'task-gated + code + codemode on + stdio → routed (default)',
       in: {
         internalMcpScope: 'task-gated',
         taskNeedsGraphTools: true,
         codemodeEnabled: true,
-        routeInternalMcp: true,
         transport: 'stdio',
       },
       want: 'route-through-codemode',
+    },
+    {
+      name: 'task-gated + code + codemode on + stdio + ouroboros excluded → direct-inject',
+      in: {
+        internalMcpScope: 'task-gated',
+        taskNeedsGraphTools: true,
+        codemodeEnabled: true,
+        ouroborosExcludedFromMultiplex: true,
+        transport: 'stdio',
+      },
+      want: 'direct-inject',
     },
   ];
 
