@@ -1,15 +1,42 @@
 import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
 
 import log from '../logger';
 import type { InternalMcpTransport } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
-// Path helper
+// Wave 53g: Claude Code reads MCP server config from `.mcp.json` at project
+// root, NOT from `.claude/settings.json`. Pre-53g this file wrote to
+// `.claude/settings.json mcpServers`, which Claude Code CLI silently ignored.
+// The current behavior:
+//
+//   1. Write `<projectRoot>/.mcp.json` with `{mcpServers: {ouroboros: {...}}}`.
+//   2. Update `~/.claude.json` per-project entry's `enabledMcpjsonServers`
+//      array to include `ouroboros` so Claude Code auto-loads it without
+//      the trust dialog (assuming the project is already trusted).
+//   3. Cleanup: remove the orphaned `mcpServers.ouroboros` entry from
+//      `.claude/settings.json` if it's there from earlier wave attempts.
+//
+// Atomic write throughout (`.tmp` + rename). Reads are tolerant of missing
+// files (treated as empty objects); writes are only attempted when the
+// underlying file is parseable JSON or absent.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Path helpers
+// ---------------------------------------------------------------------------
+
+function mcpJsonPath(projectRoot: string): string {
+  return path.join(projectRoot, '.mcp.json');
+}
 
 function settingsPath(projectRoot: string): string {
   return path.join(projectRoot, '.claude', 'settings.json');
+}
+
+function userClaudeJsonPath(): string {
+  return path.join(os.homedir(), '.claude.json');
 }
 
 // ---------------------------------------------------------------------------
@@ -19,13 +46,12 @@ function settingsPath(projectRoot: string): string {
 async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
   const tmpPath = `${filePath}.tmp`;
   const content = JSON.stringify(data, null, 2);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot/homedir + known filename
   await fs.writeFile(tmpPath, content, 'utf-8');
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot/homedir + known filename
     await fs.rename(tmpPath, filePath);
   } catch (renameErr) {
-    // Best effort: clean up .tmp file
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- cleanup of tmp file at the same validated path
       await fs.unlink(tmpPath);
@@ -37,44 +63,40 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Read settings file — returns null if file invalid JSON (do not overwrite)
+// Tolerant JSON read — returns null if invalid, {} if absent
 // ---------------------------------------------------------------------------
 
-type SettingsRecord = Record<string, unknown>;
-type ServerMap = Record<
-  string,
-  { url?: string; command?: string; args?: string[]; env?: Record<string, string> }
->;
+type JsonRecord = Record<string, unknown>;
+type ServerEntry = {
+  url?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+};
+type ServerMap = Record<string, ServerEntry>;
 
-async function readSettings(filePath: string): Promise<SettingsRecord | null> {
+async function readJsonTolerant(
+  filePath: string,
+  label: string,
+): Promise<JsonRecord | null> {
   let raw: string;
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is one of three known constants
     raw = await fs.readFile(filePath, 'utf-8');
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      // File does not exist — treat as empty object
-      return {};
-    }
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return {};
     throw err;
   }
-
-  // File exists — try to parse
   try {
-    return JSON.parse(raw) as SettingsRecord;
+    return JSON.parse(raw) as JsonRecord;
   } catch {
-    log.warn('[internal-mcp] .claude/settings.json exists but is not valid JSON — not overwriting');
-    throw new Error('.claude/settings.json exists but contains invalid JSON');
+    log.warn(`[internal-mcp] ${label} exists but is not valid JSON — not overwriting`);
+    return null;
   }
 }
 
 // ---------------------------------------------------------------------------
-// injectIntoProjectSettings
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Transport-aware ouroboros entry builder (Wave 51 Phase B)
+// Transport-aware ouroboros entry builder
 // ---------------------------------------------------------------------------
 
 export interface InjectOptions {
@@ -83,10 +105,7 @@ export interface InjectOptions {
   stdioTransportPath?: string;
 }
 
-function buildOuroborosEntry(
-  serverPort: number,
-  opts: InjectOptions,
-): { url?: string; command?: string; args?: string[] } {
+function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEntry {
   if (opts.transport === 'stdio') {
     if (!opts.stdioTransportPath) {
       throw new Error('stdio transport requires stdioTransportPath');
@@ -96,96 +115,186 @@ function buildOuroborosEntry(
   return { url: `http://127.0.0.1:${serverPort}/sse` };
 }
 
+// ---------------------------------------------------------------------------
+// Step 1 — write .mcp.json at project root
+// ---------------------------------------------------------------------------
+
+async function writeMcpJson(projectRoot: string, entry: ServerEntry): Promise<void> {
+  const filePath = mcpJsonPath(projectRoot);
+  const existing = await readJsonTolerant(filePath, '.mcp.json');
+  if (existing === null) return; // Don't overwrite invalid JSON
+  const mcpServers = ((existing.mcpServers as ServerMap | undefined) ?? {}) as ServerMap;
+  mcpServers['ouroboros'] = entry;
+  existing.mcpServers = mcpServers;
+  await atomicWriteJson(filePath, existing);
+}
+
+// ---------------------------------------------------------------------------
+// Step 2 — update ~/.claude.json per-project enabledMcpjsonServers
+// ---------------------------------------------------------------------------
+
+interface ClaudeProjectEntry {
+  enabledMcpjsonServers?: string[];
+  disabledMcpjsonServers?: string[];
+  [k: string]: unknown;
+}
+
+function ensureProjectEntry(
+  projects: Record<string, ClaudeProjectEntry>,
+  key: string,
+): ClaudeProjectEntry {
+  // eslint-disable-next-line security/detect-object-injection -- key is a normalized projectRoot, not user input
+  const existing = projects[key];
+  if (existing && typeof existing === 'object') return existing;
+  const fresh: ClaudeProjectEntry = {};
+  // eslint-disable-next-line security/detect-object-injection -- key is a normalized projectRoot, not user input
+  projects[key] = fresh;
+  return fresh;
+}
+
+async function enableInClaudeJson(projectRoot: string): Promise<void> {
+  const filePath = userClaudeJsonPath();
+  const claudeJson = await readJsonTolerant(filePath, '~/.claude.json');
+  if (claudeJson === null) return; // Don't touch invalid JSON
+  const projects =
+    ((claudeJson.projects as Record<string, ClaudeProjectEntry> | undefined) ?? {});
+  const projectKey = path.normalize(projectRoot);
+  const entry = ensureProjectEntry(projects, projectKey);
+
+  const enabled = Array.isArray(entry.enabledMcpjsonServers)
+    ? [...entry.enabledMcpjsonServers]
+    : [];
+  if (!enabled.includes('ouroboros')) {
+    enabled.push('ouroboros');
+  }
+  entry.enabledMcpjsonServers = enabled;
+
+  // If `ouroboros` was previously disabled, undisable it.
+  const disabled = Array.isArray(entry.disabledMcpjsonServers)
+    ? entry.disabledMcpjsonServers.filter((s) => s !== 'ouroboros')
+    : [];
+  if (disabled.length > 0) {
+    entry.disabledMcpjsonServers = disabled;
+  } else {
+    delete entry.disabledMcpjsonServers;
+  }
+
+  claudeJson.projects = projects;
+  await atomicWriteJson(filePath, claudeJson);
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 — clean up the orphaned entry in .claude/settings.json
+// ---------------------------------------------------------------------------
+
+async function cleanupLegacySettingsJson(projectRoot: string): Promise<void> {
+  const filePath = settingsPath(projectRoot);
+  const settings = await readJsonTolerant(filePath, '.claude/settings.json');
+  if (settings === null) return; // Don't touch invalid JSON
+  const mcpServers = settings.mcpServers as ServerMap | undefined;
+  if (!mcpServers || !('ouroboros' in mcpServers)) {
+    return; // Nothing to clean up; do not write (avoid no-op churn)
+  }
+  delete mcpServers['ouroboros'];
+  if (Object.keys(mcpServers).length === 0) {
+    delete settings.mcpServers;
+  } else {
+    settings.mcpServers = mcpServers;
+  }
+  await atomicWriteJson(filePath, settings);
+}
+
+// ---------------------------------------------------------------------------
+// Public API: injectIntoProjectSettings
+// ---------------------------------------------------------------------------
+
 /**
- * Upserts `mcpServers.ouroboros` into a project's `.claude/settings.json`.
- * Wired into `main.ts` startup. Wave 51 added the `transport`/
- * `stdioTransportPath` options so callers can opt into the stdio adapter
- * shape (`{command, args}`) instead of the legacy SSE shape (`{url}`).
+ * Register the IDE's internal MCP server (`ouroboros`) for Claude Code
+ * discovery in this project. Three actions, in order:
+ *
+ *   1. Write `<projectRoot>/.mcp.json` with the `ouroboros` server entry.
+ *   2. Update `~/.claude.json` projects.<root>.enabledMcpjsonServers to
+ *      include `'ouroboros'`.
+ *   3. Clean up any orphaned `mcpServers.ouroboros` entry from
+ *      `.claude/settings.json` (where pre-53g writes landed but Claude Code
+ *      never read).
+ *
+ * All steps are idempotent and atomic. Tolerant of missing/invalid files —
+ * never throws on parse errors, never partial-writes via .tmp + rename.
+ *
+ * Wired into `main.ts startInternalMcp` after the SSE server binds.
  */
 export async function injectIntoProjectSettings(
   projectRoot: string,
   serverPort: number,
   options: InjectOptions = {},
 ): Promise<void> {
-  const filePath = settingsPath(projectRoot);
+  const entry = buildOuroborosEntry(serverPort, options);
 
-  // Ensure the .claude/ directory exists
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated projectRoot
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  // .mcp.json gets written at the project root, alongside .claude/.
+  // Ensure the project root exists (it should — main.ts uses defaultProjectRoot
+  // which is validated upstream — but mkdir is idempotent and cheap).
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- projectRoot is upstream-validated
+  await fs.mkdir(projectRoot, { recursive: true });
 
-  const settings = await readSettings(filePath);
-  if (settings === null) {
-    // Should not happen given the logic above, but guard anyway
-    throw new Error('Could not read settings file');
-  }
-
-  // Upsert mcpServers.ouroboros — entry shape depends on transport.
-  const mcpServers = ((settings.mcpServers as ServerMap | undefined) ?? {}) as ServerMap;
-  mcpServers['ouroboros'] = buildOuroborosEntry(serverPort, options);
-
-  // Remove external codebase-memory-mcp if present (now redundant)
-  delete mcpServers['codebase-memory-mcp'];
-  delete mcpServers['codebase-memory'];
-
-  // Also clean from disabled servers
-  const disabledMcp = ((settings.disabledMcpServers as ServerMap | undefined) ?? {}) as ServerMap;
-  delete disabledMcp['codebase-memory-mcp'];
-  delete disabledMcp['codebase-memory'];
-  if (Object.keys(disabledMcp).length > 0) {
-    settings.disabledMcpServers = disabledMcp;
-  } else {
-    delete settings.disabledMcpServers;
-  }
-
-  settings.mcpServers = mcpServers;
-
-  await atomicWriteJson(filePath, settings);
+  await writeMcpJson(projectRoot, entry);
+  await enableInClaudeJson(projectRoot);
+  await cleanupLegacySettingsJson(projectRoot);
 }
 
 // ---------------------------------------------------------------------------
-// removeFromProjectSettings
+// Public API: removeFromProjectSettings
 // ---------------------------------------------------------------------------
 
+/**
+ * Remove the `ouroboros` MCP server registration. Mirrors the three writes
+ * of `injectIntoProjectSettings` in reverse: delete from `.mcp.json`, remove
+ * from `~/.claude.json` enabledMcpjsonServers, and clear any legacy entry
+ * from `.claude/settings.json`.
+ *
+ * Wave 53d: this is **not** called on shutdown; the entry is safe to leave
+ * between IDE launches because the next `injectIntoProjectSettings` overwrites
+ * with the current port. Manual callers (settings UI, future kill switch)
+ * still need the function to exist.
+ */
 export async function removeFromProjectSettings(projectRoot: string): Promise<void> {
-  const filePath = settingsPath(projectRoot);
+  await removeFromMcpJson(projectRoot);
+  await disableInClaudeJson(projectRoot);
+  await cleanupLegacySettingsJson(projectRoot);
+}
 
-  let settings: SettingsRecord;
-  try {
-    const result = await readSettings(filePath);
-    if (result === null) return; // Invalid JSON — don't touch
-    settings = result;
-  } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') return; // File doesn't exist — nothing to do
-    // If the file is invalid JSON, readSettings throws without ENOENT code
-    // Log the warning but don't fail the caller
-    log.warn('[internal-mcp] removeFromProjectSettings: could not read settings file:', err);
-    return;
-  }
-
-  // Remove ouroboros from mcpServers
-  const mcpServers = (settings.mcpServers ?? {}) as ServerMap;
-  if ('ouroboros' in mcpServers) {
-    delete mcpServers['ouroboros'];
-  }
-
-  // Clean up empty mcpServers object
+async function removeFromMcpJson(projectRoot: string): Promise<void> {
+  const filePath = mcpJsonPath(projectRoot);
+  const existing = await readJsonTolerant(filePath, '.mcp.json');
+  if (existing === null) return;
+  const mcpServers = existing.mcpServers as ServerMap | undefined;
+  if (!mcpServers || !('ouroboros' in mcpServers)) return;
+  delete mcpServers['ouroboros'];
   if (Object.keys(mcpServers).length === 0) {
-    delete settings.mcpServers;
+    delete existing.mcpServers;
   } else {
-    settings.mcpServers = mcpServers;
+    existing.mcpServers = mcpServers;
   }
+  await atomicWriteJson(filePath, existing);
+}
 
-  // Remove ouroboros from disabledMcpServers if present
-  const disabledServers = (settings.disabledMcpServers ?? {}) as ServerMap;
-  if ('ouroboros' in disabledServers) {
-    delete disabledServers['ouroboros'];
-    if (Object.keys(disabledServers).length === 0) {
-      delete settings.disabledMcpServers;
+async function disableInClaudeJson(projectRoot: string): Promise<void> {
+  const filePath = userClaudeJsonPath();
+  const claudeJson = await readJsonTolerant(filePath, '~/.claude.json');
+  if (claudeJson === null) return;
+  const projects = claudeJson.projects as Record<string, ClaudeProjectEntry> | undefined;
+  if (!projects) return;
+  const projectKey = path.normalize(projectRoot);
+  // eslint-disable-next-line security/detect-object-injection -- key is a normalized projectRoot
+  const entry = projects[projectKey];
+  if (!entry) return;
+  if (Array.isArray(entry.enabledMcpjsonServers)) {
+    const filtered = entry.enabledMcpjsonServers.filter((s) => s !== 'ouroboros');
+    if (filtered.length > 0) {
+      entry.enabledMcpjsonServers = filtered;
     } else {
-      settings.disabledMcpServers = disabledServers;
+      delete entry.enabledMcpjsonServers;
     }
   }
-
-  await atomicWriteJson(filePath, settings);
+  await atomicWriteJson(filePath, claudeJson);
 }

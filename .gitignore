@@ -3,6 +3,10 @@ node_modules/
 .pnp
 .pnp.js
 
+# IDE-managed MCP server registration (Wave 53g) — contains a per-launch
+# random port that changes every IDE restart; not meaningful to version-control.
+.mcp.json
+
 # Build outputs
 dist/
 out/

@@ -1,93 +1,93 @@
 /**
- * Wave 53d regression: shutdown must NOT remove the mcpServers.ouroboros entry.
+ * Wave 53d regression (assertions repointed by Wave 53g): shutdown must NOT
+ * remove the ouroboros MCP server entry.
  *
- * Root cause: stopInternalMcp() previously called removeFromProjectSettings()
- * unconditionally on every IDE shutdown, wiping .claude/settings.json so that
- * external Claude Code terminal sessions launched after IDE exit found no entry.
+ * Pre-53d, stopInternalMcp() unconditionally called removeFromProjectSettings()
+ * on every IDE shutdown. Pre-53g, this wiped `.claude/settings.json mcpServers
+ * .ouroboros`. Wave 53g moved the auto-inject target to `.mcp.json` (the file
+ * Claude Code actually reads), so the assertions below now check `.mcp.json`
+ * instead — but the contract is unchanged: once injectIntoProjectSettings()
+ * writes the entry, it MUST persist until the next IDE startup overwrites
+ * with the current port. removeFromProjectSettings() must NOT be called in
+ * the shutdown path.
  *
- * Contract: once injectIntoProjectSettings() writes the entry, it MUST persist
- * until the next IDE startup (which will overwrite it with the current port).
- * removeFromProjectSettings() must NOT be called in the shutdown path.
- *
- * If someone re-adds removeFromProjectSettings to stopInternalMcp, the test
- * "entry survives without remove call" will still pass, but the companion test
- * "removeFromProjectSettings erases the entry" below will remind a reviewer
- * that calling remove IS destructive — and the Phase C commit comment links
- * back to why that must not happen on shutdown.
+ * Tests mock `os.homedir()` so the suite never touches the real
+ * `~/.claude.json`.
  */
+
+/* eslint-disable security/detect-non-literal-fs-filename --
+   test file uses validated tmpdir paths throughout. */
 
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { injectIntoProjectSettings, removeFromProjectSettings } from './internalMcpAutoInject';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-let tmpRoot: string;
-
-async function readSettingsJson(root: string): Promise<Record<string, unknown>> {
-  const filePath = path.join(root, '.claude', 'settings.json');
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated tmpRoot + known filename in test helper
-  const raw = await fs.readFile(filePath, 'utf-8');
-  return JSON.parse(raw) as Record<string, unknown>;
-}
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
 // ---------------------------------------------------------------------------
 
+let tmpRoot: string;
+let projectRoot: string;
+let fakeHome: string;
+
 beforeEach(async () => {
-  tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'ouroboros-test-'));
+  tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'wave-53d-shutdown-'));
+  projectRoot = path.join(tmpRoot, 'project');
+  fakeHome = path.join(tmpRoot, 'home');
+  await fs.mkdir(projectRoot, { recursive: true });
+  await fs.mkdir(fakeHome, { recursive: true });
+  vi.spyOn(os, 'homedir').mockReturnValue(fakeHome);
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await fs.rm(tmpRoot, { recursive: true, force: true });
 });
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function readMcpJson(): Promise<Record<string, unknown>> {
+  const filePath = path.join(projectRoot, '.mcp.json');
+  const raw = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(raw) as Record<string, unknown>;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('internalMcp shutdown contract (wave-53d regression)', () => {
+describe('internalMcp shutdown contract (Wave 53d regression, Wave 53g repointed)', () => {
   it('entry survives without remove call — simulates correct shutdown path', async () => {
-    // Arrange: inject entry (what startInternalMcp does at startup)
-    await injectIntoProjectSettings(tmpRoot, 54321, { transport: 'sse' });
+    await injectIntoProjectSettings(projectRoot, 54321, { transport: 'sse' });
 
-    // Act: no removeFromProjectSettings call — this is the fixed shutdown path
+    // Simulated correct shutdown: no removeFromProjectSettings call.
 
-    // Assert: entry still present
-    const settings = await readSettingsJson(tmpRoot);
-    const mcpServers = settings['mcpServers'] as Record<string, unknown> | undefined;
+    const mcpJson = await readMcpJson();
+    const mcpServers = mcpJson.mcpServers as Record<string, unknown> | undefined;
     expect(mcpServers).toBeDefined();
     expect(mcpServers?.['ouroboros']).toEqual({ url: 'http://127.0.0.1:54321/sse' });
   });
 
   it('removeFromProjectSettings erases the entry — confirms remove IS destructive', async () => {
-    // This test documents WHY removeFromProjectSettings must not be called on
-    // shutdown: calling it unconditionally wipes the entry that external Claude
-    // Code terminal sessions depend on.
-    await injectIntoProjectSettings(tmpRoot, 54321, { transport: 'sse' });
-    await removeFromProjectSettings(tmpRoot);
+    await injectIntoProjectSettings(projectRoot, 54321, { transport: 'sse' });
+    await removeFromProjectSettings(projectRoot);
 
-    const settings = await readSettingsJson(tmpRoot);
-    const mcpServers = settings['mcpServers'] as Record<string, unknown> | undefined;
-    // After remove, ouroboros is gone — this is the bad state the fix prevents.
+    const mcpJson = await readMcpJson();
+    const mcpServers = mcpJson.mcpServers as Record<string, unknown> | undefined;
     expect(mcpServers?.['ouroboros']).toBeUndefined();
   });
 
   it('next startup inject overwrites stale port — confirms stale entry is harmless', async () => {
-    // Write entry with old port (simulates stale entry left after IDE shutdown)
-    await injectIntoProjectSettings(tmpRoot, 54321, { transport: 'sse' });
+    await injectIntoProjectSettings(projectRoot, 54321, { transport: 'sse' });
+    await injectIntoProjectSettings(projectRoot, 55555, { transport: 'sse' });
 
-    // Simulate next startup: inject with new port (overwrite)
-    await injectIntoProjectSettings(tmpRoot, 55555, { transport: 'sse' });
-
-    const settings = await readSettingsJson(tmpRoot);
-    const mcpServers = settings['mcpServers'] as Record<string, unknown> | undefined;
+    const mcpJson = await readMcpJson();
+    const mcpServers = mcpJson.mcpServers as Record<string, unknown> | undefined;
     expect(mcpServers?.['ouroboros']).toEqual({ url: 'http://127.0.0.1:55555/sse' });
   });
 });
