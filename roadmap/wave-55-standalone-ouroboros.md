@@ -1,4 +1,4 @@
-# Wave 54 — Standalone Ouroboros MCP Server
+# Wave 55 — Standalone Ouroboros MCP Server
 
 ## Implementation Plan (DRAFT)
 
@@ -86,7 +86,7 @@ The Electron-internal HTTP+SSE MCP server, the stdio bridge, the port registry, 
 
 | Phase | Goal | Subagent / responsibility |
 |---|---|---|
-| 0 | Verification smokes: confirm Claude Code spawns a standalone stdio MCP server cleanly via the SDK; confirm `better-sqlite3` opens our DB in readonly mode without locking issues; confirm the per-OS `userData` paths resolve correctly outside Electron. ADR (`roadmap/decisions/wave-54.md`) capturing the six locked decisions. | Orchestrator + user. |
+| 0 | Verification smokes: confirm Claude Code spawns a standalone stdio MCP server cleanly via the SDK; confirm `better-sqlite3` opens our DB in readonly mode without locking issues; confirm the per-OS `userData` paths resolve correctly outside Electron. ADR (`roadmap/decisions/wave-55.md`) capturing the six locked decisions. | Orchestrator + user. |
 | A | Build the standalone in isolation. New directory `src/standalone/ouroborosMcp/`, new electron-vite entry, stdio transport via SDK's `StdioServerTransport`, tool registration reusing `mcpToolHandlers.ts`. Schema-version handshake. `--db` arg parsing. No IDE-side changes yet — coexists. | sonnet-implementer. |
 | B | Switch IDE-side injection to the standalone shape. `internalMcpAutoInject.ts` writes the new entry; old shape no longer produced. Existing `internalMcpServer.ts` still runs (decommission deferred). codemodeStartup is unaffected because it reads whatever the entry shape is. Smoke: external `claude mcp list` + IDE-internal chat with codemode-on should both work. | sonnet-implementer. |
 | C | Switch per-spawn temp config (`scopedMcpConfig.ts`) to standalone too. The old direct-inject path wrote the bridge entry; now it writes the standalone entry. After this phase, no live consumer of the bridge or internalMcpServer remains. | sonnet-implementer. |
@@ -111,7 +111,7 @@ The Electron-internal HTTP+SSE MCP server, the stdio bridge, the port registry, 
 
 ## Acceptance criteria (wave-level)
 
-- [ ] All six locked decisions reflected in `roadmap/decisions/wave-54.md`.
+- [ ] All six locked decisions reflected in `roadmap/decisions/wave-55.md`.
 - [ ] `out/standalone/ouroborosMcp.js` exists, is a valid Node script, spawns and serves stdio MCP.
 - [ ] `claude mcp list` from a terminal (IDE off) shows `ouroboros` connected.
 - [ ] Agent in a terminal session (IDE off) can call `servers.ouroboros.search_graph(...)` via the codemode proxy and get results.
@@ -131,4 +131,4 @@ The Electron-internal HTTP+SSE MCP server, the stdio bridge, the port registry, 
 - **Context-layer fallback tools** — file-based reads of contextLayerStore so the 6 fallback tools work in standalone. Smaller than self-indexing; revisit if anyone hits the "graph not yet indexed" error in practice.
 - **Per-server namespace docstrings** — agent-discrimination improvement deferred from Wave 53l. Lower priority now that there's only one graph server in the multiplex.
 - **JSON tool output migration** — Wave 53l Phase C scope; independent of this wave.
-- **npm-package release of the standalone** — unblocked by Wave 54's clean directory boundary; trivial to ship later if desired.
+- **npm-package release of the standalone** — unblocked by Wave 55's clean directory boundary; trivial to ship later if desired.
