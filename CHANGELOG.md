@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.13] - 2026-04-29
+
+### Added
+- **Wave 53l Phase A — codemode universal multiplex.** When `codemode.enabled: true`,
+  the IDE patches `~/.claude.json mcpServers` once at startup with `__codemode_proxy`
+  so EVERY Claude Code session — IDE-internal AND external terminal — sees the
+  proxy. The per-spawn `acquireCodeModeForLaunch` short-circuits via
+  `isCodeModeEnabled()` once the user-level enable runs.
+- **Wave 53l Phase B — per-spawn routing default flipped.** With user-level CodeMode
+  active steady-state, the routing policy no longer needs an opt-in flag. New
+  `codemode.excludeFromMultiplex: string[]` config replaces the now-deprecated
+  `codemode.routeInternalMcp`. Default behavior: ouroboros multiplexes through
+  the proxy when `internalMcp.transport: 'stdio'`; opt out per-server via the
+  exclude list.
+
+### Fixed
+- **Stdio bridge port decoupled from baked entry.** `internalMcpStdioTransport.ts`
+  now resolves the live port at spawn time from `~/.claude/internalMcp-port.json`
+  (written on every IDE start), rather than reading a port baked into the
+  injected entry's args at enable time. Survives any number of IDE restarts.
+- **Bridge health probe before SSE handshake.** Unreachable port → descriptive
+  stderr line in `~/.claude/codemode-proxy.log` instead of opaque MCP
+  CONNECTION_CLOSED.
+- **Crash-recovery skip for ouroboros.** `maybeRestoreFromCrash` no longer
+  applies a stale ouroboros entry from a prior session's managed-backup — the
+  IDE's fresh injection is the source of truth for ouroboros lifecycle.
+- **Codemode UX polish.** `__codemode_proxy` entry now sets `alwaysLoad: true`
+  (skip tool-search deferral for the one-tool surface). Executor diagnoses
+  `Cannot read properties of undefined (reading 'X')` with available-server
+  hint. `execute_code` description spells out the explicit `return` requirement.
+
+### Changed
+- **Tool docstrings made prescriptive.** Graph tools (`search_graph`,
+  `trace_call_path`, `get_code_snippet`, `query_graph`, etc.) now lead with
+  "USE INSTEAD OF Grep when..." / "USE THIS for...". Project CLAUDE.md and
+  `~/.claude/rules/graph-tool-routing.md` align: graph tools FIRST for symbol
+  queries, Grep is the fallback.
+
 ## [2.7.12] - 2026-04-29
 
 ### Fixed

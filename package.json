@@ -1,6 +1,6 @@
 {
   "name": "ouroboros",
-  "version": "2.7.12",
+  "version": "2.7.13",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "author": "Ouroboros",
   "main": "out/main/index.js",
