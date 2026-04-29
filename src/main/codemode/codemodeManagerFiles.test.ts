@@ -18,7 +18,9 @@ vi.mock('../logger', () => ({
 
 import {
   atomicWriteJson,
+  augmentProxyServers,
   buildProxyServerEntry,
+  buildContext7ProxyEntry,
   ensureProjectEntry,
   getProjectEntry,
   getProjectsMap,
@@ -177,5 +179,28 @@ describe('buildProxyServerEntry', () => {
     expect(entry.command).toBe('node');
     expect(entry.args?.[0]).toMatch(/proxyServer\.js$/);
     expect(entry.args?.[1]).toMatch(/codemode-proxy-config\.json$/);
+  });
+});
+
+describe('context7 proxy helpers', () => {
+  const originalApiKey = process.env.CONTEXT7_API_KEY;
+
+  afterEach(() => {
+    process.env.CONTEXT7_API_KEY = originalApiKey;
+  });
+
+  it('buildContext7ProxyEntry points at context7Proxy.js', () => {
+    const entry = buildContext7ProxyEntry();
+    expect(entry.type).toBe('stdio');
+    expect(entry.command).toBe('node');
+    expect(entry.args?.[0]).toMatch(/context7Proxy\.js$/);
+  });
+
+  it('augmentProxyServers injects context7 when the API key is present', () => {
+    process.env.CONTEXT7_API_KEY = 'test-key';
+    const servers = augmentProxyServers({ github: { command: 'npx' } });
+    expect(servers.github).toBeDefined();
+    expect(servers.context7).toBeDefined();
+    expect(servers.context7?.args?.[0]).toMatch(/context7Proxy\.js$/);
   });
 });

@@ -13,9 +13,6 @@ vi.mock('../config', () => ({ getConfigValue: vi.fn() }));
 vi.mock('../logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-vi.mock('../internalMcp/internalMcpPortRegistry', () => ({
-  getInternalMcpUrl: vi.fn(),
-}));
 vi.mock('./codemodeManager', () => ({
   enableCodeMode: vi.fn(),
   disableCodeMode: vi.fn(),
@@ -24,7 +21,6 @@ vi.mock('./codemodeManager', () => ({
 }));
 
 import { getConfigValue } from '../config';
-import { getInternalMcpUrl } from '../internalMcp/internalMcpPortRegistry';
 import {
   disableCodeMode,
   enableCodeMode,
@@ -38,7 +34,6 @@ const enabledFn = isCodeModeEnabled as ReturnType<typeof vi.fn>;
 const enableFn = enableCodeMode as ReturnType<typeof vi.fn>;
 const disableFn = disableCodeMode as ReturnType<typeof vi.fn>;
 const serversFn = getMcpServers as ReturnType<typeof vi.fn>;
-const liveUrlFn = getInternalMcpUrl as ReturnType<typeof vi.fn>;
 
 function setConfig(map: Record<string, unknown>): void {
   cfg.mockImplementation((key: string) => map[key as keyof typeof map]);
@@ -50,7 +45,6 @@ beforeEach(() => {
   enableFn.mockResolvedValue({ success: true });
   disableFn.mockResolvedValue({ success: true });
   serversFn.mockResolvedValue([]);
-  liveUrlFn.mockReturnValue('http://127.0.0.1:51199/');
 });
 
 describe('enableCodeModeUserLevel — gate', () => {
@@ -89,7 +83,7 @@ describe('enableCodeModeUserLevel — eligibility filter', () => {
         name: 'ouroboros',
         enabled: true,
         scope: 'project',
-        config: { command: 'node', args: ['/path/internalMcpStdioTransport.js', '51199'] },
+        config: { command: 'node', args: ['/path/ouroborosMcp.js'] },
       },
     ]);
     await enableCodeModeUserLevel({ projectRoot: '/proj' });
@@ -124,41 +118,10 @@ describe('enableCodeModeUserLevel — eligibility filter', () => {
     expect(names).not.toContain('inactive');
   });
 
-  it('drops ouroboros when bridge port differs from live internalMcp port', async () => {
-    setConfig({ codemode: { enabled: true } });
-    liveUrlFn.mockReturnValue('http://127.0.0.1:51199/');
-    serversFn.mockResolvedValue([
-      { name: 'github', enabled: true, scope: 'global', config: { command: 'gh' } },
-      {
-        name: 'ouroboros',
-        enabled: true,
-        scope: 'project',
-        config: { command: 'node', args: ['/path/internalMcpStdioTransport.js', '51156'] },
-      },
-    ]);
-    await enableCodeModeUserLevel({ projectRoot: '/proj' });
-    const names = enableFn.mock.calls[0][0] as string[];
-    expect(names).toContain('github');
-    expect(names).not.toContain('ouroboros');
-  });
-
-  it('drops ouroboros when internalMcp is not running this session', async () => {
-    setConfig({ codemode: { enabled: true } });
-    liveUrlFn.mockReturnValue(null);
-    serversFn.mockResolvedValue([
-      { name: 'github', enabled: true, scope: 'global', config: { command: 'gh' } },
-      {
-        name: 'ouroboros',
-        enabled: true,
-        scope: 'project',
-        config: { command: 'node', args: ['/path/internalMcpStdioTransport.js', '51156'] },
-      },
-    ]);
-    await enableCodeModeUserLevel({ projectRoot: '/proj' });
-    const names = enableFn.mock.calls[0][0] as string[];
-    expect(names).toContain('github');
-    expect(names).not.toContain('ouroboros');
-  });
+  // Wave 60 Phase E: removed two `drops ouroboros when [bridge port stale]`
+  // tests — the dropStaleOuroboros guard they covered was scaffolding around
+  // the bridge architecture, which Wave 60 deleted. The standalone is
+  // portless and stable, so there's nothing for the guard to defend against.
 
   it('returns success:false when no eligible servers exist', async () => {
     setConfig({ codemode: { enabled: true } });

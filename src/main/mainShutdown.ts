@@ -15,7 +15,6 @@ import { shutdownExtensionHost } from './extensionHost/extensionHostProxy';
 import { cleanupIpcHandlers } from './ipc';
 import log from './logger';
 import { closeEditProvenance, disposeCodebaseGraph } from './mainStartup';
-import { shutdownMcpHost } from './mcpHost/mcpHostProxy';
 import { closeDecisionWriter } from './orchestration/contextDecisionWriter';
 import { closeOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { shutdownCodexAppServerProcesses } from './orchestration/providers/codexAppServerProcess';
@@ -54,7 +53,8 @@ async function disposeSubsystems(): Promise<void> {
   await tryShutdown('codebase-graph', disposeCodebaseGraph);
   await tryShutdown('codex-app-server', shutdownCodexAppServerProcesses);
   await tryShutdown('extension-host', shutdownExtensionHost);
-  await tryShutdown('mcp-host', shutdownMcpHost);
+  // Wave 60 Phase E: no legacy MCP host cleanup remains here. The
+  // standalone server is spawned and owned by Claude Code, not the IDE.
 }
 
 export async function performWillQuitShutdown(): Promise<void> {

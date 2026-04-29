@@ -1,0 +1,45 @@
+[features]
+codex_hooks = true
+
+[mcp_servers.codemode]
+command = "node"
+args = [
+  "scripts\\codemode-proxy-launcher.mjs",
+]
+cwd = "C:\\Web App\\Agent IDE"
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/assets/hooks/pre_commit_lint.mjs"'
+timeout = 120
+statusMessage = "Checking commit / Bash guardrails"
+
+[[hooks.PostToolUse]]
+matcher = "^(Edit|Write|MultiEdit)$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/assets/hooks/post_edit_eslint.mjs"'
+timeout = 45
+statusMessage = "Running ESLint after file edits"
+
+[[hooks.PostToolUse]]
+matcher = "^(Edit|Write|MultiEdit)$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/assets/hooks/post_edit_test.mjs"'
+timeout = 90
+statusMessage = "Running focused tests after file edits"
+
+[[hooks.PostToolUse]]
+matcher = "^Write$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/assets/hooks/post_write_test_required.mjs"'
+timeout = 30
+statusMessage = "Checking for required tests on new source files"

@@ -151,7 +151,9 @@ afterEach(() => {
 // ─── Settings-write shape per decision ───────────────────────────────────────
 
 describe('settings-write shape', () => {
-  it('direct-inject + sse transport: writes {ouroboros: {url}}', async () => {
+  it('direct-inject: writes {ouroboros: {command, args, env}} (standalone shape)', async () => {
+    // Wave 60 Phase E: SSE transport is deprecated — the entry is always
+    // the standalone shape regardless of `internalMcp.transport`.
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'sse' },
@@ -166,8 +168,10 @@ describe('settings-write shape', () => {
     const data = readWrittenConfig(result!.configPath);
     const entry = data.mcpServers['ouroboros'];
     expect(entry).toBeDefined();
-    expect(entry.url).toBe(OUROBOROS_URL);
-    expect(entry.command).toBeUndefined();
+    expect(entry.url).toBeUndefined();
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.env?.ELECTRON_RUN_AS_NODE).toBe('1');
+    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     expect(result!.routingDecision).toBe('direct-inject');
     await result!.cleanup();
   });
@@ -307,7 +311,9 @@ describe('route-through-codemode requires stdio transport', () => {
     expect(result).not.toBeNull();
     expect(result!.routingDecision).toBe('direct-inject');
     const entry = readWrittenConfig(result!.configPath).mcpServers['ouroboros'];
-    expect(entry.url).toBe(OUROBOROS_URL);
+    // Wave 60 Phase E: standalone shape regardless of transport config.
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     await result!.cleanup();
   });
 });

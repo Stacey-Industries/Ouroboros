@@ -15,9 +15,7 @@ import { initExtensions } from './extensionsApi';
 import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
-// prettier-ignore
-import { buildInjectOptions, injectIntoProjectSettings, startInternalMcpServer } from './internalMcp';
-import { clearInternalMcpPort, setInternalMcpPort } from './internalMcp/internalMcpPortRegistry';
+import { buildInjectOptions, injectIntoProjectSettings } from './internalMcp';
 // prettier-ignore
 import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { startJankDetector, stopJankDetector } from './jankDetector';
@@ -26,7 +24,6 @@ import { performWillQuitShutdown } from './mainShutdown';
 // prettier-ignore
 import { bootstrapApp, bootstrapCrashReporter, bootstrapProcessHandlers, configureAutoUpdater, ensureSingleInstance, initCodebaseGraph, initEditProvenance, scheduleJsonlRetentionPurge, seedGithubTokenWithRetry, writeCrashLog } from './mainStartup';
 import { registerAllTelemetryDrainHandlers } from './mainTelemetryHandlers';
-import { startMcpHost, stopMcpHost } from './mcpHost/mcpHostProxy';
 import { buildApplicationMenu } from './menu';
 import { initDecisionWriter } from './orchestration/contextDecisionWriter';
 import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
@@ -68,7 +65,6 @@ ensureSingleInstance();
 // ---------------------------------------------------------------------------
 
 let mainWindow: BrowserWindow | null = null;
-let internalMcpStop: (() => Promise<void>) | null = null;
 
 // ---------------------------------------------------------------------------
 // Startup helpers
@@ -99,46 +95,28 @@ async function startIdeTools(): Promise<void> {
   if (addr) log.info(`IDE tool server started at ${addr.address}`);
 }
 
-async function startInternalMcp(): Promise<void> {
+/**
+ * Wave 60 Phase E: the IDE no longer runs an in-process MCP server. Its
+ * job is to write the standalone-MCP entry into `<root>/.mcp.json` so
+ * Claude Code (whether spawned by the IDE or a terminal) can find and
+ * launch the standalone (`out/main/ouroborosMcp.js`). The standalone
+ * reads the SQLite DB directly — no port, no bridge, no HTTP server.
+ */
+async function injectStandaloneMcpEntry(): Promise<void> {
   if (!getConfigValue('internalMcpEnabled')) {
-    log.info('[internal-mcp] disabled by config (internalMcpEnabled=false) — skipping');
+    log.info('[internal-mcp] disabled by config (internalMcpEnabled=false) — skipping injection');
     return;
   }
   const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   if (!workspaceRoot) {
-    log.info('[internal-mcp] no project root — skipping');
+    log.info('[internal-mcp] no project root — skipping injection');
     return;
   }
   const inject = buildInjectOptions(__dirname);
-  if (getConfigValue('useMcpHost') === true) {
-    const res = await startMcpHost(workspaceRoot, 0);
-    if (!res.success || res.port == null) {
-      log.warn('[mcp] host start failed:', res.error);
-      return;
-    }
-    internalMcpStop = stopMcpHost;
-    setInternalMcpPort(res.port);
-    await injectIntoProjectSettings(workspaceRoot, res.port, inject);
-    log.info(`[internal-mcp] mcp-host listening on port ${res.port}`);
-    return;
-  }
-  const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
-  internalMcpStop = handle.stop;
-  setInternalMcpPort(handle.port);
-  await injectIntoProjectSettings(workspaceRoot, handle.port, inject);
-  log.info(`[internal-mcp] listening on port ${handle.port}`);
-}
-
-async function stopInternalMcp(): Promise<void> {
-  // Wave 53d: do NOT call removeFromProjectSettings here. Each startup upserts
-  // the mcpServers.ouroboros entry with the current port; leaving a stale entry
-  // between launches is harmless (next launch overwrites). Removing it here
-  // breaks external terminal Claude Code sessions that run with the IDE shut down.
-  clearInternalMcpPort();
-  if (internalMcpStop) {
-    await internalMcpStop();
-    internalMcpStop = null;
-  }
+  // serverPort is unused by the new stdio-standalone entry but kept in the
+  // injectIntoProjectSettings signature for back-compat. Pass 0.
+  await injectIntoProjectSettings(workspaceRoot, 0, inject);
+  log.info('[internal-mcp] injected standalone entry into <root>/.mcp.json');
 }
 
 async function startBackgroundServices(win: BrowserWindow): Promise<void> {
@@ -148,7 +126,7 @@ async function startBackgroundServices(win: BrowserWindow): Promise<void> {
     true,
   );
   await runStartupStep('[main] failed to start IDE tool server:', startIdeTools);
-  await runStartupStep('[main] failed to start internal MCP server:', startInternalMcp);
+  await runStartupStep('[main] failed to inject standalone MCP entry:', injectStandaloneMcpEntry);
   const root = getConfigValue('defaultProjectRoot') as string | undefined;
   await runStartupStep('[main] failed to enable user-level CodeMode:', () =>
     enableCodeModeUserLevel({ projectRoot: root }),
@@ -301,7 +279,9 @@ app.on('window-all-closed', async () => {
   await stopWebServer();
   await stopHooksServer();
   await stopIdeToolServer();
-  await stopInternalMcp();
+  // Wave 60 Phase E: no internalMcp HTTP server to stop — the IDE only
+  // injects the standalone entry; Claude Code spawns the standalone on
+  // demand and owns its lifecycle.
   killAllPtySessions();
   killAllWarm();
   if (process.platform !== 'darwin') app.quit();

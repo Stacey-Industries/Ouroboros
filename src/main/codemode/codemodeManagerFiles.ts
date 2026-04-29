@@ -219,6 +219,16 @@ function resolveProxyServerPath(): string {
   return sibling;
 }
 
+function resolveContext7ProxyPath(): string {
+  const sibling = path.join(__dirname, 'context7Proxy.js');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is __dirname + literal filename
+  if (existsSync(sibling)) return sibling;
+  const parent = path.join(__dirname, '..', 'context7Proxy.js');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is __dirname + literal filename
+  if (existsSync(parent)) return parent;
+  return sibling;
+}
+
 export function buildProxyServerEntry(): McpServerConfig {
   return {
     type: 'stdio',
@@ -228,10 +238,29 @@ export function buildProxyServerEntry(): McpServerConfig {
   };
 }
 
+export function buildContext7ProxyEntry(): McpServerConfig {
+  return {
+    type: 'stdio',
+    command: 'node',
+    args: [resolveContext7ProxyPath()],
+  };
+}
+
+export function augmentProxyServers(
+  serversToProxy: Record<string, McpServerConfig>,
+): Record<string, McpServerConfig> {
+  if (Object.keys(serversToProxy).length === 0) return serversToProxy;
+  if (serversToProxy.context7 || !process.env.CONTEXT7_API_KEY) return serversToProxy;
+  return {
+    ...serversToProxy,
+    context7: buildContext7ProxyEntry(),
+  };
+}
+
 export async function writeProxyConfig(
   serversToProxy: Record<string, McpServerConfig>,
 ): Promise<void> {
-  const proxyConfig = { servers: serversToProxy };
+  const proxyConfig = { servers: augmentProxyServers(serversToProxy) };
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp config path in os.tmpdir()
   await fs.writeFile(PROXY_CONFIG_PATH, JSON.stringify(proxyConfig, null, 2), 'utf-8');
 }

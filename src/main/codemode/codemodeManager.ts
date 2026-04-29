@@ -23,6 +23,7 @@ import fs from 'fs/promises';
 import log from '../logger';
 import {
   deleteRestorationFile,
+  augmentProxyServers,
   getProjectEntry,
   getProjectsMap,
   isProjectServerEnabled,
@@ -95,33 +96,12 @@ export async function getMcpServers(projectRoot?: string): Promise<McpServerEntr
  * where a previous IDE process exited mid-enable and left the user's config
  * in the half-managed state.
  */
-/**
- * Wave 53l Phase A+: strip ouroboros from a per-project restoration map.
- * The IDE owns ouroboros's lifecycle — `injectIntoProjectSettings` writes a
- * fresh portless entry on every IDE start (Fix A). Restoring an older
- * stashed ouroboros entry from a crashed prior session would clobber that
- * fresh entry with stale data (typically a baked port from before Fix A),
- * causing the codemode proxy bridge to spawn against a dead port. Other
- * project-scope servers (user-installed) ARE legitimately ours to restore.
- */
-function stripOuroborosFromProject(
-  project: Record<string, Record<string, McpServerConfig>>,
-): Record<string, Record<string, McpServerConfig>> {
-  const out: Record<string, Record<string, McpServerConfig>> = {};
-  for (const [root, servers] of Object.entries(project)) {
-    const filtered: Record<string, McpServerConfig> = {};
-    for (const [name, cfg] of Object.entries(servers)) {
-      if (name === 'ouroboros') continue;
-      // eslint-disable-next-line security/detect-object-injection -- name is a parsed settings key, not user input
-      filtered[name] = cfg;
-    }
-    if (Object.keys(filtered).length > 0) {
-      // eslint-disable-next-line security/detect-object-injection -- root is a parsed settings key, not user input
-      out[root] = filtered;
-    }
-  }
-  return out;
-}
+// Wave 60 Phase E: removed `stripOuroborosFromProject`. The Wave 53l
+// Phase A+ guard was needed because the bridge baked a port into the
+// stashed entry's args; restoring a stale entry would inject a dead
+// port. Wave 60's standalone is portless and stable across sessions,
+// so restoring the ouroboros entry is now safe (and correct — the IDE's
+// fresh injection will idempotently overwrite it on next startup).
 
 async function maybeRestoreFromCrash(): Promise<void> {
   const record = await readRestorationFile();
@@ -129,7 +109,7 @@ async function maybeRestoreFromCrash(): Promise<void> {
   log.warn('[codemode] stale restoration file detected — recovering from prior crashed enable');
   try {
     await restoreGlobal(record.global ?? {});
-    await restoreProject(stripOuroborosFromProject(record.project ?? {}));
+    await restoreProject(record.project ?? {});
   } finally {
     await deleteRestorationFile();
   }
@@ -189,7 +169,8 @@ export async function enableCodeMode(
       await rollbackEmptyEnable();
       return { success: false, error: 'None of the requested MCP servers were found in settings.' };
     }
-    await writeProxyConfig(proxied);
+    const proxyServers = augmentProxyServers(proxied);
+    await writeProxyConfig(proxyServers);
     await writeRestorationFile({
       version: 2,
       global: globalBackup,
@@ -197,7 +178,7 @@ export async function enableCodeMode(
         Object.keys(projectBackup).length > 0 && projectRoot
           ? { [projectRoot]: projectBackup }
           : {},
-      proxiedNames,
+      proxiedNames: Object.keys(proxyServers),
       activeProjectRoot: projectRoot,
     });
     codemodeEnabled = true;

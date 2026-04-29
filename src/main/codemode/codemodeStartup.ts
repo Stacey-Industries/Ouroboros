@@ -35,7 +35,6 @@
  */
 
 import { getConfigValue } from '../config';
-import { getInternalMcpUrl } from '../internalMcp/internalMcpPortRegistry';
 import log from '../logger';
 import {
   disableCodeMode,
@@ -58,60 +57,10 @@ function isStdioCapable(config: McpServerConfig): boolean {
   return typeof config.command === 'string' && config.command.length > 0;
 }
 
-function isOuroborosBridgeEntry(config: McpServerConfig): boolean {
-  if (!Array.isArray(config.args)) return false;
-  return config.args.some(
-    (a) => typeof a === 'string' && a.includes('internalMcpStdioTransport'),
-  );
-}
-
-function extractBridgePort(config: McpServerConfig): number | null {
-  if (!Array.isArray(config.args)) return null;
-  for (const a of config.args) {
-    if (typeof a !== 'string') continue;
-    const n = Number(a);
-    if (Number.isInteger(n) && n > 0 && n < 65536) return n;
-  }
-  return null;
-}
-
-function livePortOrNull(): number | null {
-  const url = getInternalMcpUrl();
-  if (!url) return null;
-  const m = /:(\d+)\//.exec(url);
-  return m ? Number(m[1]) : null;
-}
-
-/**
- * Wave 53l Phase A guard: drop ouroboros from the eligible list when its
- * bridge port doesn't match the live `getInternalMcpUrl()` port. Without
- * this, a stale `<root>/.mcp.json` entry (or a session where internalMcp
- * never started) bakes a dead port into the proxy config — the proxy then
- * starts but reports `0 server(s)` because every upstream connect hits
- * ECONNREFUSED.
- */
-function dropStaleOuroboros<T extends { name: string; config: McpServerConfig }>(
-  entries: T[],
-): T[] {
-  const live = livePortOrNull();
-  return entries.filter((e) => {
-    if (e.name !== 'ouroboros' || !isOuroborosBridgeEntry(e.config)) return true;
-    if (live === null) {
-      log.warn(
-        '[codemode-startup] dropping ouroboros from multiplex — internalMcp not running this session',
-      );
-      return false;
-    }
-    const entryPort = extractBridgePort(e.config);
-    if (entryPort !== null && entryPort !== live) {
-      log.warn(
-        `[codemode-startup] dropping ouroboros from multiplex — entry port ${entryPort} != live port ${live} (stale .mcp.json entry)`,
-      );
-      return false;
-    }
-    return true;
-  });
-}
+// Wave 60 Phase E: removed dropStaleOuroboros / livePortOrNull / bridge-port
+// extraction helpers. The pre-Wave-60 bridge baked a port into args that
+// could go stale across IDE restarts; Wave 60's standalone is portless and
+// stable across sessions, so the guard has nothing to defend against.
 
 interface StartupOptions {
   /**
@@ -133,11 +82,10 @@ async function resolveEligibleServers(
 ): Promise<EligibilityResult> {
   const excludes = new Set(cfg.excludeFromMultiplex ?? []);
   const allServers = await getMcpServers(projectRoot);
-  const stdio = allServers
+  const eligible = allServers
     .filter((e) => e.enabled)
     .filter((e) => !excludes.has(e.name))
     .filter((e) => isStdioCapable(e.config));
-  const eligible = dropStaleOuroboros(stdio);
   const skippedHttp = allServers
     .filter((e) => e.enabled && !isStdioCapable(e.config))
     .map((e) => e.name);

@@ -1,55 +1,26 @@
-<!-- claude-md-auto:start -->
+# `src/main/internalMcp/` — MCP entry injection (post-Wave-60)
 
-<!-- claude-md-auto:end -->
+> **Status: shrunken.** Pre-Wave-60 this directory ran an in-process HTTP+SSE MCP server, a stdio bridge, a port registry, a 14-tool registry, and a separate utility-process variant under `mcpHost/`. Wave 60 Phase E deleted all of that. The standalone MCP server lives at `src/standalone/ouroborosMcp/`; this directory now only writes the IDE-side injection that points Claude Code at it.
 
-<!-- claude-md-manual:preserved -->
-# `src/main/internalMcp/` — Internal MCP Server
-
-> **Status: Wired and active.** `main.ts` imports and calls `startInternalMcpServer` in the startup sequence, gated by `config.internalMcpEnabled` (default `true`).
-
-Designed to expose IDE tools to Claude Code sessions by running a local SSE MCP server on `localhost:<random port>` and auto-injecting its URL into `.claude/settings.json` as the `'ouroboros'` MCP server entry.
-
-## File Map
+## File map
 
 | File | Role |
 |------|------|
-| `index.ts` | Public barrel — re-exports `startInternalMcpServer`, `injectIntoProjectSettings`, `removeFromProjectSettings`. Carries the `@deprecated UNWIRED` notice. |
-| `internalMcpServer.ts` | HTTP server implementing the [MCP SSE transport](https://spec.modelcontextprotocol.io/specification/server/transports/#http-with-sse). Handles `GET /sse` (event stream), `POST /message` (JSON-RPC), and `POST /messages` (batch). |
-| `internalMcpTools.ts` | Tool registry — `ALL_TOOLS` array + `getActiveTools()` / `findTool()`. Falls back to context-layer tools when the codebase graph is unavailable. |
-| `internalMcpToolsGraph.ts` | Graph-aware tools: `get_architecture`, `get_codebase_context`, `search_symbols`, `get_symbol`, `trace_imports`, `detect_changes`. |
-| `internalMcpToolsModules.ts` | Context-layer module tools: `search_modules`, `get_module`, `list_modules`, `get_module_files`. Also owns `validateModuleId`, `truncate`, and `MAX_RESPONSE_CHARS`. |
-| `internalMcpToolsHelpers.ts` | Shared formatting helpers used by both tool files: `appendAiSection`, `appendSymbolsSection`, `appendDepsSection`, and graph/import formatters. |
-| `internalMcpAutoInject.ts` | Reads/writes `.claude/settings.json` atomically — adds or removes the `mcpServers.ouroboros` entry. Transport-aware: writes `{url}` for SSE, `{command, args}` for stdio. |
-| `internalMcpStdioTransport.ts` | Wave 51: standalone Node script Claude Code spawns when `transport === 'stdio'`. Forwards stdio JSON-RPC frames to `http://127.0.0.1:<port>/message`. |
-| `internalMcpTypes.ts` | Shared types: `InternalMcpServerOptions`, `InternalMcpServerHandle`, `McpToolDefinition`, `InternalMcpTransport` (`'sse' \| 'stdio'`). |
+| `index.ts` | Barrel — exports `injectIntoProjectSettings`, `removeFromProjectSettings`, `buildInjectOptions`. |
+| `internalMcpAutoInject.ts` | Writes `<root>/.mcp.json mcpServers.ouroboros` and updates `~/.claude.json projects[<root>].enabledMcpjsonServers`. The entry is the standalone shape: `{type:'stdio', command: process.execPath, args: [<ouroborosMcp.js>], env: {ELECTRON_RUN_AS_NODE:'1'}}`. |
+| `internalMcpScope.ts` | Pure decision logic for the `internalMcpScope` config (`always` / `task-gated` / `never`). Used by codemodeStartup and scopedMcpConfig. |
+| `internalMcpTypes.ts` | Shared `McpToolDefinition` and `InternalMcpTransport` types. Consumed by `mcpToolHandlers.ts` and `ouroborosMcpServer.ts`. |
 
-## Tool Fallback Strategy
+## What's no longer here (Wave 60 Phase E deletions)
 
-`getActiveTools()` in `internalMcpTools.ts` implements a two-tier fallback:
-
-1. **Graph tools** (`../codebaseGraph/mcpToolHandlers`) — preferred when `graphController.getGraphToolContext()` returns a healthy context. Provides ~14 topology-aware tools.
-2. **Context-layer tools** (`ALL_TOOLS` in this module) — fallback when the graph is unavailable. Uses `contextLayerStore` for module data.
-
-This means the tool set exposed to Claude Code depends on whether the codebase graph has been built.
-
-## Key Conventions
-
-- **`McpToolDefinition.handler` signature**: `(args: Record<string, unknown>, workspaceRoot: string) => Promise<string>`. All tools return plain text (truncated to 8000 chars via `truncate()`).
-- **`validateModuleId`**: Rejects `..`, absolute paths, and backslashes before any file access. All module-browsing tools must call this before using a user-supplied `moduleId`.
-- **Atomic settings write**: `internalMcpAutoInject.ts` writes to a `.tmp` file then `fs.rename` — never partial-writes to the live `.claude/settings.json`.
-- **SSE client tracking**: The server keeps a `Set<ServerResponse>` of connected SSE clients and broadcasts tool-result events to all of them. Clients are removed on `close`.
-- **Transport flag** (`internalMcp.transport`, default `'sse'`): switches the `mcpServers.ouroboros` entry shape between `{url}` (SSE) and `{command: 'node', args: [<stdio-transport-path>, port]}`. Both transports terminate at the same `/message` HTTP endpoint — stdio is a thin adapter, not a parallel implementation.
-- **CodeMode routing path**: when `codemode.enabled && codemode.routeInternalMcp && transport === 'stdio'`, `scopedMcpConfig.ts` omits `ouroboros` from the per-spawn config; the agent's CodeMode proxy exposes the graph tools as `servers.ouroboros.*` inside `execute_code` instead. See `src/main/orchestration/providers/internalMcpRoutingPolicy.ts`.
-
-## Dependencies
-
-- `../contextLayer/contextLayerStore` — `readModuleEntry`, `readRepoMap` (module context data)
-- `../contextLayer/contextLayerController` — `getContextLayerController` (detect-changes tool)
-- `../codebaseGraph/graphController` — `getGraphController` (tool fallback check)
-- `../codebaseGraph/mcpToolHandlers` — `createGraphMcpTools` (preferred tool set)
+- `internalMcpServer.ts` — HTTP+SSE server. No consumers; standalone replaces it.
+- `internalMcpStdioTransport.ts` — stdio→SSE bridge. Was a workaround for the standalone we now have.
+- `internalMcpPortRegistry.ts` — port file machinery. Standalone resolves DB path itself; no port.
+- `internalMcpTools*.ts` — in-process tool registry. Standalone uses `codebaseGraph/mcpToolHandlers.ts` directly.
+- `mcpHost/` directory — parallel utility-process MCP host. Same fate.
 
 ## Gotchas
 
-- **Port 0 = random**: `InternalMcpServerOptions.port` defaults to `0`, which lets the OS assign a free port. The actual port is returned in `InternalMcpServerHandle.port`.
-- **`moduleId` path security**: `validateModuleId` is intentionally strict — it only blocks traversal at the input level. The tools still call into `contextLayerStore` which performs its own path resolution.
-- **Tool implementations split for lint**: `internalMcpTools.ts` was split into `…Graph.ts` and `…Modules.ts` solely to stay under the ESLint `max-lines: 300` rule. The logical boundary is context-layer vs graph-backed tools.
+- **`internalMcp.transport` config is vestigial.** Pre-Wave-60 it switched between SSE (URL entry) and stdio (bridge entry). The standalone has only one shape. The field is still accepted on config + `InjectOptions` for back-compat but ignored. Removed in a future cleanup wave.
+- **`internalMcpEnabled: false` still honored** as a kill switch — main.ts skips injection when false; Claude Code sees no ouroboros server.
+- **Path is `process.execPath`, not `'node'`.** The standalone uses `better-sqlite3` whose native binding is compiled for Electron's Node ABI; spawning under system Node fails module-load. `ELECTRON_RUN_AS_NODE=1` makes Electron run as a plain Node interpreter with the right ABI.

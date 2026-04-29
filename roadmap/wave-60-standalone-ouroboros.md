@@ -1,10 +1,12 @@
 # Wave 60 — Standalone Ouroboros MCP Server
 
-## Implementation Plan (DRAFT)
+## Implementation Plan (COMPLETED)
 
-**Status:** DRAFT — six locked decisions below; all confirmed by user 2026-04-29.
+**Status:** COMPLETE — six locked decisions below; all confirmed by user 2026-04-29.
 **Version target:** v2.8.0 (was tentatively assigned to Wave 53l; reassign 53l to v2.7.13 patch).
 **Dependencies:** Wave 53l Phase A merged. The bridge-fix and port-registry scaffolding shipped in 53l (commits 5809ff1, ecc3cb6, a782a96, 5f180bb, 4a32150) becomes redundant in this wave and is deleted in Phase E.
+
+**Completion note:** Phases A-F have been implemented in-repo. The standalone Ouroboros MCP server is the active shape, and the legacy bridge / mcpHost stack has been removed.
 
 ---
 

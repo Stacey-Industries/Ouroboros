@@ -4,11 +4,12 @@
  * Wave 48 Phase D: each headless spawn gets a temp JSON file listing only the
  * MCP servers it should see, replacing the global settings inheritance model.
  *
- * Wave 51 Phase C: the per-spawn ouroboros routing decision is now made by
- * `internalMcpRoutingPolicy.decideInternalMcpRouting`. Three outcomes:
+ * Wave 60: the per-spawn ouroboros routing decision now either omits the
+ * server entirely or writes the standalone `ouroborosMcp.js` entry. Three
+ * outcomes:
  *
- *   - 'direct-inject'           : write `{ouroboros: {url|command,args}}` into
- *                                 the temp config (today's behavior).
+ *   - 'direct-inject'           : write `{ouroboros: {command,args,env}}`
+ *                                 for the standalone into the temp config.
  *   - 'route-through-codemode'  : omit `ouroboros`; the `__codemode_proxy`
  *                                 entry that codemodeManager added to
  *                                 `~/.claude.json mcpServers` flows through
@@ -36,7 +37,6 @@ import { homedir, tmpdir } from 'os';
 import path, { join } from 'path';
 
 import { getConfigValue } from '../../config';
-import { getInternalMcpUrl } from '../../internalMcp/internalMcpPortRegistry';
 import { type InternalMcpScope, resolveInternalMcpScope } from '../../internalMcp/internalMcpScope';
 import type { InternalMcpTransport } from '../../internalMcp/internalMcpTypes';
 import log from '../../logger';
@@ -92,14 +92,11 @@ async function readGlobalMcpServers(): Promise<McpServerMap> {
 }
 
 // ---------------------------------------------------------------------------
-// Ouroboros entry shape (Wave 60 Phase C)
+// Ouroboros entry shape (Wave 60 Phase E)
 //
-// Post-Wave-60: the entry points at the standalone MCP server
-// (`ouroborosMcp.js`) which reads the SQLite DB directly. No port, no
-// bridge, no transport branching. Works whether the IDE is running or
-// not. The legacy SSE shape is retained only for users with
-// `internalMcp.transport: 'sse'` (gradually deprecated; deleted in
-// Phase E along with the IDE's HTTP server).
+// Single shape now: standalone (`ouroborosMcp.js`) launched via Electron
+// binary in Node mode. No port, no bridge, no transport branching, no live
+// URL dependency — the standalone resolves DB path itself from %APPDATA%.
 // ---------------------------------------------------------------------------
 
 function resolveTransport(): InternalMcpTransport {
@@ -107,24 +104,13 @@ function resolveTransport(): InternalMcpTransport {
   return cfg?.transport === 'stdio' ? 'stdio' : 'sse';
 }
 
-function buildOuroborosEntry(
-  ouroborosUrl: string | null,
-  mainOutDir: string,
-): McpServerEntry | null {
-  const transport = resolveTransport();
-  if (transport === 'stdio') {
-    const standalonePath = path.join(mainOutDir, 'ouroborosMcp.js');
-    // Wave 60 Phase C+ (binding fix): use the IDE's Electron binary as the
-    // Node runtime (better-sqlite3 binding is ABI-locked to Electron).
-    // See `internalMcpAutoInject.buildOuroborosEntry` for the full reasoning.
-    return {
-      command: process.execPath,
-      args: [standalonePath],
-      env: { ELECTRON_RUN_AS_NODE: '1' },
-    };
-  }
-  if (ouroborosUrl === null) return null;
-  return { url: ouroborosUrl };
+function buildOuroborosEntry(mainOutDir: string): McpServerEntry {
+  const standalonePath = path.join(mainOutDir, 'ouroborosMcp.js');
+  return {
+    command: process.execPath,
+    args: [standalonePath],
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +228,7 @@ export interface ScopedMcpConfigOptions {
   codemodeAcquireFailed?: boolean;
   /**
    * Absolute directory containing the main process build output. Used to
-   * resolve `internalMcpStdioTransport.js` for the stdio transport entry.
+   * resolve `ouroborosMcp.js` for the standalone entry.
    * Defaults to `__dirname` of the calling main module.
    */
   mainOutDir?: string;
@@ -261,15 +247,10 @@ export async function buildScopedMcpConfig(
   if (useStrict === false) return null;
 
   const decision = deriveRoutingDecision(opts);
-  const [userServers, ouroborosUrl] = await Promise.all([
-    readGlobalMcpServers(),
-    Promise.resolve(getInternalMcpUrl()),
-  ]);
+  const userServers = await readGlobalMcpServers();
 
   const ouroborosEntry =
-    decision === 'direct-inject'
-      ? buildOuroborosEntry(ouroborosUrl, opts.mainOutDir ?? __dirname)
-      : null;
+    decision === 'direct-inject' ? buildOuroborosEntry(opts.mainOutDir ?? __dirname) : null;
   const servers = buildServerMap({ userServers, decision, ouroborosEntry });
   const configPath = makeTempPath(opts.sessionId);
   await writeTempConfig(configPath, servers);

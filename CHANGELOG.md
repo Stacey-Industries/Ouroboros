@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-04-29
+
+### Added
+- **Wave 60 — standalone Ouroboros MCP server.** The graph server now runs as a read-only stdio binary outside Electron and serves the same SQLite DB the IDE writes.
+- **Codemode now proxies `context7` too.** A local stdio shim bridges Context7's HTTP MCP endpoint into the shared CodeMode gate so Claude Code and Codex both see it as `servers.context7` inside `execute_code`.
+
+### Changed
+- **Legacy bridge / mcpHost stack removed.** The old in-process `internalMcp` HTTP server, stdio bridge, port registry, and `mcpHost` subsystem were deleted in favor of the standalone server.
+- **Release metadata updated.** Package version bumped to `2.8.0`, changelog advanced, and Wave 60 marked complete in the roadmap.
+
+### Fixed
+- **Build entry cleanup.** Removed the stale `mcpHostMain.ts` Vite input so production builds resolve cleanly.
+
 ## [2.7.13] - 2026-04-29
 
 ### Added

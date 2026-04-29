@@ -30,7 +30,7 @@ vi.mock('./mainStartup', () => ({
   closeEditProvenance: recorder('closeEditProvenance'),
   disposeCodebaseGraph: recorder('disposeCodebaseGraph', true),
 }));
-vi.mock('./mcpHost/mcpHostProxy', () => ({ shutdownMcpHost: recorder('shutdownMcpHost', true) }));
+// Wave 60 Phase E: mcpHost subsystem removed alongside internalMcpServer.
 vi.mock('./orchestration/contextDecisionWriter', () => ({
   closeDecisionWriter: recorder('closeDecisionWriter', true),
 }));
@@ -76,7 +76,6 @@ describe('performWillQuitShutdown', () => {
     expect(calls).toContain('disposeCodebaseGraph');
     expect(calls).toContain('shutdownCodexAppServerProcesses');
     expect(calls).toContain('shutdownExtensionHost');
-    expect(calls).toContain('shutdownMcpHost');
 
     // Writers run before the sync stores close (telemetry depends on writers being flushed).
     expect(calls.indexOf('closeDecisionWriter')).toBeLessThan(calls.indexOf('closeTelemetryStore'));
@@ -95,6 +94,6 @@ describe('performWillQuitShutdown', () => {
     await expect(performWillQuitShutdown()).resolves.toBeUndefined();
 
     // Later subsystems still ran after the graph threw.
-    expect(calls.indexOf('disposeCodebaseGraph')).toBeLessThan(calls.indexOf('shutdownMcpHost'));
+    expect(calls.indexOf('disposeCodebaseGraph')).toBeLessThan(calls.indexOf('shutdownExtensionHost'));
   });
 });

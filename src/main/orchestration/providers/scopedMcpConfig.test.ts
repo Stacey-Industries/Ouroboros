@@ -18,16 +18,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Hoisted mocks — must be declared before vi.mock calls
 // ---------------------------------------------------------------------------
 
-const { mockGetConfigValue, mockGetInternalMcpUrl, mockReadFile } = vi.hoisted(() => ({
+const { mockGetConfigValue, mockReadFile } = vi.hoisted(() => ({
   mockGetConfigValue: vi.fn(),
-  mockGetInternalMcpUrl: vi.fn(),
   mockReadFile: vi.fn(),
 }));
 
 vi.mock('../../config', () => ({ getConfigValue: mockGetConfigValue }));
-vi.mock('../../internalMcp/internalMcpPortRegistry', () => ({
-  getInternalMcpUrl: mockGetInternalMcpUrl,
-}));
+// Wave 60 Phase E: internalMcpPortRegistry deleted — production no longer
+// reads getInternalMcpUrl(). Mock removed.
 // Selective fs/promises mock: only intercept reads of the user's ~/.claude.json
 // (the file Claude Code CLI uses for MCP discovery — Wave 53k follow-up).
 // Pass through reads of the temp config file the production code writes.
@@ -67,22 +65,15 @@ import { buildScopedMcpConfig } from './scopedMcpConfig';
 // ---------------------------------------------------------------------------
 
 const SESSION_ID = 'test-session-abc';
-const OUROBOROS_URL = 'http://127.0.0.1:54321/sse';
+// Wave 60 Phase E: removed OUROBOROS_URL constant — standalone has no URL.
 
 function configureScope(opts: {
   useStrict?: boolean;
   enabled?: boolean;
   scope?: 'always' | 'task-gated' | 'never';
   userServers?: Record<string, unknown>;
-  mcpUrl?: string | null;
 }): void {
-  const {
-    useStrict = true,
-    enabled = true,
-    scope = 'task-gated',
-    userServers = {},
-    mcpUrl = OUROBOROS_URL,
-  } = opts;
+  const { useStrict = true, enabled = true, scope = 'task-gated', userServers = {} } = opts;
 
   mockGetConfigValue.mockImplementation((key: string) => {
     if (key === 'internalMcpUseStrictConfig') return useStrict;
@@ -90,8 +81,6 @@ function configureScope(opts: {
     if (key === 'internalMcpScope') return scope;
     return undefined;
   });
-
-  mockGetInternalMcpUrl.mockReturnValue(mcpUrl);
 
   const settingsJson = JSON.stringify({ mcpServers: userServers });
   mockReadFile.mockResolvedValue(settingsJson);
@@ -110,7 +99,6 @@ async function readConfigFile(configPath: string): Promise<Record<string, unknow
 describe('buildScopedMcpConfig', () => {
   beforeEach(() => {
     mockGetConfigValue.mockReset();
-    mockGetInternalMcpUrl.mockReset();
     mockReadFile.mockReset();
   });
 
@@ -141,7 +129,11 @@ describe('buildScopedMcpConfig', () => {
     const data = await readConfigFile(result!.configPath);
     const servers = data.mcpServers as Record<string, unknown>;
     expect(servers).toHaveProperty('ouroboros');
-    expect((servers['ouroboros'] as { url: string }).url).toBe(OUROBOROS_URL);
+    // Wave 60 Phase E: standalone shape — Electron-as-Node spawning
+    // out/main/ouroborosMcp.js. URL-based shape removed.
+    const entry = servers['ouroboros'] as { command: string; env?: Record<string, string> };
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.env?.ELECTRON_RUN_AS_NODE).toBe('1');
     await result!.cleanup();
   });
 
@@ -214,13 +206,8 @@ describe('buildScopedMcpConfig', () => {
     await expect(result!.cleanup()).resolves.not.toThrow();
   });
 
-  it('no MCP URL: ouroboros omitted even when scope=always', async () => {
-    configureScope({ scope: 'always', mcpUrl: null });
-    const result = await buildScopedMcpConfig({ goalShape: 'code', sessionId: SESSION_ID });
-    expect(result).not.toBeNull();
-    const data = await readConfigFile(result!.configPath);
-    const servers = data.mcpServers as Record<string, unknown>;
-    expect(servers).not.toHaveProperty('ouroboros');
-    await result!.cleanup();
-  });
+  // Wave 60 Phase E: removed `no MCP URL: ouroboros omitted` test. The
+  // entry no longer depends on a live IDE-served URL — the standalone
+  // resolves the SQLite DB itself. There's no "URL absent" failure mode
+  // to defend against; direct-inject always produces a valid entry.
 });

@@ -100,36 +100,46 @@ async function readJsonTolerant(
 }
 
 // ---------------------------------------------------------------------------
-// Transport-aware ouroboros entry builder
+// Ouroboros entry builder (Wave 60 Phase E)
+//
+// Single shape now: spawn the standalone (`out/main/ouroborosMcp.js`) via
+// the IDE's Electron binary in Node mode. Reads the SQLite DB directly,
+// works whether the IDE is running or not. Pre-Wave-60's transport
+// branching (sse vs stdio bridge) is gone.
+//
+// Electron-as-Node is required because better-sqlite3's native binding
+// is compiled for Electron's Node ABI (145); system Node (ABI 137) fails
+// module-load. ELECTRON_RUN_AS_NODE=1 sidesteps the mismatch and the IDE
+// installer ships the binary, so it's always on disk.
 // ---------------------------------------------------------------------------
 
 export interface InjectOptions {
-  transport?: InternalMcpTransport;
-  /** Absolute path to the built stdio transport script. Required when transport === 'stdio'. */
+  /**
+   * Absolute path to the standalone MCP script (`ouroborosMcp.js`).
+   * `buildInjectOptions` resolves this from the IDE's main-out directory.
+   */
+  standaloneScriptPath?: string;
+  /** @deprecated Use `standaloneScriptPath`. Kept for back-compat with callers
+   *  that haven't been updated yet — falls back to this field if `standaloneScriptPath`
+   *  is absent. Removed in a future wave. */
   stdioTransportPath?: string;
+  /** @deprecated SSE transport removed in Wave 60. Field accepted for
+   *  back-compat with stale config files but ignored — entry shape is always
+   *  the standalone now. */
+  transport?: InternalMcpTransport;
 }
 
-function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEntry {
-  if (opts.transport === 'stdio') {
-    if (!opts.stdioTransportPath) {
-      throw new Error('stdio transport requires stdioTransportPath');
-    }
-    // Wave 60 Phase C+ (binding fix): use the IDE's Electron binary as the
-    // Node runtime via ELECTRON_RUN_AS_NODE=1. The standalone bundle uses
-    // `better-sqlite3` whose native binding is compiled for Electron's
-    // Node ABI (145); spawning with system Node (typically ABI 137) fails
-    // module-load with NODE_MODULE_VERSION mismatch. Electron-as-Node
-    // sidesteps the binding issue entirely AND ships with the IDE installer
-    // — works whether the IDE process is running or not (binary on disk
-    // is sufficient).
-    return {
-      type: 'stdio',
-      command: process.execPath,
-      args: [opts.stdioTransportPath],
-      env: { ELECTRON_RUN_AS_NODE: '1' },
-    };
+function buildOuroborosEntry(_serverPort: number, opts: InjectOptions): ServerEntry {
+  const scriptPath = opts.standaloneScriptPath ?? opts.stdioTransportPath;
+  if (!scriptPath) {
+    throw new Error('ouroboros injection requires standaloneScriptPath');
   }
-  return { type: 'sse', url: `http://127.0.0.1:${serverPort}/sse` };
+  return {
+    type: 'stdio',
+    command: process.execPath,
+    args: [scriptPath],
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -226,10 +236,11 @@ async function cleanupLegacySettingsJson(projectRoot: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Register the IDE's internal MCP server (`ouroboros`) for Claude Code
+ * Register the standalone MCP server (`ouroboros`) for Claude Code
  * discovery in this project. Three actions, in order:
  *
- *   1. Write `<projectRoot>/.mcp.json` with the `ouroboros` server entry.
+ *   1. Write `<projectRoot>/.mcp.json` with the standalone `ouroboros`
+ *      entry.
  *   2. Update `~/.claude.json` projects.<root>.enabledMcpjsonServers to
  *      include `'ouroboros'`.
  *   3. Clean up any orphaned `mcpServers.ouroboros` entry from
@@ -239,7 +250,8 @@ async function cleanupLegacySettingsJson(projectRoot: string): Promise<void> {
  * All steps are idempotent and atomic. Tolerant of missing/invalid files —
  * never throws on parse errors, never partial-writes via .tmp + rename.
  *
- * Wired into `main.ts startInternalMcp` after the SSE server binds.
+ * Wired into `main.ts` during startup so the user-level MCP registration is
+ * refreshed every IDE launch.
  */
 export async function injectIntoProjectSettings(
   projectRoot: string,
@@ -269,10 +281,8 @@ export async function injectIntoProjectSettings(
  * from `~/.claude.json` enabledMcpjsonServers, and clear any legacy entry
  * from `.claude/settings.json`.
  *
- * Wave 53d: this is **not** called on shutdown; the entry is safe to leave
- * between IDE launches because the next `injectIntoProjectSettings` overwrites
- * with the current port. Manual callers (settings UI, future kill switch)
- * still need the function to exist.
+ * The standalone entry is rewritten on the next IDE startup, so manual
+ * callers mainly use this for disable/reset flows.
  */
 export async function removeFromProjectSettings(projectRoot: string): Promise<void> {
   await removeFromMcpJson(projectRoot);

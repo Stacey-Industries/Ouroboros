@@ -214,7 +214,9 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     expect(result).not.toBeNull();
     expect(result!.routingDecision).toBe('direct-inject');
     const entry = readWrittenConfig(result!.configPath).mcpServers['ouroboros'];
-    expect(entry.url).toBe(OUROBOROS_URL);
+    // Wave 60 Phase E: standalone shape (Electron-as-Node).
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     await result!.cleanup();
   });
 

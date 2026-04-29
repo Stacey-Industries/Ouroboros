@@ -14,6 +14,7 @@ export default tseslint.config(
       'node_modules/',
       'dist/',
       'out/',
+      'src/renderer/out/',
       'build-resources/',
       'coverage/',
       'e2e/',

@@ -1,56 +1,41 @@
 /**
- * Internal MCP server — exposes IDE tools to Claude Code sessions via SSE
- * (default) or stdio (Wave 51 Phase B opt-in via `internalMcp.transport`).
- * Started by main.ts `startBackgroundServices` after the hooks and IDE tool
- * servers. Auto-injects an entry into .claude/settings.json as 'ouroboros'.
+ * internalMcp barrel (Wave 60 Phase E).
+ *
+ * Pre-Wave-60 this directory ran an in-process HTTP+SSE MCP server and a
+ * stdio bridge. Both are deleted in Phase E. What remains:
+ *
+ *   - `injectIntoProjectSettings` / `removeFromProjectSettings` — write
+ *     the ouroboros entry into `<root>/.mcp.json`. The entry now points
+ *     at the standalone MCP server (`out/main/ouroborosMcp.js`) which
+ *     Claude Code spawns whether the IDE is running or not.
+ *   - `internalMcpScope` — task-gated scope decision (used by
+ *     scopedMcpConfig + codemodeStartup).
+ *   - `internalMcpTypes` — shared `McpToolDefinition` etc.
+ *
+ * `internalMcp.transport` config is no longer consulted — entry shape is
+ * always the standalone. The field is accepted on InjectOptions for
+ * back-compat with stale config files but ignored.
  */
 import path from 'path';
 
-import { getConfigValue } from '../config';
 import type { InjectOptions } from './internalMcpAutoInject';
-import type { InternalMcpTransport } from './internalMcpTypes';
 
 export {
   injectIntoProjectSettings,
   type InjectOptions,
   removeFromProjectSettings,
 } from './internalMcpAutoInject';
-export { startInternalMcpServer } from './internalMcpServer';
-// Wave 53j: the stdio bridge is now a self-contained CLI script using the
-// SDK's StdioServerTransport + SSEClientTransport. Its main() runs only when
-// the script is the entry point (gated by isScriptEntry), and there are no
-// other consumers — the prior `dispatchMessage`/`runStdioTransport` helpers
-// were artifacts of the hand-rolled implementation that this barrel
-// re-exported for tests. New tests import the helpers (`parsePort`,
-// `createProxyServer`) directly from the module file.
-export {
-  type InternalMcpServerHandle,
-  type InternalMcpServerOptions,
-  type InternalMcpTransport,
-} from './internalMcpTypes';
-
-/** Resolves `internalMcp.transport` from config; defaults to 'sse'. */
-export function resolveInternalMcpTransport(): InternalMcpTransport {
-  const cfg = getConfigValue('internalMcp') as { transport?: string } | undefined;
-  return cfg?.transport === 'stdio' ? 'stdio' : 'sse';
-}
+export { type InternalMcpTransport } from './internalMcpTypes';
 
 /**
- * Build the inject options for the current config.
+ * Build the inject options for the current build.
  *
- * Wave 60 Phase C: the entry now points at the standalone MCP server
- * (`ouroborosMcp.js`), not the stdio→SSE bridge. The standalone reads the
- * SQLite DB directly and works whether the IDE is running or not. The
- * legacy `internalMcp.transport` config is honored for back-compat
- * (returns no path when sse is selected, matching pre-Wave-60 behavior),
- * but Wave 60 effectively makes 'stdio' the only meaningful value — the
- * IDE's HTTP+SSE server itself is deleted in Phase E.
+ * Wave 60: the standalone is the only shape. `mainOutDir` is the
+ * directory containing `ouroborosMcp.js`. Resolve to the absolute script
+ * path; the auto-injector writes that into the entry's args.
  */
 export function buildInjectOptions(mainOutDir: string): InjectOptions {
-  const transport = resolveInternalMcpTransport();
-  if (transport !== 'stdio') return { transport };
   return {
-    transport,
     stdioTransportPath: path.join(mainOutDir, 'ouroborosMcp.js'),
   };
 }
