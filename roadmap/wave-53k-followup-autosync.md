@@ -1,6 +1,46 @@
 # Wave 53k Follow-up — autoSync graph staleness investigation
 
-**Status:** Open · Filed 2026-04-29 from the Wave 53k debug session.
+**Status:** ✅ RESOLVED 2026-04-29. Both H1 and H3 root-causes fixed in
+commits `27106cc` and `218b486`. Verification smoke confirmed
+`hashes=3207 changed=0` on poll (was `hashes=0`) and `files=1` reindex
+on file edit. Graph went from 3,327 nodes (partial, in the wrong DB) to
+19,075 nodes (full Agent IDE codebase in the right DB).
+
+The hypotheses below are kept for the historical record. The actual
+fix shape was simpler than two of the three speculations:
+
+- **H1 confirmed and fixed:** worker thread fell through to
+  `path.join(process.cwd(), 'codebase-graph.db')` because
+  `require('electron').app.getPath('userData')` from a worker context
+  doesn't return a ready path. Two SQLite files existed
+  (`<userData>/codebase-graph.db` 137 MB, main thread reads;
+  `<projectRoot>/codebase-graph.db` 7.7 MB, worker writes). Fix:
+  main thread resolves `getDbPath()` and passes it to the worker via
+  `workerData: { dbPath }`.
+- **H3 confirmed and fixed:** `AutoSyncWatcher.receiveWatcherEvent` had
+  zero callers. Wired up `@parcel/watcher` in
+  `systemTwoRegistry.acquire()` with the same ignore globs the
+  file-tree watcher uses.
+- **H2 (mtime precision) ruled out** — both code paths use the same
+  lossy conversion, comparison stays consistent.
+
+## Manual cleanup remaining
+
+The orphan `C:\Web App\Agent IDE\codebase-graph.db*` files (7.7 MB +
+WAL/SHM siblings) are dead weight. Safe to delete with the IDE quit:
+
+```powershell
+Remove-Item "C:\Web App\Agent IDE\codebase-graph.db*"
+```
+
+Not auto-deleted — the user may want to inspect contents first, or
+might have other tools sniffing that path. Filed as a one-time
+cleanup, not as a required step.
+
+---
+
+## Original investigation notes (kept for historical context)
+
 
 ## Symptom (observed across the entire Wave 53k night)
 
