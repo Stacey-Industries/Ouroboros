@@ -40,6 +40,7 @@ React browser process. Entry at `index.tsx`, root component in `App.tsx`. Everyt
 
 ## Gotchas
 
+- **Tailwind v4 chokes on Windows paths in repo content.** Tailwind's auto-source scan reads files anywhere in the working tree as candidate-class sources. Windows path segments like `C:\...\C--Web-App-Agent-IDE\...` get tokenized as CSS variable names, and 6-hex-shaped fragments (`\afa0da` etc.) parse as Unicode escapes — when the value exceeds U+10FFFF, `String.fromCodePoint` throws `RangeError: Invalid code point` and the renderer build dies. `globals.css` carries explicit `@source not` directives for `roadmap/wave-*-output/**` and `roadmap/archive/**`. **If you reorganize directories under `roadmap/` or add a new analyzer-output sibling, extend the `@source not` glob in `globals.css` in the same change.** Reproduced and fixed twice now (Wave 53c v2.7.4, Wave 53k roadmap archive).
 - **`useCustomCSS`** injects user-defined CSS into `<head>` as `<style id="custom-css">`. Effect replaces `el.textContent` on every change — safe to call repeatedly.
 - **Splash screen** (`#splash`) lives in `index.html`, not in React. `index.tsx` drives its dismissal via a 300ms `setTimeout` after `createRoot().render()`. The CSS transition is defined in `index.html`.
 - **File-drop prevention** is global in `index.tsx`. Individual components (e.g. FileTree) add their own `drop` handlers — the global handler only prevents Electron's fallback navigation to `file://` URLs.

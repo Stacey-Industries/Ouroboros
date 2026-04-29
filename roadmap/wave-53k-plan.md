@@ -1,7 +1,7 @@
 # Wave 53k — Fix CodeMode File Targeting (mirror of Wave 53g)
 ## Implementation Plan (DRAFT)
 
-**Status:** DRAFT — queued for execution. Do not start before reviewing the open questions in this doc.
+**Status:** DRAFT — queued for execution tonight. Decisions locked below; no Phase 0 design pause needed.
 **Version target:** v2.7.12 (patch — bug fix; mirror of 53g's file-targeting fix applied to CodeMode)
 **Dependencies:** Waves 53g (`.mcp.json` discovery), 53i (SDK adoption), 53j (stdio bridge SDK rewrite + CodeMode opt-in for IDE-orchestrated sessions). All shipped.
 
@@ -62,24 +62,17 @@ External sessions (terminal `claude`) still bypass CodeMode entirely — that's 
 
 ---
 
-## Open questions to resolve in Phase A
+## Locked decisions (no Phase 0 — start at Phase A)
 
-1. **Where does CodeMode's "disable original servers" land in the new file shape?**
-   - In `~/.claude/settings.json` (Anthropic Desktop convention), the canonical key was `disabledMcpServers`. Claude Code CLI doesn't read that file at all, so the key is irrelevant.
-   - In `~/.claude.json` (Claude Code's user config), there's no documented `disabledMcpServers` key at top level. Need to check whether Claude Code CLI tolerates unknown top-level keys (likely yes; it does for our `projects.<root>.disabledMcpjsonServers`) — but using a custom key like `_codemodeManagedServers` would be safer and self-documenting.
-   - In `<projectRoot>/.mcp.json`, the per-project flag pair is `enabledMcpjsonServers` / `disabledMcpjsonServers` (in `~/.claude.json projects.<root>`, not in `.mcp.json` itself).
-   - **Tentative answer:** for global scope, use `~/.claude.json _codemodeManagedServers` as a private restoration record + delete from `mcpServers`. For project scope, modify the project entry's `enabledMcpjsonServers` (drop the proxied server) and keep the entry in `.mcp.json` as a record but the agent won't see it unless re-enabled.
-   - Settle this by reading `codemodeManager`'s tests + the existing on-disable flow before committing to an approach.
+1. **Disable semantic.** Restoration data lives in a sibling file `~/.claude/codemode-managed.json` (NOT a private key in `~/.claude.json`). Rationale: opaque sibling file gives us write isolation from Claude Code's own schema and avoids fragility against future top-level key collisions. The proxied server's entry is removed from `~/.claude.json mcpServers` entirely while CodeMode is active; the sibling file holds the original config blob keyed by server name for restoration.
+2. **Project scope.** `.mcp.json` keeps the canonical entry untouched. To "disable" the original at project scope, toggle `~/.claude.json projects.<root>.disabledMcpjsonServers` to include the server name. `__codemode_proxy` is added at user scope (`~/.claude.json mcpServers`), so it's reachable from any project.
+3. **Migration of stale `.claude/settings.json mcpServers` entries.** Phase A clears any entries the manager itself wrote previously (detect by name match against `_codemodeManagedServers` if it existed, or by the `__codemode_proxy` marker). Other entries are left alone — Claude Code CLI ignores that file. Document in ADR.
+4. **Idempotency policy.** `enableCodeMode` only manages servers it owns (tracked in the sibling file). User-added entries to `~/.claude.json mcpServers` while CodeMode is active are left in place; on next IDE startup, they're picked up and moved to managed-backup. User edits to the sibling file directly are not supported (it's machine-managed state).
+5. **Atomic write.** `.tmp` + rename throughout, mirroring the patterns established in `internalMcpAutoInject.ts` post-Wave-53g. Last-write-wins on contention with concurrent `claude mcp` commands; serialization is out of scope for v1.
 
-2. **Does Claude Code refuse to launch if `~/.claude.json mcpServers` has a server with no corresponding `command`/`url`?**
-   - If yes, our "disable" pattern needs care — can't just leave dangling entries.
-   - If no, we have flexibility.
-   - Verify via a quick test (claude mcp add a fake stdio server, mcp list, claude mcp remove).
+### Quick verification before Phase A starts
 
-3. **What happens if the user manually edits `~/.claude.json` between IDE startups?**
-   - The IDE's enable-on-startup flow could clobber user changes.
-   - Tentative answer: idempotent enableCodeMode that respects user-added entries (only manages the servers it created itself).
-   - Phase A's atomic-merge logic needs this.
+- Confirm Claude Code CLI tolerates the absence of a server in `mcpServers` when a sibling restoration file exists alongside (it should — there's no documented dependency). Single 30-second smoke: rename a server out of `mcpServers`, run `claude mcp list`, confirm it just doesn't appear.
 
 ---
 
@@ -87,9 +80,15 @@ External sessions (terminal `claude`) still bypass CodeMode entirely — that's 
 
 | Phase | Goal | Subagent | Acceptance |
 |---|---|---|---|
-| A | Fix file-target in `codemodeManager`. Update existing `codemode/` tests. | `sonnet-implementer` (cross-file: codemodeManager.ts + tests + maybe `claudeCodeMode.ts` if it consumes the API surface). | All `codemode/` tests pass. Lint + typecheck clean. Smoke verifies the warning message is gone. |
+| A | Fix file-target in `codemodeManager` per locked decisions above. **Rewrite** `codemode/` test fixtures (mocks currently target `.claude/settings.json` paths and JSON shapes — this is a fixture rewrite, not an assertion-path tweak). Add sibling-file (`~/.claude/codemode-managed.json`) read/write helpers with atomic-write + missing/invalid JSON tolerance. | `sonnet-implementer` (cross-file: codemodeManager.ts + tests + sibling-file helpers + any consumer that reads CodeMode state). | All `codemode/` tests pass. Lint + typecheck clean. Smoke verifies the `enable failed; falling back` warning is gone. |
 | B | Post-restart smoke. | Orchestrator + user. | IDE log shows successful enable. `~/.claude.json` shows expected state. Fresh chat-panel session shows `Called __codemode_proxy`, not `Called ouroboros`. |
-| C | Wrap-up: result brief, ADR, plan flip, version bump, push. | Orchestrator. | All gates clean, tagged v2.7.12. |
+| **B′** | **(Discovered during Phase B smoke.)** `scopedMcpConfig.readGlobalMcpServers` was reading `~/.claude/settings.json` — the same pre-53g wrong file. Under `--strict-mcp-config` (always on for our spawns), the temp config is the sole MCP source; with the wrong-file read, `userServers` was always `{}` and `__codemode_proxy` never made it into the temp config. Fix: read `~/.claude.json mcpServers` instead. With CodeMode enabled, `__codemode_proxy` is naturally there (Decision 1) and passes through. See ADR Decision 6. | Orchestrator. | scopedMcpConfig + codemode tests pass (79 total). New regression test pins `__codemode_proxy` passthrough under route-through-codemode. Re-smoke: temp config logged as `servers: ['__codemode_proxy']` (was `[]`). |
+| **B″** | **(Re-smoke against v2.1.122 after B′ landed proved the contract still leaked.)** Claude Code v2.1.122 ignores `--strict-mcp-config` for `.mcp.json` discovery — agent successfully called `mcp__ouroboros__trace_call_path`, `mcp__ouroboros__query_graph`, etc. despite the temp config containing only `__codemode_proxy`. The Decision-2 toggle (`disabledMcpjsonServers` flip) was also non-functional on Windows. **Pivoted Decision 2 → Decision 8: destructive write to `.mcp.json`.** CodeMode now removes proxied entries from `<root>/.mcp.json` during enable and restores them verbatim on disable. Restoration file schema bumped to v2 to carry full configs. Self-healing crash recovery added: `enableCodeMode` checks for stale restoration file at start and applies it before proceeding. See ADR Decision 8. | Orchestrator. | scopedMcpConfig + codemode tests pass (99 total). Restoration-file schema is v2. Re-smoke: agent's tool calls show `mcp__codemode_proxy__execute_code` only — no ouroboros direct calls reachable. `.mcp.json` mid-session has no `ouroboros` entry; post-disable verbatim restore. |
+| **B‴** | **(Re-smoke after B″ confirmed Claude Code spawned the proxy, but it never surfaced tools.)** Two latent bugs the leak had been masking: (a) `proxyServer.js` was registered with `path.join(__dirname, 'proxyServer.js')` but `__dirname` resolved to `out/main/chunks/` (where the calling code is bundled) while the file is at `out/main/proxyServer.js` — fixed with sibling-then-parent `existsSync` resolver. (b) HTTP-only upstreams (sentry, context7) hung the stdio-only mcpClient for 30s each — fixed by filtering `isStdioCapable()` at `claudeCodeMode.resolveProxiedServerNames`. HTTP servers stay directly registered. | Orchestrator. | 100 tests passing. Re-smoke: proxy spawned, but agent still saw no tools — exposed the next bug. |
+| **B⁗** | **(Diagnostic log + re-smoke caught it.)** `mcpClient.ts` and `proxyServer.ts` used LSP-style Content-Length framing on the wire, but MCP stdio transport is NDJSON. Every real MCP server's response was being silently dropped, leading to 30s `initialize` timeouts on all 4 upstreams. Fixed: `encodeMessage` writes `JSON.stringify(msg) + '\n'`, `parseMessages` splits on `\n` with CRLF tolerance and partial-tail buffering. Added 9 regression tests for NDJSON parser. Re-smoke: 3 of 4 upstreams connected (github, stripe, ouroboros); codebase-memory-mcp.exe stalled on tools/list. | Orchestrator. | 82 tests. Proxy log shows `connected: <name> (N tools)` for healthy upstreams. |
+| **B⁗.5** | **(Same smoke showed the proxy reported "ready" 2ms after Claude Code disconnected at the 30s safety timeout.)** `Promise.allSettled` blocked the proxy's "ready" signal on the slowest upstream's failure path. Added `STARTUP_DEADLINE_MS = 15_000` per-upstream race in `proxyServer.connectServerEntry`, plus per-connection real-time logging (`connected: name (N tools, Nms)`). Slow upstreams skipped, healthy ones report instantly, proxy comes up well within Claude Code's 30s window. | Orchestrator. | Proxy log shows real-time connection progress. |
+| **D** | **(Live smoke proved CodeMode end-to-end working: agent successfully called `mcp__codemode_proxy__execute_code`, then `Object.keys(servers)`, `Object.keys(servers.ouroboros)`, `servers.ouroboros.search_graph`, `servers.ouroboros.query_graph`. Per user directive: stop point-fixing the hand-roll, do the proper SDK adoption.)** Replaced `mcpClient.ts` hand-roll with `@modelcontextprotocol/sdk` `Client` + `StdioClientTransport`. Replaced `proxyServer.ts` hand-rolled message handling with `Server` + `StdioServerTransport` and SDK request handlers. Mirrors Wave 53j precedent (`internalMcpStdioTransport.ts`). 280-line hand-rolled mcpClient → 120 lines. NDJSON parser tests retired (SDK owns wire); replaced with SDK-mocked initialize/listTools/callTool delegation tests. New `proxyServer.test.ts` covers `buildExecuteCodeTool`, `buildToolDispatchMap`, `formatExecutionResult`, `formatExecutionFailure`, plus entry-point guard. See ADR Decision 9. | sonnet-implementer. | 113 tests passing across codemode + scopedMcpConfig + claudeCodeMode. Lint + typecheck clean. Build green. CodeMode end-to-end verified via live smoke. |
+| C | Wrap-up: result brief, version bump, commit. | Orchestrator. | All gates clean, tagged v2.7.12. |
 
 ---
 
@@ -106,11 +105,11 @@ External sessions (terminal `claude`) still bypass CodeMode entirely — that's 
 
 ## Acceptance criteria (wave-level)
 
-- [ ] `codemodeManager` reads/writes `~/.claude.json` (global) and `<root>/.mcp.json` (project), not `.claude/settings.json`.
-- [ ] Open Question 1 resolved (disable semantic) and documented in the ADR.
-- [ ] All `codemode/` tests pass after assertion updates.
+- [ ] `codemodeManager` writes `__codemode_proxy` to `~/.claude.json mcpServers` (global) and toggles `~/.claude.json projects.<root>.disabledMcpjsonServers` for project scope. Restoration data lives in `~/.claude/codemode-managed.json`.
+- [ ] All five locked decisions (above) reflected in the ADR (`roadmap/decisions/wave-53k.md`).
+- [ ] All `codemode/` tests pass after fixture rewrite.
 - [ ] IDE-orchestrated session smoke confirms `__codemode_proxy` engagement (not `ouroboros` direct-inject).
-- [ ] No regressions in Wave 54 adoption smoke (graph tools still work, just now via CodeMode).
+- [ ] No regressions in Wave 53h adoption smoke (graph tools still work end-to-end, just routed through CodeMode).
 
 ---
 

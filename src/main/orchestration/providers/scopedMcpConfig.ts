@@ -9,12 +9,23 @@
  *
  *   - 'direct-inject'           : write `{ouroboros: {url|command,args}}` into
  *                                 the temp config (today's behavior).
- *   - 'route-through-codemode'  : omit `ouroboros`; CodeMode's
- *                                 `__codemode_proxy` entry (already in user
- *                                 settings, picked up via passthrough) surfaces
- *                                 the graph tools as `servers.ouroboros.*`.
+ *   - 'route-through-codemode'  : omit `ouroboros`; the `__codemode_proxy`
+ *                                 entry that codemodeManager added to
+ *                                 `~/.claude.json mcpServers` flows through
+ *                                 via the user-server pass-through and
+ *                                 surfaces the graph tools as
+ *                                 `servers.ouroboros.*` inside `execute_code`.
  *   - 'omit'                    : skip entirely (scope=never, or task-gated +
  *                                 non-graph task).
+ *
+ * Wave 53k follow-up: `readGlobalMcpServers` reads `~/.claude.json` (the file
+ * Claude Code CLI actually uses) instead of `~/.claude/settings.json`. The
+ * pre-fix reader silently returned `{}` for users whose servers lived in
+ * `~/.claude.json`, so the temp config had no servers and `__codemode_proxy`
+ * never got passed through. With `--strict-mcp-config` (always on for
+ * scoped-config spawns — see `claudeStreamJsonRunner.appendMcpConfigFlags`),
+ * the temp config is the SOLE source Claude Code consults — `.mcp.json` and
+ * other discovery paths are bypassed.
  *
  * Returns { configPath, cleanup }.  Caller MUST call cleanup() after the
  * spawned process exits, on both success and error paths.
@@ -60,14 +71,19 @@ interface ScopedMcpConfigResult {
 }
 
 // ---------------------------------------------------------------------------
-// Reading user-configured servers from ~/.claude/settings.json
+// Reading user-configured servers from ~/.claude.json
+//
+// Wave 53k follow-up: this file is what Claude Code CLI actually reads for
+// MCP server discovery. The pre-fix path read `~/.claude/settings.json`
+// (Anthropic Desktop's file, ignored by the CLI), which meant the temp
+// config silently dropped all user servers AND `__codemode_proxy`.
 // ---------------------------------------------------------------------------
 
 async function readGlobalMcpServers(): Promise<McpServerMap> {
-  const settingsPath = join(homedir(), '.claude', 'settings.json');
+  const userConfigPath = join(homedir(), '.claude.json');
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from homedir() + known filename
-    const raw = await readFile(settingsPath, 'utf-8');
+    const raw = await readFile(userConfigPath, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return (parsed.mcpServers ?? {}) as McpServerMap;
   } catch {

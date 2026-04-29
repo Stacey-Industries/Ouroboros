@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Command } from '../../CommandPalette/types';
-import {
-  __chatOnlyDisabledCommandIds,
-  filterCommandsForChatShell,
-} from './chatOnlyCommandFilter';
+import { __chatOnlyDisabledCommandIds, filterCommandsForChatShell } from './chatOnlyCommandFilter';
 
 function makeCommand(id: string, label = id): Command {
   return { id, label, action: () => undefined };

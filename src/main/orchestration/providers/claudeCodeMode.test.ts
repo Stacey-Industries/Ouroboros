@@ -55,9 +55,17 @@ beforeEach(() => {
   enableFn.mockResolvedValue({ success: true });
   disableFn.mockResolvedValue({ success: true });
   serversFn.mockResolvedValue([
-    { name: 'sentry', enabled: true, scope: 'global' },
-    { name: 'github', enabled: true, scope: 'global' },
-    { name: 'ouroboros', enabled: true, scope: 'project' },
+    // Wave 53k Phase B‴: claudeCodeMode now filters by isStdioCapable (config.command).
+    // All fixture servers must have a command field to be eligible for proxy multiplex;
+    // url-only entries would be filtered out as HTTP-only (correct behavior).
+    { name: 'sentry', enabled: true, scope: 'global', config: { command: 'sentry-bin' } },
+    { name: 'github', enabled: true, scope: 'global', config: { command: 'gh-bin' } },
+    {
+      name: 'ouroboros',
+      enabled: true,
+      scope: 'project',
+      config: { command: 'node', args: ['stdio.js', '0'] },
+    },
   ]);
 });
 
@@ -114,6 +122,23 @@ describe('acquireCodeModeForLaunch', () => {
     await acquireCodeModeForLaunch('/proj');
     const names = enableFn.mock.calls[0][0] as string[];
     expect(names).not.toContain('ouroboros');
+  });
+
+  // Wave 53k Phase B‴: HTTP-only upstreams (url, no command) are not multiplexed
+  // because mcpClient.ts is stdio-only. Including them caused the proxy to hang
+  // 30s per upstream on connectUpstream before failing.
+  it('skips HTTP-only servers (url, no command) from the proxied set', async () => {
+    setConfig({ codemode: { enabled: true } });
+    serversFn.mockResolvedValue([
+      { name: 'sentry-http', enabled: true, scope: 'global', config: { url: 'https://x/mcp' } },
+      { name: 'github', enabled: true, scope: 'global', config: { command: 'gh-bin' } },
+      { name: 'context7', enabled: true, scope: 'global', config: { url: 'https://y/mcp' } },
+    ]);
+    await acquireCodeModeForLaunch('/proj');
+    const names = enableFn.mock.calls[0][0] as string[];
+    expect(names).not.toContain('sentry-http');
+    expect(names).not.toContain('context7');
+    expect(names).toContain('github');
   });
 
   it('downgrades gracefully when enableCodeMode reports failure', async () => {

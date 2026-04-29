@@ -1,25 +1,49 @@
 /**
- * codemodeManager.ts — Orchestrates Code Mode lifecycle.
+ * codemodeManager.ts — Public API for the Code Mode lifecycle.
  *
- * Reads MCP server configs from Claude Code's settings files,
- * writes a proxy config, injects a __codemode_proxy MCP entry,
- * and toggles the original servers on/off.
+ * Wave 53k file-targeting fix. The real work is split across:
+ *   - `codemodeManagerFiles.ts` — paths, atomic JSON I/O, restoration record
+ *   - `codemodeManagerScopes.ts` — global/project enable + restore helpers
+ *
+ * Phase B″: project-scope disable now removes the entry from `<root>/.mcp.json`
+ * (destructive write) rather than toggling a flag. Empirical reason: Claude
+ * Code v2.1.122 on Windows ignored both `--strict-mcp-config` and
+ * `disabledMcpjsonServers` for `.mcp.json` discovery, so the agent kept seeing
+ * the un-multiplexed ouroboros tools. Crash safety comes from the on-disk
+ * restoration file (`~/.claude/codemode-managed.json`) plus self-healing on
+ * enable.
+ *
+ * This file holds the stable public surface (`enableCodeMode`,
+ * `disableCodeMode`, `getMcpServers`, `getCodeModeStatus`, `isCodeModeEnabled`)
+ * and the small amount of in-process state we still keep in memory.
  */
 
 import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
 
+import log from '../logger';
+import {
+  deleteRestorationFile,
+  getProjectEntry,
+  getProjectsMap,
+  isProjectServerEnabled,
+  type McpServerConfig,
+  PROXY_CONFIG_PATH,
+  readJsonTolerant,
+  readRestorationFile,
+  userClaudeJsonPath,
+  writeProxyConfig,
+  writeRestorationFile,
+} from './codemodeManagerFiles';
+import {
+  applyGlobalEnable,
+  applyProjectEnable,
+  readGlobalServers,
+  readProjectServerMap,
+  restoreGlobal,
+  restoreProject,
+  rollbackEmptyEnable,
+} from './codemodeManagerScopes';
 import type { CodeModeStatusResult } from './types';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface McpServerConfig {
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  url?: string;
-}
 
 export interface McpServerEntry {
   name: string;
@@ -32,260 +56,156 @@ export interface McpServerEntry {
 
 let codemodeEnabled = false;
 let proxiedServerNames: string[] = [];
-let disabledByUs = new Set<string>();
-let activeScope: 'global' | 'project' = 'global';
-let activeProjectRoot: string | undefined;
 let generatedTypesCache = '';
 
-// ─── Settings file paths ──────────────────────────────────────────────────────
+// ─── Server discovery ────────────────────────────────────────────────────────
 
-function getGlobalSettingsPath(): string {
-  return path.join(os.homedir(), '.claude', 'settings.json');
-}
-
-function getProjectSettingsPath(projectRoot: string): string {
-  return path.join(projectRoot, '.claude', 'settings.json');
-}
-
-function getSettingsPath(scope: 'global' | 'project', projectRoot?: string): string {
-  if (scope === 'project' && projectRoot) {
-    return getProjectSettingsPath(projectRoot);
+function collectGlobalEntries(servers: Record<string, McpServerConfig>): McpServerEntry[] {
+  const out: McpServerEntry[] = [];
+  for (const [name, config] of Object.entries(servers)) {
+    if (name === '__codemode_proxy') continue;
+    out.push({ name, config, scope: 'global', enabled: true });
   }
-  return getGlobalSettingsPath();
+  return out;
 }
 
-// ─── Settings I/O ─────────────────────────────────────────────────────────────
-
-async function readSettingsFile(filePath: string): Promise<Record<string, unknown>> {
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from known settings paths
-    const raw = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+async function collectProjectEntries(projectRoot: string): Promise<McpServerEntry[]> {
+  const servers = await readProjectServerMap(projectRoot);
+  const claudeJson = await readJsonTolerant(userClaudeJsonPath(), '~/.claude.json');
+  const entry = getProjectEntry(getProjectsMap(claudeJson), projectRoot);
+  return Object.entries(servers).map(([name, config]) => ({
+    name,
+    config,
+    scope: 'project' as const,
+    enabled: isProjectServerEnabled(name, entry),
+  }));
 }
-
-async function writeSettingsFile(filePath: string, data: Record<string, unknown>): Promise<void> {
-  const dir = path.dirname(filePath);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from known settings directory
-  await fs.mkdir(dir, { recursive: true });
-  const tmpPath = filePath + '.tmp';
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp file alongside settings
-  await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- atomic rename of temp file
-  await fs.rename(tmpPath, filePath);
-}
-
-// ─── Config file path ─────────────────────────────────────────────────────────
-
-const PROXY_CONFIG_PATH = path.join(os.tmpdir(), 'codemode-proxy-config.json');
-
-// ─── Read all MCP servers ─────────────────────────────────────────────────────
 
 export async function getMcpServers(projectRoot?: string): Promise<McpServerEntry[]> {
-  const entries: McpServerEntry[] = [];
+  const global = collectGlobalEntries(await readGlobalServers());
+  if (!projectRoot) return global;
+  return [...global, ...(await collectProjectEntries(projectRoot))];
+}
 
-  // Global servers
-  const globalSettings = await readSettingsFile(getGlobalSettingsPath());
-  const globalMcp = (globalSettings.mcpServers ?? {}) as Record<string, McpServerConfig>;
-  const globalDisabled = (globalSettings.disabledMcpServers ?? {}) as Record<
-    string,
-    McpServerConfig
-  >;
+// ─── Crash recovery ──────────────────────────────────────────────────────────
 
-  for (const [name, config] of Object.entries(globalMcp)) {
-    entries.push({ name, config, scope: 'global', enabled: true });
+/**
+ * If a restoration file from a prior crashed enable still exists, apply it
+ * before starting a fresh enable. Belt-and-suspenders: also catches the case
+ * where a previous IDE process exited mid-enable and left the user's config
+ * in the half-managed state.
+ */
+async function maybeRestoreFromCrash(): Promise<void> {
+  const record = await readRestorationFile();
+  if (!record) return;
+  log.warn('[codemode] stale restoration file detected — recovering from prior crashed enable');
+  try {
+    await restoreGlobal(record.global ?? {});
+    await restoreProject(record.project ?? {});
+  } finally {
+    await deleteRestorationFile();
   }
-  for (const [name, config] of Object.entries(globalDisabled)) {
-    entries.push({ name, config, scope: 'global', enabled: false });
-  }
-
-  // Project servers
-  if (projectRoot) {
-    const projectSettings = await readSettingsFile(getProjectSettingsPath(projectRoot));
-    const projectMcp = (projectSettings.mcpServers ?? {}) as Record<string, McpServerConfig>;
-    const projectDisabled = (projectSettings.disabledMcpServers ?? {}) as Record<
-      string,
-      McpServerConfig
-    >;
-
-    for (const [name, config] of Object.entries(projectMcp)) {
-      entries.push({ name, config, scope: 'project', enabled: true });
-    }
-    for (const [name, config] of Object.entries(projectDisabled)) {
-      entries.push({ name, config, scope: 'project', enabled: false });
-    }
-  }
-
-  return entries;
-}
-
-function getServerMaps(settings: Record<string, unknown>): {
-  mcpServers: Record<string, McpServerConfig>;
-  disabledMcp: Record<string, McpServerConfig>;
-} {
-  return {
-    mcpServers: (settings.mcpServers ?? {}) as Record<string, McpServerConfig>,
-    disabledMcp: (settings.disabledMcpServers ?? {}) as Record<string, McpServerConfig>,
-  };
-}
-
-function collectServersToProxy(
-  serverNames: string[],
-  mcpServers: Record<string, McpServerConfig>,
-): Record<string, McpServerConfig> {
-  const serversToProxy: Record<string, McpServerConfig> = {};
-  for (const name of serverNames) {
-    // eslint-disable-next-line security/detect-object-injection -- name from caller-provided server name list
-    if (mcpServers[name]) {
-      // eslint-disable-next-line security/detect-object-injection -- same as above
-      serversToProxy[name] = mcpServers[name];
-    }
-  }
-  return serversToProxy;
-}
-
-async function writeProxyConfig(serversToProxy: Record<string, McpServerConfig>): Promise<void> {
-  const proxyConfig = { servers: serversToProxy };
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp config path in os.tmpdir()
-  await fs.writeFile(PROXY_CONFIG_PATH, JSON.stringify(proxyConfig, null, 2), 'utf-8');
-}
-
-function buildProxyServerEntry(): McpServerConfig {
-  const proxyServerPath = path.join(__dirname, 'proxyServer.js');
-  return {
-    command: 'node',
-    args: [proxyServerPath, PROXY_CONFIG_PATH],
-  };
-}
-
-function moveProxiedServersToDisabled(
-  serverNames: string[],
-  mcpServers: Record<string, McpServerConfig>,
-  disabledMcp: Record<string, McpServerConfig>,
-): Set<string> {
-  const newDisabledByUs = new Set<string>();
-  for (const name of serverNames) {
-    // eslint-disable-next-line security/detect-object-injection -- name from caller-provided server name list
-    disabledMcp[name] = mcpServers[name];
-    // eslint-disable-next-line security/detect-object-injection -- same as above
-    delete mcpServers[name];
-    newDisabledByUs.add(name);
-  }
-  return newDisabledByUs;
-}
-
-async function persistServerMaps(
-  settingsPath: string,
-  settings: Record<string, unknown>,
-  mcpServers: Record<string, McpServerConfig>,
-  disabledMcp: Record<string, McpServerConfig>,
-): Promise<void> {
-  settings.mcpServers = mcpServers;
-  settings.disabledMcpServers = disabledMcp;
-  await writeSettingsFile(settingsPath, settings);
-}
-
-function updateCodeModeState(
-  scope: 'global' | 'project',
-  projectRoot: string | undefined,
-  proxiedServers: string[],
-  newDisabledByUs: Set<string>,
-): void {
-  codemodeEnabled = true;
-  proxiedServerNames = proxiedServers;
-  disabledByUs = newDisabledByUs;
-  activeScope = scope;
-  activeProjectRoot = projectRoot;
-  generatedTypesCache = '';
 }
 
 // ─── Enable Code Mode ─────────────────────────────────────────────────────────
 
+function partitionByScope(
+  entries: McpServerEntry[],
+  serverNames: string[],
+): { global: string[]; project: string[] } {
+  const lookup = new Map<string, 'global' | 'project'>();
+  for (const e of entries) lookup.set(e.name, e.scope);
+  const result: { global: string[]; project: string[] } = { global: [], project: [] };
+  for (const name of serverNames) {
+    const scope = lookup.get(name);
+    if (scope === 'global') result.global.push(name);
+    else if (scope === 'project') result.project.push(name);
+  }
+  return result;
+}
+
+async function applyEnable(
+  serverNames: string[],
+  projectRoot?: string,
+): Promise<{
+  proxied: Record<string, McpServerConfig>;
+  globalBackup: Record<string, McpServerConfig>;
+  projectBackup: Record<string, McpServerConfig>;
+}> {
+  const allServers = await getMcpServers(projectRoot);
+  const partitioned = partitionByScope(allServers, serverNames);
+  const globalResult = await applyGlobalEnable(partitioned.global);
+  const projectResult = projectRoot
+    ? await applyProjectEnable(projectRoot, partitioned.project)
+    : { proxiedConfigs: {}, backup: {} };
+  return {
+    proxied: { ...globalResult.proxiedConfigs, ...projectResult.proxiedConfigs },
+    globalBackup: globalResult.backup,
+    projectBackup: projectResult.backup,
+  };
+}
+
 export async function enableCodeMode(
   serverNames: string[],
-  scope: 'global' | 'project',
+  _scope: 'global' | 'project',
   projectRoot?: string,
 ): Promise<{ success: boolean; error?: string }> {
+  if (codemodeEnabled) {
+    return { success: false, error: 'Code Mode is already enabled. Disable it first.' };
+  }
   try {
-    if (codemodeEnabled) {
-      return { success: false, error: 'Code Mode is already enabled. Disable it first.' };
-    }
-
-    const settingsPath = getSettingsPath(scope, projectRoot);
-    const settings = await readSettingsFile(settingsPath);
-
-    const { mcpServers, disabledMcp } = getServerMaps(settings);
-    const serversToProxy = collectServersToProxy(serverNames, mcpServers);
-
-    if (Object.keys(serversToProxy).length === 0) {
+    await maybeRestoreFromCrash();
+    const { proxied, globalBackup, projectBackup } = await applyEnable(serverNames, projectRoot);
+    const proxiedNames = Object.keys(proxied);
+    if (proxiedNames.length === 0) {
+      await rollbackEmptyEnable();
       return { success: false, error: 'None of the requested MCP servers were found in settings.' };
     }
-
-    await writeProxyConfig(serversToProxy);
-    mcpServers['__codemode_proxy'] = buildProxyServerEntry();
-
-    const proxiedNames = Object.keys(serversToProxy);
-    const newDisabledByUs = moveProxiedServersToDisabled(proxiedNames, mcpServers, disabledMcp);
-
-    await persistServerMaps(settingsPath, settings, mcpServers, disabledMcp);
-    updateCodeModeState(scope, projectRoot, proxiedNames, newDisabledByUs);
-
+    await writeProxyConfig(proxied);
+    await writeRestorationFile({
+      version: 2,
+      global: globalBackup,
+      project:
+        Object.keys(projectBackup).length > 0 && projectRoot
+          ? { [projectRoot]: projectBackup }
+          : {},
+      proxiedNames,
+      activeProjectRoot: projectRoot,
+    });
+    codemodeEnabled = true;
+    proxiedServerNames = proxiedNames;
+    generatedTypesCache = '';
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-// ─── Disable Code Mode ───────────────────────────────────────────────────────
+// ─── Disable Code Mode ────────────────────────────────────────────────────────
+
+async function cleanupProxyTempConfig(): Promise<void> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- known module constant
+    await fs.unlink(PROXY_CONFIG_PATH);
+  } catch {
+    /* non-fatal */
+  }
+}
 
 export async function disableCodeMode(): Promise<{ success: boolean; error?: string }> {
+  if (!codemodeEnabled) {
+    return { success: false, error: 'Code Mode is not currently enabled.' };
+  }
   try {
-    if (!codemodeEnabled) {
-      return { success: false, error: 'Code Mode is not currently enabled.' };
-    }
+    const record = await readRestorationFile();
+    await restoreGlobal(record?.global ?? {});
+    await restoreProject(record?.project ?? {});
+    await deleteRestorationFile();
+    await cleanupProxyTempConfig();
 
-    const settingsPath = getSettingsPath(activeScope, activeProjectRoot);
-    const settings = await readSettingsFile(settingsPath);
-
-    const mcpServers = (settings.mcpServers ?? {}) as Record<string, McpServerConfig>;
-    const disabledMcp = (settings.disabledMcpServers ?? {}) as Record<string, McpServerConfig>;
-
-    // Remove the proxy entry
-    delete mcpServers['__codemode_proxy'];
-
-    // Move our disabled servers back to mcpServers
-    for (const name of Array.from(disabledByUs)) {
-      // eslint-disable-next-line security/detect-object-injection -- name from our own tracked disabledByUs set
-      if (disabledMcp[name]) {
-        // eslint-disable-next-line security/detect-object-injection -- same as above
-        mcpServers[name] = disabledMcp[name];
-        // eslint-disable-next-line security/detect-object-injection -- same as above
-        delete disabledMcp[name];
-      }
-    }
-
-    // Write settings back
-    settings.mcpServers = mcpServers;
-    settings.disabledMcpServers = disabledMcp;
-    await writeSettingsFile(settingsPath, settings);
-
-    // Clean up the proxy config temp file
-    try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is a fixed module constant
-      await fs.unlink(PROXY_CONFIG_PATH);
-    } catch {
-      // Non-fatal if file already gone
-    }
-
-    // Clear module state
     codemodeEnabled = false;
     proxiedServerNames = [];
-    disabledByUs = new Set<string>();
-    activeProjectRoot = undefined;
     generatedTypesCache = '';
-
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -305,3 +225,13 @@ export function getCodeModeStatus(): CodeModeStatusResult {
 export function isCodeModeEnabled(): boolean {
   return codemodeEnabled;
 }
+
+// Internal — for tests only.
+export function __resetCodemodeState(): void {
+  codemodeEnabled = false;
+  proxiedServerNames = [];
+  generatedTypesCache = '';
+}
+
+// Re-export McpServerConfig for external consumers (claudeCodeMode and ipc).
+export type { McpServerConfig };

@@ -70,9 +70,27 @@ async function resolveProxiedServerNames(projectRoot: string | undefined): Promi
     taskNeedsGraphTools: true,
     transport: internalMcp?.transport === 'stdio' ? 'stdio' : 'sse',
   });
-  const enabled = entries.filter((e) => e.enabled).map((e) => e.name);
+  // Wave 53k Phase B‴: CodeMode's mcpClient.ts is stdio-only (see codemode
+  // CLAUDE.md gotcha "mcpClient.ts is stdio-only by design"). HTTP/SSE
+  // upstreams (those with `url` and no `command`) cannot be multiplexed —
+  // including them caused the proxy to hang on `connectUpstream` for 30s
+  // per server before failing, blocking session start. Skip them here so
+  // they remain directly registered in ~/.claude.json mcpServers and
+  // surface to the agent unchanged. The agent then sees:
+  //   - mcp__codemode_proxy__execute_code (the multiplexed stdio servers)
+  //   - mcp__<httpServer>__* (each HTTP server, direct)
+  const stdioCapable = entries.filter((e) => isStdioCapable(e.config));
+  const skipped = entries.filter((e) => !isStdioCapable(e.config)).map((e) => e.name);
+  if (skipped.length > 0) {
+    log.info('[codemode] skipping HTTP-only upstreams (not multiplexed):', skipped.join(','));
+  }
+  const enabled = stdioCapable.filter((e) => e.enabled).map((e) => e.name);
   if (decision !== 'route-through-codemode') return enabled.filter((n) => n !== 'ouroboros');
   return enabled.includes('ouroboros') ? enabled : [...enabled, 'ouroboros'];
+}
+
+function isStdioCapable(config: { command?: string; url?: string }): boolean {
+  return typeof config.command === 'string' && config.command.length > 0;
 }
 
 export interface CodeModeLaunchHandle {

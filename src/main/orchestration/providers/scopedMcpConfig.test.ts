@@ -28,12 +28,16 @@ vi.mock('../../config', () => ({ getConfigValue: mockGetConfigValue }));
 vi.mock('../../internalMcp/internalMcpPortRegistry', () => ({
   getInternalMcpUrl: mockGetInternalMcpUrl,
 }));
-// Selective fs/promises mock: only intercept reads of the user's settings.json;
-// pass through reads of the temp config file the production code writes.
+// Selective fs/promises mock: only intercept reads of the user's ~/.claude.json
+// (the file Claude Code CLI uses for MCP discovery — Wave 53k follow-up).
+// Pass through reads of the temp config file the production code writes.
 vi.mock('fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs/promises')>();
-  const wrappedReadFile = (path: Parameters<typeof actual.readFile>[0], opts?: Parameters<typeof actual.readFile>[1]) => {
-    if (typeof path === 'string' && path.includes('.claude') && path.endsWith('settings.json')) {
+  const wrappedReadFile = (
+    path: Parameters<typeof actual.readFile>[0],
+    opts?: Parameters<typeof actual.readFile>[1],
+  ) => {
+    if (typeof path === 'string' && path.endsWith('.claude.json')) {
       return mockReadFile(path, opts);
     }
     return actual.readFile(path, opts);
@@ -166,7 +170,7 @@ describe('buildScopedMcpConfig', () => {
       scope: 'never',
       userServers: {
         'my-tool': { command: 'npx', args: ['my-mcp-server'] },
-        'another': { url: 'http://localhost:9999/sse' },
+        another: { url: 'http://localhost:9999/sse' },
       },
     });
     const result = await buildScopedMcpConfig({ goalShape: 'code', sessionId: SESSION_ID });

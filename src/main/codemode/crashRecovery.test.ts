@@ -65,7 +65,7 @@ vi.mock('fs/promises', async (importOriginal) => {
     p: Parameters<typeof actual.readFile>[0],
     o?: Parameters<typeof actual.readFile>[1],
   ) => {
-    if (typeof p === 'string' && p.includes('.claude') && p.endsWith('settings.json')) {
+    if (typeof p === 'string' && p.endsWith('.claude.json')) {
       return mockReadFile(p, o);
     }
     return actual.readFile(p, o);

@@ -1,7 +1,7 @@
 # Wave 53l — CodeMode as Universal MCP Multiplexer (External Access)
 ## Implementation Plan (DRAFT)
 
-**Status:** DRAFT — major design questions unresolved. Do NOT start before working through the design section below.
+**Status:** DRAFT — design decisions locked below (no hybrid; CodeMode-on means CodeMode-takes-over). Phase 0 is now a verification-only pass, not an open design exploration.
 **Version target:** v2.8.0 (minor — meaningful change to MCP topology; affects external sessions; user-facing config surface changes)
 **Dependencies:** Wave 53k must ship first (CodeMode file targeting). 53l extends what 53k makes work.
 
@@ -14,6 +14,8 @@ User's request post-Wave-53j: *"I want all MCPs routed through CodeMode, ourobor
 Currently CodeMode is wired into IDE-orchestrated launches only (via `claudeCodeLaunch.ts` calling `acquireCodeModeForLaunch`). External Claude Code sessions (terminal `claude` in project dir) read `~/.claude.json mcpServers` and `.mcp.json` directly, never touching CodeMode. The user wants CodeMode to be the surface for ALL MCP traffic — both IDE-internal AND external — and the optimization (one `execute_code` tool instead of N tool schemas per server) to apply everywhere.
 
 This wave makes `__codemode_proxy` a discoverable user-level MCP server registered in `~/.claude.json mcpServers`, with the proxy aggregating all the user's other MCP servers (sentry, github, stripe, codebase-memory-mcp, context7, ouroboros, etc.) and exposing them as `servers.<name>.*` inside `execute_code`.
+
+**Honest scope statement.** For non-IDE-resident servers (sentry, github, stripe, context7, codebase-memory-mcp, etc.) this wave delivers universal multiplex immediately — they spawn standalone and the proxy connects to them whether the IDE is running or not. For ouroboros specifically (which runs inside the IDE process), external sessions multiplex it only when the IDE is up; when the IDE is off the proxy gracefully degrades and exposes the other servers but ouroboros tools fail. Fully-offline ouroboros multiplex is contingent on the standalone-ouroboros-MCP follow-up wave.
 
 ---
 
@@ -50,11 +52,12 @@ Every Claude Code session (IDE-internal or external) sees one tool: `__codemode_
 ### In-scope (large)
 
 - Move CodeMode auto-inject from per-spawn (current `scopedMcpConfig` model) to user-level (in `~/.claude.json` directly, written once at IDE startup).
-- Extend `codemodeManager` to enumerate ALL `mcpServers` entries (not just an explicit list passed by the IDE), move them to a managed-backup namespace (`_codemodeManagedServers` or similar), and write `__codemode_proxy` as the sole `mcpServers` entry.
-- Update `proxyServer.ts` config loading to read the managed-backup namespace as its upstream list (currently it's given an explicit config from `codemodeManager`; that contract stays, but the source of truth shifts to user config).
-- Update Wave 51's routing matrix (`internalMcpRoutingPolicy.ts`): when CodeMode is enabled at user level, `route-through-codemode` becomes the steady-state — IDE-orchestrated sessions don't need their own per-spawn temp config layer to engage CodeMode; the user config already routes through it.
-- Add a deterministic rollback path: a single command (CLI subcommand or settings UI button) that restores the user's `mcpServers` from `_codemodeManagedServers` and removes `__codemode_proxy`. **This is critical** — destructive changes to user config need a one-step undo.
-- Document the new behavior in `src/main/codemode/CLAUDE.md` and a top-level user doc (`docs/codemode.md` or similar).
+- Extend `codemodeManager` to enumerate ALL `mcpServers` entries (minus `codemode.excludeFromMultiplex`), move them to `~/.claude/codemode-managed.json`, and write `__codemode_proxy` as the sole `mcpServers` entry.
+- Update `proxyServer.ts` config loading to read its upstream list from `~/.claude/codemode-managed.json` (the managed-backup file is now the source of truth for proxy upstream config).
+- Update Wave 51's routing matrix (`internalMcpRoutingPolicy.ts`): when CodeMode is enabled, `route-through-codemode` is steady-state — IDE-orchestrated sessions don't need their own per-spawn temp config layer; user config already routes through it.
+- Add a deterministic rollback path: Settings UI toggle (`codemode.enabled: false`) restores user's `mcpServers` from `~/.claude/codemode-managed.json` and removes `__codemode_proxy`. **This is critical** — destructive changes to user config need a one-step undo.
+- Add CodeMode telemetry (per-session `execute_code` call count, `servers.<name>.*` invocation counts, proxy cold-start latency). Required for measuring multiplexer value during soak.
+- Document the new behavior in `src/main/codemode/CLAUDE.md` and a top-level user doc (`docs/codemode.md`).
 
 ### Out-of-scope
 
@@ -64,71 +67,22 @@ Every Claude Code session (IDE-internal or external) sees one tool: `__codemode_
 
 ---
 
-## Open design questions — must resolve before Phase A
+## Locked decisions
 
-### Q1. Opt-in semantics
+1. **Single mode: takeover.** No hybrid, no `takeoverUserConfig` opt-in. When `codemode.enabled: true`, CodeMode takes over `~/.claude.json mcpServers` at IDE startup — user's servers move to managed backup, `__codemode_proxy` becomes the sole entry. `codemode.enabled` is the one switch.
+2. **Server selection: all, with explicit opt-out.** Default is multiplex every user-registered server. `codemode.excludeFromMultiplex: string[]` lets the user remove specific servers from the proxy if one misbehaves. No opt-in list — matches user intent ("all MCPs through CodeMode").
+3. **Restoration data file: sibling, not in-line key.** `~/.claude/codemode-managed.json` holds the managed-backup blob (same file as Wave 53k uses for its disable semantic — CodeMode owns this file end-to-end). Avoids fragility against Claude Code schema additions and gives us write isolation.
+4. **Rollback UX:** Settings UI toggle (`codemode.enabled: false`) triggers restore-from-backup. Plus document the manual JSON edit as last-resort fallback in `docs/codemode.md`.
+5. **New-server pickup: stale-until-restart.** If user runs `claude mcp add foo …` while CodeMode is active, foo doesn't appear in the multiplex until next IDE restart. A reactive watcher is filed as a follow-up.
+6. **Transport stays stdio.** Wave 53j's choice holds. The proxy spawns the ouroboros stdio bridge (per 53j) — no SSE handshake needed.
+7. **Ouroboros + IDE-off: graceful degradation.** Proxy exposes only reachable servers. When IDE is off, the agent sees `execute_code` work for sentry/github/etc. but `servers.ouroboros.*` calls fail with a clear error. Fully-offline ouroboros is the standalone-server follow-up.
 
-Two models:
+### Phase 0 = verification only (no design pause)
 
-- **Global takeover.** When `codemode.enabled: true`, CodeMode replaces the user's `mcpServers` block at IDE startup. User loses direct access to individual servers in non-CodeMode contexts (Anthropic Desktop, etc.). Maximum context savings; biggest behavior change.
-- **Coexist by default.** `__codemode_proxy` added alongside the existing servers. User has both surfaces. No context savings (worse than current state — agent has 1 + N tool schemas instead of N), but zero destructive change.
-- **Hybrid (preferred):** Coexist by default; a separate flag (`codemode.takeoverUserConfig: true`) opts into the takeover model.
-
-Recommendation: Hybrid. `codemode.enabled` controls IDE-orchestration routing (Wave 53j semantics). `codemode.takeoverUserConfig` controls the user-level multiplex (this wave's contribution). Both default false. User opts in to as much as they want.
-
-### Q2. Server selection
-
-Does CodeMode multiplex ALL user-registered MCP servers, or a curated list?
-
-- **All:** Simplest; matches "user wants CodeMode for everything." Risks: if a server has auth flows or odd lifecycles, it might break under proxy. Each server's behavior under CodeMode needs verification.
-- **Curated list:** User specifies which servers to multiplex via config (`codemode.multiplexedServers: ["ouroboros", "github"]`). Safer; explicit opt-in per server.
-
-Recommendation: Default to all when `takeoverUserConfig: true`, with an opt-out list (`codemode.excludeFromMultiplex: ["sentry"]`) for servers known to misbehave. Avoid an opt-in list unless we hit specific problems — defaulting to "all" matches the user's intent.
-
-### Q3. Rollback UX
-
-Destructive changes to `~/.claude.json` need a clear undo:
-
-- A CLI subcommand (`ouroboros codemode disable` — but we don't have an Ouroboros CLI; not applicable).
-- A Settings UI button in the IDE (likely the right surface).
-- A documented manual edit (last-resort fallback).
-
-Recommendation: Settings UI toggle that flips `codemode.takeoverUserConfig: true → false` and triggers a restore-from-backup pass. Plus document the manual JSON edit in case the IDE is unreachable.
-
-### Q4. Cross-IDE-restart consistency
-
-If the user adds a new MCP server while CodeMode is active (e.g., `claude mcp add foo …`), how does CodeMode see it?
-
-- **Reactive:** the IDE watches `~/.claude.json` for changes; on detected new server, moves it to managed backup + updates proxy config + restarts proxy.
-- **Stale-until-restart:** the user must restart the IDE (or run `codemode reload`) for new servers to be picked up.
-
-Recommendation: Stale-until-restart for v1. Reactive watching has its own complexity and isn't worth it until the v1 model is proven.
-
-### Q5. Config schema impact
-
-`~/.claude.json` is Claude Code CLI's primary config. Adding `_codemodeManagedServers` as a sibling to `mcpServers` is presumably tolerated (Claude Code is liberal about unknown top-level keys), but should be verified. Worst case, use a different file entirely (e.g., `~/.claude/codemode-managed.json`) to avoid touching Claude Code's own state.
-
-### Q6. The `transport: "stdio"` question
-
-Wave 53j flipped `internalMcp.transport: "stdio"`. With Wave 53l's user-level multiplex, ouroboros is no longer a directly-registered server (it's behind the proxy). Does `internalMcp.transport` even matter post-53l?
-
-- The IDE still needs to expose ouroboros somewhere for the proxy to connect to. If transport=sse, the proxy connects via HTTP+SSE. If transport=stdio, the proxy spawns the ouroboros stdio bridge (Wave 53j's work).
-- Recommendation: Stay with `transport: "stdio"` (Wave 53j's choice). Or revisit if the proxy benefits from direct SSE.
-
-### Q7. External session discovery
-
-For external sessions to actually use the user-level `__codemode_proxy`, Claude Code CLI has to:
-- Read `~/.claude.json mcpServers` and find `__codemode_proxy` ✓ (we're already targeting the right file post-53k)
-- Spawn the proxy via `command: "node", args: [proxyServerPath, proxyConfigPath]`
-- The proxy must be able to find the IDE's running ouroboros server (the `<port>` is dynamic).
-
-This is the fragility point. Currently `proxyServer.ts` reads its config from a JSON file the IDE writes. The config has the upstream server connection info INCLUDING ouroboros's current port. **If the user starts an external session while the IDE is OFF, the proxy launches but ouroboros isn't running — proxy fails, agent loses graph tools.**
-
-Resolution options:
-- (a) The proxy gracefully degrades — exposes only the servers that ARE reachable. User loses ouroboros tools when IDE is off, but other servers (sentry/github/etc.) still work.
-- (b) Block the wave on first standalone-MCP-server work for ouroboros (Wave 53m or similar). External sessions via CodeMode become contingent on the IDE being up; standalone ouroboros would unblock fully-offline use.
-
-Recommendation: (a) — graceful degradation. Standalone ouroboros is its own wave; this wave doesn't depend on it.
+Quick smokes before Phase A starts:
+- Confirm Claude Code CLI tolerates `mcpServers` containing only `__codemode_proxy` (other servers absent). 30-second test: `claude mcp list` after rename, confirm proxy entry present and others absent.
+- Confirm `~/.claude/codemode-managed.json` is not read by Claude Code itself (it shouldn't be — it's our private file).
+- Time first-tool-use latency on an external session with the proxy multiplexing 6 upstream servers. **Target: <2s cold start.** If significantly worse, surface it before flipping defaults.
 
 ---
 
@@ -136,13 +90,17 @@ Recommendation: (a) — graceful degradation. Standalone ouroboros is its own wa
 
 | Phase | Goal | Subagent / responsibility |
 |---|---|---|
-| 0 | Resolve Q1–Q7 design questions in this doc + in `roadmap/decisions/wave-53l.md`. **No code.** | Orchestrator + user. |
-| A | Implement the new auto-inject path: `codemodeManager` writes `__codemode_proxy` + `_codemodeManagedServers` to `~/.claude.json`. Behind `codemode.takeoverUserConfig` flag. | sonnet-implementer. |
-| B | Update routing matrix in `internalMcpRoutingPolicy.ts`: when takeover is on, route-through-codemode is steady-state (no per-spawn override needed). | Orchestrator. |
-| C | Update `proxyServer.ts` upstream-config loading to handle the new managed-backup format. | sonnet-implementer. |
-| D | Add Settings UI surface for the takeover toggle + rollback. | sonnet-implementer (renderer side; pairs with main-process IPC). |
-| E | Smoke tests: external session sees `__codemode_proxy` only; agent calls `execute_code`; rollback works; one-server-down graceful degradation. | Orchestrator + user. |
-| F | Wrap-up: result brief, ADR, plan flip, version bump (likely v2.8.0 — minor), push. | Orchestrator. |
+| 0 | Verification smokes per "Phase 0 = verification only" above. ADR (`roadmap/decisions/wave-53l.md`) committed reflecting the locked decisions. **No design pause.** | Orchestrator + user. |
+| A | Implement the new auto-inject path: `codemodeManager` writes `__codemode_proxy` to `~/.claude.json mcpServers` and moves user's other servers to `~/.claude/codemode-managed.json`. Gated on `codemode.enabled` (no separate takeover flag). | sonnet-implementer. |
+| B | Update routing matrix in `internalMcpRoutingPolicy.ts`: route-through-codemode is steady-state when CodeMode is enabled — no per-spawn override needed. | Orchestrator. |
+| C | Update `proxyServer.ts` upstream-config loading to read from `~/.claude/codemode-managed.json`. Add graceful-degradation path: unreachable upstream servers → tool calls fail with clear error, reachable servers continue working. | sonnet-implementer. |
+| D1 | Backend rollback path: IPC handler that restores `~/.claude.json mcpServers` from the managed-backup file, removes `__codemode_proxy`, signals running proxy to exit. Tested independently of UI. | sonnet-implementer. |
+| D2 | Settings UI surface for the `codemode.enabled` toggle + rollback affordance. Token-clean styling per `.claude/rules/renderer.md`. **Manual smoke gate required** per `~/.claude/rules/manual-smoke-gate.md`. | sonnet-implementer (renderer + IPC pairing). |
+| E | Telemetry: emit per-session `execute_code` count, `servers.<name>.*` invocation counts, proxy cold-start latency to the existing telemetry sink. | sonnet-implementer. |
+| F | Smoke tests: external session sees `__codemode_proxy` only; agent calls `execute_code`; rollback works; IDE-off graceful degradation; first-tool-use latency under 2s with 6 upstream servers. Signed manual smoke checklist included. | Orchestrator + user. |
+| G | Wrap-up: result brief (with smoke checklist), ADR, plan flip, version bump v2.8.0 (minor — user-facing topology change, new config surface, schema-changing rollback path), push. | Orchestrator. |
+
+**Upgrade path note.** Existing v2.7.x users with CodeMode on: behavior changes — CodeMode now manages user config. The release notes must call this out, point to the rollback toggle, and document the manual-edit fallback. Users with `codemode.enabled: false` see no change.
 
 ---
 
@@ -162,14 +120,17 @@ Recommendation: (a) — graceful degradation. Standalone ouroboros is its own wa
 
 ## Acceptance criteria (wave-level)
 
-- [ ] Q1–Q7 design questions resolved in ADR.
-- [ ] `codemode.takeoverUserConfig` flag added + default false.
-- [ ] When flag is on, IDE startup auto-injects `__codemode_proxy` to `~/.claude.json mcpServers`, moves user's other servers to `_codemodeManagedServers`.
-- [ ] External `claude mcp list` shows only `__codemode_proxy`.
-- [ ] Fresh external Claude Code session: agent's tool list shows one `mcp__codemode_proxy__execute_code` (or however CodeMode exposes the tool); not the individual servers' tools.
+- [ ] All seven locked decisions reflected in `roadmap/decisions/wave-53l.md`.
+- [ ] When `codemode.enabled: true`, IDE startup auto-injects `__codemode_proxy` to `~/.claude.json mcpServers` and moves user's other servers to `~/.claude/codemode-managed.json`.
+- [ ] `codemode.excludeFromMultiplex: string[]` config option respected — excluded servers stay in `~/.claude.json mcpServers` directly.
+- [ ] External `claude mcp list` shows only `__codemode_proxy` (plus any excluded servers).
+- [ ] Fresh external Claude Code session: agent's tool list shows one `mcp__codemode_proxy__execute_code`; not the individual servers' tools.
 - [ ] Asking the agent a graph-shaped query routes through `execute_code(servers.ouroboros.trace_call_path(...))`.
-- [ ] Rollback (settings toggle) restores user's `mcpServers` from `_codemodeManagedServers` and removes `__codemode_proxy`.
-- [ ] When IDE is off, external session still sees `__codemode_proxy` but ouroboros tools fail gracefully (other proxied servers still work).
+- [ ] Rollback (Settings UI toggle to `codemode.enabled: false`) restores user's `mcpServers` from `~/.claude/codemode-managed.json` and removes `__codemode_proxy`.
+- [ ] When IDE is off, external session still sees `__codemode_proxy`; `servers.ouroboros.*` calls fail with a clear error; other proxied servers still work.
+- [ ] First-tool-use latency on external session with 6 upstream servers measured and under 2s.
+- [ ] Telemetry emits per-session `execute_code` count + per-server invocation counts + proxy cold-start latency.
+- [ ] Manual smoke gate signed in result brief (renderer-touching wave per Phase D2).
 - [ ] No regressions in IDE-orchestrated sessions.
 
 ---
@@ -177,6 +138,5 @@ Recommendation: (a) — graceful degradation. Standalone ouroboros is its own wa
 ## Out-of-wave follow-ups
 
 - **Standalone ouroboros MCP server** — extract the codebase-memory-mcp behavior into a process independent of the IDE so external CodeMode sessions can use ouroboros tools when the IDE is off. Wave-sized; has been on the follow-up list since 53d.
-- **Reactive `~/.claude.json` watcher** — pick up new MCP servers without IDE restart (Q4 follow-up).
-- **CodeMode-specific telemetry** — track which `servers.<name>.*` calls the agent actually makes, so we can measure the multiplexer's value (vs the cost of one extra subprocess hop). Not blocking; informs whether we flip schema defaults globally.
-- **Schema default flip** for `codemode.takeoverUserConfig` — only after a long soak period and clear data on the trade-off.
+- **Reactive `~/.claude.json` watcher** — pick up new MCP servers without IDE restart (decision 5 follow-up).
+- **`codemode.enabled` default flip** — only after a soak period with telemetry data confirming the multiplexer's value vs the per-session subprocess-spawn cost. Phase E telemetry feeds this decision.

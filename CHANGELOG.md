@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.12] - 2026-04-29
+
+### Fixed
+- **Wave 53k:** CodeMode end-to-end functional. The proxy was silently broken
+  since Wave 53g (file-targeting regression cascaded into eight latent bugs
+  the leak masked). Working agent path: `mcp__codemode_proxy__execute_code`
+  → `servers.<name>.<tool>(...)` for `github`, `stripe`, `ouroboros` (graph
+  tools). HTTP-only servers (`sentry`, `context7`) stay directly registered.
+- `codemodeManager` now writes to `~/.claude.json` and `<root>/.mcp.json` (the
+  files Claude Code CLI actually reads), not `~/.claude/settings.json`
+  (Anthropic Desktop's file). Restoration data lives in the v2-schema sibling
+  file `~/.claude/codemode-managed.json`.
+- `scopedMcpConfig.readGlobalMcpServers()` corrected from the same wrong-file
+  bug; user globals now flow through to the per-spawn temp config and the
+  agent sees them under `--strict-mcp-config`.
+- Project-scope multiplex now uses destructive write to `<root>/.mcp.json`
+  (with verbatim restore on disable) because empirical testing in Claude
+  Code v2.1.122 on Windows showed `--strict-mcp-config` doesn't isolate
+  `.mcp.json` discovery and `disabledMcpjsonServers` flag is non-functional.
+- Self-healing crash recovery: `enableCodeMode` checks for stale restoration
+  files and applies them before starting a new enable.
+
+### Changed
+- `mcpClient.ts` and `proxyServer.ts` rewritten on `@modelcontextprotocol/sdk`
+  (`Client`/`Server` + `StdioClientTransport`/`StdioServerTransport`),
+  retiring ~280 lines of hand-rolled JSON-RPC. Mirrors the Wave 53j precedent
+  for `internalMcpStdioTransport.ts`. SDK owns wire format (NDJSON, not the
+  pre-fix LSP-style Content-Length framing), request correlation, and
+  initialize handshake.
+- HTTP/SSE upstreams (`url` field, no `command`) are filtered out at the
+  `claudeCodeMode.resolveProxiedServerNames` boundary via the new
+  `isStdioCapable()` predicate. They remain directly registered in
+  `~/.claude.json mcpServers` and surface to the agent as `mcp__<name>__*`
+  unchanged.
+- `proxyServer.connectServerEntry` now races each upstream against a 15s
+  startup deadline (was: blocked on `Promise.allSettled` for the slowest
+  upstream's full 30s timeout — exhausted Claude Code's ~30s safety window).
+- `~/.claude/codemode-proxy.log` — new diagnostic log file capturing every
+  proxy spawn, upstream connect/fail, and shutdown event. Append-forever;
+  truncate periodically if it grows large.
+
+### Internal
+- `codemodeManager.ts` split: public API surface delegates to
+  `codemodeManagerFiles.ts` (paths + atomic JSON I/O + restoration record)
+  and `codemodeManagerScopes.ts` (global vs project enable+restore).
+- `proxyServer.js` path resolution: `resolveProxyServerPath()` walks
+  sibling-then-parent so the registered path works regardless of bundle
+  layout (electron-vite chunks the calling code into `out/main/chunks/`
+  while `proxyServer.js` is at `out/main/`).
+- Tailwind `@source not` glob extended to `roadmap/archive/**` after
+  archiving completed waves moved `wave-53c-output/` under it; Tailwind
+  v4's auto-source scan trips on Windows path encodings (`\afa0da`-shaped
+  hex segments) above U+10FFFF.
+- Wave 53k ADR (`roadmap/decisions/wave-53k.md`) documents nine architecture
+  decisions, including the Decision-2 reversal (toggle-flag → destructive
+  write) and Decision 9 (SDK adoption pulled forward from a Wave 53m punt).
+
 ## [2.0.0] - 2026-04-20
 
 Major release: dual-shell UI model. The IDE now ships with two top-level

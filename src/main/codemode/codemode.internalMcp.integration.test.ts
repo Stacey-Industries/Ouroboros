@@ -55,7 +55,7 @@ vi.mock('fs/promises', async (importOriginal) => {
     p: Parameters<typeof actual.readFile>[0],
     o?: Parameters<typeof actual.readFile>[1],
   ) => {
-    if (typeof p === 'string' && p.includes('.claude') && p.endsWith('settings.json')) {
+    if (typeof p === 'string' && p.endsWith('.claude.json')) {
       return mockReadFile(p, o);
     }
     return actual.readFile(p, o);
@@ -254,6 +254,38 @@ describe('settings-write shape', () => {
     expect(data.mcpServers).toHaveProperty('github');
     expect(data.mcpServers).toHaveProperty('sentry');
     expect(data.mcpServers).not.toHaveProperty('ouroboros');
+    await result!.cleanup();
+  });
+
+  // Wave 53k follow-up: when CodeMode is enabled, codemodeManager has placed
+  // `__codemode_proxy` into ~/.claude.json mcpServers. The temp config must
+  // pass it through so that --strict-mcp-config + the temp config gives the
+  // agent a visible proxy. This is the regression test for the smoke-failure
+  // where the temp config was empty (servers: []) and the agent saw nothing
+  // through the proxy.
+  it('passes through __codemode_proxy from ~/.claude.json under route-through-codemode', async () => {
+    applyUserServers({
+      __codemode_proxy: {
+        command: 'node',
+        args: ['/fake/proxyServer.js', '/fake/proxy-config.json'],
+      },
+    });
+    applyConfig({
+      internalMcpScope: 'task-gated',
+      internalMcp: { transport: 'stdio' },
+      codemode: { enabled: true, routeInternalMcp: true },
+    });
+    const result = await buildScopedMcpConfig({
+      goalShape: 'code',
+      sessionId: SESSION_ID,
+      mainOutDir: FAKE_MAIN_OUT,
+    });
+    expect(result).not.toBeNull();
+    const data = readWrittenConfig(result!.configPath);
+    expect(data.mcpServers).toHaveProperty('__codemode_proxy');
+    expect(data.mcpServers.__codemode_proxy.command).toBe('node');
+    expect(data.mcpServers).not.toHaveProperty('ouroboros');
+    expect(result!.routingDecision).toBe('route-through-codemode');
     await result!.cleanup();
   });
 });

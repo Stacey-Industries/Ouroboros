@@ -9,8 +9,11 @@
    that Tailwind's tokenizer reads as CSS variable names, then `ke()` interprets
    `\afa0da`-shaped path segments as 6-hex-digit Unicode escapes. When the value
    exceeds U+10FFFF, String.fromCodePoint throws "Invalid code point" and the
-   build fails. Reproduced and fixed during Wave 53c follow-up (v2.7.4). */
+   build fails. Reproduced and fixed during Wave 53c follow-up (v2.7.4); the
+   archive glob below was added during the Wave 53k roadmap cleanup that
+   moved completed waves (including wave-53c-output/) under roadmap/archive/. */
 @source not "../../../roadmap/wave-*-output/**";
+@source not "../../../roadmap/archive/**";
 
 @custom-variant dark (&:is(.dark *));
 
