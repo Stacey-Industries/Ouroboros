@@ -100,7 +100,35 @@ After v2.7.6's fix landed and the IDE was restarted, the orchestrator re-ran the
 
 `list_projects` reported `0 nodes, 0 edges` from a stored timestamp of 2026-04-20, but `get_graph_schema` (called moments later, same server) reported 11K+ functions live. The project-table's `node_count` / `edge_count` columns are not being updated on incremental reindex — only on full re-index. Cosmetic for now (real query results are correct), but worth filing as a small follow-up: refresh project-table stats at the end of each indexing pass, or compute them lazily from the live counts.
 
-### Wave 54 adoption smoke — still pending the user
+## Wave 54 adoption smoke run #4 (2026-04-28, post-v2.7.9) — GREENLIT
+
+**Setup verified before agent test (orchestrator-runnable):**
+- `.mcp.json` correct shape with `type: "sse"` field.
+- `claude mcp get ouroboros` reports `Status: ✓ Connected`.
+- SSE first chunk: `event: endpoint\ndata: /message?sessionId=b8d1b448-232c-401a-8a71-9659d1d01ab8`.
+
+**Agent test (fresh Claude Code session, IDE chat panel):**
+
+Prompt: *"Use trace_call_path to find all callers of injectIntoProjectSettings in this codebase."*
+
+Response (paraphrased):
+> Called ouroboros [tool use]
+>
+> injectIntoProjectSettings is defined at `src/main/internalMcp/internalMcpAutoInject.ts:71` and has one caller:
+> - `startInternalMcp` at `src/main/main.ts:126`
+
+**Observations:**
+- ✅ Agent saw `mcp__ouroboros__trace_call_path` in its tool list.
+- ✅ Reached for it directly without falling back to Grep.
+- ✅ Got real graph-edge data, not text matches.
+- ✅ The result is **more precise than Grep would have produced**. Earlier smoke #2 (pre-v2.7.9, Grep fallback) found 2 production callers + 4 test callers — Grep counted test-file imports as callers. This run correctly identifies the single function-level call edge from `startInternalMcp`. That's the value: graph filters out comments, docstrings, and test imports.
+- ⚠️ One tradeoff: the graph reports function-level edges, not per-call-site references. `injectIntoProjectSettings` is invoked from two distinct lines inside `startInternalMcp` (the `useMcpHost` branch and the standard SSE path). Both collapse into one caller at the graph level. For most "who calls this" questions, function-level is right; for surgery-grade refactors, per-call-site fidelity might still want a Grep follow-up.
+
+**Verdict for Wave 53d Decision 9: GREENLIT.**
+
+The wiring works end-to-end. The agent uses the tool when available. The response is useful and arguably better than the Grep alternative. Wave 54 (TS semantic operations) can proceed per its plan.
+
+The original Wave 54 plan also specified Phase A+B (read-only ops) before Phase D (mutations); given the corpus's low Edit-failure rate, that internal staging still applies. But the wave is **no longer paused** on any prerequisite — the discovery / runtime / handshake / sessionId chain is closed.
 
 The runtime is now functional. The remaining question is **does the agent reach for these tools when they're available?** That requires a fresh Claude Code session post-restart (this orchestrating session's tool list was frozen pre-fix). The user can verify by:
 

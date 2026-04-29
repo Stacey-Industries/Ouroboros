@@ -1,6 +1,8 @@
 # Wave 54 — TypeScript Semantic Operations (Conditional)
 ## Implementation Plan (DRAFT)
 
+**Status (2026-04-28):** ✅ **GREENLIT** by Wave 53d Decision 9 after Wave 53h's adoption smoke verified end-to-end tool usage. Earlier blockers (lifecycle, runtime context, SSE handshake, discovery file, type field, sessionId routing) all resolved across Waves 53d–53h. The original conditional staging in this plan (Phase A+B before Phase C measurement, Phase D conditional on positive measurement) still applies — adoption is verified, not the full mutation surface.
+
 **Version target:** v2.9.0 (minor — new agent capability; TS-only first-party semantic ops)
 **Feature flags:** new `semanticOps.tsserver.enabled` (default `false` until Phase C validates), new `semanticOps.exposeAsTools` (default `false` — controls whether agent sees the tools)
 **Dependencies:**

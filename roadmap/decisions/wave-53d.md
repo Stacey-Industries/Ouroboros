@@ -1,6 +1,6 @@
 # Wave 53d — Architecture Decision Record
 
-**Status:** Decisions 1–8 resolved at wave close. Decision 9 (Wave 54 verdict) deferred to user-driven post-restart smoke; finalized when the user appends adoption observations to `roadmap/wave-53d-live-test.md`.
+**Status:** FINALIZED 2026-04-28. Decisions 1–9 resolved. Decision 9 took five additional waves (53e/53f/53g/53h) to clear all the prerequisite layers between "wiring fixed" and "agent actually uses tools." Wave 54 GREENLIT.
 
 This wave fixes wiring on existing infrastructure rather than introducing new architecture. Most decisions will be tactical (which lifecycle hook owns the auto-inject, when to re-run it). The big-shape decision is a Wave 54 status pivot at Phase E based on Phase D's live-test observations.
 
@@ -102,7 +102,27 @@ This wave fixes wiring on existing infrastructure rather than introducing new ar
 
 ---
 
-## Decision 9: Wave 54 stays PAUSED — second runtime bug surfaced by the smoke
+## Decision 9: Wave 54 — GREENLIT (FINALIZED 2026-04-28 via Wave 53h's smoke)
+
+**Final outcome:** The Wave 54 adoption smoke run #4 (post-v2.7.9, fresh Claude Code session) showed:
+
+- `claude mcp get ouroboros` reports `Status: ✓ Connected`.
+- A graph-shaped query ("Use `trace_call_path` to find callers of `injectIntoProjectSettings`") triggered the agent to call `mcp__ouroboros__trace_call_path` directly — no Grep fallback.
+- The graph result (1 function-level caller: `startInternalMcp at main.ts:126`) is more precise than the Grep alternative (which counted test-file imports as callers).
+- Recorded in `roadmap/wave-53d-live-test.md` under "Wave 54 adoption smoke run #4".
+
+**Verdict:** GREENLIT. Wave 54 (TS semantic operations) can proceed per its plan. Internal staging (Phase A+B read-only ops, Phase C measurement gate, Phase D conditional mutations) still applies — the Wave 54 plan didn't require the verdict to also commit to Phase D.
+
+**Total path to greenlight:** Five additional waves (53e/53f/53g/53h) closed prerequisite layers between Wave 53d's lifecycle fix and a working end-to-end smoke. Each wave fixed a real bug; each was masked by the next layer until Wave 53h's research read the SDK reference directly and produced a complete fix.
+
+**Lessons captured for future MCP-adjacent work** (memorialized in `~/.claude/projects/C--Web-App-Agent-IDE/memory/project_graph_tool_adoption_gap.md`):
+- For MCP server work targeting Claude Code, treat the official `@modelcontextprotocol/sdk` source as canonical, not the spec text. The SDK's wire format is what the SDK *client* requires.
+- "Server is healthy via curl" doesn't mean "agent can use it." Curl bypasses the discovery and SSE handshake layers that real clients exercise.
+- Single-file `.claude/settings.json` is the wrong target for MCP server registration in Claude Code CLI. Project-local `.mcp.json` (registered via `enabledMcpjsonServers`) is correct.
+
+---
+
+## Decision 9-archived (historical record from earlier in the conversation): Wave 54 stays PAUSED — second runtime bug surfaced by the smoke
 
 **Context:** The orchestrator ran the post-restart smoke (2026-04-28, immediately after v2.7.5 shipped). Server is reachable, auto-inject lifecycle is fixed, 14 graph tools are registered and enumerable via JSON-RPC. **But every tool fails at runtime** with `"Cannot read properties of undefined (reading '<methodName>')"` — the handler closures captured a broken `GraphToolContext` at tool-registration time. Likely cause: a startup-order race where the internalMcp server registers tools before the graph controller has finished initializing, or `getGraphToolContext()` returns a partially-initialized stub that's truthy enough to choose the graph-tools path but missing its inner service references.
 
