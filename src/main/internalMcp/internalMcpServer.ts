@@ -1,4 +1,40 @@
-import { randomUUID } from 'crypto';
+/**
+ * internalMcpServer.ts — Wave 53i: SDK-backed implementation
+ *
+ * Replaces the hand-rolled SSE/JSON-RPC dispatch (Waves 53d–53h) with the
+ * official `@modelcontextprotocol/sdk` v1.29.0 transport classes. We keep:
+ *   - Node `http.createServer` scaffolding for port allocation, listen,
+ *     stop lifecycle (preserves the existing `InternalMcpServerHandle`
+ *     contract).
+ *   - The `getActiveTools()` / `findTool()` registry (graph-healthy → 14
+ *     tools; degraded → 6 fallback tools).
+ *   - SSE wire format (Claude Code's client connects to /sse + /message
+ *     with type:"sse"; per Wave 53h smoke).
+ *
+ * What changes:
+ *   - `SSEServerTransport` from the SDK handles the SSE handshake (endpoint
+ *     event, sessionId, response routing). Wave 53h's hand-rolled
+ *     equivalent is retired.
+ *   - `Server` (the low-level SDK server) hosts our `tools/list` and
+ *     `tools/call` request handlers. We bypass `McpServer.registerTool`
+ *     because it requires Zod schemas; our existing tool definitions use
+ *     JSON Schema objects compatible with the SDK's `setRequestHandler`
+ *     pathway.
+ *   - One `Server` + one `SSEServerTransport` per SSE connection. Both
+ *     close when the underlying HTTP request closes.
+ *
+ * Wire format produced by the SDK (verified by Phase B smoke):
+ *   GET /sse → `event: endpoint\ndata: /message?sessionId=<UUID>\n\n`
+ *   POST /message?sessionId=<X> → JSON-RPC dispatch via the matching
+ *     transport; response delivered as `event: message` on the SSE stream.
+ */
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { IncomingMessage, ServerResponse } from 'http';
 import http from 'http';
 import type { AddressInfo } from 'net';
@@ -7,234 +43,110 @@ import { findTool, getActiveTools } from './internalMcpTools';
 import type { InternalMcpServerHandle, InternalMcpServerOptions } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
-// SSE connection registry — Wave 53h
-// ---------------------------------------------------------------------------
-//
-// The MCP HTTP+SSE transport (2024-11-05) routes JSON-RPC responses back to
-// the client via the SSE stream, not the POST response body. The
-// `@modelcontextprotocol/sdk` SSEClientTransport requires this routing: when
-// a client opens GET /sse, the server generates a unique sessionId, includes
-// it in the `endpoint` event's URL (`/message?sessionId=<uuid>`), and tracks
-// the SSE response by that id. When a POST /message?sessionId=<id> arrives,
-// the server dispatches the RPC and pushes the response as `event: message`
-// on the matching SSE stream.
-//
-// We also keep returning the response in the POST body for backward compat
-// with curl-based smokes and the strict subset of clients that read the body
-// instead of the SSE stream.
-
-const sseConnections = new Map<string, ServerResponse>();
-
-// ---------------------------------------------------------------------------
-// JSON-RPC helpers
+// Active connection registry — one entry per open /sse connection.
 // ---------------------------------------------------------------------------
 
-interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  id?: string | number | null;
-  method: string;
-  params?: Record<string, unknown>;
+interface SseConnection {
+  transport: SSEServerTransport;
+  server: Server;
 }
 
-function rpcSuccess(id: string | number | null | undefined, result: unknown): string {
-  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, result });
-}
-
-function rpcError(id: string | number | null | undefined, code: number, message: string): string {
-  return JSON.stringify({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
-}
+const sseConnections = new Map<string, SseConnection>();
 
 // ---------------------------------------------------------------------------
-// Read full POST body
+// Per-connection MCP Server factory
 // ---------------------------------------------------------------------------
 
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-    req.on('error', reject);
-  });
-}
+function createMcpServer(workspaceRoot: string): Server {
+  const server = new Server(
+    { name: 'ouroboros', version: '1.0.0' },
+    { capabilities: { tools: {} } },
+  );
 
-// ---------------------------------------------------------------------------
-// SSE handler
-// ---------------------------------------------------------------------------
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: getActiveTools().map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema as Record<string, unknown>,
+    })),
+  }));
 
-function handleSse(req: IncomingMessage, res: ServerResponse): void {
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
-  });
-
-  // Wave 53h: Per the MCP TypeScript SDK reference SSEServerTransport, the
-  // endpoint URL must include a `sessionId` query parameter. The SDK client
-  // uses this id as the routing key to associate POST messages with the SSE
-  // stream and to receive JSON-RPC responses on the same stream. Without
-  // sessionId, the SDK client (which Claude Code uses) reports "Failed to
-  // connect" or surfaces an auth-prompt error. Wave 53f got the endpoint
-  // event format right but skipped the sessionId — that's why post-53f
-  // smokes still failed.
-  const sessionId = randomUUID();
-  sseConnections.set(sessionId, res);
-  res.write(`event: endpoint\ndata: /message?sessionId=${sessionId}\n\n`);
-
-  // Heartbeat every 30 seconds to keep the connection alive
-  const heartbeat = setInterval(() => {
-    try {
-      res.write(': heartbeat\n\n');
-    } catch {
-      clearInterval(heartbeat);
+  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    const { name, arguments: args } = req.params;
+    const tool = findTool(name);
+    if (!tool) {
+      return { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true };
     }
-  }, 30_000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    sseConnections.delete(sessionId);
+    try {
+      const text = await tool.handler(
+        (args ?? {}) as Record<string, unknown>,
+        workspaceRoot,
+      );
+      return { content: [{ type: 'text', text }], isError: false };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true };
+    }
   });
+
+  return server;
 }
 
 // ---------------------------------------------------------------------------
-// JSON-RPC handler
+// Routing handlers
 // ---------------------------------------------------------------------------
 
-async function parseRpcRequest(
+async function handleSseConnection(
   req: IncomingMessage,
   res: ServerResponse,
-): Promise<{ rpc: JsonRpcRequest; id: string | number | null } | null> {
-  let body: string;
-  try {
-    body = await readBody(req);
-  } catch {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(rpcError(null, -32700, 'Parse error: could not read request body'));
-    return null;
-  }
-
-  try {
-    const rpc = JSON.parse(body) as JsonRpcRequest;
-    return { rpc, id: rpc.id ?? null };
-  } catch {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(rpcError(null, -32700, 'Parse error: invalid JSON'));
-    return null;
-  }
-}
-
-async function dispatchRpcMethod(
-  rpc: JsonRpcRequest,
-  id: string | number | null,
   workspaceRoot: string,
-): Promise<string> {
-  switch (rpc.method) {
-    case 'initialize':
-      return rpcSuccess(id, {
-        protocolVersion: '2024-11-05',
-        capabilities: { tools: {} },
-        serverInfo: { name: 'ouroboros', version: '1.0.0' },
-      });
+): Promise<void> {
+  // Endpoint URI passed to SSEServerTransport is what the client will POST
+  // to. Relative path `/message` keeps the URL host/port-agnostic and
+  // matches the route registered below.
+  const transport = new SSEServerTransport('/message', res);
+  const server = createMcpServer(workspaceRoot);
 
-    case 'tools/list': {
-      const tools = getActiveTools().map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema,
-      }));
-      return rpcSuccess(id, { tools });
-    }
+  sseConnections.set(transport.sessionId, { transport, server });
 
-    case 'tools/call':
-      return handleToolCall(rpc, id, workspaceRoot);
+  const cleanup = (): void => {
+    sseConnections.delete(transport.sessionId);
+    transport.close().catch(() => undefined);
+    server.close().catch(() => undefined);
+  };
+  res.on('close', cleanup);
+  req.on('close', cleanup);
 
-    default:
-      return rpcError(id, -32601, `Method not found: ${rpc.method}`);
-  }
-}
-
-async function handleToolCall(
-  rpc: JsonRpcRequest,
-  id: string | number | null,
-  workspaceRoot: string,
-): Promise<string> {
-  const params = (rpc.params ?? {}) as { name?: string; arguments?: Record<string, unknown> };
-  const toolName = params.name;
-  const toolArgs = params.arguments ?? {};
-
-  if (!toolName) return rpcError(id, -32602, 'Invalid params: missing tool name');
-
-  const tool = findTool(toolName);
-  if (!tool) {
-    return rpcSuccess(id, {
-      content: [{ type: 'text', text: `Unknown tool: ${toolName}` }],
-      isError: true,
-    });
-  }
-
-  try {
-    const text = await tool.handler(toolArgs, workspaceRoot);
-    return rpcSuccess(id, { content: [{ type: 'text', text }], isError: false });
-  } catch (toolErr) {
-    const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr);
-    return rpcSuccess(id, { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true });
-  }
-}
-
-function pushResponseToSse(sessionId: string | null, responseBody: string): void {
-  if (!sessionId) return;
-  const sse = sseConnections.get(sessionId);
-  if (!sse) return;
-  try {
-    // Per MCP HTTP+SSE transport spec, JSON-RPC responses are delivered to the
-    // client via an `event: message` SSE event on the connection associated
-    // with the request's sessionId. The SDK client looks for it on the SSE
-    // stream; without this, the connection appears hung and times out.
-    sse.write(`event: message\ndata: ${responseBody}\n\n`);
-  } catch {
-    // SSE connection might have closed mid-flight; safe to ignore.
-  }
+  // server.connect() calls transport.start() internally, which writes the
+  // SSE headers + endpoint event including ?sessionId=<UUID>.
+  await server.connect(transport);
 }
 
 function extractSessionId(url: string | undefined): string | null {
   if (!url) return null;
   const queryStart = url.indexOf('?');
   if (queryStart === -1) return null;
-  const params = new URLSearchParams(url.slice(queryStart + 1));
-  return params.get('sessionId');
+  return new URLSearchParams(url.slice(queryStart + 1)).get('sessionId');
 }
 
-async function handleJsonRpc(
-  req: IncomingMessage,
-  res: ServerResponse,
-  workspaceRoot: string,
-): Promise<void> {
-  const parsed = await parseRpcRequest(req, res);
-  if (!parsed) return;
-
-  const { rpc, id } = parsed;
+async function handlePost(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const sessionId = extractSessionId(req.url);
-
-  try {
-    const responseBody = await dispatchRpcMethod(rpc, id, workspaceRoot);
-    // Dual-write: SSE stream (for SDK clients) + response body (for direct
-    // POST callers like curl). The SDK client ignores the body; loose clients
-    // ignore the SSE event. Keeping both maximises compat without changing
-    // observable behaviour for the SDK client.
-    pushResponseToSse(sessionId, responseBody);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(responseBody);
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    const errorBody = rpcError(id, -32603, `Internal error: ${errMsg}`);
-    pushResponseToSse(sessionId, errorBody);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(errorBody);
+  if (!sessionId) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Missing sessionId query parameter' }));
+    return;
   }
+  const conn = sseConnections.get(sessionId);
+  if (!conn) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Unknown sessionId' }));
+    return;
+  }
+  await conn.transport.handlePostMessage(req, res);
 }
 
 // ---------------------------------------------------------------------------
-// Public API
+// HTTP request router
 // ---------------------------------------------------------------------------
 
 function createRequestHandler(
@@ -251,20 +163,19 @@ function createRequestHandler(
       return;
     }
 
-    // Match path component only (URL may include `?sessionId=...` query).
     const pathOnly = (req.url ?? '').split('?')[0];
 
     if (req.method === 'GET' && pathOnly === '/sse') {
-      handleSse(req, res);
+      await handleSseConnection(req, res, workspaceRoot);
       return;
     }
 
     if (req.method === 'POST' && pathOnly === '/message') {
-      await handleJsonRpc(req, res, workspaceRoot);
+      await handlePost(req, res);
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/health') {
+    if (req.method === 'GET' && pathOnly === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }));
       return;
@@ -275,12 +186,17 @@ function createRequestHandler(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /**
- * Start the internal MCP HTTP+SSE server. Wired into `main.ts` startup
- * (gated by `internalMcpEnabled`, default true). Wave 51 added a stdio
- * transport adapter (`internalMcpStdioTransport.ts`) that forwards stdio
- * JSON-RPC to the same `/message` endpoint this server exposes — both
- * transports share the tool surface defined by `getActiveTools()`.
+ * Start the internal MCP HTTP+SSE server using the official SDK transport.
+ * Wired into `main.ts` startup (gated by `internalMcpEnabled`).
+ *
+ * Wave 51's stdio transport adapter (`internalMcpStdioTransport.ts`)
+ * continues to forward stdio JSON-RPC frames to `/message` — same endpoint
+ * the SDK transport accepts.
  */
 export async function startInternalMcpServer(
   options: InternalMcpServerOptions,
@@ -303,6 +219,12 @@ export async function startInternalMcpServer(
         port: actualPort,
         stop: () =>
           new Promise<void>((res, rej) => {
+            // Close all active SSE connections + their per-connection servers
+            for (const conn of sseConnections.values()) {
+              conn.transport.close().catch(() => undefined);
+              conn.server.close().catch(() => undefined);
+            }
+            sseConnections.clear();
             server.close((err) => {
               if (err) rej(err);
               else res();
