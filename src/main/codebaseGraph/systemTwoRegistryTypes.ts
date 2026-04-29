@@ -5,6 +5,7 @@
  * The registry coordinates per-root watcher state, not per-root databases.
  */
 
+import type { WatchSubscription } from '../watchers/nativeWatcher.types';
 import type { AutoSyncWatcher } from './autoSync';
 
 // ─── Handle (public API) ──────────────────────────────────────────────────────
@@ -33,6 +34,13 @@ export interface RegistryEntry {
   projectName: string;
   refCount: number;
   watcher: AutoSyncWatcher | null;
+  /**
+   * Wave 53k follow-up (H3): per-root @parcel/watcher subscription that
+   * forwards file-change events into `AutoSyncWatcher.receiveWatcherEvent`.
+   * Without this, the receiveWatcherEvent path was dead code and new-file
+   * creation was invisible to autoSync's poll loop. Closed on release().
+   */
+  nativeWatcherSubscription: WatchSubscription | null;
   createdAt: number;
   lastIndexStatus: string;
 }

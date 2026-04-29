@@ -9,11 +9,27 @@
 import path from 'path';
 
 import log from '../logger';
+import { watchRecursive } from '../watchers';
 import type { AutoSyncOptions } from './autoSync';
 import { AutoSyncWatcher } from './autoSync';
 import type { GraphDatabase } from './graphDatabase';
 import type { IndexingPipeline } from './indexingPipeline';
 import type { RegistryEntry, SystemTwoHandle } from './systemTwoRegistryTypes';
+
+/**
+ * Mirrors `WATCHER_IGNORE_GLOBS` in `src/main/ipc-handlers/files.ts` —
+ * keep these in sync. Skips dotfiles, VCS, and common build outputs so
+ * the indexer doesn't churn on `out/`, `dist/`, `node_modules/`, etc.
+ */
+const AUTOSYNC_WATCHER_IGNORE_GLOBS = [
+  '**/.*/**',
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/out/**',
+  '**/build/**',
+  '**/coverage/**',
+];
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
@@ -104,6 +120,7 @@ export async function acquire(
     projectName,
     refCount: 1,
     watcher: null,
+    nativeWatcherSubscription: null,
     createdAt: Date.now(),
     lastIndexStatus: 'initializing',
   };
@@ -116,9 +133,35 @@ export async function acquire(
   await watcher.initWithLaunchDiff();
   watcher.start();
 
+  // Wave 53k follow-up (H3): wire @parcel/watcher into AutoSyncWatcher.
+  // Pre-fix `receiveWatcherEvent` had zero callers; new-file creation was
+  // invisible to the poll loop because `collectChangedFiles` only iterates
+  // existing-in-DB hashes. Native events catch creation, modification, and
+  // deletion within the OS-level coalescing window.
+  entry.nativeWatcherSubscription = await subscribeNativeWatcher(projectRoot, watcher);
+
   entry.lastIndexStatus = 'running';
   log.info(`[s2-registry] acquired (new) ${projectName}`);
   return toHandle(entry);
+}
+
+async function subscribeNativeWatcher(
+  projectRoot: string,
+  watcher: AutoSyncWatcher,
+): Promise<RegistryEntry['nativeWatcherSubscription']> {
+  try {
+    return await watchRecursive(
+      projectRoot,
+      { ignore: AUTOSYNC_WATCHER_IGNORE_GLOBS },
+      (event) => watcher.receiveWatcherEvent(event.path),
+    );
+  } catch (err) {
+    // Native watcher subscription is best-effort — autoSync degrades to
+    // poll-only if the OS-level subscription fails (e.g., permissions,
+    // unsupported FS). Log and continue without throwing.
+    log.warn(`[s2-registry] native watcher subscribe failed for ${projectRoot}:`, err);
+    return null;
+  }
 }
 
 /**
@@ -135,10 +178,21 @@ export async function release(projectRoot: string): Promise<void> {
   log.info(`[s2-registry] release (refCount=${entry.refCount}) ${entry.projectName}`);
 
   if (entry.refCount <= 0) {
+    await closeNativeSubscription(entry);
     entry.watcher?.dispose();
     registry.delete(key);
     log.info(`[s2-registry] disposed ${entry.projectName}`);
   }
+}
+
+async function closeNativeSubscription(entry: RegistryEntry): Promise<void> {
+  if (!entry.nativeWatcherSubscription) return;
+  try {
+    await entry.nativeWatcherSubscription.close();
+  } catch (err) {
+    log.warn(`[s2-registry] native watcher close failed for ${entry.projectName}:`, err);
+  }
+  entry.nativeWatcherSubscription = null;
 }
 
 /** Read-only lookup. Returns null if root is not registered. */
@@ -156,6 +210,7 @@ export function listActive(): SystemTwoHandle[] {
 export async function disposeAll(): Promise<void> {
   const entries = Array.from(registry.values());
   for (const entry of entries) {
+    await closeNativeSubscription(entry);
     entry.watcher?.dispose();
   }
   registry.clear();
