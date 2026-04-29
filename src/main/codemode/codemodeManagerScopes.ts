@@ -120,11 +120,10 @@ export async function applyProjectEnable(
 
   if (Object.keys(backup).length === 0) return { proxiedConfigs, backup };
 
-  if (Object.keys(servers).length === 0) {
-    delete data.mcpServers;
-  } else {
-    data.mcpServers = servers;
-  }
+  // Wave 60: always emit `mcpServers` (even when empty). Claude Code's
+  // /doctor schema validator rejects bare `{}` with "Does not adhere to
+  // MCP server configuration schema" — `{mcpServers: {}}` is required.
+  data.mcpServers = servers;
   await atomicWriteJson(filePath, data);
 
   return { proxiedConfigs, backup };
