@@ -143,7 +143,7 @@ const TOOL_SCHEMAS = {
 
 // ---- Factory helpers ----------------------------------------------------------
 
-function buildIndexingTools(context: GraphToolContext): McpToolDefinition[] {
+function buildLifecycleTools(context: GraphToolContext): McpToolDefinition[] {
   return [
     {
       name: 'index_repository',
@@ -169,9 +169,15 @@ function buildIndexingTools(context: GraphToolContext): McpToolDefinition[] {
       inputSchema: TOOL_SCHEMAS.index_status,
       handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context),
     },
+  ];
+}
+
+function buildMetaTools(context: GraphToolContext): McpToolDefinition[] {
+  return [
     {
       name: 'get_graph_schema',
-      description: 'Graph schema: node/edge counts, relationship patterns, sample names.',
+      description:
+        'Graph schema: node/edge counts, relationship patterns, sample names. Call this once at the start of a session involving graph queries to discover what node labels and edge types are available before writing query_graph (Cypher) statements.',
       inputSchema: TOOL_SCHEMAS.get_graph_schema,
       handler: async () => handleGetGraphSchema(context),
     },
@@ -189,7 +195,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'search_graph',
       description:
-        'Search the codebase knowledge graph for nodes by label, name pattern, file path, and more.',
+        'USE INSTEAD OF Grep when looking for symbols (functions, classes, types, methods) by name. Returns indexed graph nodes with file:line and structural metadata. Grep returns text matches including comments, strings, and unrelated same-name occurrences — search_graph returns only actual symbol definitions/references. Filter by label (Function, Class, etc.) and file_path.',
       inputSchema: TOOL_SCHEMAS.search_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -201,21 +207,22 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     },
     {
       name: 'get_architecture',
-      description: 'Get a high-level architectural overview of the codebase.',
+      description:
+        'Use when orienting in unfamiliar code or before a refactor. Returns hotspots (most-connected functions), module structure, and file-tree overview. Cheaper than reading multiple files; tells you where a change has the widest impact.',
       inputSchema: TOOL_SCHEMAS.get_architecture,
       handler: async (a: Record<string, unknown>) => handleGetArchitecture(a, context),
     },
     {
       name: 'search_code',
       description:
-        'Search for text patterns in source files. Supports regex and file pattern filtering.',
+        'Regex search across source files. Use for STRING content (error messages, log lines, literal text). For SYMBOL queries (function/class names) prefer search_graph — it filters out comments and same-name false positives.',
       inputSchema: TOOL_SCHEMAS.search_code,
       handler: async (a: Record<string, unknown>) => handleSearchCode(a, context),
     },
     {
       name: 'get_code_snippet',
       description:
-        'Get the source code for a function, class, or other symbol by its qualified name.',
+        'USE INSTEAD OF Read when you only need one symbol body. Returns source for a function/class by qualified name (Project.module.symbol). Avoids reading the full file. Pair with search_graph (find the qualified name) → get_code_snippet (get the body).',
       inputSchema: TOOL_SCHEMAS.get_code_snippet,
       handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
     },
@@ -228,7 +235,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'trace_call_path',
       description:
-        'Trace the call graph from/to a function. Shows callers, callees, or both with risk classification.',
+        'USE THIS for caller/callee questions — Grep cannot answer them correctly. Traces actual call edges in/out of a function with risk classification (CRITICAL → LOW). Grep returns text matches including comments and same-name unrelated variables; trace_call_path returns the real call graph from parsed AST. Always prefer this over Grep for "who calls X" or "what does X call".',
       inputSchema: TOOL_SCHEMAS.trace_call_path,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -241,7 +248,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'detect_changes',
       description:
-        'Map uncommitted git changes to affected graph symbols and compute blast radius.',
+        'Use BEFORE a refactor or when assessing safety of a change. Maps uncommitted git changes to affected graph symbols and computes blast radius (which symbols depend on what changed). Answers "what will break if I touch this" — Grep cannot.',
       inputSchema: TOOL_SCHEMAS.detect_changes,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -260,7 +267,7 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
     {
       name: 'query_graph',
       description:
-        'Execute a Cypher-like query against the codebase graph. Read-only, results capped at 200 rows.',
+        'USE FOR relationship queries Grep cannot express. Cypher subset against the codebase graph. Examples: "all functions in src/main/ that call parseConfig", "files that import both X and Y", "methods on Class Foo with no callers". Read-only, capped at 200 rows. Run get_graph_schema first to see node labels and edge types.',
       inputSchema: TOOL_SCHEMAS.query_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -289,7 +296,8 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
 
 export function createGraphMcpTools(context: GraphToolContext): McpToolDefinition[] {
   return [
-    ...buildIndexingTools(context),
+    ...buildLifecycleTools(context),
+    ...buildMetaTools(context),
     ...buildSearchTools(context),
     ...buildTraceAndChangeTools(context),
     ...buildCypherAndAdrTools(context),

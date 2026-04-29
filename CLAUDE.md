@@ -56,9 +56,15 @@ If the discovery doesn't fit any existing CLAUDE.md, add it to the most directly
 
 Each subdirectory has its own `CLAUDE.md` with a subsystem-specific file map.
 
-## Codebase Graph
+## Codebase Graph — use it FIRST
 
-The repo is indexed in the codebase-memory graph (~1.4K nodes, ~2.3K edges). Auto-sync keeps it fresh. See `~/.claude/rules/graph-tool-routing.md` for when to use graph tools vs Grep/Read.
+The repo is indexed in the codebase-memory graph (~1.4K nodes, ~2.3K edges, auto-synced on file changes). At this graph size queries are cheap; use them liberally.
+
+**Default behavior for symbol queries: graph tools FIRST, Grep is the fallback.** When the question is "who calls X", "where is X defined", "what's the body of X", "what depends on X" — use `trace_call_path`, `search_graph`, `get_code_snippet`, `detect_changes`, or `query_graph` (Cypher) BEFORE reaching for Grep. Grep returns text matches including comments and same-name unrelated occurrences; the graph returns actual structural edges.
+
+If you find yourself running a Grep for an identifier and following it with three Reads to disambiguate, you skipped the graph. See `~/.claude/rules/graph-tool-routing.md` for the full prescriptive table.
+
+Codemode is enabled in this project — graph tools surface as `servers.ouroboros.*` inside `execute_code` (the codemode proxy's single tool). Example: `await servers.ouroboros.trace_call_path({ symbol: 'parseConfig', direction: 'callers' })`.
 
 ## Key Conventions
 
