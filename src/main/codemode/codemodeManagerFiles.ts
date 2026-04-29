@@ -27,6 +27,13 @@ export interface McpServerConfig {
   args?: string[];
   env?: Record<string, string>;
   url?: string;
+  /**
+   * Wave 53l Phase A polish: when true, Claude Code's tool-search harness
+   * skips deferral for this server's tools and loads them at session start.
+   * We set this on `__codemode_proxy` so the agent doesn't have to issue a
+   * `ToolSearch` round-trip before its first `execute_code` call.
+   */
+  alwaysLoad?: boolean;
 }
 
 export interface ClaudeProjectEntry {
@@ -217,6 +224,7 @@ export function buildProxyServerEntry(): McpServerConfig {
     type: 'stdio',
     command: 'node',
     args: [resolveProxyServerPath(), PROXY_CONFIG_PATH],
+    alwaysLoad: true,
   };
 }
 

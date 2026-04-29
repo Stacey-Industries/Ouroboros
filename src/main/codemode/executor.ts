@@ -78,11 +78,11 @@ export async function executeCode(
   toolFns: Record<string, Record<string, (args: Record<string, unknown>) => Promise<unknown>>>,
 ): Promise<ExecuteResult> {
   const logs: string[] = [];
+  const serverNames = Object.keys(toolFns);
 
   try {
     const consoleProxy = buildConsoleProxy(logs);
 
-    // Build the sandbox context with safe globals + tool access
     const sandbox: Record<string, unknown> = {
       ...getSafeSandboxGlobals(),
       console: consoleProxy,
@@ -93,43 +93,44 @@ export async function executeCode(
       codeGeneration: { strings: false, wasm: false },
     });
 
-    // Wrap in async IIFE so top-level await works
     const wrapped = `(async () => {\n${code}\n})()`;
-
-    const script = new vm.Script(wrapped, {
-      filename: 'codemode-sandbox.js',
-    });
-
-    // Run with timeout — returns a Promise from the async IIFE
-    const promise = script.runInContext(context, {
-      timeout: 30_000,
-    });
-
-    // Await the async result
+    const script = new vm.Script(wrapped, { filename: 'codemode-sandbox.js' });
+    const promise = script.runInContext(context, { timeout: 30_000 });
     const result = await promise;
 
     return { success: true, result, logs };
   } catch (err: unknown) {
-    const message = formatError(err);
+    const message = formatError(err, serverNames);
     return { success: false, error: message, logs };
   }
 }
 
+/**
+ * Wave 53l Phase A polish (Fix #4): when the agent writes
+ * `servers.foo.bar(...)` for a server that isn't multiplexed, V8 throws
+ * `TypeError: Cannot read properties of undefined (reading 'bar')`. The
+ * raw error is a head-scratcher for an LLM. Detecting the pattern and
+ * appending the actually-available server names turns it into a
+ * one-shot self-correction signal.
+ */
+function maybeRewriteUndefinedAccess(message: string, serverNames: string[]): string | null {
+  const m = /Cannot read properties of undefined \(reading '([^']+)'\)/.exec(message);
+  if (!m) return null;
+  const accessed = m[1];
+  return (
+    `${message}\n\nLikely cause: \`servers.<name>.${accessed}(...)\` where <name> ` +
+    `is not currently multiplexed. Available servers: ${serverNames.join(', ') || '(none)'}.`
+  );
+}
+
 /** Produce a clean error message from various error types. */
-function formatError(err: unknown): string {
-  if (err instanceof Error) {
-    // Node's VM timeout error
-    if (
-      err.message === 'Script execution timed out after 30000ms' ||
-      err.message.includes('Script execution timed out')
-    ) {
-      return 'Execution timed out (30s limit)';
-    }
-    // Code generation blocked (eval/Function/wasm)
-    if (err.message.includes('Code generation from strings disallowed')) {
-      return 'eval() and new Function() are not allowed';
-    }
-    return err.message;
+function formatError(err: unknown, serverNames: string[]): string {
+  if (!(err instanceof Error)) return String(err);
+  if (err.message.includes('Script execution timed out')) {
+    return 'Execution timed out (30s limit)';
   }
-  return String(err);
+  if (err.message.includes('Code generation from strings disallowed')) {
+    return 'eval() and new Function() are not allowed';
+  }
+  return maybeRewriteUndefinedAccess(err.message, serverNames) ?? err.message;
 }

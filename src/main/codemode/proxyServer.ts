@@ -105,16 +105,22 @@ export function buildExecuteCodeTool(typeDefs: string): {
   return {
     name: 'execute_code',
     description:
-      'Execute TypeScript code against MCP server APIs.\n\nAvailable API:\n\n' +
+      'Execute TypeScript code against MCP server APIs.\n\n' +
+      'IMPORTANT — return value: the value of an explicit `return` statement is ' +
+      'what the tool returns to you. Without an explicit return you get `undefined`.\n\n' +
+      'Available API:\n\n' +
       typeDefs +
-      '\n\nExample: await servers.github.search_code({ query: "auth" })',
+      '\n\nExample:\n' +
+      '  const r = await servers.github.search_code({ query: "auth" });\n' +
+      '  return r;',
     inputSchema: {
       type: 'object',
       properties: {
         code: {
           type: 'string',
           description:
-            'JavaScript/TypeScript code to execute. Use the `servers` namespace to call MCP tools.',
+            'JavaScript/TypeScript code to execute. Use the `servers` namespace to call MCP ' +
+            'tools, and `return <value>` to surface the result.',
         },
       },
       required: ['code'],
