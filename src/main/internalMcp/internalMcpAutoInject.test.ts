@@ -112,7 +112,10 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
       | undefined;
     expect(servers?.ouroboros?.type).toBe('stdio');
     expect(servers?.ouroboros?.command).toBe('node');
-    expect(servers?.ouroboros?.args).toEqual(['/fake/internalMcpStdioTransport.js', '12345']);
+    // Wave 53l Phase A+ (Fix A): no baked port — bridge resolves it at
+    // spawn time from ~/.claude/internalMcp-port.json. Pre-Fix-A the port
+    // was baked here and went stale across IDE restarts.
+    expect(servers?.ouroboros?.args).toEqual(['/fake/internalMcpStdioTransport.js']);
   });
 
   it('preserves other servers in .mcp.json (does not stomp user entries)', async () => {

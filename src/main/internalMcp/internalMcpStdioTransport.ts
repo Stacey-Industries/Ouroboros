@@ -40,6 +40,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import http from 'http';
+
+import { readPortFileSync } from './internalMcpPortRegistry';
 
 export function logStderr(message: string): void {
   // Always to stderr — stdout is reserved for the SDK's stdio transport.
@@ -52,6 +55,61 @@ export function parsePort(arg: string | undefined): number {
     throw new Error(`invalid port argument: ${arg}`);
   }
   return port;
+}
+
+/**
+ * Wave 53l Phase A+ (Fix A): resolve the live internalMcp port. Prefers an
+ * explicit `process.argv[2]` (back-compat with pre-Fix-A entries that baked
+ * the port into args). Falls back to `~/.claude/internalMcp-port.json` —
+ * the registry written by `setInternalMcpPort` on every IDE start. Throws
+ * with a clear message when neither source is available so the codemode
+ * proxy log shows exactly what's wrong instead of an opaque
+ * CONNECTION_CLOSED.
+ */
+export function resolveLivePort(argv: readonly string[]): number {
+  const argPort = argv[2];
+  if (argPort !== undefined && argPort.length > 0) {
+    return parsePort(argPort);
+  }
+  const filePort = readPortFileSync();
+  if (filePort !== null) return filePort;
+  throw new Error(
+    'no live internalMcp port found — IDE not running, or ~/.claude/internalMcp-port.json missing. ' +
+      'Start the Ouroboros IDE first; the codemode proxy resolves the port at bridge spawn time.',
+  );
+}
+
+/**
+ * Wave 53l Phase A+ (Fix C): probe the server's /health endpoint before
+ * the SDK SSE handshake. If the port is bound but the server isn't ready
+ * yet, the SSE connect will hang or fail with an opaque CONNECTION_CLOSED.
+ * The probe replaces that with a clear stderr line that the codemode
+ * proxy log surfaces verbatim.
+ */
+export function probeHealth(port: number, timeoutMs = 2000): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path: '/health',
+        method: 'GET',
+        timeout: timeoutMs,
+      },
+      (res) => {
+        // Drain the response so the socket can close cleanly.
+        res.resume();
+        if (res.statusCode === 200) resolve();
+        else reject(new Error(`health probe got status ${res.statusCode}`));
+      },
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`health probe timed out after ${timeoutMs}ms`));
+    });
+    req.on('error', (err) => reject(err));
+    req.end();
+  });
 }
 
 export async function connectClient(port: number): Promise<Client> {
@@ -92,8 +150,18 @@ function isScriptEntry(): boolean {
 }
 
 async function main(): Promise<void> {
-  const port = parsePort(process.argv[2]);
+  const port = resolveLivePort(process.argv);
   logStderr(`starting; forwarding stdio→SSE at http://127.0.0.1:${port}`);
+
+  try {
+    await probeHealth(port);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `internalMcp /health probe failed (port ${port}): ${msg}. ` +
+        'The IDE may have restarted on a different port; relaunch it or check that internalMcpEnabled is true.',
+    );
+  }
 
   const client = await connectClient(port);
   const server = createProxyServer(client);

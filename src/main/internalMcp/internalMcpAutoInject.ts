@@ -114,10 +114,15 @@ function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEnt
     if (!opts.stdioTransportPath) {
       throw new Error('stdio transport requires stdioTransportPath');
     }
+    // Wave 53l Phase A+ (Fix A): no port arg. The bridge resolves the live
+    // port at spawn time from `~/.claude/internalMcp-port.json` (written by
+    // `setInternalMcpPort`). Pre-Fix-A the port was baked here and went
+    // stale across IDE restarts → bridge hit ECONNREFUSED on the SSE side
+    // → proxy registered ouroboros as 0 servers.
     return {
       type: 'stdio',
       command: 'node',
-      args: [opts.stdioTransportPath, String(serverPort)],
+      args: [opts.stdioTransportPath],
     };
   }
   return { type: 'sse', url: `http://127.0.0.1:${serverPort}/sse` };
