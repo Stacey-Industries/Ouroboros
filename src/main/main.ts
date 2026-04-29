@@ -100,7 +100,10 @@ async function startIdeTools(): Promise<void> {
 }
 
 async function startInternalMcp(): Promise<void> {
-  if (!getConfigValue('internalMcpEnabled')) return;
+  if (!getConfigValue('internalMcpEnabled')) {
+    log.info('[internal-mcp] disabled by config (internalMcpEnabled=false) — skipping');
+    return;
+  }
   const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   if (!workspaceRoot) {
     log.info('[internal-mcp] no project root — skipping');
@@ -116,12 +119,14 @@ async function startInternalMcp(): Promise<void> {
     internalMcpStop = stopMcpHost;
     setInternalMcpPort(res.port);
     await injectIntoProjectSettings(workspaceRoot, res.port, inject);
+    log.info(`[internal-mcp] mcp-host listening on port ${res.port}`);
     return;
   }
   const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
   internalMcpStop = handle.stop;
   setInternalMcpPort(handle.port);
   await injectIntoProjectSettings(workspaceRoot, handle.port, inject);
+  log.info(`[internal-mcp] listening on port ${handle.port}`);
 }
 
 async function stopInternalMcp(): Promise<void> {
