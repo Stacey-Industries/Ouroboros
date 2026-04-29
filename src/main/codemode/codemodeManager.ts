@@ -95,13 +95,41 @@ export async function getMcpServers(projectRoot?: string): Promise<McpServerEntr
  * where a previous IDE process exited mid-enable and left the user's config
  * in the half-managed state.
  */
+/**
+ * Wave 53l Phase A+: strip ouroboros from a per-project restoration map.
+ * The IDE owns ouroboros's lifecycle — `injectIntoProjectSettings` writes a
+ * fresh portless entry on every IDE start (Fix A). Restoring an older
+ * stashed ouroboros entry from a crashed prior session would clobber that
+ * fresh entry with stale data (typically a baked port from before Fix A),
+ * causing the codemode proxy bridge to spawn against a dead port. Other
+ * project-scope servers (user-installed) ARE legitimately ours to restore.
+ */
+function stripOuroborosFromProject(
+  project: Record<string, Record<string, McpServerConfig>>,
+): Record<string, Record<string, McpServerConfig>> {
+  const out: Record<string, Record<string, McpServerConfig>> = {};
+  for (const [root, servers] of Object.entries(project)) {
+    const filtered: Record<string, McpServerConfig> = {};
+    for (const [name, cfg] of Object.entries(servers)) {
+      if (name === 'ouroboros') continue;
+      // eslint-disable-next-line security/detect-object-injection -- name is a parsed settings key, not user input
+      filtered[name] = cfg;
+    }
+    if (Object.keys(filtered).length > 0) {
+      // eslint-disable-next-line security/detect-object-injection -- root is a parsed settings key, not user input
+      out[root] = filtered;
+    }
+  }
+  return out;
+}
+
 async function maybeRestoreFromCrash(): Promise<void> {
   const record = await readRestorationFile();
   if (!record) return;
   log.warn('[codemode] stale restoration file detected — recovering from prior crashed enable');
   try {
     await restoreGlobal(record.global ?? {});
-    await restoreProject(record.project ?? {});
+    await restoreProject(stripOuroborosFromProject(record.project ?? {}));
   } finally {
     await deleteRestorationFile();
   }
