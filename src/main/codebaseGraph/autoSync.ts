@@ -135,13 +135,35 @@ export class AutoSyncWatcher {
   async pollForChanges(): Promise<void> {
     if (this.disposed || this.reindexing) return;
     const t0 = Date.now();
-    const changed = await this.collectChangedFiles();
+    const { changed, totalHashes } = await this.collectChangedFilesWithDiag();
     log.info(
-      `[trace:autoSync.poll] collectChangedFiles in ${Date.now() - t0}ms changed=${changed.length}`,
+      `[trace:autoSync.poll] collectChangedFiles in ${Date.now() - t0}ms hashes=${totalHashes} changed=${changed.length}`,
     );
     if (changed.length > 0) {
       await this.triggerReindex();
     }
+  }
+
+  /**
+   * Wrapper around collectChangedFiles that also reports the size of the
+   * file-hash catalog the poll iterates. Wave 53k follow-up: an
+   * investigation observed `changed=0` consistently with `0ms` runtime,
+   * which is suspicious for a ~2600-file repo. The hashes count
+   * disambiguates "DB returned empty" from "DB returned full but no
+   * mtime/size mismatch".
+   */
+  private async collectChangedFilesWithDiag(): Promise<{
+    changed: string[];
+    totalHashes: number;
+  }> {
+    let totalHashes = 0;
+    try {
+      totalHashes = this.opts.db.getAllFileHashes(this.opts.projectName).length;
+    } catch {
+      /* ignore — collectChangedFiles will surface the real error */
+    }
+    const changed = await this.collectChangedFiles();
+    return { changed, totalHashes };
   }
 
   /** Collect files that have changed based on stat comparison. */
