@@ -16,10 +16,13 @@ export {
   removeFromProjectSettings,
 } from './internalMcpAutoInject';
 export { startInternalMcpServer } from './internalMcpServer';
-export {
-  dispatchMessage as dispatchStdioMessage,
-  runStdioTransport,
-} from './internalMcpStdioTransport';
+// Wave 53j: the stdio bridge is now a self-contained CLI script using the
+// SDK's StdioServerTransport + SSEClientTransport. Its main() runs only when
+// the script is the entry point (gated by isScriptEntry), and there are no
+// other consumers — the prior `dispatchMessage`/`runStdioTransport` helpers
+// were artifacts of the hand-rolled implementation that this barrel
+// re-exported for tests. New tests import the helpers (`parsePort`,
+// `createProxyServer`) directly from the module file.
 export {
   type InternalMcpServerHandle,
   type InternalMcpServerOptions,
