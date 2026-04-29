@@ -53,21 +53,20 @@ export class GraphDatabase {
   private db: Database.Database;
   private stmts!: Record<string, Database.Statement>;
 
-  constructor(dbPath?: string) {
-    this.db = new Database(dbPath ?? getDbPath());
-    this.applyPragmas();
-    this.createSchema();
+  constructor(dbPath?: string, opts: { readonly?: boolean } = {}) {
+    const p = dbPath ?? getDbPath();
+    const ro = opts.readonly === true;
+    this.db = ro ? new Database(p, { readonly: true, fileMustExist: true }) : new Database(p);
+    this.applyPragmas(ro);
+    if (!ro) this.createSchema();
     this.prepareStatements();
   }
 
-  private applyPragmas(): void {
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('synchronous = NORMAL');
-    this.db.pragma('cache_size = -32000');
-    this.db.pragma('temp_store = MEMORY');
-    this.db.pragma('mmap_size = 134217728');
-    this.db.pragma('foreign_keys = ON');
-    this.db.pragma('busy_timeout = 5000');
+  private applyPragmas(ro: boolean): void {
+    if (!ro) this.db.pragma('journal_mode = WAL');
+    if (!ro) this.db.pragma('synchronous = NORMAL');
+    const pragmas = ['cache_size = -32000', 'temp_store = MEMORY', 'mmap_size = 134217728', 'foreign_keys = ON', 'busy_timeout = 5000'];
+    for (const p of pragmas) this.db.pragma(p);
   }
 
   private createSchema(): void {

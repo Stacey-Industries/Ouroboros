@@ -75,6 +75,7 @@ export default defineConfig({
           mcpHostMain: resolve(__dirname, 'src/main/mcpHost/mcpHostMain.ts'),
           proxyServer: resolve(__dirname, 'src/main/codemode/proxyServer.ts'),
           internalMcpStdioTransport: resolve(__dirname, 'src/main/internalMcp/internalMcpStdioTransport.ts'),
+          ouroborosMcp: resolve(__dirname, 'src/standalone/ouroborosMcp/ouroborosMcp.ts'),
         }
       }
     } as any,
