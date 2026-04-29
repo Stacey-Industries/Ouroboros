@@ -11,6 +11,8 @@
  * IDE owns (`index_repository`, `delete_project`, `ingest_traces`).
  */
 
+import path from 'node:path';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
@@ -42,18 +44,30 @@ export function filterReadOnlyTools(
 
 export interface BuildServerInput {
   dbPath: string;
+  /**
+   * Absolute path to the project root the standalone is serving. The IDE
+   * names projects by `path.basename(path.resolve(projectRoot))` (see
+   * `systemTwoRegistry.ts`). Defaults to `process.cwd()` — Claude Code
+   * spawns child processes with cwd = project root, so the default is
+   * correct for normal usage.
+   */
+  projectRoot?: string;
 }
 
 export interface BuiltServer {
   server: Server;
   toolNames: string[];
+  projectName: string;
   close: () => void;
 }
 
 export function buildOuroborosMcpServer(input: BuildServerInput): BuiltServer {
+  const projectRoot = input.projectRoot ?? process.cwd();
+  const projectName = path.basename(path.resolve(projectRoot));
+
   const db = new GraphDatabase(input.dbPath, { readonly: true });
-  const queryEngine = new QueryEngine(db);
-  const cypherEngine = new CypherEngine(db);
+  const queryEngine = new QueryEngine(db, projectName, projectRoot);
+  const cypherEngine = new CypherEngine(db, projectName);
 
   const tools = filterReadOnlyTools(
     createGraphMcpTools({
@@ -68,6 +82,7 @@ export function buildOuroborosMcpServer(input: BuildServerInput): BuiltServer {
   return {
     server,
     toolNames: tools.map((t) => t.name),
+    projectName,
     close: () => db.close(),
   };
 }

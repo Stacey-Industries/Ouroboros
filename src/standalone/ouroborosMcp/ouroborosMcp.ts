@@ -38,10 +38,14 @@ async function main(): Promise<void> {
   probeDb.close();
   if (!check.ok) throw new Error(check.message ?? 'schema mismatch');
 
-  logErr(`starting; db=${args.dbPath} schema=v${check.actualVersion}`);
+  logErr(
+    `starting; db=${args.dbPath} schema=v${check.actualVersion} cwd=${process.cwd()}`,
+  );
 
   const built = buildOuroborosMcpServer({ dbPath: args.dbPath });
-  logErr(`registered ${built.toolNames.length} tool(s): ${built.toolNames.join(',')}`);
+  logErr(
+    `serving project=${built.projectName} (${built.toolNames.length} tool(s): ${built.toolNames.join(',')})`,
+  );
 
   const transport = new StdioServerTransport();
   await built.server.connect(transport);
