@@ -13,6 +13,7 @@ import path from 'path';
 import { Worker } from 'worker_threads';
 
 import log from '../logger';
+import { getDbPath } from './graphDatabaseHelpers';
 import type { IndexingOptions, IndexingResult } from './indexingPipelineTypes';
 import type { IndexingWorkerResponse, IndexRequestOptions } from './indexingWorkerTypes';
 
@@ -21,6 +22,20 @@ import type { IndexingWorkerResponse, IndexRequestOptions } from './indexingWork
 function resolveWorkerPath(): string {
   const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
   return path.join(outMainDir, 'indexingWorker.js');
+}
+
+/**
+ * Resolve the SQLite database path on the main thread (where Electron's
+ * `app.getPath('userData')` works) and pass it to the worker via
+ * workerData. Without this, the worker's `getDbPath()` falls through to
+ * `process.cwd()` because `require('electron')` from a worker thread does
+ * not give it access to a ready `app` module — resulting in worker writes
+ * landing at `<projectRoot>/codebase-graph.db` while the main thread reads
+ * from `<userData>/codebase-graph.db`. Two separate files, neither thread
+ * sees the other's writes. (Wave 53k follow-up — H1 confirmed.)
+ */
+function buildWorkerData(): { dbPath: string } {
+  return { dbPath: getDbPath() };
 }
 
 // ── Pending-request bookkeeping ───────────────────────────────────────────────
@@ -100,7 +115,7 @@ export class IndexingWorkerClient {
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
 
-    const worker = new Worker(resolveWorkerPath());
+    const worker = new Worker(resolveWorkerPath(), { workerData: buildWorkerData() });
     worker.on('message', (msg: IndexingWorkerResponse) => this.handleMessage(msg));
     worker.on('error', (err) => {
       log.error('[indexingWorker] worker error:', err);

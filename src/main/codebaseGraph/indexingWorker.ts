@@ -9,7 +9,7 @@
  * main-process code.  The class is still directly usable for tests.
  */
 
-import { parentPort } from 'worker_threads';
+import { parentPort, workerData } from 'worker_threads';
 
 import { GraphDatabase } from './graphDatabase';
 import { IndexingPipeline } from './indexingPipeline';
@@ -29,9 +29,22 @@ let parser: TreeSitterParser | null = null;
 let pipeline: IndexingPipeline | null = null;
 let disposed = false;
 
+/**
+ * Resolve the SQLite path the worker should open. Wave 53k follow-up
+ * (H1): main thread passes its resolved `getDbPath()` via workerData
+ * because `require('electron').app.getPath('userData')` from a worker
+ * thread returns an unready/empty path on Electron — pre-fix the worker
+ * fell back to `process.cwd()` and wrote to a separate db file from the
+ * main thread, so file_hashes never reached the autoSync poll's view.
+ */
+function resolveWorkerDbPath(): string | undefined {
+  const data = workerData as { dbPath?: string } | null | undefined;
+  return data?.dbPath;
+}
+
 function getOrInitPipeline(): IndexingPipeline {
   if (pipeline) return pipeline;
-  db = new GraphDatabase();
+  db = new GraphDatabase(resolveWorkerDbPath());
   parser = new TreeSitterParser();
   pipeline = new IndexingPipeline(db, parser);
   return pipeline;
