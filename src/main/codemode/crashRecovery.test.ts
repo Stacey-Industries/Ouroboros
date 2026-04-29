@@ -192,7 +192,9 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     const entry = data.mcpServers['ouroboros'];
     // Direct-inject + stdio → command/args; not the route-through-codemode omission.
     expect(entry).toBeDefined();
-    expect(entry.command).toBe('node');
+    // Wave 60 Phase C+ (binding fix): Electron-as-Node runtime.
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.env?.ELECTRON_RUN_AS_NODE).toBe('1');
     expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     await result!.cleanup();
   });

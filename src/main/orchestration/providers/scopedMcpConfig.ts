@@ -114,7 +114,14 @@ function buildOuroborosEntry(
   const transport = resolveTransport();
   if (transport === 'stdio') {
     const standalonePath = path.join(mainOutDir, 'ouroborosMcp.js');
-    return { command: 'node', args: [standalonePath] };
+    // Wave 60 Phase C+ (binding fix): use the IDE's Electron binary as the
+    // Node runtime (better-sqlite3 binding is ABI-locked to Electron).
+    // See `internalMcpAutoInject.buildOuroborosEntry` for the full reasoning.
+    return {
+      command: process.execPath,
+      args: [standalonePath],
+      env: { ELECTRON_RUN_AS_NODE: '1' },
+    };
   }
   if (ouroborosUrl === null) return null;
   return { url: ouroborosUrl };

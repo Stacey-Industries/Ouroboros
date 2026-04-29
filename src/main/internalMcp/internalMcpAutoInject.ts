@@ -114,13 +114,19 @@ function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEnt
     if (!opts.stdioTransportPath) {
       throw new Error('stdio transport requires stdioTransportPath');
     }
-    // Wave 60 Phase C: stdioTransportPath now points at `ouroborosMcp.js`
-    // (the standalone MCP server). It reads the SQLite DB directly and
-    // requires no port — works whether the IDE is running or not.
+    // Wave 60 Phase C+ (binding fix): use the IDE's Electron binary as the
+    // Node runtime via ELECTRON_RUN_AS_NODE=1. The standalone bundle uses
+    // `better-sqlite3` whose native binding is compiled for Electron's
+    // Node ABI (145); spawning with system Node (typically ABI 137) fails
+    // module-load with NODE_MODULE_VERSION mismatch. Electron-as-Node
+    // sidesteps the binding issue entirely AND ships with the IDE installer
+    // — works whether the IDE process is running or not (binary on disk
+    // is sufficient).
     return {
       type: 'stdio',
-      command: 'node',
+      command: process.execPath,
       args: [opts.stdioTransportPath],
+      env: { ELECTRON_RUN_AS_NODE: '1' },
     };
   }
   return { type: 'sse', url: `http://127.0.0.1:${serverPort}/sse` };

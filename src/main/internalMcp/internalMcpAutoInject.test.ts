@@ -103,19 +103,24 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
   it('writes .mcp.json with stdio shape when transport is stdio (includes type)', async () => {
     await injectIntoProjectSettings(projectRoot, 12345, {
       transport: 'stdio',
-      stdioTransportPath: '/fake/internalMcpStdioTransport.js',
+      stdioTransportPath: '/fake/ouroborosMcp.js',
     });
 
     const mcpJson = await readJson(mcpJsonPath());
     const servers = mcpJson?.mcpServers as
-      | Record<string, { type?: string; command?: string; args?: string[] }>
+      | Record<
+          string,
+          { type?: string; command?: string; args?: string[]; env?: Record<string, string> }
+        >
       | undefined;
     expect(servers?.ouroboros?.type).toBe('stdio');
-    expect(servers?.ouroboros?.command).toBe('node');
-    // Wave 53l Phase A+ (Fix A): no baked port — bridge resolves it at
-    // spawn time from ~/.claude/internalMcp-port.json. Pre-Fix-A the port
-    // was baked here and went stale across IDE restarts.
-    expect(servers?.ouroboros?.args).toEqual(['/fake/internalMcpStdioTransport.js']);
+    // Wave 60 Phase C+ (binding fix): command is the IDE's Electron binary
+    // (process.execPath) launched in Node mode via ELECTRON_RUN_AS_NODE=1.
+    // Sidesteps the better-sqlite3 NODE_MODULE_VERSION mismatch between
+    // Electron (ABI 145) and system Node (ABI 137).
+    expect(servers?.ouroboros?.command).toBe(process.execPath);
+    expect(servers?.ouroboros?.env?.ELECTRON_RUN_AS_NODE).toBe('1');
+    expect(servers?.ouroboros?.args).toEqual(['/fake/ouroborosMcp.js']);
   });
 
   it('preserves other servers in .mcp.json (does not stomp user entries)', async () => {

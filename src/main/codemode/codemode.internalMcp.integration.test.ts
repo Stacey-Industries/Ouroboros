@@ -186,11 +186,11 @@ describe('settings-write shape', () => {
     expect(result).not.toBeNull();
     const entry = readWrittenConfig(result!.configPath).mcpServers['ouroboros'];
     expect(entry.url).toBeUndefined();
-    expect(entry.command).toBe('node');
+    // Wave 60 Phase C+ (binding fix): command is the IDE's Electron binary
+    // (process.execPath) launched in Node mode (ELECTRON_RUN_AS_NODE=1).
+    expect(entry.command).toBe(process.execPath);
+    expect(entry.env?.ELECTRON_RUN_AS_NODE).toBe('1');
     expect(entry.args).toBeDefined();
-    // Wave 60 Phase C: entry now points at the standalone MCP server
-    // (`ouroborosMcp.js`), not the stdio→SSE bridge. Standalone reads
-    // SQLite directly — no port arg.
     expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     expect(entry.args![0]).toContain('fake');
     expect(entry.args!.length).toBe(1);
