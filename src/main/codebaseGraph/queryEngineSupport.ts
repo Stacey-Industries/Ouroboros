@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { gitExec } from '../ipc-handlers/gitOperations';
+import { gitExec } from '../util/gitExec';
 import type { GraphDatabase } from './graphDatabase';
 import type { EdgeType, GraphNode } from './graphDatabaseTypes';
 import type {

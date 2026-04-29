@@ -5,7 +5,6 @@
  * Parse utilities live in gitParsers.ts.
  */
 
-import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -39,8 +38,12 @@ export type {
 } from './gitParsers';
 export { applyPatch, stagePatch };
 
-export const MB = 1024 * 1024;
-export const GIT_TIMEOUT_MS = 30_000;
+// Wave 60 Phase B: gitExec/gitStdout/MB/GIT_TIMEOUT_MS now live in
+// `../util/gitExec.ts` so the standalone MCP server can import them
+// without dragging this file's IDE-only chain (extensions, contextLayer,
+// agentChat) into the standalone bundle. Re-exported here so existing
+// callers keep their import paths.
+export { GIT_TIMEOUT_MS, gitExec, gitStdout, MB } from '../util/gitExec';
 
 export function gitErrorMessage(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -49,28 +52,6 @@ export function gitErrorMessage(err: unknown): string {
 
 export function errorMessage(err: unknown, useGitMessage: boolean = false): string {
   return useGitMessage ? gitErrorMessage(err) : err instanceof Error ? err.message : String(err);
-}
-
-export function gitExec(
-  args: string[],
-  opts: { cwd: string; maxBuffer?: number },
-): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'git',
-      args,
-      { ...opts, timeout: GIT_TIMEOUT_MS, maxBuffer: opts.maxBuffer ?? MB },
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })),
-    );
-  });
-}
-
-export async function gitStdout(
-  root: string,
-  args: string[],
-  maxBuffer: number = MB,
-): Promise<string> {
-  return (await gitExec(args, { cwd: root, maxBuffer })).stdout;
 }
 
 export async function gitTrimmed(
