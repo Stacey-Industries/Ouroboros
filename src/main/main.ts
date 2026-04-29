@@ -7,6 +7,7 @@ import { migrateSecretsIfNeeded } from './auth/secretMigration';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import { startClaudeUsagePoller } from './claudeUsagePoller';
+import { enableCodeModeUserLevel } from './codemode/codemodeStartup';
 import { getConfigValue, setConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { initialiseCrashReporter } from './crashReporter';
@@ -144,6 +145,9 @@ async function startBackgroundServices(win: BrowserWindow): Promise<void> {
   await runStartupStep('[main] failed to start IDE tool server:', startIdeTools);
   await runStartupStep('[main] failed to start internal MCP server:', startInternalMcp);
   const root = getConfigValue('defaultProjectRoot') as string | undefined;
+  await runStartupStep('[main] failed to enable user-level CodeMode:', () =>
+    enableCodeModeUserLevel({ projectRoot: root }),
+  );
   if (!root || isWorkspaceTrusted(root)) {
     await runStartupStep('[main] hook installer error:', installHooks);
     await runStartupStep('[main] extensions init error:', initExtensions);

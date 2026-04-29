@@ -9,6 +9,7 @@
 
 import { closeThreadStore } from './agentChat/threadStore';
 import { stopClaudeUsagePoller } from './claudeUsagePoller';
+import { disableCodeModeUserLevel } from './codemode/codemodeStartup';
 import { closeCostHistoryDb } from './costHistory';
 import { shutdownExtensionHost } from './extensionHost/extensionHostProxy';
 import { cleanupIpcHandlers } from './ipc';
@@ -57,6 +58,7 @@ async function disposeSubsystems(): Promise<void> {
 }
 
 export async function performWillQuitShutdown(): Promise<void> {
+  await tryShutdown('codemode-user-level', disableCodeModeUserLevel);
   closeSessionServices();
   await closeWriters();
   closeSyncStores();
