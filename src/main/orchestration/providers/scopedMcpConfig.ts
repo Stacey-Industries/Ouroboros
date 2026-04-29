@@ -92,14 +92,14 @@ async function readGlobalMcpServers(): Promise<McpServerMap> {
 }
 
 // ---------------------------------------------------------------------------
-// Ouroboros entry shape (transport-aware, Phase C)
+// Ouroboros entry shape (Wave 60 Phase C)
 //
-// Phase B added a transport-aware builder in `internalMcpAutoInject.ts`, but
-// importing from the `internalMcp` barrel here pulls in `internalMcpServer.ts`
-// → `internalMcpTools.ts` → graph controller (which depends on Electron `app`
-// at module load). The per-spawn path runs in tests without Electron, so we
-// inline the small entry-shape decision here. The shape MUST stay in sync
-// with `buildOuroborosEntry` in `internalMcpAutoInject.ts`.
+// Post-Wave-60: the entry points at the standalone MCP server
+// (`ouroborosMcp.js`) which reads the SQLite DB directly. No port, no
+// bridge, no transport branching. Works whether the IDE is running or
+// not. The legacy SSE shape is retained only for users with
+// `internalMcp.transport: 'sse'` (gradually deprecated; deleted in
+// Phase E along with the IDE's HTTP server).
 // ---------------------------------------------------------------------------
 
 function resolveTransport(): InternalMcpTransport {
@@ -111,20 +111,13 @@ function buildOuroborosEntry(
   ouroborosUrl: string | null,
   mainOutDir: string,
 ): McpServerEntry | null {
-  if (ouroborosUrl === null) return null;
   const transport = resolveTransport();
   if (transport === 'stdio') {
-    const port = portFromUrl(ouroborosUrl);
-    if (port === null) return null;
-    const stdioTransportPath = path.join(mainOutDir, 'internalMcpStdioTransport.js');
-    return { command: 'node', args: [stdioTransportPath, port] };
+    const standalonePath = path.join(mainOutDir, 'ouroborosMcp.js');
+    return { command: 'node', args: [standalonePath] };
   }
+  if (ouroborosUrl === null) return null;
   return { url: ouroborosUrl };
-}
-
-function portFromUrl(url: string): string | null {
-  const match = /:(\d+)\//.exec(url);
-  return match ? match[1] : null;
 }
 
 // ---------------------------------------------------------------------------

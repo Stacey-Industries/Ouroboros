@@ -193,7 +193,7 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     // Direct-inject + stdio → command/args; not the route-through-codemode omission.
     expect(entry).toBeDefined();
     expect(entry.command).toBe('node');
-    expect(entry.args![0]).toMatch(/internalMcpStdioTransport\.js$/);
+    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     await result!.cleanup();
   });
 

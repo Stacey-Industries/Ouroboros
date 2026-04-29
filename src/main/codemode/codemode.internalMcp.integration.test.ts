@@ -188,12 +188,12 @@ describe('settings-write shape', () => {
     expect(entry.url).toBeUndefined();
     expect(entry.command).toBe('node');
     expect(entry.args).toBeDefined();
-    // First arg is the path to the stdio transport script (path.join'd
-    // against mainOutDir; separator is platform-dependent so we only
-    // assert the basename + that the script file appears in the path).
-    expect(entry.args![0]).toMatch(/internalMcpStdioTransport\.js$/);
+    // Wave 60 Phase C: entry now points at the standalone MCP server
+    // (`ouroborosMcp.js`), not the stdio→SSE bridge. Standalone reads
+    // SQLite directly — no port arg.
+    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
     expect(entry.args![0]).toContain('fake');
-    expect(entry.args![1]).toBe(OUROBOROS_PORT);
+    expect(entry.args!.length).toBe(1);
     expect(result!.routingDecision).toBe('direct-inject');
     await result!.cleanup();
   });

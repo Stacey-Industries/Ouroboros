@@ -114,11 +114,9 @@ function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEnt
     if (!opts.stdioTransportPath) {
       throw new Error('stdio transport requires stdioTransportPath');
     }
-    // Wave 53l Phase A+ (Fix A): no port arg. The bridge resolves the live
-    // port at spawn time from `~/.claude/internalMcp-port.json` (written by
-    // `setInternalMcpPort`). Pre-Fix-A the port was baked here and went
-    // stale across IDE restarts → bridge hit ECONNREFUSED on the SSE side
-    // → proxy registered ouroboros as 0 servers.
+    // Wave 60 Phase C: stdioTransportPath now points at `ouroborosMcp.js`
+    // (the standalone MCP server). It reads the SQLite DB directly and
+    // requires no port — works whether the IDE is running or not.
     return {
       type: 'stdio',
       command: 'node',
