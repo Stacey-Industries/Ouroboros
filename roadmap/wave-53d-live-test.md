@@ -126,6 +126,14 @@ Response (paraphrased):
 
 **Verdict for Wave 53d Decision 9: GREENLIT.**
 
+## Wave 53i regression smoke (2026-04-28, post-v2.7.10)
+
+After replacing the hand-rolled MCP server with `@modelcontextprotocol/sdk` (Wave 53i), re-ran the same prompt: *"Use trace_call_path to find all callers of injectIntoProjectSettings."*
+
+Same response shape as Wave 53h's smoke — agent called `mcp__ouroboros__trace_call_path`, returned the same graph result. **No behavior regression.** Six waves of hand-rolled compat fixes successfully retired in favor of the SDK; agent UX unchanged.
+
+This is the durable end-state: future MCP spec changes ride in via `npm update @modelcontextprotocol/sdk`, not a new wave.
+
 The wiring works end-to-end. The agent uses the tool when available. The response is useful and arguably better than the Grep alternative. Wave 54 (TS semantic operations) can proceed per its plan.
 
 The original Wave 54 plan also specified Phase A+B (read-only ops) before Phase D (mutations); given the corpus's low Edit-failure rate, that internal staging still applies. But the wave is **no longer paused** on any prerequisite — the discovery / runtime / handshake / sessionId chain is closed.
