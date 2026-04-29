@@ -88,16 +88,19 @@ async function writeJson(p: string, data: unknown): Promise<void> {
 // ---------------------------------------------------------------------------
 
 describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually reads)', () => {
-  it('writes .mcp.json at project root with mcpServers.ouroboros (SSE shape)', async () => {
+  it('writes .mcp.json at project root with mcpServers.ouroboros (SSE shape, with type)', async () => {
     await injectIntoProjectSettings(projectRoot, 12345);
 
     const mcpJson = await readJson(mcpJsonPath());
     expect(mcpJson).not.toBeNull();
-    const servers = mcpJson?.mcpServers as Record<string, { url?: string }> | undefined;
+    const servers = mcpJson?.mcpServers as
+      | Record<string, { type?: string; url?: string }>
+      | undefined;
+    expect(servers?.ouroboros?.type).toBe('sse');
     expect(servers?.ouroboros?.url).toBe('http://127.0.0.1:12345/sse');
   });
 
-  it('writes .mcp.json with stdio shape when transport is stdio', async () => {
+  it('writes .mcp.json with stdio shape when transport is stdio (includes type)', async () => {
     await injectIntoProjectSettings(projectRoot, 12345, {
       transport: 'stdio',
       stdioTransportPath: '/fake/internalMcpStdioTransport.js',
@@ -105,8 +108,9 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
 
     const mcpJson = await readJson(mcpJsonPath());
     const servers = mcpJson?.mcpServers as
-      | Record<string, { command?: string; args?: string[] }>
+      | Record<string, { type?: string; command?: string; args?: string[] }>
       | undefined;
+    expect(servers?.ouroboros?.type).toBe('stdio');
     expect(servers?.ouroboros?.command).toBe('node');
     expect(servers?.ouroboros?.args).toEqual(['/fake/internalMcpStdioTransport.js', '12345']);
   });

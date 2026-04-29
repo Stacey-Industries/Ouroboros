@@ -78,10 +78,12 @@ function readFirstSseChunk(port: number): Promise<string> {
   });
 }
 
-describe('MCP SSE handshake (Wave 53f contract)', () => {
-  it('sends the endpoint event as the first SSE message', async () => {
+describe('MCP SSE handshake (Wave 53f contract, Wave 53h sessionId)', () => {
+  it('sends the endpoint event with a sessionId query param as the first SSE message', async () => {
     const chunk = await readFirstSseChunk(handle.port);
-    expect(chunk).toContain('event: endpoint\ndata: /message\n\n');
+    // Wave 53h: sessionId is required by the SDK SSEClientTransport.
+    // Match the canonical SDK pattern: `event: endpoint\ndata: /message?sessionId=<UUID>\n\n`.
+    expect(chunk).toMatch(/event: endpoint\ndata: \/message\?sessionId=[0-9a-f-]{36}\n\n/);
   });
 
   it('does not send notifications/initialized on the SSE stream', async () => {

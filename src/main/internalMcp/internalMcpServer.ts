@@ -1,9 +1,29 @@
+import { randomUUID } from 'crypto';
 import type { IncomingMessage, ServerResponse } from 'http';
 import http from 'http';
 import type { AddressInfo } from 'net';
 
 import { findTool, getActiveTools } from './internalMcpTools';
 import type { InternalMcpServerHandle, InternalMcpServerOptions } from './internalMcpTypes';
+
+// ---------------------------------------------------------------------------
+// SSE connection registry — Wave 53h
+// ---------------------------------------------------------------------------
+//
+// The MCP HTTP+SSE transport (2024-11-05) routes JSON-RPC responses back to
+// the client via the SSE stream, not the POST response body. The
+// `@modelcontextprotocol/sdk` SSEClientTransport requires this routing: when
+// a client opens GET /sse, the server generates a unique sessionId, includes
+// it in the `endpoint` event's URL (`/message?sessionId=<uuid>`), and tracks
+// the SSE response by that id. When a POST /message?sessionId=<id> arrives,
+// the server dispatches the RPC and pushes the response as `event: message`
+// on the matching SSE stream.
+//
+// We also keep returning the response in the POST body for backward compat
+// with curl-based smokes and the strict subset of clients that read the body
+// instead of the SSE stream.
+
+const sseConnections = new Map<string, ServerResponse>();
 
 // ---------------------------------------------------------------------------
 // JSON-RPC helpers
@@ -49,15 +69,17 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
     'Access-Control-Allow-Origin': '*',
   });
 
-  // Wave 53f: Per the MCP 2024-11-05 HTTP+SSE transport spec, the first SSE
-  // message must be an `endpoint` event announcing the URL where the client
-  // POSTs JSON-RPC messages. Without it, strict clients (Claude Code's MCP
-  // implementation included) cannot discover the message-write URL and
-  // refuse to register tools. Pre-53f the handler instead wrote a
-  // `notifications/initialized` payload, which is a *client → server*
-  // notification per the spec — the wrong-direction message caused strict
-  // clients to drop the connection. See roadmap/wave-53f-plan.md.
-  res.write('event: endpoint\ndata: /message\n\n');
+  // Wave 53h: Per the MCP TypeScript SDK reference SSEServerTransport, the
+  // endpoint URL must include a `sessionId` query parameter. The SDK client
+  // uses this id as the routing key to associate POST messages with the SSE
+  // stream and to receive JSON-RPC responses on the same stream. Without
+  // sessionId, the SDK client (which Claude Code uses) reports "Failed to
+  // connect" or surfaces an auth-prompt error. Wave 53f got the endpoint
+  // event format right but skipped the sessionId — that's why post-53f
+  // smokes still failed.
+  const sessionId = randomUUID();
+  sseConnections.set(sessionId, res);
+  res.write(`event: endpoint\ndata: /message?sessionId=${sessionId}\n\n`);
 
   // Heartbeat every 30 seconds to keep the connection alive
   const heartbeat = setInterval(() => {
@@ -70,6 +92,7 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
 
   req.on('close', () => {
     clearInterval(heartbeat);
+    sseConnections.delete(sessionId);
   });
 }
 
@@ -158,6 +181,29 @@ async function handleToolCall(
   }
 }
 
+function pushResponseToSse(sessionId: string | null, responseBody: string): void {
+  if (!sessionId) return;
+  const sse = sseConnections.get(sessionId);
+  if (!sse) return;
+  try {
+    // Per MCP HTTP+SSE transport spec, JSON-RPC responses are delivered to the
+    // client via an `event: message` SSE event on the connection associated
+    // with the request's sessionId. The SDK client looks for it on the SSE
+    // stream; without this, the connection appears hung and times out.
+    sse.write(`event: message\ndata: ${responseBody}\n\n`);
+  } catch {
+    // SSE connection might have closed mid-flight; safe to ignore.
+  }
+}
+
+function extractSessionId(url: string | undefined): string | null {
+  if (!url) return null;
+  const queryStart = url.indexOf('?');
+  if (queryStart === -1) return null;
+  const params = new URLSearchParams(url.slice(queryStart + 1));
+  return params.get('sessionId');
+}
+
 async function handleJsonRpc(
   req: IncomingMessage,
   res: ServerResponse,
@@ -167,15 +213,23 @@ async function handleJsonRpc(
   if (!parsed) return;
 
   const { rpc, id } = parsed;
+  const sessionId = extractSessionId(req.url);
 
   try {
     const responseBody = await dispatchRpcMethod(rpc, id, workspaceRoot);
+    // Dual-write: SSE stream (for SDK clients) + response body (for direct
+    // POST callers like curl). The SDK client ignores the body; loose clients
+    // ignore the SSE event. Keeping both maximises compat without changing
+    // observable behaviour for the SDK client.
+    pushResponseToSse(sessionId, responseBody);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(responseBody);
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
+    const errorBody = rpcError(id, -32603, `Internal error: ${errMsg}`);
+    pushResponseToSse(sessionId, errorBody);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(rpcError(id, -32603, `Internal error: ${errMsg}`));
+    res.end(errorBody);
   }
 }
 
@@ -197,12 +251,15 @@ function createRequestHandler(
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/sse') {
+    // Match path component only (URL may include `?sessionId=...` query).
+    const pathOnly = (req.url ?? '').split('?')[0];
+
+    if (req.method === 'GET' && pathOnly === '/sse') {
       handleSse(req, res);
       return;
     }
 
-    if (req.method === 'POST' && req.url === '/message') {
+    if (req.method === 'POST' && pathOnly === '/message') {
       await handleJsonRpc(req, res, workspaceRoot);
       return;
     }

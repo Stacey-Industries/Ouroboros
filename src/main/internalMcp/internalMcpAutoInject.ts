@@ -68,6 +68,10 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 
 type JsonRecord = Record<string, unknown>;
 type ServerEntry = {
+  /** Wave 53h: required by Claude Code's `.mcp.json` schema validator.
+   *  Without `type`, the entry is rejected at parse time with
+   *  "Does not adhere to MCP server configuration schema". */
+  type?: 'sse' | 'http' | 'stdio';
   url?: string;
   command?: string;
   args?: string[];
@@ -110,9 +114,13 @@ function buildOuroborosEntry(serverPort: number, opts: InjectOptions): ServerEnt
     if (!opts.stdioTransportPath) {
       throw new Error('stdio transport requires stdioTransportPath');
     }
-    return { command: 'node', args: [opts.stdioTransportPath, String(serverPort)] };
+    return {
+      type: 'stdio',
+      command: 'node',
+      args: [opts.stdioTransportPath, String(serverPort)],
+    };
   }
-  return { url: `http://127.0.0.1:${serverPort}/sse` };
+  return { type: 'sse', url: `http://127.0.0.1:${serverPort}/sse` };
 }
 
 // ---------------------------------------------------------------------------

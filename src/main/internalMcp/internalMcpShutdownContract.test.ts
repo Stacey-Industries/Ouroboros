@@ -70,7 +70,7 @@ describe('internalMcp shutdown contract (Wave 53d regression, Wave 53g repointed
     const mcpJson = await readMcpJson();
     const mcpServers = mcpJson.mcpServers as Record<string, unknown> | undefined;
     expect(mcpServers).toBeDefined();
-    expect(mcpServers?.['ouroboros']).toEqual({ url: 'http://127.0.0.1:54321/sse' });
+    expect(mcpServers?.['ouroboros']).toEqual({ type: 'sse', url: 'http://127.0.0.1:54321/sse' });
   });
 
   it('removeFromProjectSettings erases the entry — confirms remove IS destructive', async () => {
@@ -88,6 +88,6 @@ describe('internalMcp shutdown contract (Wave 53d regression, Wave 53g repointed
 
     const mcpJson = await readMcpJson();
     const mcpServers = mcpJson.mcpServers as Record<string, unknown> | undefined;
-    expect(mcpServers?.['ouroboros']).toEqual({ url: 'http://127.0.0.1:55555/sse' });
+    expect(mcpServers?.['ouroboros']).toEqual({ type: 'sse', url: 'http://127.0.0.1:55555/sse' });
   });
 });
