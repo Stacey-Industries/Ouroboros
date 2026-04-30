@@ -74,6 +74,8 @@ export function buildOuroborosMcpServer(input: BuildServerInput): BuiltServer {
       db,
       queryEngine,
       cypherEngine,
+      projectName,
+      projectRoot,
       pipeline: { index: () => Promise.reject(new Error('standalone is read-only')) },
     }),
   );
