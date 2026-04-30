@@ -46,5 +46,6 @@ export function buildProvidersApi(t: WebSocketTransport) {
   return {
     list: () => t.invoke('providers:list'),
     getSlots: () => t.invoke('providers:getSlots'),
+    checkAllAvailability: () => t.invoke('providers:checkAllAvailability'),
   };
 }

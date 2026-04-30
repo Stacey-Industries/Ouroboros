@@ -37,6 +37,14 @@ export function buildPtyApis(t: WebSocketTransport) {
     startRecording: (id: string) => t.invoke('pty:startRecording', id),
     stopRecording: (id: string) => t.invoke('pty:stopRecording', id),
     listSessions: () => t.invoke('pty:listSessions'),
+    getShellState: (id: string) => t.invoke('pty:shellState', id),
+    listPersistedSessions: () => t.invoke('pty:listPersistedSessions'),
+    restoreSession: (id: string) => t.invoke('pty:restoreSession', id),
+    discardPersistedSessions: () => t.invoke('pty:discardPersistedSessions'),
+    linkToThread: (sessionId: string, threadId: string) =>
+      t.invoke('pty:linkToThread', sessionId, threadId),
+    getLinkedThread: (sessionId: string) => t.invoke('pty:getLinkedThread', sessionId),
+    getLinkedSessionIds: (threadId: string) => t.invoke('pty:getLinkedSessionIds', threadId),
     onData: (id: string, cb: (data: string) => void) =>
       t.on(`pty:data:${id}`, cb as (v: unknown) => void),
     onExit: (
@@ -45,6 +53,10 @@ export function buildPtyApis(t: WebSocketTransport) {
     ) => t.on(`pty:exit:${id}`, cb as (v: unknown) => void),
     onRecordingState: (id: string, cb: (state: { recording: boolean }) => void) =>
       t.on(`pty:recordingState:${id}`, cb as (v: unknown) => void),
+    onDisconnected: (
+      id: string,
+      cb: (info: { reason: string; exitCode: number; scrollback: string[] }) => void,
+    ) => t.on(`pty:disconnected:${id}`, cb as (v: unknown) => void),
   };
   const codexAPI = {
     listModels: () => t.invoke('codex:listModels'),
@@ -161,17 +173,32 @@ const MENU_EVENTS = [
   'menu:settings',
 ];
 
-export function buildAppApi(t: WebSocketTransport) {
+function buildAppCoreApi(t: WebSocketTransport) {
   return {
     getVersion: () => t.invoke('app:getVersion'),
     getPlatform: () => t.invoke('app:getPlatform'),
+    getSystemInfo: () => ({ electron: '', chrome: '', node: '' }),
     openExternal: (url: string) => {
       window.open(url, '_blank');
       return Promise.resolve({ success: true });
     },
     setTitleBarOverlay: desktopOnlyNoop(),
     notify: (options: unknown) => t.invoke('app:notify', options),
+    showStreamCompletionNotification: (options: unknown) =>
+      t.invoke('app:showStreamCompletionNotification', options),
+    rebuildAndRestart: desktopOnlyNoop(),
     rebuildWeb: () => t.invoke('app:rebuildWeb'),
+    saveFileDialog: (defaultName: string, content: string) =>
+      t.invoke('dialog:saveFile', defaultName, content),
+  };
+}
+
+function buildAppEventsApi(t: WebSocketTransport) {
+  return {
+    onStartupWarning: (cb: (payload: { name: string; message: string }) => void) =>
+      t.on('app:startupWarning', cb as (v: unknown) => void),
+    onNavigateToPermalink: (cb: (payload: { threadId: string; messageId?: string }) => void) =>
+      t.on('app:navigateToPermalink', cb as (v: unknown) => void),
     onMenuEvent: (cb: (event: string) => void) => {
       const cleanups = MENU_EVENTS.map((e) => t.on(e, () => cb(e)));
       return () => cleanups.forEach((c) => c());
@@ -179,6 +206,11 @@ export function buildAppApi(t: WebSocketTransport) {
     /** Wave 34 Phase G — connection state broadcast for offline dispatch. */
     onConnectionState: (cb: (state: 'connected' | 'connecting' | 'disconnected') => void) =>
       t.subscribeConnectionState(cb as Parameters<typeof t.subscribeConnectionState>[0]),
+  };
+}
+
+function buildAppWindowApi() {
+  return {
     minimizeWindow: desktopOnlyNoop(),
     toggleMaximizeWindow: desktopOnlyNoop(),
     closeWindow: desktopOnlyNoop(),
@@ -199,6 +231,14 @@ export function buildAppApi(t: WebSocketTransport) {
       document.body.style.zoom = '1';
       return { success: true };
     },
+  };
+}
+
+export function buildAppApi(t: WebSocketTransport) {
+  return {
+    ...buildAppCoreApi(t),
+    ...buildAppEventsApi(t),
+    ...buildAppWindowApi(),
   };
 }
 
@@ -273,6 +313,7 @@ function buildGitWriteApi(t: WebSocketTransport) {
     restoreSnapshot: (root: string, commitHash: string) =>
       t.invoke('git:restoreSnapshot', root, commitHash),
     createSnapshot: (root: string, label?: string) => t.invoke('git:createSnapshot', root, label),
+    checkpoint: (root: string, message: string) => t.invoke('git:checkpoint', root, message),
   };
 }
 

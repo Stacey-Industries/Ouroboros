@@ -242,7 +242,15 @@ function InnerApp({
   const hooks = useInnerAppHooks(initialRecentProjects, keybindings);
   const { isChatWindow } = useChatWindowMode();
   const immersiveFlag = useImmersiveChatFlag();
-  const isImmersive = isChatWindow || immersiveFlag;
+  // Mobile web is locked to the chat workbench shell — the IDE shell is unusable
+  // on phone-sized viewports (no resize handles, panels squish each other).
+  const isMobileWeb =
+    typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('web-mode') &&
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 768px)').matches;
+  const isImmersive = isChatWindow || immersiveFlag || isMobileWeb;
 
   if (isImmersive) return <ChatOnlyShellWrapper terminal={hooks.terminal} />;
 

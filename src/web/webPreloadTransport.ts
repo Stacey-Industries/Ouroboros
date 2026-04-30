@@ -229,12 +229,12 @@ export class WebSocketTransport {
     }
   }
 
-  async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
+  async invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       await this.connect();
     }
     const id = ++this.requestId;
-    return new Promise<unknown>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const budgetMs = CALL_TIMEOUTS[channelTimeoutClass(channel)];
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(id)) {

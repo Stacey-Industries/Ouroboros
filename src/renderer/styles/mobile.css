@@ -268,10 +268,13 @@
         Applies on web/browser where Capacitor keyboard events are absent.
      Both vars default to 0px so this is safe on desktop. */
   .web-mode [data-layout='agent-chat-composer'] {
-    padding-bottom: max(
-      env(safe-area-inset-bottom, 0px),
-      var(--native-keyboard-height, 0px),
-      var(--keyboard-inset, 0px)
+    padding-bottom: calc(
+      0.75rem +
+        max(
+          env(safe-area-inset-bottom, 0px),
+          var(--native-keyboard-height, 0px),
+          var(--keyboard-inset, 0px)
+        )
     );
   }
 

@@ -10,15 +10,24 @@ import type { WebSocketTransport } from './webPreloadTransport';
 
 // ─── Approval + Sessions + Cost + Usage ──────────────────────────────────────
 
-export function buildTransactionApis(t: WebSocketTransport) {
-  const approvalAPI = {
+function buildApprovalApi(t: WebSocketTransport) {
+  return {
     respond: (requestId: string, decision: string, reason?: string) =>
       t.invoke('approval:respond', requestId, decision, reason),
     alwaysAllow: (sessionId: string, toolName: string) =>
       t.invoke('approval:alwaysAllow', sessionId, toolName),
+    remember: (toolName: string, key: string, decision: string) =>
+      t.invoke('approval:remember', toolName, key, decision),
+    listMemory: () => t.invoke('approval:listMemory'),
+    forget: (entryId: string) => t.invoke('approval:forget', entryId),
     onRequest: (cb: (request: unknown) => void) => t.on('approval:request', cb),
     onResolved: (cb: (resolved: unknown) => void) => t.on('approval:resolved', cb),
+    onMemoryChanged: (cb: (entries: unknown) => void) => t.on('approval:memoryChanged', cb),
   };
+}
+
+export function buildTransactionApis(t: WebSocketTransport) {
+  const approvalAPI = buildApprovalApi(t);
 
   const sessionsAPI = {
     save: (session: unknown) => t.invoke('sessions:save', session),
@@ -120,6 +129,10 @@ export function buildWindowExtensionsApis(t: WebSocketTransport) {
     list: () => t.invoke('window:list'),
     focus: (windowId: number) => t.invoke('window:focus', windowId),
     close: (windowId: number) => t.invoke('window:close', windowId),
+    getSelf: () => t.invoke('window:getSelf'),
+    setProjectRoot: (projectRoot: string) => t.invoke('window:setProjectRoot', projectRoot),
+    getProjectRoots: () => t.invoke('window:getProjectRoots'),
+    setProjectRoots: (roots: string[]) => t.invoke('window:setProjectRoots', roots),
   };
   const extensionsAPI = {
     list: () => t.invoke('extensions:list'),
@@ -193,6 +206,7 @@ export function buildStoreContextApis(t: WebSocketTransport) {
   };
   const contextAPI = {
     scan: (projectRoot: string) => t.invoke('context:scan', projectRoot),
+    getRankerDashboard: () => t.invoke('context:getRankerDashboard'),
     generate: (projectRoot: string, options: unknown) =>
       t.invoke('context:generate', projectRoot, options),
   };

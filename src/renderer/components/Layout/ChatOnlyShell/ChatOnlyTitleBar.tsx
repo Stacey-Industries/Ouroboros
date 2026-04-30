@@ -166,13 +166,32 @@ interface TitleBarLeftProps {
   isWorkbench: boolean;
 }
 
+function ChatModeChip(): React.ReactElement {
+  return (
+    <span
+      className="web-mobile-only items-center rounded-full border border-border-semantic px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-text-semantic-muted"
+      data-testid="chat-mode-chip"
+      title="Chat workbench mode"
+    >
+      Chat
+    </span>
+  );
+}
+
 function TitleBarLeft({
   projectName,
   sidebarMode,
   onCycleSidebarMode,
   isWorkbench,
 }: TitleBarLeftProps): React.ReactElement {
-  if (isWorkbench) return <TitleBarLogo />;
+  if (isWorkbench) {
+    return (
+      <>
+        <TitleBarLogo />
+        <ChatModeChip />
+      </>
+    );
+  }
   return (
     <>
       <button
@@ -190,6 +209,7 @@ function TitleBarLeft({
           {projectName}
         </span>
       )}
+      <ChatModeChip />
     </>
   );
 }

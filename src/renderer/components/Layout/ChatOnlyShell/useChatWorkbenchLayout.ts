@@ -88,11 +88,19 @@ function isUtilityTab(value: unknown): value is ChatWorkbenchUtilityTab {
   );
 }
 
+function isMobileViewport(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
 function readPersisted(): ChatWorkbenchLayoutState {
   if (typeof window === 'undefined') return DEFAULT_STATE;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
+    if (!raw) {
+      // Cold boot on mobile — start with rail closed so chat fills the screen.
+      return isMobileViewport() ? { ...DEFAULT_STATE, railOpen: false } : DEFAULT_STATE;
+    }
     const parsed = JSON.parse(raw) as Partial<ChatWorkbenchLayoutState>;
     return {
       railOpen: Boolean(parsed.railOpen),

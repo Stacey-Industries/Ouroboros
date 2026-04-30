@@ -18,7 +18,8 @@ export function ChatStatusChipRow(): React.ReactElement {
   return (
     <div
       data-testid="chat-status-chip-row"
-      className="px-4 pt-1 pb-0.5 flex items-center gap-1.5 text-xs text-text-semantic-muted shrink-0"
+      className="px-4 pt-1 pb-0.5 flex items-center gap-1.5 text-xs text-text-semantic-muted shrink-0 overflow-x-auto"
+      style={{ scrollbarWidth: 'none' }}
     >
       <ChatOnlyHeaderControls />
     </div>

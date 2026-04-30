@@ -207,3 +207,58 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
     expect(screen.getByTestId('chat-workbench-terminal-dock-unavailable')).toBeDefined();
   });
 });
+
+describe('ChatWorkbenchBody — mobile overlay mode', () => {
+  function mockMobile(matches: boolean): void {
+    window.matchMedia = ((q: string) => ({
+      matches: matches && q.includes('max-width'),
+      media: q,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      onchange: null,
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  it('renders the rail inside an overlay on mobile when railOpen is true', () => {
+    mockMobile(true);
+    render(
+      <ChatWorkbenchBody
+        layout={makeLayout({ railOpen: true })}
+        dock={makeDock()}
+        projectRoot="/test"
+      />,
+    );
+    expect(screen.getByTestId('workbench-left-overlay')).toBeDefined();
+    expect(screen.getByTestId('workbench-left-overlay-scrim')).toBeDefined();
+    // Body marker
+    expect(screen.getByTestId('chat-workbench-body').getAttribute('data-mobile')).toBe('true');
+  });
+
+  it('omits the rail overlay on mobile when railOpen is false', () => {
+    mockMobile(true);
+    render(
+      <ChatWorkbenchBody
+        layout={makeLayout({ railOpen: false })}
+        dock={makeDock()}
+        projectRoot="/test"
+      />,
+    );
+    expect(screen.queryByTestId('workbench-left-overlay')).toBeNull();
+  });
+
+  it('does not switch to overlay mode when viewport is desktop-sized', () => {
+    mockMobile(false);
+    render(
+      <ChatWorkbenchBody
+        layout={makeLayout({ railOpen: true })}
+        dock={makeDock()}
+        projectRoot="/test"
+      />,
+    );
+    expect(screen.queryByTestId('workbench-left-overlay')).toBeNull();
+    expect(screen.getByTestId('chat-workbench-body').getAttribute('data-mobile')).toBeNull();
+  });
+});

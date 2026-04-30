@@ -7,9 +7,11 @@
  * Variant rule: new variant-specific behaviour MUST motivate its own prop or
  * context — do not extend this component for unrelated variants.
  *
- * Responsive: collapses to icon-only at narrow widths via Tailwind breakpoints.
- *   - <640px (sm): permission chip hidden
- *   - <768px (md): model chip hidden
+ * Responsive: chips shrink-to-fit and use horizontal scroll on overflow.
+ * Originally hid chips at narrow widths when they lived in the title bar; now
+ * that they live in their own row below the composer (Wave 44 Phase D), all
+ * three chips remain visible across breakpoints — including mobile, where the
+ * model/permission/effort selectors are essential.
  */
 
 import React from 'react';
@@ -46,7 +48,7 @@ function PermissionChip({
     <button
       type="button"
       onClick={() => onChange(cyclePermissionMode(value, provider, { codexAppServerTransport }))}
-      className="hidden sm:flex items-center px-1.5 py-0.5 text-[11px] rounded text-text-semantic-muted hover:bg-surface-hover transition-colors shrink-0"
+      className="flex items-center px-1.5 py-0.5 text-[11px] rounded text-text-semantic-muted hover:bg-surface-hover transition-colors shrink-0"
       title="Permission mode (click to cycle)"
       aria-label={`Permission mode: ${label}`}
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
@@ -88,7 +90,7 @@ function ModelChip({
   });
   return (
     <div
-      className="hidden md:flex shrink-0"
+      className="flex shrink-0"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
       <SelectPill
@@ -139,7 +141,7 @@ function EffortChip({
   if (effortOptions.length === 0) return null;
   return (
     <div
-      className="hidden sm:flex shrink-0"
+      className="flex shrink-0"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
       <SelectPill label="Effort" value={effortValue} options={effortOptions} onChange={onChange} />

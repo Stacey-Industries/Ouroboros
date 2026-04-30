@@ -9,6 +9,7 @@
 import React, { useCallback, useMemo } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
+import { OPEN_SETTINGS_EVENT } from '../../../hooks/appEventNames';
 import { useConfig } from '../../../hooks/useConfig';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
@@ -77,7 +78,7 @@ function useRailHandlers(layout: LayoutState): RailHandlers {
     [config?.recentProjects, layout, removeProjectRoot, setConfig],
   );
   const handleOpenSettings = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('agent-ide:open-settings'));
+    window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_EVENT));
   }, []);
   const handleSelectTab = useCallback(
     (tab: Parameters<LayoutState['setActiveInnerTab']>[1]) => {
