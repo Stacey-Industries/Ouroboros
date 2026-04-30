@@ -88,8 +88,8 @@ describe('AgentTree — subagent nesting', () => {
 
     render(<AgentTree sessions={[parent, child]} onDismiss={noop} />);
 
-    expect(screen.getByTestId('agent-card-parent-1')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-child-1')).toBeTruthy();
+    screen.getByTestId('agent-card-parent-1');
+    screen.getByTestId('agent-card-child-1');
     expect(screen.getByText('Parent task')).toBeTruthy();
     expect(screen.getByText('Child task')).toBeTruthy();
   });
@@ -100,8 +100,8 @@ describe('AgentTree — subagent nesting', () => {
 
     render(<AgentTree sessions={[a, b]} onDismiss={noop} />);
 
-    expect(screen.getByTestId('agent-card-sess-a')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-sess-b')).toBeTruthy();
+    screen.getByTestId('agent-card-sess-a');
+    screen.getByTestId('agent-card-sess-b');
   });
 
   it('places parent at depth=0 and child at depth=1 in the DOM hierarchy', () => {
@@ -145,9 +145,9 @@ describe('AgentTree — subagent nesting', () => {
 
     render(<AgentTree sessions={[parent, childA, childB]} onDismiss={noop} />);
 
-    expect(screen.getByTestId('agent-card-top')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-ca')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-cb')).toBeTruthy();
+    screen.getByTestId('agent-card-top');
+    screen.getByTestId('agent-card-ca');
+    screen.getByTestId('agent-card-cb');
     expect(screen.getByText('2 subagents')).toBeTruthy();
   });
 });
@@ -240,8 +240,8 @@ describe('AgentTree — restored parent in live group', () => {
 
     render(<AgentTree sessions={[restoredParent, liveChild]} onDismiss={noop} />);
 
-    expect(screen.getByTestId('agent-card-rp-live')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-lc-live')).toBeTruthy();
+    screen.getByTestId('agent-card-rp-live');
+    screen.getByTestId('agent-card-lc-live');
   });
 
   it('renders both cards when parent is restored:true + status:complete while child is running', () => {
@@ -265,7 +265,7 @@ describe('AgentTree — restored parent in live group', () => {
 
     render(<AgentTree sessions={[restoredCompleteParent, liveChild]} onDismiss={noop} />);
 
-    expect(screen.getByTestId('agent-card-rp-complete')).toBeTruthy();
-    expect(screen.getByTestId('agent-card-lc-running')).toBeTruthy();
+    screen.getByTestId('agent-card-rp-complete');
+    screen.getByTestId('agent-card-lc-running');
   });
 });

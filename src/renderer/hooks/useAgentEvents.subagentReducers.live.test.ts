@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AgentState } from './useAgentEvents.helpers';
+import type { AgentAction, AgentState } from './useAgentEvents.helpers';
 import { initialAgentState, isLiveSession, reducer } from './useAgentEvents.helpers';
 
 // ─── Stubs ────────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ afterEach(() => {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeParentSession(
-  overrides: Partial<Parameters<typeof reducer>[1] & { type: 'AGENT_START' }> = {},
+  overrides: Partial<Extract<AgentAction, { type: 'AGENT_START' }>> = {},
 ): AgentState {
   return reducer(initialAgentState, {
     type: 'AGENT_START',

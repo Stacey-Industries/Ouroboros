@@ -170,7 +170,7 @@ function reduceUtilityAction(state: AgentState, action: AgentAction): AgentState
     case 'CLEAR_COMPLETED':
       return {
         ...state,
-        sessions: state.sessions.filter((s) => s.status === 'running' || s.status === 'idle'),
+        sessions: state.sessions.filter(isLiveSession),
       };
     case 'LOAD_PERSISTED':
       return loadPersistedSessions(state, action.sessions);
