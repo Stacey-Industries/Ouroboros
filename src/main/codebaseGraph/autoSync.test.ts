@@ -2,9 +2,11 @@
  * autoSync.test.ts — Unit tests for AutoSyncWatcher.
  *
  * Covers: 300ms application-layer debounce, onLaunchDiff stat comparison,
- * initWithLaunchDiff triggering reindex on stale files.
+ * initWithLaunchDiff triggering reindex on stale files,
+ * pollForChanges sliced-window reconciliation, and onFileChange debounce.
  */
 
+import fsp from 'fs/promises';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -260,5 +262,200 @@ describe('initWithLaunchDiff', () => {
     const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb([]), pipeline }));
     await watcher.initWithLaunchDiff();
     expect(mockRunIndex).not.toHaveBeenCalled();
+  });
+});
+
+// ─── pollForChanges — sliced reconciliation ───────────────────────────────────
+
+/** Build N fake hash records. Paths are synthetic (non-existent by default). */
+function makeHashes(count: number, projectName = 'test-project'): FakeHashRecord[] {
+  return Array.from({ length: count }, (_, i) => ({
+    project: projectName,
+    rel_path: `src/file${i}.ts`,
+    content_hash: `hash${i}`,
+    mtime_ns: 1_000_000 * (i + 1),
+    size: 100 + i,
+  }));
+}
+
+describe('pollForChanges — sliced reconciliation', () => {
+  let statSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    mockRunIndex.mockClear();
+    // By default: stat throws ENOENT (file not found) — every record is "changed"
+    // Override per-test as needed.
+    statSpy = vi
+      .spyOn(fsp, 'stat')
+      .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+  });
+
+  afterEach(() => {
+    statSpy.mockRestore();
+  });
+
+  it('scans at most MAX_FILES_PER_POLL records per cycle', async () => {
+    // 500 records → only first 100 should be stat'd in one pollForChanges call
+    const hashes = makeHashes(500);
+    const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb(hashes) }));
+
+    await watcher.pollForChanges();
+
+    expect(statSpy).toHaveBeenCalledTimes(100);
+  });
+
+  it('scanOffset advances and wraps after a full pass', async () => {
+    // 250 records → 3 calls cover: [0..99], [100..199], [200..249] then offset wraps to 0
+    const hashes = makeHashes(250);
+    // Stat succeeds with matching values so nothing triggers reindex (avoids noise)
+    statSpy.mockImplementation(async (p: unknown) => {
+      const filePath = p as string;
+      const idx = parseInt(
+        path
+          .basename(filePath as string)
+          .replace('file', '')
+          .replace('.ts', ''),
+        10,
+      );
+      return {
+        mtimeMs: (1_000_000 * (idx + 1)) / 1e6, // matches stored mtime_ns
+        size: 100 + idx, // matches stored size
+      } as Awaited<ReturnType<typeof fsp.stat>>;
+    });
+
+    const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb(hashes) }));
+    const seenPaths = new Set<string>();
+
+    statSpy.mockImplementation(async (p: unknown) => {
+      seenPaths.add(p as string);
+      const filePath = p as string;
+      const idx = parseInt(path.basename(filePath).replace('file', '').replace('.ts', ''), 10);
+      return {
+        mtimeMs: (1_000_000 * (idx + 1)) / 1e6,
+        size: 100 + idx,
+      } as Awaited<ReturnType<typeof fsp.stat>>;
+    });
+
+    await watcher.pollForChanges(); // covers [0..99]
+    await watcher.pollForChanges(); // covers [100..199]
+    await watcher.pollForChanges(); // covers [200..249], offset wraps to 0
+
+    expect(statSpy).toHaveBeenCalledTimes(250);
+    // All 250 rel_paths must have been stat'd
+    for (let i = 0; i < 250; i++) {
+      const expected = path.join('/tmp/test-project', `src/file${i}.ts`);
+      expect(seenPaths.has(expected)).toBe(true);
+    }
+  });
+
+  it('returns without triggering reindex when no records mismatch', async () => {
+    const hashes = makeHashes(50);
+    // Stat returns values that exactly match the stored mtime_ns and size
+    statSpy.mockImplementation(async (p: unknown) => {
+      const filePath = p as string;
+      const idx = parseInt(path.basename(filePath).replace('file', '').replace('.ts', ''), 10);
+      return {
+        mtimeMs: (1_000_000 * (idx + 1)) / 1e6,
+        size: 100 + idx,
+      } as Awaited<ReturnType<typeof fsp.stat>>;
+    });
+
+    const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb(hashes) }));
+    const reindexSpy = vi.spyOn(watcher, 'triggerReindex').mockResolvedValue();
+
+    await watcher.pollForChanges();
+
+    expect(reindexSpy).not.toHaveBeenCalled();
+  });
+
+  it('triggers reindex when at least one record mismatches', async () => {
+    const hashes = makeHashes(10);
+    statSpy.mockImplementation(async (p: unknown) => {
+      const filePath = p as string;
+      const idx = parseInt(path.basename(filePath).replace('file', '').replace('.ts', ''), 10);
+      // Record 5 gets a different mtimeMs → mismatch detected
+      const mtimeMs =
+        idx === 5
+          ? (1_000_000 * (idx + 1)) / 1e6 + 999 // different
+          : (1_000_000 * (idx + 1)) / 1e6; // matching
+      return {
+        mtimeMs,
+        size: 100 + idx,
+      } as Awaited<ReturnType<typeof fsp.stat>>;
+    });
+
+    const watcher = new AutoSyncWatcher(makeOpts({ db: makeDb(hashes) }));
+    const reindexSpy = vi.spyOn(watcher, 'triggerReindex').mockResolvedValue();
+
+    await watcher.pollForChanges();
+
+    expect(reindexSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── onFileChange — always triggers debounced reindex ────────────────────────
+
+describe('onFileChange — always triggers debounced reindex', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockRunIndex.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ['single file', ['/tmp/test-project/a.ts']],
+    [
+      'five files',
+      [
+        '/tmp/test-project/a.ts',
+        '/tmp/test-project/b.ts',
+        '/tmp/test-project/c.ts',
+        '/tmp/test-project/d.ts',
+        '/tmp/test-project/e.ts',
+      ],
+    ],
+    ['fifty files', Array.from({ length: 50 }, (_, i) => `/tmp/test-project/file${i}.ts`)],
+  ])('triggers reindex regardless of batch size — %s', async (_label, files) => {
+    const watcher = new AutoSyncWatcher(makeOpts());
+    const reindexSpy = vi.spyOn(watcher, 'triggerReindex').mockResolvedValue();
+
+    watcher.onFileChange(files);
+
+    // Debounce has not fired yet
+    expect(reindexSpy).not.toHaveBeenCalled();
+
+    // Advance past the 3s DEBOUNCE_MS window
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(reindexSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('empty array is a no-op', async () => {
+    const watcher = new AutoSyncWatcher(makeOpts());
+    const reindexSpy = vi.spyOn(watcher, 'triggerReindex').mockResolvedValue();
+
+    watcher.onFileChange([]);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(reindexSpy).not.toHaveBeenCalled();
+  });
+
+  it('multiple rapid calls coalesce into a single reindex', async () => {
+    const watcher = new AutoSyncWatcher(makeOpts());
+    const reindexSpy = vi.spyOn(watcher, 'triggerReindex').mockResolvedValue();
+
+    watcher.onFileChange(['/tmp/test-project/a.ts']);
+    await vi.advanceTimersByTimeAsync(1000);
+    watcher.onFileChange(['/tmp/test-project/b.ts']);
+    await vi.advanceTimersByTimeAsync(1000);
+    watcher.onFileChange(['/tmp/test-project/c.ts']);
+
+    // 3s debounce from last call fires now
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(reindexSpy).toHaveBeenCalledTimes(1);
   });
 });

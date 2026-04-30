@@ -49,7 +49,7 @@ callers use `getGraphController()` and receive a `GraphControllerLike`.
 | `treeSitterParserImports.ts` | Import/export extraction. |
 | `treeSitterParserSupport.ts` | Shared cursor-walk helpers (`findDescendantsOfType`). |
 | `treeSitterTypes.ts` | Extraction result types. |
-| `autoSync.ts` | `AutoSyncWatcher` — chokidar watcher that triggers incremental reindex on file changes. |
+| `autoSync.ts` | `AutoSyncWatcher`. Watcher-first via `@parcel/watcher`; polling is a 1–10 min reconciliation safety net for missed events, not the primary detection mechanism. |
 | `systemTwoRegistry.ts` | Core acquire/release registry keyed by root path, ref-counted. Manages watcher lifecycle. |
 | `systemTwoRegistryTypes.ts` | Registry handle and config types. |
 | `concurrency.ts` | Async mutex / concurrency helpers used by the pipeline. |
@@ -67,7 +67,7 @@ initCodebaseGraph() (mainStartup.ts)
   └── initCompatRegistry(db, queryEngine, cypherEngine, workerClient)
   └── GraphControllerCompatRegistry.acquireGraphController(root, pipeline)
        └── SystemTwoRegistry.acquire(root, db, pipeline)
-            └── AutoSyncWatcher (chokidar) → incremental reindex on changes
+            └── AutoSyncWatcher (@parcel/watcher) → incremental reindex on changes
        └── new GraphControllerCompat(handle)
             ├── QueryEngine    (search, trace, architecture, detect-changes)
             ├── CypherEngine   (queryGraph — simplified Cypher subset)
@@ -116,6 +116,7 @@ The stable interface that all consumers depend on. Defined in `graphControllerSu
 - **`GraphControllerCompat` is permanent** — it's the abstraction boundary. Do not bypass it to call System 2 internals from consumers.
 - **Worker path** — `indexingWorkerClient.ts` resolves the worker path using `__dirname` with an `endsWith('chunks')` check for asar packaging. Same pattern as the old `resolveWorkerPath` from System 1.
 - **GC runs at startup** — `graphGc.pruneExpiredProjects()` fires before the initial index if `codebaseGraph.gcEnabled` is true. Pruned project names are tracked to force a full reindex.
+- **autoSync poll loop scans a sliced window**: `pollForChanges` walks at most `MAX_FILES_PER_POLL` records per cycle (with a rolling `scanOffset` that wraps), parallelized at concurrency 32. The cap is iteration-count, not changed-count. Reason: a 0-changes scan must still terminate inside the per-cycle budget; capping on results means an unchanged repo iterates the entire catalog every cycle and blocks the event loop. Investigated in Wave 53k follow-up; freezes were 5–10 s on medium repos before the fix.
 
 ## Dependencies
 
