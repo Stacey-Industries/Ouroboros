@@ -15,6 +15,7 @@
     "build:verify-marketplace-key": "npx tsx scripts/check-marketplace-key.ts",
     "prebuild": "npx tsx scripts/check-marketplace-key.ts",
     "build": "electron-vite build",
+    "build:coach-hook": "node scripts/build-coach-hook.mjs",
     "preview": "electron-vite preview",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:analyze": "node -e \"require('child_process').execSync('electron-vite build',{stdio:'inherit',env:{...process.env,ANALYZE:'true'}})\"",

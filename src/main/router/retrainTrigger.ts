@@ -49,6 +49,20 @@ export interface RetrainOpts {
 /** Start the periodic dataset growth observer. */
 export function observeDatasetGrowth(opts?: RetrainOpts): void {
   if (intervalHandle) return; // already observing
+
+  // Wave 61: auto-retrain is opt-in. The retrain pipeline cannot produce
+  // de-escalation labels (routerExporterHelpers.signalToLabel only reinforces
+  // or escalates), so for users who don't actively try cheaper tiers it loops
+  // every interval on the same data without progress. Skip the observer
+  // entirely when the flag is off; signal/decision logging continues elsewhere.
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.autoRetrainEnabled) {
+    log.info(
+      '[retrain] auto-retrain disabled (routerSettings.autoRetrainEnabled=false) — observer not started',
+    );
+    return;
+  }
+
   const minSamples = opts?.minNewSamples ?? DEFAULT_MIN_SAMPLES;
   const intervalMs = opts?.checkIntervalMs ?? DEFAULT_CHECK_INTERVAL_MS;
 
@@ -73,6 +87,9 @@ async function checkAndRetrain(minSamples: number): Promise<void> {
   if (isRunning) return; // prevent concurrent retrains
   const routerConfig = getConfigValue('routerSettings');
   if (!routerConfig?.enabled) return;
+  // Wave 61: live re-check the kill switch in case the flag was flipped at
+  // runtime after observeDatasetGrowth started the interval.
+  if (!routerConfig?.autoRetrainEnabled) return;
 
   const dataDir = app.getPath('userData');
   const currentCount = await countSignalLines(dataDir);

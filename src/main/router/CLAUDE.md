@@ -3,9 +3,18 @@
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->
+
 # `src/main/router/` — Model Tier Router
 
-Three-layer cascade that selects HAIKU / SONNET / OPUS for each chat prompt. Also shadow-routes terminal prompts for passive training data collection and auto-retrains the ML classifier from accumulated quality signals.
+Three-layer cascade that selects HAIKU / SONNET / OPUS for each chat prompt. Also shadow-routes terminal prompts for passive training data collection. The auto-retrain pipeline is **disabled by default** as of Wave 61 — see "Wave 61: maintenance-only mode" below.
+
+## Wave 61: maintenance-only mode
+
+`routerSettings.autoRetrainEnabled` defaults to `false`. The periodic retrain observer (`observeDatasetGrowth`) short-circuits when the flag is off; signal/decision logging continues normally. Reason: `routerExporterHelpers.signalToLabel` only produces _reinforce-current-tier_ and _escalate-one-step_ labels — there is no de-escalation path. For users who don't actively try cheaper tiers, the label distribution is degenerate (e.g. all-OPUS) and the trainer's per-class minimum (`MIN_PER_CLASS_SAMPLES = 5` in `tools/train-router.py`) is never reached. Pre-Wave-61 the loop fired every 30s indefinitely without progress.
+
+The active model-selection feature is now Wave 61's **delegation coach** at `src/main/delegationCoach/`. The router stays in place serving bundled weights for any consumer that calls `routePromptSync()`; flip `autoRetrainEnabled: true` only if you have a tier-balanced label distribution OR want to re-enable retraining for experimentation.
+
+The mythical `llmJudge.ts` referenced below is documented in this file but never shipped — it would be the missing piece for de-escalation labels. Defer until there's a concrete need; the delegation coach addresses the user-facing pain that originally motivated it.
 
 ## Architecture: Three-Layer Cascade
 
@@ -20,23 +29,23 @@ Falls back to SONNET on any error or complete miss.
 
 ## File Map
 
-| File | Role |
-|------|------|
-| `orchestrator.ts` | Entry point — chains all three layers; `routePromptSync()` is the main call site |
-| `routerTypes.ts` | **Single source of truth** — all types, `ModelTier`, `TIER_TO_MODEL`, `SLASH_COMMAND_TIERS`, `FEATURE_NAMES` |
-| `ruleEngine.ts` | Layer 1 — deterministic rules: slash commands, keyword patterns, follow-up confirmation detection |
-| `featureExtractor.ts` | Extracts the 19 numeric features consumed by Layer 2 |
-| `classifier.ts` | Layer 2 — pure-TS logistic regression; loads weights from `model/router-weights.json` |
-| `llmFallback.ts` | Layer 3 — async Haiku API call; 2s timeout, 5-minute in-memory cache |
-| `routerFeedback.ts` | Builds `EnrichedRoutingLogEntry` with trace ID, counterfactuals, workspace hash |
-| `routerLogger.ts` | Appends enriched entries to `{userData}/router-decisions.jsonl` |
-| `qualitySignalCollector.ts` | Tracks implicit quality signals (regeneration, abort, git commit) → `router-quality-signals.jsonl` |
-| `qualitySignalTypes.ts` | `QualityAnnotation` type — shape of quality signal entries |
-| `routerShadow.ts` | Shadow-routes terminal `user_prompt_submit` hook events for training data (never changes model) |
-| `retrainTrigger.ts` | Polls signal count; when ≥50 new samples, exports data + spawns `tools/train-router.py` |
-| `routerExporter.ts` | Merges decisions + signals by `traceId` → `router-full-extracted.jsonl` / `router-full-judged.jsonl` |
-| `llmJudge.ts` | Sampled async judge — scores routing quality via Haiku; controlled by `llmJudgeSampleRate` |
-| `index.ts` | Barrel re-export — only import from here, not from individual files |
+| File                        | Role                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `orchestrator.ts`           | Entry point — chains all three layers; `routePromptSync()` is the main call site                             |
+| `routerTypes.ts`            | **Single source of truth** — all types, `ModelTier`, `TIER_TO_MODEL`, `SLASH_COMMAND_TIERS`, `FEATURE_NAMES` |
+| `ruleEngine.ts`             | Layer 1 — deterministic rules: slash commands, keyword patterns, follow-up confirmation detection            |
+| `featureExtractor.ts`       | Extracts the 19 numeric features consumed by Layer 2                                                         |
+| `classifier.ts`             | Layer 2 — pure-TS logistic regression; loads weights from `model/router-weights.json`                        |
+| `llmFallback.ts`            | Layer 3 — async Haiku API call; 2s timeout, 5-minute in-memory cache                                         |
+| `routerFeedback.ts`         | Builds `EnrichedRoutingLogEntry` with trace ID, counterfactuals, workspace hash                              |
+| `routerLogger.ts`           | Appends enriched entries to `{userData}/router-decisions.jsonl`                                              |
+| `qualitySignalCollector.ts` | Tracks implicit quality signals (regeneration, abort, git commit) → `router-quality-signals.jsonl`           |
+| `qualitySignalTypes.ts`     | `QualityAnnotation` type — shape of quality signal entries                                                   |
+| `routerShadow.ts`           | Shadow-routes terminal `user_prompt_submit` hook events for training data (never changes model)              |
+| `retrainTrigger.ts`         | Polls signal count; when ≥50 new samples, exports data + spawns `tools/train-router.py`                      |
+| `routerExporter.ts`         | Merges decisions + signals by `traceId` → `router-full-extracted.jsonl` / `router-full-judged.jsonl`         |
+| `llmJudge.ts`               | Sampled async judge — scores routing quality via Haiku; controlled by `llmJudgeSampleRate`                   |
+| `index.ts`                  | Barrel re-export — only import from here, not from individual files                                          |
 
 Helper modules (`routerExporterHelpers.ts`, `retrainTriggerHelpers.ts`, `qualitySignalCollectorHelpers.ts`) exist purely to keep their parent under 300 lines.
 
@@ -56,7 +65,7 @@ Helper modules (`routerExporterHelpers.ts`, `retrainTriggerHelpers.ts`, `quality
 
 - **Logistic regression uses `.at(i)` not `[i]`** throughout `classifier.ts` to satisfy `eslint-plugin-security`'s `detect-object-injection` rule. Don't simplify these to bracket access.
 - **Layer 3 (LLM fallback) is not wired into `routePromptSync()`** — it's implemented but the orchestrator's sync path has no async escape hatch. It exists for future async routing or manual invocation.
-- **`routerLastRetrainCount` is persisted to electron-store** via `config.ts`. After a retrain, the signal baseline is saved so subsequent checks measure *new* signals only.
+- **`routerLastRetrainCount` is persisted to electron-store** via `config.ts`. After a retrain, the signal baseline is saved so subsequent checks measure _new_ signals only.
 - **Trainer script resolves from two locations**: dev (`app.getAppPath()/tools/train-router.py`) and packaged (`process.resourcesPath/train-router.py`). Only the dev path exists in the repo.
 - **`llmFallback.ts` calls `createAnthropicClient()`** from `orchestration/providers/anthropicAuth` — requires valid auth. Falls back to `SONNET` silently on any error including auth failure.
 - **`workspaceRootHash`** in enriched log entries is a SHA-256 prefix of the workspace path, not the path itself — for privacy. Don't log raw paths.

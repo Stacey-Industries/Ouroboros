@@ -11,6 +11,13 @@ import { countSignalLines, validateWeightFile } from './retrainTriggerHelpers';
 // Mock electron
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp/test-retrain' } }));
 
+// Mock config for the observeDatasetGrowth gate test below.
+const mockGetConfigValue = vi.fn();
+vi.mock('../config', () => ({
+  getConfigValue: (key: string) => mockGetConfigValue(key),
+  setConfigValue: vi.fn(),
+}));
+
 // ─── Temp dir setup ──────────────────────────────────────────────────────────
 
 let tmpDir: string;
@@ -157,6 +164,50 @@ describe('reloadWeights', () => {
 // Note: findPython caches its result in a module-level variable. Each sub-
 // describe uses vi.resetModules() + a dynamic re-import so the cache is fresh
 // for each test group.
+
+// ─── observeDatasetGrowth (Wave 61 gate) ─────────────────────────────────────
+
+describe('observeDatasetGrowth — Wave 61 autoRetrainEnabled gate', () => {
+  beforeEach(() => {
+    mockGetConfigValue.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not start the interval when autoRetrainEnabled is false', async () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true, autoRetrainEnabled: false });
+    const { observeDatasetGrowth, stopObserving } = await import('./retrainTrigger');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    observeDatasetGrowth();
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setIntervalSpy.mockRestore();
+    stopObserving();
+  });
+
+  it('does not start the interval when autoRetrainEnabled is missing (older config)', async () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true });
+    const { observeDatasetGrowth, stopObserving } = await import('./retrainTrigger');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    observeDatasetGrowth();
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setIntervalSpy.mockRestore();
+    stopObserving();
+  });
+
+  it('starts the interval when autoRetrainEnabled is true', async () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true, autoRetrainEnabled: true });
+    vi.resetModules(); // re-import retrainTrigger so module-level intervalHandle is fresh
+    const { observeDatasetGrowth, stopObserving } = await import('./retrainTrigger');
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    observeDatasetGrowth();
+    expect(setIntervalSpy).toHaveBeenCalled();
+    stopObserving();
+    setIntervalSpy.mockRestore();
+  });
+});
 
 describe('findPython', () => {
   describe('when a python binary is available', () => {

@@ -224,6 +224,12 @@ export interface RouterSettings {
    * configTypes.RouterSettings shape (older config blobs may lack this key).
    */
   shadowMode?: boolean;
+  /**
+   * Wave 61 — when false, observeDatasetGrowth never schedules retrain
+   * checks. Defaults false (see configTypes.RouterSettings for rationale).
+   * Optional so older config blobs without the key parse cleanly.
+   */
+  autoRetrainEnabled?: boolean;
 }
 
 export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
@@ -235,6 +241,7 @@ export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   paranoidMode: false,
   llmJudgeSampleRate: 0,
   shadowMode: true,
+  autoRetrainEnabled: false,
 };
 
 /* ── Feature list (canonical, shared by TS extractor + Python trainer) */

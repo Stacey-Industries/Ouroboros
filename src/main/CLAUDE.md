@@ -4,27 +4,28 @@ Node.js main process for the Ouroboros IDE. Entry point is `main.ts`. Each subdi
 
 ## Subsystem Map
 
-| Directory / File        | Role                                                                                                  |
-| ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `main.ts`               | Entry point — app lifecycle, window creation, startup sequencing                                      |
-| `ipc.ts`                | IPC orchestration — registers all handler domains, deduplicates channels                              |
-| `config.ts`             | electron-store schema + persistence                                                                   |
-| `pty.ts`                | node-pty session management                                                                           |
-| `hooks.ts`              | Named pipe server for Claude Code hook events                                                         |
-| `windowManager.ts`      | BrowserWindow lifecycle, multi-window tracking                                                        |
-| `lsp.ts`                | LSP server lifecycle (start/stop per workspace root)                                                  |
-| `extensions.ts`         | VS Code extension loading and management                                                              |
-| `approvalManager.ts`    | Pre-execution approval flow — response-file protocol at `~/.ouroboros/approvals/`                     |
-| `hookInstaller.ts`      | Auto-installs Claude Code hook scripts; version tracked via SHA-256 of contents                       |
-| `agentChat/`            | Chat thread persistence, orchestration bridge, session projection — see `agentChat/CLAUDE.md`         |
-| `codebaseGraph/`        | In-process codebase knowledge graph engine — see `codebaseGraph/CLAUDE.md`                            |
-| `contextLayer/`         | Repo-aware context enrichment for agent sessions — see `contextLayer/CLAUDE.md`                       |
-| `orchestration/`        | Context preparation and provider coordination — see `orchestration/CLAUDE.md`                         |
-| `ipc-handlers/`         | Domain-split IPC handler registrars — see `ipc-handlers/CLAUDE.md`                                    |
-| `storage/`              | SQLite database layer and JSON→SQLite migration — see `storage/CLAUDE.md`                             |
-| `web/`                  | HTTP + WebSocket server for browser-based IDE access — see `web/CLAUDE.md`                            |
-| `codemode/`             | Cloudflare CodeMode integration layer — see `codemode/CLAUDE.md`                                      |
-| `hooks/`                | Stop/start hook handlers (gotcha nudge, session lifecycle)                                            |
+| Directory / File     | Role                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `main.ts`            | Entry point — app lifecycle, window creation, startup sequencing                                       |
+| `ipc.ts`             | IPC orchestration — registers all handler domains, deduplicates channels                               |
+| `config.ts`          | electron-store schema + persistence                                                                    |
+| `pty.ts`             | node-pty session management                                                                            |
+| `hooks.ts`           | Named pipe server for Claude Code hook events                                                          |
+| `windowManager.ts`   | BrowserWindow lifecycle, multi-window tracking                                                         |
+| `lsp.ts`             | LSP server lifecycle (start/stop per workspace root)                                                   |
+| `extensions.ts`      | VS Code extension loading and management                                                               |
+| `approvalManager.ts` | Pre-execution approval flow — response-file protocol at `~/.ouroboros/approvals/`                      |
+| `hookInstaller.ts`   | Auto-installs Claude Code hook scripts; version tracked via SHA-256 of contents                        |
+| `agentChat/`         | Chat thread persistence, orchestration bridge, session projection — see `agentChat/CLAUDE.md`          |
+| `codebaseGraph/`     | In-process codebase knowledge graph engine — see `codebaseGraph/CLAUDE.md`                             |
+| `contextLayer/`      | Repo-aware context enrichment for agent sessions — see `contextLayer/CLAUDE.md`                        |
+| `orchestration/`     | Context preparation and provider coordination — see `orchestration/CLAUDE.md`                          |
+| `ipc-handlers/`      | Domain-split IPC handler registrars — see `ipc-handlers/CLAUDE.md`                                     |
+| `storage/`           | SQLite database layer and JSON→SQLite migration — see `storage/CLAUDE.md`                              |
+| `web/`               | HTTP + WebSocket server for browser-based IDE access — see `web/CLAUDE.md`                             |
+| `codemode/`          | Cloudflare CodeMode integration layer — see `codemode/CLAUDE.md`                                       |
+| `hooks/`             | Stop/start hook handlers (gotcha nudge, session lifecycle)                                             |
+| `delegationCoach/`   | Wave 61 — pattern-matched nudges that fire when Opus skips delegation; see `delegationCoach/CLAUDE.md` |
 
 ## Key Patterns
 

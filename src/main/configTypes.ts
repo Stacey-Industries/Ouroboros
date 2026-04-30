@@ -248,6 +248,15 @@ export interface RouterSettings {
   llmJudgeSampleRate: number;
   /** Wave 53 — log shadow router decision even when user overrides the model. */
   shadowMode?: boolean;
+  /**
+   * Wave 61 — when false, the periodic auto-retrain observer never starts.
+   * Decision and quality-signal logging continue regardless. Defaults false:
+   * the retrain pipeline cannot produce de-escalation labels (see
+   * routerExporterHelpers.signalToLabel) so for users who don't actively try
+   * cheaper tiers it loops forever on the same data. Flip true if you have a
+   * tier-balanced label distribution OR want to re-enable for experimentation.
+   */
+  autoRetrainEnabled?: boolean;
 }
 
 export interface AgentTemplate {
