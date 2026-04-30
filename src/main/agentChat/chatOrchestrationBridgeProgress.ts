@@ -97,6 +97,8 @@ function handleCompletedProgress(
   progress: ProviderProgressEvent,
 ): void {
   stopIncrementalFlush(ctx);
+  // Wave 57 Phase C — close any Task child sessions that didn't complete.
+  closeOpenSubagents(ctx, 'success');
   if (progress.tokenUsage) {
     ctx.tokenUsage = progress.tokenUsage;
     if (ctx.estimatedHistoryTokens && ctx.estimatedHistoryTokens > 0) {
