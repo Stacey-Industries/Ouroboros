@@ -48,9 +48,8 @@ npm run validate     # Full validation: typecheck + format + lint + test
 
 ## Important Warnings
 
-- **NEVER kill Electron processes** (`taskkill /IM electron.exe`, `kill -9`). This project is developed from within itself — killing Electron kills the host IDE
-- **NEVER run `npm run dev` expecting a fresh window** — a running instance may already be open. Hot-reload updates the renderer in-place
 - **NEVER relax lint rules to pass commits** — use `--no-verify` only as a last resort
+- **`npm run build` writes to `out/`, but already-running processes (e.g., the codemode-proxy MCP subprocess for `ouroboros`) keep using the previously-loaded code in memory.** Restart the parent that forked the subprocess (typically the Claude Code session) to pick up rebuilt code.
 
 ## Pull Request Process
 

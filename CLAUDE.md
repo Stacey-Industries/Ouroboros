@@ -1,15 +1,12 @@
 # Ouroboros — Claude Code Instructions
 
-Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation. **Built by Claude Code, running inside itself.**
+Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation.
 
-## Meta-Development Warning
+## Build / reload notes
 
-This project is developed from within itself. Claude Code runs as a terminal session inside the Ouroboros — the very app being edited.
-
-- `npm run dev` is safe — it spawns its own Electron instance separate from the host. The host IDE keeps running unless explicitly closed.
-- Killing electron processes is permitted when needed. The host IDE is one of those processes; the user may have to relaunch it afterwards.
-- Hot-reload (`npm run dev` / Vite HMR) updates the renderer in-place without killing the window. Main-process changes require a relaunch.
-- For renderer-only changes, ask the user to reload with `Ctrl+R`. For main-process changes, ask them to relaunch.
+- `npm run dev` — spawns an Electron dev instance with Vite HMR for the renderer; main-process changes require restarting the dev instance.
+- `npm run build` — produces `out/`. Anything that loads from `out/` (notably the codemode proxy's `ouroboros` MCP server defined in `~/AppData/Local/Temp/codemode-proxy-config.json`) keeps using the previously-loaded code in memory. To pick up rebuilt code, restart whatever forked the subprocess (e.g., the Claude Code session that spawned the MCP server).
+- `npm run dist` — builds + packages with electron-builder for distribution.
 
 ## Gotcha maintenance rule
 

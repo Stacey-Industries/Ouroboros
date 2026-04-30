@@ -1088,8 +1088,6 @@ Things to be aware of that might confuse you:
    - Must NOT use the WebGL addon (it causes ghost cursor artefacts)
    - Must block OSC 10/11/12 sequences (they try to override theme colours)
 
-6. **Self-Hosted Development** — The app is literally developed from within itself. This means you can never kill the Electron process during development (that would terminate your own workspace). Use hot reload instead.
-
 ---
 
 ## Final Notes
