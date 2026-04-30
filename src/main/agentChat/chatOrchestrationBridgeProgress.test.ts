@@ -37,6 +37,10 @@ vi.mock('./chatOrchestrationBridgeProgressBlocks', () => ({
   handleContentBlock: vi.fn(),
 }));
 
+vi.mock('./chatOrchestrationBridgeSubagent', () => ({
+  closeOpenSubagents: vi.fn(),
+}));
+
 vi.mock('./tokenCalibration', () => ({
   tokenCalibrationStore: { recordObservation: vi.fn() },
 }));
@@ -59,6 +63,7 @@ function makeCtx(overrides: Partial<ActiveStreamContext> = {}): ActiveStreamCont
     accumulatedBlocks: [],
     monitorStartEmitted: false,
     streamEnded: false,
+    chatSubagentEmissions: new Map(),
     ...overrides,
   } as ActiveStreamContext;
 }
@@ -92,9 +97,7 @@ describe('handleProviderProgress', () => {
     const ctx = makeCtx({ streamEnded: true });
     const runtime = makeRuntime(ctx);
     // Should return early without calling any persist helpers
-    expect(() =>
-      handleProviderProgress(runtime, { status: 'streaming' } as never),
-    ).not.toThrow();
+    expect(() => handleProviderProgress(runtime, { status: 'streaming' } as never)).not.toThrow();
   });
 
   it('syncs claudeSessionId from claude-code provider event', async () => {

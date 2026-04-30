@@ -21,6 +21,7 @@ import {
 } from './chatOrchestrationBridgePersist';
 import { handleContentBlock } from './chatOrchestrationBridgeProgressBlocks';
 import { findContextForProgress } from './chatOrchestrationBridgeProgressHelpers';
+import { closeOpenSubagents } from './chatOrchestrationBridgeSubagent';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tokenCalibrationStore } from './tokenCalibration';
 
@@ -126,6 +127,8 @@ function handleCancelledProgress(
   now: number,
 ): void {
   stopIncrementalFlush(ctx);
+  // Wave 57 Phase C — close any Task child sessions that didn't complete.
+  closeOpenSubagents(ctx, 'cancelled');
   const hasContent = ctx.accumulatedText.length > 0 || ctx.accumulatedBlocks.length > 0;
   if (hasContent) {
     void persistCancelledTurn(ctx, runtime, now);
@@ -151,6 +154,8 @@ function handleFailedProgress(
   now: number,
 ): void {
   stopIncrementalFlush(ctx);
+  // Wave 57 Phase C — close any Task child sessions that didn't complete.
+  closeOpenSubagents(ctx, 'error');
   const errorMessage = progress.message || 'Provider task failed.';
   const hasContent = ctx.accumulatedText.length > 0 || ctx.accumulatedBlocks.length > 0;
   if (hasContent) {

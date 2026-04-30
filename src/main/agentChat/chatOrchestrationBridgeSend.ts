@@ -4,10 +4,7 @@ import { beginChatSessionLaunch } from '../hooks';
 import log from '../logger';
 import { captureHeadHash } from './chatOrchestrationBridgeGit';
 import { startIncrementalFlush, stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
-import {
-  failPendingSend,
-  inheritExistingLinkFields,
-} from './chatOrchestrationBridgeSendHelpers';
+import { failPendingSend, inheritExistingLinkFields } from './chatOrchestrationBridgeSendHelpers';
 import {
   buildAgentChatOrchestrationLink,
   buildAssistantMessageId,
@@ -130,6 +127,7 @@ export function buildStreamContext({
     ),
     sendStartedAt,
     outcomeTraceId: pending.outcomeTraceId ?? undefined,
+    chatSubagentEmissions: new Map(),
   };
 }
 
@@ -203,7 +201,10 @@ type ValidCreated = CreateTaskResult & {
 };
 
 type CreateAndLinkResult =
-  | { validCreated: ValidCreated; linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] } }
+  | {
+      validCreated: ValidCreated;
+      linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] };
+    }
   | AgentChatSendResult;
 
 async function createAndLinkTask(args: {
@@ -228,7 +229,11 @@ async function createAndLinkTask(args: {
     });
   }
   const et2 = Date.now();
-  const linked = await persistCreatedLink({ created, pending: args.pending, threadStore: args.threadStore });
+  const linked = await persistCreatedLink({
+    created,
+    pending: args.pending,
+    threadStore: args.threadStore,
+  });
   log.info('persistCreatedLink:', Date.now() - et2, 'ms');
   if (preSnapshotHash) linked.link.preSnapshotHash = preSnapshotHash;
   return { validCreated: created as ValidCreated, linked };

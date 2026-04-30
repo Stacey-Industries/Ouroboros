@@ -21,8 +21,8 @@ vi.mock('./config', () => ({
 import { resolveParentSessionId } from './agentChat/subagentLinkResolver';
 import { traceLink } from './agentChat/subagentLinkTrace';
 import { getConfigValue } from './config';
-import { enrichAgentStartPayload } from './hooksAgentStartEnrich';
 import type { HookPayload } from './hooks';
+import { enrichAgentStartPayload } from './hooksAgentStartEnrich';
 
 const mockResolve = vi.mocked(resolveParentSessionId);
 const mockTrace = vi.mocked(traceLink);

@@ -12,8 +12,8 @@ vi.mock('./subagentTracker', () => ({
   getParentSessionIdFor: vi.fn(),
 }));
 
-import { getParentSessionIdFor } from './subagentTracker';
 import { resolveParentSessionId } from './subagentLinkResolver';
+import { getParentSessionIdFor } from './subagentTracker';
 
 const mockGetParentSessionIdFor = vi.mocked(getParentSessionIdFor);
 
