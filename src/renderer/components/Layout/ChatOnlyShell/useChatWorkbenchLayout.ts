@@ -32,11 +32,14 @@ function parseProjectStates(raw: unknown): Record<string, ProjectRailState> {
 
 // ── Top-level layout state ─────────────────────────────────────────────────────
 
+export type RightPaneView = 'utility' | 'artifact';
+
 export interface ChatWorkbenchLayoutState {
   railOpen: boolean;
   artifactOpen: boolean;
   utilityOpen: boolean;
   activeUtilityTab: ChatWorkbenchUtilityTab;
+  lastRightPaneView: RightPaneView;
   activeProject: string | null;
   projectStates: Record<string, ProjectRailState>;
 }
@@ -49,9 +52,14 @@ export interface ChatWorkbenchLayoutApi extends ChatWorkbenchLayoutState {
   toggleUtility: () => void;
   setUtilityOpen: (open: boolean) => void;
   setActiveUtilityTab: (tab: ChatWorkbenchUtilityTab) => void;
-  setActiveProject: (projectPath: string) => void;
+  setActiveProject: (projectPath: string | null) => void;
   setActiveInnerTab: (projectPath: string, tab: InnerSidebarTab) => void;
   getProjectState: (projectPath: string) => ProjectRailState;
+  // Right pane (utility ⇄ artifact, mutually exclusive)
+  rightPaneOpen: boolean;
+  rightPaneView: RightPaneView | null;
+  toggleRightPane: () => void;
+  setRightPaneView: (view: RightPaneView) => void;
 }
 
 const DEFAULT_STATE: ChatWorkbenchLayoutState = {
@@ -59,9 +67,14 @@ const DEFAULT_STATE: ChatWorkbenchLayoutState = {
   artifactOpen: false,
   utilityOpen: false,
   activeUtilityTab: 'activity',
+  lastRightPaneView: 'utility',
   activeProject: null,
   projectStates: {},
 };
+
+function isRightPaneView(value: unknown): value is RightPaneView {
+  return value === 'utility' || value === 'artifact';
+}
 
 // ── Persistence ────────────────────────────────────────────────────────────────
 
@@ -88,6 +101,9 @@ function readPersisted(): ChatWorkbenchLayoutState {
       activeUtilityTab: isUtilityTab(parsed.activeUtilityTab)
         ? parsed.activeUtilityTab
         : DEFAULT_STATE.activeUtilityTab,
+      lastRightPaneView: isRightPaneView(parsed.lastRightPaneView)
+        ? parsed.lastRightPaneView
+        : DEFAULT_STATE.lastRightPaneView,
       activeProject: typeof parsed.activeProject === 'string' ? parsed.activeProject : null,
       projectStates: parseProjectStates(parsed.projectStates),
     };
@@ -109,17 +125,35 @@ function persist(state: ChatWorkbenchLayoutState): void {
 
 type Setter = React.Dispatch<React.SetStateAction<ChatWorkbenchLayoutState>>;
 
+function applyArtifactOpen(p: ChatWorkbenchLayoutState, open: boolean): ChatWorkbenchLayoutState {
+  if (!open) return { ...p, artifactOpen: false };
+  return { ...p, artifactOpen: true, utilityOpen: false, lastRightPaneView: 'artifact' };
+}
+
+function applyUtilityOpen(p: ChatWorkbenchLayoutState, open: boolean): ChatWorkbenchLayoutState {
+  if (!open) return { ...p, utilityOpen: false };
+  return { ...p, utilityOpen: true, artifactOpen: false, lastRightPaneView: 'utility' };
+}
+
+function applyToggleRightPane(p: ChatWorkbenchLayoutState): ChatWorkbenchLayoutState {
+  const open = p.utilityOpen || p.artifactOpen;
+  if (open) return { ...p, utilityOpen: false, artifactOpen: false };
+  return p.lastRightPaneView === 'artifact'
+    ? applyArtifactOpen(p, true)
+    : applyUtilityOpen(p, true);
+}
+
 function buildCallbacks(setState: Setter) {
   return {
     toggleRail: () => setState((p) => ({ ...p, railOpen: !p.railOpen })),
     setRailOpen: (open: boolean) => setState((p) => ({ ...p, railOpen: open })),
-    toggleArtifact: () => setState((p) => ({ ...p, artifactOpen: !p.artifactOpen })),
-    setArtifactOpen: (open: boolean) => setState((p) => ({ ...p, artifactOpen: open })),
-    toggleUtility: () => setState((p) => ({ ...p, utilityOpen: !p.utilityOpen })),
-    setUtilityOpen: (open: boolean) => setState((p) => ({ ...p, utilityOpen: open })),
+    toggleArtifact: () => setState((p) => applyArtifactOpen(p, !p.artifactOpen)),
+    setArtifactOpen: (open: boolean) => setState((p) => applyArtifactOpen(p, open)),
+    toggleUtility: () => setState((p) => applyUtilityOpen(p, !p.utilityOpen)),
+    setUtilityOpen: (open: boolean) => setState((p) => applyUtilityOpen(p, open)),
     setActiveUtilityTab: (tab: ChatWorkbenchUtilityTab) =>
       setState((p) => ({ ...p, activeUtilityTab: tab })),
-    setActiveProject: (projectPath: string) =>
+    setActiveProject: (projectPath: string | null) =>
       setState((p) => ({ ...p, activeProject: projectPath })),
     setActiveInnerTab: (projectPath: string, tab: InnerSidebarTab) =>
       setState((p) => ({
@@ -133,47 +167,58 @@ function buildCallbacks(setState: Setter) {
           },
         },
       })),
+    toggleRightPane: () => setState(applyToggleRightPane),
+    setRightPaneView: (view: RightPaneView) =>
+      setState((p) =>
+        view === 'artifact' ? applyArtifactOpen(p, true) : applyUtilityOpen(p, true),
+      ),
   };
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
 
+function useStableCallbacks(setState: Setter): ReturnType<typeof buildCallbacks> {
+  const cbs = buildCallbacks(setState);
+  /* eslint-disable react-hooks/exhaustive-deps */
+  return {
+    toggleRail: useCallback(cbs.toggleRail, [setState]),
+    setRailOpen: useCallback(cbs.setRailOpen, [setState]),
+    toggleArtifact: useCallback(cbs.toggleArtifact, [setState]),
+    setArtifactOpen: useCallback(cbs.setArtifactOpen, [setState]),
+    toggleUtility: useCallback(cbs.toggleUtility, [setState]),
+    setUtilityOpen: useCallback(cbs.setUtilityOpen, [setState]),
+    setActiveUtilityTab: useCallback(cbs.setActiveUtilityTab, [setState]),
+    setActiveProject: useCallback(cbs.setActiveProject, [setState]),
+    setActiveInnerTab: useCallback(cbs.setActiveInnerTab, [setState]),
+    toggleRightPane: useCallback(cbs.toggleRightPane, [setState]),
+    setRightPaneView: useCallback(cbs.setRightPaneView, [setState]),
+  };
+  /* eslint-enable react-hooks/exhaustive-deps */
+}
+
+function deriveRightPane(state: ChatWorkbenchLayoutState): {
+  rightPaneOpen: boolean;
+  rightPaneView: RightPaneView | null;
+} {
+  const rightPaneOpen = state.utilityOpen || state.artifactOpen;
+  const rightPaneView: RightPaneView | null = state.utilityOpen
+    ? 'utility'
+    : state.artifactOpen
+      ? 'artifact'
+      : null;
+  return { rightPaneOpen, rightPaneView };
+}
+
 export function useChatWorkbenchLayout(): ChatWorkbenchLayoutApi {
   const [state, setState] = useState<ChatWorkbenchLayoutState>(() => readPersisted());
-
   useEffect(() => {
     persist(state);
   }, [state]);
-
-  // Wrap each stable callback in useCallback so consumers get referential stability.
-  const cbs = buildCallbacks(setState);
-  const toggleRail = useCallback(cbs.toggleRail, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setRailOpen = useCallback(cbs.setRailOpen, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const toggleArtifact = useCallback(cbs.toggleArtifact, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setArtifactOpen = useCallback(cbs.setArtifactOpen, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const toggleUtility = useCallback(cbs.toggleUtility, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setUtilityOpen = useCallback(cbs.setUtilityOpen, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setActiveUtilityTab = useCallback(cbs.setActiveUtilityTab, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setActiveProject = useCallback(cbs.setActiveProject, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-  const setActiveInnerTab = useCallback(cbs.setActiveInnerTab, [setState]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  const callbacks = useStableCallbacks(setState);
   const getProjectState = useCallback(
     (projectPath: string): ProjectRailState =>
       state.projectStates[projectPath] ?? DEFAULT_PROJECT_STATE,
     [state.projectStates],
   );
-
-  return {
-    ...state,
-    toggleRail,
-    setRailOpen,
-    toggleArtifact,
-    setArtifactOpen,
-    toggleUtility,
-    setUtilityOpen,
-    setActiveUtilityTab,
-    setActiveProject,
-    setActiveInnerTab,
-    getProjectState,
-  };
+  return { ...state, ...callbacks, ...deriveRightPane(state), getProjectState };
 }

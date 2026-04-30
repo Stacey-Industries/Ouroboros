@@ -116,7 +116,7 @@ function applyUserServers(servers: Record<string, unknown> = {}): void {
 }
 
 function readWrittenConfig(configPath: string): {
-  mcpServers: Record<string, { url?: string; command?: string; args?: string[] }>;
+  mcpServers: Record<string, { url?: string; command?: string; args?: string[]; env?: Record<string, string> }>;
 } {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path produced by builder
   const raw = readFileSync(configPath, 'utf-8');

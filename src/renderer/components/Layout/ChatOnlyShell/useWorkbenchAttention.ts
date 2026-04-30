@@ -54,6 +54,8 @@ export function resolveSessionThread(
   }
   const linked = index.bySessionId.get(session.id)?.[0];
   if (linked) return linked;
+  const rooted = index.byWorkspaceRoot.get(session.projectRoot)?.[0];
+  if (rooted) return rooted;
   if (
     session.id === activeSessionId &&
     index.activeThread &&

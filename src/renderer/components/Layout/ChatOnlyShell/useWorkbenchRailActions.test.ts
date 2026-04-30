@@ -5,28 +5,39 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockState = {
+  threads: [] as Array<{
+    id: string;
+    workspaceRoot: string;
+    createdAt: number;
+    updatedAt: number;
+    title: string;
+    status: 'complete';
+    messages: [];
+    pinned: boolean;
+    version: 1;
+  }>,
+  activeThread: null as null | { id: string },
+  reloadThreads: vi.fn().mockResolvedValue(undefined),
+  onSelectThread: vi.fn(),
+};
+
 // Mock agentChatStore before module import
 vi.mock('../../AgentChat/agentChatStore', () => {
-  const state = {
-    threads: [],
-    activeThread: null,
-    onSelectThread: vi.fn(),
-  };
   const store = {
-    getState: () => state,
-    setState: vi.fn((fn: (s: typeof state) => typeof state) => {
-      Object.assign(state, fn(state));
+    getState: () => mockState,
+    setState: vi.fn((fn: (s: typeof mockState) => typeof mockState) => {
+      Object.assign(mockState, fn(mockState));
     }),
     subscribe: vi.fn(() => vi.fn()),
   };
   return {
     AgentChatStoreContext: { _currentValue: store },
-    useAgentChatStoreContext: (selector: (s: typeof state) => unknown) => selector(state),
+    useAgentChatStoreContext: (selector: (s: typeof mockState) => unknown) => selector(mockState),
   };
 });
 
 import { useWorkbenchRailActions } from './useWorkbenchRailActions';
-
 const mockDeleteThread = vi.fn().mockResolvedValue({ success: true });
 const mockPinThread = vi.fn().mockResolvedValue({ success: true });
 const mockListThreads = vi.fn().mockResolvedValue({ success: true, threads: [] });
@@ -52,6 +63,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  mockState.threads = [];
+  mockState.activeThread = null;
+  mockState.reloadThreads = vi.fn().mockResolvedValue(undefined);
 });
 
 describe('useWorkbenchRailActions', () => {
@@ -81,11 +95,25 @@ describe('useWorkbenchRailActions', () => {
   });
 
   it('onDeleteThread calls agentChat.deleteThread', async () => {
+    mockState.threads = [
+      {
+        id: 'thread-1',
+        workspaceRoot: '/workspace/alpha',
+        createdAt: 1,
+        updatedAt: 2,
+        title: 'Test',
+        status: 'complete',
+        messages: [],
+        pinned: false,
+        version: 1,
+      },
+    ];
     const { result } = renderHook(() => useWorkbenchRailActions());
     await act(async () => {
       await result.current.actions.onDeleteThread('thread-1');
     });
     expect(mockDeleteThread).toHaveBeenCalledWith('thread-1');
+    expect(mockState.reloadThreads).toHaveBeenCalledTimes(1);
   });
 
   it('onPinThread calls agentChat.pinThread', async () => {

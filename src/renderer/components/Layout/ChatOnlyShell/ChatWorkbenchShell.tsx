@@ -190,10 +190,8 @@ function ShellChrome({
         railOpen={layout.railOpen}
         onToggleTerminal={dock.toggleVisible}
         terminalOpen={dock.visible}
-        onToggleUtility={layout.toggleUtility}
-        utilityOpen={layout.utilityOpen}
-        onToggleArtifact={layout.toggleArtifact}
-        artifactOpen={layout.artifactOpen}
+        onToggleRightPane={layout.toggleRightPane}
+        rightPaneOpen={layout.rightPaneOpen}
       />
       <ChatWorkbenchBody
         dock={dock}

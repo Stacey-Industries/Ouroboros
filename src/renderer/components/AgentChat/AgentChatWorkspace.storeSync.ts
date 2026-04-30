@@ -113,6 +113,7 @@ function useSyncActionsIntoStore(
       onRerunSuccess: model.selectThread,
       onOpenLinkedDetails: model.openLinkedDetails,
       onOpenLinkedTask: model.openDetailsInOrchestration,
+      reloadThreads: model.reloadThreads,
       closeDetails: model.closeDetails,
       onChatOverridesChange: model.setChatOverrides,
       onAttachmentsChange: model.setAttachments,

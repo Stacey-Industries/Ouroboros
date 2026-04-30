@@ -1,6 +1,9 @@
 /**
- * WorkbenchPanelToggleStrip — icon-button strip for toggling workbench panels
- * (terminal, utility drawer, artifact pane) from the title bar.
+ * Workbench panel toggle buttons — terminal (bottom dock) and right-pane.
+ *
+ * The right pane consolidates the utility drawer + artifact pane (mutually
+ * exclusive) under a single toggle. The internal view is switched via a
+ * dropdown header inside the pane itself.
  */
 
 import React from 'react';
@@ -43,7 +46,15 @@ function PanelToggleBtn({
 
 function TerminalIcon(): React.ReactElement {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
       <polyline points="4,6 6.5,8 4,10" />
       <line x1="8" y1="10" x2="12" y2="10" />
@@ -51,63 +62,57 @@ function TerminalIcon(): React.ReactElement {
   );
 }
 
-function UtilityIcon(): React.ReactElement {
+function RightPaneIcon(): React.ReactElement {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
-      <line x1="1.5" y1="9.5" x2="14.5" y2="9.5" />
-    </svg>
-  );
-}
-
-function ArtifactIcon(): React.ReactElement {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
-      <line x1="9.5" y1="2.5" x2="9.5" y2="13.5" />
-    </svg>
-  );
-}
-
-export interface WorkbenchPanelToggleStripProps {
-  terminalOpen: boolean;
-  onToggleTerminal: () => void;
-  utilityOpen: boolean;
-  onToggleUtility: () => void;
-  artifactOpen: boolean;
-  onToggleArtifact: () => void;
-}
-
-function StripButtons({
-  terminalOpen, onToggleTerminal,
-  utilityOpen, onToggleUtility,
-  artifactOpen, onToggleArtifact,
-}: WorkbenchPanelToggleStripProps): React.ReactElement {
-  return (
-    <>
-      <PanelToggleBtn active={terminalOpen} label={terminalOpen ? 'Hide terminal' : 'Show terminal'} onToggle={onToggleTerminal} testId="workbench-toggle-terminal">
-        <TerminalIcon />
-      </PanelToggleBtn>
-      <PanelToggleBtn active={utilityOpen} label={utilityOpen ? 'Hide utility drawer' : 'Show utility drawer'} onToggle={onToggleUtility} testId="workbench-toggle-utility">
-        <UtilityIcon />
-      </PanelToggleBtn>
-      <PanelToggleBtn active={artifactOpen} label={artifactOpen ? 'Hide artifact pane' : 'Show artifact pane'} onToggle={onToggleArtifact} testId="workbench-toggle-artifact">
-        <ArtifactIcon />
-      </PanelToggleBtn>
-    </>
-  );
-}
-
-export function WorkbenchPanelToggleStrip(
-  props: WorkbenchPanelToggleStripProps,
-): React.ReactElement {
-  return (
-    <div
-      className="flex items-center gap-0.5"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      data-testid="workbench-panel-toggle-strip"
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
     >
-      <StripButtons {...props} />
-    </div>
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
+    </svg>
+  );
+}
+
+export function TerminalToggleButton({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <PanelToggleBtn
+      active={open}
+      label={open ? 'Hide terminal' : 'Show terminal'}
+      onToggle={onToggle}
+      testId="workbench-toggle-terminal"
+    >
+      <TerminalIcon />
+    </PanelToggleBtn>
+  );
+}
+
+export function RightPaneToggleButton({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <PanelToggleBtn
+      active={open}
+      label={open ? 'Hide right pane' : 'Show right pane'}
+      onToggle={onToggle}
+      testId="workbench-toggle-right-pane"
+    >
+      <RightPaneIcon />
+    </PanelToggleBtn>
   );
 }

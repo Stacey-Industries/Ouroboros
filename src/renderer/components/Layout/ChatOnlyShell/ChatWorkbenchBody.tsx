@@ -54,8 +54,9 @@ export function ChatWorkbenchBody({
   terminal,
 }: ChatWorkbenchBodyProps): React.ReactElement {
   const selectThread = useAgentChatStoreContext((state) => state.onSelectThread);
+  const reloadThreads = useAgentChatStoreContext((state) => state.reloadThreads);
   const state = useWorkbenchContextState(externalLayout, externalDock);
-  const handlers = useWorkbenchHandlers(state.activation, selectThread);
+  const handlers = useWorkbenchHandlers(state.activation, selectThread, reloadThreads);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-workbench-body">
@@ -71,7 +72,7 @@ export function ChatWorkbenchBody({
         compare={state.compare}
         dock={state.dock}
         layout={state.layout}
-        projectRoot={projectRoot}
+        projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
         terminal={terminal}
       />

@@ -5,7 +5,10 @@ import { OPEN_MULTI_SESSION_EVENT } from '../../../hooks/appEventNames';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
-import { createStoredSessionFromPicker } from '../../SessionSidebar/NewSessionButton';
+import {
+  createStoredSessionFromPicker,
+  createStoredSessionInProject,
+} from '../../SessionSidebar/NewSessionButton';
 import { useSessions } from '../../SessionSidebar/useSessions';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
 import type { TerminalDockApi } from './useTerminalDockState';
@@ -34,7 +37,7 @@ export interface WorkbenchContextState {
 }
 
 export interface WorkbenchHandlers {
-  handleCreateSession: () => Promise<void>;
+  handleCreateSession: (projectRoot?: string) => Promise<void>;
   handleLaunchAgent: () => void;
   handleSelectRecentChat: (threadId: string) => void;
   handleSelectSession: (sessionId: string) => void;
@@ -116,14 +119,21 @@ async function createThreadForSession(projectRoot: string): Promise<string | nul
 export function useWorkbenchHandlers(
   activation: ActivationState,
   selectThread: (threadId: string) => void,
+  reloadThreads?: () => Promise<void>,
 ): WorkbenchHandlers {
-  const handleCreateSession = React.useCallback(async (): Promise<void> => {
-    const session = await createStoredSessionFromPicker();
-    if (!session) return;
-    const threadId = await createThreadForSession(session.projectRoot);
-    await activation.activateSession(session.id);
-    if (threadId) selectThread(threadId);
-  }, [activation, selectThread]);
+  const handleCreateSession = React.useCallback(
+    async (projectRoot?: string): Promise<void> => {
+      const session = projectRoot
+        ? await createStoredSessionInProject(projectRoot)
+        : await createStoredSessionFromPicker();
+      if (!session) return;
+      const threadId = await createThreadForSession(session.projectRoot);
+      await activation.activateSession(session.id);
+      if (reloadThreads) await reloadThreads();
+      if (threadId) selectThread(threadId);
+    },
+    [activation, selectThread, reloadThreads],
+  );
   const handleLaunchAgent = React.useCallback((): void => {
     window.dispatchEvent(new CustomEvent(OPEN_MULTI_SESSION_EVENT));
   }, []);

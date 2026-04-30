@@ -118,7 +118,7 @@ function applyConfig(shape: ConfigShape): void {
 }
 
 function readWrittenConfig(configPath: string): {
-  mcpServers: Record<string, { url?: string; command?: string; args?: string[] }>;
+  mcpServers: Record<string, { url?: string; command?: string; args?: string[]; env?: Record<string, string> }>;
 } {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path produced by builder
   const raw = readFileSync(configPath, 'utf-8');
@@ -172,7 +172,7 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     // Sanity: without failure, the policy is route-through-codemode.
     const baseline = decideInternalMcpRouting({
       codemodeEnabled: true,
-      routeInternalMcp: true,
+      ouroborosExcludedFromMultiplex: false,
       internalMcpScope: 'task-gated',
       taskNeedsGraphTools: true,
       transport: 'stdio',

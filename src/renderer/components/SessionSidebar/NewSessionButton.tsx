@@ -35,6 +35,12 @@ export async function createStoredSessionFromPicker(): Promise<SessionRecord | n
   return createStoredSession(projectRoot);
 }
 
+export async function createStoredSessionInProject(
+  projectRoot: string,
+): Promise<SessionRecord | null> {
+  return createStoredSession(projectRoot);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export interface NewSessionButtonProps {

@@ -4,7 +4,7 @@
  * Channels:
  *   sessionCrud:list     — all sessions from sessionStore
  *   sessionCrud:active   — current window's active session id
- *   sessionCrud:create   — create + upsert + return new session
+ *   sessionCrud:create   — reuse existing repo session or create + upsert a new one
  *   sessionCrud:activate — set activeSessionId for a window
  *   sessionCrud:archive  — archive session by id (writes trash file)
  *   sessionCrud:restore  — restore archived session from trash
@@ -88,7 +88,14 @@ function handleCreate(args: unknown): HandlerResult<{ session: Session }> {
   }
   const store = getSessionStore();
   if (!store) return fail('sessionStore not initialised');
-  const session = makeSession(projectRoot);
+  const now = new Date().toISOString();
+  const existing = store
+    .listByProjectRoot(projectRoot)
+    .filter((session) => !session.archivedAt && session.deletedAt === undefined)
+    .sort(
+      (left, right) => new Date(right.lastUsedAt).getTime() - new Date(left.lastUsedAt).getTime(),
+    )[0];
+  const session = existing ? { ...existing, lastUsedAt: now } : makeSession(projectRoot);
   store.upsert(session);
   applyToSession(session.id, projectRoot);
   broadcastChanged();

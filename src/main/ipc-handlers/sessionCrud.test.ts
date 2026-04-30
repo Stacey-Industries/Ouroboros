@@ -173,6 +173,21 @@ describe('registerSessionCrudHandlers', () => {
     expect(store.listAll()).toHaveLength(1);
   });
 
+  it('sessionCrud:create reuses an existing active session for the same projectRoot', async () => {
+    const existing = makeSession('/projects/beta');
+    store.upsert(existing);
+    const handler = captureHandler('sessionCrud:create');
+    const result = (await handler?.(makeEvent(), { projectRoot: '/projects/beta' })) as {
+      success: boolean;
+      session: Session;
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.session.id).toBe(existing.id);
+    expect(store.listAll()).toHaveLength(1);
+    expect(store.getById(existing.id)?.lastUsedAt).toBe(result.session.lastUsedAt);
+  });
+
   it('sessionCrud:create fails without projectRoot', async () => {
     const handler = captureHandler('sessionCrud:create');
     const result = (await handler?.(makeEvent(), {})) as { success: boolean; error: string };

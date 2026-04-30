@@ -120,6 +120,45 @@ describe('useWorkbenchSessions', () => {
     });
   });
 
+  it('collapses duplicate project roots to one visible session and keeps chats on the canonical session', () => {
+    const { result } = renderHook(() =>
+      useWorkbenchSessions({
+        activeSessionId: 'session-newer',
+        sessions: [
+          makeSession({
+            id: 'session-older',
+            projectRoot: '/workspace/shared',
+            lastUsedAt: '2026-04-20T12:00:00.000Z',
+          }),
+          makeSession({
+            id: 'session-newer',
+            projectRoot: '/workspace/shared',
+            lastUsedAt: '2026-04-22T12:00:00.000Z',
+          }),
+          makeSession({
+            id: 'session-other',
+            projectRoot: '/workspace/other',
+            lastUsedAt: '2026-04-19T12:00:00.000Z',
+          }),
+        ],
+        threads: [
+          makeThread({
+            id: 'thread-shared',
+            workspaceRoot: '/workspace/shared',
+            latestOrchestration: { sessionId: 'session-older' },
+          }),
+        ],
+      }),
+    );
+
+    expect(result.current.items.map((item) => item.id)).toEqual(['session-newer', 'session-other']);
+    expect(result.current.items[0]).toMatchObject({
+      id: 'session-newer',
+      chatCount: 1,
+      linkedThreadId: 'thread-shared',
+    });
+  });
+
   it('derives terminal and chat counts and attaches linked thread attention', () => {
     const { result } = renderHook(() =>
       useWorkbenchSessions({
@@ -194,9 +233,17 @@ describe('useWorkbenchSessions', () => {
     const { result } = renderHook(() =>
       useWorkbenchSessions({
         sessions: [
-          makeSession({ id: 'active' }),
-          makeSession({ id: 'archived', archivedAt: '2026-04-21T00:00:00.000Z' }),
-          makeSession({ id: 'deleted', deletedAt: Date.now() - 10_000 }),
+          makeSession({ id: 'active', projectRoot: '/workspace/active' }),
+          makeSession({
+            id: 'archived',
+            projectRoot: '/workspace/archived',
+            archivedAt: '2026-04-21T00:00:00.000Z',
+          }),
+          makeSession({
+            id: 'deleted',
+            projectRoot: '/workspace/deleted',
+            deletedAt: Date.now() - 10_000,
+          }),
         ],
         activeSessionId: 'active',
       }),

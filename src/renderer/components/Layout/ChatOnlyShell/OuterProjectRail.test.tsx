@@ -130,6 +130,23 @@ describe('OuterProjectRail', () => {
     render(<OuterProjectRail {...makeProps({ projects: [], activeProject: null })} />);
     expect(screen.getByTestId('outer-project-rail')).toBeDefined();
   });
+
+  it('right-click opens the project context menu and Remove fires onRemoveProject', () => {
+    const onRemoveProject = vi.fn();
+    render(<OuterProjectRail {...makeProps({ onRemoveProject })} />);
+    const betaLabel = projectInitials(PROJECTS[1]);
+    fireEvent.contextMenu(screen.getByTestId(`project-icon-${betaLabel}`));
+    expect(screen.getByTestId('outer-project-rail-menu')).toBeDefined();
+    fireEvent.click(screen.getByTestId('outer-project-rail-menu-remove'));
+    expect(onRemoveProject).toHaveBeenCalledWith(PROJECTS[1]);
+  });
+
+  it('does not open the menu when onRemoveProject is not provided', () => {
+    render(<OuterProjectRail {...makeProps()} />);
+    const betaLabel = projectInitials(PROJECTS[1]);
+    fireEvent.contextMenu(screen.getByTestId(`project-icon-${betaLabel}`));
+    expect(screen.queryByTestId('outer-project-rail-menu')).toBeNull();
+  });
 });
 
 describe('projectInitials', () => {

@@ -51,6 +51,7 @@ describe('RegistryEntry', () => {
       projectName: 'my-project',
       refCount: 1,
       watcher: null,
+      nativeWatcherSubscription: null,
       createdAt: Date.now(),
       lastIndexStatus: 'idle',
     };
@@ -67,6 +68,7 @@ describe('RegistryEntry', () => {
       projectName: 'test',
       refCount: 0,
       watcher: null,
+      nativeWatcherSubscription: null,
       createdAt: 0,
       lastIndexStatus: 'disposed',
     };

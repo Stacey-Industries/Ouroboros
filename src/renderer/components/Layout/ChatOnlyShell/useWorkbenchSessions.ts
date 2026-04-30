@@ -7,6 +7,14 @@ import { useSessions } from '../../SessionSidebar/useSessions';
 import type { TerminalSession } from '../../Terminal/TerminalTabs';
 import type { WorkbenchAttentionState } from './useWorkbenchAttention';
 import { resolveSessionThread } from './useWorkbenchAttention';
+import {
+  buildThreadCounts,
+  buildThreadIndex,
+  dedupeSessionsByProjectRoot,
+  projectBasename,
+  relativeTime,
+  sessionStatus,
+} from './useWorkbenchSessions.helpers';
 
 const FALLBACK_CHAT_STORE = createAgentChatStore();
 const EMPTY_TERMINAL_SESSIONS: TerminalSession[] = [];
@@ -17,26 +25,6 @@ const NONE_ATTENTION: WorkbenchAttentionState = {
   tone: 'neutral',
   isSticky: false,
 };
-
-function projectBasename(root: string): string {
-  return root.replace(/\\/g, '/').split('/').filter(Boolean).at(-1) ?? root;
-}
-
-function relativeTime(iso: string, now: number): string {
-  const diffMs = Math.max(0, now - new Date(iso).getTime());
-  const diffMinutes = Math.floor(diffMs / 60_000);
-  if (diffMinutes < 1) return 'just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
-}
-
-function sessionStatus(session: SessionRecord): 'active' | 'archived' | 'deleted' {
-  if (session.deletedAt) return 'deleted';
-  if (session.archivedAt) return 'archived';
-  return 'active';
-}
 
 function compareBackgroundSessions(
   left: WorkbenchSessionItem,
@@ -55,60 +43,6 @@ function compareBackgroundSessions(
   return (
     new Date(right.rawSession.lastUsedAt).getTime() - new Date(left.rawSession.lastUsedAt).getTime()
   );
-}
-
-function dedupeSessions(sessions: SessionRecord[]): SessionRecord[] {
-  const byId = new Map<string, SessionRecord>();
-  for (const session of sessions) {
-    const current = byId.get(session.id);
-    if (
-      !current ||
-      new Date(session.lastUsedAt).getTime() > new Date(current.lastUsedAt).getTime()
-    ) {
-      byId.set(session.id, session);
-    }
-  }
-  return [...byId.values()];
-}
-
-function buildThreadCounts(threads: AgentChatThreadRecord[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const thread of threads) {
-    if (thread.deletedAt) continue;
-    counts.set(thread.workspaceRoot, (counts.get(thread.workspaceRoot) ?? 0) + 1);
-  }
-  return counts;
-}
-
-function buildThreadIndex(
-  threads: AgentChatThreadRecord[],
-  activeThreadId: string | null,
-): Parameters<typeof resolveSessionThread>[1] {
-  const activeThread = activeThreadId
-    ? (threads.find((thread) => thread.id === activeThreadId) ?? null)
-    : null;
-  const byConversationId = new Map<string, AgentChatThreadRecord>();
-  const bySessionId = new Map<string, AgentChatThreadRecord[]>();
-
-  for (const thread of threads) {
-    byConversationId.set(thread.id, thread);
-    const sessionId = thread.latestOrchestration?.sessionId;
-    if (!sessionId) continue;
-    const list = bySessionId.get(sessionId) ?? [];
-    list.push(thread);
-    bySessionId.set(sessionId, list);
-  }
-
-  for (const list of bySessionId.values()) {
-    list.sort((left, right) => right.updatedAt - left.updatedAt);
-  }
-
-  return {
-    activeThread,
-    byConversationId,
-    bySessionId,
-    sessionIds: new Set(bySessionId.keys()),
-  };
 }
 
 interface SessionItemArgs {
@@ -157,7 +91,7 @@ function toSessionItem(args: SessionItemArgs): WorkbenchSessionItem {
   } = args;
   const linkedThread = resolveSessionThread(session, threadIndex, activeSessionId);
   const terminalCount = resolveTerminalCount(session, terminalSessions);
-  const chatCount = threadCounts.get(session.projectRoot) ?? 0;
+  const chatCount = threadCounts.get(session.id) ?? 0;
   const hasActiveThread = hasMatchingActiveThread(session, activeThreadId, threads);
 
   return {
@@ -273,14 +207,41 @@ function useResolvedSessionOptions(options: UseWorkbenchSessionsOptions): Resolv
 }
 
 function useSessionItems(resolved: ResolvedSessionOptions): WorkbenchSessionItem[] {
-  const { sessions, activeSessionId, activeThreadId, now, threads, terminalSessions, attentionBySessionId } = resolved;
+  const {
+    sessions,
+    activeSessionId,
+    activeThreadId,
+    now,
+    threads,
+    terminalSessions,
+    attentionBySessionId,
+  } = resolved;
   return useMemo(() => {
-    const threadCounts = buildThreadCounts(threads);
+    const canonicalSessions = dedupeSessionsByProjectRoot(sessions);
+    const threadCounts = buildThreadCounts(threads, sessions);
     const threadIndex = buildThreadIndex(threads, activeThreadId);
-    return dedupeSessions(sessions).map((session) =>
-      toSessionItem({ session, activeSessionId, activeThreadId, now, threads, terminalSessions, threadCounts, attentionBySessionId, threadIndex }),
+    return canonicalSessions.map((session) =>
+      toSessionItem({
+        session,
+        activeSessionId,
+        activeThreadId,
+        now,
+        threads,
+        terminalSessions,
+        threadCounts,
+        attentionBySessionId,
+        threadIndex,
+      }),
     );
-  }, [activeSessionId, activeThreadId, attentionBySessionId, now, sessions, terminalSessions, threads]);
+  }, [
+    activeSessionId,
+    activeThreadId,
+    attentionBySessionId,
+    now,
+    sessions,
+    terminalSessions,
+    threads,
+  ]);
 }
 
 export function useWorkbenchSessions(

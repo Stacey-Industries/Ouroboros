@@ -91,28 +91,9 @@ describe('ChatOnlyTitleBar', () => {
     expect(screen.queryByText('Chat Mode')).toBeNull();
   });
 
-  it('shows Exit chat mode icon button (restored in Wave 44 Phase A)', () => {
+  it('does NOT show Exit chat mode button in the title bar (moved to View menu)', () => {
     renderTitleBar();
-    expect(screen.getByTitle('Exit chat mode')).toBeDefined();
-  });
-
-  it('dispatches TOGGLE_IMMERSIVE_CHAT_EVENT when Exit button is clicked', () => {
-    const dispatched: string[] = [];
-    const origDispatch = window.dispatchEvent.bind(window);
-    vi.spyOn(window, 'dispatchEvent').mockImplementation((evt: Event) => {
-      dispatched.push(evt.type);
-      return origDispatch(evt);
-    });
-    renderTitleBar();
-    fireEvent.click(screen.getByTitle('Exit chat mode'));
-    expect(dispatched).toContain('agent-ide:toggle-immersive-chat');
-    vi.restoreAllMocks();
-  });
-
-  it('Exit chat mode button has no visible text label (icon-only)', () => {
-    renderTitleBar();
-    const btn = screen.getByTitle('Exit chat mode');
-    expect(btn.textContent?.trim()).toBe('');
+    expect(screen.queryByTitle('Exit chat mode')).toBeNull();
   });
 
   it('does NOT mount ChatOnlyHeaderControls in title bar (Wave 44 Phase D)', () => {

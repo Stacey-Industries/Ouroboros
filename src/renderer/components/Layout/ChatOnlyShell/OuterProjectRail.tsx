@@ -9,7 +9,8 @@
  * Active project: filled accent background. Inactive: muted, hover tooltip.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useProject } from '../../../contexts/ProjectContext';
 import { WORKBENCH_OPEN_CHAT_SEARCH_EVENT } from '../../../hooks/appEventNames';
@@ -27,6 +28,14 @@ export interface OuterProjectRailProps {
   onAddProject: (projectPath: string) => void;
   /** Called when settings icon is clicked. */
   onOpenSettings: () => void;
+  /** Called when user removes a project from the rail (does not delete files). */
+  onRemoveProject?: (projectPath: string) => void;
+}
+
+interface ProjectMenuState {
+  path: string;
+  x: number;
+  y: number;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -55,10 +64,12 @@ const FOOTER_BTN_CLASS =
 function ProjectIconButton({
   isActive,
   onClick,
+  onContextMenu,
   path,
 }: {
   isActive: boolean;
   onClick: () => void;
+  onContextMenu?: (e: React.MouseEvent, path: string) => void;
   path: string;
 }): React.ReactElement {
   const label = projectInitials(path);
@@ -70,12 +81,70 @@ function ProjectIconButton({
       aria-label={`Switch to project ${title}`}
       aria-pressed={isActive}
       onClick={onClick}
+      onContextMenu={(e) => onContextMenu?.(e, path)}
       data-testid={`project-icon-${label}`}
       className={`${ICON_BTN_BASE} ${isActive ? ICON_BTN_ACTIVE : ICON_BTN_IDLE}`}
     >
       {label}
     </button>
   );
+}
+
+function useDismissOnOutside(onClose: () => void): void {
+  useEffect(() => {
+    let armed = false;
+    const arm = window.setTimeout(() => {
+      armed = true;
+    }, 0);
+    const handler = (): void => {
+      if (armed) onClose();
+    };
+    window.addEventListener('click', handler);
+    window.addEventListener('contextmenu', handler);
+    return () => {
+      window.clearTimeout(arm);
+      window.removeEventListener('click', handler);
+      window.removeEventListener('contextmenu', handler);
+    };
+  }, [onClose]);
+}
+
+interface ProjectContextMenuProps {
+  state: ProjectMenuState;
+  onRemove: (path: string) => void;
+  onClose: () => void;
+}
+
+function ProjectContextMenu({
+  state,
+  onRemove,
+  onClose,
+}: ProjectContextMenuProps): React.ReactElement {
+  useDismissOnOutside(onClose);
+  const node = (
+    <div
+      role="menu"
+      data-testid="outer-project-rail-menu"
+      className="fixed z-[1000] min-w-[180px] rounded border border-border-semantic bg-surface-overlay shadow-lg"
+      style={{ left: state.x, top: state.y }}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        data-testid="outer-project-rail-menu-remove"
+        onClick={() => {
+          onRemove(state.path);
+          onClose();
+        }}
+        className="flex w-full items-center px-3 py-1.5 text-left text-xs text-text-semantic-primary hover:bg-surface-hover"
+      >
+        Remove from rail
+      </button>
+    </div>
+  );
+  return typeof document !== 'undefined' ? createPortal(node, document.body) : node;
 }
 
 function SearchIcon(): React.ReactElement {
@@ -143,10 +212,12 @@ function RailFooter({ onOpenSettings }: { onOpenSettings: () => void }): React.R
 function ProjectList({
   activeProject,
   onSelectProject,
+  onContextMenu,
   projects,
 }: {
   activeProject: string | null;
   onSelectProject: (p: string) => void;
+  onContextMenu?: (e: React.MouseEvent, path: string) => void;
   projects: string[];
 }): React.ReactElement {
   return (
@@ -156,6 +227,7 @@ function ProjectList({
           key={projectPath}
           isActive={projectPath === activeProject}
           onClick={() => onSelectProject(projectPath)}
+          onContextMenu={onContextMenu}
           path={projectPath}
         />
       ))}
@@ -179,37 +251,65 @@ function useAddProject(onAddProject: (path: string) => void): () => void {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
+function useProjectMenuState(): {
+  menu: ProjectMenuState | null;
+  open: (e: React.MouseEvent, path: string) => void;
+  close: () => void;
+} {
+  const [menu, setMenu] = useState<ProjectMenuState | null>(null);
+  const open = useCallback((e: React.MouseEvent, path: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ path, x: e.clientX, y: e.clientY });
+  }, []);
+  const close = useCallback(() => setMenu(null), []);
+  return { menu, open, close };
+}
+
+function AddProjectButton({ onClick }: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      title="Add project"
+      aria-label="Add project"
+      onClick={onClick}
+      data-testid="outer-rail-add-project"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg font-light text-text-semantic-muted transition-colors hover:bg-interactive-hover hover:text-text-semantic-primary"
+    >
+      +
+    </button>
+  );
+}
+
 export function OuterProjectRail({
   activeProject,
   onAddProject,
   onOpenSettings,
+  onRemoveProject,
   onSelectProject,
   projects,
 }: OuterProjectRailProps): React.ReactElement {
   const handleAdd = useAddProject(onAddProject);
+  const { menu, open, close } = useProjectMenuState();
+  const handleContextMenu = onRemoveProject ? open : undefined;
   return (
     <aside
       aria-label="Projects"
       data-testid="outer-project-rail"
       className="flex h-full w-[52px] shrink-0 flex-col items-center gap-1.5 overflow-hidden border-r border-border-semantic bg-surface-panel/95 py-2"
     >
-      <button
-        type="button"
-        title="Add project"
-        aria-label="Add project"
-        onClick={handleAdd}
-        data-testid="outer-rail-add-project"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg font-light text-text-semantic-muted transition-colors hover:bg-interactive-hover hover:text-text-semantic-primary"
-      >
-        +
-      </button>
+      <AddProjectButton onClick={handleAdd} />
       <div className="mx-auto h-px w-8 shrink-0 bg-border-semantic" />
       <ProjectList
         activeProject={activeProject}
         onSelectProject={onSelectProject}
+        onContextMenu={handleContextMenu}
         projects={projects}
       />
       <RailFooter onOpenSettings={onOpenSettings} />
+      {menu && onRemoveProject && (
+        <ProjectContextMenu state={menu} onRemove={onRemoveProject} onClose={close} />
+      )}
     </aside>
   );
 }

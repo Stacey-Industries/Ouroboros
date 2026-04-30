@@ -5,74 +5,56 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { WorkbenchPanelToggleStrip } from './WorkbenchPanelToggleStrip';
+import { RightPaneToggleButton, TerminalToggleButton } from './WorkbenchPanelToggleStrip';
 
-function makeProps(overrides: Partial<React.ComponentProps<typeof WorkbenchPanelToggleStrip>> = {}) {
-  return {
-    terminalOpen: false,
-    onToggleTerminal: vi.fn(),
-    utilityOpen: false,
-    onToggleUtility: vi.fn(),
-    artifactOpen: false,
-    onToggleArtifact: vi.fn(),
-    ...overrides,
-  };
-}
+afterEach(cleanup);
 
-afterEach(() => cleanup());
-
-describe('WorkbenchPanelToggleStrip', () => {
-  it('renders all three toggle buttons', () => {
-    render(<WorkbenchPanelToggleStrip {...makeProps()} />);
+describe('TerminalToggleButton', () => {
+  it('renders with the correct testid', () => {
+    render(<TerminalToggleButton open={false} onToggle={vi.fn()} />);
     expect(screen.getByTestId('workbench-toggle-terminal')).toBeDefined();
-    expect(screen.getByTestId('workbench-toggle-utility')).toBeDefined();
-    expect(screen.getByTestId('workbench-toggle-artifact')).toBeDefined();
   });
 
-  it('calls onToggleTerminal when terminal button is clicked', () => {
-    const onToggleTerminal = vi.fn();
-    render(<WorkbenchPanelToggleStrip {...makeProps({ onToggleTerminal })} />);
+  it('fires onToggle when clicked', () => {
+    const onToggle = vi.fn();
+    render(<TerminalToggleButton open={false} onToggle={onToggle} />);
     fireEvent.click(screen.getByTestId('workbench-toggle-terminal'));
-    expect(onToggleTerminal).toHaveBeenCalledOnce();
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 
-  it('calls onToggleUtility when utility button is clicked', () => {
-    const onToggleUtility = vi.fn();
-    render(<WorkbenchPanelToggleStrip {...makeProps({ onToggleUtility })} />);
-    fireEvent.click(screen.getByTestId('workbench-toggle-utility'));
-    expect(onToggleUtility).toHaveBeenCalledOnce();
-  });
-
-  it('calls onToggleArtifact when artifact button is clicked', () => {
-    const onToggleArtifact = vi.fn();
-    render(<WorkbenchPanelToggleStrip {...makeProps({ onToggleArtifact })} />);
-    fireEvent.click(screen.getByTestId('workbench-toggle-artifact'));
-    expect(onToggleArtifact).toHaveBeenCalledOnce();
-  });
-
-  it('sets aria-pressed=true on terminal button when terminalOpen is true', () => {
-    render(<WorkbenchPanelToggleStrip {...makeProps({ terminalOpen: true })} />);
+  it('reflects open state via aria-pressed and label', () => {
+    const { rerender } = render(<TerminalToggleButton open={true} onToggle={vi.fn()} />);
     const btn = screen.getByTestId('workbench-toggle-terminal');
     expect(btn.getAttribute('aria-pressed')).toBe('true');
-  });
-
-  it('sets aria-pressed=false on utility button when utilityOpen is false', () => {
-    render(<WorkbenchPanelToggleStrip {...makeProps({ utilityOpen: false })} />);
-    const btn = screen.getByTestId('workbench-toggle-utility');
-    expect(btn.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('shows "Hide artifact pane" label when artifactOpen is true', () => {
-    render(<WorkbenchPanelToggleStrip {...makeProps({ artifactOpen: true })} />);
-    expect(screen.getByTestId('workbench-toggle-artifact').getAttribute('aria-label')).toBe(
-      'Hide artifact pane',
+    expect(btn.getAttribute('title')).toBe('Hide terminal');
+    rerender(<TerminalToggleButton open={false} onToggle={vi.fn()} />);
+    expect(screen.getByTestId('workbench-toggle-terminal').getAttribute('title')).toBe(
+      'Show terminal',
     );
   });
+});
 
-  it('shows "Show terminal" label when terminalOpen is false', () => {
-    render(<WorkbenchPanelToggleStrip {...makeProps({ terminalOpen: false })} />);
-    expect(screen.getByTestId('workbench-toggle-terminal').getAttribute('aria-label')).toBe(
-      'Show terminal',
+describe('RightPaneToggleButton', () => {
+  it('renders with the correct testid', () => {
+    render(<RightPaneToggleButton open={false} onToggle={vi.fn()} />);
+    expect(screen.getByTestId('workbench-toggle-right-pane')).toBeDefined();
+  });
+
+  it('fires onToggle when clicked', () => {
+    const onToggle = vi.fn();
+    render(<RightPaneToggleButton open={false} onToggle={onToggle} />);
+    fireEvent.click(screen.getByTestId('workbench-toggle-right-pane'));
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it('reflects open state via aria-pressed and label', () => {
+    const { rerender } = render(<RightPaneToggleButton open={true} onToggle={vi.fn()} />);
+    const btn = screen.getByTestId('workbench-toggle-right-pane');
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(btn.getAttribute('title')).toBe('Hide right pane');
+    rerender(<RightPaneToggleButton open={false} onToggle={vi.fn()} />);
+    expect(screen.getByTestId('workbench-toggle-right-pane').getAttribute('title')).toBe(
+      'Show right pane',
     );
   });
 });

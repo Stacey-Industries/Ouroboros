@@ -22,8 +22,8 @@ import fs from 'fs/promises';
 
 import log from '../logger';
 import {
-  deleteRestorationFile,
   augmentProxyServers,
+  deleteRestorationFile,
   getProjectEntry,
   getProjectsMap,
   isProjectServerEnabled,

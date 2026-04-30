@@ -150,6 +150,9 @@ vi.mock('./useChatSidebarMode', () => ({
 vi.mock('../../../contexts/ProjectContext', () => ({
   useProject: () => ({ projectRoot: '/test/project', projectRoots: ['/test/project'] }),
 }));
+vi.mock('../../FileTree/FileTree', () => ({
+  FileTree: () => <div data-testid="mock-file-tree" />,
+}));
 vi.mock('../../../hooks/useRulesAndSkills', () => ({
   useRulesAndSkills: () => ({
     rules: [],
@@ -210,11 +213,24 @@ describe('Rail IA (Wave 59 two-tier rail)', () => {
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 
-  it('exposes a + New session affordance somewhere in the inner sidebar', () => {
+  it('exposes a + New chat affordance in the inner sidebar when a project is active', () => {
+    window.localStorage.setItem(
+      'agent-ide:chat-workbench-layout',
+      JSON.stringify({
+        railOpen: true,
+        artifactOpen: false,
+        utilityOpen: false,
+        activeUtilityTab: 'activity',
+        activeProject: '/test/project',
+        projectStates: {},
+      }),
+    );
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     const innerSidebar = screen.getByTestId('inner-sidebar');
-    const labels = within(innerSidebar).queryAllByRole('button').map((b) => b.textContent ?? '');
-    expect(labels.some((l) => /new session/i.test(l))).toBe(true);
+    const labels = within(innerSidebar)
+      .queryAllByRole('button')
+      .map((b) => b.textContent ?? '');
+    expect(labels.some((l) => /new chat/i.test(l))).toBe(true);
   });
 
   it('renders without crashing when sessions are present', () => {
@@ -267,7 +283,12 @@ describe('Utility drawer — real surface policy join', () => {
     // Force drawer open via localStorage to avoid needing a trigger
     window.localStorage.setItem(
       'agent-ide:chat-workbench-layout',
-      JSON.stringify({ railOpen: true, artifactOpen: false, utilityOpen: true, activeUtilityTab: 'rules' }),
+      JSON.stringify({
+        railOpen: true,
+        artifactOpen: false,
+        utilityOpen: true,
+        activeUtilityTab: 'rules',
+      }),
     );
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
@@ -277,7 +298,12 @@ describe('Utility drawer — real surface policy join', () => {
   it('real close button dismisses the drawer', () => {
     window.localStorage.setItem(
       'agent-ide:chat-workbench-layout',
-      JSON.stringify({ railOpen: true, artifactOpen: false, utilityOpen: true, activeUtilityTab: 'activity' }),
+      JSON.stringify({
+        railOpen: true,
+        artifactOpen: false,
+        utilityOpen: true,
+        activeUtilityTab: 'activity',
+      }),
     );
     render(<ChatWorkbenchShell {...buildShellProps()} />);
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();

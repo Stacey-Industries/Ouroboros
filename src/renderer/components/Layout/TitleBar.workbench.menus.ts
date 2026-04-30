@@ -145,7 +145,7 @@ function buildWorkbenchViewMenu(): MenuDefinition {
       },
       SEPARATOR,
       {
-        label: 'Switch to IDE Shell',
+        label: 'Exit Chat Mode',
         shortcut: 'Ctrl+Alt+I',
         action: () => dispatchEv(TOGGLE_IMMERSIVE_CHAT_EVENT),
       },

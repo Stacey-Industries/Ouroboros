@@ -12,14 +12,14 @@
  * reflects current mode. onToggleDrawer kept for hidden-mode overlay compat.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
+import ouroborosLogo from '../../../../../public/OUROBOROS.png';
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
-import { TOGGLE_IMMERSIVE_CHAT_EVENT } from '../../../hooks/appEventNames';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 import { WorkbenchMenuBar } from './WorkbenchMenuBar';
-import { WorkbenchPanelToggleStrip } from './WorkbenchPanelToggleStrip';
+import { RightPaneToggleButton, TerminalToggleButton } from './WorkbenchPanelToggleStrip';
 import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
 
 // ── Window controls (win32 only) ──────────────────────────────────────────────
@@ -143,6 +143,20 @@ function sidebarModeLabel(mode: ChatSidebarMode): string {
   return 'Sidebar hidden — click to pin';
 }
 
+// ── TitleBarLogo ──────────────────────────────────────────────────────────────
+
+function TitleBarLogo(): React.ReactElement {
+  return (
+    <img
+      className="titlebar-no-drag select-none shrink-0"
+      src={ouroborosLogo}
+      alt="Ouroboros"
+      draggable={false}
+      style={{ height: 20, width: 20, objectFit: 'contain', opacity: 0.9 }}
+    />
+  );
+}
+
 // ── TitleBarLeft ──────────────────────────────────────────────────────────────
 
 interface TitleBarLeftProps {
@@ -158,65 +172,25 @@ function TitleBarLeft({
   onCycleSidebarMode,
   isWorkbench,
 }: TitleBarLeftProps): React.ReactElement {
+  if (isWorkbench) return <TitleBarLogo />;
   return (
     <>
-      {!isWorkbench && (
-        <button
-          className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          onClick={onCycleSidebarMode}
-          title={sidebarModeLabel(sidebarMode)}
-          aria-label={sidebarModeLabel(sidebarMode)}
-          data-testid="sidebar-cycle-button"
-        >
-          <SidebarToggleIcon mode={sidebarMode} />
-        </button>
-      )}
+      <button
+        className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        onClick={onCycleSidebarMode}
+        title={sidebarModeLabel(sidebarMode)}
+        aria-label={sidebarModeLabel(sidebarMode)}
+        data-testid="sidebar-cycle-button"
+      >
+        <SidebarToggleIcon mode={sidebarMode} />
+      </button>
       {projectName && (
         <span className="text-sm font-medium text-text-semantic-primary truncate max-w-[160px]">
           {projectName}
         </span>
       )}
     </>
-  );
-}
-
-// ── ExitChatButton ────────────────────────────────────────────────────────────
-
-function ExitChatIcon(): React.ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
-      <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
-      <polyline points="13,6.5 14.5,8 13,9.5" />
-    </svg>
-  );
-}
-
-function ExitChatButton(): React.ReactElement {
-  const handleClick = useCallback((): void => {
-    window.dispatchEvent(new CustomEvent(TOGGLE_IMMERSIVE_CHAT_EVENT));
-  }, []);
-  return (
-    <button
-      type="button"
-      className="flex items-center justify-center w-8 h-8 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover transition-colors shrink-0"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      onClick={handleClick}
-      title="Exit chat mode"
-      aria-label="Exit chat mode"
-    >
-      <ExitChatIcon />
-    </button>
   );
 }
 
@@ -237,7 +211,6 @@ function TitleBarRight(): React.ReactElement {
           {pendingCount} approval{pendingCount === 1 ? '' : 's'}
         </div>
       )}
-      <ExitChatButton />
       <WindowControls />
     </>
   );
@@ -259,10 +232,8 @@ export interface ChatOnlyTitleBarProps {
   /** Workbench panel toggles — shown only in workbench mode (when onToggleRail is set). */
   onToggleTerminal?: () => void;
   terminalOpen?: boolean;
-  onToggleUtility?: () => void;
-  utilityOpen?: boolean;
-  onToggleArtifact?: () => void;
-  artifactOpen?: boolean;
+  onToggleRightPane?: () => void;
+  rightPaneOpen?: boolean;
 }
 
 // ── WorkbenchControls — rail + panel strip, workbench-mode only ───────────────
@@ -272,29 +243,26 @@ function WorkbenchControls({
   railOpen,
   onToggleTerminal,
   terminalOpen,
-  onToggleUtility,
-  utilityOpen,
-  onToggleArtifact,
-  artifactOpen,
+  onToggleRightPane,
+  rightPaneOpen,
 }: Omit<
   ChatOnlyTitleBarProps,
   'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'
 >): React.ReactElement | null {
   if (onToggleRail === undefined) return null;
   return (
-    <>
+    <div
+      className="flex items-center gap-0.5"
+      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+    >
       <WorkbenchRailToggleButton railOpen={railOpen ?? false} onToggle={onToggleRail} />
-      {onToggleTerminal && onToggleUtility && onToggleArtifact && (
-        <WorkbenchPanelToggleStrip
-          terminalOpen={terminalOpen ?? false}
-          onToggleTerminal={onToggleTerminal}
-          utilityOpen={utilityOpen ?? false}
-          onToggleUtility={onToggleUtility}
-          artifactOpen={artifactOpen ?? false}
-          onToggleArtifact={onToggleArtifact}
-        />
+      {onToggleTerminal && (
+        <TerminalToggleButton open={terminalOpen ?? false} onToggle={onToggleTerminal} />
       )}
-    </>
+      {onToggleRightPane && (
+        <RightPaneToggleButton open={rightPaneOpen ?? false} onToggle={onToggleRightPane} />
+      )}
+    </div>
   );
 }
 
@@ -326,11 +294,11 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
           onCycleSidebarMode={onCycleSidebarMode}
           isWorkbench={isWorkbench}
         />
-        <WorkbenchControls {...props} />
+        {isWorkbench && <WorkbenchMenuBar />}
         <div className="flex-1" />
+        <WorkbenchControls {...props} />
         <TitleBarRight />
       </div>
-      {isWorkbench && <WorkbenchMenuBar />}
     </header>
   );
 }

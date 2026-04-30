@@ -108,6 +108,7 @@ export interface UseWorkbenchRecentChatsOptions {
   sessions?: SessionRecord[];
   threads?: AgentChatThreadRecord[];
   activeThreadId?: string | null;
+  activeProjectRoot?: string | null;
   attentionByThreadId?: Record<string, WorkbenchAttentionState>;
   now?: number;
 }
@@ -116,28 +117,83 @@ export interface UseWorkbenchRecentChatsResult {
   items: WorkbenchRecentChatItem[];
 }
 
-export function useWorkbenchRecentChats(
-  options: UseWorkbenchRecentChatsOptions = {},
-): UseWorkbenchRecentChatsResult {
+function threadMatchesProject(
+  thread: AgentChatThreadRecord,
+  activeProjectRoot: string | null,
+): boolean {
+  if (!activeProjectRoot) return false;
+  return thread.workspaceRoot === activeProjectRoot;
+}
+
+interface ResolvedRecentChatOptions {
+  sessions: SessionRecord[];
+  threads: AgentChatThreadRecord[];
+  activeThreadId: string | null;
+  activeProjectRoot: string | null;
+  attentionByThreadId: Record<string, WorkbenchAttentionState>;
+  now: number;
+}
+
+interface RecentChatStoreSlice {
+  sessionsState: ReturnType<typeof useSessions>;
+  storeThreads: AgentChatThreadRecord[];
+  storeActiveThreadId: string | null;
+}
+
+function useRecentChatStoreSlice(): RecentChatStoreSlice {
   const sessionsState = useSessions();
   const chatStore = useContext(AgentChatStoreContext) ?? FALLBACK_CHAT_STORE;
   const storeThreads = useStore(chatStore, (state) => state.threads);
   const storeActiveThread = useStore(chatStore, (state) => state.activeThread);
+  return {
+    sessionsState,
+    storeThreads,
+    storeActiveThreadId: storeActiveThread?.id ?? null,
+  };
+}
 
-  const sessions = options.sessions ?? sessionsState.sessions;
-  const threads = options.threads ?? storeThreads;
-  const activeThreadId = options.activeThreadId ?? storeActiveThread?.id ?? null;
-  const now = options.now ?? Date.now();
+function useResolvedRecentChatOptions(
+  options: UseWorkbenchRecentChatsOptions,
+): ResolvedRecentChatOptions {
+  const slice = useRecentChatStoreSlice();
+  return {
+    sessions: options.sessions ?? slice.sessionsState.sessions,
+    threads: options.threads ?? slice.storeThreads,
+    activeThreadId: options.activeThreadId ?? slice.storeActiveThreadId,
+    activeProjectRoot: options.activeProjectRoot ?? null,
+    attentionByThreadId: options.attentionByThreadId ?? {},
+    now: options.now ?? Date.now(),
+  };
+}
 
-  const items = useMemo(() => {
-    const attentionByThreadId = options.attentionByThreadId ?? {};
-    const visibleThreads = dedupeThreads(threads).filter((thread) => !thread.deletedAt);
+function buildRecentChatItems(resolved: ResolvedRecentChatOptions): WorkbenchRecentChatItem[] {
+  const { activeProjectRoot, activeThreadId, attentionByThreadId, now, sessions, threads } =
+    resolved;
+  if (!activeProjectRoot) return [];
+  const visibleThreads = dedupeThreads(threads).filter((thread) => !thread.deletedAt);
+  return visibleThreads
+    .map((thread) =>
+      buildRecentChatItem({ thread, sessions, activeThreadId, now, attentionByThreadId }),
+    )
+    .filter((item) => threadMatchesProject(item.rawThread, activeProjectRoot))
+    .sort(compareRecentChats);
+}
 
-    return visibleThreads
-      .map((thread) => buildRecentChatItem({ thread, sessions, activeThreadId, now, attentionByThreadId }))
-      .filter((item) => item.linkedSessionId === null)
-      .sort(compareRecentChats);
-  }, [activeThreadId, now, options.attentionByThreadId, sessions, threads]);
-
+export function useWorkbenchRecentChats(
+  options: UseWorkbenchRecentChatsOptions = {},
+): UseWorkbenchRecentChatsResult {
+  const resolved = useResolvedRecentChatOptions(options);
+  const items = useMemo(
+    () => buildRecentChatItems(resolved),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      resolved.activeProjectRoot,
+      resolved.activeThreadId,
+      resolved.attentionByThreadId,
+      resolved.now,
+      resolved.sessions,
+      resolved.threads,
+    ],
+  );
   return { items };
 }

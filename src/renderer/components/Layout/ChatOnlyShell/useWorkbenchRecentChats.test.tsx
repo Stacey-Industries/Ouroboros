@@ -47,18 +47,41 @@ function makeThread(overrides: Partial<AgentChatThreadRecord> = {}): AgentChatTh
 }
 
 describe('useWorkbenchRecentChats', () => {
-  it('dedupes repeated thread ids and excludes chats already linked to sessions', () => {
+  it('returns no items when no project is active', () => {
     const { result } = renderHook(() =>
       useWorkbenchRecentChats({
-        sessions: [makeSession({ conversationThreadId: 'thread-linked' })],
+        sessions: [makeSession()],
+        threads: [makeThread({ id: 'thread-a' })],
+      }),
+    );
+    expect(result.current.items).toEqual([]);
+  });
+
+  it('scopes chats to the active project via workspaceRoot match', () => {
+    const { result } = renderHook(() =>
+      useWorkbenchRecentChats({
+        activeProjectRoot: '/workspace/alpha',
+        sessions: [makeSession()],
         threads: [
-          makeThread({ id: 'thread-a', updatedAt: 20, title: 'Newest thread-a' }),
-          makeThread({ id: 'thread-a', updatedAt: 10, title: 'Older thread-a' }),
-          makeThread({ id: 'thread-linked', updatedAt: 30, title: 'Linked thread' }),
+          makeThread({ id: 'thread-alpha', workspaceRoot: '/workspace/alpha', updatedAt: 20 }),
+          makeThread({ id: 'thread-beta', workspaceRoot: '/workspace/beta', updatedAt: 30 }),
         ],
       }),
     );
+    expect(result.current.items.map((i) => i.id)).toEqual(['thread-alpha']);
+  });
 
+  it('dedupes repeated thread ids', () => {
+    const { result } = renderHook(() =>
+      useWorkbenchRecentChats({
+        activeProjectRoot: '/workspace/alpha',
+        sessions: [makeSession()],
+        threads: [
+          makeThread({ id: 'thread-a', updatedAt: 20, title: 'Newest thread-a' }),
+          makeThread({ id: 'thread-a', updatedAt: 10, title: 'Older thread-a' }),
+        ],
+      }),
+    );
     expect(result.current.items.map((item) => item.id)).toEqual(['thread-a']);
     expect(result.current.items[0]?.title).toBe('Newest thread-a');
   });
@@ -66,7 +89,9 @@ describe('useWorkbenchRecentChats', () => {
   it('orders active, pinned, and higher-attention chats ahead of stale chats', () => {
     const { result } = renderHook(() =>
       useWorkbenchRecentChats({
+        activeProjectRoot: '/workspace/alpha',
         activeThreadId: 'thread-active',
+        sessions: [makeSession()],
         threads: [
           makeThread({ id: 'thread-stale', updatedAt: 5 }),
           makeThread({ id: 'thread-pinned', updatedAt: 8, pinned: true }),

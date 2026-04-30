@@ -1,14 +1,14 @@
 /**
- * InnerSidebarChats — Chats tab content for the inner sidebar (Wave 59 Phase D).
+ * InnerSidebarChats — Chats tab content for the inner sidebar.
  *
- * Mirrors WorkbenchRail's session+chat list pattern but renders without a
- * surrounding aside / header — the InnerSidebar shell owns those. Keeps the
- * "+ New session" affordance at the top per the Phase D spec.
+ * Scoped to the active project: shows all chats whose workspaceRoot matches,
+ * ordered most-recent-first. A `+ New chat` button at the top creates a new
+ * chat in the active project. When no project is active, shows a CTA to pick
+ * one from the outer rail.
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 
-import { SESSION_SWITCH_EVENT } from '../../../hooks/appEventNames';
 import type {
   AgentChatThreadRecord,
   ApprovalRequest,
@@ -19,157 +19,122 @@ import { useWorkbenchRailActions } from './useWorkbenchRailActions';
 import {
   useWorkbenchRecentChats,
   type UseWorkbenchRecentChatsResult,
+  type WorkbenchRecentChatItem,
 } from './useWorkbenchRecentChats';
-import {
-  useWorkbenchSessions,
-  type UseWorkbenchSessionsResult,
-  type WorkbenchSessionItem,
-} from './useWorkbenchSessions';
 import {
   useRowContextMenu,
   WorkbenchRailContextMenu,
   type WorkbenchRowItem,
 } from './WorkbenchRailContextMenu';
-import { WorkbenchRailSections } from './WorkbenchRailSections';
+import { WorkbenchSessionRow } from './WorkbenchSessionRow';
 
 export interface InnerSidebarChatsProps {
-  activeSessionId: string | null;
+  activeProjectRoot: string | null;
   activeThreadId?: string | null;
   approvalRequests: ApprovalRequest[];
-  canCompareSession?: (item: WorkbenchSessionItem) => boolean;
-  compareSessionId?: string | null;
-  onCompareSession?: (sessionId: string) => void;
-  onCreateSession?: () => void;
+  onCreateChat?: () => void;
   onSelectRecentChat?: (threadId: string) => void;
-  onSelectSession?: (sessionId: string) => void;
   sessions: SessionRecord[];
   threads: AgentChatThreadRecord[];
 }
 
-function NewSessionRow({ onCreate }: { onCreate?: () => void }): React.ReactElement | null {
+function NewChatRow({ onCreate }: { onCreate?: () => void }): React.ReactElement | null {
   if (!onCreate) return null;
   return (
     <div className="shrink-0 border-b border-border-semantic px-3 py-2">
       <button
         type="button"
         onClick={onCreate}
-        data-testid="inner-chats-new-session"
+        data-testid="inner-chats-new-chat"
         className="w-full rounded border border-border-semantic bg-surface-panel px-2 py-1 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
       >
-        + New session
+        + New chat
       </button>
     </div>
   );
 }
 
-function EmptyChats({ isLoading }: { isLoading: boolean }): React.ReactElement {
+function NoProjectPrompt(): React.ReactElement {
   return (
-    <div className="flex flex-1 items-center justify-center p-4 text-center">
-      <p className="text-xs text-text-semantic-faint">
-        {isLoading ? 'Loading…' : 'No chats yet.'}
-      </p>
+    <div
+      className="flex flex-1 flex-col items-center justify-center px-4 text-center"
+      data-testid="inner-chats-no-project"
+    >
+      <p className="text-xs text-text-semantic-faint">Select a project to view its chats.</p>
     </div>
   );
 }
 
-interface ChatsState {
-  sessionState: UseWorkbenchSessionsResult;
-  recentChats: UseWorkbenchRecentChatsResult['items'];
+function EmptyChats(): React.ReactElement {
+  return (
+    <div className="flex flex-1 items-center justify-center p-4 text-center">
+      <p className="text-xs text-text-semantic-faint">No chats yet.</p>
+    </div>
+  );
 }
 
-function useChatsState(props: InnerSidebarChatsProps): ChatsState {
+function useChatsState(props: InnerSidebarChatsProps): UseWorkbenchRecentChatsResult {
   const attention = useWorkbenchAttention({
-    activeSessionId: props.activeSessionId,
+    activeSessionId: null,
     activeThreadId: props.activeThreadId ?? null,
     approvalRequests: props.approvalRequests,
     sessions: props.sessions,
     threads: props.threads,
   });
-  const sessionState = useWorkbenchSessions({
-    activeSessionId: props.activeSessionId,
+  return useWorkbenchRecentChats({
+    activeProjectRoot: props.activeProjectRoot,
     activeThreadId: props.activeThreadId ?? null,
-    attentionBySessionId: attention.sessionAttentionById,
+    attentionByThreadId: attention.chatAttentionById,
     sessions: props.sessions,
     threads: props.threads,
   });
-  const recentChatsState = useWorkbenchRecentChats({
-    activeThreadId: props.activeThreadId ?? null,
-    attentionByThreadId: attention.chatAttentionById,
-    sessions: sessionState.items.map((i) => i.rawSession),
-    threads: props.threads,
-  });
-  return { sessionState, recentChats: recentChatsState.items };
 }
 
-function useSessionSelectHandler(
-  onSelectSession: ((id: string) => void) | undefined,
-): (sessionId: string) => void {
-  return useCallback(
-    (sessionId: string) => {
-      if (onSelectSession) {
-        onSelectSession(sessionId);
-        return;
-      }
-      window.dispatchEvent(new CustomEvent(SESSION_SWITCH_EVENT, { detail: { sessionId } }));
-    },
-    [onSelectSession],
-  );
-}
-
-interface ChatsBodyProps {
-  canCompareSession?: (item: WorkbenchSessionItem) => boolean;
-  compareSessionId?: string | null;
-  onCompareSession?: (sessionId: string) => void;
+interface ChatsListProps {
+  items: WorkbenchRecentChatItem[];
   onContextMenu: (item: WorkbenchRowItem, e: React.MouseEvent) => void;
   onSelectRecentChat?: (threadId: string) => void;
-  onSelectSession: (id: string) => void;
-  recentChats: UseWorkbenchRecentChatsResult['items'];
-  sessionState: UseWorkbenchSessionsResult;
 }
 
-function ChatsBody(p: ChatsBodyProps): React.ReactElement {
-  const total = p.sessionState.activeItems.length + p.sessionState.backgroundItems.length;
-  if (total === 0 && p.recentChats.length === 0) {
-    return <EmptyChats isLoading={p.sessionState.isLoading} />;
-  }
+function ChatsList({
+  items,
+  onContextMenu,
+  onSelectRecentChat,
+}: ChatsListProps): React.ReactElement {
+  if (items.length === 0) return <EmptyChats />;
   return (
-    <WorkbenchRailSections
-      activeSessions={p.sessionState.activeItems}
-      backgroundSessions={p.sessionState.backgroundItems}
-      canCompareSession={p.canCompareSession}
-      compareSessionId={p.compareSessionId}
-      onCompareSession={p.onCompareSession}
-      onContextMenu={p.onContextMenu}
-      onSelectRecentChat={p.onSelectRecentChat}
-      onSelectSession={p.onSelectSession}
-      recentChats={p.recentChats}
-    />
+    <div className="flex flex-col" data-testid="inner-chats-list">
+      {items.map((item) => (
+        <WorkbenchSessionRow
+          key={item.id}
+          item={item}
+          onSelect={onSelectRecentChat}
+          onContextMenu={onContextMenu}
+        />
+      ))}
+    </div>
   );
 }
 
 export function InnerSidebarChats(props: InnerSidebarChatsProps): React.ReactElement {
-  const { sessionState, recentChats } = useChatsState(props);
-  const handleSelectSession = useSessionSelectHandler(props.onSelectSession);
+  const recent = useChatsState(props);
   const { actions } = useWorkbenchRailActions();
   const { menuState, openMenu, closeMenu } = useRowContextMenu();
+  const hasProject = Boolean(props.activeProjectRoot);
   return (
-    <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden"
-      data-testid="inner-sidebar-chats"
-    >
-      <NewSessionRow onCreate={props.onCreateSession} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <ChatsBody
-          canCompareSession={props.canCompareSession}
-          compareSessionId={props.compareSessionId}
-          onCompareSession={props.onCompareSession}
-          onContextMenu={openMenu}
-          onSelectRecentChat={props.onSelectRecentChat}
-          onSelectSession={handleSelectSession}
-          recentChats={recentChats}
-          sessionState={sessionState}
-        />
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inner-sidebar-chats">
+      {hasProject && <NewChatRow onCreate={props.onCreateChat} />}
+      {!hasProject ? (
+        <NoProjectPrompt />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <ChatsList
+            items={recent.items}
+            onContextMenu={openMenu}
+            onSelectRecentChat={props.onSelectRecentChat}
+          />
+        </div>
+      )}
       {menuState && (
         <WorkbenchRailContextMenu state={menuState} actions={actions} onClose={closeMenu} />
       )}

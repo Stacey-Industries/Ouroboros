@@ -23,7 +23,7 @@ afterEach(cleanup);
 
 function makeProps(overrides: Partial<InnerSidebarChatsProps> = {}): InnerSidebarChatsProps {
   return {
-    activeSessionId: null,
+    activeProjectRoot: null,
     activeThreadId: null,
     approvalRequests: [],
     sessions: [],
@@ -42,26 +42,69 @@ describe('InnerSidebarChats', () => {
     expect(screen.getByTestId('inner-sidebar-chats')).toBeDefined();
   });
 
-  it('shows the empty state when no sessions or chats', () => {
+  it('shows the no-project prompt when no project is active', () => {
     renderChats();
-    expect(screen.getByText(/no chats yet|loading/i)).toBeDefined();
+    expect(screen.getByTestId('inner-chats-no-project')).toBeDefined();
+    expect(screen.queryByTestId('inner-chats-new-chat')).toBeNull();
   });
 
-  it('renders + New session button only when handler provided', () => {
-    const onCreateSession = vi.fn();
-    renderChats({ onCreateSession });
-    expect(screen.getByTestId('inner-chats-new-session')).toBeDefined();
+  it('shows the + New chat row when a project is active', () => {
+    renderChats({ activeProjectRoot: '/proj/alpha', onCreateChat: vi.fn() });
+    expect(screen.getByTestId('inner-chats-new-chat')).toBeDefined();
+    expect(screen.queryByTestId('inner-chats-no-project')).toBeNull();
   });
 
-  it('does not render + New session button when handler omitted', () => {
-    renderChats();
-    expect(screen.queryByTestId('inner-chats-new-session')).toBeNull();
+  it('clicking + New chat fires the handler', () => {
+    const onCreateChat = vi.fn();
+    renderChats({ activeProjectRoot: '/proj/alpha', onCreateChat });
+    fireEvent.click(screen.getByTestId('inner-chats-new-chat'));
+    expect(onCreateChat).toHaveBeenCalledOnce();
   });
 
-  it('clicking + New session calls the handler', () => {
-    const onCreateSession = vi.fn();
-    renderChats({ onCreateSession });
-    fireEvent.click(screen.getByTestId('inner-chats-new-session'));
-    expect(onCreateSession).toHaveBeenCalledOnce();
+  it('shows the empty chats state when project is active and no chats match', () => {
+    renderChats({ activeProjectRoot: '/proj/alpha', threads: [] });
+    expect(screen.getByText(/no chats yet/i)).toBeDefined();
+  });
+
+  it('lists threads scoped to the active project, most-recent-first', () => {
+    const threads = [
+      {
+        version: 1,
+        id: 'thread-old',
+        workspaceRoot: '/proj/alpha',
+        createdAt: 1,
+        updatedAt: 10,
+        title: 'Older chat',
+        status: 'complete' as const,
+        messages: [],
+      },
+      {
+        version: 1,
+        id: 'thread-new',
+        workspaceRoot: '/proj/alpha',
+        createdAt: 1,
+        updatedAt: 50,
+        title: 'Newer chat',
+        status: 'complete' as const,
+        messages: [],
+      },
+      {
+        version: 1,
+        id: 'thread-other',
+        workspaceRoot: '/proj/beta',
+        createdAt: 1,
+        updatedAt: 99,
+        title: 'Other project',
+        status: 'complete' as const,
+        messages: [],
+      },
+    ];
+    renderChats({ activeProjectRoot: '/proj/alpha', threads });
+    const list = screen.getByTestId('inner-chats-list');
+    const ids = Array.from(list.children).map((el) =>
+      (el as HTMLElement).getAttribute('data-item-id'),
+    );
+    expect(ids).toEqual(['thread-new', 'thread-old']);
+    expect(ids).not.toContain('thread-other');
   });
 });

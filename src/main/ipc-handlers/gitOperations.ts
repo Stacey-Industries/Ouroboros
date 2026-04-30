@@ -12,6 +12,7 @@ import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchActivationEvent } from '../extensions';
 import log from '../logger';
+import { gitExec, gitStdout,MB } from '../util/gitExec';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat';
 import {
   getChangedFilesBetween,

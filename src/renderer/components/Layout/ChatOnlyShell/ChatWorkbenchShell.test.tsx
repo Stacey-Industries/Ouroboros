@@ -201,6 +201,7 @@ vi.mock('./useChatWorkbenchLayout', () => ({
     artifactOpen: mockArtifactOpen,
     utilityOpen: mockUtilityOpen,
     activeUtilityTab: mockActiveUtilityTab,
+    lastRightPaneView: mockUtilityOpen ? 'utility' : 'artifact',
     activeProject: null,
     projectStates: {},
     toggleRail: vi.fn(),
@@ -213,6 +214,10 @@ vi.mock('./useChatWorkbenchLayout', () => ({
     setActiveProject: vi.fn(),
     setActiveInnerTab: vi.fn(),
     getProjectState: vi.fn(() => ({ activeInnerTab: 'chats' as const })),
+    rightPaneOpen: mockArtifactOpen || mockUtilityOpen,
+    rightPaneView: mockUtilityOpen ? 'utility' : mockArtifactOpen ? 'artifact' : null,
+    toggleRightPane: vi.fn(),
+    setRightPaneView: vi.fn(),
   }),
 }));
 

@@ -102,6 +102,7 @@ export function useAgentChatActions(): AgentChatActions {
       onRerunSuccess: s.onRerunSuccess,
       onOpenLinkedDetails: s.onOpenLinkedDetails,
       onOpenLinkedTask: s.onOpenLinkedTask,
+      reloadThreads: s.reloadThreads,
       onSend: s.onSend,
       onStop: s.onStop,
       closeDetails: s.closeDetails,

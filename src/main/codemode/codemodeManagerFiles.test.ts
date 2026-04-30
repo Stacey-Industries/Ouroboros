@@ -19,8 +19,8 @@ vi.mock('../logger', () => ({
 import {
   atomicWriteJson,
   augmentProxyServers,
-  buildProxyServerEntry,
   buildContext7ProxyEntry,
+  buildProxyServerEntry,
   ensureProjectEntry,
   getProjectEntry,
   getProjectsMap,

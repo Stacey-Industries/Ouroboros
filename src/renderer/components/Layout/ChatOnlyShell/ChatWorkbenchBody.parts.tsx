@@ -1,7 +1,5 @@
-import React, { Suspense, useCallback, useMemo } from 'react';
+import React, { Suspense } from 'react';
 
-import { useProject } from '../../../contexts/ProjectContext';
-import { useConfig } from '../../../hooks/useConfig';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
@@ -14,159 +12,18 @@ import type {
   WorkbenchHandlers,
 } from './ChatWorkbenchBody.model';
 import { ChatWorkbenchComparePane } from './ChatWorkbenchComparePane';
-import { ChatWorkbenchUtilityDrawer } from './ChatWorkbenchUtilityDrawer';
-import { InnerSidebar } from './InnerSidebar';
-import { InnerSidebarChats } from './InnerSidebarChats';
-import { InnerSidebarCode } from './InnerSidebarCode';
-import { InnerSidebarTerminals } from './InnerSidebarTerminals';
-import { OuterProjectRail } from './OuterProjectRail';
 import { WorkbenchApprovalPrompt } from './WorkbenchApprovalPrompt';
+import { WorkbenchRightPane } from './WorkbenchRightPane';
 
 const ChatWorkbenchTerminalDock = React.lazy(() =>
   import('./ChatWorkbenchTerminalDock').then((m) => ({ default: m.ChatWorkbenchTerminalDock })),
 );
-const ChatWorkbenchArtifactPane = React.lazy(() =>
-  import('./ChatWorkbenchArtifactPane').then((m) => ({ default: m.ChatWorkbenchArtifactPane })),
-);
-
-// ── Project list helpers ───────────────────────────────────────────────────────
-
-function useWorkbenchProjects(): string[] {
-  const { projectRoots } = useProject();
-  const { config } = useConfig();
-  return useMemo(() => {
-    const seen = new Set<string>();
-    const merged: string[] = [];
-    for (const p of [...projectRoots, ...(config?.recentProjects ?? [])]) {
-      if (p && !seen.has(p)) {
-        seen.add(p);
-        merged.push(p);
-      }
-    }
-    return merged;
-  }, [projectRoots, config?.recentProjects]);
-}
 
 // ── Two-tier rail ─────────────────────────────────────────────────────────────
-
-export interface TwoTierRailSurfaceProps {
-  layout: LayoutState;
-  sessionsState: SessionsState;
-  threads: AgentChatThreadRecord[];
-  approvalRequests: ApprovalRequest[];
-  compare: CompareState;
-  handlers: WorkbenchHandlers;
-  terminal?: UseTerminalSessionsReturn;
-  dock: DockState;
-}
-
-function useRailHandlers(layout: LayoutState): {
-  handleSelectProject: (path: string) => void;
-  handleAddProject: (path: string) => void;
-  handleOpenSettings: () => void;
-  handleSelectTab: (tab: Parameters<typeof layout.setActiveInnerTab>[1]) => void;
-} {
-  const activeProject = layout.activeProject;
-  const handleSelectProject = useCallback(
-    (path: string) => layout.setActiveProject(path),
-    [layout],
-  );
-  const handleAddProject = useCallback((path: string) => layout.setActiveProject(path), [layout]);
-  const handleOpenSettings = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('agent-ide:open-settings'));
-  }, []);
-  const handleSelectTab = useCallback(
-    (tab: Parameters<typeof layout.setActiveInnerTab>[1]) => {
-      if (activeProject) layout.setActiveInnerTab(activeProject, tab);
-    },
-    [layout, activeProject],
-  );
-  return { handleSelectProject, handleAddProject, handleOpenSettings, handleSelectTab };
-}
-
-function buildInnerTabContents(props: {
-  activeProject: string | null;
-  approvalRequests: ApprovalRequest[];
-  compare: CompareState;
-  dock: DockState;
-  handlers: WorkbenchHandlers;
-  sessionsState: SessionsState;
-  terminal?: UseTerminalSessionsReturn;
-  threads: AgentChatThreadRecord[];
-}): {
-  chats: React.ReactNode;
-  terminals: React.ReactNode;
-  code: React.ReactNode;
-} {
-  const { activeProject, approvalRequests, compare, dock, handlers, sessionsState, terminal, threads } = props;
-  const openDock = (): void => {
-    dock.setVisible(true);
-  };
-  return {
-    chats: (
-      <InnerSidebarChats
-        activeSessionId={sessionsState.activeSessionId}
-        activeThreadId={null}
-        approvalRequests={approvalRequests}
-        compareSessionId={compare.compareTarget?.sessionId ?? null}
-        onCompareSession={compare.openCompare}
-        onCreateSession={() => {
-          void handlers.handleCreateSession();
-        }}
-        onSelectRecentChat={handlers.handleSelectRecentChat}
-        onSelectSession={handlers.handleSelectSession}
-        sessions={sessionsState.sessions}
-        threads={threads}
-      />
-    ),
-    terminals: <InnerSidebarTerminals terminal={terminal} onActivateInDock={openDock} />,
-    code: <InnerSidebarCode activeProject={activeProject} />,
-  };
-}
-
-function RailSurfaceView(props: {
-  activeProject: string | null;
-  activeTab: ReturnType<LayoutState['getProjectState']>['activeInnerTab'];
-  projects: string[];
-  railHandlers: ReturnType<typeof useRailHandlers>;
-  tabContents: ReturnType<typeof buildInnerTabContents>;
-}): React.ReactElement {
-  const { activeProject, activeTab, projects, railHandlers, tabContents } = props;
-  return (
-    <>
-      <OuterProjectRail
-        projects={projects}
-        activeProject={activeProject}
-        onSelectProject={railHandlers.handleSelectProject}
-        onAddProject={railHandlers.handleAddProject}
-        onOpenSettings={railHandlers.handleOpenSettings}
-      />
-      <InnerSidebar
-        activeProject={activeProject}
-        activeTab={activeTab}
-        onSelectTab={railHandlers.handleSelectTab}
-        chatsContent={tabContents.chats}
-        terminalsContent={tabContents.terminals}
-        codeContent={tabContents.code}
-      />
-    </>
-  );
-}
-
-export function TwoTierRailSurface(props: TwoTierRailSurfaceProps): React.ReactElement {
-  const { layout, ...rest } = props;
-  const activeProject = layout.activeProject;
-  const projectState = layout.getProjectState(activeProject ?? '');
-  return (
-    <RailSurfaceView
-      activeProject={activeProject}
-      activeTab={projectState.activeInnerTab}
-      projects={useWorkbenchProjects()}
-      railHandlers={useRailHandlers(layout)}
-      tabContents={buildInnerTabContents({ activeProject, ...rest })}
-    />
-  );
-}
+//
+// TwoTierRailSurface lives in ChatWorkbenchBody.rails.tsx. Re-exported here for
+// existing import sites.
+export { TwoTierRailSurface, type TwoTierRailSurfaceProps } from './ChatWorkbenchBody.rails';
 
 // ── Approval surface ───────────────────────────────────────────────────────────
 
@@ -233,22 +90,20 @@ function WorkbenchSidePanels({
 }: {
   layout: LayoutState;
   surfacePolicy: SurfacePolicyState;
-}): React.ReactElement {
+}): React.ReactElement | null {
+  if (!layout.rightPaneOpen || !layout.rightPaneView) return null;
+  const handleClose = (): void => {
+    if (layout.rightPaneView === 'artifact') surfacePolicy.closeArtifact();
+    else surfacePolicy.closeUtility();
+  };
   return (
-    <>
-      {layout.artifactOpen && (
-        <Suspense fallback={null}>
-          <ChatWorkbenchArtifactPane onClose={surfacePolicy.closeArtifact} />
-        </Suspense>
-      )}
-      {layout.utilityOpen && (
-        <ChatWorkbenchUtilityDrawer
-          activeTab={layout.activeUtilityTab}
-          onSelectTab={layout.setActiveUtilityTab}
-          onClose={surfacePolicy.closeUtility}
-        />
-      )}
-    </>
+    <WorkbenchRightPane
+      view={layout.rightPaneView}
+      activeUtilityTab={layout.activeUtilityTab}
+      onSelectUtilityTab={layout.setActiveUtilityTab}
+      onSelectView={layout.setRightPaneView}
+      onClose={handleClose}
+    />
   );
 }
 

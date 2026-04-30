@@ -141,7 +141,7 @@ function makeRailProps(overrides: Partial<TwoTierRailSurfaceProps> = {}): TwoTie
 }
 
 describe('Wave 59 — IA reshape integration', () => {
-  it('outer rail + inner sidebar render together with the active project label', () => {
+  it('outer project rail + inner sidebar render together with the active project label', () => {
     render(<TwoTierRailSurface {...makeRailProps()} />);
     expect(screen.getByTestId('outer-project-rail')).toBeDefined();
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();

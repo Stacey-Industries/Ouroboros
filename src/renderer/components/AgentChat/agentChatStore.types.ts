@@ -97,6 +97,7 @@ export interface AgentChatActions {
   onRerunSuccess: (newThreadId: string) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onOpenLinkedTask: () => void;
+  reloadThreads: () => Promise<void>;
   onSend: () => Promise<void>;
   onStop: () => Promise<void>;
   closeDetails: () => void;

@@ -5,6 +5,7 @@ export interface SessionThreadIndex {
   activeThread: AgentChatThreadRecord | null;
   byConversationId: Map<string, AgentChatThreadRecord>;
   bySessionId: Map<string, AgentChatThreadRecord[]>;
+  byWorkspaceRoot: Map<string, AgentChatThreadRecord[]>;
   sessionIds: Set<string>;
 }
 
@@ -66,6 +67,7 @@ export function buildSessionThreadIndex(
 ): SessionThreadIndex {
   const byConversationId = new Map<string, AgentChatThreadRecord>();
   const bySessionId = new Map<string, AgentChatThreadRecord[]>();
+  const byWorkspaceRoot = new Map<string, AgentChatThreadRecord[]>();
   const activeThread = activeThreadId
     ? (threads.find((t) => t.id === activeThreadId) ?? null)
     : null;
@@ -76,11 +78,23 @@ export function buildSessionThreadIndex(
     const list = bySessionId.get(sid) ?? [];
     list.push(thread);
     bySessionId.set(sid, list);
+    const rooted = byWorkspaceRoot.get(thread.workspaceRoot) ?? [];
+    rooted.push(thread);
+    byWorkspaceRoot.set(thread.workspaceRoot, rooted);
   }
   for (const list of bySessionId.values()) {
     list.sort((a, b) => threadUpdatedAt(b) - threadUpdatedAt(a));
   }
-  return { activeThread, byConversationId, bySessionId, sessionIds: new Set(bySessionId.keys()) };
+  for (const list of byWorkspaceRoot.values()) {
+    list.sort((a, b) => threadUpdatedAt(b) - threadUpdatedAt(a));
+  }
+  return {
+    activeThread,
+    byConversationId,
+    bySessionId,
+    byWorkspaceRoot,
+    sessionIds: new Set(bySessionId.keys()),
+  };
 }
 
 export function buildApprovalCounts(approvals: ApprovalRequest[]): Map<string, number> {

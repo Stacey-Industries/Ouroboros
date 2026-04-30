@@ -64,6 +64,7 @@ describe('useChatWorkbenchLayout', () => {
 
     act(() => {
       result.current.toggleRail();
+      // utility and artifact are mutually exclusive — opening utility after artifact closes artifact
       result.current.setArtifactOpen(true);
       result.current.toggleUtility();
       result.current.setActiveUtilityTab('subagents');
@@ -73,12 +74,35 @@ describe('useChatWorkbenchLayout', () => {
       expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
     });
 
-    // toggleRail starts from true (default) → false
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}')).toMatchObject({
       railOpen: false,
-      artifactOpen: true,
+      artifactOpen: false,
       utilityOpen: true,
       activeUtilityTab: 'subagents',
+      lastRightPaneView: 'utility',
     });
+  });
+
+  it('opens the last-used right pane view via toggleRightPane', () => {
+    const { result } = renderHook(() => useChatWorkbenchLayout());
+    // Default lastRightPaneView is 'utility'
+    act(() => result.current.toggleRightPane());
+    expect(result.current.utilityOpen).toBe(true);
+    expect(result.current.artifactOpen).toBe(false);
+    expect(result.current.rightPaneOpen).toBe(true);
+    expect(result.current.rightPaneView).toBe('utility');
+
+    act(() => result.current.setRightPaneView('artifact'));
+    expect(result.current.utilityOpen).toBe(false);
+    expect(result.current.artifactOpen).toBe(true);
+    expect(result.current.rightPaneView).toBe('artifact');
+
+    act(() => result.current.toggleRightPane());
+    expect(result.current.rightPaneOpen).toBe(false);
+
+    act(() => result.current.toggleRightPane());
+    // lastRightPaneView is now 'artifact', so toggle re-opens artifact
+    expect(result.current.artifactOpen).toBe(true);
+    expect(result.current.rightPaneView).toBe('artifact');
   });
 });

@@ -18,21 +18,6 @@ import type { WorkbenchRailActions } from './WorkbenchRailContextMenu';
 
 // ── Store helpers (mirrors ChatHistorySidebar pattern) ────────────────────────
 
-async function syncThreadsInStore(
-  store: AgentChatStoreInstance | null,
-  workspaceRoot: string | undefined,
-): Promise<void> {
-  if (!store || !workspaceRoot) return;
-  const result = await window.electronAPI?.agentChat?.listThreads?.(workspaceRoot);
-  const threads: AgentChatThreadRecord[] =
-    result?.success && result.threads ? result.threads : [];
-  store.setState((state: AgentChatStore) => ({
-    ...state,
-    threads,
-    activeThread: threads.find((t) => t.id === state.activeThread?.id) ?? null,
-  }));
-}
-
 function applyLocalDelete(store: AgentChatStoreInstance | null, id: string): void {
   if (!store) return;
   store.setState((state: AgentChatStore) => ({
@@ -50,6 +35,34 @@ export interface UseWorkbenchRailActionsResult {
   setRenameTarget: (t: AgentChatThreadRecord | null) => void;
 }
 
+async function listAndApply(store: AgentChatStoreInstance, workspaceRoot: string): Promise<void> {
+  const result = await window.electronAPI?.agentChat?.listThreads?.(workspaceRoot);
+  const threads: AgentChatThreadRecord[] = result?.success && result.threads ? result.threads : [];
+  store.setState((state: AgentChatStore) => ({
+    ...state,
+    threads,
+    activeThread: threads.find((t) => t.id === state.activeThread?.id) ?? null,
+  }));
+}
+
+async function refreshThreadsAfterMutation(
+  store: AgentChatStoreInstance | null,
+  workspaceRoot: string | undefined,
+  fallbackOnDelete?: (threadId: string) => void,
+  threadId?: string,
+): Promise<void> {
+  const reloadThreads = store?.getState().reloadThreads;
+  if (reloadThreads) {
+    await reloadThreads();
+    return;
+  }
+  if (store && workspaceRoot) {
+    await listAndApply(store, workspaceRoot);
+    return;
+  }
+  if (fallbackOnDelete && threadId !== undefined) fallbackOnDelete(threadId);
+}
+
 function useThreadActions(
   store: AgentChatStoreInstance | null,
   workspaceRoot: string | undefined,
@@ -57,15 +70,22 @@ function useThreadActions(
 ): Pick<WorkbenchRailActions, 'onDeleteThread' | 'onPinThread' | 'onRenameThread'> {
   const onDeleteThread = useCallback(
     async (threadId: string): Promise<void> => {
-      await window.electronAPI?.agentChat?.deleteThread?.(threadId);
-      applyLocalDelete(store, threadId);
+      const result = await window.electronAPI?.agentChat?.deleteThread?.(threadId);
+      if (result && typeof result === 'object' && 'success' in result && result.success === false)
+        return;
+      await refreshThreadsAfterMutation(
+        store,
+        workspaceRoot,
+        (id) => applyLocalDelete(store, id),
+        threadId,
+      );
     },
-    [store],
+    [store, workspaceRoot],
   );
   const onPinThread = useCallback(
     async (threadId: string, pinned: boolean): Promise<void> => {
       await window.electronAPI?.agentChat?.pinThread?.(threadId, pinned);
-      await syncThreadsInStore(store, workspaceRoot);
+      await refreshThreadsAfterMutation(store, workspaceRoot);
     },
     [store, workspaceRoot],
   );
