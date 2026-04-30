@@ -243,4 +243,29 @@ describe('AgentTree — restored parent in live group', () => {
     expect(screen.getByTestId('agent-card-rp-live')).toBeTruthy();
     expect(screen.getByTestId('agent-card-lc-live')).toBeTruthy();
   });
+
+  it('renders both cards when parent is restored:true + status:complete while child is running', () => {
+    // Production scenario: parent was persisted (complete+restored) and the
+    // live reconnect AGENT_START has not yet arrived. A live child has already
+    // started and points back to this parent. AgentTree must not hide the
+    // parent just because it carries status:'complete' + restored:true — the
+    // presence of a live child means this tree must still be visible.
+    const restoredCompleteParent = makeSession({
+      id: 'rp-complete',
+      taskLabel: 'Restored complete parent',
+      restored: true,
+      status: 'complete',
+    });
+    const liveChild = makeSession({
+      id: 'lc-running',
+      taskLabel: 'Live running child',
+      parentSessionId: 'rp-complete',
+      status: 'running',
+    });
+
+    render(<AgentTree sessions={[restoredCompleteParent, liveChild]} onDismiss={noop} />);
+
+    expect(screen.getByTestId('agent-card-rp-complete')).toBeTruthy();
+    expect(screen.getByTestId('agent-card-lc-running')).toBeTruthy();
+  });
 });

@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AgentState } from './useAgentEvents.helpers';
-import { initialAgentState, reducer } from './useAgentEvents.helpers';
+import { initialAgentState, isLiveSession, reducer } from './useAgentEvents.helpers';
 
 // ─── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -111,10 +111,10 @@ describe('AGENT_START with parentSessionId — live events', () => {
     expect(parent?.status).toBe('running');
     expect(parent?.restored).toBe(false);
 
-    // Verify the live bucket predicate matches
-    const isCurrent = (s: { status: string }) =>
-      s.status === 'running' || s.status === 'idle';
-    expect(withLiveParent.sessions.filter(isCurrent)).toHaveLength(2);
+    // Verify the live bucket predicate matches (uses production isLiveSession —
+    // not a locally-derived copy — so the test stays in sync if the predicate
+    // ever adds new live states such as 'paused').
+    expect(withLiveParent.sessions.filter(isLiveSession)).toHaveLength(2);
   });
 
   it('pendingSubagentLinks flushes when child arrives after parent mapping is known', () => {

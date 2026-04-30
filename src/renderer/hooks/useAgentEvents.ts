@@ -18,6 +18,7 @@ import {
   dispatchAgentEnd,
   dispatchTokenUpdate,
   initialAgentState,
+  isLiveSession,
   reducer,
 } from './useAgentEvents.helpers';
 import {
@@ -87,10 +88,7 @@ function useDerivedSessions(sessions: AgentSession[]): {
   // disk and then resumed (status flips back to 'running') belongs in the
   // active list, not the previous-sessions dropdown. The `restored` flag
   // remains an origin marker for cost-dedup and UI labelling.
-  const currentSessions = useMemo(
-    () => sessions.filter((s) => s.status === 'running' || s.status === 'idle'),
-    [sessions],
-  );
+  const currentSessions = useMemo(() => sessions.filter(isLiveSession), [sessions]);
   const historicalSessions = useMemo(
     () => sessions.filter((s) => s.status === 'complete' || s.status === 'error'),
     [sessions],

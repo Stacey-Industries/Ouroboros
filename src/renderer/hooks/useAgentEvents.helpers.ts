@@ -49,6 +49,11 @@ import {
 } from './useAgentEvents.taskReducers';
 import { finishToolCall, startToolCall } from './useAgentEvents.toolCallReducers';
 
+/** Returns true when a session belongs to the live (current) bucket. */
+export function isLiveSession(s: { status: string }): boolean {
+  return s.status === 'running' || s.status === 'idle';
+}
+
 export interface PendingSubagentStamp {
   parentSessionId: string;
   timestamp: number;
