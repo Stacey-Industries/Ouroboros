@@ -3,8 +3,8 @@
  * to keep the factory function and each handler under the max-lines-per-function limit.
  */
 
-import type { EdgeType, NodeLabel } from './graphDatabaseTypes';
 import type { GraphToolContext } from './mcpToolHandlers';
+import { hasOnlyQuery, runFilteredSearch, runRankedSearch } from './mcpToolHandlerSearch';
 import type { QueryEngine } from './queryEngine';
 
 // ─── Shared output helper ─────────────────────────────────────────────────────
@@ -18,60 +18,17 @@ export function truncate(text: string): string {
 
 // ─── Tool 5: search_graph handler ────────────────────────────────────────────
 
-function formatSearchNode(node: {
-  label: string;
-  name: string;
-  file_path?: string | null;
-  start_line?: number | null;
-  qualified_name: string;
-  props: unknown;
-}): string[] {
-  const props = node.props as Record<string, unknown>;
-  const sig = props.signature ? ` ${props.signature}` : '';
-  const loc = node.file_path
-    ? `${node.file_path}${node.start_line ? ':' + node.start_line : ''}`
-    : '';
-  const lines = [`${node.label} ${node.name}${sig}`];
-  if (loc) lines.push(`  ${loc}`);
-  lines.push(`  qualified: ${node.qualified_name}`, '');
-  return lines;
-}
-
 export async function handleSearchGraph(
   args: Record<string, unknown>,
   ctx: GraphToolContext,
 ): Promise<string> {
-  const { db, projectName } = ctx;
   const namePattern =
     (args.query as string | undefined) ?? (args.name_pattern as string | undefined);
-  const result = db.searchNodes({
-    project: (args.project as string) ?? projectName,
-    label: args.label as NodeLabel | undefined,
-    namePattern,
-    filePath: args.file_pattern as string | undefined,
-    relationship: args.relationship as EdgeType | undefined,
-    direction: args.direction as 'inbound' | 'outbound' | 'both' | undefined,
-    minDegree: args.min_degree as number | undefined,
-    maxDegree: args.max_degree as number | undefined,
-    excludeEntryPoints: args.exclude_entry_points as boolean | undefined,
-    caseSensitive: args.case_sensitive as boolean | undefined,
-    limit: (args.limit as number) ?? 100,
-    offset: (args.offset as number) ?? 0,
-  });
-
-  if (result.nodes.length === 0) return 'No matching nodes found.';
-
-  const lines = [`Found ${result.total} nodes (showing ${result.nodes.length}):`, ''];
-  for (const node of result.nodes) lines.push(...formatSearchNode(node));
-
-  if (result.has_more) {
-    const nextOffset = ((args.offset as number) ?? 0) + result.nodes.length;
-    lines.push(
-      `... ${result.total - result.nodes.length} more results. Use offset=${nextOffset} to see more.`,
-    );
+  // 3-tier ranked path when caller passed just `query` (no filter args).
+  if (namePattern && hasOnlyQuery(args)) {
+    return runRankedSearch(ctx, namePattern, (args.limit as number) ?? 100);
   }
-
-  return truncate(lines.join('\n'));
+  return runFilteredSearch(args, ctx, namePattern);
 }
 
 // ─── Tool 10: trace_call_path handler ────────────────────────────────────────

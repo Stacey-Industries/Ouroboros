@@ -973,19 +973,19 @@ describe('GraphDatabase', () => {
 
     it('user_version is set to SCHEMA_VERSION after migration', () => {
       const version = db.rawQuery('PRAGMA user_version') as Array<{ user_version: number }>;
-      expect(version[0].user_version).toBe(1);
+      expect(version[0].user_version).toBe(2);
     });
   });
 
-  // ─── Migration: v0 → v1 ─────────────────────────────────────────────
+  // ─── Migration: v0 → v2 (chained) ────────────────────────────────────
 
-  describe('migration v0 → v1', () => {
-    it('migration is idempotent on a fresh DB (already at v1)', () => {
+  describe('migration v0 → v2', () => {
+    it('migration is idempotent on a fresh DB (already at v2)', () => {
       // A fresh :memory: DB runs through migration on construction.
       // Creating a second instance should not throw.
       const db2 = new GraphDatabase(':memory:');
       const version = db2.rawQuery('PRAGMA user_version') as Array<{ user_version: number }>;
-      expect(version[0].user_version).toBe(1);
+      expect(version[0].user_version).toBe(2);
       db2.close();
     });
   });

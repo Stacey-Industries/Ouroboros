@@ -26,8 +26,10 @@ import {
   runGetNodesByDegree,
   runNodeDegreeQuery,
   runSearchNodes,
+  runSearchNodesRanked,
   SCHEMA_SQL,
 } from './graphDatabaseHelpers';
+import { migrateToV1, migrateToV2 } from './graphDatabaseMigrations';
 import { SCHEMA_VERSION } from './graphDatabaseSchema';
 import {
   detectChangesForSession,
@@ -78,20 +80,11 @@ export class GraphDatabase {
     const current = (this.db.pragma('user_version', { simple: true }) as number) ?? 0;
     if (current >= SCHEMA_VERSION) return;
     const txn = this.db.transaction(() => {
-      if (current < 1) this.migrateToV1();
+      if (current < 1) migrateToV1(this.db);
+      if (current < 2) migrateToV2(this.db);
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`);
     });
     txn();
-  }
-
-  private migrateToV1(): void {
-    const cols = this.db.pragma('table_info(projects)') as Array<{ name: string }>;
-    if (!cols.some((c) => c.name === 'last_opened_at')) {
-      this.db.exec('ALTER TABLE projects ADD COLUMN last_opened_at INTEGER NOT NULL DEFAULT 0');
-    }
-    this.db.exec(
-      'CREATE TABLE IF NOT EXISTS graph_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT',
-    );
   }
 
   private prepareStatements(): void {
@@ -235,6 +228,14 @@ export class GraphDatabase {
 
   searchNodesFts(query: string, limit: number = 100): GraphNode[] {
     return this.stmts.searchNodesFts.all(query, limit).map((r) => rowToNode(r));
+  }
+
+  searchNodesRanked(
+    project: string,
+    query: string,
+    limit: number = 100,
+  ): Array<GraphNode & { rank: number }> {
+    return runSearchNodesRanked(this.db, project, query, limit);
   }
 
   // ─── File hash tracking ─────────────────────────────────────────────────

@@ -115,8 +115,12 @@ describe('handleSearchGraph — parameter aliasing', () => {
 
   it('returns filtered results (not full table scan) when query is provided', async () => {
     const result = await handleSearchGraph({ query: 'helperFn' }, ctx);
-    // Should find 1 node, not 2
-    expect(result).toContain('Found 1 nodes');
+    // Wave 66: ranked path is taken when only `query` is supplied. Output uses
+    // "Found N ranked nodes:" with tier headers. The substantive assertion is that
+    // we found 1 node, not all 2 — the bug was a no-filter scan returning everything.
+    expect(result).toContain('Found 1 ranked nodes');
+    expect(result).toContain('helperFn');
+    expect(result).not.toContain('callerFn');
   });
 
   it('returns all nodes when no query filter is given', async () => {

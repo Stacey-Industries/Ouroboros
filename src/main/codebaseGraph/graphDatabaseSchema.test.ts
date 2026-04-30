@@ -17,8 +17,8 @@ describe('graphDatabaseSchema', () => {
       expect(SCHEMA_VERSION).toBeGreaterThan(0);
     });
 
-    it('equals 1 (Package 2 migration)', () => {
-      expect(SCHEMA_VERSION).toBe(1);
+    it('equals 2 (Wave 66 — confidence column on edges)', () => {
+      expect(SCHEMA_VERSION).toBe(2);
     });
   });
 

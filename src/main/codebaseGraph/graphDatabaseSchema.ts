@@ -7,6 +7,7 @@
  * Schema versions:
  *   0 → initial (no user_version set)
  *   1 → added last_opened_at to projects; added graph_metadata table
+ *   2 → added confidence REAL NOT NULL DEFAULT 1.0 to edges
  */
 
 // ─── Node label constants (informational — actual values are in graphDatabaseTypes.ts) ──
@@ -19,7 +20,7 @@
 //        CONFIGURES, WRITES, MEMBER_OF, TESTS, USES_TYPE, FILE_CHANGES_WITH,
 //        EXPORTS, EXTENDS
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
@@ -49,12 +50,13 @@ CREATE INDEX IF NOT EXISTS idx_nodes_name    ON nodes(name);
 CREATE INDEX IF NOT EXISTS idx_nodes_file    ON nodes(file_path);
 
 CREATE TABLE IF NOT EXISTS edges (
-  id        INTEGER PRIMARY KEY AUTOINCREMENT,
-  project   TEXT NOT NULL REFERENCES projects(name) ON DELETE CASCADE,
-  source_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  target_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  type      TEXT NOT NULL,
-  props     TEXT NOT NULL DEFAULT '{}',
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  project    TEXT NOT NULL REFERENCES projects(name) ON DELETE CASCADE,
+  source_id  TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  target_id  TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL,
+  props      TEXT NOT NULL DEFAULT '{}',
+  confidence REAL NOT NULL DEFAULT 1.0,
   UNIQUE(source_id, target_id, type)
 );
 

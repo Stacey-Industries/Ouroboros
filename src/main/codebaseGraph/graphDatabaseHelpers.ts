@@ -324,6 +324,33 @@ export function runSearchNodes(
   };
 }
 
+/**
+ * 3-tier ranked symbol search: exact (rank 0) > prefix (rank 1) > substring (rank 2).
+ * Tiers are mutually exclusive — no duplicates across tiers.
+ */
+export function runSearchNodesRanked(
+  db: Database.Database,
+  project: string,
+  query: string,
+  limit: number,
+): Array<GraphNode & { rank: number }> {
+  const sql = `
+    SELECT *, 0 AS rank FROM nodes WHERE project = ? AND name = ?
+    UNION ALL
+    SELECT *, 1 AS rank FROM nodes WHERE project = ? AND name LIKE ? || '%' AND name != ?
+    UNION ALL
+    SELECT *, 2 AS rank FROM nodes WHERE project = ? AND name LIKE '%' || ? || '%' AND name NOT LIKE ? || '%' AND name != ?
+    ORDER BY rank, name
+    LIMIT ?
+  `;
+  const rows = db
+    .prepare(sql)
+    .all(project, query, project, query, query, project, query, query, query, limit) as Array<
+    Record<string, unknown> & { rank: number }
+  >;
+  return rows.map((row) => ({ ...rowToNode(row), rank: row.rank }));
+}
+
 export type { BfsOptions, NodesByDegreeOptions } from './graphDatabaseTraversal';
 export {
   addNodeDegreeConditions,

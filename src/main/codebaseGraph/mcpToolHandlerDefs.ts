@@ -3,6 +3,10 @@
  * mcpToolHandlers.ts to keep the factory function under the line limit.
  */
 
+import { xxh3 } from '@node-rs/xxhash';
+import fs from 'fs';
+import path from 'path';
+
 import type { EdgeType } from './graphDatabaseTypes';
 import { truncate } from './mcpToolHandlerHelpers';
 import type { GraphToolContext } from './mcpToolHandlers';
@@ -206,21 +210,38 @@ function resolveQualifiedName(
   return { qn: null };
 }
 
+function isFileStale(filePath: string, ctx: GraphToolContext): boolean {
+  const indexed = ctx.db.getFileHash(ctx.projectName, filePath);
+  if (!indexed) return false;
+  const absolutePath = path.resolve(ctx.projectRoot, filePath);
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from trusted graph node
+    const content = fs.readFileSync(absolutePath);
+    const currentHash = xxh3.xxh128(content).toString(16).padStart(32, '0');
+    return currentHash !== indexed.content_hash;
+  } catch {
+    return false;
+  }
+}
+
 function formatSnippet(qn: string, ctx: GraphToolContext): string {
   const node = ctx.db.getNode(qn);
   if (!node) return `Symbol not found: ${qn}`;
   const snippet = ctx.queryEngine.getCodeSnippet(qn);
   if (!snippet) return `Could not read source for: ${qn}`;
   const props = node.props as Record<string, unknown>;
-  const header = [
+  const stale = node.file_path ? isFileStale(node.file_path, ctx) : false;
+  const headerLines = [
+    stale
+      ? '⚠ Note: file changed since indexing — line offsets may be stale. Re-index for fresh source.'
+      : null,
     `${node.label} ${node.name}`,
     props.signature ? `Signature: ${props.signature}` : null,
     `File: ${node.file_path}:${node.start_line}-${node.end_line}`,
     `Module: ${node.qualified_name.split('.').slice(0, -1).join('.')}`,
     '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  ];
+  const header = headerLines.filter(Boolean).join('\n');
   return truncate(header + snippet);
 }
 
