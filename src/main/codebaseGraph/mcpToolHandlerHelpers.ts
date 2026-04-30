@@ -3,6 +3,7 @@
  * to keep the factory function and each handler under the max-lines-per-function limit.
  */
 
+import type { EdgeType, NodeLabel } from './graphDatabaseTypes';
 import type { GraphToolContext } from './mcpToolHandlers';
 import type { QueryEngine } from './queryEngine';
 
@@ -45,11 +46,11 @@ export async function handleSearchGraph(
     (args.query as string | undefined) ?? (args.name_pattern as string | undefined);
   const result = db.searchNodes({
     project: (args.project as string) ?? projectName,
-    label: args.label as string | undefined,
+    label: args.label as NodeLabel | undefined,
     namePattern,
     filePath: args.file_pattern as string | undefined,
-    relationship: args.relationship as undefined,
-    direction: args.direction as undefined,
+    relationship: args.relationship as EdgeType | undefined,
+    direction: args.direction as 'inbound' | 'outbound' | 'both' | undefined,
     minDegree: args.min_degree as number | undefined,
     maxDegree: args.max_degree as number | undefined,
     excludeEntryPoints: args.exclude_entry_points as boolean | undefined,
@@ -277,6 +278,9 @@ export async function handleManageAdr(
 ): Promise<string> {
   const proj = (args.project as string) ?? ctx.projectName;
   const mode = args.mode as string;
+  if (!mode) {
+    return "Error: missing required parameter 'mode'";
+  }
 
   switch (mode) {
     case 'list': {

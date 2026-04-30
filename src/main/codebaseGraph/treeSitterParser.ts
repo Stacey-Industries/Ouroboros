@@ -180,27 +180,28 @@ export class TreeSitterParser {
     });
 
     if (TS_JS_LANGUAGES.has(config.id)) {
-      this.extractArrowFunctionExports(rootNode, definitions);
+      this.extractArrowFunctions(rootNode, definitions);
     }
 
     return definitions;
   }
 
-  private extractArrowFunctionExports(
+  private extractArrowFunctions(
     rootNode: Parser.SyntaxNode,
     definitions: ExtractedDefinition[],
   ): void {
     const existingNames = new Set(definitions.map((d) => d.name));
-
+    const isDecl = (t: string) => t === 'lexical_declaration' || t === 'variable_declaration';
     this.walkTree(rootNode, (node) => {
-      if (node.type !== 'export_statement') return;
-      const declaration = node.namedChildren.find(
-        (c) => c.type === 'lexical_declaration' || c.type === 'variable_declaration',
-      );
+      const isExported = node.type === 'export_statement';
+      const declaration = isExported
+        ? node.namedChildren.find((c) => isDecl(c.type))
+        : isDecl(node.type) && node.parent?.type === 'program'
+          ? node
+          : null;
       if (!declaration) return;
-      for (const declarator of declaration.namedChildren) {
-        extractArrowDeclarator(node, declarator, existingNames, definitions);
-      }
+      const ctx = { existingNames, definitions, isExported };
+      for (const d of declaration.namedChildren) extractArrowDeclarator(node, d, ctx);
     });
   }
 
@@ -273,6 +274,7 @@ export class TreeSitterParser {
         startLine: node.startPosition.row + 1,
         isAsync: info.isAsync,
         arguments: argCount,
+        isNewExpression: node.type === 'new_expression',
       });
     });
 

@@ -136,6 +136,21 @@ export function isDefaultExport(node: Parser.SyntaxNode): boolean {
   return parent.children.some((c) => c.type === 'default');
 }
 
+// Languages whose method node type overlaps with their function node type
+// (Python function_definition, Rust function_item) reach extractSingleDefinition
+// with label='Method' for ALL functions. Demote to Function when there is no
+// enclosing class/impl block.
+function resolveMethodContext(
+  node: Parser.SyntaxNode,
+  label: string,
+  config: LanguageConfig,
+): { effectiveLabel: string; receiver: string | null } {
+  if (label !== 'Method') return { effectiveLabel: label, receiver: null };
+  const contextNode = findAncestorOfType(node, [...config.classNodes, 'impl_item']);
+  if (!contextNode) return { effectiveLabel: 'Function', receiver: null };
+  return { effectiveLabel: 'Method', receiver: contextNode.childForFieldName('name')?.text ?? null };
+}
+
 export function extractSingleDefinition(
   node: Parser.SyntaxNode,
   label: string,
@@ -157,15 +172,11 @@ export function extractSingleDefinition(
   const isStatic = label === 'Method' && hasModifier(node, 'static');
   const isAbstract = node.type.includes('abstract') || hasModifier(node, 'abstract');
 
-  let receiver: string | null = null;
-  if (label === 'Method') {
-    const classNode = findAncestorOfType(node, config.classNodes);
-    receiver = classNode?.childForFieldName('name')?.text ?? null;
-  }
+  const { effectiveLabel, receiver } = resolveMethodContext(node, label, config);
 
   return {
     name,
-    kind: label as NodeLabel,
+    kind: effectiveLabel as NodeLabel,
     signature,
     returnType,
     startLine: node.startPosition.row + 1,
@@ -181,36 +192,59 @@ export function extractSingleDefinition(
   };
 }
 
-export function extractArrowDeclarator(
-  node: Parser.SyntaxNode,
-  declarator: Parser.SyntaxNode,
-  existingNames: Set<string>,
-  definitions: ExtractedDefinition[],
-): void {
-  if (declarator.type !== 'variable_declarator') return;
-  const nameNode = declarator.childForFieldName('name');
-  const valueNode = declarator.childForFieldName('value');
-  if (!nameNode || !valueNode || !isArrowOrFunctionValue(valueNode)) return;
-  const name = nameNode.text;
-  if (existingNames.has(name)) return;
-  existingNames.add(name);
+interface ArrowDefNodes {
+  statementNode: Parser.SyntaxNode; // export_statement or lexical_declaration
+  declarator: Parser.SyntaxNode;
+  valueNode: Parser.SyntaxNode;
+}
+
+function buildArrowDef(
+  { statementNode, declarator, valueNode }: ArrowDefNodes,
+  name: string,
+  isExported: boolean,
+): ExtractedDefinition {
   const isAsync = hasModifier(valueNode, 'async') || valueNode.text.startsWith('async');
-  definitions.push({
+  return {
     name,
     kind: 'Function',
     signature: extractNodeSignature(valueNode),
     returnType: extractReturnType(valueNode) ?? extractReturnTypeFromAnnotation(declarator),
-    startLine: node.startPosition.row + 1,
-    endLine: node.endPosition.row + 1,
-    isExported: true,
-    isDefault: isDefaultExport(node),
+    startLine: statementNode.startPosition.row + 1,
+    endLine: statementNode.endPosition.row + 1,
+    isExported,
+    isDefault: isExported && isDefaultExport(statementNode),
     isAsync,
     isStatic: false,
     isAbstract: false,
     decorators: [],
     receiver: null,
     constants: [],
-  });
+  };
+}
+
+export interface ArrowDeclaratorContext {
+  existingNames: Set<string>;
+  definitions: ExtractedDefinition[];
+  isExported?: boolean;
+}
+
+export function extractArrowDeclarator(
+  statementNode: Parser.SyntaxNode,
+  declarator: Parser.SyntaxNode,
+  ctx: ArrowDeclaratorContext,
+): void {
+  if (declarator.type !== 'variable_declarator') return;
+  const nameNode = declarator.childForFieldName('name');
+  const valueNode = declarator.childForFieldName('value');
+  if (!nameNode || !valueNode || !isArrowOrFunctionValue(valueNode)) return;
+  // Skip destructured patterns (e.g. const { fn } = require(...)) — name is not a plain identifier
+  if (nameNode.type !== 'identifier') return;
+  const name = nameNode.text;
+  if (ctx.existingNames.has(name)) return;
+  ctx.existingNames.add(name);
+  const isExported = ctx.isExported ?? true;
+  const nodes: ArrowDefNodes = { statementNode, declarator, valueNode };
+  ctx.definitions.push(buildArrowDef(nodes, name, isExported));
 }
 
 /** Collect exported identifier names from an export_statement node via walkFn. */

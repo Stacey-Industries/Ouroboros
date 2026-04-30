@@ -49,6 +49,7 @@ export interface ExtractedCall {
   startLine: number;
   isAsync: boolean; // await or .then()
   arguments: number; // Argument count (for disambiguation)
+  isNewExpression: boolean; // true when call site is `new Foo()` — used to prefer Class over Function in resolver
 }
 
 export interface ExtractedRoute {

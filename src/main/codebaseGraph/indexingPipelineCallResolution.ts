@@ -16,6 +16,7 @@ interface CallResolutionContext {
   projectName: string;
   symbolsByName: Map<string, string[]>;
   fileImportMap: Map<string, Map<string, string>>;
+  classIds?: Set<string>;
 }
 
 interface FileCallContext {
@@ -77,12 +78,20 @@ function resolveCallee(
   calleeName: string,
   fileCtx: FileCallContext,
   ctx: CallResolutionContext,
+  isNewExpression = false,
 ): string | null {
   if (fileCtx.importedNames.has(calleeName)) return fileCtx.importedNames.get(calleeName)!;
   const sameFileDef = fileCtx.fileDefs.find((d) => d.name === calleeName);
   if (sameFileDef) return `${fileCtx.fileQn}.${sameFileDef.name}`;
   const candidates = ctx.symbolsByName.get(calleeName) ?? [];
+  if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0];
+  // Multiple candidates: for `new X()` prefer the Class node (qualified name ends with .X
+  // and the node was registered via the Class label). Caller passes isNewExpression.
+  if (isNewExpression) {
+    const classCandidate = candidates.find((id) => ctx.classIds?.has(id));
+    if (classCandidate) return classCandidate;
+  }
   return null;
 }
 
@@ -106,7 +115,7 @@ function resolveCallEdges(
       );
       if (!enclosingDef) continue;
       const callerQn = `${fileQn}.${enclosingDef.name}`;
-      const calleeQn = resolveCallee(call.calleeName, fileCtx, ctx);
+      const calleeQn = resolveCallee(call.calleeName, fileCtx, ctx, call.isNewExpression);
       if (calleeQn && calleeQn !== callerQn) {
         edges.push({
           project: ctx.projectName,
@@ -134,7 +143,8 @@ function buildSymbolsByName(db: GraphDatabase, projectName: string): Map<string,
   const symbolsByName = new Map<string, string[]>();
   const allDefinitions = db
     .getNodesByLabel(projectName, 'Function')
-    .concat(db.getNodesByLabel(projectName, 'Method'));
+    .concat(db.getNodesByLabel(projectName, 'Method'))
+    .concat(db.getNodesByLabel(projectName, 'Class'));
   for (const node of allDefinitions) {
     const names = symbolsByName.get(node.name) ?? [];
     names.push(node.id);
@@ -169,8 +179,9 @@ export function callResolutionPass(
   options?: { chunkSize?: number },
 ): void {
   const symbolsByName = buildSymbolsByName(db, projectName);
+  const classIds = new Set(db.getNodesByLabel(projectName, 'Class').map((n) => n.id));
   const fileImportMap = buildFileImportMap(indexedFiles, projectName, symbolsByName);
-  const callCtx: CallResolutionContext = { projectName, symbolsByName, fileImportMap };
+  const callCtx: CallResolutionContext = { projectName, symbolsByName, fileImportMap, classIds };
   const size = options?.chunkSize;
   if (!size) {
     db.insertEdges(resolveChunkEdges(indexedFiles, callCtx));

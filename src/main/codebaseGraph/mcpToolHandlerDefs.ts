@@ -267,7 +267,15 @@ export async function handleIngestTraces(
   ctx: GraphToolContext,
 ): Promise<string> {
   try {
-    const parsed = JSON.parse(args.traces as string);
+    const rawTraces = args.traces;
+    if (!rawTraces) return "Error: missing required parameter 'traces'";
+    if (typeof rawTraces !== 'string') return "Error: parameter 'traces' must be a JSON string";
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawTraces);
+    } catch {
+      return "Error: parameter 'traces' is not valid JSON";
+    }
     const traces = parseTraces(parsed);
     if (traces.length === 0) return 'No valid trace edges in payload.';
     const edges = traces.map((t) => ({

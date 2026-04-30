@@ -103,7 +103,7 @@ export const pythonConfig: LanguageConfig = {
   interfaceNodes: [], // Python uses ABC/Protocol but they parse as classes
   typeNodes: [],
   enumNodes: [],
-  methodNodes: [], // Python methods are function_definition inside class
+  methodNodes: ['function_definition'], // Demoted to Function in extractSingleDefinition when no class ancestor
   importNodes: ['import_statement', 'import_from_statement'],
   callNodes: ['call'],
   exportKeyword: null, // Python exports via __all__ or convention
@@ -177,7 +177,7 @@ export const rustConfig: LanguageConfig = {
   interfaceNodes: ['trait_item'],
   typeNodes: ['type_item', 'struct_item'],
   enumNodes: ['enum_item'],
-  methodNodes: [], // Rust methods are function_item inside impl_item
+  methodNodes: ['function_item'], // Demoted to Function in extractSingleDefinition when no impl_item ancestor
   importNodes: ['use_declaration'],
   callNodes: ['call_expression'],
   exportKeyword: null, // Rust exports via `pub`
