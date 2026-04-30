@@ -28,11 +28,11 @@ vi.mock('./subagentLinkTrace', () => ({
   traceLink: vi.fn(),
 }));
 
+import type { AgentAction, AgentState } from '../../renderer/hooks/useAgentEvents.helpers';
+import { initialAgentState, reducer } from '../../renderer/hooks/useAgentEvents.helpers';
 import { getConfigValue } from '../config';
 import { dispatchSyntheticHookEvent } from '../hooks';
 import { enrichAgentStartPayload } from '../hooksAgentStartEnrich';
-import type { AgentAction, AgentState } from '../../renderer/hooks/useAgentEvents.helpers';
-import { initialAgentState, reducer } from '../../renderer/hooks/useAgentEvents.helpers';
 import { emitChatSubagentEnd, emitChatSubagentStart } from './chatOrchestrationBridgeSubagent';
 import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';
 import { _clearAll, recordStart } from './subagentTracker';
