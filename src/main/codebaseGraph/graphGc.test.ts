@@ -4,9 +4,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as indexingWorkerModule from './indexingWorkerClient';
 import { GraphDatabase } from './graphDatabase';
 import { pruneExpiredProjects, purgeSkippedNodes } from './graphGc';
+import * as indexingWorkerModule from './indexingWorkerClient';
 
 vi.mock('./indexingWorkerClient', () => ({
   getIndexingWorkerClient: vi.fn(),
