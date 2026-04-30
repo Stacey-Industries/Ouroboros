@@ -250,7 +250,7 @@ All are no-ops until `agentMonitor.subagentDisplay.diagnostics` is set to `true`
 |---|---|---|
 | `tracker:recordStart` | `subagentTracker.recordStart` | parentSessionId, childSessionId, toolCallId at tracker write time |
 | `tracker:recordEnd` | `subagentTracker.recordEnd` | parentSessionId (from record), childSessionId at end time |
-| `hook:incoming` | `hooksSubagentTap.tapSubagentTracker` | parentSessionId from payload, childSessionId from tool input, for pre_tool_use Task events |
+| `hook:agentStart` | `hooksSubagentTap.tapSubagentTracker` | parentSessionId from payload, childSessionId from tool input, for pre_tool_use Task events |
 | `chat:taskBlockObserved` | `chatOrchestrationBridgeProgressBlocks.applyToolStart` | toolCallId when a Task tool block first surfaces in the chat stream |
 | `renderer:resolve` | `useAgentEvents.helpers.resolveParentAndTimestamps` | resolved parentSessionId and childSessionId at the reducer decision branch |
 

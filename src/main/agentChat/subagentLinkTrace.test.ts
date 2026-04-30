@@ -162,4 +162,10 @@ describe('traceLink — output schema', () => {
       timestamp: 42,
     });
   });
+
+  it('preserves hook:agentStart stage string verbatim', () => {
+    traceLink('hook:agentStart', { source: 'test', timestamp: 0 });
+    const entry = mockLogInfo.mock.calls[0][1] as Record<string, unknown>;
+    expect(entry.stage).toBe('hook:agentStart');
+  });
 });

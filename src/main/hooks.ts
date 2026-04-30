@@ -206,7 +206,6 @@ function traceAgentStart(payload: HookPayload): void {
 function dispatchLifecycleEvent(payload: HookPayload): void {
   if (payload.type === 'agent_start') {
     traceAgentStart(payload);
-    return;
   }
   if (payload.type === 'session_start') {
     handleSessionStart(payload);
