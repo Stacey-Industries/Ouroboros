@@ -226,3 +226,66 @@ describe('vi mock placeholder', () => {
     expect(vi).toBeDefined();
   });
 });
+
+describe('reducer — SESSION_REGISTER', () => {
+  it('creates a session when none exists with that id', () => {
+    const next = reducer(initialAgentState, {
+      type: 'SESSION_REGISTER',
+      sessionId: 'chat-uuid-1',
+      timestamp: 5000,
+      kind: 'chat',
+      cwd: 'C:\\Web App\\Contractor App',
+    });
+    expect(next.sessions).toHaveLength(1);
+    expect(next.sessions[0]).toMatchObject({
+      id: 'chat-uuid-1',
+      kind: 'chat',
+      cwd: 'C:\\Web App\\Contractor App',
+      status: 'running',
+      startedAt: 5000,
+    });
+  });
+
+  it('is a no-op when a session with the same id already exists', () => {
+    const next = reducer(STATE_WITH_SESSION, {
+      type: 'SESSION_REGISTER',
+      sessionId: 'sess-1',
+      timestamp: 9999,
+      kind: 'chat',
+    });
+    expect(next).toBe(STATE_WITH_SESSION);
+  });
+
+  it('uses the provided taskLabel when given', () => {
+    const next = reducer(initialAgentState, {
+      type: 'SESSION_REGISTER',
+      sessionId: 'chat-uuid-2',
+      timestamp: 1000,
+      kind: 'chat',
+      taskLabel: 'Contractor app turn 3',
+    });
+    expect(next.sessions[0].taskLabel).toBe('Contractor app turn 3');
+  });
+
+  it('lets a subsequent RULE_LOADED action attach loadedRules to the registered session', () => {
+    const registered = reducer(initialAgentState, {
+      type: 'SESSION_REGISTER',
+      sessionId: 'chat-uuid-3',
+      timestamp: 1000,
+      kind: 'chat',
+    });
+    const next = reducer(registered, {
+      type: 'RULE_LOADED',
+      sessionId: 'chat-uuid-3',
+      rule: {
+        filePath: '/Users/test/.claude/CLAUDE.md',
+        name: 'CLAUDE',
+        memoryType: 'User',
+        loadReason: 'always',
+        loadedAt: 2000,
+      },
+    });
+    expect(next.sessions[0].loadedRules).toHaveLength(1);
+    expect(next.sessions[0].loadedRules?.[0].memoryType).toBe('User');
+  });
+});

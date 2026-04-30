@@ -310,6 +310,13 @@ export function setWindowProjectRoots(winId: number, roots: string[]): void {
     void acquireContextLayer(newRoot);
     void acquireGraphController(newRoot);
   }
+  // Wave 64 — eager persist on every mutation. Without this, project root
+  // changes only flush to SQLite on a clean window close, so any unclean exit
+  // (force-kill, HMR restart, dev-server Ctrl+C, crash) loses the additions
+  // and the rail comes back empty on relaunch. Project root changes are
+  // user-initiated and infrequent — no debounce needed (unlike bounds, which
+  // fire hundreds of events per drag and use a timer-based debounce).
+  persistWindowSessions();
 }
 
 export function getWindowProjectRoots(winId: number): string[] {

@@ -35,6 +35,7 @@ import {
   dispatchSkillStart,
 } from './useAgentEvents.ruleSkillDispatchers';
 import { markSessionsAsSaved, shouldPersistSession } from './useAgentEvents.session-utils';
+import { useChatSessionRegistration } from './useChatSessionRegistration';
 
 export interface UseAgentEventsReturn {
   agents: AgentSession[];
@@ -44,6 +45,8 @@ export interface UseAgentEventsReturn {
   updateNotes: (sessionId: string, notes: string, bookmarked?: boolean) => void;
   currentSessions: AgentSession[];
   historicalSessions: AgentSession[];
+  /** Wave 64 — register an IDE chat session so InstructionsLoaded events can attach. Idempotent. */
+  registerChatSession: (args: { sessionId: string; cwd?: string; taskLabel?: string }) => void;
 }
 
 function deleteCompletedSessions(sessions: AgentSession[]): void {
@@ -57,20 +60,18 @@ function deleteCompletedSessions(sessions: AgentSession[]): void {
   }
 }
 
-function persistSessionNotes(
-  sessions: AgentSession[],
-  sessionId: string,
-  notes: string,
-  bookmarked?: boolean,
-): void {
-  const session = sessions.find((candidate) => candidate.id === sessionId);
-  if (session) {
-    window.electronAPI?.sessions
-      ?.save?.({ ...session, notes, bookmarked: bookmarked ?? session.bookmarked })
-      .catch((err: unknown) => {
-        log.warn('Session notes persistence failed:', err);
-      });
-  }
+function persistSessionNotes(args: {
+  sessions: AgentSession[];
+  sessionId: string;
+  notes: string;
+  bookmarked?: boolean;
+}): void {
+  const session = args.sessions.find((c) => c.id === args.sessionId);
+  if (!session) return;
+  const next = { ...session, notes: args.notes, bookmarked: args.bookmarked ?? session.bookmarked };
+  window.electronAPI?.sessions?.save?.(next).catch((err: unknown) => {
+    log.warn('Session notes persistence failed:', err);
+  });
 }
 
 function useDerivedSessions(sessions: AgentSession[]): {
@@ -121,10 +122,12 @@ export function useAgentEvents(): UseAgentEventsReturn {
   const updateNotes = useCallback(
     (sessionId: string, notes: string, bookmarked?: boolean) => {
       dispatch({ type: 'SET_NOTES', sessionId, notes, bookmarked });
-      persistSessionNotes(state.sessions, sessionId, notes, bookmarked);
+      persistSessionNotes({ sessions: state.sessions, sessionId, notes, bookmarked });
     },
     [state.sessions],
   );
+
+  const registerChatSession = useChatSessionRegistration(dispatch);
 
   const { activeCount, currentSessions, historicalSessions } = useDerivedSessions(state.sessions);
 
@@ -136,6 +139,7 @@ export function useAgentEvents(): UseAgentEventsReturn {
     updateNotes,
     currentSessions,
     historicalSessions,
+    registerChatSession,
   };
 }
 

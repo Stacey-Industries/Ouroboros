@@ -404,6 +404,24 @@ describe('setWindowProjectRoots', () => {
     expect(managed?.projectRoot).toBeNull();
     expect(managed?.projectRoots).toEqual([]);
   });
+
+  it('Wave 64 — eagerly persists to sessionsData on every mutation', () => {
+    type SessionLike = { projectRoot: string; id?: string; bounds?: Record<string, unknown> };
+    mocks.getConfigValue.mockImplementation((key: string) => {
+      if (key === 'sessionsData') {
+        return [{ projectRoot: '/root/a', id: 's1' }] as SessionLike[];
+      }
+      return undefined;
+    });
+    const win = wm.createWindow('/root/a');
+    mocks.isDestroyed.mockReturnValue(false);
+    mocks.setConfigValue.mockClear();
+
+    wm.setWindowProjectRoots(win.id, ['/root/a', '/root/b']);
+
+    const call = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'sessionsData');
+    expect(call).toBeDefined();
+  });
 });
 
 // ── focusOrCreateWindow ───────────────────────────────────────────────────────

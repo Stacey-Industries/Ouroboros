@@ -31,6 +31,7 @@ import {
   hasSession,
   loadPersistedSessions,
   omitPendingLink,
+  registerSpawnedSession,
   updateSession,
 } from './useAgentEvents.session-utils';
 import {
@@ -89,6 +90,22 @@ export type AgentAction =
     }
   | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string; costUsd?: number }
   | { type: 'AGENT_END_FORCE_FINALIZE'; sessionId: string }
+  | {
+      /**
+       * Wave 64 — idempotent session registration for sessions the IDE spawns
+       * (chat sessions). Creates a placeholder AgentSession when the session_id
+       * becomes known from stream-json `system.init`, so InstructionsLoaded hook
+       * events arriving with that id can attach loadedRules to a real record
+       * instead of dropping silently. No-op when a session with the same id
+       * already exists.
+       */
+      type: 'SESSION_REGISTER';
+      sessionId: string;
+      timestamp: number;
+      kind: 'chat' | 'agent' | 'terminal';
+      taskLabel?: string;
+      cwd?: string;
+    }
   | { type: 'TOKEN_UPDATE'; sessionId: string; usage: TokenUsage; model?: string }
   | { type: 'LINK_SUBAGENT'; parentSessionId: string; childSessionId: string }
   | { type: 'RECORD_SUBAGENT_TOOL'; parentSessionId: string; timestamp: number }
@@ -126,6 +143,8 @@ export function reducer(state: AgentState, action: AgentAction): AgentState {
       return endSession(state, action);
     case 'AGENT_END_FORCE_FINALIZE':
       return forceFinalizeEnd(state, action);
+    case 'SESSION_REGISTER':
+      return registerSession(state, action);
     case 'TOKEN_UPDATE':
       return updateTokenUsage(state, action);
     case 'SUBTOOL_UPDATE':
@@ -197,6 +216,18 @@ function reduceExtensionAction(state: AgentState, action: AgentAction): AgentSta
     default:
       return state;
   }
+}
+
+type SessionRegisterAction = Extract<AgentAction, { type: 'SESSION_REGISTER' }>;
+
+function registerSession(state: AgentState, action: SessionRegisterAction): AgentState {
+  return registerSpawnedSession(state, {
+    sessionId: action.sessionId,
+    timestamp: action.timestamp,
+    kind: action.kind,
+    taskLabel: action.taskLabel,
+    cwd: action.cwd,
+  });
 }
 
 type AgentStartAction = Extract<AgentAction, { type: 'AGENT_START' }>;

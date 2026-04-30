@@ -52,6 +52,31 @@ export function ensureSession(state: AgentState, sessionId: string, timestamp: n
   };
 }
 
+/**
+ * Wave 64 — idempotent registration for sessions the IDE spawns (chat sessions).
+ * Creates a session with the given kind + cwd if absent; returns state unchanged
+ * when a session with the same id already exists. Distinct from `ensureSession`,
+ * which always tags as `external: true` and is used for hook-discovered sessions.
+ */
+export function registerSpawnedSession(
+  state: AgentState,
+  args: { sessionId: string; timestamp: number; kind: 'chat' | 'agent' | 'terminal'; taskLabel?: string; cwd?: string },
+): AgentState {
+  if (hasSession(state.sessions, args.sessionId)) return state;
+  const session: AgentSession = {
+    id: args.sessionId,
+    taskLabel: args.taskLabel ?? `Session ${args.sessionId.slice(0, 8)}`,
+    status: 'running',
+    startedAt: args.timestamp,
+    toolCalls: [],
+    inputTokens: 0,
+    outputTokens: 0,
+    kind: args.kind,
+    cwd: args.cwd,
+  };
+  return { ...state, sessions: [session, ...state.sessions] };
+}
+
 export function loadPersistedSessions(state: AgentState, sessions: AgentSession[]): AgentState {
   const existingIds = new Set(state.sessions.map((session) => session.id));
   return {

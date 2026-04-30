@@ -27,6 +27,7 @@ export function AgentEventsProvider({
     updateNotes,
     currentSessions,
     historicalSessions,
+    registerChatSession,
   } = useAgentEvents();
   const value = useMemo<UseAgentEventsReturn>(
     () => ({
@@ -37,6 +38,7 @@ export function AgentEventsProvider({
       updateNotes,
       currentSessions,
       historicalSessions,
+      registerChatSession,
     }),
     [
       agents,
@@ -46,6 +48,7 @@ export function AgentEventsProvider({
       updateNotes,
       currentSessions,
       historicalSessions,
+      registerChatSession,
     ],
   );
   return <AgentEventsContext.Provider value={value}>{children}</AgentEventsContext.Provider>;

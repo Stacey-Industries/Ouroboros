@@ -35,6 +35,15 @@ export interface AgentSession {
   internal?: boolean;
   /** True when the session originates from a Claude Code process outside the IDE (external terminal). */
   external?: boolean;
+  /**
+   * Source of the session. Wave 64 — distinguishes IDE chat sessions (registered via the
+   * chat thread bridge) from agent sessions (registered via AGENT_START hook events) so
+   * the AgentMonitor list can filter chat sessions out and the popover can find them.
+   * Default 'agent' for backward compatibility with persisted sessions that lack the field.
+   */
+  kind?: 'chat' | 'agent' | 'terminal';
+  /** Working directory captured at session-register time. Used by the popover to scope memory entries. */
+  cwd?: string;
   /** Rules/instructions loaded during this session (populated by InstructionsLoaded hook events). */
   loadedRules?: LoadedRule[];
   /** Skill invocations during this session (populated by agent_start/agent_end with skill signatures). */
