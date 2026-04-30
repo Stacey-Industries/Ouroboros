@@ -33,7 +33,7 @@ let mockApprovalRequests: Array<{
   timestamp: number;
 }> = [];
 let mockDiffState: null | { sessionId: string; snapshotHash: string } = null;
-let mockActiveUtilityTab: 'activity' | 'review' | 'approvals' | 'subagents' = 'activity';
+let mockActiveUtilityTab: 'activity' | 'review' | 'approvals' | 'monitor' = 'activity';
 const mockSetArtifactOpen = vi.fn();
 const mockSetUtilityOpen = vi.fn();
 const mockSetActiveUtilityTab = vi.fn();
@@ -556,7 +556,7 @@ describe('ChatWorkbenchShell', () => {
       );
     });
     expect(mockSetUtilityOpen).toHaveBeenCalledWith(true);
-    expect(mockSetActiveUtilityTab).toHaveBeenCalledWith('subagents');
+    expect(mockSetActiveUtilityTab).toHaveBeenCalledWith('monitor');
 
     mockSetUtilityOpen.mockClear();
     mockSetActiveUtilityTab.mockClear();
@@ -580,6 +580,6 @@ describe('ChatWorkbenchShell', () => {
       );
     });
     expect(mockSetUtilityOpen).toHaveBeenCalledWith(true);
-    expect(mockSetActiveUtilityTab).toHaveBeenCalledWith('subagents');
+    expect(mockSetActiveUtilityTab).toHaveBeenCalledWith('monitor');
   });
 });

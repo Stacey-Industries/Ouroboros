@@ -6,7 +6,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OPEN_SUBAGENT_PANEL_EVENT } from '../../../hooks/appEventNames';
 import { ChatWorkbenchUtilityDrawer } from './ChatWorkbenchUtilityDrawer';
 
 let approvalRequests = [] as Array<{
@@ -102,10 +101,8 @@ vi.mock('../../DiffReview/DiffReviewPanel', () => ({
   DiffReviewPanel: () => <div data-testid="diff-review-panel" />,
 }));
 
-vi.mock('../../AgentMonitor/SubagentPanel', () => ({
-  SubagentPanel: ({ subagentId }: { subagentId: string }) => (
-    <div data-testid="subagent-transcript">{subagentId}</div>
-  ),
+vi.mock('../../AgentMonitor', () => ({
+  AgentMonitorManager: () => <div data-testid="agent-monitor-manager" />,
 }));
 
 afterEach(() => {
@@ -154,7 +151,7 @@ describe('ChatWorkbenchUtilityDrawer', () => {
     expect(screen.getByText('Read')).toBeTruthy();
   });
 
-  it('switches across approvals, review, and subagents tabs', () => {
+  it('switches across approvals, review, and monitor tabs', () => {
     approvalRequests = [
       {
         requestId: 'req-1',
@@ -225,87 +222,14 @@ describe('ChatWorkbenchUtilityDrawer', () => {
     );
     expect(screen.getByTestId('diff-review-panel')).toBeTruthy();
 
-    fireEvent.click(screen.getByTestId('chat-workbench-utility-tab-subagents'));
-    expect(onSelectTab).toHaveBeenCalledWith('subagents');
+    fireEvent.click(screen.getByTestId('chat-workbench-utility-tab-monitor'));
+    expect(onSelectTab).toHaveBeenCalledWith('monitor');
   });
 
-  it('resolves a subagent transcript from the most recent task handoff event', () => {
-    currentSessions = [
-      {
-        id: 'child-2',
-        taskLabel: 'Investigate',
-        status: 'running',
-        startedAt: 5_100,
-        parentSessionId: 'parent-1',
-        toolCalls: [],
-        inputTokens: 0,
-        outputTokens: 0,
-      },
-    ];
-
-    window.dispatchEvent(
-      new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, {
-        detail: { toolCallId: 'tool-2', parentSessionId: 'parent-1', timestamp: 5_000 },
-      }),
-    );
-
+  it('renders AgentMonitorManager on the monitor tab', () => {
     render(
-      <ChatWorkbenchUtilityDrawer activeTab="subagents" onSelectTab={vi.fn()} onClose={vi.fn()} />,
+      <ChatWorkbenchUtilityDrawer activeTab="monitor" onSelectTab={vi.fn()} onClose={vi.fn()} />,
     );
-
-    expect(screen.getByTestId('workbench-subagent-panel')).toBeTruthy();
-    expect(screen.getByTestId('subagent-transcript').textContent).toContain('child-2');
-  });
-
-  it('resets from a resolved transcript back to the empty state via Clear selection', () => {
-    currentSessions = [
-      {
-        id: 'child-reset',
-        taskLabel: 'Reset test',
-        status: 'running',
-        startedAt: 6_000,
-        parentSessionId: 'parent-reset',
-        toolCalls: [],
-        inputTokens: 0,
-        outputTokens: 0,
-      },
-    ];
-
-    window.dispatchEvent(
-      new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, {
-        detail: { toolCallId: 'tool-reset', parentSessionId: 'parent-reset', timestamp: 5_900 },
-      }),
-    );
-
-    render(
-      <ChatWorkbenchUtilityDrawer activeTab="subagents" onSelectTab={vi.fn()} onClose={vi.fn()} />,
-    );
-
-    expect(screen.getByTestId('workbench-subagent-panel')).toBeTruthy();
-    expect(screen.getByTestId('subagent-transcript').textContent).toContain('child-reset');
-
-    fireEvent.click(screen.getByText('Clear selection'));
-
-    expect(
-      screen.getByText('Select a Task handoff to inspect a subagent transcript.'),
-    ).toBeTruthy();
-  });
-
-  it('shows a resolver fallback and can clear the subagent selection', () => {
-    window.dispatchEvent(
-      new CustomEvent(OPEN_SUBAGENT_PANEL_EVENT, {
-        detail: { toolCallId: 'tool-missing', parentSessionId: 'parent-x', timestamp: 7_000 },
-      }),
-    );
-
-    render(
-      <ChatWorkbenchUtilityDrawer activeTab="subagents" onSelectTab={vi.fn()} onClose={vi.fn()} />,
-    );
-
-    expect(screen.getByText('Subagent transcript unavailable')).toBeTruthy();
-    fireEvent.click(screen.getByText('Clear selection'));
-    expect(
-      screen.getByText('Select a Task handoff to inspect a subagent transcript.'),
-    ).toBeTruthy();
+    expect(screen.getByTestId('agent-monitor-manager')).toBeTruthy();
   });
 });

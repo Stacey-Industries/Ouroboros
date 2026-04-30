@@ -29,13 +29,42 @@ function artifactTriggerKey(kind: WorkbenchArtifactKind, key: string | null): st
   return `artifact:${key}`;
 }
 
-interface UtilityEffectsArgs {
-  approvalCount: number;
-  diffKey: string | null;
+interface UtilityCallbacksResult {
   openUtility: (trigger: UtilityTrigger) => void;
+  closeUtility: () => void;
 }
 
-function useUtilityEffects({ approvalCount, diffKey, openUtility }: UtilityEffectsArgs): void {
+function useUtilityCallbacks(
+  setUtilityOpen: (open: boolean) => void,
+  setActiveUtilityTab: (tab: ChatWorkbenchUtilityTab) => void,
+): UtilityCallbacksResult {
+  const dismissedKeysRef = React.useRef(new Set<string>());
+  const currentKeyRef = React.useRef<string | null>(null);
+
+  const openUtility = React.useCallback(
+    (trigger: UtilityTrigger) => {
+      currentKeyRef.current = trigger.key;
+      if (dismissedKeysRef.current.has(trigger.key)) return;
+      setUtilityOpen(true);
+      setActiveUtilityTab(trigger.tab);
+    },
+    [setActiveUtilityTab, setUtilityOpen],
+  );
+
+  const closeUtility = React.useCallback(() => {
+    const key = currentKeyRef.current;
+    if (key) dismissedKeysRef.current.add(key);
+    setUtilityOpen(false);
+  }, [setUtilityOpen]);
+
+  return { openUtility, closeUtility };
+}
+
+function useUtilityEffects(
+  approvalCount: number,
+  diffKey: string | null,
+  openUtility: (trigger: UtilityTrigger) => void,
+): void {
   React.useEffect(() => {
     if (approvalCount <= 0) return;
     openUtility({ key: `approvals:${approvalCount}`, tab: 'approvals' });
@@ -49,7 +78,7 @@ function useUtilityEffects({ approvalCount, diffKey, openUtility }: UtilityEffec
   React.useEffect(() => {
     const handleSubagentOpen = (event: Event): void => {
       const detail = (event as CustomEvent<{ toolCallId?: string }>).detail;
-      openUtility({ key: `subagents:${detail?.toolCallId ?? 'unknown'}`, tab: 'subagents' });
+      openUtility({ key: `monitor:${detail?.toolCallId ?? 'unknown'}`, tab: 'monitor' });
     };
     window.addEventListener(OPEN_SUBAGENT_PANEL_EVENT, handleSubagentOpen);
     return () => {
@@ -58,23 +87,20 @@ function useUtilityEffects({ approvalCount, diffKey, openUtility }: UtilityEffec
   }, [openUtility]);
 }
 
-export function useWorkbenchSurfacePolicy({ approvalCount, diffKey, artifactKey, artifactKind, setArtifactOpen, setUtilityOpen, setActiveUtilityTab }: UseWorkbenchSurfacePolicyOptions): UseWorkbenchSurfacePolicyResult {
+export function useWorkbenchSurfacePolicy({
+  approvalCount,
+  diffKey,
+  artifactKey,
+  artifactKind,
+  setArtifactOpen,
+  setUtilityOpen,
+  setActiveUtilityTab,
+}: UseWorkbenchSurfacePolicyOptions): UseWorkbenchSurfacePolicyResult {
   const dismissedArtifactKeysRef = React.useRef(new Set<string>());
-  const dismissedUtilityKeysRef = React.useRef(new Set<string>());
   const currentArtifactKeyRef = React.useRef<string | null>(null);
-  const currentUtilityKeyRef = React.useRef<string | null>(null);
+  const { openUtility, closeUtility } = useUtilityCallbacks(setUtilityOpen, setActiveUtilityTab);
 
-  const openUtility = React.useCallback(
-    (trigger: UtilityTrigger) => {
-      currentUtilityKeyRef.current = trigger.key;
-      if (dismissedUtilityKeysRef.current.has(trigger.key)) return;
-      setUtilityOpen(true);
-      setActiveUtilityTab(trigger.tab);
-    },
-    [setActiveUtilityTab, setUtilityOpen],
-  );
-
-  useUtilityEffects({ approvalCount, diffKey, openUtility });
+  useUtilityEffects(approvalCount, diffKey, openUtility);
 
   React.useEffect(() => {
     const triggerKey = artifactTriggerKey(artifactKind, artifactKey);
@@ -88,12 +114,6 @@ export function useWorkbenchSurfacePolicy({ approvalCount, diffKey, artifactKey,
     if (key) dismissedArtifactKeysRef.current.add(key);
     setArtifactOpen(false);
   }, [setArtifactOpen]);
-
-  const closeUtility = React.useCallback(() => {
-    const key = currentUtilityKeyRef.current;
-    if (key) dismissedUtilityKeysRef.current.add(key);
-    setUtilityOpen(false);
-  }, [setUtilityOpen]);
 
   return { closeArtifact, closeUtility };
 }

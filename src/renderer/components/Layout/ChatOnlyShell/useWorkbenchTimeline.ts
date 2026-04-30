@@ -59,7 +59,7 @@ export interface UseWorkbenchTimelineResult {
   counts: {
     approvals: number;
     review: number;
-    subagents: number;
+    monitor: number;
     activity: number;
   };
 }
@@ -132,7 +132,7 @@ export function useWorkbenchTimeline(
     counts: {
       approvals: approvalRequests.length,
       review: reviewState?.files.length ?? 0,
-      subagents: sessions.filter((session) => Boolean(session.parentSessionId)).length,
+      monitor: sessions.filter((session) => Boolean(session.parentSessionId)).length,
       activity: entries.length,
     },
   };

@@ -141,7 +141,7 @@ describe('useWorkbenchSurfacePolicy', () => {
       );
     });
     expect(setUtilityOpen).toHaveBeenCalledWith(true);
-    expect(setActiveUtilityTab).toHaveBeenCalledWith('subagents');
+    expect(setActiveUtilityTab).toHaveBeenCalledWith('monitor');
 
     act(() => {
       result.current.closeUtility();
@@ -162,6 +162,6 @@ describe('useWorkbenchSurfacePolicy', () => {
       );
     });
     expect(setUtilityOpen).toHaveBeenCalledWith(true);
-    expect(setActiveUtilityTab).toHaveBeenCalledWith('subagents');
+    expect(setActiveUtilityTab).toHaveBeenCalledWith('monitor');
   });
 });

@@ -28,5 +28,11 @@
     "src/shared/**/*",
     "src/renderer/types/**/*",
     "tools/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
   ]
 }

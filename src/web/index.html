@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- iOS PWA: paint behind the status bar instead of reserving a white strip.
+         Without this, the standalone-mode iOS shell reserves ~44px at the top,
+         and visualViewport changes (keyboard focus) cause layout shift. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ouroboros" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0d1117" />
     <title>Ouroboros IDE</title>
     <style>
       /* ── Startup splash ───────────────────────────────────────────────────── */

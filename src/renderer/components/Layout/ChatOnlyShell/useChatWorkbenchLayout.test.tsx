@@ -67,7 +67,7 @@ describe('useChatWorkbenchLayout', () => {
       // utility and artifact are mutually exclusive — opening utility after artifact closes artifact
       result.current.setArtifactOpen(true);
       result.current.toggleUtility();
-      result.current.setActiveUtilityTab('subagents');
+      result.current.setActiveUtilityTab('monitor');
     });
 
     await waitFor(() => {
@@ -78,7 +78,7 @@ describe('useChatWorkbenchLayout', () => {
       railOpen: false,
       artifactOpen: false,
       utilityOpen: true,
-      activeUtilityTab: 'subagents',
+      activeUtilityTab: 'monitor',
       lastRightPaneView: 'utility',
     });
   });

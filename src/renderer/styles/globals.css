@@ -1092,6 +1092,14 @@ body {
   overflow: hidden;
 }
 
+/* SelectPill popover overrides the shared `overflow: hidden` above so long
+   model/effort lists can scroll. Horizontal still clipped to preserve the
+   rounded corners; vertical scrolls inside the max-h-[280px] window. */
+[data-select-pill-menu] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* Tooltips: frosted glass background */
 .agent-ide-tooltip__body {
   background: var(--surface-overlay) !important;

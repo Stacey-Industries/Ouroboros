@@ -12,12 +12,12 @@
  * 2. Layout persistence: open/close the drawer, confirm state survives a
  *    simulated remount (reading from localStorage).
  * 3. Drawer tab switching: verify all five real tabs (activity, approvals,
- *    review, rules, subagents) render their content panels without crashing.
+ *    review, rules, monitor) render their content panels without crashing.
  *
  * What is NOT mocked (same policy as ChatWorkbenchFollowThrough.integration.test.tsx):
  * - useWorkbenchSurfacePolicy, useChatWorkbenchLayout, ChatWorkbenchUtilityDrawer
  * - All tab content panels (WorkbenchApprovalPanel, WorkbenchTimelinePanel,
- *   SubagentTranscriptPanel, WorkbenchRulesPanel)
+ *   AgentMonitorManager, WorkbenchRulesPanel)
  *
  * What IS mocked (platform / external boundaries):
  * - window.electronAPI, useFileViewerManager, useDiffReview, AgentChatWorkspace,
@@ -35,7 +35,13 @@ import { useWorkbenchSurfacePolicy } from './useWorkbenchSurfacePolicy';
 // ── Shared mocks (boundary-only) ────────────────────────────────────────────
 
 vi.mock('../../../contexts/ApprovalContext', () => ({
-  useApprovalContext: () => ({ pendingCount: 0, requests: [], approve: vi.fn(), reject: vi.fn(), alwaysAllow: vi.fn() }),
+  useApprovalContext: () => ({
+    pendingCount: 0,
+    requests: [],
+    approve: vi.fn(),
+    reject: vi.fn(),
+    alwaysAllow: vi.fn(),
+  }),
 }));
 
 vi.mock('../../../contexts/AgentEventsContext', () => ({
@@ -58,10 +64,8 @@ vi.mock('../../DiffReview/DiffReviewPanel', () => ({
   DiffReviewPanel: () => <div data-testid="diff-review-panel" />,
 }));
 
-vi.mock('../../AgentMonitor/SubagentPanel', () => ({
-  SubagentPanel: ({ subagentId }: { subagentId: string }) => (
-    <div data-testid="subagent-panel">{subagentId}</div>
-  ),
+vi.mock('../../AgentMonitor', () => ({
+  AgentMonitorManager: () => <div data-testid="agent-monitor-manager" />,
 }));
 
 vi.mock('../../../contexts/ProjectContext', () => ({
@@ -175,11 +179,7 @@ describe('Layout persistence (useChatWorkbenchLayout)', () => {
     window.localStorage.setItem('agent-ide:chat-workbench-layout', JSON.stringify(persistedState));
 
     render(
-      <ChatWorkbenchUtilityDrawer
-        activeTab="approvals"
-        onSelectTab={vi.fn()}
-        onClose={vi.fn()}
-      />,
+      <ChatWorkbenchUtilityDrawer activeTab="approvals" onSelectTab={vi.fn()} onClose={vi.fn()} />,
     );
 
     // Drawer mounts with approvals tab active — confirmed by header subtitle
@@ -194,7 +194,11 @@ describe('Layout persistence (useChatWorkbenchLayout)', () => {
     const onSelectTab = vi.fn();
 
     render(
-      <ChatWorkbenchUtilityDrawer activeTab="activity" onSelectTab={onSelectTab} onClose={vi.fn()} />,
+      <ChatWorkbenchUtilityDrawer
+        activeTab="activity"
+        onSelectTab={onSelectTab}
+        onClose={vi.fn()}
+      />,
     );
 
     const approvalsTab = screen.getByTestId('chat-workbench-utility-tab-approvals');
@@ -208,12 +212,10 @@ describe('Layout persistence (useChatWorkbenchLayout)', () => {
 
 // ── 3. All drawer tabs render without crashing ────────────────────────────────
 describe('Drawer tab content panels — all five tabs mount real components', () => {
-  const tabs: ChatWorkbenchUtilityTab[] = ['activity', 'approvals', 'review', 'rules', 'subagents'];
+  const tabs: ChatWorkbenchUtilityTab[] = ['activity', 'approvals', 'review', 'rules', 'monitor'];
 
   it.each(tabs)('tab "%s" mounts without crashing', (tab) => {
-    render(
-      <ChatWorkbenchUtilityDrawer activeTab={tab} onSelectTab={vi.fn()} onClose={vi.fn()} />,
-    );
+    render(<ChatWorkbenchUtilityDrawer activeTab={tab} onSelectTab={vi.fn()} onClose={vi.fn()} />);
     // The drawer itself must be present
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
     // The active tab button must be highlighted

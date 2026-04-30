@@ -89,10 +89,7 @@ function ModelChip({
     codexModels,
   });
   return (
-    <div
-      className="flex shrink-0"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-    >
+    <div className="flex shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <SelectPill
         label="Model"
         value={model}
@@ -140,10 +137,7 @@ function EffortChip({
   });
   if (effortOptions.length === 0) return null;
   return (
-    <div
-      className="flex shrink-0"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-    >
+    <div className="flex shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <SelectPill label="Effort" value={effortValue} options={effortOptions} onChange={onChange} />
     </div>
   );

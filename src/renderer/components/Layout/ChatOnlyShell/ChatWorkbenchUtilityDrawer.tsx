@@ -4,9 +4,9 @@ import { useProject } from '../../../contexts/ProjectContext';
 import { OPEN_FILE_EVENT } from '../../../hooks/appEventNames';
 import { useRulesAndSkills } from '../../../hooks/useRulesAndSkills';
 import { RulesTab } from '../../AgentChat/RulesTab';
+import { AgentMonitorManager } from '../../AgentMonitor';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
 import { DiffReviewPanel } from '../../DiffReview/DiffReviewPanel';
-import { SubagentTranscriptPanel } from './SubagentTranscriptPanel';
 import type { ChatWorkbenchUtilityTab } from './useChatWorkbenchLayout';
 import { useWorkbenchTimeline } from './useWorkbenchTimeline';
 import { WorkbenchApprovalPanel } from './WorkbenchApprovalPanel';
@@ -22,7 +22,7 @@ function tabLabel(tab: ChatWorkbenchUtilityTab): string {
   if (tab === 'approvals') return 'Approvals';
   if (tab === 'review') return 'Review';
   if (tab === 'rules') return 'Rules';
-  if (tab === 'subagents') return 'Subagents';
+  if (tab === 'monitor') return 'Monitor';
   return 'Timeline';
 }
 
@@ -32,7 +32,7 @@ function useTabCounts(): Record<ChatWorkbenchUtilityTab, number> {
     approvals: counts.approvals,
     review: counts.review,
     rules: 0,
-    subagents: counts.subagents,
+    monitor: counts.monitor,
     activity: counts.activity,
   };
 }
@@ -152,7 +152,12 @@ function DrawerContent({ activeTab }: { activeTab: ChatWorkbenchUtilityTab }): R
   if (activeTab === 'approvals') return <WorkbenchApprovalPanel />;
   if (activeTab === 'review') return <ReviewPanel />;
   if (activeTab === 'rules') return <WorkbenchRulesPanel />;
-  if (activeTab === 'subagents') return <SubagentTranscriptPanel />;
+  if (activeTab === 'monitor')
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <AgentMonitorManager />
+      </div>
+    );
   return <WorkbenchTimelinePanel />;
 }
 
@@ -185,7 +190,7 @@ const DRAWER_TABS: ChatWorkbenchUtilityTab[] = [
   'approvals',
   'review',
   'rules',
-  'subagents',
+  'monitor',
 ];
 
 export function ChatWorkbenchUtilityDrawer({
