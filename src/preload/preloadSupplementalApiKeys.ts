@@ -42,3 +42,4 @@ export type SupplementalApiKey =
   | 'compareProviders'
   | 'ecosystem'
   | 'marketplace'
+  | 'memory'

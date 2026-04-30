@@ -126,10 +126,10 @@ describe('ContextPreview', () => {
     expect(screen.getByText('README.md')).toBeDefined();
   });
 
-  it('shows empty message on Memory tab (not yet wired)', () => {
+  it('shows empty message on Memory tab when no memory items', () => {
     render(<ContextPreview model={MODEL_WITH_ITEMS} isOpen={true} onToggle={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: /Memory/i }));
-    expect(screen.getByText(/not yet wired/i)).toBeDefined();
+    expect(screen.getByText(/No memory entries for this project/i)).toBeDefined();
   });
 
   it('strip shows item summary from model totals', () => {
@@ -137,5 +137,65 @@ describe('ContextPreview', () => {
     const toggle = screen.getByTestId('context-preview-toggle');
     expect(toggle.textContent).toMatch(/rule/i);
     expect(toggle.textContent).toMatch(/file/i);
+  });
+
+  it('renders disabled badge for tool items with serverDisabled: true', () => {
+    const modelWithDisabledMcp: ContextPreviewModel = {
+      items: [
+        {
+          enabled: true,
+          estimatedTokens: 3,
+          id: 'tool:mcp:my-server',
+          kind: 'tool',
+          label: 'my-server',
+          serverDisabled: true,
+        },
+      ],
+      totals: {
+        files: 0,
+        memory: 0,
+        mentions: 0,
+        rules: 0,
+        skills: 0,
+        system: 0,
+        tools: 1,
+        totalItems: 1,
+        totalTokens: 3,
+      },
+    };
+    render(<ContextPreview model={modelWithDisabledMcp} isOpen={true} onToggle={vi.fn()} />);
+    // Navigate to Tools tab
+    fireEvent.click(screen.getByRole('tab', { name: /Tools/i }));
+    expect(screen.getByTitle(/MCP server is disabled/i)).toBeDefined();
+    expect(screen.getByText('disabled')).toBeDefined();
+  });
+
+  it('does not render disabled badge for normal (enabled) tool items', () => {
+    const modelWithEnabledMcp: ContextPreviewModel = {
+      items: [
+        {
+          enabled: true,
+          estimatedTokens: 3,
+          id: 'tool:mcp:active-server',
+          kind: 'tool',
+          label: 'active-server',
+          serverDisabled: false,
+        },
+      ],
+      totals: {
+        files: 0,
+        memory: 0,
+        mentions: 0,
+        rules: 0,
+        skills: 0,
+        system: 0,
+        tools: 1,
+        totalItems: 1,
+        totalTokens: 3,
+      },
+    };
+    render(<ContextPreview model={modelWithEnabledMcp} isOpen={true} onToggle={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Tools/i }));
+    expect(screen.queryByText('disabled')).toBeNull();
   });
 });

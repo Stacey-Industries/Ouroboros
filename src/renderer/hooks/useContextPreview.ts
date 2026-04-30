@@ -4,7 +4,7 @@
  * Data sources:
  *   Rules    — active session's loadedRules from AgentEventsContext
  *   Skills   — active session's skillExecutions from AgentEventsContext
- *   Memory   — not yet wired (no IPC surface to read MEMORY.md from renderer)
+ *   Memory   — live entries from ~/.claude/projects/<slug>/memory/MEMORY.md (Phase E)
  *   Files    — pinned files + @mentions passed in as props
  *   Tools    — static list derived from Claude Code's built-in tools
  *   System   — model + effort from chatOverrides / settingsModel
@@ -15,6 +15,8 @@
 
 import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
 import { useMemo } from 'react';
+
+import type { MemoryEntry } from '../types/electron-memory';
 
 export type ContextItemKind = 'rule' | 'skill' | 'memory' | 'file' | 'mention' | 'tool' | 'system';
 
@@ -30,6 +32,8 @@ export interface ContextItem {
   enabled: boolean;
   /** Wave 62 — sub-grouping for the Rules tab (user-level vs project-level). */
   group?: RuleGroup;
+  /** Wave 63 — MCP server is disabled (registered but not active). */
+  serverDisabled?: boolean;
 }
 
 /** Kinds that the user can toggle off before sending */
@@ -111,9 +115,19 @@ export interface ContextPreviewModel {
   totals: ContextTotals;
 }
 
+/** Wave 63 — a single MCP server entry from the static config reader. */
+export interface McpToolItem {
+  /** MCP server name as registered in settings. */
+  server: string;
+  /** Whether the server is enabled in settings (false = disabled badge). */
+  enabled: boolean;
+}
+
 export interface UseContextPreviewInput {
   effort?: string;
   loadedRules: LoadedRule[];
+  mcpTools?: McpToolItem[];
+  memoryEntries?: MemoryEntry[];
   mentionLabels: { estimatedTokens: number; label: string }[];
   model?: string;
   pinnedFileNames: { estimatedTokens: number; name: string; path: string }[];
@@ -183,17 +197,40 @@ function buildFileItems(
   return [...fileItems, ...mentionItems];
 }
 
+// Verified against Claude Code 2.1.x as of 2026-04-30 (source: ericbuess/claude-code-docs
+// agent-sdk__typescript.md + in-session tool surface). MCP tools deferred to Phase C.
+// PowerShell is Windows-only; included unconditionally for display simplicity.
 const BUILT_IN_TOOLS = [
+  'Agent',
+  'AskUserQuestion',
   'Bash',
+  'CronCreate',
+  'CronDelete',
+  'CronList',
   'Edit',
+  'EnterWorktree',
+  'ExitPlanMode',
+  'ExitWorktree',
   'Glob',
   'Grep',
-  'LS',
+  'LSP',
+  'NotebookEdit',
+  'PowerShell', // Windows-only
   'Read',
-  'Task',
-  'TodoRead',
+  'ScheduleWakeup',
+  'SendMessage',
+  'Skill',
+  'TaskCreate',
+  'TaskGet',
+  'TaskList',
+  'TaskStop',
+  'TaskUpdate',
+  'TeamCreate',
+  'TeamDelete',
   'TodoWrite',
+  'ToolSearch',
   'WebFetch',
+  'WebSearch',
   'Write',
 ];
 
@@ -206,6 +243,31 @@ function buildToolItems(): ContextItem[] {
     id: `tool:${t}`,
     kind: 'tool' as const,
     label: t,
+  }));
+}
+
+/** Wave 63 Phase E — one ContextItem per MEMORY.md entry. */
+export function buildMemoryItems(entries: MemoryEntry[]): ContextItem[] {
+  return entries.map((e) => ({
+    detail: e.description || e.section,
+    enabled: true,
+    estimatedTokens: approxTokens(e.title + (e.description ?? '')),
+    id: `memory:${e.id}`,
+    kind: 'memory' as const,
+    label: e.title,
+  }));
+}
+
+/** Wave 63 — one ContextItem per MCP server (server-level granularity). */
+export function buildMcpToolItems(mcpTools: McpToolItem[]): ContextItem[] {
+  return mcpTools.map((m) => ({
+    detail: m.enabled ? undefined : 'disabled',
+    enabled: true,
+    estimatedTokens: approxTokens(m.server),
+    id: `tool:mcp:${m.server}`,
+    kind: 'tool' as const,
+    label: m.server,
+    serverDisabled: !m.enabled,
   }));
 }
 
@@ -267,14 +329,26 @@ export function useContextPreview(input: UseContextPreviewInput): ContextPreview
   return useMemo(() => {
     const ruleItems = buildRuleItems(input.loadedRules);
     const skillItems = buildSkillItems(input.skillExecutions);
+    const memoryItems = buildMemoryItems(input.memoryEntries ?? []);
     const fileItems = buildFileItems(input.pinnedFileNames, input.mentionLabels);
-    const toolItems = buildToolItems();
+    const builtInItems = buildToolItems();
+    const mcpItems = buildMcpToolItems(input.mcpTools ?? []);
+    const toolItems = [...builtInItems, ...mcpItems];
     const systemItems = buildSystemItems(input.model, input.effort);
-    const items = [...ruleItems, ...skillItems, ...fileItems, ...toolItems, ...systemItems];
+    const items = [
+      ...ruleItems,
+      ...skillItems,
+      ...memoryItems,
+      ...fileItems,
+      ...toolItems,
+      ...systemItems,
+    ];
     return { items, totals: computeTotals(items) };
   }, [
     input.effort,
     input.loadedRules,
+    input.mcpTools,
+    input.memoryEntries,
     input.mentionLabels,
     input.model,
     input.pinnedFileNames,

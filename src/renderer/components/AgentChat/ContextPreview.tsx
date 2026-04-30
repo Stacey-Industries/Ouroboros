@@ -167,6 +167,17 @@ function ManagedBadge(): React.ReactElement {
   );
 }
 
+function DisabledBadge(): React.ReactElement {
+  return (
+    <span
+      className="shrink-0 rounded px-1 text-[10px] text-text-semantic-faint border border-border-subtle"
+      title="MCP server is disabled — not active in this session"
+    >
+      disabled
+    </span>
+  );
+}
+
 // Rule items only toggle if their id encodes a known scope (`rule:global:` or
 // `rule:project:`). Managed/Local rules keep the legacy `rule:<filePath>` form.
 function isToggleableItem(item: ContextItem): boolean {
@@ -211,7 +222,8 @@ function ItemRow(props: {
       <span className="flex-1 truncate text-text-semantic-primary" title={item.label}>
         {item.label}
       </span>
-      {item.detail && (
+      {item.serverDisabled && <DisabledBadge />}
+      {item.detail && !item.serverDisabled && (
         <span className="shrink-0 text-text-semantic-faint" title={item.detail}>
           {item.detail}
         </span>
@@ -224,11 +236,12 @@ function ItemRow(props: {
 }
 
 const EMPTY_TAB_MESSAGES: Partial<Record<ContextItemKind, string>> = {
-  memory: 'No memory context — not yet wired to MEMORY.md',
-  rule: 'No rules loaded for this session',
-  skill: 'No skills executed in this session',
-  file: 'No pinned files',
-  mention: 'No @mentions in this prompt',
+  memory: 'No memory entries for this project.',
+  rule: 'No rules loaded for this session.',
+  skill: 'No skills executed in this session.',
+  file: 'No pinned files.',
+  mention: 'No @mentions in this prompt.',
+  system: 'No model selected.',
 };
 
 function EmptyTabMessage({ kind }: { kind: ContextItemKind }): React.ReactElement {

@@ -27,6 +27,7 @@ import {
 } from './AgentChatComposerParts';
 import { noop } from './AgentChatComposerSupport';
 import { AgentChatContextBar } from './AgentChatContextBar';
+import { useChatActiveThread } from './agentChatSelectors';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ComposerContextPreview } from './ComposerContextPreview';
 import { FloatingComposerContainer } from './FloatingComposerContainer';
@@ -271,13 +272,19 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
 
 /* ---------- AgentChatComposer ---------- */
 
+function toMentionLabels(
+  mentions: MentionItem[] | undefined,
+): { estimatedTokens: number; label: string }[] {
+  return (mentions ?? []).map((m) => ({ estimatedTokens: m.estimatedTokens, label: m.label }));
+}
+
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
   const { attachmentHandlers } = state;
-  const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } =
-    composerProps;
+  const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } = composerProps;
   const variant = useWorkspaceVariant();
+  const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
       {variant === 'chat-only' && (
@@ -285,6 +292,8 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
           pinnedFiles={composerProps.pinnedFiles}
           chatOverrides={chatOverrides}
           settingsModel={settingsModel}
+          mentionLabels={toMentionLabels(composerProps.mentions)}
+          claudeSessionId={claudeSessionId}
         />
       )}
       <FloatingComposerContainer

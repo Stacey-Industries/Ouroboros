@@ -8,6 +8,7 @@
  *     agent-events context.
  *   - Compute the model + effort from chatOverrides / settings model.
  *   - Manage open/closed and disabled-IDs state locally.
+ *   - Wave 63: fetch MCP server list (static path) and surface them in Tools tab.
  *
  * Disabled IDs are kept per-mount (per chat thread, since the composer is
  * remounted on thread switch). Persisting across reloads is deferred — see
@@ -19,36 +20,95 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import { useProjectOptional } from '../../contexts/ProjectContext';
+import type { McpToolItem } from '../../hooks/useContextPreview';
 import { parseRuleToggleId, useContextPreview } from '../../hooks/useContextPreview';
+import { useMemoryEntries } from '../../hooks/useMemoryEntries';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ContextPreview } from './ContextPreview';
 import type { PinnedFile } from './useAgentChatContext';
+
 
 export interface ComposerContextPreviewProps {
   pinnedFiles?: PinnedFile[];
   chatOverrides?: ChatOverrides;
   settingsModel?: string;
+  mentionLabels?: { estimatedTokens: number; label: string }[];
+  /**
+   * Wave 64 — the active chat thread's Claude Code session UUID (from stream-json
+   * init). When provided, the popover scopes its Rules/Skills lookup to this
+   * exact session and registers it in the agent-events reducer so InstructionsLoaded
+   * events have a record to attach to. When absent, falls back to "most recent
+   * running agent" for backward compat with non-chat surfaces.
+   */
+  claudeSessionId?: string;
 }
 
-function useActiveSessionRulesAndSkills(): {
+function useActiveSessionRulesAndSkills(claudeSessionId?: string): {
   loadedRules: LoadedRule[];
   skillExecutions: SkillExecutionRecord[];
 } {
   const { agents } = useAgentEventsContext();
   return useMemo(() => {
-    const running = agents.filter((s) => s.status === 'running');
-    const target =
-      running.length > 0
-        ? running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b))
-        : agents.reduce<(typeof agents)[number] | undefined>((a, b) => {
-            if (!a) return b;
-            return b.startedAt > a.startedAt ? b : a;
-          }, undefined);
+    const target = claudeSessionId
+      ? agents.find((s) => s.id === claudeSessionId)
+      : pickMostRecent(agents);
     return {
       loadedRules: target?.loadedRules ?? [],
       skillExecutions: target?.skillExecutions ?? [],
     };
-  }, [agents]);
+  }, [agents, claudeSessionId]);
+}
+
+function pickMostRecent(agents: readonly AgentSessionLike[]): AgentSessionLike | undefined {
+  const running = agents.filter((s) => s.status === 'running');
+  if (running.length > 0) return running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b));
+  return agents.reduce<AgentSessionLike | undefined>((a, b) => {
+    if (!a) return b;
+    return b.startedAt > a.startedAt ? b : a;
+  }, undefined);
+}
+
+interface AgentSessionLike {
+  id: string;
+  status: string;
+  startedAt: number;
+  loadedRules?: LoadedRule[];
+  skillExecutions?: SkillExecutionRecord[];
+}
+
+/**
+ * Wave 64 — when `claudeSessionId` is set and no agent record exists for it,
+ * dispatch SESSION_REGISTER so subsequent InstructionsLoaded events attach.
+ */
+function useChatSessionBridge(claudeSessionId: string | undefined, projectRoot: string | null): void {
+  const { agents, registerChatSession } = useAgentEventsContext();
+  useEffect(() => {
+    if (!claudeSessionId) return;
+    if (agents.some((s) => s.id === claudeSessionId)) return;
+    registerChatSession({ sessionId: claudeSessionId, cwd: projectRoot ?? undefined });
+  }, [claudeSessionId, projectRoot, agents, registerChatSession]);
+}
+
+/**
+ * Wave 63 — fetches the merged MCP server list (global + project scopes) via the
+ * existing `mcp:getServers` IPC. Disabled servers are included so the Tools tab
+ * can render them with a "disabled" badge. Re-fetches when projectRoot changes.
+ */
+function useMcpTools(projectRoot: string | null): McpToolItem[] {
+  const [items, setItems] = useState<McpToolItem[]>([]);
+  useEffect(() => {
+    const api = window.electronAPI?.mcp;
+    if (!api?.getServers) return;
+    let cancelled = false;
+    void api.getServers(projectRoot ?? undefined).then((res) => {
+      if (cancelled || !res.success || !res.servers) return;
+      setItems(res.servers.map((s) => ({ server: s.name, enabled: s.enabled })));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectRoot]);
+  return items;
 }
 
 function pinnedFilesToInput(
@@ -155,10 +215,15 @@ export function ComposerContextPreview({
   pinnedFiles,
   chatOverrides,
   settingsModel,
+  mentionLabels = [],
+  claudeSessionId,
 }: ComposerContextPreviewProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
-  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills();
   const projectRoot = useProjectOptional()?.projectRoot ?? null;
+  useChatSessionBridge(claudeSessionId, projectRoot);
+  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills(claudeSessionId);
+  const mcpTools = useMcpTools(projectRoot);
+  const memoryEntries = useMemoryEntries(projectRoot);
   const { ids: localIds, toggle: toggleLocal } = useLocalDisabledIds();
   const fsDisabledRuleIds = useFilesystemDisabledRuleIds(projectRoot);
   const disabledIds = useMergedDisabledIds(localIds, fsDisabledRuleIds);
@@ -166,7 +231,9 @@ export function ComposerContextPreview({
   const previewModel = useContextPreview({
     effort: chatOverrides?.effort,
     loadedRules,
-    mentionLabels: [],
+    mcpTools,
+    memoryEntries,
+    mentionLabels,
     model: chatOverrides?.model || settingsModel,
     pinnedFileNames: pinnedFilesToInput(pinnedFiles),
     skillExecutions,

@@ -21,6 +21,7 @@ import {
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
   cleanupLayoutHandlers,
+  cleanupMemoryHandlers,
   cleanupPairingHandlers,
   cleanupPinnedContextHandlers,
   cleanupProfileCrudHandlers,
@@ -60,6 +61,7 @@ import {
   registerMarketplaceHandlers,
   registerMcpHandlers,
   registerMcpStoreHandlers,
+  registerMemoryHandlers,
   registerMiscHandlers,
   registerPairingHandlers,
   registerPinnedContextHandlers,
@@ -163,6 +165,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('ecosystem', () => registerEcosystemHandlers()),
     ...safeRegister('usageExporter', () => registerUsageExporterHandlers()),
     ...safeRegister('marketplace', () => registerMarketplaceHandlers()),
+    ...safeRegister('memory', () => registerMemoryHandlers()),
   ];
 }
 
@@ -322,12 +325,8 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
 }
 
 export async function cleanupIpcHandlers(): Promise<void> {
-  // Close all file watchers
   cleanupFileWatchers();
-
-  // Close settings file watcher
   cleanupConfigWatcher();
-
   await cleanupAgentChatHandlers();
   cleanupCompareProvidersHandlers();
   cleanupSessionCrudHandlers();
@@ -345,20 +344,12 @@ export async function cleanupIpcHandlers(): Promise<void> {
   cleanupPairingHandlers();
   cleanupDispatchHandlers();
   cleanupSystemPromptHandlers();
+  cleanupMemoryHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
-
-  // Stop all LSP servers
-  lspStopAll().catch((error) => {
-    log.error('Failed to stop LSP servers during cleanup:', error);
-  });
-
-  // Remove all handlers from ipcMain and the WebSocket bridge registry
-  for (const channel of allChannels) {
-    ipcMain.removeHandler(channel);
-  }
+  lspStopAll().catch((error) => { log.error('Failed to stop LSP servers during cleanup:', error); });
+  for (const channel of allChannels) { ipcMain.removeHandler(channel); }
   clearRegistry();
-
   allChannels = [];
   handlersRegistered = false;
 }

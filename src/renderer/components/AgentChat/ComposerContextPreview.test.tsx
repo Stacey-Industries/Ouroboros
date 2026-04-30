@@ -1,15 +1,16 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const registerChatSessionMock = vi.fn();
 vi.mock('../../contexts/AgentEventsContext', () => ({
   useAgentEventsContext: () => ({
     agents: [
       {
-        sessionId: 's1',
+        id: 's1',
         status: 'running',
         startedAt: 100,
         loadedRules: [
@@ -34,7 +35,22 @@ vi.mock('../../contexts/AgentEventsContext', () => ({
           },
         ],
       },
+      {
+        id: 'unrelated',
+        status: 'complete',
+        startedAt: 50,
+        loadedRules: [
+          {
+            filePath: '/other/.claude/CLAUDE.md',
+            loadReason: 'always',
+            loadedAt: 50,
+            memoryType: 'User',
+            name: 'CLAUDE',
+          },
+        ],
+      },
     ],
+    registerChatSession: registerChatSessionMock,
   }),
 }));
 
@@ -77,5 +93,90 @@ describe('ComposerContextPreview', () => {
     fireEvent.click(cb);
     const cb2 = screen.getByTestId('context-item-checkbox-file:/p/README.md') as HTMLInputElement;
     expect(cb2.checked).toBe(false);
+  });
+
+  it('Mentions tab shows items when mentionLabels are provided', () => {
+    const mentions = [
+      { estimatedTokens: 120, label: 'src/main/main.ts' },
+      { estimatedTokens: 80, label: 'src/renderer/App.tsx' },
+    ];
+    render(<ComposerContextPreview mentionLabels={mentions} />);
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    fireEvent.click(screen.getByRole('tab', { name: /Mentions/i }));
+    expect(screen.getByText('src/main/main.ts')).toBeDefined();
+    expect(screen.getByText('src/renderer/App.tsx')).toBeDefined();
+  });
+
+  it('Mentions tab is empty when no mentionLabels are provided', () => {
+    render(<ComposerContextPreview />);
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    fireEvent.click(screen.getByRole('tab', { name: /Mentions/i }));
+    expect(screen.queryByText('src/main/main.ts')).toBeNull();
+  });
+
+  it('Memory tab shows entries when memory IPC returns results', async () => {
+    Object.defineProperty(window, 'electronAPI', {
+      value: {
+        ...window.electronAPI,
+        memory: {
+          list: vi.fn().mockResolvedValue({
+            success: true,
+            entries: [
+              {
+                id: 'constraints',
+                title: 'Max subscription',
+                description: 'OAuth only',
+                section: 'Constraints',
+                filePath: '/home/.claude/projects/C--p/memory/constraints.md',
+                exists: true,
+              },
+            ],
+          }),
+          read: vi.fn().mockResolvedValue({ success: true, content: '' }),
+          onChanged: vi.fn(() => () => undefined),
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    render(<ComposerContextPreview />);
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    fireEvent.click(screen.getByRole('tab', { name: /Memory/i }));
+
+    // Wait for IPC promise to resolve and state to update
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Max subscription')).toBeDefined();
+  });
+
+  it('Wave 64 — when claudeSessionId matches an agent, popover shows that session\'s rules', () => {
+    render(<ComposerContextPreview claudeSessionId="s1" />);
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    expect(screen.getByText('testing')).toBeDefined();
+  });
+
+  it('Wave 64 — when claudeSessionId does not match, no rules show (no fallback to other agents)', () => {
+    render(<ComposerContextPreview claudeSessionId="not-tracked-yet" />);
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    // Rules tab is the default; with no match, the testing rule should not appear.
+    expect(screen.queryByText('testing')).toBeNull();
+    expect(screen.queryByText('CLAUDE')).toBeNull();
+  });
+
+  it('Wave 64 — registers a chat session when claudeSessionId is unknown to the reducer', () => {
+    registerChatSessionMock.mockClear();
+    render(<ComposerContextPreview claudeSessionId="brand-new-id" />);
+    expect(registerChatSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 'brand-new-id' }),
+    );
+  });
+
+  it('Wave 64 — does NOT register when the session is already in the reducer', () => {
+    registerChatSessionMock.mockClear();
+    render(<ComposerContextPreview claudeSessionId="s1" />);
+    expect(registerChatSessionMock).not.toHaveBeenCalled();
   });
 });

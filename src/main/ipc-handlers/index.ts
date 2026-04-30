@@ -34,6 +34,7 @@ export { cleanupLayoutHandlers, registerLayoutHandlers } from './layout';
 export { registerMarketplaceHandlers } from './marketplaceHandlers';
 export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
+export { cleanupMemoryHandlers, registerMemoryHandlers } from './memory';
 export { lspStopAll, registerMiscHandlers } from './misc';
 export { cleanupPinnedContextHandlers, registerPinnedContextHandlers } from './pinnedContext';
 export { cleanupProfileCrudHandlers, registerProfileCrudHandlers } from './profileCrud';

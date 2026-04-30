@@ -19,6 +19,7 @@ import type { GraphAPI } from './electron-graph';
 import type { LayoutAPI } from './electron-layout';
 import type { MarketplaceAPI } from './electron-marketplace';
 import type { McpStoreAPI } from './electron-mcp-store';
+import type { MemoryAPI } from './electron-memory';
 import type { MobileAccessAPI } from './electron-mobile-access';
 import type {
   ContextLayerAPI,
@@ -215,8 +216,6 @@ export interface WindowAPI {
   setProjectRoots: (roots: string[]) => Promise<IpcResult>;
 }
 
-export type { OrchestrationAPI };
-
 /** Wave 36 Phase E — availability result per session-provider id. */
 export interface ProviderAvailabilityResult {
   success: boolean;
@@ -326,6 +325,7 @@ export interface ElectronAPI {
   layout: LayoutAPI;
   mobileAccess: MobileAccessAPI;
   compareProviders: CompareProvidersAPI;
+  memory: MemoryAPI;
 }
 
 export interface WorkspaceAPI {

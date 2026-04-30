@@ -23,6 +23,7 @@ import { folderCrudApi } from './preloadSupplementalFolderApis';
 import { graphApi } from './preloadSupplementalGraphApis';
 import { layoutApi } from './preloadSupplementalLayoutApis';
 import { marketplaceApi } from './preloadSupplementalMarketplaceApis';
+import { memoryApi } from './preloadSupplementalMemoryApis';
 import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
 import { profileCrudApi } from './preloadSupplementalProfileApis';
 import { researchApi } from './preloadSupplementalResearchApis';
@@ -315,6 +316,7 @@ export const supplementalApis: SupplementalApis = {
   },
 
   marketplace: marketplaceApi,
+  memory: memoryApi,
   // Wave 37 Phase B+C — ecosystem moat: prompt diff push event + usage exporter
   ecosystem: {
     onPromptDiff: (callback) =>

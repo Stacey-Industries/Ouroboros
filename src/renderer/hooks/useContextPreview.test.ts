@@ -5,8 +5,15 @@ import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivit
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { UseContextPreviewInput } from './useContextPreview';
-import { BUILT_IN_TOOLS_COUNT, isToggleableKind, useContextPreview } from './useContextPreview';
+import type { MemoryEntry } from '../types/electron-memory';
+import type { McpToolItem, UseContextPreviewInput } from './useContextPreview';
+import {
+  buildMcpToolItems,
+  buildMemoryItems,
+  BUILT_IN_TOOLS_COUNT,
+  isToggleableKind,
+  useContextPreview,
+} from './useContextPreview';
 
 const EMPTY_INPUT: UseContextPreviewInput = {
   effort: undefined,
@@ -54,6 +61,17 @@ describe('useContextPreview', () => {
     const toolItems = result.current.items.filter((i) => i.kind === 'tool');
     expect(toolItems.length).toBe(BUILT_IN_TOOLS_COUNT);
     expect(toolItems.every((i) => i.estimatedTokens >= 1)).toBe(true);
+  });
+
+  it('includes Claude Code 2.1.x tools absent from the original list', () => {
+    const { result } = renderHook(() => useContextPreview(EMPTY_INPUT));
+    const toolLabels = result.current.items.filter((i) => i.kind === 'tool').map((i) => i.label);
+    expect(toolLabels).toContain('Agent');
+    expect(toolLabels).toContain('Skill');
+    expect(toolLabels).toContain('ToolSearch');
+    expect(toolLabels).toContain('ExitPlanMode');
+    expect(toolLabels).toContain('AskUserQuestion');
+    expect(toolLabels).toContain('NotebookEdit');
   });
 
   it('maps loaded rules to rule items with correct fields', () => {
@@ -180,5 +198,118 @@ describe('useContextPreview', () => {
     expect(mentionItems).toHaveLength(1);
     expect(result.current.totals.mentions).toBe(1);
     expect(result.current.totals.files).toBe(0);
+  });
+});
+
+describe('buildMcpToolItems', () => {
+  it('returns empty array for empty input', () => {
+    expect(buildMcpToolItems([])).toHaveLength(0);
+  });
+
+  it('produces one item per MCP server', () => {
+    const servers: McpToolItem[] = [
+      { server: 'github', enabled: true },
+      { server: 'context7', enabled: true },
+    ];
+    const items = buildMcpToolItems(servers);
+    expect(items).toHaveLength(2);
+    expect(items[0].label).toBe('github');
+    expect(items[0].id).toBe('tool:mcp:github');
+    expect(items[0].kind).toBe('tool');
+    expect(items[1].label).toBe('context7');
+  });
+
+  it('sets serverDisabled: true for disabled servers', () => {
+    const servers: McpToolItem[] = [
+      { server: 'disabled-server', enabled: false },
+      { server: 'active-server', enabled: true },
+    ];
+    const items = buildMcpToolItems(servers);
+    expect(items[0].serverDisabled).toBe(true);
+    expect(items[1].serverDisabled).toBeFalsy();
+  });
+
+  it('sets detail to undefined for enabled servers', () => {
+    const items = buildMcpToolItems([{ server: 'myserver', enabled: true }]);
+    expect(items[0].detail).toBeUndefined();
+  });
+
+  it('merges MCP tool items into the tools total', () => {
+    const mcpTools: McpToolItem[] = [{ server: 'github', enabled: true }];
+    const { result } = renderHook(() => useContextPreview({ ...EMPTY_INPUT, mcpTools }));
+    const toolItems = result.current.items.filter((i) => i.kind === 'tool');
+    expect(toolItems.length).toBe(BUILT_IN_TOOLS_COUNT + 1);
+    expect(result.current.totals.tools).toBe(BUILT_IN_TOOLS_COUNT + 1);
+    expect(toolItems.some((i) => i.id === 'tool:mcp:github')).toBe(true);
+  });
+
+  it('omits mcpTools when input is undefined (no crash)', () => {
+    const { result } = renderHook(() => useContextPreview(EMPTY_INPUT));
+    const toolItems = result.current.items.filter((i) => i.kind === 'tool');
+    // Only built-ins when no MCP tools provided
+    expect(toolItems.length).toBe(BUILT_IN_TOOLS_COUNT);
+  });
+});
+
+// ─── fixtures for memory tests ────────────────────────────────────────────────
+
+const MEMORY_ENTRY: MemoryEntry = {
+  id: 'constraints',
+  title: 'Constraints',
+  description: 'Max subscription, no API key',
+  section: 'Constraints',
+  filePath: '/home/.claude/projects/C--project/memory/constraints.md',
+  exists: true,
+};
+
+describe('buildMemoryItems', () => {
+  it('returns empty array for empty input', () => {
+    expect(buildMemoryItems([])).toHaveLength(0);
+  });
+
+  it('produces one item per entry with kind "memory"', () => {
+    const items = buildMemoryItems([MEMORY_ENTRY]);
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('memory');
+    expect(items[0].label).toBe('Constraints');
+    expect(items[0].id).toBe('memory:constraints');
+  });
+
+  it('uses description as detail when present', () => {
+    const items = buildMemoryItems([MEMORY_ENTRY]);
+    expect(items[0].detail).toBe('Max subscription, no API key');
+  });
+
+  it('falls back to section when description is empty', () => {
+    const entry: MemoryEntry = { ...MEMORY_ENTRY, description: '' };
+    const items = buildMemoryItems([entry]);
+    expect(items[0].detail).toBe('Constraints');
+  });
+
+  it('sets enabled: true on all items', () => {
+    const items = buildMemoryItems([MEMORY_ENTRY]);
+    expect(items[0].enabled).toBe(true);
+  });
+
+  it('includes memory items in totals when passed to useContextPreview', () => {
+    const { result } = renderHook(() =>
+      useContextPreview({ ...EMPTY_INPUT, memoryEntries: [MEMORY_ENTRY] }),
+    );
+    const memItems = result.current.items.filter((i) => i.kind === 'memory');
+    expect(memItems).toHaveLength(1);
+    expect(result.current.totals.memory).toBe(1);
+  });
+
+  it('memory total is 0 when memoryEntries is omitted', () => {
+    const { result } = renderHook(() => useContextPreview(EMPTY_INPUT));
+    expect(result.current.totals.memory).toBe(0);
+  });
+
+  it('totalTokens reflects memory item tokens', () => {
+    const { result: withMem } = renderHook(() =>
+      useContextPreview({ ...EMPTY_INPUT, memoryEntries: [MEMORY_ENTRY] }),
+    );
+    const { result: without } = renderHook(() => useContextPreview(EMPTY_INPUT));
+    expect(withMem.current.totals.totalTokens).toBeGreaterThan(without.current.totals.totalTokens);
   });
 });
