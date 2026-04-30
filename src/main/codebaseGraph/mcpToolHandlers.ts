@@ -59,8 +59,9 @@ const TOOL_SCHEMAS = {
   search_graph: {
     type: 'object',
     properties: {
+      query: { type: 'string', description: 'Symbol name to search (preferred). Substring match.' },
+      name_pattern: { type: 'string', description: 'Deprecated alias for query.' },
       label: { type: 'string' },
-      name_pattern: { type: 'string' },
       project: { type: 'string' },
       file_pattern: { type: 'string' },
       relationship: { type: 'string' },
@@ -101,18 +102,27 @@ const TOOL_SCHEMAS = {
   },
   get_code_snippet: {
     type: 'object',
-    properties: { qualified_name: { type: 'string', description: 'The full qualified name' } },
-    required: ['qualified_name'],
+    properties: {
+      symbol: { type: 'string', description: 'Symbol name or qualified name (preferred).' },
+      qualified_name: { type: 'string', description: 'Deprecated alias for symbol.' },
+    },
+    required: [],
   },
   trace_call_path: {
     type: 'object',
     properties: {
-      function_name: { type: 'string' },
-      direction: { type: 'string', enum: ['inbound', 'outbound', 'both'] },
+      symbol: { type: 'string', description: 'Function/method name to trace (preferred).' },
+      function_name: { type: 'string', description: 'Deprecated alias for symbol.' },
+      direction: {
+        type: 'string',
+        enum: ['inbound', 'outbound', 'both', 'callers', 'callees'],
+        description:
+          "Direction: 'inbound'/'callers' (who calls this); 'outbound'/'callees' (what this calls); 'both' (default).",
+      },
       depth: { type: 'number' },
       risk_labels: { type: 'boolean' },
     },
-    required: ['function_name'],
+    required: [],
   },
   detect_changes: {
     type: 'object',
@@ -165,7 +175,8 @@ function buildLifecycleTools(context: GraphToolContext): McpToolDefinition[] {
     },
     {
       name: 'index_status',
-      description: 'Get the current indexing status for a project.',
+      description:
+        'Get the current indexing status for a project. Pass project name or omit to use the current workspace.',
       inputSchema: TOOL_SCHEMAS.index_status,
       handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context),
     },
@@ -195,7 +206,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'search_graph',
       description:
-        'USE INSTEAD OF Grep when looking for symbols (functions, classes, types, methods) by name. Returns indexed graph nodes with file:line and structural metadata. Grep returns text matches including comments, strings, and unrelated same-name occurrences — search_graph returns only actual symbol definitions/references. Filter by label (Function, Class, etc.) and file_path.',
+        'USE INSTEAD OF Grep when looking for symbols (functions, classes, types, methods) by name. Returns indexed graph nodes with file:line and structural metadata. Grep returns text matches including comments, strings, and unrelated same-name occurrences — search_graph returns only actual symbol definitions/references. Pass query (preferred) or name_pattern (deprecated alias). Filter by label (Function, Class, etc.) and file_pattern.',
       inputSchema: TOOL_SCHEMAS.search_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -222,7 +233,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'get_code_snippet',
       description:
-        'USE INSTEAD OF Read when you only need one symbol body. Returns source for a function/class by qualified name (Project.module.symbol). Avoids reading the full file. Pair with search_graph (find the qualified name) → get_code_snippet (get the body).',
+        'USE INSTEAD OF Read when you only need one symbol body. Returns source for a function/class. Pass symbol (preferred) or qualified_name (deprecated alias). A bare symbol name (e.g. "GraphDatabase") auto-resolves via search if unique; pass the full qualified name for precision. Avoids reading the full file. Pair with search_graph (find the qualified name) → get_code_snippet (get the body).',
       inputSchema: TOOL_SCHEMAS.get_code_snippet,
       handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
     },
@@ -235,7 +246,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'trace_call_path',
       description:
-        'USE THIS for caller/callee questions — Grep cannot answer them correctly. Traces actual call edges in/out of a function with risk classification (CRITICAL → LOW). Grep returns text matches including comments and same-name unrelated variables; trace_call_path returns the real call graph from parsed AST. Always prefer this over Grep for "who calls X" or "what does X call".',
+        "USE THIS for caller/callee questions — Grep cannot answer them correctly. Traces actual call edges in/out of a function with risk classification (CRITICAL → LOW). Pass symbol (preferred) or function_name (deprecated alias). direction: 'inbound'/'callers' = who calls this; 'outbound'/'callees' = what this calls; 'both' = default. Grep returns text matches including comments and same-name unrelated variables; trace_call_path returns the real call graph from parsed AST.",
       inputSchema: TOOL_SCHEMAS.trace_call_path,
       handler: async (a: Record<string, unknown>) => {
         try {

@@ -41,10 +41,12 @@ export async function handleSearchGraph(
   ctx: GraphToolContext,
 ): Promise<string> {
   const { db, projectName } = ctx;
+  const namePattern =
+    (args.query as string | undefined) ?? (args.name_pattern as string | undefined);
   const result = db.searchNodes({
     project: (args.project as string) ?? projectName,
-    label: args.label as undefined,
-    namePattern: args.name_pattern as string | undefined,
+    label: args.label as string | undefined,
+    namePattern,
     filePath: args.file_pattern as string | undefined,
     relationship: args.relationship as undefined,
     direction: args.direction as undefined,
@@ -105,19 +107,23 @@ function groupNodesByDepth(nodes: TraceNode[]): Map<number, TraceNode[]> {
   return byDepth;
 }
 
-export async function handleTraceCallPath(
-  args: Record<string, unknown>,
-  queryEngine: QueryEngine,
-): Promise<string> {
-  const result = queryEngine.traceCallPath({
-    functionName: args.function_name as string,
-    direction: (args.direction as 'inbound' | 'outbound' | 'both') ?? 'both',
-    depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
-    riskLabels: (args.risk_labels as boolean) ?? false,
-  });
+function resolveDirection(raw: unknown): 'inbound' | 'outbound' | 'both' {
+  if (raw === 'callers') return 'inbound';
+  if (raw === 'callees') return 'outbound';
+  if (raw === 'inbound' || raw === 'outbound' || raw === 'both') return raw;
+  return 'both';
+}
 
-  if (!result.startNode) return `Function "${args.function_name}" not found in the graph.`;
+type TraceResult = {
+  startNode: TraceNode | null;
+  nodes: TraceNode[];
+  totalNodes: number;
+  truncated: boolean;
+  impactSummary?: string;
+};
 
+function formatTraceResult(result: TraceResult, functionName: string): string {
+  if (!result.startNode) return `Function "${functionName}" not found in the graph.`;
   const lines: string[] = [`Trace from: ${result.startNode.label} ${result.startNode.name}`];
   if (result.startNode.signature) lines.push(`  Signature: ${result.startNode.signature}`);
   if (result.startNode.filePath)
@@ -127,14 +133,30 @@ export async function handleTraceCallPath(
     `${result.totalNodes} connected nodes found${result.truncated ? ' (truncated at 200)' : ''}:`,
     '',
   );
-
   const byDepth = groupNodesByDepth(result.nodes);
   for (const [depth, nodes] of Array.from(byDepth.entries()).sort((a, b) => a[0] - b[0])) {
     lines.push(...formatTraceDepthGroup(depth, nodes));
   }
-
   if (result.impactSummary) lines.push(result.impactSummary);
   return truncate(lines.join('\n'));
+}
+
+export async function handleTraceCallPath(
+  args: Record<string, unknown>,
+  queryEngine: QueryEngine,
+): Promise<string> {
+  const functionName =
+    (args.symbol as string | undefined) ?? (args.function_name as string | undefined);
+  if (!functionName) {
+    return "Error: missing required parameter 'symbol' (or 'function_name')";
+  }
+  const result = queryEngine.traceCallPath({
+    functionName,
+    direction: resolveDirection(args.direction),
+    depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
+    riskLabels: (args.risk_labels as boolean) ?? false,
+  });
+  return formatTraceResult(result, functionName);
 }
 
 // ─── Tool 11: detect_changes handler ─────────────────────────────────────────

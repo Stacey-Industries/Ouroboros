@@ -76,7 +76,10 @@ export async function handleIndexStatus(
   ctx: GraphToolContext,
 ): Promise<string> {
   try {
-    const name = (args.project as string) ?? ctx.projectName;
+    const name =
+      (args.project as string | undefined) ??
+      (args.project_name as string | undefined) ??
+      ctx.projectName;
     const project = ctx.db.getProject(name);
     if (!project) return `Project "${name}" is not indexed. Run index_repository first.`;
     const nodeCounts = ctx.db.getNodeLabelCounts(name);
@@ -183,27 +186,56 @@ export async function handleSearchCode(
 
 // ─── get_code_snippet handler ─────────────────────────────────────────────────
 
+function resolveQualifiedName(
+  value: string,
+  ctx: GraphToolContext,
+): { qn: string | null; error?: string } {
+  if (ctx.db.getNode(value)) return { qn: value };
+  const matches = ctx.db.searchNodes({
+    project: ctx.projectName,
+    namePattern: value,
+    caseSensitive: true,
+    limit: 5,
+  });
+  const exact = matches.nodes.filter((n) => n.name === value);
+  if (exact.length === 1) return { qn: exact[0].qualified_name };
+  if (exact.length > 1) {
+    const names = exact.map((n) => n.qualified_name).join(', ');
+    return { qn: null, error: `Error: ambiguous symbol '${value}'; matched ${exact.length} qualified names: ${names}` };
+  }
+  return { qn: null };
+}
+
+function formatSnippet(qn: string, ctx: GraphToolContext): string {
+  const node = ctx.db.getNode(qn);
+  if (!node) return `Symbol not found: ${qn}`;
+  const snippet = ctx.queryEngine.getCodeSnippet(qn);
+  if (!snippet) return `Could not read source for: ${qn}`;
+  const props = node.props as Record<string, unknown>;
+  const header = [
+    `${node.label} ${node.name}`,
+    props.signature ? `Signature: ${props.signature}` : null,
+    `File: ${node.file_path}:${node.start_line}-${node.end_line}`,
+    `Module: ${node.qualified_name.split('.').slice(0, -1).join('.')}`,
+    '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return truncate(header + snippet);
+}
+
 export async function handleGetCodeSnippet(
   args: Record<string, unknown>,
   ctx: GraphToolContext,
 ): Promise<string> {
   try {
-    const qn = args.qualified_name as string;
-    const node = ctx.db.getNode(qn);
-    if (!node) return `Symbol not found: ${qn}`;
-    const snippet = ctx.queryEngine.getCodeSnippet(qn);
-    if (!snippet) return `Could not read source for: ${qn}`;
-    const props = node.props as Record<string, unknown>;
-    const header = [
-      `${node.label} ${node.name}`,
-      props.signature ? `Signature: ${props.signature}` : null,
-      `File: ${node.file_path}:${node.start_line}-${node.end_line}`,
-      `Module: ${node.qualified_name.split('.').slice(0, -1).join('.')}`,
-      '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-    return truncate(header + snippet);
+    const raw =
+      (args.symbol as string | undefined) ?? (args.qualified_name as string | undefined);
+    if (!raw) return "Error: missing required parameter 'symbol' (or 'qualified_name')";
+    const resolved = resolveQualifiedName(raw, ctx);
+    if (resolved.error) return resolved.error;
+    if (!resolved.qn) return `Symbol not found: ${raw}`;
+    return formatSnippet(resolved.qn, ctx);
   } catch (err) {
     return `Error getting code snippet: ${err instanceof Error ? err.message : String(err)}`;
   }
