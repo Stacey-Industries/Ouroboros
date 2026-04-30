@@ -58,7 +58,7 @@ Each subdirectory has its own `CLAUDE.md` with a subsystem-specific file map.
 
 ## Codebase Graph — use it FIRST
 
-The repo is indexed in the codebase-memory graph (~1.4K nodes, ~2.3K edges, auto-synced on file changes). At this graph size queries are cheap; use them liberally.
+The repo is indexed in the codebase-memory graph (~18.3K nodes, ~13.2K edges, auto-synced on file changes). At this graph size queries are moderately cheap; use them routinely for symbol queries.
 
 **Default behavior for symbol queries: graph tools FIRST, Grep is the fallback.** When the question is "who calls X", "where is X defined", "what's the body of X", "what depends on X" — use `trace_call_path`, `search_graph`, `get_code_snippet`, `detect_changes`, or `query_graph` (Cypher) BEFORE reaching for Grep. Grep returns text matches including comments and same-name unrelated occurrences; the graph returns actual structural edges.
 
