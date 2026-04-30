@@ -46,6 +46,43 @@ const DEBOUNCE_MS = 3000;
 /** Threshold: if onFileChange receives more than this many paths, defer to polling. */
 const IMMEDIATE_REINDEX_THRESHOLD = 5;
 
+/** Log every Nth quiet poll cycle even when nothing changed (diagnostic heartbeat). */
+const POLL_LOG_EVERY_N = 10;
+
+/** Log the poll line if it took longer than this, even when nothing changed (ms). */
+const POLL_LOG_SLOW_MS = 100;
+
+// ─── Module-scope helpers ─────────────────────────────────────────────────────
+
+/**
+ * Async map with a bounded concurrency window.
+ * Runs at most `concurrency` promises simultaneously; returns results in
+ * input order. Items beyond the window are queued and started as slots free.
+ */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runNext(): Promise<void> {
+    while (nextIndex < items.length) {
+      const idx = nextIndex++;
+      // eslint-disable-next-line security/detect-object-injection -- idx is a bounded integer counter, not user input
+      results[idx] = await fn(items[idx]);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    () => runNext(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 // ─── AutoSyncWatcher ──────────────────────────────────────────────────────────
 
 export class AutoSyncWatcher {
@@ -56,6 +93,12 @@ export class AutoSyncWatcher {
   private disposed = false;
   private reindexing = false;
   private pollIntervalMs: number;
+
+  /** Rolling offset into the file-hash catalog for the current scan window. */
+  private scanOffset = 0;
+
+  /** Counter incremented on every poll; used for periodic heartbeat logging. */
+  private pollCount = 0;
 
   /** Accumulates file paths received during the 300ms app-layer debounce window. */
   private pendingEvents: Map<string, number> = new Map();
@@ -125,9 +168,11 @@ export class AutoSyncWatcher {
   }
 
   /**
-   * Stat-based change detection. Iterates existing file hashes in DB,
-   * compares mtime_ns and size against current fs.stat. Caps at
-   * MAX_FILES_PER_POLL per cycle to avoid blocking the event loop.
+   * Stat-based change detection. Iterates a rolling window of file hashes in DB,
+   * compares mtime_ns and size against current fs.stat. Stats are parallelized
+   * with concurrency=32 via mapWithConcurrency. The scanOffset advances by
+   * MAX_FILES_PER_POLL each cycle, wrapping at catalog length so successive
+   * polls eventually cover the full catalog.
    *
    * If changes are detected and no reindex is already in flight,
    * triggers an incremental reindex.
@@ -135,76 +180,83 @@ export class AutoSyncWatcher {
   async pollForChanges(): Promise<void> {
     if (this.disposed || this.reindexing) return;
     const t0 = Date.now();
-    const { changed, totalHashes } = await this.collectChangedFilesWithDiag();
-    log.info(
-      `[trace:autoSync.poll] collectChangedFiles in ${Date.now() - t0}ms hashes=${totalHashes} changed=${changed.length}`,
-    );
+    this.pollCount++;
+
+    const { changed, totalHashes } = await this.collectChangedFiles();
+
+    const elapsedMs = Date.now() - t0;
+    const shouldLog =
+      changed.length > 0 ||
+      this.pollCount % POLL_LOG_EVERY_N === 0 ||
+      elapsedMs > POLL_LOG_SLOW_MS;
+
+    if (shouldLog) {
+      log.info(
+        `[trace:autoSync.poll] collectChangedFiles in ${elapsedMs}ms hashes=${totalHashes} changed=${changed.length}`,
+      );
+    }
+
     if (changed.length > 0) {
       await this.triggerReindex();
     }
   }
 
   /**
-   * Wrapper around collectChangedFiles that also reports the size of the
-   * file-hash catalog the poll iterates. Wave 53k follow-up: an
-   * investigation observed `changed=0` consistently with `0ms` runtime,
-   * which is suspicious for a ~2600-file repo. The hashes count
-   * disambiguates "DB returned empty" from "DB returned full but no
-   * mtime/size mismatch".
+   * Collect files that have changed based on stat comparison.
+   * Reads the full hash catalog once, slices MAX_FILES_PER_POLL records
+   * starting at scanOffset, stats them concurrently (concurrency=32), then
+   * advances scanOffset (wrapping at catalog length).
+   *
+   * Returns changed paths and the full catalog size for diagnostics.
    */
-  private async collectChangedFilesWithDiag(): Promise<{
-    changed: string[];
-    totalHashes: number;
-  }> {
-    let totalHashes = 0;
+  private async collectChangedFiles(): Promise<{ changed: string[]; totalHashes: number }> {
+    let allHashes: ReturnType<GraphDatabase['getAllFileHashes']>;
+
     try {
-      totalHashes = this.opts.db.getAllFileHashes(this.opts.projectName).length;
-    } catch {
-      /* ignore — collectChangedFiles will surface the real error */
+      allHashes = this.opts.db.getAllFileHashes(this.opts.projectName);
+    } catch (err) {
+      this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
+      return { changed: [], totalHashes: 0 };
     }
-    const changed = await this.collectChangedFiles();
+
+    const totalHashes = allHashes.length;
+    if (totalHashes === 0) return { changed: [], totalHashes };
+
+    const slice = allHashes.slice(this.scanOffset, this.scanOffset + MAX_FILES_PER_POLL);
+    this.scanOffset =
+      this.scanOffset + MAX_FILES_PER_POLL >= totalHashes
+        ? 0
+        : this.scanOffset + MAX_FILES_PER_POLL;
+
+    const results = await mapWithConcurrency(slice, 32, (record) => {
+      const absolutePath = path.join(this.opts.projectRoot, record.rel_path);
+      return this.checkFileChanged(absolutePath, record);
+    });
+
+    const changed = results.filter((r): r is string => r !== null);
     return { changed, totalHashes };
   }
 
-  /** Collect files that have changed based on stat comparison. */
-  private async collectChangedFiles(): Promise<string[]> {
-    const changed: string[] = [];
-    let existingHashes: ReturnType<GraphDatabase['getAllFileHashes']>;
-
-    try {
-      existingHashes = this.opts.db.getAllFileHashes(this.opts.projectName);
-    } catch (err) {
-      this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
-      return changed;
-    }
-
-    for (const record of existingHashes) {
-      if (changed.length >= MAX_FILES_PER_POLL) break;
-      const absolutePath = path.join(this.opts.projectRoot, record.rel_path);
-
-      await this.checkFileChanged(absolutePath, record, changed);
-    }
-
-    return changed;
-  }
-
-  /** Check a single file's stat against the stored hash record. */
+  /**
+   * Check a single file's stat against the stored hash record.
+   * Returns the rel_path if changed/deleted, or null if unchanged.
+   */
   private async checkFileChanged(
     absolutePath: string,
     record: ReturnType<GraphDatabase['getAllFileHashes']>[number],
-    changed: string[],
-  ): Promise<void> {
+  ): Promise<string | null> {
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- absolutePath from trusted graph record
       const stat = await fs.stat(absolutePath);
       const currentMtimeNs = Math.floor(stat.mtimeMs * 1e6);
       const currentSize = stat.size;
       if (currentMtimeNs !== record.mtime_ns || currentSize !== record.size) {
-        changed.push(record.rel_path);
+        return record.rel_path;
       }
+      return null;
     } catch {
       // File deleted or inaccessible -- mark as changed so reindex handles removal
-      changed.push(record.rel_path);
+      return record.rel_path;
     }
   }
 
