@@ -17,6 +17,7 @@ import {
   logFirstChunk,
   type ProgressToolActivity,
 } from './chatOrchestrationBridgeProgressHelpers';
+import { emitChatSubagentEnd, emitChatSubagentStart } from './chatOrchestrationBridgeSubagent';
 import {
   applySubAgentMessageToAccumulatedBlock,
   applySubToolToAccumulatedBlock,
@@ -25,6 +26,7 @@ import {
 } from './chatOrchestrationBridgeSubTools';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tapTextDeltaForFactClaims } from './factClaimTap';
+import { traceLink } from './subagentLinkTrace';
 import type {
   AgentChatContentBlock,
   AgentChatSubAgentTranscriptEntry,
@@ -141,6 +143,17 @@ function applyToolStart(
   if (!isRepeatedStart) {
     ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
     emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
+    // Wave 57 Phase A — trace Task tool blocks surfacing in the chat stream.
+    // Wave 57 Phase C — emit synthetic agent_start for Task tool child sessions.
+    if (toolActivity.name === 'Task') {
+      const toolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+      traceLink('chat:taskBlockObserved', {
+        toolCallId,
+        source: 'chat-stream',
+        timestamp: now,
+      });
+      emitChatSubagentStart(ctx, { toolCallId });
+    }
   }
 }
 
@@ -164,6 +177,11 @@ function applyToolComplete(
     now,
     output: toolActivity.output,
   });
+  // Wave 57 Phase C — emit synthetic agent_end for Task tool child sessions.
+  if (toolActivity.name === 'Task') {
+    const toolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+    emitChatSubagentEnd(ctx, { toolCallId }, 'success');
+  }
 }
 
 export function handleToolBlock(args: BlockHandlerArgs, toolActivity: ProgressToolActivity): void {

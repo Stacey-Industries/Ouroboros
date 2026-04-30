@@ -29,6 +29,11 @@ vi.mock('./ipc-handlers/subagent', () => ({
   broadcastSubagentUpdated: mockBroadcast,
 }));
 
+// Mock subagentLinkTrace so its config import doesn't pull in electron.app
+vi.mock('./agentChat/subagentLinkTrace', () => ({
+  traceLink: vi.fn(),
+}));
+
 // Mock electron (hooks.ts HookPayload type only — no runtime electron calls)
 vi.mock('electron', () => ({
   BrowserWindow: {},

@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
   BrowserWindow: { fromWebContents: vi.fn() },
+  // app.getPath needed by subagentLinkTrace → config → configPreflight
+  app: { getPath: vi.fn(() => '/fake/userData'), isPackaged: false },
 }));
 
 // Mock windowManager so broadcastSubagentUpdated doesn't blow up

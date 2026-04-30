@@ -32,6 +32,7 @@ function makeCtx(overrides: Partial<ActiveStreamContext> = {}): ActiveStreamCont
     accumulatedBlocks: [],
     monitorStartEmitted: false,
     streamEnded: false,
+    chatSubagentEmissions: new Map(),
     ...overrides,
   } as ActiveStreamContext;
 }
@@ -58,6 +59,10 @@ vi.mock('./chatOrchestrationBridgeSubTools', () => ({
   buildSubAgentMessageStreamChunk: vi.fn(() => ({})),
 }));
 vi.mock('./factClaimTap', () => ({ tapTextDeltaForFactClaims: vi.fn(() => Promise.resolve()) }));
+vi.mock('./chatOrchestrationBridgeSubagent', () => ({
+  emitChatSubagentStart: vi.fn(),
+  emitChatSubagentEnd: vi.fn(),
+}));
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -116,28 +121,22 @@ describe('handleToolBlock', () => {
   it('handles subToolActivity path without throwing', () => {
     const ctx = makeCtx({ accumulatedBlocks: [{ kind: 'text', content: '' }] });
     expect(() =>
-      handleToolBlock(
-        { ctx, listeners: makeListeners(), blockIndex: 0, now: 0 },
-        {
-          name: 'Read',
-          status: 'running',
-          subToolActivity: { name: 'Read', status: 'running' },
-        } as never,
-      ),
+      handleToolBlock({ ctx, listeners: makeListeners(), blockIndex: 0, now: 0 }, {
+        name: 'Read',
+        status: 'running',
+        subToolActivity: { name: 'Read', status: 'running' },
+      } as never),
     ).not.toThrow();
   });
 
   it('handles subAgentMessage path without throwing', () => {
     const ctx = makeCtx({ accumulatedBlocks: [{ kind: 'text', content: '' }] });
     expect(() =>
-      handleToolBlock(
-        { ctx, listeners: makeListeners(), blockIndex: 0, now: 0 },
-        {
-          name: 'Agent',
-          status: 'running',
-          subAgentMessage: { role: 'assistant', textDelta: 'hi' },
-        } as never,
-      ),
+      handleToolBlock({ ctx, listeners: makeListeners(), blockIndex: 0, now: 0 }, {
+        name: 'Agent',
+        status: 'running',
+        subAgentMessage: { role: 'assistant', textDelta: 'hi' },
+      } as never),
     ).not.toThrow();
   });
 });
@@ -145,7 +144,12 @@ describe('handleToolBlock', () => {
 describe('handleContentBlock', () => {
   it('routes text blockType to handleTextBlock', () => {
     const ctx = makeCtx();
-    handleContentBlock(ctx, makeListeners(), { blockIndex: 0, blockType: 'text', textDelta: 'yo' }, 0);
+    handleContentBlock(
+      ctx,
+      makeListeners(),
+      { blockIndex: 0, blockType: 'text', textDelta: 'yo' },
+      0,
+    );
     expect(ctx.accumulatedText).toBe('yo');
     expect(ctx.firstChunkEmitted).toBe(true);
   });
@@ -164,12 +168,7 @@ describe('handleContentBlock', () => {
 
   it('is a no-op for unknown blockType', () => {
     const ctx = makeCtx();
-    handleContentBlock(
-      ctx,
-      makeListeners(),
-      { blockIndex: 0, blockType: 'unknown' as never },
-      0,
-    );
+    handleContentBlock(ctx, makeListeners(), { blockIndex: 0, blockType: 'unknown' as never }, 0);
     expect(ctx.firstChunkEmitted).toBe(true);
   });
 });

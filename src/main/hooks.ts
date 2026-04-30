@@ -2,12 +2,15 @@
 
 import { BrowserWindow } from 'electron';
 
+import { traceLink } from './agentChat/subagentLinkTrace';
+import { get as getSubagentRecord } from './agentChat/subagentTracker';
 import {
   clearSessionRules,
   requestApproval,
   respondToApproval,
   toolRequiresApproval,
 } from './approvalManager';
+import { enrichAgentStartPayload } from './hooksAgentStartEnrich';
 import { getChatLaunchesInFlight } from './hooksChatLaunch';
 import { tapContextOutcomeObserver } from './hooksContextOutcome';
 import { pairCorrelationId } from './hooksCorrelationPairing';
@@ -191,7 +194,20 @@ function dispatchNewEventType(payload: HookPayload): boolean {
   return false;
 }
 
+function traceAgentStart(payload: HookPayload): void {
+  const existing = getSubagentRecord(payload.sessionId);
+  traceLink('hook:agentStart', {
+    childSessionId: payload.sessionId,
+    parentSessionId: payload.parentSessionId ?? existing?.parentSessionId,
+    source: 'named-pipe',
+    timestamp: payload.timestamp,
+  });
+}
+
 function dispatchLifecycleEvent(payload: HookPayload): void {
+  if (payload.type === 'agent_start') {
+    traceAgentStart(payload);
+  }
   if (payload.type === 'session_start') {
     handleSessionStart(payload);
     return;
@@ -258,7 +274,9 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
     );
   }
   trackSessionLifecycle(rawPayload);
-  const payload = inferSessionId(rawPayload);
+  const inferred = inferSessionId(rawPayload);
+  // Wave 57 Phase B — enrich agent_start with parentSessionId from tracker when flag is on.
+  const payload = enrichAgentStartPayload(inferred);
 
   const windows = getDispatchWindows();
   if (windows.length === 0) {

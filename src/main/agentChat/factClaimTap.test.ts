@@ -44,6 +44,7 @@ function makeCtx(overrides: Partial<ActiveStreamContext> = {}): ActiveStreamCont
     monitorStartEmitted: false,
     streamEnded: false,
     model: 'claude-sonnet-4-6',
+    chatSubagentEmissions: new Map(),
     ...overrides,
   };
 }

@@ -5,6 +5,7 @@
  * Handles Task tool pre/post events to track subagent start and end.
  */
 
+import { traceLink } from './agentChat/subagentLinkTrace';
 import { get, onTaskToolPreUse, recordEnd } from './agentChat/subagentTracker';
 import type { HookPayload } from './hooks';
 import { broadcastSubagentUpdated } from './ipc-handlers/subagent';
@@ -15,9 +16,21 @@ function getChildSessionId(payload: HookPayload): string | undefined {
     | undefined;
 }
 
+function traceHookIncoming(payload: HookPayload): void {
+  const childSessionId = getChildSessionId(payload);
+  traceLink('hook:incoming', {
+    parentSessionId: payload.parentSessionId,
+    childSessionId: childSessionId ?? payload.sessionId,
+    toolCallId: payload.toolCallId,
+    source: 'named-pipe',
+    timestamp: payload.timestamp,
+  });
+}
+
 export function tapSubagentTracker(payload: HookPayload): void {
   if (payload.toolName !== 'Task') return;
   if (payload.type === 'pre_tool_use') {
+    traceHookIncoming(payload);
     onTaskToolPreUse(payload);
     return;
   }

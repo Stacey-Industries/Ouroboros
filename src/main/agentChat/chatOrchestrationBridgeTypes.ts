@@ -76,6 +76,12 @@ export interface ActiveStreamContext {
    * Absent when the router is disabled or no packet was built.
    */
   outcomeTraceId?: string;
+  /**
+   * Tracks synthetic agent_start/agent_end emissions for Task tool child sessions.
+   * Keys on toolCallId. Enforces idempotence across mid-turn refreshes.
+   * Wave 57 Phase C.
+   */
+  chatSubagentEmissions: Map<string, { started: boolean; ended: boolean }>;
 }
 
 export interface AgentChatBridgeRuntime {

@@ -242,7 +242,7 @@ export class WebSocketTransport {
           reject(new Error(`IPC timeout: ${channel}`));
         }
       }, budgetMs) as unknown as number;
-      this.pendingRequests.set(id, { resolve, reject, timer });
+      this.pendingRequests.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
       this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: channel, params: args }));
     });
   }
