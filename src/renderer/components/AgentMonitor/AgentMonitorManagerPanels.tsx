@@ -243,5 +243,5 @@ export const MonitorToolbar = memo(function MonitorToolbar({
   );
 });
 
-export { ComparePanel, QuickActionBar, SearchInput } from './AgentMonitorManagerPanelsParts';
+export { ComparePanel, SearchInput } from './AgentMonitorManagerPanelsParts';
 export { EmptyState };

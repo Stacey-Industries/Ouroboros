@@ -6,16 +6,14 @@ import { useToastContext } from '../../contexts/ToastContext';
 import { useConfig } from '../../hooks/useConfig';
 import { useCostTracking } from '../../hooks/useCostTracking';
 import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
-import type { AgentTemplate } from '../../types/electron';
 import { AgentMonitorManagerContent } from './AgentMonitorManagerContent';
-import { MonitorToolbar, QuickActionBar } from './AgentMonitorManagerPanels';
+import { MonitorToolbar } from './AgentMonitorManagerPanels';
 import { enrichSessions, filterSessions } from './agentMonitorManagerUtils';
 import { AgentSummaryBar } from './AgentSummaryBar';
 import { hasTreeStructure } from './AgentTree';
 import type { AgentSession } from './types';
 import { type AgentMonitorModes, useAgentMonitorModes } from './useAgentMonitorModes';
 import { useAgentMonitorSettings } from './useAgentMonitorSettings';
-import { useAgentMonitorTemplates } from './useAgentMonitorTemplates';
 import { useCompletionNotifications } from './useCompletionNotifications';
 import { ViewModeSelector } from './ViewModeSelector';
 
@@ -134,7 +132,6 @@ function useAgentMonitorState() {
     [getSnapshotHash],
   );
   const modes = useAgentMonitorModes();
-  const { executeTemplate, templates } = useAgentMonitorTemplates(projectRoot);
   const debouncedFilterQuery = useDebouncedValue(modes.filterQuery, 150);
   const derived = useAgentMonitorDerived({
     agents,
@@ -152,11 +149,9 @@ function useAgentMonitorState() {
     agents,
     clearCompleted,
     dismiss,
-    executeTemplate,
     modes,
     monitorSettings,
     subagentUxEnabled,
-    templates,
     updateNotes,
     ...derived,
   };
@@ -166,13 +161,11 @@ interface MonitorBodyProps {
   agents: AgentSession[];
   clearCompleted: () => void;
   dismiss: (id: string) => void;
-  executeTemplate: (template: AgentTemplate) => void;
   handleReplay: (sessionId: string) => void;
   handleReviewChanges: (sessionId: string) => void;
   modes: AgentMonitorModes;
   monitorSettings: ReturnType<typeof useAgentMonitorSettings>;
   subagentUxEnabled: boolean;
-  templates: AgentTemplate[];
   updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
   useTree: boolean;
   visibleCurrentSessions: AgentSession[];
@@ -235,7 +228,6 @@ const MonitorBody = memo(function MonitorBody(p: MonitorBodyProps): React.ReactE
   return (
     <div className="flex flex-col h-full min-h-0">
       <MonitorViewModeBar monitorSettings={p.monitorSettings} />
-      <QuickActionBar templates={p.templates} onExecuteTemplate={p.executeTemplate} />
       {p.agents.length > 0 ? (
         <div className="flex-shrink-0">
           <AgentSummaryBar sessions={p.agents} onClearCompleted={p.clearCompleted} />

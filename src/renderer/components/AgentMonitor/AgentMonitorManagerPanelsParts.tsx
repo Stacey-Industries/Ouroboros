@@ -1,7 +1,5 @@
 import React, { memo, useCallback } from 'react';
 
-import type { AgentTemplate } from '../../types/electron';
-
 export { ComparePanel } from './ComparePanelSupport';
 
 // ─── Toolbar SVG icons ────────────────────────────────────────────────────────
@@ -163,72 +161,6 @@ export const SearchInput = memo(function SearchInput({
         aria-label="Filter agent sessions"
       />
       {value ? <ClearFilterButton onClear={() => onChange('')} /> : null}
-    </div>
-  );
-});
-
-// ─── QuickActionBar ───────────────────────────────────────────────────────────
-
-const QuickActionButton = memo(function QuickActionButton({
-  onClick,
-  template,
-}: {
-  onClick: () => void;
-  template: AgentTemplate;
-}): React.ReactElement {
-  return (
-    <button
-      onClick={onClick}
-      className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
-      style={{
-        background: 'transparent',
-        border: '1px solid var(--border-default)',
-        color: 'var(--text-muted)',
-        fontSize: '10px',
-        fontFamily: 'var(--font-ui)',
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = 'var(--surface-raised)';
-        event.currentTarget.style.color = 'var(--text-primary)';
-        event.currentTarget.style.borderColor = 'var(--interactive-accent)';
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent';
-        event.currentTarget.style.color = 'var(--text-muted)';
-        event.currentTarget.style.borderColor = 'var(--border-default)';
-      }}
-      title={template.promptTemplate}
-    >
-      {template.icon ? <span>{template.icon}</span> : null}
-      <span>{template.name}</span>
-    </button>
-  );
-});
-
-export const QuickActionBar = memo(function QuickActionBar({
-  onExecuteTemplate,
-  templates,
-}: {
-  onExecuteTemplate: (template: AgentTemplate) => void;
-  templates: AgentTemplate[];
-}): React.ReactElement | null {
-  if (templates.length === 0) return null;
-
-  return (
-    <div
-      className="flex items-center gap-1 px-2 py-1.5 flex-shrink-0 overflow-x-auto"
-      style={{ borderBottom: '1px solid var(--border-subtle)' }}
-    >
-      <span className="text-[10px] font-medium shrink-0 text-text-semantic-faint">Quick:</span>
-      {templates.map((template) => (
-        <QuickActionButton
-          key={template.id}
-          template={template}
-          onClick={() => onExecuteTemplate(template)}
-        />
-      ))}
     </div>
   );
 });
