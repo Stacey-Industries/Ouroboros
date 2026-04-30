@@ -1,19 +1,11 @@
 // @vitest-environment jsdom
 
-import { renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsMobile } from './useIsMobile';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function setWebMode(enabled: boolean): void {
-  if (enabled) {
-    document.documentElement.classList.add('web-mode');
-  } else {
-    document.documentElement.classList.remove('web-mode');
-  }
-}
 
 function mockMatchMedia(phoneMatches: boolean): void {
   window.matchMedia = vi.fn((query: string) => {
@@ -33,51 +25,55 @@ function mockMatchMedia(phoneMatches: boolean): void {
 
 describe('useIsMobile', () => {
   afterEach(() => {
-    setWebMode(false);
     vi.restoreAllMocks();
   });
 
-  describe('Electron mode (no web-mode class)', () => {
-    beforeEach(() => {
-      setWebMode(false);
-    });
-
-    it('returns false regardless of viewport width', () => {
-      mockMatchMedia(true); // phone-sized but Electron mode
-      const { result } = renderHook(() => useIsMobile());
-      expect(result.current).toBe(false);
-    });
-
-    it('returns false without matchMedia being called', () => {
-      const matchMediaSpy = vi.fn();
-      window.matchMedia = matchMediaSpy;
-      renderHook(() => useIsMobile());
-      expect(matchMediaSpy).not.toHaveBeenCalled();
-    });
+  it('returns true when viewport is phone-sized (≤768px)', () => {
+    mockMatchMedia(true);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(true);
   });
 
-  describe('web mode (web-mode class present)', () => {
-    beforeEach(() => {
-      setWebMode(true);
-    });
-
-    it('returns true when viewport is phone-sized (≤768px)', () => {
-      mockMatchMedia(true);
-      const { result } = renderHook(() => useIsMobile());
-      expect(result.current).toBe(true);
-    });
-
-    it('returns false when viewport is not phone-sized', () => {
-      mockMatchMedia(false);
-      const { result } = renderHook(() => useIsMobile());
-      expect(result.current).toBe(false);
-    });
+  it('returns false when viewport is not phone-sized', () => {
+    mockMatchMedia(false);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
   });
 
-  describe('return type', () => {
-    it('returns a boolean', () => {
-      const { result } = renderHook(() => useIsMobile());
-      expect(typeof result.current).toBe('boolean');
+  it('returns false when window.matchMedia is not available (SSR/Electron without matchMedia)', () => {
+    const original = window.matchMedia;
+    // @ts-expect-error — simulate missing matchMedia
+    delete window.matchMedia;
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+    window.matchMedia = original;
+  });
+
+  it('returns a boolean', () => {
+    mockMatchMedia(false);
+    const { result } = renderHook(() => useIsMobile());
+    expect(typeof result.current).toBe('boolean');
+  });
+
+  it('updates when viewport changes', () => {
+    let changeHandler: ((e: MediaQueryListEvent) => void) | undefined;
+    window.matchMedia = vi.fn(() => ({
+      matches: false,
+      media: '(max-width: 768px)',
+      onchange: null,
+      addEventListener: vi.fn((_: string, handler: (e: MediaQueryListEvent) => void) => {
+        changeHandler = handler;
+      }),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+
+    act(() => {
+      changeHandler?.({ matches: true } as MediaQueryListEvent);
     });
+    expect(result.current).toBe(true);
   });
 });

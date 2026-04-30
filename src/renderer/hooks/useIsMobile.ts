@@ -1,13 +1,29 @@
 /**
- * useIsMobile — returns true when the viewport is at phone breakpoint (≤768px).
+ * useIsMobile.ts — viewport-width-based mobile detection.
  *
- * Thin wrapper around useViewportBreakpoint. Returns false immediately in
- * Electron (no web-mode class) and during SSR. In web mode, subscribes to
- * breakpoint changes so the component re-renders only on threshold crossings.
+ * Returns `true` when the current viewport is narrower than the mobile
+ * breakpoint (768px). Tracks live via matchMedia; SSR-safe (returns false
+ * when window is undefined).
  */
+import { useEffect, useState } from 'react';
 
-import { useViewportBreakpoint } from './useViewportBreakpoint';
+const MOBILE_QUERY = '(max-width: 768px)';
+
+function read(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
 
 export function useIsMobile(): boolean {
-  return useViewportBreakpoint() === 'phone';
+  const [isMobile, setIsMobile] = useState<boolean>(() => read());
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const handler = (e: MediaQueryListEvent): void => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  return isMobile;
 }
