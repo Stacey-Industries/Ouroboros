@@ -10,6 +10,7 @@ import {
   respondToApproval,
   toolRequiresApproval,
 } from './approvalManager';
+import { enrichAgentStartPayload } from './hooksAgentStartEnrich';
 import { getChatLaunchesInFlight } from './hooksChatLaunch';
 import { tapContextOutcomeObserver } from './hooksContextOutcome';
 import { pairCorrelationId } from './hooksCorrelationPairing';
@@ -273,7 +274,9 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
     );
   }
   trackSessionLifecycle(rawPayload);
-  const payload = inferSessionId(rawPayload);
+  const inferred = inferSessionId(rawPayload);
+  // Wave 57 Phase B — enrich agent_start with parentSessionId from tracker when flag is on.
+  const payload = enrichAgentStartPayload(inferred);
 
   const windows = getDispatchWindows();
   if (windows.length === 0) {

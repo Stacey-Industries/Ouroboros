@@ -210,6 +210,17 @@ export function get(subagentId: string): SubagentRecord | undefined {
 }
 
 /**
+ * Return the parentSessionId recorded for a child session, or undefined when
+ * no record exists or the record has no parent set.
+ *
+ * Pure read — never throws on unknown or falsy IDs.
+ */
+export function getParentSessionIdFor(childSessionId: string): string | undefined {
+  if (!childSessionId) return undefined;
+  return records.get(childSessionId)?.parentSessionId || undefined;
+}
+
+/**
  * Associate a PTY session ID with a subagent record so the cancel handler
  * can issue a real process kill. No-op when the record does not exist yet
  * (the cancel path handles the not-found case gracefully).
