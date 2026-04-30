@@ -1,18 +1,18 @@
 /**
- * ContextPreview.tsx — Collapsed strip + tabbed popover showing what
- * gets sent with the next prompt.
- *
- * Usage: mount above the composer. Pass the result of useContextPreview().
- * Toggle state is managed by the parent (controlled) so the parent can
- * close it on send.
- *
- * Tabs: Rules / Skills / Memory / Files / Mentions / Tools / System
+ * ContextPreview.tsx — Collapsed strip + tabbed popover showing what gets sent
+ * with the next prompt. Tabs: Rules / Skills / Memory / Files / Mentions /
+ * Tools / System. Toggle state is parent-managed (controlled).
  */
 
 import React from 'react';
 
-import type { ContextItem, ContextItemKind, ContextPreviewModel } from '../../hooks/useContextPreview';
+import type {
+  ContextItem,
+  ContextItemKind,
+  ContextPreviewModel,
+} from '../../hooks/useContextPreview';
 import { isToggleableKind } from '../../hooks/useContextPreview';
+import { RuleGroupSubTabs, usePopoverTabState } from './ContextPreviewRuleSubTabs';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
@@ -69,15 +69,12 @@ function buildStripLabel(model: ContextPreviewModel): string {
 }
 
 function ChevronIcon({ open }: { open: boolean }): React.ReactElement {
+  const style = {
+    transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+    transition: 'transform 150ms',
+  };
   return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      aria-hidden="true"
-      style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
-    >
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={style}>
       <path
         d="M2 3.5L5 6.5L8 3.5"
         stroke="currentColor"
@@ -119,14 +116,6 @@ function ContextPreviewStrip(props: {
 }
 
 // ─── Popover ──────────────────────────────────────────────────────────────────
-
-function buildCountsFromItems(items: ContextItem[]): Record<ContextItemKind, number> {
-  const counts: Record<ContextItemKind, number> = {
-    file: 0, memory: 0, mention: 0, rule: 0, skill: 0, system: 0, tool: 0,
-  };
-  for (const item of items) counts[item.kind] += 1;
-  return counts;
-}
 
 function TabBar(props: {
   tabs: TabDef[];
@@ -178,13 +167,21 @@ function ManagedBadge(): React.ReactElement {
   );
 }
 
+// Rule items only toggle if their id encodes a known scope (`rule:global:` or
+// `rule:project:`). Managed/Local rules keep the legacy `rule:<filePath>` form.
+function isToggleableItem(item: ContextItem): boolean {
+  if (!isToggleableKind(item.kind)) return false;
+  if (item.kind !== 'rule') return true;
+  return item.id.startsWith('rule:global:') || item.id.startsWith('rule:project:');
+}
+
 function ItemRowControl(props: {
   item: ContextItem;
   disabled: boolean;
   onToggle?: (id: string) => void;
 }): React.ReactElement {
   const { item, disabled, onToggle } = props;
-  if (!isToggleableKind(item.kind)) return <ManagedBadge />;
+  if (!isToggleableItem(item)) return <ManagedBadge />;
   return (
     <input
       type="checkbox"
@@ -203,10 +200,12 @@ function ItemRow(props: {
   onToggle?: (id: string) => void;
 }): React.ReactElement {
   const { item, disabled, onToggle } = props;
-  const dimmed = isToggleableKind(item.kind) && disabled;
+  const dimmed = isToggleableItem(item) && disabled;
   return (
     <div
-      className={['flex items-center gap-2 px-3 py-1 text-[11px]', dimmed ? 'opacity-40' : ''].join(' ')}
+      className={['flex items-center gap-2 px-3 py-1 text-[11px]', dimmed ? 'opacity-40' : ''].join(
+        ' ',
+      )}
     >
       <ItemRowControl item={item} disabled={disabled} onToggle={onToggle} />
       <span className="flex-1 truncate text-text-semantic-primary" title={item.label}>
@@ -234,9 +233,7 @@ const EMPTY_TAB_MESSAGES: Partial<Record<ContextItemKind, string>> = {
 
 function EmptyTabMessage({ kind }: { kind: ContextItemKind }): React.ReactElement {
   const msg = EMPTY_TAB_MESSAGES[kind] ?? 'None';
-  return (
-    <div className="px-3 py-2 text-[11px] text-text-semantic-faint italic">{msg}</div>
-  );
+  return <div className="px-3 py-2 text-[11px] text-text-semantic-faint italic">{msg}</div>;
 }
 
 function PopoverHeader(props: { totalTokens: number; onClose: () => void }): React.ReactElement {
@@ -272,9 +269,9 @@ function ContextPreviewPopover(props: {
   disabledIds: ReadonlySet<string>;
 }): React.ReactElement {
   const { model, onClose, onToggleItem, disabledIds } = props;
-  const [activeKind, setActiveKind] = React.useState<ContextItemKind>('rule');
-  const counts = buildCountsFromItems(model.items);
-  const visibleItems = model.items.filter((i) => i.kind === activeKind);
+  const tabs = usePopoverTabState(model);
+  const { activeKind, setActiveKind, ruleGroup, setRuleGroup, counts, ruleCounts, visibleItems } =
+    tabs;
 
   return (
     <div
@@ -286,9 +283,12 @@ function ContextPreviewPopover(props: {
     >
       <PopoverHeader totalTokens={model.totals.totalTokens} onClose={onClose} />
       <TabBar tabs={TABS} activeKind={activeKind} counts={counts} onSelect={setActiveKind} />
+      {activeKind === 'rule' && (
+        <RuleGroupSubTabs active={ruleGroup} counts={ruleCounts} onSelect={setRuleGroup} />
+      )}
       <div className="flex-1 overflow-y-auto" role="tabpanel">
-        {visibleItems.length > 0
-          ? visibleItems.map((item) => (
+        {visibleItems.length > 0 ? (
+          visibleItems.map((item) => (
             <ItemRow
               key={item.id}
               item={item}
@@ -296,7 +296,9 @@ function ContextPreviewPopover(props: {
               onToggle={onToggleItem}
             />
           ))
-          : <EmptyTabMessage kind={activeKind} />}
+        ) : (
+          <EmptyTabMessage kind={activeKind} />
+        )}
       </div>
     </div>
   );

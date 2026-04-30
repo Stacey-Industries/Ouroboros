@@ -4,6 +4,14 @@ import type { RuleDefinition } from '../../../shared/types/claudeConfig';
 import type { RulesFile } from '../../../shared/types/rulesAndSkills';
 import { InlineCreateForm, ScopeToggle, type ScopeValue } from './ClaudeConfigPanelParts';
 import { RuleItem, SectionHeader } from './RulesSkillsPanelParts';
+import {
+  DisabledPill,
+  hasAnyDisabled,
+  RestoreAllButton,
+  RuleRowToggle,
+  useRestoreAll,
+  useRuleToggle,
+} from './RulesTabToggle';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -24,7 +32,7 @@ function hasAPI(): boolean {
   );
 }
 
-const SCOPE_BADGE: Record<string, string> = { global: '\u25C8', project: '\u25A3' };
+const SCOPE_BADGE: Record<string, string> = { global: '◈', project: '▣' };
 
 const DEFAULT_RULE_CONTENT = (name: string): string =>
   `# Rule: ${name}\n\nDescribe the rule here.\n`;
@@ -147,33 +155,52 @@ const handleRuleMouseLeave = (e: React.MouseEvent<HTMLDivElement>): void => {
   e.currentTarget.style.backgroundColor = 'transparent';
 };
 
+function RuleFileName({
+  id,
+  description,
+  isDisabled,
+}: {
+  id: string;
+  description: string;
+  isDisabled: boolean;
+}): React.ReactElement {
+  return (
+    <span className="flex flex-col min-w-0 flex-1">
+      <span className="flex items-center gap-1 min-w-0">
+        <span className="text-xs font-medium text-text-semantic-primary truncate">{id}.md</span>
+        {isDisabled && <DisabledPill />}
+      </span>
+      {description && (
+        <span className="text-[10px] text-text-semantic-muted truncate">{description}</span>
+      )}
+    </span>
+  );
+}
+
 function RuleFileItem({
   rule,
   onOpen,
   onDelete,
+  onToggle,
 }: {
   rule: RuleDefinition;
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
+  onToggle: (id: string, disable: boolean) => void;
 }): React.ReactElement {
+  const isDisabled = rule.disabled === true;
   return (
     <div
       className="group flex items-center gap-2 w-full px-3 py-1.5 transition-colors duration-75"
-      style={{ backgroundColor: 'transparent' }}
+      style={{ backgroundColor: 'transparent', opacity: isDisabled ? 0.55 : 1 }}
       onMouseEnter={handleRuleMouseEnter}
       onMouseLeave={handleRuleMouseLeave}
     >
       <span className="text-[10px] text-text-semantic-muted flex-shrink-0" title={rule.scope}>
         {SCOPE_BADGE[rule.scope] ?? '?'}
       </span>
-      <span className="flex flex-col min-w-0 flex-1">
-        <span className="text-xs font-medium text-text-semantic-primary truncate">
-          {rule.id}.md
-        </span>
-        {rule.description && (
-          <span className="text-[10px] text-text-semantic-muted truncate">{rule.description}</span>
-        )}
-      </span>
+      <RuleRowToggle enabled={!isDisabled} onToggle={() => onToggle(rule.id, !isDisabled)} />
+      <RuleFileName id={rule.id} description={rule.description} isDisabled={isDisabled} />
       <RuleFileActionButtons
         filePath={rule.filePath}
         id={rule.id}
@@ -191,10 +218,12 @@ function RuleFileList({
   ruleFiles,
   onOpen,
   onDelete,
+  onToggle,
 }: {
   ruleFiles: RuleDefinition[];
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
+  onToggle: (id: string, disable: boolean) => void;
 }): React.ReactElement {
   if (ruleFiles.length === 0) {
     return (
@@ -209,6 +238,7 @@ function RuleFileList({
           rule={rule}
           onOpen={onOpen}
           onDelete={onDelete}
+          onToggle={onToggle}
         />
       ))}
     </>
@@ -228,6 +258,8 @@ export function RulesTab({
 
   const handleCreate = useRuleCreate(scope, projectRoot, onOpenFile);
   const handleDelete = useRuleDelete(scope, projectRoot);
+  const handleToggle = useRuleToggle(scope, projectRoot);
+  const handleRestoreAll = useRestoreAll(scope, projectRoot);
 
   const onDelete = useCallback((id: string) => handleDelete(id), [handleDelete]);
 
@@ -238,8 +270,16 @@ export function RulesTab({
         <RuleItem key={rule.type} rule={rule} onOpen={onOpenFile} onCreate={onCreateRule} />
       ))}
       <SectionHeader label="Rule Files" />
-      <ScopeToggle scope={scope} onScopeChange={setScope} />
-      <RuleFileList ruleFiles={ruleFiles} onOpen={onOpenFile} onDelete={onDelete} />
+      <div className="flex items-center justify-between px-3 pb-1">
+        <ScopeToggle scope={scope} onScopeChange={setScope} />
+        {hasAnyDisabled(ruleFiles) && <RestoreAllButton onRestore={handleRestoreAll} />}
+      </div>
+      <RuleFileList
+        ruleFiles={ruleFiles}
+        onOpen={onOpenFile}
+        onDelete={onDelete}
+        onToggle={handleToggle}
+      />
       <InlineCreateForm onCreate={handleCreate} placeholder="+ New Rule" />
     </div>
   );

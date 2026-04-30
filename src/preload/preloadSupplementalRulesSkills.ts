@@ -34,6 +34,10 @@ export const rulesAndSkillsApi: RulesAndSkillsApi = {
     ipcRenderer.invoke('rulesDir:update', args),
   deleteRuleFile: (args: { scope: string; name: string; projectRoot?: string }) =>
     ipcRenderer.invoke('rulesDir:delete', args),
+  toggleRuleFile: (args: { scope: string; name: string; disable: boolean; projectRoot?: string }) =>
+    ipcRenderer.invoke('rulesDir:toggle', args),
+  restoreAllDisabledRules: (args: { scope: string; projectRoot?: string }) =>
+    ipcRenderer.invoke('rulesDir:restoreAll', args),
   getHooksConfig: (scope: string, projectRoot?: string) =>
     ipcRenderer.invoke('hooks:getConfig', scope, projectRoot),
   addHook: (args: {

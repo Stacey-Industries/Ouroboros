@@ -97,5 +97,6 @@ export async function runLaunch(
     providerEnv: args.isProviderRouted ? args.providerEnv : undefined,
     eventHandler: args.eventHandler,
     mcpConfigPath: inputs.mcpConfigPath,
+    projectRoot: args.cwd,
   }).result;
 }

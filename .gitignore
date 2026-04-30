@@ -114,3 +114,7 @@ android/app/release/
 
 # iOS (deferred — Mac required)
 ios/
+
+# Wave 62 — ephemeral disabled-rule sibling dir (project scope).
+# Files here are restored to .claude/rules/ on next session-spawn or app boot.
+.claude/rules-disabled/

@@ -14,7 +14,6 @@ import {
   readCommand,
   updateCommand,
 } from '../rulesAndSkills/commandsManager';
-import { addHook, readHooksConfig, removeHook } from '../rulesAndSkills/hooksManager';
 import {
   createRuleFile,
   deleteRuleFile,
@@ -26,7 +25,9 @@ import { listRulesFiles, readRulesFile } from '../rulesAndSkills/rulesReader';
 import { startRulesWatcher } from '../rulesAndSkills/rulesWatcher';
 import { broadcastToWebClients } from '../web/webServer';
 import { assertPathAllowed } from './pathSecurity';
+import { registerHooksHandlers } from './rulesAndSkillsHooks';
 import { registerClaudeSettingsHandlers } from './rulesAndSkillsSupport';
+import { registerRulesToggleHandlers } from './rulesAndSkillsToggle';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 
@@ -94,60 +95,6 @@ function registerRulesHandlers(channels: string[]): void {
   registerRulesCreate(channels);
 }
 
-function registerHooksGetConfig(channels: string[]): void {
-  ipcMain.handle('hooks:getConfig', async (_event, scope: string, projectRoot?: string) => {
-    try {
-      const hooks = await readHooksConfig(scope as 'global' | 'project', projectRoot);
-      return { success: true, hooks };
-    } catch (error: unknown) {
-      return fail(error);
-    }
-  });
-  channels.push('hooks:getConfig');
-}
-
-type AddHookArgs = {
-  scope: string;
-  eventType: string;
-  command: string;
-  matcher?: string;
-  projectRoot?: string;
-};
-
-async function handleAddHook(_event: unknown, args: AddHookArgs) {
-  try {
-    const { scope, eventType, command, matcher, projectRoot } = args;
-    await addHook({ scope: scope as 'global' | 'project', eventType, command, matcher, projectRoot });
-    return { success: true };
-  } catch (error: unknown) {
-    return fail(error);
-  }
-}
-
-type RemoveHookArgs = { scope: string; eventType: string; index: number; projectRoot?: string };
-
-async function handleRemoveHook(_event: unknown, args: RemoveHookArgs) {
-  try {
-    const { scope, eventType, index, projectRoot } = args;
-    await removeHook(scope as 'global' | 'project', eventType, index, projectRoot);
-    return { success: true };
-  } catch (error: unknown) {
-    return fail(error);
-  }
-}
-
-function registerHooksAddRemove(channels: string[]): void {
-  ipcMain.handle('hooks:addHook', handleAddHook);
-  channels.push('hooks:addHook');
-  ipcMain.handle('hooks:removeHook', handleRemoveHook);
-  channels.push('hooks:removeHook');
-}
-
-function registerHooksHandlers(channels: string[]): void {
-  registerHooksGetConfig(channels);
-  registerHooksAddRemove(channels);
-}
-
 function registerCommandsListAndCreate(channels: string[]): void {
   ipcMain.handle('commands:list', async (_event, projectRoot?: string) => {
     try {
@@ -186,22 +133,31 @@ type CrudArgsWithContent = CrudArgs & { content: string };
 
 async function handleCommandRead(_e: unknown, args: CrudArgs) {
   try {
-    return { success: true, content: await readCommand(args.scope as ClaudeConfigScope, args.name, args.projectRoot) };
-  } catch (error: unknown) { return fail(error); }
+    return {
+      success: true,
+      content: await readCommand(args.scope as ClaudeConfigScope, args.name, args.projectRoot),
+    };
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 async function handleCommandUpdate(_e: unknown, args: CrudArgsWithContent) {
   try {
     await updateCommand(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
     return { success: true };
-  } catch (error: unknown) { return fail(error); }
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 async function handleCommandDelete(_e: unknown, args: CrudArgs) {
   try {
     await deleteCommand(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
     return { success: true };
-  } catch (error: unknown) { return fail(error); }
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 function registerCommandsCrud(channels: string[]): void {
@@ -253,22 +209,36 @@ function registerRulesDirListAndCreate(channels: string[]): void {
 
 async function handleRuleDirRead(_e: unknown, args: CrudArgs) {
   try {
-    return { success: true, content: await readRuleFile(args.scope as ClaudeConfigScope, args.name, args.projectRoot) };
-  } catch (error: unknown) { return fail(error); }
+    return {
+      success: true,
+      content: await readRuleFile(args.scope as ClaudeConfigScope, args.name, args.projectRoot),
+    };
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 async function handleRuleDirUpdate(_e: unknown, args: CrudArgsWithContent) {
   try {
-    await updateRuleFile(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
+    await updateRuleFile(
+      args.scope as ClaudeConfigScope,
+      args.name,
+      args.content,
+      args.projectRoot,
+    );
     return { success: true };
-  } catch (error: unknown) { return fail(error); }
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 async function handleRuleDirDelete(_e: unknown, args: CrudArgs) {
   try {
     await deleteRuleFile(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
     return { success: true };
-  } catch (error: unknown) { return fail(error); }
+  } catch (error: unknown) {
+    return fail(error);
+  }
 }
 
 function registerRulesDirCrud(channels: string[]): void {
@@ -311,6 +281,7 @@ export function registerRulesAndSkillsHandlers(_senderWindow: SenderWindow): str
   registerRulesHandlers(channels);
   registerCommandsHandlers(channels);
   registerRulesDirHandlers(channels);
+  registerRulesToggleHandlers(channels, broadcastChanged);
   registerHooksHandlers(channels);
   registerClaudeSettingsHandlers(channels);
   activateWatcher(channels);

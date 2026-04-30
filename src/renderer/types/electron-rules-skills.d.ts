@@ -54,6 +54,16 @@ export interface RulesAndSkillsAPI {
     name: string;
     projectRoot?: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  toggleRuleFile: (args: {
+    scope: string;
+    name: string;
+    disable: boolean;
+    projectRoot?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  restoreAllDisabledRules: (args: {
+    scope: string;
+    projectRoot?: string;
+  }) => Promise<{ success: boolean; restored?: number; skipped?: number; error?: string }>;
   getHooksConfig: (
     scope: 'global' | 'project',
     projectRoot?: string,

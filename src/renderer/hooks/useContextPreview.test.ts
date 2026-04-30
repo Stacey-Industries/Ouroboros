@@ -57,9 +57,7 @@ describe('useContextPreview', () => {
   });
 
   it('maps loaded rules to rule items with correct fields', () => {
-    const { result } = renderHook(() =>
-      useContextPreview({ ...EMPTY_INPUT, loadedRules: [RULE] }),
-    );
+    const { result } = renderHook(() => useContextPreview({ ...EMPTY_INPUT, loadedRules: [RULE] }));
     const ruleItems = result.current.items.filter((i) => i.kind === 'rule');
     expect(ruleItems).toHaveLength(1);
     expect(ruleItems[0].label).toBe('testing');
@@ -163,10 +161,10 @@ describe('useContextPreview', () => {
     }
   });
 
-  it('isToggleableKind returns true for file and mention, false for managed kinds', () => {
+  it('isToggleableKind returns true for file, mention, and rule (Wave 62); false for managed kinds', () => {
     expect(isToggleableKind('file')).toBe(true);
     expect(isToggleableKind('mention')).toBe(true);
-    expect(isToggleableKind('rule')).toBe(false);
+    expect(isToggleableKind('rule')).toBe(true);
     expect(isToggleableKind('skill')).toBe(false);
     expect(isToggleableKind('tool')).toBe(false);
     expect(isToggleableKind('system')).toBe(false);

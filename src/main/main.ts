@@ -39,6 +39,7 @@ import { initCorrectionWriter } from './research/correctionWriter';
 import { scheduleResearchCachePurge } from './research/researchCacheScheduler';
 import { initResearchOutcomeWriter } from './research/researchOutcomeWriter';
 import { loadRetrainedWeightsIfAvailable, observeDatasetGrowth } from './router/retrainTrigger';
+import { fireBootRestore } from './rulesAndSkills/postSpawnRestore';
 import { initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
 import { getTelemetryStore, initOutcomeObserver, initTelemetryStore } from './telemetry';
@@ -253,6 +254,7 @@ async function initializeApplication(): Promise<void> {
   markStartup('app-ready');
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
+  await fireBootRestore(defaultRoot);
   const ud = app.getPath('userData');
   await initTelemetryAndWriters(ud);
   const cfg = { get: getConfigValue, set: setConfigValue };

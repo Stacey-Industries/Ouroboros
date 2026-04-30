@@ -18,6 +18,8 @@ import { useMemo } from 'react';
 
 export type ContextItemKind = 'rule' | 'skill' | 'memory' | 'file' | 'mention' | 'tool' | 'system';
 
+export type RuleGroup = 'user' | 'project';
+
 export interface ContextItem {
   id: string;
   kind: ContextItemKind;
@@ -26,14 +28,70 @@ export interface ContextItem {
   estimatedTokens: number;
   /** true by default; only file/mention/artifact kinds are user-toggleable */
   enabled: boolean;
+  /** Wave 62 — sub-grouping for the Rules tab (user-level vs project-level). */
+  group?: RuleGroup;
 }
 
 /** Kinds that the user can toggle off before sending */
-export const TOGGLEABLE_KINDS: ReadonlySet<ContextItemKind> = new Set(['file', 'mention']);
+export const TOGGLEABLE_KINDS: ReadonlySet<ContextItemKind> = new Set(['file', 'mention', 'rule']);
 
 /** Returns true if the item kind supports user toggling */
 export function isToggleableKind(kind: ContextItemKind): boolean {
   return TOGGLEABLE_KINDS.has(kind);
+}
+
+/**
+ * Wave 62 — encoded id form for togglable rules: `rule:<scope>:<name>`.
+ * Non-toggleable rules (memoryType === 'Managed' or 'Local') keep the legacy
+ * `rule:<filePath>` form so the popover renders the "managed" badge.
+ */
+export function parseRuleToggleId(
+  id: string,
+): { scope: 'global' | 'project'; name: string } | null {
+  if (!id.startsWith('rule:')) return null;
+  const rest = id.slice('rule:'.length);
+  const sep = rest.indexOf(':');
+  if (sep <= 0) return null;
+  const scope = rest.slice(0, sep);
+  const name = rest.slice(sep + 1);
+  if (scope !== 'global' && scope !== 'project') return null;
+  return { scope, name };
+}
+
+/**
+ * Wave 62 — only files actually under `.claude/rules/` are toggleable. The CLI
+ * reports CLAUDE.md / AGENTS.md / settings.local.json with the same memoryType
+ * tags ('User' / 'Project') so we can't gate solely on memoryType. Path-check
+ * the filePath segment to identify true rule files.
+ */
+function ruleScope(
+  memoryType: LoadedRule['memoryType'],
+  filePath: string,
+): 'global' | 'project' | null {
+  const inRulesDir =
+    filePath.includes('/.claude/rules/') || filePath.includes('\\.claude\\rules\\');
+  if (!inRulesDir) return null;
+  if (memoryType === 'User') return 'global';
+  if (memoryType === 'Project') return 'project';
+  return null; // 'Local' and 'Managed' stay non-toggleable
+}
+
+function ruleGroup(memoryType: LoadedRule['memoryType']): RuleGroup {
+  return memoryType === 'User' ? 'user' : 'project';
+}
+
+/** Wave 62 — Claude Code occasionally emits the same rule multiple times
+ *  (one per loadReason). Dedup by (memoryType, filePath, name) tuple. */
+function dedupLoadedRules(rules: LoadedRule[]): LoadedRule[] {
+  const seen = new Set<string>();
+  const out: LoadedRule[] = [];
+  for (const r of rules) {
+    const key = `${r.memoryType}::${r.filePath}::${r.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
 }
 
 export interface ContextTotals {
@@ -77,14 +135,19 @@ function approxTokens(text: string): number {
 // ---------------------------------------------------------------------------
 
 function buildRuleItems(rules: LoadedRule[]): ContextItem[] {
-  return rules.map((r) => ({
-    detail: r.memoryType,
-    enabled: true,
-    estimatedTokens: approxTokens(r.filePath + r.name),
-    id: `rule:${r.filePath}`,
-    kind: 'rule' as const,
-    label: r.name,
-  }));
+  return dedupLoadedRules(rules).map((r) => {
+    const scope = ruleScope(r.memoryType, r.filePath);
+    const id = scope ? `rule:${scope}:${r.name}` : `rule:${r.filePath}`;
+    return {
+      detail: r.memoryType,
+      enabled: true,
+      estimatedTokens: approxTokens(r.filePath + r.name),
+      group: ruleGroup(r.memoryType),
+      id,
+      kind: 'rule' as const,
+      label: r.name,
+    };
+  });
 }
 
 function buildSkillItems(skills: SkillExecutionRecord[]): ContextItem[] {
@@ -121,8 +184,17 @@ function buildFileItems(
 }
 
 const BUILT_IN_TOOLS = [
-  'Bash', 'Edit', 'Glob', 'Grep', 'LS',
-  'Read', 'Task', 'TodoRead', 'TodoWrite', 'WebFetch', 'Write',
+  'Bash',
+  'Edit',
+  'Glob',
+  'Grep',
+  'LS',
+  'Read',
+  'Task',
+  'TodoRead',
+  'TodoWrite',
+  'WebFetch',
+  'Write',
 ];
 
 export const BUILT_IN_TOOLS_COUNT = BUILT_IN_TOOLS.length;
@@ -156,10 +228,19 @@ function buildSystemItems(model?: string, effort?: string): ContextItem[] {
 // ---------------------------------------------------------------------------
 
 const ZERO_TOTALS: Omit<ContextTotals, 'totalItems' | 'totalTokens'> = {
-  files: 0, memory: 0, mentions: 0, rules: 0, skills: 0, system: 0, tools: 0,
+  files: 0,
+  memory: 0,
+  mentions: 0,
+  rules: 0,
+  skills: 0,
+  system: 0,
+  tools: 0,
 };
 
-const KIND_TO_TOTAL_KEY: Record<ContextItemKind, keyof Omit<ContextTotals, 'totalItems' | 'totalTokens'>> = {
+const KIND_TO_TOTAL_KEY: Record<
+  ContextItemKind,
+  keyof Omit<ContextTotals, 'totalItems' | 'totalTokens'>
+> = {
   file: 'files',
   memory: 'memory',
   mention: 'mentions',

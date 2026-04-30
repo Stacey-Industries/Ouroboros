@@ -34,4 +34,6 @@ export interface RuleDefinition {
   content: string;
   /** First non-empty line, truncated to 80 chars. */
   description: string;
+  /** True when the rule is in the disabled sibling dir and won't be injected. */
+  disabled?: boolean;
 }

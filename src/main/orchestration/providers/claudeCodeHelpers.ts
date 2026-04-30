@@ -14,6 +14,7 @@ import { join } from 'path';
 import type { ImageAttachment } from '../../agentChat/types';
 import type { ClaudeCliSettings } from '../../config';
 import log from '../../logger';
+import { firePostSpawnRestore } from '../../rulesAndSkills/postSpawnRestore';
 import { buildEventHandler } from './claudeCodeEventHandler';
 import {
   activeAgentPtySessions,
@@ -121,6 +122,26 @@ function pickSettingOverrides(settings: ClaudeCliSettings) {
 // thread (assigned once at thread creation by the chat orchestration layer).
 // A follow-up can rename the key if the upstream ID model changes.
 
+/**
+ * Wraps onEvent to fire a one-shot post-spawn restore on the first
+ * `system { subtype: 'init' }` event — the canonical signal that Claude Code
+ * has finished constructing its system prompt (rules are now in memory).
+ * The boolean guard prevents double-firing on subsequent system events.
+ */
+function wrapEventWithRestore(
+  onEvent: (event: StreamJsonEvent) => void,
+  projectRoot: string | undefined,
+): (event: StreamJsonEvent) => void {
+  let fired = false;
+  return (event: StreamJsonEvent) => {
+    onEvent(event);
+    if (!fired && event.type === 'system' && 'subtype' in event && event.subtype === 'init') {
+      fired = true;
+      void firePostSpawnRestore(projectRoot);
+    }
+  };
+}
+
 function launchWarm(args: {
   context: { taskId: string };
   prompt: string;
@@ -131,6 +152,7 @@ function launchWarm(args: {
   providerEnv?: Record<string, string>;
   effort?: string;
   eventHandler?: (event: StreamJsonEvent) => void;
+  projectRoot?: string;
 }): { result: Promise<StreamJsonResultEvent> } {
   const key = args.context.taskId;
   const spawnOpts = {
@@ -142,7 +164,11 @@ function launchWarm(args: {
   const handler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler;
   getOrCreateWarm(key, spawnOpts);
   log.info(`[warm:${key}] routing turn via warm process`);
-  return { result: sendWarmTurn(key, args.prompt, handler) };
+  // Warm process already has rules in its system prompt from boot. Fire restore
+  // immediately after the turn message is written (before awaiting the result).
+  const result = sendWarmTurn(key, args.prompt, handler);
+  void firePostSpawnRestore(args.projectRoot);
+  return { result };
 }
 
 export function launchHeadless(args: {
@@ -158,11 +184,14 @@ export function launchHeadless(args: {
   providerEnv?: Record<string, string>;
   eventHandler?: (event: StreamJsonEvent) => void;
   mcpConfigPath?: string;
+  /** Wave 62 — project root for post-spawn rules restore. */
+  projectRoot?: string;
 }): { result: Promise<StreamJsonResultEvent> } {
   if (args.settings.useWarmProcess && !args.resumeSessionId && !args.continueSession) {
     return launchWarm(args);
   }
-  const handler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler;
+  const baseHandler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler;
+  const handler = wrapEventWithRestore(baseHandler, args.projectRoot);
   const handle = spawnStreamJsonProcess({
     prompt: args.prompt,
     cwd: args.cwd,

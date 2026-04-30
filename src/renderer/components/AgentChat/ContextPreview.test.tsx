@@ -31,8 +31,20 @@ const EMPTY_MODEL: ContextPreviewModel = {
 const MODEL_WITH_ITEMS: ContextPreviewModel = {
   items: [
     { detail: 'Project', estimatedTokens: 12, id: 'rule:testing', kind: 'rule', label: 'testing' },
-    { detail: 'sonnet-implementer', estimatedTokens: 4, id: 'skill:impl:1000', kind: 'skill', label: 'implement-feature' },
-    { detail: '/project/README.md', estimatedTokens: 400, id: 'file:/project/README.md', kind: 'file', label: 'README.md' },
+    {
+      detail: 'sonnet-implementer',
+      estimatedTokens: 4,
+      id: 'skill:impl:1000',
+      kind: 'skill',
+      label: 'implement-feature',
+    },
+    {
+      detail: '/project/README.md',
+      estimatedTokens: 400,
+      id: 'file:/project/README.md',
+      kind: 'file',
+      label: 'README.md',
+    },
     { estimatedTokens: 1, id: 'tool:Bash', kind: 'tool', label: 'Bash' },
   ],
   totals: {
@@ -86,7 +98,11 @@ describe('ContextPreview', () => {
 
   it('renders all 7 tabs when popover is open', () => {
     render(<ContextPreview model={MODEL_WITH_ITEMS} isOpen={true} onToggle={vi.fn()} />);
-    const tabs = screen.getAllByRole('tab');
+    // Wave 62 added a "Rule scope" sub-tablist (User/Project) for the Rules
+    // tab. Filter to the main tablist by excluding the sub-tabs' aria-label.
+    const tabs = screen
+      .getAllByRole('tab')
+      .filter((t) => t.closest('[aria-label="Rule scope"]') === null);
     expect(tabs.length).toBe(7);
     // textContent includes the count badge (e.g. "Rules1"), so use startsWith
     const labels = tabs.map((t) => t.textContent?.trim() ?? '');
