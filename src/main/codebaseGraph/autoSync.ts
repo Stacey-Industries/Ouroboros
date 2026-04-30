@@ -1,9 +1,12 @@
 /**
  * autoSync.ts — Background watcher that keeps the codebase graph in sync
- * with file changes via adaptive polling and event-driven triggers.
+ * with file changes.
  *
- * Uses stat-based change detection (mtime_ns + size) rather than fs.watch
- * for cross-platform reliability. Polling interval adapts to repository size.
+ * Primary mechanism: @parcel/watcher events (wired by systemTwoRegistry)
+ * → receiveWatcherEvent → 300ms debounce → debouncedReindex.
+ * Reconciliation: a low-frequency stat-based catalog sweep catches missed
+ * events (Windows watcher drops under load). Polling is the safety net,
+ * not the hot path.
  */
 
 import fs from 'fs/promises';
@@ -42,9 +45,6 @@ const APP_DEBOUNCE_MS = 300;
 
 /** Legacy 3s debounce for git commits and explicit triggers. */
 const DEBOUNCE_MS = 3000;
-
-/** Threshold: if onFileChange receives more than this many paths, defer to polling. */
-const IMMEDIATE_REINDEX_THRESHOLD = 5;
 
 /** Log every Nth quiet poll cycle even when nothing changed (diagnostic heartbeat). */
 const POLL_LOG_EVERY_N = 10;
@@ -92,7 +92,7 @@ export class AutoSyncWatcher {
   private running = false;
   private disposed = false;
   private reindexing = false;
-  private pollIntervalMs: number;
+  private reconcileIntervalMs: number;
 
   /** Rolling offset into the file-hash catalog for the current scan window. */
   private scanOffset = 0;
@@ -100,24 +100,24 @@ export class AutoSyncWatcher {
   /** Counter incremented on every poll; used for periodic heartbeat logging. */
   private pollCount = 0;
 
-  /** Accumulates file paths received during the 300ms app-layer debounce window. */
+  /** Accumulates file paths during the 300ms app-layer debounce window (OS-level coalescing + app idle gap). */
   private pendingEvents: Map<string, number> = new Map();
 
   private opts: AutoSyncOptions;
 
   constructor(opts: AutoSyncOptions) {
     this.opts = opts;
-    this.pollIntervalMs = AutoSyncWatcher.adaptivePollInterval(
+    this.reconcileIntervalMs = AutoSyncWatcher.adaptivePollInterval(
       opts.db.getNodeCount(opts.projectName),
     );
   }
 
-  /** Compute adaptive poll interval from node count. */
+  /** Compute reconciliation cadence from node count. Polling is the safety net; watcher events are the hot path. */
   private static adaptivePollInterval(nodeCount: number): number {
-    if (nodeCount < 500) return 2_000; // 2s for small repos
-    if (nodeCount < 2_000) return 5_000; // 5s for medium repos
-    if (nodeCount < 5_000) return 15_000; // 15s for large repos
-    return 30_000; // 30s for very large repos
+    if (nodeCount < 2_000) return 60_000; // 1 min — reconciliation cadence
+    if (nodeCount < 5_000) return 120_000; // 2 min
+    if (nodeCount < 20_000) return 300_000; // 5 min
+    return 600_000; // 10 min — very large repos
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ export class AutoSyncWatcher {
         this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
       }
       this.schedulePoll();
-    }, this.pollIntervalMs);
+    }, this.reconcileIntervalMs);
   }
 
   /**
@@ -425,18 +425,14 @@ export class AutoSyncWatcher {
   // ─── Event handlers (public, for integration) ─────────────────────────────
 
   /**
-   * Called when specific files change (e.g., from the existing file watcher
-   * infrastructure). If the change set is small (<= 5 files), triggers a
-   * debounced reindex. Larger batches are deferred to the normal poll cycle.
+   * Called when specific files change (via drainPendingEvents or direct callers).
+   * Always triggers a debounced reindex regardless of batch size — the indexing
+   * pipeline handles batch sizing correctly, and polling can only see existing-in-DB
+   * paths (it would silently drop new files in a large batch).
    */
   onFileChange(relativePaths: string[]): void {
-    if (this.disposed) return;
-
-    if (relativePaths.length <= IMMEDIATE_REINDEX_THRESHOLD) {
-      this.debouncedReindex();
-    }
-    // For larger batches (e.g., build output, format-on-save), let the
-    // normal polling cycle handle it to avoid redundant reindex storms.
+    if (this.disposed || relativePaths.length === 0) return;
+    this.debouncedReindex();
   }
 
   /**
@@ -468,8 +464,8 @@ export class AutoSyncWatcher {
     this.opts.projectRoot = newProjectRoot;
     this.opts.projectName = newProjectName;
 
-    // Recalculate adaptive poll interval for the new project
-    this.pollIntervalMs = AutoSyncWatcher.adaptivePollInterval(
+    // Recalculate reconciliation interval for the new project
+    this.reconcileIntervalMs = AutoSyncWatcher.adaptivePollInterval(
       this.opts.db.getNodeCount(newProjectName),
     );
 
@@ -483,8 +479,8 @@ export class AutoSyncWatcher {
     return this.reindexing;
   }
 
-  /** Returns the adaptive poll interval in milliseconds. */
+  /** Returns the adaptive reconciliation interval in milliseconds. */
   getPollInterval(): number {
-    return this.pollIntervalMs;
+    return this.reconcileIntervalMs;
   }
 }
