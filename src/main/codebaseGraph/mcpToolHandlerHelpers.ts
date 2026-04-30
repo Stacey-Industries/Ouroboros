@@ -234,6 +234,8 @@ export async function handleManageAdr(
   ctx: GraphToolContext,
 ): Promise<string> {
   const proj = (args.project as string) ?? ctx.projectName;
+  // Schema accepts `id` and `adr_id` but current DB methods are project-level only;
+  // per-ID targeting deferred to a future wave that adds the storage support.
   const mode = args.mode as string;
   if (!mode) {
     return "Error: missing required parameter 'mode'";

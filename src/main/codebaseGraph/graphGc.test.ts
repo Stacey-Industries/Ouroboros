@@ -4,8 +4,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as indexingWorkerModule from './indexingWorkerClient';
 import { GraphDatabase } from './graphDatabase';
 import { pruneExpiredProjects, purgeSkippedNodes } from './graphGc';
+
+vi.mock('./indexingWorkerClient', () => ({
+  getIndexingWorkerClient: vi.fn(),
+}));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -235,5 +240,73 @@ describe('purgeSkippedNodes', () => {
 
     expect(report.totalPurged).toBe(2);
     expect(report.projectsScanned).toBe(2);
+  });
+});
+
+// ─── GC ↔ indexing worker mutual exclusion ────────────────────────────────────
+
+describe('pruneExpiredProjects with indexing worker mutex', () => {
+  let db: GraphDatabase;
+
+  beforeEach(() => {
+    db = new GraphDatabase(':memory:');
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    db.close();
+    vi.restoreAllMocks();
+  });
+
+  it('defers GC when indexing is in progress', () => {
+    const oldTimestamp = Date.now() - 100 * 86_400_000; // 100 days ago
+    db.upsertProject({
+      name: 'old-project',
+      root_path: '/projects/old-project',
+      indexed_at: Date.now(),
+      node_count: 5,
+      edge_count: 3,
+    });
+    db['db'].prepare('UPDATE projects SET last_opened_at = ? WHERE name = ?').run(oldTimestamp, 'old-project');
+
+    // Mock the worker to report indexing in progress
+    const mockWorker = {
+      isIndexingInProgress: () => true,
+    } as ReturnType<typeof indexingWorkerModule.getIndexingWorkerClient>;
+    vi.mocked(indexingWorkerModule.getIndexingWorkerClient).mockReturnValue(mockWorker);
+
+    const report = pruneExpiredProjects(db, 90);
+
+    // Should not prune anything while indexing is in progress
+    expect(report.prunedCount).toBe(0);
+    expect(report.keptCount).toBe(0);
+    expect(report.prunedProjects).toEqual([]);
+    // Project should still exist
+    expect(db.getProject('old-project')).not.toBeNull();
+  });
+
+  it('proceeds with GC when indexing is not in progress', () => {
+    const oldTimestamp = Date.now() - 100 * 86_400_000; // 100 days ago
+    db.upsertProject({
+      name: 'old-project',
+      root_path: '/projects/old-project',
+      indexed_at: Date.now(),
+      node_count: 5,
+      edge_count: 3,
+    });
+    db['db'].prepare('UPDATE projects SET last_opened_at = ? WHERE name = ?').run(oldTimestamp, 'old-project');
+
+    // Mock the worker to report indexing is not in progress
+    const mockWorker = {
+      isIndexingInProgress: () => false,
+    } as ReturnType<typeof indexingWorkerModule.getIndexingWorkerClient>;
+    vi.mocked(indexingWorkerModule.getIndexingWorkerClient).mockReturnValue(mockWorker);
+
+    const report = pruneExpiredProjects(db, 90);
+
+    // Should prune the old project
+    expect(report.prunedCount).toBe(1);
+    expect(report.prunedProjects).toContain('old-project');
+    expect(db.getProject('old-project')).toBeNull();
   });
 });

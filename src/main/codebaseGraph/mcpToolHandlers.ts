@@ -139,6 +139,8 @@ const TOOL_SCHEMAS = {
     properties: {
       mode: { type: 'string', enum: ['list', 'get', 'store', 'update', 'delete'] },
       project: { type: 'string' },
+      id: { type: 'string', description: 'ADR identifier (when targeting a specific ADR).' },
+      adr_id: { type: 'string', description: 'Deprecated alias for id.' },
       content: { type: 'string' },
       sections: { type: 'object' },
     },
@@ -146,7 +148,9 @@ const TOOL_SCHEMAS = {
   },
   ingest_traces: {
     type: 'object',
-    properties: { traces: { type: 'string' } },
+    properties: {
+      traces: { type: 'string', description: 'JSON-serialized string: JSON.stringify([{ fromId, toId, type, weight? }])' },
+    },
     required: ['traces'],
   },
 } as const;
@@ -194,7 +198,8 @@ function buildMetaTools(context: GraphToolContext): McpToolDefinition[] {
     },
     {
       name: 'ingest_traces',
-      description: 'Add/strengthen HTTP_CALLS edges. Accepts {fromId,toId,type,weight?}[] JSON.',
+      description:
+        'Add/strengthen HTTP_CALLS edges. Pass traces as a JSON-serialized string: JSON.stringify([{ fromId, toId, type, weight? }]).',
       inputSchema: TOOL_SCHEMAS.ingest_traces,
       handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context),
     },
@@ -206,7 +211,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'search_graph',
       description:
-        'USE INSTEAD OF Grep when looking for symbols (functions, classes, types, methods) by name. Returns indexed graph nodes with file:line and structural metadata. Grep returns text matches including comments, strings, and unrelated same-name occurrences — search_graph returns only actual symbol definitions/references. Pass query (preferred) or name_pattern (deprecated alias). Filter by label (Function, Class, etc.) and file_pattern.',
+        'Symbol search (prefer over Grep). Returns graph nodes with file:line + metadata. Grep returns text matches including comments; search_graph returns actual definitions. Pass query or name_pattern (deprecated).',
       inputSchema: TOOL_SCHEMAS.search_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -233,7 +238,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'get_code_snippet',
       description:
-        'USE INSTEAD OF Read when you only need one symbol body. Returns source for a function/class. Pass symbol (preferred) or qualified_name (deprecated alias). A bare symbol name (e.g. "GraphDatabase") auto-resolves via search if unique; pass the full qualified name for precision. Avoids reading the full file. Pair with search_graph (find the qualified name) → get_code_snippet (get the body).',
+        'Symbol body retrieval (prefer over Read for single symbols). Returns source for function/class. Pass symbol or qualified_name (deprecated). Auto-resolves bare names if unique.',
       inputSchema: TOOL_SCHEMAS.get_code_snippet,
       handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
     },
@@ -246,7 +251,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'trace_call_path',
       description:
-        "USE THIS for caller/callee questions — Grep cannot answer them correctly. Traces actual call edges in/out of a function with risk classification (CRITICAL → LOW). Pass symbol (preferred) or function_name (deprecated alias). direction: 'inbound'/'callers' = who calls this; 'outbound'/'callees' = what this calls; 'both' = default. Grep returns text matches including comments and same-name unrelated variables; trace_call_path returns the real call graph from parsed AST.",
+        "Caller/callee graph (prefer over Grep). Pass symbol or function_name (deprecated). direction: 'inbound'/'callers', 'outbound'/'callees', 'both' (default). Returns call edges with risk labels.",
       inputSchema: TOOL_SCHEMAS.trace_call_path,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -259,7 +264,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'detect_changes',
       description:
-        'Use BEFORE a refactor or when assessing safety of a change. Maps uncommitted git changes to affected graph symbols and computes blast radius (which symbols depend on what changed). Answers "what will break if I touch this" — Grep cannot.',
+        'Pre-refactor impact analysis. Maps git changes to affected symbols; computes blast radius of what will break.',
       inputSchema: TOOL_SCHEMAS.detect_changes,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -290,7 +295,7 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
     },
     {
       name: 'manage_adr',
-      description: 'Manage Architecture Decision Records (ADR). Modes: get, store, update, delete.',
+      description: 'Manage Architecture Decision Records (ADR). Modes: list, get, store, update, delete.',
       inputSchema: TOOL_SCHEMAS.manage_adr,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -302,9 +307,6 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
     },
   ];
 }
-
-// ---- Factory ------------------------------------------------------------------
-
 export function createGraphMcpTools(context: GraphToolContext): McpToolDefinition[] {
   return [
     ...buildLifecycleTools(context),

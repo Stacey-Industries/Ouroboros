@@ -13,6 +13,7 @@ import path from 'path';
 import { Worker } from 'worker_threads';
 
 import log from '../logger';
+import { Mutex } from './concurrency';
 import { getDbPath } from './graphDatabaseHelpers';
 import type { IndexingOptions, IndexingResult } from './indexingPipelineTypes';
 import type { IndexingWorkerResponse, IndexRequestOptions } from './indexingWorkerTypes';
@@ -56,6 +57,8 @@ export class IndexingWorkerClient {
   private busy = false;
   private nextId = 0;
   private terminatingWorkers = new WeakSet<Worker>();
+  private indexingMutex = new Mutex();
+  private mutexAcquired = false;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -64,6 +67,14 @@ export class IndexingWorkerClient {
       this.queue.push(() => this.dispatch(options, resolve, reject));
       this.drainQueue();
     });
+  }
+
+  /**
+   * Check if indexing is currently in progress.
+   * Used by GC to avoid running concurrently with the indexing worker.
+   */
+  isIndexingInProgress(): boolean {
+    return this.mutexAcquired;
   }
 
   async dispose(): Promise<void> {
@@ -143,6 +154,13 @@ export class IndexingWorkerClient {
     const { onProgress, ...rest } = options;
     const serialisable: IndexRequestOptions = rest;
 
+    // Mark that indexing is in progress.
+    // GC will check isIndexingInProgress() and skip if true.
+    if (!this.mutexAcquired) {
+      this.indexingMutex.acquire();
+      this.mutexAcquired = true;
+    }
+
     this.pending.set(requestId, { requestId, resolve, reject, onProgress });
     this.ensureWorker().postMessage({ type: 'indexRepository', requestId, options: serialisable });
   }
@@ -178,6 +196,12 @@ export class IndexingWorkerClient {
     this.pending.delete(requestId);
     this.busy = false;
     fn(p);
+    // Release the indexing mutex once all pending requests are done.
+    // This allows GC to run on the next cycle.
+    if (this.pending.size === 0 && this.mutexAcquired) {
+      this.indexingMutex.release();
+      this.mutexAcquired = false;
+    }
     this.drainQueue();
   }
 
@@ -186,6 +210,11 @@ export class IndexingWorkerClient {
     this.pending.clear();
     this.busy = false;
     this.queue = [];
+    // Release the indexing mutex if we had acquired it.
+    if (this.mutexAcquired) {
+      this.indexingMutex.release();
+      this.mutexAcquired = false;
+    }
   }
 }
 

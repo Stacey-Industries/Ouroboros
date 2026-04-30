@@ -8,10 +8,15 @@
  * Also exports purgeSkippedNodes — a one-time migration pass that evicts nodes
  * whose file_path matches skip rules (e.g. .claude/worktrees subtrees). Gated
  * by the graph_metadata key `gc_schema_v2` so it runs at most once per DB.
+ *
+ * Mutual exclusion: pruneExpiredProjects checks if indexing is in progress
+ * and defers to the next cycle if so, allowing the indexing worker and GC
+ * to never run concurrently.
  */
 
 import log from '../logger';
 import type { GraphDatabase } from './graphDatabase';
+import { getIndexingWorkerClient } from './indexingWorkerClient';
 
 /** Metadata key that marks the skip-node GC pass as done for this DB. */
 const GC_SCHEMA_V2_KEY = 'gc_schema_v2';
@@ -61,6 +66,15 @@ export interface PruneReport {
 }
 
 export function pruneExpiredProjects(db: GraphDatabase, thresholdDays: number): PruneReport {
+  // Check if indexing is in progress; defer GC to the next cycle if so.
+  // Try-acquire pattern: GC never waits, it just skips this cycle.
+  // Worker client may be uninitialized in test contexts; treat absent as "not indexing".
+  const indexingWorker = getIndexingWorkerClient();
+  if (indexingWorker?.isIndexingInProgress?.()) {
+    log.info('[graphGc] skipping cycle — indexing in progress');
+    return { prunedCount: 0, keptCount: 0, prunedProjects: [] };
+  }
+
   const cutoff = Date.now() - thresholdDays * 86_400_000;
   const projects = db.listAllProjects();
   const prunedProjects: string[] = [];
