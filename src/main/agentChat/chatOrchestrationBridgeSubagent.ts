@@ -62,6 +62,7 @@ export function emitChatSubagentStart(ctx: ActiveStreamContext, taskBlock: TaskB
     type: 'agent_start',
     sessionId: childSessionId,
     parentSessionId: ctx.threadId,
+    taskLabel: 'Task (subagent)',
     timestamp: Date.now(),
   });
 
