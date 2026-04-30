@@ -229,4 +229,6 @@ export interface AppConfig {
   /** Wave 50 Phase B/D — deterministic PreToolUse hook enforcement toggles.
    *  enforceGraphFirst: reserved stub — Phase D analysis returned 93.9% adherence (stay log-only). */
   hooks?: { enforcedRules: string[]; enforceGraphFirst?: boolean };
+  /** Wave 57 — agent monitor feature flags. */
+  agentMonitor?: { subagentDisplay?: { diagnostics?: boolean } };
 }

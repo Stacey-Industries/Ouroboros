@@ -265,6 +265,18 @@ function resolveParentAndTimestamps(
       );
     }
   }
+  // Wave 57 Phase A — diagnostic trace at parentSessionId resolution decision point.
+  void window.electronAPI?.config?.getAll().then((cfg) => {
+    const monitor = (cfg as unknown as Record<string, unknown>).agentMonitor as
+      | { subagentDisplay?: { diagnostics?: boolean } }
+      | undefined;
+    if (!monitor?.subagentDisplay?.diagnostics) return;
+    console.warn('[trace:subagent-link]', {
+      stage: 'renderer:resolve',
+      parentSessionId: resolvedParent,
+      childSessionId: action.sessionId,
+    });
+  });
   return { resolvedParent, updatedTimestamps };
 }
 

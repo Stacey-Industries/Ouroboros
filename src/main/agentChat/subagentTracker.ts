@@ -17,6 +17,7 @@ import type { SubagentCostRollup, SubagentMessage, SubagentRecord } from '@share
 
 import type { HookPayload } from '../hooks';
 import log from '../logger';
+import { traceLink } from './subagentLinkTrace';
 
 export type { SubagentCostRollup, SubagentMessage, SubagentRecord };
 
@@ -100,20 +101,21 @@ function makeStubRecord(subagentId: string, now: number): SubagentRecord {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function recordStart(params: RecordStartParams): void {
-  const now = params.startedAt ?? Date.now();
-  const existing = records.get(params.id);
-  if (existing) {
-    // Idempotent re-entry — update fields without losing accumulated data.
-    if (params.parentSessionId) existing.parentSessionId = params.parentSessionId;
-    if (params.parentThreadId) existing.parentThreadId = params.parentThreadId;
-    if (params.toolCallId) existing.toolCallId = params.toolCallId;
-    if (params.taskLabel) existing.taskLabel = params.taskLabel;
-    existing.status = 'running';
-    existing.startedAt = now;
-    log.info(`[subagentTracker] re-start id=${params.id} parent=${params.parentSessionId}`);
-    return;
-  }
+function updateExistingRecord(
+  existing: SubagentRecord,
+  params: RecordStartParams,
+  now: number,
+): void {
+  if (params.parentSessionId) existing.parentSessionId = params.parentSessionId;
+  if (params.parentThreadId) existing.parentThreadId = params.parentThreadId;
+  if (params.toolCallId) existing.toolCallId = params.toolCallId;
+  if (params.taskLabel) existing.taskLabel = params.taskLabel;
+  existing.status = 'running';
+  existing.startedAt = now;
+  log.info(`[subagentTracker] re-start id=${params.id} parent=${params.parentSessionId}`);
+}
+
+function createNewRecord(params: RecordStartParams, now: number): void {
   const rec: SubagentRecord = {
     id: params.id,
     parentSessionId: params.parentSessionId,
@@ -138,6 +140,24 @@ export function recordStart(params: RecordStartParams): void {
   log.info(`[subagentTracker] start id=${params.id} parent=${params.parentSessionId}`);
 }
 
+export function recordStart(params: RecordStartParams): void {
+  const now = params.startedAt ?? Date.now();
+  // Wave 57 Phase A — diagnostic trace (no-op unless agentMonitor.subagentDisplay.diagnostics).
+  traceLink('tracker:recordStart', {
+    parentSessionId: params.parentSessionId,
+    childSessionId: params.id,
+    toolCallId: params.toolCallId,
+    source: 'subagentTracker',
+    timestamp: now,
+  });
+  const existing = records.get(params.id);
+  if (existing) {
+    updateExistingRecord(existing, params, now);
+    return;
+  }
+  createNewRecord(params, now);
+}
+
 export function recordMessage(subagentId: string, message: SubagentMessage): void {
   const rec = records.get(subagentId);
   if (rec) {
@@ -159,6 +179,13 @@ export function recordUsage(subagentId: string, usage: UsageParams): void {
 export function recordEnd(subagentId: string, status: 'completed' | 'cancelled' | 'failed'): void {
   const now = Date.now();
   const rec = records.get(subagentId);
+  // Wave 57 Phase A — diagnostic trace (no-op unless agentMonitor.subagentDisplay.diagnostics).
+  traceLink('tracker:recordEnd', {
+    parentSessionId: rec?.parentSessionId,
+    childSessionId: subagentId,
+    source: 'subagentTracker',
+    timestamp: now,
+  });
   if (!rec) {
     // Arrived before start — create a stub so end doesn't get lost.
     const stub = makeStubRecord(subagentId, now);

@@ -5,6 +5,8 @@
  * Merged back into tailSchema via object spread in configSchemaTail.ts.
  */
 
+import { tailSchemaExt2 } from './configSchemaTailExt2';
+
 export const tailSchemaExt = {
   /** Wave 17 — layout preset engine. Wave 28 — dragAndDrop, customLayouts. Wave 32 — mobilePrimary.
    *  Wave 42 — immersiveChat. Wave 43 — chatPrimary retired. Wave 44 — chatSidebarMode.
@@ -346,4 +348,5 @@ export const tailSchemaExt = {
     },
     default: {},
   },
+  ...tailSchemaExt2,
 };

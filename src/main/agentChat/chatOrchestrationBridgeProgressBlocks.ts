@@ -25,6 +25,7 @@ import {
 } from './chatOrchestrationBridgeSubTools';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tapTextDeltaForFactClaims } from './factClaimTap';
+import { traceLink } from './subagentLinkTrace';
 import type {
   AgentChatContentBlock,
   AgentChatSubAgentTranscriptEntry,
@@ -141,6 +142,15 @@ function applyToolStart(
   if (!isRepeatedStart) {
     ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
     emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
+    // Wave 57 Phase A — trace Task tool blocks surfacing in the chat stream.
+    if (toolActivity.name === 'Task') {
+      const toolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+      traceLink('chat:taskBlockObserved', {
+        toolCallId,
+        source: 'chat-stream',
+        timestamp: now,
+      });
+    }
   }
 }
 
