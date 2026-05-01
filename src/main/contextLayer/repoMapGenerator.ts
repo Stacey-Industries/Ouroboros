@@ -17,6 +17,7 @@ import {
   buildModuleStructuralSummaries,
   detectModules,
 } from './moduleDetector';
+import { buildCrossModuleDependenciesFromGraph } from './repoMapGeneratorDeps';
 import { detectFrameworks } from './repoMapGeneratorFrameworks';
 import { queryModuleExports } from './repoMapGeneratorGraph';
 import {
@@ -69,13 +70,32 @@ async function enrichExportsFromGraph(summary: ModuleStructuralSummary): Promise
   return graphExports.length > 0 ? graphExports : summary.exports;
 }
 
+/**
+ * Phase B3: prefer graph-derived deps; soft-fallback to file-walk path
+ * when the graph is unavailable or returns no edges (Decision 7).
+ */
+async function resolveCrossModuleDeps(options: {
+  modules: ModuleIdentity[];
+  structuralSummaries: ModuleStructuralSummary[];
+  allFiles: IndexedRepoFile[];
+  workspaceRoot: string;
+}): Promise<Array<{ from: string; to: string; weight: number }>> {
+  const { modules, structuralSummaries, allFiles, workspaceRoot } = options;
+  const graphDeps = await buildCrossModuleDependenciesFromGraph(modules);
+  if (graphDeps.length > 0) return graphDeps;
+  return buildCrossModuleDependencies({
+    modules,
+    summaries: structuralSummaries,
+    files: allFiles,
+    workspaceRoot,
+  });
+}
+
 export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<RepoMap> {
   const { repoFacts, repoIndex, workspaceRoot } = options;
 
   const allFiles = collectAllFiles(repoIndex);
-  if (allFiles.length === 0) {
-    return buildEmptyRepoMap(workspaceRoot);
-  }
+  if (allFiles.length === 0) return buildEmptyRepoMap(workspaceRoot);
 
   const isMultiRoot = repoIndex.roots.length > 1;
   const modules = detectModulesFromRoots(repoIndex, isMultiRoot);
@@ -86,10 +106,10 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
     workspaceRoot,
     gitDiffFiles,
   });
-  const crossModuleDeps = buildCrossModuleDependencies({
+  const crossModuleDeps = await resolveCrossModuleDeps({
     modules,
-    summaries: structuralSummaries,
-    files: allFiles,
+    structuralSummaries,
+    allFiles,
     workspaceRoot,
   });
   const enrichedSummaries = await Promise.all(
@@ -98,9 +118,7 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
   const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((summary) => ({
     structural: summary,
   }));
-
-  // Phase B2: compute hotspot scores once (per-module COUNT(*) Cypher) and
-  // hand to enforceSizeCap so Step 3 can rank by importance, not file count.
+  // Phase B2: hotspot scores feed enforceSizeCap Step 3.
   const hotspotScores = await computeAllModuleHotspotScores(modules);
 
   return enforceSizeCap(
