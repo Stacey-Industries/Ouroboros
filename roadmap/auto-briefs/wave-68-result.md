@@ -93,28 +93,47 @@ out.project = await servers.ouroboros.query_graph({
 });
 //   Expect: { p_name: 'Agent IDE', p_indexed_at: <epoch ms> }
 
-// 6. Unsupported function — clear error
-try {
-  await servers.ouroboros.query_graph({ query: "MATCH (n) RETURN nonsense(n)" });
-} catch (e) {
-  out.unsupported_function_error = String(e);
-}
-//   Expect: error message contains "unsupported function: nonsense"
+// 6. Unsupported function — clear error in response text (NOT a thrown exception)
+//   The MCP handler wraps cypherEngine.execute in try/catch and returns
+//   "Query error: ..." as the tool result string per Wave 66 Decision 1.
+//   try/catch around the MCP call won't fire — the protocol returns a
+//   successful tool response containing the error string.
+const r = await servers.ouroboros.query_graph({ query: "MATCH (n) RETURN nonsense(n)" });
+out.unsupported_function_response = JSON.stringify(r);
+//   Expect: response text contains "Query error: unsupported function: nonsense"
 
 return out;
 ```
 
-## Acceptance gate (manual)
+## Acceptance gate (verified 2026-04-30)
 
-- [ ] User restarted Ouroboros app post-merge.
-- [ ] User restarted Claude Code session (so MCP subprocess loads new build).
-- [ ] Probe 1 returns a moderate non-zero count for Class CALLS.
-- [ ] Probe 2 returns ≥18,000 (matches `index_status` DEFINES count).
-- [ ] Probe 3 returns numeric confidence values.
-- [ ] Probe 4 returns `'Class'`.
-- [ ] Probe 5 returns the project name and indexed_at timestamp.
-- [ ] Probe 6 throws "unsupported function: nonsense".
-- [ ] Smoke signed: ____ on ____.
+- [x] User restarted Ouroboros app post-merge.
+- [x] User restarted Claude Code session (so MCP subprocess loads new build).
+- [x] Probe 1 — Class CALLS count = **58** (moderate non-zero; not total Function or total node count).
+- [x] Probe 2 — DEFINES anonymous count = **18,282** (matches `index_status` DEFINES count).
+- [x] Probe 3 — `r.confidence` returns **1.0, 1.0, ...** (default 1.0; will be varied once call-resolution writes confidence).
+- [x] Probe 4 — `labels(n)` for `GraphDatabase` returns `**'Class'**`.
+- [x] Probe 5 — `MATCH (p:Project)` returns `**'Agent IDE' | 1777610068099**`.
+- [x] Probe 6 — Response text contains `**"Query error: unsupported function: nonsense"**` (the test contract is response-text, not thrown exception — MCP handlers return `Promise<string>` per Wave 66 Decision 1).
+- [x] Smoke signed: orchestrator on 2026-04-30.
+
+## Note on probe shape — `try/catch` does NOT fire on MCP errors
+
+The codemode-proxy treats handler errors as successful tool responses with the error string in the response text. So:
+
+```ts
+// WRONG — try/catch never fires; out.error stays undefined
+try {
+  await servers.ouroboros.query_graph({ query: "...nonsense(n)..." });
+} catch (e) { out.error = String(e); }
+
+// RIGHT — inspect the response text
+const r = await servers.ouroboros.query_graph({ query: "...nonsense(n)..." });
+const errorText = (r[0] as { text?: string })?.text ?? '';
+expect(errorText).toContain('unsupported function: nonsense');
+```
+
+This is by design — Wave 66 ADR Decision 1 keeps `Promise<string>` as the handler return type so error envelopes don't cascade through the MCP protocol. Future smoke probes should follow this shape.
 
 ## Deferred from this wave (intentional)
 
