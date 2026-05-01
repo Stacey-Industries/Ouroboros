@@ -175,6 +175,10 @@ function startContextLayerAsync(defaultRoot: string | undefined): void {
     debounceMs: 5000,
     autoSummarize: true,
   };
+  log.info('[context-layer] startContextLayerAsync calling initContextLayer', {
+    defaultProjectRoot: getConfigValue('defaultProjectRoot'),
+    contextLayerEnabled: contextLayerConfig?.enabled,
+  });
   initContextLayer({
     workspaceRoot: getConfigValue('defaultProjectRoot'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -182,9 +186,11 @@ function startContextLayerAsync(defaultRoot: string | undefined): void {
     config: contextLayerConfig,
   })
     .then(() => {
+      log.info('[context-layer] initContextLayer promise resolved');
       log.info('Initialization complete');
     })
     .catch((error: unknown) => {
+      log.warn('[context-layer] initContextLayer promise rejected', error);
       log.warn('Initialization failed:', error);
     });
   initCodebaseGraph().catch((error) => {

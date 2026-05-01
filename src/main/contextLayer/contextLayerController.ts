@@ -94,22 +94,34 @@ class ContextLayerControllerImpl implements ContextLayerController {
   }
 
   async initialize(): Promise<void> {
+    log.info('[context-layer] initialize() called', {
+      workspaceRoot: this.workspaceRoot,
+      enabled: this.config?.enabled,
+      hasConfig: !!this.config,
+    });
     if (!this.config.enabled) {
+      log.info('[context-layer] initialize() — disabled, exiting early');
       this.health = 'disabled';
       return;
     }
 
+    log.info('[context-layer] initialize() — initContextLayerStore start');
     await initContextLayerStore(this.workspaceRoot);
+    log.info('[context-layer] initialize() — initContextLayerStore done');
     await ensureGitignore(this.workspaceRoot);
 
     const loaded = await this.tryLoadFromDisk();
+    log.info('[context-layer] initialize() — tryLoadFromDisk returned', { loaded });
     if (!loaded) {
+      log.info('[context-layer] initialize() — runFullRebuild start');
       await this.runFullRebuild();
+      log.info('[context-layer] initialize() — runFullRebuild done');
     }
 
     this.setupWatcher();
     this.setupGcTimer();
     this.health = 'healthy';
+    log.info('[context-layer] initialize() — complete', { health: this.health });
   }
 
   private async tryLoadFromDisk(): Promise<boolean> {
@@ -137,14 +149,26 @@ class ContextLayerControllerImpl implements ContextLayerController {
   }
 
   private async runFullRebuild(): Promise<void> {
+    log.info('[context-layer] runFullRebuild — buildRepoIndex start', {
+      workspaceRoot: this.workspaceRoot,
+    });
     const snapshot = await this.buildRepoIndex([this.workspaceRoot]);
     this.snapshot = snapshot;
     const repoFacts = snapshot.repoFacts;
+    log.info('[context-layer] runFullRebuild — buildRepoIndex done', {
+      rootCount: snapshot.roots?.length,
+      fileCount: snapshot.roots?.reduce((acc: number, r) => acc + (r.files?.length ?? 0), 0),
+    });
 
+    log.info('[context-layer] runFullRebuild — generateRepoMap start');
     const newRepoMap = await generateRepoMap({
       repoFacts,
       repoIndex: snapshot,
       workspaceRoot: this.workspaceRoot,
+    });
+    log.info('[context-layer] runFullRebuild — generateRepoMap done', {
+      moduleCount: newRepoMap.moduleCount,
+      depCount: newRepoMap.crossModuleDependencies.length,
     });
 
     await writeRepoMap(this.workspaceRoot, newRepoMap);
