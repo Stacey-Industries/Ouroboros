@@ -198,6 +198,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
   async enrichPacket(
     packet: ContextPacket,
     goalKeywords: string[],
+    model?: string,
   ): Promise<{ packet: ContextPacket; injectedModules: string[]; injectedTokens: number }> {
     if (!this.config.enabled) {
       return { packet, injectedModules: [], injectedTokens: 0 };
@@ -208,6 +209,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
         packet,
         workspaceRoot: this.workspaceRoot,
         goalKeywords,
+        model,
       });
       return result;
     } catch (err) {

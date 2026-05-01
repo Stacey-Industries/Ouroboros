@@ -17,6 +17,7 @@ import {
   buildModuleStructuralSummaries,
   detectModules,
 } from './moduleDetector';
+import { getRepoMapBudget } from './repoMapBudgets';
 import { buildCrossModuleDependenciesFromGraph } from './repoMapGeneratorDeps';
 import { detectFrameworks } from './repoMapGeneratorFrameworks';
 import { queryModuleExports } from './repoMapGeneratorGraph';
@@ -25,7 +26,7 @@ import {
   computeAllModuleHotspotScores,
 } from './repoMapGeneratorRanking';
 
-const REPO_MAP_SIZE_CAP_BYTES = 8192;
+// Raw byte cap is now model-aware; see repoMapBudgets.getRepoMapBudget.
 const TRUNCATED_EXPORTS_LIMIT = 5;
 const MAX_MODULES_AFTER_TRUNCATION = 30;
 const MIN_DEPENDENCY_WEIGHT_AFTER_TRUNCATION = 2;
@@ -35,6 +36,12 @@ export interface GenerateRepoMapOptions {
   repoFacts: RepoFacts;
   repoIndex: RepoIndexSnapshot;
   workspaceRoot: string;
+  /**
+   * Optional model id (e.g. `claude-opus-4-7`). Selects the per-tier raw
+   * byte cap before enforceSizeCap starts trimming. Falls back to the
+   * historical 8 KB default when absent or unrecognized.
+   */
+  model?: string;
 }
 
 function buildRepoMapFromSummaries(options: {
@@ -130,6 +137,7 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
       crossModuleDeps,
     }),
     hotspotScores,
+    options.model,
   );
 }
 
@@ -255,9 +263,14 @@ function buildEmptyRepoMap(workspaceRoot: string): RepoMap {
   };
 }
 
-function enforceSizeCap(repoMap: RepoMap, hotspotScores: Map<string, number>): RepoMap {
+function enforceSizeCap(
+  repoMap: RepoMap,
+  hotspotScores: Map<string, number>,
+  model?: string,
+): RepoMap {
+  const { rawCapBytes } = getRepoMapBudget(model);
   let serialized = JSON.stringify(repoMap);
-  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) return repoMap;
+  if (serialized.length <= rawCapBytes) return repoMap;
 
   // Step 1: truncate exports per module + drop imports.
   const trimmedModules = repoMap.modules.map((entry) => ({
@@ -279,7 +292,7 @@ function enforceSizeCap(repoMap: RepoMap, hotspotScores: Map<string, number>): R
     crossModuleDependencies: trimmedDeps,
   };
   serialized = JSON.stringify(trimmed);
-  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) return trimmed;
+  if (serialized.length <= rawCapBytes) return trimmed;
 
   // Step 3: hotspot-ranked top-N truncation (Wave 69 Decision 3).
   return applyHotspotRankedTruncation(trimmed, trimmedModules, trimmedDeps, hotspotScores);

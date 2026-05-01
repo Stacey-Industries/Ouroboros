@@ -77,6 +77,7 @@ export interface ContextLayerController {
   enrichPacket(
     packet: ContextPacket,
     goalKeywords: string[],
+    model?: string,
   ): Promise<{ packet: ContextPacket; injectedModules: string[]; injectedTokens: number }>;
   onSessionStart(): void;
   onGitCommit(): void;

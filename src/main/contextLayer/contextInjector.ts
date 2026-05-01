@@ -7,6 +7,7 @@ import type {
   RepoMap,
   RepoMapSummary,
 } from './contextLayerTypes';
+import { getRepoMapBudget } from './repoMapBudgets';
 import { compressRepoMap } from './repoMapGenerator';
 
 // ---------------------------------------------------------------------------
@@ -17,6 +18,12 @@ export interface InjectionContext {
   packet: ContextPacket;
   workspaceRoot: string;
   goalKeywords: string[];
+  /**
+   * Optional model id (e.g. `claude-opus-4-7`). Selects the per-tier
+   * injection token budget; falls back to the historical 2K default when
+   * absent or unrecognized.
+   */
+  model?: string;
 }
 
 export interface InjectionResult {
@@ -32,11 +39,7 @@ interface EnrichedContextPacket extends ContextPacket {
   moduleSummaries?: ModuleContextSummary[];
 }
 
-// ---------------------------------------------------------------------------
-// Token budget constants
-// ---------------------------------------------------------------------------
-
-const MAX_TOTAL_INJECTION_TOKENS = 2000;
+// Token budget is now model-aware; see repoMapBudgets.getRepoMapBudget.
 
 // ---------------------------------------------------------------------------
 // Token estimation
@@ -193,11 +196,13 @@ function enforceTokenBudget(
   repoMapSummary: RepoMapSummary,
   summaries: ModuleContextSummary[],
   selectedModules: SelectedModule[],
+  model?: string,
 ): { repoMap: RepoMapSummary | undefined; moduleSummaries: ModuleContextSummary[] } {
   const repoMapTokens = estimateTokens(repoMapSummary);
 
-  // Count actual repo map tokens toward the total budget
-  let remainingBudget = MAX_TOTAL_INJECTION_TOKENS - repoMapTokens;
+  // Count actual repo map tokens toward the total budget (model-aware tier).
+  const { injectionTokenCap } = getRepoMapBudget(model);
+  let remainingBudget = injectionTokenCap - repoMapTokens;
 
   // If repo map exceeds total budget, include repo map only
   if (remainingBudget <= 0) {
@@ -270,42 +275,38 @@ function buildRepoMapOnlyResult(
   };
 }
 
+async function loadRepoMapForInjection(workspaceRoot: string): Promise<RepoMap | null> {
+  try {
+    return await readRepoMap(workspaceRoot);
+  } catch (error) {
+    log.warn('[context-layer] Failed to read repo map:', error);
+    return null;
+  }
+}
+
 export async function injectContextLayer(context: InjectionContext): Promise<InjectionResult> {
   const { packet, workspaceRoot, goalKeywords } = context;
 
-  // 1. Read repo map from store
-  let repoMap: RepoMap | null;
-  try {
-    repoMap = await readRepoMap(workspaceRoot);
-  } catch (error) {
-    log.warn('[context-layer] Failed to read repo map:', error);
-    return { packet, injectedModules: [], injectedTokens: 0 };
-  }
+  const repoMap = await loadRepoMapForInjection(workspaceRoot);
+  if (!repoMap) return { packet, injectedModules: [], injectedTokens: 0 };
 
-  if (!repoMap) {
-    return { packet, injectedModules: [], injectedTokens: 0 };
-  }
-
-  // 2. Compress repo map
   const repoMapSummary = compressRepoMap(repoMap);
-
-  // 3. If no goal keywords, inject repo map only
   if (goalKeywords.length === 0) {
     return buildRepoMapOnlyResult(packet, repoMapSummary);
   }
 
-  // 4. Select relevant modules
   const selectedModules = selectRelevantModules(repoMap, packet, goalKeywords);
-
   if (selectedModules.length === 0) {
     return buildRepoMapOnlyResult(packet, repoMapSummary);
   }
 
-  // 5. Read module entries from store
   const moduleSummaries = await readModuleSummaries(workspaceRoot, selectedModules);
-
-  // 6. Enforce token budget
-  const budgeted = enforceTokenBudget(repoMapSummary, moduleSummaries, selectedModules);
+  const budgeted = enforceTokenBudget(
+    repoMapSummary,
+    moduleSummaries,
+    selectedModules,
+    context.model,
+  );
 
   // 7. Build enriched packet
   const enrichedPacket = { ...packet } as EnrichedContextPacket;
