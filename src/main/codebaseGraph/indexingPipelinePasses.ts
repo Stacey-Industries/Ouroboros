@@ -70,8 +70,8 @@ async function readAndParseOne(
   let parsed = null;
   try {
     parsed = await parser.parseFile(file.relativePath, content);
-  } catch {
-    /* skip */
+  } catch (err) {
+    log.warn('[parsePass] parseFile threw, file=%s err=%s', file.relativePath, err instanceof Error ? err.message : String(err));
   }
   return { ...file, contentHash, parsed };
 }

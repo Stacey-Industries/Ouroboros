@@ -42,10 +42,11 @@ function resolveWorkerDbPath(): string | undefined {
   return data?.dbPath;
 }
 
-function getOrInitPipeline(): IndexingPipeline {
+async function getOrInitPipeline(): Promise<IndexingPipeline> {
   if (pipeline) return pipeline;
   db = new GraphDatabase(resolveWorkerDbPath());
   parser = new TreeSitterParser();
+  await parser.init();
   pipeline = new IndexingPipeline(db, parser);
   return pipeline;
 }
@@ -79,7 +80,7 @@ async function handleIndexRepository(req: IndexRepositoryRequest): Promise<void>
     post({ type: 'error', requestId: req.requestId, message: 'Worker is disposed' });
     return;
   }
-  const pl = getOrInitPipeline();
+  const pl = await getOrInitPipeline();
 
   const onProgress = (progress: IndexingProgress): void => {
     post({ type: 'progress', requestId: req.requestId, progress });
