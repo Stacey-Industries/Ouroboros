@@ -81,10 +81,9 @@ async function fetchEdgeRows(
   try {
     const rows = await ctrl.queryGraph(cypher);
     return rows.map((row) => ({
-      // eslint-disable-next-line security/detect-object-injection -- literal keys
       caller:
         typeof row['caller_file_path'] === 'string' ? (row['caller_file_path'] as string) : null,
-      // eslint-disable-next-line security/detect-object-injection -- literal keys
+
       callee:
         typeof row['callee_file_path'] === 'string' ? (row['callee_file_path'] as string) : null,
     }));

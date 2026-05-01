@@ -1,11 +1,8 @@
 import { createHash } from 'crypto';
 import path from 'path';
 
-import {
-  getAllImportableExtensions,
-  getStrategyForLanguage,
-} from '../contextLayer/languageStrategies';
 import { readTextSafe } from '../ipc-handlers/contextDetectors';
+import { getAllImportableExtensions, getStrategyForLanguage } from './languageStrategies';
 import type {
   IndexedRepoDirectory,
   IndexedRepoFile,
@@ -144,18 +141,50 @@ export function createRootStateKey(input: {
 // ---------------------------------------------------------------------------
 
 export const LANGUAGE_BY_EXTENSION: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript', '.d.ts': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
-  '.json': 'json', '.md': 'markdown', '.mdx': 'markdown',
-  '.css': 'css', '.scss': 'scss', '.less': 'less',
-  '.html': 'html', '.xml': 'xml', '.yaml': 'yaml', '.yml': 'yaml', '.toml': 'toml',
-  '.sh': 'shell', '.bash': 'shell', '.zsh': 'shell', '.ps1': 'powershell',
-  '.py': 'python', '.rs': 'rust', '.go': 'go', '.java': 'java',
-  '.rb': 'ruby', '.php': 'php', '.sql': 'sql',
-  '.c': 'c', '.h': 'c', '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp', '.hpp': 'cpp',
-  '.cs': 'csharp', '.kt': 'kotlin', '.swift': 'swift',
-  '.vue': 'vue', '.svelte': 'svelte', '.astro': 'astro',
-  '.prisma': 'prisma', '.graphql': 'graphql', '.gql': 'graphql',
+  '.ts': 'typescript',
+  '.tsx': 'typescript',
+  '.d.ts': 'typescript',
+  '.js': 'javascript',
+  '.jsx': 'javascript',
+  '.mjs': 'javascript',
+  '.cjs': 'javascript',
+  '.json': 'json',
+  '.md': 'markdown',
+  '.mdx': 'markdown',
+  '.css': 'css',
+  '.scss': 'scss',
+  '.less': 'less',
+  '.html': 'html',
+  '.xml': 'xml',
+  '.yaml': 'yaml',
+  '.yml': 'yaml',
+  '.toml': 'toml',
+  '.sh': 'shell',
+  '.bash': 'shell',
+  '.zsh': 'shell',
+  '.ps1': 'powershell',
+  '.py': 'python',
+  '.rs': 'rust',
+  '.go': 'go',
+  '.java': 'java',
+  '.rb': 'ruby',
+  '.php': 'php',
+  '.sql': 'sql',
+  '.c': 'c',
+  '.h': 'c',
+  '.cpp': 'cpp',
+  '.cc': 'cpp',
+  '.cxx': 'cpp',
+  '.hpp': 'cpp',
+  '.cs': 'csharp',
+  '.kt': 'kotlin',
+  '.swift': 'swift',
+  '.vue': 'vue',
+  '.svelte': 'svelte',
+  '.astro': 'astro',
+  '.prisma': 'prisma',
+  '.graphql': 'graphql',
+  '.gql': 'graphql',
   '.proto': 'proto',
 };
 
@@ -224,5 +253,7 @@ export async function extractImports(filePath: string, maxImportBytes: number): 
   if (!IMPORTABLE_EXTENSIONS_CACHE.has(detectExtension(filePath))) return [];
   const content = await readTextSafe(filePath, maxImportBytes);
   if (!content) return [];
-  return Array.from(parseImportsFromContent(content, detectLanguage(filePath))).sort((l, r) => l.localeCompare(r));
+  return Array.from(parseImportsFromContent(content, detectLanguage(filePath))).sort((l, r) =>
+    l.localeCompare(r),
+  );
 }

@@ -1,23 +1,21 @@
 /**
  * contextLayerRefresher.ts — Helpers for refreshing dirty modules and
  * updating the module cache from a fresh repo index snapshot.
- * Extracted from contextLayerController.ts to stay under the max-lines limit.
+ *
+ * Wave 69 Phase D: removed buildResolvedImportGraph / computeModuleCohesion /
+ * applyGraphAnalysis dependencies — the codebase-memory graph is the source
+ * of truth now. cohesion / graph-analysis seams are gone; the file-walk
+ * caching logic remains and is still used for hash-based dirty tracking.
  */
 
-import type {
-  IndexedRepoFile,
-  RepoIndexSnapshot,
-  RootRepoIndexSnapshot,
-} from '../orchestration/repoIndexer';
+import type { RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { RepoMapSummary } from '../orchestration/types';
 import type { CachedModuleData, DetectedModule } from './contextLayerControllerHelpers';
 import {
-  applyGraphAnalysis,
   buildRepoMap,
   buildSingleModuleSummary,
   computeModuleHash,
 } from './contextLayerControllerSupport';
-import { buildResolvedImportGraph, computeModuleCohesion } from './importGraphAnalyzer';
 
 export interface ModuleCacheState {
   cachedModules: Map<string, CachedModuleData>;
@@ -31,16 +29,12 @@ export function updateModuleCache(
   modules: DetectedModule[],
   snapshot: RepoIndexSnapshot,
 ): void {
-  const graph = buildResolvedImportGraph(snapshot.roots);
-  const cohesionMetrics = computeModuleCohesion(modules, graph);
-  const cohesionById = new Map(cohesionMetrics.map((c) => [c.moduleId, c]));
-
   for (const mod of modules) {
     const hash = computeModuleHash(mod);
     const existing = state.cachedModules.get(mod.id);
     if (existing && existing.stateHash === hash) continue;
 
-    const summary = buildSingleModuleSummary(mod, cohesionById.get(mod.id));
+    const summary = buildSingleModuleSummary(mod);
     state.cachedModules.set(mod.id, { module: mod, summary, stateHash: hash, aiEnriched: false });
   }
 
@@ -59,17 +53,13 @@ export function refreshDirtyModuleCache(
   modules: DetectedModule[],
   snapshot: RepoIndexSnapshot,
 ): void {
-  const graph = buildResolvedImportGraph(snapshot.roots);
-  const cohesionMetrics = computeModuleCohesion(modules, graph);
-  const cohesionById = new Map(cohesionMetrics.map((c) => [c.moduleId, c]));
-
   for (const mod of modules) {
     if (!state.dirtyModuleIds.has(mod.id)) continue;
     const hash = computeModuleHash(mod);
     const existing = state.cachedModules.get(mod.id);
     if (existing && existing.stateHash === hash) continue;
 
-    const summary = buildSingleModuleSummary(mod, cohesionById.get(mod.id));
+    const summary = buildSingleModuleSummary(mod);
     state.cachedModules.set(mod.id, { module: mod, summary, stateHash: hash, aiEnriched: false });
   }
 
@@ -78,17 +68,8 @@ export function refreshDirtyModuleCache(
   state.dirtyModuleIds.clear();
 }
 
-export function maybeRunGraphAnalysis(
-  modules: DetectedModule[],
-  roots: RootRepoIndexSnapshot[],
-  dirtyCount: number,
-  allFiles: IndexedRepoFile[],
-): void {
-  const threshold = Math.max(5, Math.floor(modules.length * 0.1));
-  if (dirtyCount >= threshold) {
-    applyGraphAnalysis(modules, roots, allFiles);
-  }
-}
+// maybeRunGraphAnalysis removed in Wave 69 Phase D — graph analysis lives in
+// the codebase-memory graph indexer now.
 
 export function countRefreshedModules(
   modules: DetectedModule[],

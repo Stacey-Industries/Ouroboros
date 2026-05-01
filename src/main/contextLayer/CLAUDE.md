@@ -1,35 +1,47 @@
 <!-- claude-md-auto:start -->
 # contextLayer — Repo-aware context enrichment for agent sessions
 
-Builds three context layers (repo map, module summaries, dependency graph) from the repo indexer's data and injects them into context packets before they reach the LLM provider.
+Builds the repo map, module summaries, and cross-module deps that get injected into context packets before they reach the LLM provider. **Wave 67–69 made this subsystem a graph consumer**: signatures, hotspot ranking, and dependency edges come from the codebase-memory graph rather than file-walk heuristics. The contextLayer's load-bearing original contributions — directory-driven module identity, goal-conditioned selection, AI summarization — remain.
 
 ## Key Files
 
-| File                              | Role                                                                                                                                                                                         |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `contextLayerController.ts`       | Main controller — indexes workspace, detects modules, caches summaries, enriches context packets. Singleton via `initContextLayer()` / `getContextLayerController()`.                        |
-| `contextLayerControllerSupport.ts`| Module detection pipeline (Options A–C), import analysis, graph analysis application, repo map builder. Re-exports helpers from the two sibling files below it.                              |
-| `contextLayerControllerHelpers.ts`| Low-level helpers: `buildDirTree`, `makeModule`, `isCodeFile`, `selectRepresentativeFiles`, `computeModuleHash`, `normalizePath`. Shared by controller and support.                          |
-| `contextLayerRefresher.ts`        | Dirty-module refresh path — `updateModuleCache`, `refreshDirtyModuleCache`, `maybeRunGraphAnalysis`, fire-and-forget enrichment on refresh.                                                  |
-| `contextLayerAiSummarizer.ts`     | Optional Haiku calls for natural-language module descriptions. Circuit-breaker after 3 failures. Persists summaries to `.ouroboros/module-summaries.json` in the workspace root.             |
-| `contextLayerModuleSummary.ts`    | `buildSingleModuleSummary` + `selectModuleSummariesForGoal` — scores modules against goal keywords, boosting strong-boundary and high-cohesion modules.                                      |
-| `languageStrategies.ts`           | Language-specific import extraction + resolution for 10 languages (TS/JS, Python, Java, Kotlin, Go in this file; Rust, C/C++, Ruby, PHP, C# in `languageStrategiesSupport.ts`).            |
-| `languageStrategiesSupport.ts`    | Languages 6–10 strategy definitions. Companion to `languageStrategies.ts` — split to stay under the file-line limit.                                                                        |
-| `importGraphAnalyzer.ts`          | "Option C" — builds resolved import graph, computes per-module cohesion, re-exports `refineModuleAssignments` from support.                                                                 |
-| `importGraphAnalyzerSupport.ts`   | Seed-based iterative refinement — moves files to the module they import most. Runs until stable or 10 iterations.                                                                            |
-| `contextLayerTypes.ts`            | `ContextLayerConfig` interface: `enabled`, `maxModules`, `maxSizeBytes`, `debounceMs`, `autoSummarize`, `moduleDepthLimit`.                                                                  |
+| File                              | Role                                                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contextLayerController.ts`       | Main controller — indexes workspace, detects modules, caches summaries, enriches context packets. Singleton via `initContextLayer()` / `getContextLayerController()`.        |
+| `contextLayerControllerSupport.ts`| Directory-walk module detection and the file-walk `RepoMapSummary` builder. Wave 69 Phase D removed import analysis + graph analysis seams.                                  |
+| `contextLayerControllerHelpers.ts`| Low-level helpers: `buildDirTree`, `makeModule`, `isCodeFile`, `selectRepresentativeFiles`, `computeModuleHash`, `normalizePath`.                                             |
+| `contextLayerRefresher.ts`        | Dirty-module refresh — hash-based caching only post-Wave-69.                                                                                                                  |
+| `contextLayerAiSummarizer.ts`     | Optional Haiku calls for natural-language module descriptions. Circuit-breaker after 3 failures.                                                                              |
+| `contextLayerModuleSummary.ts`    | `buildSingleModuleSummary` + `selectModuleSummariesForGoal` — goal-conditioned ranking of cached summaries.                                                                   |
+| `repoMapGenerator.ts`             | Async repo-map builder. Plumbs graph-backed exports + hotspot ranking + cross-module deps. Soft-fallback when graph isn't ready.                                              |
+| `repoMapGeneratorGraph.ts`        | Per-module Cypher: `MATCH (n) WHERE file_path STARTS WITH '<rootPath>' AND labels(n) IN ['Class','Function','Method'] RETURN n.name, n.signature, labels(n) AS kind LIMIT 50` |
+| `repoMapGeneratorRanking.ts`      | Per-module hotspot scores via `MATCH ()-[r:CALLS]->(callee) … COUNT(*)`. Comparator with file-count tiebreaker.                                                              |
+| `repoMapGeneratorDeps.ts`         | Per-source-module CALLS+IMPORTS edge enumeration → cross-module deps. Soft-fallback to file-walk via `moduleDetectorHelpers.buildCrossModuleDependencies`.                   |
+| `repoMapGeneratorFrameworks.ts`   | Framework detection by config-file presence + extension counts.                                                                                                              |
+| `repoMapBudgets.ts`               | Model-aware budget table: Opus 16 KB / 4K, Sonnet 12 KB / 3K, default 8 KB / 2K.                                                                                              |
+| `moduleDetector*.ts` family       | Directory-driven module identity (Wave 69 Decision 1). Pattern matching + import resolution for the file-walk soft-fallback.                                                  |
+| `contextLayerTypes.ts`            | `ContextLayerConfig`, `ModuleStructuralSummary`, `RepoMap`. Re-exports `ModuleExport` / `ModuleContextSummary` / `RepoMapSummary` from `orchestration/types`.                  |
 
-## Architecture — Three-Stage Detection Pipeline
+## Architecture — Module Detection
 
 ```
-Option A: detectModules()           — directory tree walk (adaptive depth, default 6)
-     ↓
-Option B: applyImportAnalysis()     — barrel vs. direct import counting → boundary strength
-     ↓
-Option C: applyGraphAnalysis()      — resolved import graph → cohesion metrics + file movements
+detectModules()                          directory tree walk (adaptive depth, default 6)
+   │
+   ▼
+buildModuleStructuralSummaries()         per-module file count + language stats + git diff
+   │
+   ▼
+queryModuleExports()                     graph: signatures + kind (LIMIT 50 per module)
+   │   soft-fallback: file-walk names with signature: null
+   ▼
+computeAllModuleHotspotScores()          graph: per-module COUNT(*) of inbound CALLS edges
+   │
+   ▼
+buildCrossModuleDependenciesFromGraph()  graph: CALLS + IMPORTS edges aggregated to module pairs
+   │   soft-fallback: file-walk import resolution
+   ▼
+enforceSizeCap()                         hotspot-ranked top-N truncation under model-aware byte cap
 ```
-
-Each stage refines the module assignment output of the previous. Option C is gated at refresh time: only runs when ≥10% of modules are dirty (or ≥5 absolute).
 
 ## Key Patterns
 

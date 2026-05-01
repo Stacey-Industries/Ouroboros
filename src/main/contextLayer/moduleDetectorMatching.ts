@@ -85,7 +85,6 @@ const PATTERN_ORDER: Record<string, number> = {
 export function findModuleForFile(modules: ModuleIdentity[], file: IndexedRepoFile): string | null {
   const fileRelDir = normalizedDirname(file.relativePath);
   const sorted = [...modules].sort(
-    // eslint-disable-next-line security/detect-object-injection -- pattern is a validated discriminant
     (a, b) => (PATTERN_ORDER[a.pattern] ?? 99) - (PATTERN_ORDER[b.pattern] ?? 99),
   );
   for (const mod of sorted) {

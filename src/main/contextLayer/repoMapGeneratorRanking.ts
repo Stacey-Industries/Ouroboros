@@ -63,7 +63,7 @@ async function queryModuleHotspotScore(modulePath: string): Promise<number> {
   if (!row) return 0;
   // The cypherEngine returns COUNT(*) under the key 'count' (the parser
   // assigns the function name as the column when no AS alias is given).
-  // eslint-disable-next-line security/detect-object-injection -- 'count' is a literal key
+
   const value = row['count'];
   return typeof value === 'number' ? value : 0;
 }

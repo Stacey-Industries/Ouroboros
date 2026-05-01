@@ -8,23 +8,18 @@ import path from 'path';
 import type { IndexedRepoFile } from '../orchestration/repoIndexer';
 import type { ModuleContextSummary } from '../orchestration/types';
 import type { CachedModuleData, DetectedModule } from './contextLayerControllerHelpers';
-import type { ModuleCohesionMetrics } from './importGraphAnalyzer';
 
 // ---------------------------------------------------------------------------
 // Module summary building
 // ---------------------------------------------------------------------------
 
-export function buildSingleModuleSummary(
-  mod: DetectedModule,
-  cohesionMetrics?: ModuleCohesionMetrics,
-): ModuleContextSummary {
+export function buildSingleModuleSummary(mod: DetectedModule): ModuleContextSummary {
   const languages = summarizeModuleLanguages(mod.files);
-  const deps = cohesionMetrics?.topDependencies.slice(0, 3).map((d) => d.moduleId) ?? [];
   return {
     moduleId: mod.id,
     label: mod.label,
     rootPath: mod.rootPath,
-    description: `${mod.label} module (${mod.files.length} files, ${languages.join('/')}${mod.boundarySignals.hasBarrel ? ', barrel' : ''}, ${mod.boundarySignals.boundaryStrength} boundary, ${(mod.cohesion * 100).toFixed(0)}% cohesion)`,
+    description: `${mod.label} module (${mod.files.length} files, ${languages.join('/')}${mod.boundarySignals.hasBarrel ? ', barrel' : ''})`,
     keyResponsibilities: deriveResponsibilities(mod),
     gotchas: deriveGotchas(mod),
     // File-walk path: no graph signatures. Wrap as ModuleExport with signature: null.
@@ -33,7 +28,6 @@ export function buildSingleModuleSummary(
       signature: null,
       kind: 'Function' as const,
     })),
-    dependencies: deps.length > 0 ? deps : undefined,
   };
 }
 
