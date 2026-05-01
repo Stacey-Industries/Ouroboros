@@ -19,6 +19,7 @@ import type { GraphDatabase } from './codebaseGraph/graphDatabase';
 import { pruneExpiredProjects, purgeSkippedNodes } from './codebaseGraph/graphGc';
 import { getConfigValue } from './config';
 import log from './logger';
+import { triggerContextLayerRebuildAfterGraphReady } from './mainStartupContextLayerTrigger';
 import { initEditProvenance } from './orchestration/editProvenance';
 export { initEditProvenance };
 export {
@@ -224,6 +225,12 @@ async function runInitialIndex(args: InitialIndexArgs): Promise<void> {
     log.info(
       `[system2] initial index complete: ${result.filesIndexed} files, ${result.nodesCreated} nodes`,
     );
+    // Wave 69 follow-up: contextLayer's first rebuild on cold start typically
+    // races ahead of the graph's initial index, so every signature ends up
+    // null via the soft-fallback path. Now that the graph is populated,
+    // trigger a contextLayer rebuild so the repo map picks up signatures,
+    // hotspot scores, and graph-derived deps. Fire-and-forget; never blocks.
+    void triggerContextLayerRebuildAfterGraphReady();
   } else {
     const message = result.errors.join('; ');
     sendIndexProgress({ kind: 'error', projectName, message });
