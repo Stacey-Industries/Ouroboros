@@ -60,7 +60,8 @@ function rowToModuleExport(row: Record<string, unknown>): ModuleExport | null {
 export async function queryModuleExports(moduleRootPath: string): Promise<ModuleExport[]> {
   const ctrl = getGraphController();
   if (!ctrl) {
-    log.info('[repo-map-graph] graph not ready — skipping export query for', moduleRootPath);
+    // Soft-fallback path. Caller (generateRepoMap) emits a single summary log
+    // covering all skipped modules; per-module logs would spam the terminal.
     return [];
   }
 

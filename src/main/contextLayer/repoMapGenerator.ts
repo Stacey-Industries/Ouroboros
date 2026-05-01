@@ -2,6 +2,8 @@ import { readFileSync } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
+import log from '../logger';
 import type { IndexedRepoFile, RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { RepoFacts } from '../orchestration/types';
 import type {
@@ -78,6 +80,24 @@ async function enrichExportsFromGraph(summary: ModuleStructuralSummary): Promise
 }
 
 /**
+ * Runs export enrichment across every structural summary. Emits a single
+ * "graph not ready" log if the controller is absent — replaces what would
+ * otherwise be one log per module (~50 lines of terminal spam on cold start).
+ */
+async function enrichSummariesWithGraphSignatures(
+  summaries: ModuleStructuralSummary[],
+): Promise<ModuleStructuralSummary[]> {
+  if (!getGraphController()) {
+    log.info(
+      `[context-layer] graph not ready — skipping ${summaries.length} per-module export queries (signatures will be name-only this round)`,
+    );
+  }
+  return Promise.all(
+    summaries.map(async (s) => ({ ...s, exports: await enrichExportsFromGraph(s) })),
+  );
+}
+
+/**
  * Phase B3: prefer graph-derived deps; soft-fallback to file-walk path
  * when the graph is unavailable or returns no edges (Decision 7).
  */
@@ -119,9 +139,7 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
     allFiles,
     workspaceRoot,
   });
-  const enrichedSummaries = await Promise.all(
-    structuralSummaries.map(async (s) => ({ ...s, exports: await enrichExportsFromGraph(s) })),
-  );
+  const enrichedSummaries = await enrichSummariesWithGraphSignatures(structuralSummaries);
   const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((summary) => ({
     structural: summary,
   }));
