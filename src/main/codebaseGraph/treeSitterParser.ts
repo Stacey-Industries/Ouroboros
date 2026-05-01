@@ -114,22 +114,27 @@ export class TreeSitterParser {
     return load;
   }
 
+  // ABI validated by setLanguage; Language.load alone accepts incompat ABIs.
+  private async tryLoadOne(id: LanguageId, p: string): Promise<Parser.Language | null> {
+    try {
+      const lang = await Parser.Language.load(p);
+      if (this.parser) this.parser.setLanguage(lang);
+      return lang;
+    } catch (err) {
+      log.debug(`[treeSitterParser] load failed: ${id} @ ${p}:`, err);
+      return null;
+    }
+  }
+
   private async doLoadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
     try {
-      for (const wasmPath of resolveGrammarPaths(config.wasmFile)) {
-        try {
-          const language = await Parser.Language.load(wasmPath);
-          this.languages.set(config.id, language);
-          return language;
-        } catch (err) {
-          log.debug(`[treeSitterParser] load failed: ${config.id} @ ${wasmPath}:`, err);
-        }
+      for (const p of resolveGrammarPaths(config.wasmFile)) {
+        const lang = await this.tryLoadOne(config.id, p);
+        if (lang) { this.languages.set(config.id, lang); return lang; }
       }
       this.unsupportedLanguages.add(config.id);
       return null;
-    } finally {
-      this.pendingLanguageLoads.delete(config.id);
-    }
+    } finally { this.pendingLanguageLoads.delete(config.id); }
   }
 
   // ─── Main entry point ────────────────────────────────────────────────────
