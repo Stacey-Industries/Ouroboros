@@ -168,6 +168,16 @@ export interface RepoFacts {
   recentCommits?: RecentCommit[];
 }
 
+/**
+ * A module export entry enriched with signature and kind from the codebase graph.
+ * `signature` is null when the graph has no signature for the symbol (soft-fallback path).
+ */
+export interface ModuleExport {
+  name: string;
+  signature: string | null;
+  kind: 'Class' | 'Function' | 'Method';
+}
+
 export interface RepoMapSummary {
   projectName: string;
   languages: string[];
@@ -178,7 +188,7 @@ export interface RepoMapSummary {
     label: string;
     rootPath: string;
     fileCount: number;
-    exports: string[];
+    exports: ModuleExport[];
     recentlyChanged: boolean;
   }>;
 }
@@ -190,7 +200,7 @@ export interface ModuleContextSummary {
   description: string;
   keyResponsibilities: string[];
   gotchas: string[];
-  exports: string[];
+  exports: ModuleExport[];
   dependencies?: string[];
 }
 

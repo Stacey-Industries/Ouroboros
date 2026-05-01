@@ -7,15 +7,13 @@ import { createHash } from 'crypto';
 import path from 'path';
 
 import type { IndexedRepoFile } from '../orchestration/repoIndexer';
-import type { ModuleIdentity, ModuleStructuralSummary } from './contextLayerTypes';
+import type { ModuleExport, ModuleIdentity, ModuleStructuralSummary } from './contextLayerTypes';
 import {
-  basenameWithoutExtension,
-  isConfigFile,
-  isSourceFile,
-  kebabToCamel,
-  normalizedDirname,
-  normalizeSeparators,
-} from './moduleDetectorUtils';
+  findModuleForFile,
+  resolveImportToModule,
+  resolveRelativePath,
+} from './moduleDetectorMatching';
+import { isSourceFile, normalizeSeparators } from './moduleDetectorUtils';
 
 const MAX_EXPORTS_PER_MODULE = 20;
 const AVERAGE_BYTES_PER_LINE = 40;
@@ -169,21 +167,29 @@ function findEntryPoints(files: IndexedRepoFile[]): IndexedRepoFile[] {
   });
 }
 
-function extractModuleExports(files: IndexedRepoFile[], entryPoints: IndexedRepoFile[]): string[] {
+function extractModuleExports(
+  files: IndexedRepoFile[],
+  entryPoints: IndexedRepoFile[],
+): ModuleExport[] {
   const filesToScan = entryPoints.length > 0 ? entryPoints : files;
-  const exports = new Set<string>();
+  const names = new Set<string>();
 
   for (const file of filesToScan) {
     if (!isSourceFile(file.extension)) continue;
     for (const importSpec of file.imports) {
       if (!importSpec.startsWith('.')) continue;
       const basename = path.basename(importSpec).replace(/\.[^.]+$/, '');
-      if (basename && basename !== 'index') exports.add(basename);
+      if (basename && basename !== 'index') names.add(basename);
     }
-    if (exports.size >= MAX_EXPORTS_PER_MODULE) break;
+    if (names.size >= MAX_EXPORTS_PER_MODULE) break;
   }
 
-  return Array.from(exports).sort().slice(0, MAX_EXPORTS_PER_MODULE);
+  // Soft-fallback shape: names from file-walk, signature unknown, kind defaults to Function.
+  // Graph-backed path (repoMapGeneratorGraph.ts) replaces these with real signatures.
+  return Array.from(names)
+    .sort()
+    .slice(0, MAX_EXPORTS_PER_MODULE)
+    .map((name) => ({ name, signature: null, kind: 'Function' as const }));
 }
 
 function extractExternalImports(files: IndexedRepoFile[]): string[] {
@@ -248,114 +254,5 @@ function buildFileToModuleMap(
   return result;
 }
 
-function matchesFeatureFolder(mod: ModuleIdentity, fileRelDir: string): boolean {
-  const modRoot = normalizeSeparators(mod.rootPath);
-  return fileRelDir === modRoot || fileRelDir.startsWith(modRoot + '/');
-}
-
-function matchesConfigGroup(file: IndexedRepoFile, fileRelDir: string): boolean {
-  const basename = path.basename(file.relativePath);
-  return (fileRelDir === '.' || fileRelDir === '') && isConfigFile(basename);
-}
-
-function matchesFlatGroup(mod: ModuleIdentity, file: IndexedRepoFile, fileRelDir: string): boolean {
-  const modDir = normalizeSeparators(mod.rootPath);
-  if (fileRelDir !== modDir && modDir !== '.') return false;
-  const fileBase = basenameWithoutExtension(file.relativePath);
-  const fileBaseWithoutTest = fileBase.replace(/\.(test|spec)$/, '');
-  const prefix = kebabToCamel(mod.id);
-  return (
-    fileBase.toLowerCase().startsWith(prefix.toLowerCase()) ||
-    fileBaseWithoutTest.toLowerCase().startsWith(prefix.toLowerCase())
-  );
-}
-
-function matchesSingleFile(
-  mod: ModuleIdentity,
-  file: IndexedRepoFile,
-  fileRelDir: string,
-): boolean {
-  const modDir = normalizeSeparators(path.dirname(mod.rootPath));
-  const modBase = basenameWithoutExtension(mod.rootPath);
-  const dirMatches =
-    fileRelDir === modDir || (modDir === '.' && (fileRelDir === '.' || fileRelDir === ''));
-  if (!dirMatches) return false;
-  const fileBase = basenameWithoutExtension(file.relativePath);
-  const fileBaseWithoutTest = fileBase.replace(/\.(test|spec)$/, '');
-  return fileBase === modBase || fileBaseWithoutTest === modBase;
-}
-
-function checkPatternMatch(
-  mod: ModuleIdentity,
-  file: IndexedRepoFile,
-  fileRelDir: string,
-): boolean {
-  if (mod.pattern === 'feature-folder') return matchesFeatureFolder(mod, fileRelDir);
-  if (mod.pattern === 'config') return matchesConfigGroup(file, fileRelDir);
-  if (mod.pattern === 'flat-group' && mod.id !== 'other')
-    return matchesFlatGroup(mod, file, fileRelDir);
-  if (mod.pattern === 'single-file') return matchesSingleFile(mod, file, fileRelDir);
-  return false;
-}
-
-const PATTERN_ORDER: Record<string, number> = {
-  'feature-folder': 0,
-  config: 1,
-  'flat-group': 2,
-  'single-file': 3,
-};
-
-function findModuleForFile(modules: ModuleIdentity[], file: IndexedRepoFile): string | null {
-  const fileRelDir = normalizedDirname(file.relativePath);
-  const sorted = [...modules].sort((a, b) => ((PATTERN_ORDER[a.pattern] ?? 99) - (PATTERN_ORDER[b.pattern] ?? 99)));
-  for (const mod of sorted) {
-    if (checkPatternMatch(mod, file, fileRelDir)) return mod.id;
-  }
-  return modules.some((m) => m.id === 'other') ? 'other' : null;
-}
-
-// ---------------------------------------------------------------------------
-// Import resolution
-// ---------------------------------------------------------------------------
-
-function resolveImportToModule(
-  resolvedRelativePath: string,
-  fileToModule: Map<string, string>,
-): string | null {
-  const normalized = normalizeSeparators(resolvedRelativePath).toLowerCase();
-  const exact = fileToModule.get(normalized);
-  if (exact) return exact;
-
-  const extensions = [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '/index.ts',
-    '/index.tsx',
-    '/index.js',
-    '/index.jsx',
-  ];
-  for (const ext of extensions) {
-    const withExt = fileToModule.get(normalized + ext);
-    if (withExt) return withExt;
-  }
-
-  return null;
-}
-
-function resolveRelativePath(fromDir: string, importSpecifier: string): string {
-  const normalized = normalizeSeparators(importSpecifier);
-  const parts = normalizeSeparators(fromDir).split('/').filter(Boolean);
-  const importParts = normalized.split('/');
-
-  for (const segment of importParts) {
-    if (segment === '..') {
-      parts.pop();
-    } else if (segment !== '.') {
-      parts.push(segment);
-    }
-  }
-
-  return parts.join('/');
-}
+// findModuleForFile, resolveImportToModule, resolveRelativePath moved to
+// moduleDetectorMatching.ts in Wave 69 B1.

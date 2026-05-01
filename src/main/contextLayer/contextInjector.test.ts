@@ -4,6 +4,7 @@ import type { ContextPacket, RankedContextFile } from '../orchestration/types';
 import type {
   ModuleAISummary,
   ModuleContextEntry,
+  ModuleExport,
   ModuleIdentity,
   ModuleStructuralSummary,
   RepoMap,
@@ -52,7 +53,11 @@ function createMockStructuralSummary(
     fileCount: 5,
     totalLines: 200,
     languages: ['typescript'],
-    exports: ['ComponentA', 'ComponentB', 'useHook'],
+    exports: [
+      { name: 'ComponentA', signature: null, kind: 'Class' as const },
+      { name: 'ComponentB', signature: null, kind: 'Class' as const },
+      { name: 'useHook', signature: null, kind: 'Function' as const },
+    ],
     imports: ['react', '../utils'],
     entryPoints: ['index.ts'],
     recentlyChanged: false,
@@ -278,7 +283,11 @@ describe('injectContextLayer', () => {
   it('keyword matches exports', async () => {
     const hooksEntry = createMockModuleEntry('hooks', 'src/hooks', {
       structural: {
-        exports: ['useFileWatcher', 'useConfig', 'useTheme'],
+        exports: [
+          { name: 'useFileWatcher', signature: null, kind: 'Function' as const },
+          { name: 'useConfig', signature: null, kind: 'Function' as const },
+          { name: 'useTheme', signature: null, kind: 'Function' as const },
+        ] satisfies ModuleExport[],
       },
     });
     const otherEntry = createMockModuleEntry('utils', 'src/utils');
@@ -415,7 +424,11 @@ describe('injectContextLayer', () => {
           structural: {
             exports: Array.from(
               { length: 10 },
-              (_, j) => `VeryLongExportNameForBudgetTesting_Export${j}_Module${i}`,
+              (_, j): ModuleExport => ({
+                name: `exp${j}m${i}`,
+                signature: null,
+                kind: 'Function',
+              }),
             ),
           },
           ai: {

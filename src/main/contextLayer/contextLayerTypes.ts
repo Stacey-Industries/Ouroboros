@@ -2,6 +2,10 @@
  * contextLayerTypes.ts — Type definitions for the context layer subsystem.
  */
 
+import type { ModuleExport } from '../orchestration/types';
+
+export type { ModuleExport };
+
 export interface ContextLayerConfig {
   enabled: boolean;
   maxModules: number;
@@ -45,7 +49,7 @@ export interface ModuleStructuralSummary {
   fileCount: number;
   totalLines: number;
   languages: string[];
-  exports: string[];
+  exports: ModuleExport[];
   imports: string[];
   entryPoints: string[];
   recentlyChanged: boolean;

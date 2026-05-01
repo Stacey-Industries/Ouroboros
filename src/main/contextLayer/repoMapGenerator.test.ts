@@ -7,7 +7,12 @@ import type {
   RootRepoIndexSnapshot,
 } from '../orchestration/repoIndexer';
 import type { GitDiffSummary, RepoFacts } from '../orchestration/types';
-import type { ModuleIdentity, ModuleStructuralSummary, RepoMap } from './contextLayerTypes';
+import type {
+  ModuleExport,
+  ModuleIdentity,
+  ModuleStructuralSummary,
+  RepoMap,
+} from './contextLayerTypes';
 
 vi.mock('./moduleDetector', () => ({
   detectModules: vi.fn(),
@@ -18,6 +23,12 @@ vi.mock('./moduleDetector', () => ({
 vi.mock('fs', () => ({
   default: { readFileSync: vi.fn() },
   readFileSync: vi.fn(),
+}));
+
+// Graph query returns empty array by default — soft-fallback path.
+// Individual tests override this to verify graph-backed enrichment.
+vi.mock('./repoMapGeneratorGraph', () => ({
+  queryModuleExports: vi.fn().mockResolvedValue([]),
 }));
 
 import {
@@ -31,6 +42,9 @@ import {
   detectProjectName,
   generateRepoMap,
 } from './repoMapGenerator';
+// queryModuleExports is mocked above so generateRepoMap soft-falls back to
+// name-only ModuleExport[] in these tests; graph-backed coverage lives in
+// repoMapGeneratorGraph.test.ts.
 
 const mockedDetectModules = vi.mocked(detectModules);
 const mockedBuildSummaries = vi.mocked(buildModuleStructuralSummaries);
@@ -152,7 +166,11 @@ function createMockStructuralSummary(
     fileCount: 5,
     totalLines: 200,
     languages: ['typescript'],
-    exports: ['ComponentA', 'ComponentB', 'useHook'],
+    exports: [
+      { name: 'ComponentA', signature: null, kind: 'Class' as const },
+      { name: 'ComponentB', signature: null, kind: 'Class' as const },
+      { name: 'useHook', signature: null, kind: 'Function' as const },
+    ],
     imports: ['react', '../utils'],
     entryPoints: ['index.ts'],
     recentlyChanged: false,
@@ -168,7 +186,7 @@ afterEach(() => {
 });
 
 describe('generateRepoMap', () => {
-  it('generates a valid RepoMap with modules from RepoFacts and RepoIndexSnapshot', () => {
+  it('generates a valid RepoMap with modules from RepoFacts and RepoIndexSnapshot', async () => {
     const rootPath = '/home/user/my-project';
     const files = [
       createMockFile({
@@ -240,7 +258,7 @@ describe('generateRepoMap', () => {
       { from: 'terminal', to: 'hooks', weight: 2 },
     ]);
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
     expect(result.version).toBe(1);
     expect(result.workspaceRoot).toBe(rootPath);
@@ -251,12 +269,12 @@ describe('generateRepoMap', () => {
     expect(result.generatedAt).toBeGreaterThan(0);
   });
 
-  it('returns an empty RepoMap for an empty workspace', () => {
+  it('returns an empty RepoMap for an empty workspace', async () => {
     const rootPath = '/home/user/empty-project';
     const repoIndex = createMockRepoIndex(rootPath, []);
     const repoFacts = createMockRepoFacts({ workspaceRoots: [rootPath] });
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
     expect(result.version).toBe(1);
     expect(result.moduleCount).toBe(0);
@@ -268,7 +286,7 @@ describe('generateRepoMap', () => {
     expect(result.frameworks).toEqual([]);
   });
 
-  it('enforces the 8KB size cap by truncating exports, imports, and module count', () => {
+  it('enforces the 8KB size cap by truncating exports, imports, and module count', async () => {
     const rootPath = '/home/user/large-project';
     const files = Array.from({ length: 100 }, (_, index) =>
       createMockFile({
@@ -284,7 +302,11 @@ describe('generateRepoMap', () => {
       createMockModuleIdentity(`m${index}`, `src/mod${index}`),
     );
 
-    const longExports = Array.from({ length: 20 }, (_, index) => `Export${index}`);
+    const longExports: ModuleExport[] = Array.from({ length: 20 }, (_, index) => ({
+      name: `Export${index}`,
+      signature: null,
+      kind: 'Function' as const,
+    }));
     const longImports = Array.from({ length: 15 }, (_, index) => `@scope/pkg-${index}`);
 
     mockedDetectModules.mockReturnValue(modules);
@@ -305,7 +327,7 @@ describe('generateRepoMap', () => {
       })),
     );
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
     // Verify truncation was applied
     for (const entry of result.modules) {
@@ -320,7 +342,7 @@ describe('generateRepoMap', () => {
     expect(result.moduleCount).toBeLessThanOrEqual(30);
   });
 
-  it('truncates modules to top 30 by fileCount when still over 8KB after first pass', () => {
+  it('truncates modules to top 30 by fileCount when still over 8KB after first pass', async () => {
     const rootPath = '/home/user/huge-project';
     const files = Array.from({ length: 200 }, (_, index) =>
       createMockFile({
@@ -339,9 +361,13 @@ describe('generateRepoMap', () => {
       ),
     );
 
-    const longExports = Array.from(
+    const longExports: ModuleExport[] = Array.from(
       { length: 20 },
-      (_, index) => `VeryLongExportedSymbolName_Component${index}_WithExtraContext`,
+      (_, index): ModuleExport => ({
+        name: `VeryLongExportedSymbolName_Component${index}_WithExtraContext`,
+        signature: null,
+        kind: 'Function',
+      }),
     );
 
     mockedDetectModules.mockReturnValue(modules);
@@ -364,13 +390,13 @@ describe('generateRepoMap', () => {
       })),
     );
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
     expect(result.modules.length).toBeLessThanOrEqual(30);
     expect(result.moduleCount).toBeLessThanOrEqual(30);
   });
 
-  it('sets recentlyChanged flag on modules containing files from git diff', () => {
+  it('sets recentlyChanged flag on modules containing files from git diff', async () => {
     const rootPath = '/home/user/my-project';
     const changedFile1 = `${rootPath}/src/components/FileTree/FileTree.tsx`;
     const changedFile2 = `${rootPath}/src/hooks/useTheme.ts`;
@@ -401,7 +427,7 @@ describe('generateRepoMap', () => {
     ]);
     mockedBuildDeps.mockReturnValue([]);
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
     const fileTreeEntry = result.modules.find((m) => m.structural.module.id === 'file-tree');
     const terminalEntry = result.modules.find((m) => m.structural.module.id === 'terminal');
@@ -637,15 +663,15 @@ describe('compressRepoMap', () => {
             {
               fileCount: 8,
               exports: [
-                'TreeView',
-                'FileList',
-                'SearchOverlay',
-                'ContextMenu',
-                'RootSection',
-                'VirtualTree',
-                'useTreeState',
-                'treeUtils',
-              ],
+                { name: 'TreeView', signature: '(): JSX.Element', kind: 'Function' as const },
+                { name: 'FileList', signature: null, kind: 'Class' as const },
+                { name: 'SearchOverlay', signature: null, kind: 'Function' as const },
+                { name: 'ContextMenu', signature: null, kind: 'Function' as const },
+                { name: 'RootSection', signature: null, kind: 'Class' as const },
+                { name: 'VirtualTree', signature: null, kind: 'Class' as const },
+                { name: 'useTreeState', signature: null, kind: 'Function' as const },
+                { name: 'treeUtils', signature: null, kind: 'Function' as const },
+              ] satisfies ModuleExport[],
               recentlyChanged: true,
             },
           ),
@@ -655,7 +681,11 @@ describe('compressRepoMap', () => {
             createMockModuleIdentity('terminal', 'src/components/Terminal'),
             {
               fileCount: 7,
-              exports: ['TerminalManager', 'TerminalInstance', 'TerminalPane'],
+              exports: [
+                { name: 'TerminalManager', signature: null, kind: 'Class' as const },
+                { name: 'TerminalInstance', signature: null, kind: 'Class' as const },
+                { name: 'TerminalPane', signature: null, kind: 'Function' as const },
+              ] satisfies ModuleExport[],
               recentlyChanged: false,
             },
           ),
@@ -675,13 +705,15 @@ describe('compressRepoMap', () => {
     const fileTreeSummary = result.modules.find((m) => m.id === 'file-tree');
     expect(fileTreeSummary).toBeDefined();
     expect(fileTreeSummary?.exports.length).toBeLessThanOrEqual(5);
-    expect(fileTreeSummary?.exports).toEqual([
+    // First 5 of the 8 exports, each as ModuleExport objects
+    expect(fileTreeSummary?.exports.map((e) => e.name)).toEqual([
       'TreeView',
       'FileList',
       'SearchOverlay',
       'ContextMenu',
       'RootSection',
     ]);
+    expect(fileTreeSummary?.exports[0].signature).toBe('(): JSX.Element');
     expect(fileTreeSummary?.fileCount).toBe(8);
     expect(fileTreeSummary?.recentlyChanged).toBe(true);
     expect(fileTreeSummary?.label).toBe('File Tree');
@@ -689,7 +721,7 @@ describe('compressRepoMap', () => {
 
     const terminalSummary = result.modules.find((m) => m.id === 'terminal');
     expect(terminalSummary).toBeDefined();
-    expect(terminalSummary?.exports).toEqual([
+    expect(terminalSummary?.exports.map((e) => e.name)).toEqual([
       'TerminalManager',
       'TerminalInstance',
       'TerminalPane',
@@ -720,7 +752,7 @@ describe('compressRepoMap', () => {
 });
 
 describe('size cap enforcement', () => {
-  it('does not truncate a RepoMap that is already under 8KB', () => {
+  it('does not truncate a RepoMap that is already under 8KB', async () => {
     const rootPath = '/home/user/small-project';
     const files = [
       createMockFile({ relativePath: 'src/index.ts', path: `${rootPath}/src/index.ts` }),
@@ -730,23 +762,27 @@ describe('size cap enforcement', () => {
     const repoIndex = createMockRepoIndex(rootPath, files);
     const repoFacts = createMockRepoFacts();
 
+    const smallExports: ModuleExport[] = [
+      { name: 'main', signature: null, kind: 'Function' },
+      { name: 'init', signature: null, kind: 'Function' },
+    ];
     const mod = createMockModuleIdentity('app', 'src');
     mockedDetectModules.mockReturnValue([mod]);
     mockedBuildSummaries.mockReturnValue([
-      createMockStructuralSummary(mod, { fileCount: 2, exports: ['main', 'init'] }),
+      createMockStructuralSummary(mod, { fileCount: 2, exports: smallExports }),
     ]);
     mockedBuildDeps.mockReturnValue([]);
 
-    const result = generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
+    const result = await generateRepoMap({ repoFacts, repoIndex, workspaceRoot: rootPath });
 
-    expect(result.modules[0].structural.exports).toEqual(['main', 'init']);
+    expect(result.modules[0].structural.exports).toEqual(smallExports);
     expect(result.modules[0].structural.imports).toEqual(['react', '../utils']);
     expect(JSON.stringify(result).length).toBeLessThanOrEqual(8192);
   });
 });
 
 describe('multi-root workspace', () => {
-  it('prefixes module IDs with root basename when multiple roots exist', () => {
+  it('prefixes module IDs with root basename when multiple roots exist', async () => {
     const rootPath1 = '/home/user/workspace/frontend';
     const rootPath2 = '/home/user/workspace/backend';
 
@@ -794,7 +830,7 @@ describe('multi-root workspace', () => {
     ]);
     mockedBuildDeps.mockReturnValue([]);
 
-    const result = generateRepoMap({
+    const result = await generateRepoMap({
       repoFacts,
       repoIndex,
       workspaceRoot: rootPath1,

@@ -6,7 +6,9 @@ import type { IndexedRepoFile, RepoIndexSnapshot } from '../orchestration/repoIn
 import type { RepoFacts } from '../orchestration/types';
 import type {
   ModuleContextEntry,
+  ModuleExport,
   ModuleIdentity,
+  ModuleStructuralSummary,
   RepoMap,
   RepoMapSummary,
 } from './contextLayerTypes';
@@ -15,6 +17,8 @@ import {
   buildModuleStructuralSummaries,
   detectModules,
 } from './moduleDetector';
+import { detectFrameworks } from './repoMapGeneratorFrameworks';
+import { queryModuleExports } from './repoMapGeneratorGraph';
 
 const REPO_MAP_SIZE_CAP_BYTES = 8192;
 const TRUNCATED_EXPORTS_LIMIT = 5;
@@ -50,7 +54,18 @@ function buildRepoMapFromSummaries(options: {
   };
 }
 
-export function generateRepoMap(options: GenerateRepoMapOptions): RepoMap {
+/**
+ * Enriches a structural summary's exports with graph-backed signatures.
+ * If the graph returns results, they replace the file-walk fallback exports.
+ * If the graph is unavailable or returns nothing, the file-walk exports (with
+ * signature: null) are kept as-is — soft-fallback per Decision 7.
+ */
+async function enrichExportsFromGraph(summary: ModuleStructuralSummary): Promise<ModuleExport[]> {
+  const graphExports = await queryModuleExports(summary.module.rootPath);
+  return graphExports.length > 0 ? graphExports : summary.exports;
+}
+
+export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<RepoMap> {
   const { repoFacts, repoIndex, workspaceRoot } = options;
 
   const allFiles = collectAllFiles(repoIndex);
@@ -73,7 +88,10 @@ export function generateRepoMap(options: GenerateRepoMapOptions): RepoMap {
     files: allFiles,
     workspaceRoot,
   });
-  const moduleEntries: ModuleContextEntry[] = structuralSummaries.map((summary) => ({
+  const enrichedSummaries = await Promise.all(
+    structuralSummaries.map(async (s) => ({ ...s, exports: await enrichExportsFromGraph(s) })),
+  );
+  const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((summary) => ({
     structural: summary,
   }));
 
@@ -105,76 +123,8 @@ export function compressRepoMap(repoMap: RepoMap): RepoMapSummary {
   };
 }
 
-function detectElectronFramework(allFiles: IndexedRepoFile[], relativePaths: Set<string>): boolean {
-  const hasElectronStructure =
-    allFiles.some((f) => f.relativePath.startsWith('src/main/')) &&
-    allFiles.some((f) => f.relativePath.startsWith('src/renderer/')) &&
-    allFiles.some((f) => f.relativePath.startsWith('src/preload/'));
-  return (
-    hasElectronStructure ||
-    Array.from(relativePaths).some((p) => p.startsWith('electron.vite.config'))
-  );
-}
-
-function detectReactFramework(allFiles: IndexedRepoFile[], detected: string[]): boolean {
-  const tsxCount = allFiles.filter((f) => f.extension === '.tsx').length;
-  return (
-    tsxCount >= 3 &&
-    !detected.includes('Next.js') &&
-    !detected.includes('Vue') &&
-    !detected.includes('Angular')
-  );
-}
-
-function buildFrameworkChecks(
-  allFiles: IndexedRepoFile[],
-  relativePaths: Set<string>,
-): Array<{ name: string; check: (detected: string[]) => boolean }> {
-  const hasExtension = (ext: string): boolean => allFiles.some((file) => file.extension === ext);
-  return [
-    {
-      name: 'Next.js',
-      check: () =>
-        matchesAnyPattern(relativePaths, ['next.config.js', 'next.config.ts', 'next.config.mjs']),
-    },
-    {
-      name: 'Vue',
-      check: () => matchesAnyPattern(relativePaths, ['vue.config.js']) || hasExtension('.vue'),
-    },
-    { name: 'Angular', check: () => matchesAnyPattern(relativePaths, ['angular.json']) },
-    { name: 'Electron', check: () => detectElectronFramework(allFiles, relativePaths) },
-    {
-      name: 'Vite',
-      check: (d) => matchesAnyGlob(relativePaths, 'vite.config') && !d.includes('Electron'),
-    },
-    { name: 'React', check: (d) => detectReactFramework(allFiles, d) },
-    { name: 'Tailwind CSS', check: () => matchesAnyGlob(relativePaths, 'tailwind.config') },
-    {
-      name: 'Svelte',
-      check: () =>
-        matchesAnyPattern(relativePaths, ['svelte.config.js', 'svelte.config.ts']) ||
-        hasExtension('.svelte'),
-    },
-    {
-      name: 'Astro',
-      check: () =>
-        matchesAnyPattern(relativePaths, ['astro.config.mjs', 'astro.config.ts']) ||
-        hasExtension('.astro'),
-    },
-  ];
-}
-
-export function detectFrameworks(repoIndex: RepoIndexSnapshot): string[] {
-  const allFiles = collectAllFiles(repoIndex);
-  const relativePaths = new Set(allFiles.map((file) => file.relativePath.toLowerCase()));
-  const checks = buildFrameworkChecks(allFiles, relativePaths);
-
-  const detected: string[] = [];
-  for (const { name, check } of checks) {
-    if (check(detected)) detected.push(name);
-  }
-  return detected.sort((left, right) => left.localeCompare(right));
-}
+// Framework detection moved to repoMapGeneratorFrameworks.ts in Wave 69 B1.
+export { detectFrameworks } from './repoMapGeneratorFrameworks';
 
 export function detectProjectName(workspaceRoot: string, repoIndex: RepoIndexSnapshot): string {
   for (const root of repoIndex.roots) {
@@ -190,11 +140,16 @@ async function readPackageJsonNameAsync(filePath: string): Promise<string | null
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from repoIndexer's trusted file listing
     const parsed = JSON.parse(await fs.readFile(filePath, 'utf-8')) as Record<string, unknown>;
     if (typeof parsed.name === 'string' && parsed.name.trim() !== '') return parsed.name.trim();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
-export async function detectProjectNameAsync(workspaceRoot: string, repoIndex: RepoIndexSnapshot): Promise<string> {
+export async function detectProjectNameAsync(
+  workspaceRoot: string,
+  repoIndex: RepoIndexSnapshot,
+): Promise<string> {
   for (const root of repoIndex.roots) {
     const pj = root.files.find((f) => f.relativePath === 'package.json');
     const name = pj ? await readPackageJsonNameAsync(pj.path) : null;
@@ -325,10 +280,4 @@ function enforceSizeCap(repoMap: RepoMap): RepoMap {
   return trimmed;
 }
 
-function matchesAnyPattern(relativePaths: Set<string>, patterns: string[]): boolean {
-  return patterns.some((pattern) => relativePaths.has(pattern));
-}
-
-function matchesAnyGlob(relativePaths: Set<string>, prefix: string): boolean {
-  return Array.from(relativePaths).some((p) => p.startsWith(prefix));
-}
+// matchesAnyPattern / matchesAnyGlob moved to repoMapGeneratorFrameworks.ts.

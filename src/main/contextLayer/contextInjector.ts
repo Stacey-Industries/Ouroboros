@@ -95,7 +95,7 @@ function selectByKeyword(
 
     const idLower = moduleId.toLowerCase();
     const labelLower = entry.structural.module.label.toLowerCase();
-    const exportsLower = entry.structural.exports.map((exp) => exp.toLowerCase());
+    const exportsLower = entry.structural.exports.map((exp) => exp.name.toLowerCase());
 
     const hasMatch = lowerKeywords.some(
       (kw) =>
@@ -242,6 +242,15 @@ async function readModuleSummaries(
       continue;
     }
     if (entry) {
+      // GC stale-file guard: old .context/modules/*.json files have exports: string[].
+      // After B1 the on-disk schema is ModuleExport[]. Detect legacy shape and skip
+      // rather than crashing on downstream .name access. Next GC cycle writes fresh data.
+      if (entry.structural.exports.length > 0 && typeof entry.structural.exports[0] === 'string') {
+        log.info(
+          `[context-layer] Skipping stale module entry for ${mod.id} (legacy exports shape)`,
+        );
+        continue;
+      }
       summaries.push(buildModuleSummary(entry));
     }
   }

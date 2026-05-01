@@ -17,6 +17,7 @@ export type {
   EditorSelectionRange,
   LiveIdeState,
   ModuleContextSummary,
+  ModuleExport,
   OmittedContextCandidate,
   RankedContextFile,
   RepoMapSummary,

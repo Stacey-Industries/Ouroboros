@@ -327,7 +327,13 @@ export function buildRepoMap(
         label: mod.label,
         rootPath: mod.rootPath,
         fileCount: mod.files.length,
-        exports: mod.exports.slice(0, 10),
+        // File-walk path: no graph signatures available. Wrap names as ModuleExport
+        // with signature: null so the type is compatible with the graph-backed shape.
+        exports: mod.exports.slice(0, 10).map((name) => ({
+          name,
+          signature: null,
+          kind: 'Function' as const,
+        })),
         recentlyChanged: mod.recentlyChanged,
       })),
   };

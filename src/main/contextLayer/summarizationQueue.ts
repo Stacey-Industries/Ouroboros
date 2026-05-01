@@ -128,7 +128,16 @@ function buildEnrichedStructural(
   }
   return {
     ...structural,
-    exports: result.extractedSymbols.map((s) => s.name).slice(0, 20),
+    exports: result.extractedSymbols.slice(0, 20).map((s) => ({
+      name: s.name,
+      signature: s.signature ?? null,
+      kind:
+        s.kind === 'class'
+          ? ('Class' as const)
+          : s.kind === 'function'
+            ? ('Function' as const)
+            : ('Function' as const),
+    })),
     extractedSymbols: result.extractedSymbols.map((s) => ({
       name: s.name,
       kind:
@@ -146,7 +155,11 @@ function buildEnrichedStructural(
 
 type LoopControl = 'continue' | 'break' | 'return';
 
-async function runOneAttempt(moduleId: string, context: SummarizationContext, ctx: ProcessCtx): Promise<{ control: LoopControl; result: SummarizationResult }> {
+async function runOneAttempt(
+  moduleId: string,
+  context: SummarizationContext,
+  ctx: ProcessCtx,
+): Promise<{ control: LoopControl; result: SummarizationResult }> {
   const { state } = ctx;
   state.activeAbortController = new AbortController();
   const result = await summarizeModule(context);
@@ -155,7 +168,13 @@ async function runOneAttempt(moduleId: string, context: SummarizationContext, ct
   if (result.error === 'rate_limited') {
     applyRateLimitBackoff(state);
     state.queue.set(moduleId, Date.now());
-    log.info('[context-layer] Rate limited — re-enqueuing', moduleId, 'backoff:', state.backoffMs, 'ms');
+    log.info(
+      '[context-layer] Rate limited — re-enqueuing',
+      moduleId,
+      'backoff:',
+      state.backoffMs,
+      'ms',
+    );
     return { control: 'return', result };
   }
   if (result.error === 'no_auth') {
@@ -167,7 +186,12 @@ async function runOneAttempt(moduleId: string, context: SummarizationContext, ct
   return { control: result.error === 'parse_failure' ? 'break' : 'continue', result };
 }
 
-async function runSummarizationLoop(moduleId: string, context: SummarizationContext, maxRetries: number, ctx: ProcessCtx): Promise<void> {
+async function runSummarizationLoop(
+  moduleId: string,
+  context: SummarizationContext,
+  maxRetries: number,
+  ctx: ProcessCtx,
+): Promise<void> {
   const { state } = ctx;
   let retriesLeft = maxRetries;
   let result: SummarizationResult | undefined;
@@ -180,7 +204,12 @@ async function runSummarizationLoop(moduleId: string, context: SummarizationCont
     if (retriesLeft <= 0) break;
     retriesLeft--;
   }
-  await persistSummaryResult(moduleId, context.module, result ?? { success: false, error: 'summarization-exhausted-retries' }, ctx);
+  await persistSummaryResult(
+    moduleId,
+    context.module,
+    result ?? { success: false, error: 'summarization-exhausted-retries' },
+    ctx,
+  );
 }
 
 async function processModule(moduleId: string, ctx: ProcessCtx, maxRetries: number): Promise<void> {
@@ -214,7 +243,10 @@ async function processModule(moduleId: string, ctx: ProcessCtx, maxRetries: numb
 // ---------------------------------------------------------------------------
 
 function cancelTimer(state: QueueState): void {
-  if (state.nextJobTimer) { clearTimeout(state.nextJobTimer); state.nextJobTimer = null; }
+  if (state.nextJobTimer) {
+    clearTimeout(state.nextJobTimer);
+    state.nextJobTimer = null;
+  }
 }
 
 function makeScheduler(ctx: ProcessCtx, cfg: SchedulerConfig): SummarizationQueue {
@@ -234,7 +266,10 @@ function makeScheduler(ctx: ProcessCtx, cfg: SchedulerConfig): SummarizationQueu
   const status = makeStatus(ctx, cfg);
 
   function pause(): void {
-    if (!state.disposed) { state.paused = true; cancelTimer(state); }
+    if (!state.disposed) {
+      state.paused = true;
+      cancelTimer(state);
+    }
   }
 
   function dispose(): void {
@@ -248,7 +283,10 @@ function makeScheduler(ctx: ProcessCtx, cfg: SchedulerConfig): SummarizationQueu
   }
 
   function resume(): void {
-    if (!state.disposed) { state.paused = false; scheduleNext(); }
+    if (!state.disposed) {
+      state.paused = false;
+      scheduleNext();
+    }
   }
 
   return { enqueue, status, pause, resume, dispose };

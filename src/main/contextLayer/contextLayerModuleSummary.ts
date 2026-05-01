@@ -27,7 +27,12 @@ export function buildSingleModuleSummary(
     description: `${mod.label} module (${mod.files.length} files, ${languages.join('/')}${mod.boundarySignals.hasBarrel ? ', barrel' : ''}, ${mod.boundarySignals.boundaryStrength} boundary, ${(mod.cohesion * 100).toFixed(0)}% cohesion)`,
     keyResponsibilities: deriveResponsibilities(mod),
     gotchas: deriveGotchas(mod),
-    exports: mod.exports.slice(0, 10),
+    // File-walk path: no graph signatures. Wrap as ModuleExport with signature: null.
+    exports: mod.exports.slice(0, 10).map((name) => ({
+      name,
+      signature: null,
+      kind: 'Function' as const,
+    })),
     dependencies: deps.length > 0 ? deps : undefined,
   };
 }

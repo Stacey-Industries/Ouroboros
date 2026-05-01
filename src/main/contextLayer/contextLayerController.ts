@@ -122,6 +122,14 @@ class ContextLayerControllerImpl implements ContextLayerController {
     const repoMap = await readRepoMap(this.workspaceRoot);
     if (!repoMap) return false;
 
+    if (!repoMap.workspaceRoot || repoMap.workspaceRoot !== this.workspaceRoot) {
+      log.warn('[context-layer] On-disk repo map workspaceRoot mismatch — forcing rebuild', {
+        onDisk: repoMap.workspaceRoot,
+        expected: this.workspaceRoot,
+      });
+      return false;
+    }
+
     this.repoMap = repoMap;
     this.repoMapGeneratedAt = Date.now();
     log.info('[context-layer] Loaded from disk (manifest fresh)');
@@ -133,7 +141,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.snapshot = snapshot;
     const repoFacts = snapshot.repoFacts;
 
-    const newRepoMap = generateRepoMap({
+    const newRepoMap = await generateRepoMap({
       repoFacts,
       repoIndex: snapshot,
       workspaceRoot: this.workspaceRoot,
