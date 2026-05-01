@@ -283,7 +283,7 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
     {
       name: 'query_graph',
       description:
-        'USE FOR relationship queries Grep cannot express. Cypher subset against the codebase graph. Examples: "all functions in src/main/ that call parseConfig", "files that import both X and Y", "methods on Class Foo with no callers". Read-only, capped at 200 rows. Run get_graph_schema first to see node labels and edge types.',
+        'Complex relationship queries. Cypher-subset: MATCH (n:Label), (a)-[:TYPE]->(b), (a)-[:TYPE*1..3]->(b); WHERE n.prop {=,<>,<,>,<=,>=,CONTAINS,STARTS WITH,ENDS WITH} AND/OR; RETURN n.prop, COUNT(*), labels(n), DISTINCT; ORDER BY, LIMIT. Capped at 200 rows. Use search_graph for simple symbol lookups. Call get_graph_schema first to discover node labels and edge types.',
       inputSchema: TOOL_SCHEMAS.query_graph,
       handler: async (a: Record<string, unknown>) => {
         try {

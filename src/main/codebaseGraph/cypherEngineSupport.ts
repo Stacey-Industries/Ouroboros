@@ -87,10 +87,11 @@ const VARPATH_IN = new RegExp(
   'i',
 )
 // Groups: 1=leftAlias, 2=leftLabel, 3=edgeAlias, 4=edgeType, 5=rightAlias, 6=rightLabel
+// Edge bracket syntax handled: [], [r], [:TYPE], [r:TYPE]
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_OUT = /\((\w*)(?::(\w+))?\)\s*-\[\s*(?:(\w+)\s*:)?\s*(\w+)?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
+const HOP_OUT = /\((\w*)(?::(\w+))?\)\s*-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_IN = /\((\w*)(?::(\w+))?\)\s*<-\[\s*(?:(\w+)\s*:)?\s*(\w+)?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
+const HOP_IN = /\((\w*)(?::(\w+))?\)\s*<-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches single Cypher node; no backtracking risk
 const SINGLE_NODE = /\((\w*)(?::(\w+))?\)/i;
 
