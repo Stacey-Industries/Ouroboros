@@ -54,13 +54,19 @@ export class IndexingPipeline {
 
   // Reports the phase, runs the thunk inside a single transaction, then yields
   // the event loop via setImmediate so IPC messages aren't starved between passes.
+  // A pass that throws is logged and skipped; subsequent passes still run. The
+  // failing pass's transaction is rolled back automatically by db.transaction.
   private async runPass(
     phase: string,
     thunk: () => void,
     report: (p: string) => void,
   ): Promise<void> {
     report(phase);
-    this.db.transaction(thunk);
+    try {
+      this.db.transaction(thunk);
+    } catch (err) {
+      log.warn('[pipeline] pass=%s threw, isolating: %s', phase, err instanceof Error ? err.message : String(err));
+    }
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
@@ -72,7 +78,11 @@ export class IndexingPipeline {
     report: (p: string) => void,
   ): Promise<void> {
     report(phase);
-    thunk();
+    try {
+      thunk();
+    } catch (err) {
+      log.warn('[pipeline] pass=%s threw, isolating: %s', phase, err instanceof Error ? err.message : String(err));
+    }
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 

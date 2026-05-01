@@ -46,26 +46,29 @@ const MAX_SIGNATURE_LENGTH = 200;
 const TS_JS_LANGUAGES = new Set<LanguageId>(['typescript', 'tsx', 'javascript', 'jsx']);
 
 /**
- * Resolve grammar WASM path. Prefers @vscode/tree-sitter-wasm; falls back to
- * tree-sitter-wasms for grammars not present in the vscode package (e.g. C).
+ * Resolve candidate grammar WASM paths in preference order. Returns all paths
+ * that exist; caller falls back if Parser.Language.load throws an ABI mismatch
+ * (e.g. @vscode/tree-sitter-wasm@0.3.1 javascript wasm is ABI 15 but
+ * web-tree-sitter@0.22 only supports 13–14; tree-sitter-wasms@0.1.13 stays
+ * compatible).
  */
-function resolveGrammarPath(wasmFile: string): string {
-  const vscodeWasmFile = wasmFile.replace('tree-sitter-c_sharp', 'tree-sitter-c-sharp');
-  try {
-    const vscodeDir = path.dirname(require.resolve('@vscode/tree-sitter-wasm/package.json'));
-    const candidate = path.join(vscodeDir, 'wasm', vscodeWasmFile);
-    // require.resolve only works for JS modules, not .wasm files.
-    // Use a synchronous existence check via the fs module loaded at call-time.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require('fs') as typeof import('fs');
-    if (fs.existsSync(candidate)) return candidate;
-  } catch {
-    /* package not installed */
-  }
-
-  // Fallback: tree-sitter-wasms (System 1 source, always present)
-  const fallbackDir = path.dirname(require.resolve('tree-sitter-wasms/package.json'));
-  return path.join(fallbackDir, 'out', wasmFile);
+function resolveGrammarPaths(wasmFile: string): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs') as typeof import('fs');
+  const vscodeFile = wasmFile.replace('tree-sitter-c_sharp', 'tree-sitter-c-sharp');
+  const tryResolve = (pkg: string, sub: string, file: string): string | null => {
+    try {
+      const dir = path.dirname(require.resolve(`${pkg}/package.json`));
+      const p = path.join(dir, sub, file);
+      return fs.existsSync(p) ? p : null;
+    } catch {
+      return null;
+    }
+  };
+  return [
+    tryResolve('@vscode/tree-sitter-wasm', 'wasm', vscodeFile),
+    tryResolve('tree-sitter-wasms', 'out', wasmFile),
+  ].filter((p): p is string => p !== null);
 }
 
 export class TreeSitterParser {
@@ -113,12 +116,15 @@ export class TreeSitterParser {
 
   private async doLoadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
     try {
-      const wasmPath = resolveGrammarPath(config.wasmFile);
-      const language = await Parser.Language.load(wasmPath);
-      this.languages.set(config.id, language);
-      return language;
-    } catch (err) {
-      log.debug(`[treeSitterParser] grammar load failed for ${config.id}:`, err);
+      for (const wasmPath of resolveGrammarPaths(config.wasmFile)) {
+        try {
+          const language = await Parser.Language.load(wasmPath);
+          this.languages.set(config.id, language);
+          return language;
+        } catch (err) {
+          log.debug(`[treeSitterParser] load failed: ${config.id} @ ${wasmPath}:`, err);
+        }
+      }
       this.unsupportedLanguages.add(config.id);
       return null;
     } finally {

@@ -15,44 +15,45 @@ import type { IndexedFile } from './passTypes';
 // Maps a function/method name to the HTTP methods it can represent.
 // '*' means any method (the actual method is determined at runtime).
 
-const HTTP_CALL_PATTERNS: Record<string, string[]> = {
+// Map (not Record) — avoids prototype pollution when call names like
+// `toString`, `constructor`, `hasOwnProperty` collide with Object.prototype.
+const HTTP_CALL_PATTERNS: ReadonlyMap<string, readonly string[]> = new Map([
   // JavaScript / TypeScript
-  fetch: ['GET'],
-  axios: ['GET'],
-  'axios.get': ['GET'],
-  'axios.post': ['POST'],
-  'axios.put': ['PUT'],
-  'axios.delete': ['DELETE'],
-  'axios.patch': ['PATCH'],
+  ['fetch', ['GET']],
+  ['axios', ['GET']],
+  ['axios.get', ['GET']],
+  ['axios.post', ['POST']],
+  ['axios.put', ['PUT']],
+  ['axios.delete', ['DELETE']],
+  ['axios.patch', ['PATCH']],
   // Node.js http / https
-  'http.get': ['GET'],
-  'http.request': ['*'],
-  'https.get': ['GET'],
-  'https.request': ['*'],
+  ['http.get', ['GET']],
+  ['http.request', ['*']],
+  ['https.get', ['GET']],
+  ['https.request', ['*']],
   // Python — requests
-  'requests.get': ['GET'],
-  'requests.post': ['POST'],
-  'requests.put': ['PUT'],
-  'requests.delete': ['DELETE'],
-  'requests.patch': ['PATCH'],
+  ['requests.get', ['GET']],
+  ['requests.post', ['POST']],
+  ['requests.put', ['PUT']],
+  ['requests.delete', ['DELETE']],
+  ['requests.patch', ['PATCH']],
   // Python — httpx
-  'httpx.get': ['GET'],
-  'httpx.post': ['POST'],
-  'httpx.put': ['PUT'],
-  'httpx.delete': ['DELETE'],
-  'httpx.patch': ['PATCH'],
+  ['httpx.get', ['GET']],
+  ['httpx.post', ['POST']],
+  ['httpx.put', ['PUT']],
+  ['httpx.delete', ['DELETE']],
+  ['httpx.patch', ['PATCH']],
   // Go
-  'http.Get': ['GET'],
-  'http.Post': ['POST'],
-  'http.NewRequest': ['*'],
-};
+  ['http.Get', ['GET']],
+  ['http.Post', ['POST']],
+  ['http.NewRequest', ['*']],
+]);
 
 // ─── Helper: look up HTTP methods for a call site ────────────────────────────
 
-function resolveHttpMethods(calleeName: string, receiverName?: string): string[] | null {
+function resolveHttpMethods(calleeName: string, receiverName?: string): readonly string[] | null {
   const fullCallName = receiverName ? `${receiverName}.${calleeName}` : calleeName;
-  // eslint-disable-next-line security/detect-object-injection -- keys are Cypher-extracted call names matched against a static allowlist
-  return HTTP_CALL_PATTERNS[fullCallName] ?? HTTP_CALL_PATTERNS[calleeName] ?? null;
+  return HTTP_CALL_PATTERNS.get(fullCallName) ?? HTTP_CALL_PATTERNS.get(calleeName) ?? null;
 }
 
 // ─── Helper: score a route match ─────────────────────────────────────────────
@@ -61,7 +62,7 @@ function scoreRouteMatch(
   callerName: string,
   routeMethod: string,
   routePath: string,
-  methods: string[],
+  methods: readonly string[],
 ): number {
   if (!methods.includes('*') && !methods.includes(routeMethod)) return 0;
 
