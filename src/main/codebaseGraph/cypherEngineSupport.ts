@@ -11,6 +11,7 @@ export type MatchPattern =
       kind: 'hop';
       left: { alias: string; label: string | null };
       right: { alias: string; label: string | null };
+      edgeAlias: string | null;
       edgeType: string | null;
       direction: 'outbound' | 'inbound';
     }
@@ -85,12 +86,13 @@ const VARPATH_IN = new RegExp(
   `^\\((${IDENT})(?::(${IDENT}))?\\)\\s*<-\\[\\s*:?(?:(${IDENT}))\\s*\\*\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*-\\s*\\((${IDENT})(?::(${IDENT}))?\\)$`,
   'i',
 )
+// Groups: 1=leftAlias, 2=leftLabel, 3=edgeAlias, 4=edgeType, 5=rightAlias, 6=rightLabel
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_OUT = /\((\w+)(?::(\w+))?\)\s*-\[\s*:?(\w+)?\s*\]\s*->\s*\((\w+)(?::(\w+))?\)/i;
+const HOP_OUT = /\((\w*)(?::(\w+))?\)\s*-\[\s*(?:(\w+)\s*:)?\s*(\w+)?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_IN = /\((\w+)(?::(\w+))?\)\s*<-\[\s*:?(\w+)?\s*\]\s*-\s*\((\w+)(?::(\w+))?\)/i;
+const HOP_IN = /\((\w*)(?::(\w+))?\)\s*<-\[\s*(?:(\w+)\s*:)?\s*(\w+)?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches single Cypher node; no backtracking risk
-const SINGLE_NODE = /\((\w+)(?::(\w+))?\)/i;
+const SINGLE_NODE = /\((\w*)(?::(\w+))?\)/i;
 
 function tryVarpath(matchStr: string): MatchPattern | null {
   let m = VARPATH_OUT.exec(matchStr);
@@ -120,27 +122,25 @@ function tryVarpath(matchStr: string): MatchPattern | null {
   return null;
 }
 
+function hopFromMatch(
+  m: RegExpExecArray,
+  direction: 'outbound' | 'inbound',
+): Extract<MatchPattern, { kind: 'hop' }> {
+  return {
+    kind: 'hop',
+    left: { alias: m[1] || '_n0', label: m[2] || null },
+    right: { alias: m[5] || '_n1', label: m[6] || null },
+    edgeAlias: m[3] || null,
+    edgeType: m[4] || null,
+    direction,
+  };
+}
+
 function tryHop(matchStr: string): MatchPattern | null {
-  let m = HOP_OUT.exec(matchStr);
-  if (m) {
-    return {
-      kind: 'hop',
-      left: { alias: m[1], label: m[2] || null },
-      right: { alias: m[4], label: m[5] || null },
-      edgeType: m[3] || null,
-      direction: 'outbound',
-    };
-  }
-  m = HOP_IN.exec(matchStr);
-  if (m) {
-    return {
-      kind: 'hop',
-      left: { alias: m[1], label: m[2] || null },
-      right: { alias: m[4], label: m[5] || null },
-      edgeType: m[3] || null,
-      direction: 'inbound',
-    };
-  }
+  const mOut = HOP_OUT.exec(matchStr);
+  if (mOut) return hopFromMatch(mOut, 'outbound');
+  const mIn = HOP_IN.exec(matchStr);
+  if (mIn) return hopFromMatch(mIn, 'inbound');
   return null;
 }
 
@@ -205,6 +205,14 @@ function parseReturnField(fieldStr: string): ReturnField | null {
   }
   if (/^\w+$/.test(expr)) {
     return { alias: expr, property: '*', outputName: expr };
+  }
+  const fnMatch = /^(\w+)\s*\(\s*(\w+)\s*\)$/.exec(expr);
+  if (fnMatch) {
+    const [, fnName, fnAlias] = fnMatch;
+    if (fnName.toLowerCase() === 'labels') {
+      return { alias: fnAlias, property: 'label', outputName: `labels_${fnAlias}` };
+    }
+    throw new Error(`unsupported function: ${fnName}`);
   }
   return null;
 }

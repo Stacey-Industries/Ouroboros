@@ -146,81 +146,86 @@ export class CypherEngine {
   /** Single node match: MATCH (n:Label) ... */
   private singleNodeSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
     const match = parsed.match as Extract<MatchPattern, { kind: 'single' }>;
+    if (match.label === 'Project') return this.singleProjectSql(parsed, match);
     const params: unknown[] = [];
-
-    const selectCols = this.buildSelectColumns(parsed, match.alias);
-
-    const conditions: string[] = [`${match.alias}.project = ?`];
+    const alias = match.alias || '_n0';
+    const selectCols = this.buildSelectColumns(parsed, alias);
+    const conditions: string[] = [`${alias}.project = ?`];
     params.push(this.projectName);
-
-    if (match.label) {
-      conditions.push(`${match.alias}.label = ?`);
-      params.push(match.label);
-    }
-
+    if (match.label) { conditions.push(`${alias}.label = ?`); params.push(match.label); }
     this.addWhereConditions(parsed.where, conditions, params);
-
     const orderBy = buildOrderBy(parsed.orderBy);
     const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
-
     const sql = [
       `SELECT ${distinct}${selectCols}`,
-      `FROM nodes ${match.alias}`,
+      `FROM nodes ${alias}`,
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ]
-      .filter(Boolean)
-      .join(' ');
-
+    ].filter(Boolean).join(' ');
     params.push(parsed.limit);
     return { text: sql, params };
+  }
+
+  /** MATCH (p:Project) — routes to projects table since Project columns
+   * (indexed_at, node_count, etc.) live there, not on the nodes table. */
+  private singleProjectSql(
+    parsed: ParsedQuery,
+    match: Extract<MatchPattern, { kind: 'single' }>,
+  ): { text: string; params: unknown[] } {
+    const alias = match.alias || '_p';
+    const cols = parsed.isCount
+      ? 'COUNT(*) AS _count'
+      : parsed.returnFields.length === 0
+      ? `${alias}.*`
+      : parsed.returnFields
+          .map((f) => (f.property === '*' ? `${alias}.*` : `${alias}.${f.property} AS ${f.outputName}`))
+          .join(', ');
+    const sql = `SELECT ${cols} FROM projects ${alias} WHERE ${alias}.name = ? LIMIT ?`;
+    return { text: sql, params: [this.projectName, parsed.limit] };
+  }
+
+  /** Build WHERE conditions for a single-hop query. */
+  private buildHopConditions(
+    match: Extract<MatchPattern, { kind: 'hop' }>,
+    params: unknown[],
+  ): string[] {
+    const { left, right, edgeType } = match;
+    const conditions: string[] = [`${left.alias}.project = ?`];
+    params.push(this.projectName);
+    if (left.label) { conditions.push(`${left.alias}.label = ?`); params.push(left.label); }
+    if (right.label) { conditions.push(`${right.alias}.label = ?`); params.push(right.label); }
+    if (edgeType) { conditions.push(`e.type = ?`); params.push(edgeType); }
+    return conditions;
   }
 
   /** Single hop: MATCH (n)-[:TYPE]->(m) ... */
   private singleHopSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
     const match = parsed.match as Extract<MatchPattern, { kind: 'hop' }>;
     const params: unknown[] = [];
-    const { left, right, edgeType, direction } = match;
-    const edgeAlias = 'e';
+    const { left, right, edgeAlias: cypherEdgeAlias, direction } = match;
 
-    const selectCols = this.buildSelectColumns(parsed, left.alias, right.alias);
-    const joinCondition = buildHopJoinCondition(edgeAlias, left.alias, right.alias, direction);
-
-    const conditions: string[] = [`${left.alias}.project = ?`];
-    params.push(this.projectName);
-
-    if (left.label) {
-      conditions.push(`${left.alias}.label = ?`);
-      params.push(left.label);
-    }
-    if (right.label) {
-      conditions.push(`${right.alias}.label = ?`);
-      params.push(right.label);
-    }
-    if (edgeType) {
-      conditions.push(`${edgeAlias}.type = ?`);
-      params.push(edgeType);
-    }
+    const selectAliases = [left.alias, right.alias];
+    if (cypherEdgeAlias) selectAliases.push(cypherEdgeAlias);
+    const selectCols = this.buildSelectColumns(parsed, ...selectAliases);
+    const joinCondition = buildHopJoinCondition('e', left.alias, right.alias, direction);
+    const conditions = this.buildHopConditions(match, params);
 
     this.addWhereConditions(parsed.where, conditions, params);
 
     const orderBy = buildOrderBy(parsed.orderBy);
     const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
-    const rightJoinCol =
-      direction === 'outbound' ? `${edgeAlias}.target_id` : `${edgeAlias}.source_id`;
+    const rightJoinCol = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
 
     const sql = [
       `SELECT ${distinct}${selectCols}`,
       `FROM nodes ${left.alias}`,
-      `JOIN edges ${edgeAlias} ON ${joinCondition}`,
+      `JOIN edges e ON ${joinCondition}`,
       `JOIN nodes ${right.alias} ON ${right.alias}.id = ${rightJoinCol}`,
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ]
-      .filter(Boolean)
-      .join(' ');
+    ].filter(Boolean).join(' ');
 
     params.push(parsed.limit);
     return { text: sql, params };
@@ -274,29 +279,43 @@ export class CypherEngine {
   // SQL building helpers
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /** Build SELECT column list from RETURN fields. */
+  /** Build SELECT column list from RETURN fields. The last entry of
+   * availableAliases is treated as the Cypher edge alias when present
+   * (singleHopSql passes it after node aliases); maps to SQL alias 'e'. */
   private buildSelectColumns(parsed: ParsedQuery, ...availableAliases: string[]): string {
     if (parsed.isCount) return 'COUNT(*) AS _count';
-
+    const edgeColumns = new Set(['id', 'project', 'source_id', 'target_id', 'type', 'confidence']);
+    // Heuristic: if more than 2 aliases, the third+ are edge aliases (singleHopSql
+    // passes [leftNode, rightNode, ...edgeAliases]).
+    const edgeAliases = availableAliases.slice(2);
     const cols: string[] = [];
-
     for (const field of parsed.returnFields) {
+      const isEdge = edgeAliases.includes(field.alias);
+      const sqlAlias = isEdge ? 'e' : field.alias;
       if (field.property === '*') {
-        if (availableAliases.includes(field.alias)) {
-          cols.push(`${field.alias}.*`);
-        }
-      } else {
-        const col = resolveColumn(field.property);
-        if (availableAliases.includes(field.alias)) {
-          cols.push(`${field.alias}.${col} AS ${field.outputName}`);
+        if (availableAliases.includes(field.alias)) cols.push(`${sqlAlias}.*`);
+        continue;
+      }
+      // Edge property: dedicated columns vs JSON props
+      if (isEdge) {
+        if (edgeColumns.has(field.property)) {
+          cols.push(`${sqlAlias}.${field.property} AS ${field.outputName}`);
         } else {
           cols.push(
-            `json_extract(${field.alias}.props, '$.${field.property}') AS ${field.outputName}`,
+            `json_extract(${sqlAlias}.props, '$.${field.property}') AS ${field.outputName}`,
           );
         }
+        continue;
+      }
+      const col = resolveColumn(field.property);
+      if (availableAliases.includes(field.alias)) {
+        cols.push(`${sqlAlias}.${col} AS ${field.outputName}`);
+      } else {
+        cols.push(
+          `json_extract(${field.alias}.props, '$.${field.property}') AS ${field.outputName}`,
+        );
       }
     }
-
     return cols.length > 0 ? cols.join(', ') : `${availableAliases[0]}.*`;
   }
 
