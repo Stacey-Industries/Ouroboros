@@ -9,7 +9,7 @@ import type { ReturnField, WhereCondition } from './cypherEngineSupport';
 
 /** Resolver callbacks used to translate Cypher identifiers and operators to SQL. */
 export interface CypherResolvers {
-  resolveColumn: (p: string) => string;
+  resolveColumnExpression: (sqlAlias: string, property: string) => string;
   cypherOpToSql: (op: string) => string;
 }
 
@@ -39,9 +39,9 @@ export function buildVarpathStartConditions(
 
   for (const cond of where) {
     if (cond.alias === left.alias) {
-      const col = resolvers.resolveColumn(cond.property);
+      const expr = resolvers.resolveColumnExpression('n_start', cond.property);
       const sqlOp = resolvers.cypherOpToSql(cond.operator);
-      startConditions.push(`n_start.${col} ${sqlOp} ?`);
+      startConditions.push(`${expr} ${sqlOp} ?`);
       params.push(cond.value);
     }
   }
@@ -65,9 +65,9 @@ export function buildVarpathEndConditions(
 
   for (const cond of where) {
     if (cond.alias === right.alias) {
-      const col = resolvers.resolveColumn(cond.property);
+      const expr = resolvers.resolveColumnExpression('n_end', cond.property);
       const sqlOp = resolvers.cypherOpToSql(cond.operator);
-      endConditions.push(`n_end.${col} ${sqlOp} ?`);
+      endConditions.push(`${expr} ${sqlOp} ?`);
       params.push(cond.value);
     }
   }
@@ -121,7 +121,7 @@ export function buildVarpathSelectParts(
   returnFields: ReturnField[],
   leftAlias: string,
   rightAlias: string,
-  resolveColumn: (p: string) => string,
+  resolveColumnExpression: (sqlAlias: string, property: string) => string,
 ): string[] {
   const selectParts: string[] = [];
 
@@ -130,9 +130,15 @@ export function buildVarpathSelectParts(
       if (field.alias === leftAlias) selectParts.push(`n_start.id AS ${field.outputName}`);
       else if (field.alias === rightAlias) selectParts.push(`n_end.id AS ${field.outputName}`);
     } else {
-      const col = resolveColumn(field.property);
-      if (field.alias === leftAlias) selectParts.push(`n_start.${col} AS ${field.outputName}`);
-      else if (field.alias === rightAlias) selectParts.push(`n_end.${col} AS ${field.outputName}`);
+      if (field.alias === leftAlias) {
+        selectParts.push(
+          `${resolveColumnExpression('n_start', field.property)} AS ${field.outputName}`,
+        );
+      } else if (field.alias === rightAlias) {
+        selectParts.push(
+          `${resolveColumnExpression('n_end', field.property)} AS ${field.outputName}`,
+        );
+      }
     }
   }
 

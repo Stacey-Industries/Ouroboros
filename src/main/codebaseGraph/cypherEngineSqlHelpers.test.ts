@@ -2,24 +2,41 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildOrderBy,
-  buildWhereExpression,
+  buildWhereRhs,
   cypherOpToSql,
   isWriteQuery,
   mergeCondition,
   pushWhereParam,
-  resolveColumn,
+  resolveColumnExpression,
   sanitizeIdentifier,
 } from './cypherEngineSqlHelpers';
 
 describe('cypherEngineSqlHelpers', () => {
-  describe('resolveColumn', () => {
-    it('maps known property names to SQL columns', () => {
-      expect(resolveColumn('name')).toBe('name');
-      expect(resolveColumn('file_path')).toBe('file_path');
+  describe('resolveColumnExpression', () => {
+    it('maps known property names to alias.column refs', () => {
+      expect(resolveColumnExpression('n', 'name')).toBe('n.name');
+      expect(resolveColumnExpression('n', 'file_path')).toBe('n.file_path');
     });
 
-    it('returns the property name unchanged for unknown properties', () => {
-      expect(resolveColumn('unknown_prop')).toBe('unknown_prop');
+    it('maps camelCase aliases to snake_case SQL columns', () => {
+      expect(resolveColumnExpression('n', 'filePath')).toBe('n.file_path');
+      expect(resolveColumnExpression('n', 'qualifiedName')).toBe('n.qualified_name');
+    });
+
+    it('falls through to json_extract for unknown properties (props.* keys)', () => {
+      expect(resolveColumnExpression('n', 'signature')).toBe(
+        "json_extract(n.props, '$.signature')",
+      );
+      expect(resolveColumnExpression('n', 'custom_prop')).toBe(
+        "json_extract(n.props, '$.custom_prop')",
+      );
+    });
+
+    it('sanitizes the JSON path key against injection', () => {
+      // Keys that would otherwise inject quote/SQL fragments are stripped to alphanumerics
+      expect(resolveColumnExpression('n', "evil'; DROP TABLE")).toBe(
+        "json_extract(n.props, '$.evilDROPTABLE')",
+      );
     });
   });
 
@@ -51,6 +68,10 @@ describe('cypherEngineSqlHelpers', () => {
       expect(cypherOpToSql('<=')).toBe('<=');
     });
 
+    it('maps IN to IN', () => {
+      expect(cypherOpToSql('IN')).toBe('IN');
+    });
+
     it('defaults unknown operators to =', () => {
       expect(cypherOpToSql('INVALID')).toBe('=');
     });
@@ -75,15 +96,50 @@ describe('cypherEngineSqlHelpers', () => {
     });
   });
 
-  describe('buildWhereExpression', () => {
-    it('returns column ref for known schema properties', () => {
-      const result = buildWhereExpression('name', 'n', 'n.name');
-      expect(result).toBe('n.name');
+  describe('buildWhereRhs', () => {
+    it('returns a single placeholder for scalar operators', () => {
+      expect(
+        buildWhereRhs({
+          alias: 'n',
+          property: 'name',
+          operator: '=',
+          value: 'foo',
+          conjunction: null,
+        }),
+      ).toBe('?');
+      expect(
+        buildWhereRhs({
+          alias: 'n',
+          property: 'name',
+          operator: 'CONTAINS',
+          value: 'foo',
+          conjunction: null,
+        }),
+      ).toBe('?');
     });
 
-    it('returns json_extract for unknown properties', () => {
-      const result = buildWhereExpression('custom_prop', 'n', 'n.custom_prop');
-      expect(result).toBe("json_extract(n.props, '$.custom_prop')");
+    it('returns a parenthesized list of placeholders for IN operator', () => {
+      expect(
+        buildWhereRhs({
+          alias: 'n',
+          property: 'label',
+          operator: 'IN',
+          value: ['Class', 'Function', 'Method'],
+          conjunction: null,
+        }),
+      ).toBe('(?, ?, ?)');
+    });
+
+    it('returns (NULL) for empty IN lists so the predicate matches nothing', () => {
+      expect(
+        buildWhereRhs({
+          alias: 'n',
+          property: 'label',
+          operator: 'IN',
+          value: [],
+          conjunction: null,
+        }),
+      ).toBe('(NULL)');
     });
   });
 
@@ -110,7 +166,13 @@ describe('cypherEngineSqlHelpers', () => {
   describe('pushWhereParam', () => {
     it('wraps CONTAINS value with % on both sides', () => {
       const params: unknown[] = [];
-      pushWhereParam(params, { alias: 'n', property: 'name', operator: 'CONTAINS', value: 'foo', conjunction: null });
+      pushWhereParam(params, {
+        alias: 'n',
+        property: 'name',
+        operator: 'CONTAINS',
+        value: 'foo',
+        conjunction: null,
+      });
       expect(params).toEqual(['%foo%']);
     });
 
@@ -140,8 +202,38 @@ describe('cypherEngineSqlHelpers', () => {
 
     it('passes through value unchanged for equality operators', () => {
       const params: unknown[] = [];
-      pushWhereParam(params, { alias: 'n', property: 'name', operator: '=', value: 'foo', conjunction: null });
+      pushWhereParam(params, {
+        alias: 'n',
+        property: 'name',
+        operator: '=',
+        value: 'foo',
+        conjunction: null,
+      });
       expect(params).toEqual(['foo']);
+    });
+
+    it('expands array values into separate params for IN operator', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'n',
+        property: 'label',
+        operator: 'IN',
+        value: ['Class', 'Function', 'Method'],
+        conjunction: null,
+      });
+      expect(params).toEqual(['Class', 'Function', 'Method']);
+    });
+
+    it('handles a scalar value for IN operator by wrapping it once', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'n',
+        property: 'label',
+        operator: 'IN',
+        value: 'Class',
+        conjunction: null,
+      });
+      expect(params).toEqual(['Class']);
     });
   });
 

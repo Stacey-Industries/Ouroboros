@@ -20,12 +20,12 @@
 import { extractClause, parseOrderBy, parseWhere } from './cypherEngineParser';
 import {
   buildOrderBy,
-  buildWhereExpression,
+  buildWhereRhs,
   cypherOpToSql,
   isWriteQuery,
   mergeCondition,
   pushWhereParam,
-  resolveColumn,
+  resolveColumnExpression,
   sanitizeIdentifier,
 } from './cypherEngineSqlHelpers';
 import type {
@@ -152,7 +152,10 @@ export class CypherEngine {
     const selectCols = this.buildSelectColumns(parsed, alias);
     const conditions: string[] = [`${alias}.project = ?`];
     params.push(this.projectName);
-    if (match.label) { conditions.push(`${alias}.label = ?`); params.push(match.label); }
+    if (match.label) {
+      conditions.push(`${alias}.label = ?`);
+      params.push(match.label);
+    }
     this.addWhereConditions(parsed.where, conditions, params);
     const orderBy = buildOrderBy(parsed.orderBy);
     const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
@@ -162,7 +165,9 @@ export class CypherEngine {
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ].filter(Boolean).join(' ');
+    ]
+      .filter(Boolean)
+      .join(' ');
     params.push(parsed.limit);
     return { text: sql, params };
   }
@@ -177,10 +182,12 @@ export class CypherEngine {
     const cols = parsed.isCount
       ? 'COUNT(*) AS _count'
       : parsed.returnFields.length === 0
-      ? `${alias}.*`
-      : parsed.returnFields
-          .map((f) => (f.property === '*' ? `${alias}.*` : `${alias}.${f.property} AS ${f.outputName}`))
-          .join(', ');
+        ? `${alias}.*`
+        : parsed.returnFields
+            .map((f) =>
+              f.property === '*' ? `${alias}.*` : `${alias}.${f.property} AS ${f.outputName}`,
+            )
+            .join(', ');
     const sql = `SELECT ${cols} FROM projects ${alias} WHERE ${alias}.name = ? LIMIT ?`;
     return { text: sql, params: [this.projectName, parsed.limit] };
   }
@@ -193,9 +200,18 @@ export class CypherEngine {
     const { left, right, edgeType } = match;
     const conditions: string[] = [`${left.alias}.project = ?`];
     params.push(this.projectName);
-    if (left.label) { conditions.push(`${left.alias}.label = ?`); params.push(left.label); }
-    if (right.label) { conditions.push(`${right.alias}.label = ?`); params.push(right.label); }
-    if (edgeType) { conditions.push(`e.type = ?`); params.push(edgeType); }
+    if (left.label) {
+      conditions.push(`${left.alias}.label = ?`);
+      params.push(left.label);
+    }
+    if (right.label) {
+      conditions.push(`${right.alias}.label = ?`);
+      params.push(right.label);
+    }
+    if (edgeType) {
+      conditions.push(`e.type = ?`);
+      params.push(edgeType);
+    }
     return conditions;
   }
 
@@ -225,7 +241,9 @@ export class CypherEngine {
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ].filter(Boolean).join(' ');
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     params.push(parsed.limit);
     return { text: sql, params };
@@ -237,7 +255,7 @@ export class CypherEngine {
     const params: unknown[] = [];
     const { left, right, edgeType, minHops, maxHops, direction } = match;
     const resolvers: CypherResolvers = {
-      resolveColumn: (p) => resolveColumn(p),
+      resolveColumnExpression: (alias, p) => resolveColumnExpression(alias, p),
       cypherOpToSql: (op) => cypherOpToSql(op),
     };
 
@@ -248,7 +266,7 @@ export class CypherEngine {
       parsed.returnFields,
       left.alias,
       right.alias,
-      (p) => resolveColumn(p),
+      (alias, p) => resolveColumnExpression(alias, p),
     );
 
     const typeFilter = edgeType ? `AND e.type = '${sanitizeIdentifier(edgeType)}'` : '';
@@ -284,39 +302,39 @@ export class CypherEngine {
    * (singleHopSql passes it after node aliases); maps to SQL alias 'e'. */
   private buildSelectColumns(parsed: ParsedQuery, ...availableAliases: string[]): string {
     if (parsed.isCount) return 'COUNT(*) AS _count';
-    const edgeColumns = new Set(['id', 'project', 'source_id', 'target_id', 'type', 'confidence']);
-    // Heuristic: if more than 2 aliases, the third+ are edge aliases (singleHopSql
-    // passes [leftNode, rightNode, ...edgeAliases]).
     const edgeAliases = availableAliases.slice(2);
     const cols: string[] = [];
     for (const field of parsed.returnFields) {
-      const isEdge = edgeAliases.includes(field.alias);
-      const sqlAlias = isEdge ? 'e' : field.alias;
-      if (field.property === '*') {
-        if (availableAliases.includes(field.alias)) cols.push(`${sqlAlias}.*`);
-        continue;
-      }
-      // Edge property: dedicated columns vs JSON props
-      if (isEdge) {
-        if (edgeColumns.has(field.property)) {
-          cols.push(`${sqlAlias}.${field.property} AS ${field.outputName}`);
-        } else {
-          cols.push(
-            `json_extract(${sqlAlias}.props, '$.${field.property}') AS ${field.outputName}`,
-          );
-        }
-        continue;
-      }
-      const col = resolveColumn(field.property);
-      if (availableAliases.includes(field.alias)) {
-        cols.push(`${sqlAlias}.${col} AS ${field.outputName}`);
-      } else {
-        cols.push(
-          `json_extract(${field.alias}.props, '$.${field.property}') AS ${field.outputName}`,
-        );
-      }
+      const expr = this.buildSelectColumnExpr(field, availableAliases, edgeAliases);
+      if (expr) cols.push(expr);
     }
     return cols.length > 0 ? cols.join(', ') : `${availableAliases[0]}.*`;
+  }
+
+  /** Resolve a single RETURN field into its SQL projection string (or empty). */
+  private buildSelectColumnExpr(
+    field: ReturnField,
+    availableAliases: string[],
+    edgeAliases: string[],
+  ): string {
+    const edgeColumns = new Set(['id', 'project', 'source_id', 'target_id', 'type', 'confidence']);
+    const isEdge = edgeAliases.includes(field.alias);
+    const sqlAlias = isEdge ? 'e' : field.alias;
+    if (field.property === '*') {
+      return availableAliases.includes(field.alias) ? `${sqlAlias}.*` : '';
+    }
+    if (isEdge) {
+      const safeKey = sanitizeIdentifier(field.property);
+      const ref = edgeColumns.has(field.property)
+        ? `${sqlAlias}.${field.property}`
+        : `json_extract(${sqlAlias}.props, '$.${safeKey}')`;
+      return `${ref} AS ${field.outputName}`;
+    }
+    if (!availableAliases.includes(field.alias)) {
+      const safeKey = sanitizeIdentifier(field.property);
+      return `json_extract(${field.alias}.props, '$.${safeKey}') AS ${field.outputName}`;
+    }
+    return `${resolveColumnExpression(sqlAlias, field.property)} AS ${field.outputName}`;
   }
 
   /** Add WHERE conditions to the SQL conditions array. */
@@ -327,17 +345,15 @@ export class CypherEngine {
   ): void {
     let prevConjunction: 'AND' | 'OR' | null = null;
     for (const cond of where) {
-      const col = resolveColumn(cond.property);
+      const expression = resolveColumnExpression(cond.alias, cond.property);
       const sqlOp = cypherOpToSql(cond.operator);
-      const colRef = `${cond.alias}.${col}`;
-      const expression = buildWhereExpression(cond.property, cond.alias, colRef);
-      const condStr = `${expression} ${sqlOp} ?`;
+      const rhs = buildWhereRhs(cond);
+      const condStr = `${expression} ${sqlOp} ${rhs}`;
       mergeCondition(conditions, condStr, prevConjunction);
       pushWhereParam(params, cond);
       prevConjunction = cond.conjunction;
     }
   }
-
 }
 
 // Re-export types that consumers may need

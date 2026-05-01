@@ -25,11 +25,17 @@ export type MatchPattern =
       direction: 'outbound' | 'inbound';
     };
 
+export type WhereValue = string | number | (string | number)[];
+
 export interface WhereCondition {
   alias: string;
   property: string;
   operator: string;
-  value: string | number;
+  /**
+   * Value is a scalar for `=`, `<>`, `<`, `>`, `<=`, `>=`, `CONTAINS`,
+   * `STARTS WITH`, and `ENDS WITH`. For `IN` it is an array of values.
+   */
+  value: WhereValue;
   conjunction: 'AND' | 'OR' | null;
 }
 
@@ -77,21 +83,23 @@ export const PROP_TO_COLUMN: Record<string, string> = {
 
 // ─── parseMatch helpers ───────────────────────────────────────────────────────
 
-const IDENT = '[A-Za-z_][A-Za-z0-9_$]*'
+const IDENT = '[A-Za-z_][A-Za-z0-9_$]*';
 const VARPATH_OUT = new RegExp(
   `^\\((${IDENT})(?::(${IDENT}))?\\)\\s*-\\[\\s*:?(?:(${IDENT}))\\s*\\*\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*->\\s*\\((${IDENT})(?::(${IDENT}))?\\)$`,
   'i',
-)
+);
 const VARPATH_IN = new RegExp(
   `^\\((${IDENT})(?::(${IDENT}))?\\)\\s*<-\\[\\s*:?(?:(${IDENT}))\\s*\\*\\s*(\\d+)\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*-\\s*\\((${IDENT})(?::(${IDENT}))?\\)$`,
   'i',
-)
+);
 // Groups: 1=leftAlias, 2=leftLabel, 3=edgeAlias, 4=edgeType, 5=rightAlias, 6=rightLabel
 // Edge bracket syntax handled: [], [r], [:TYPE], [r:TYPE]
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_OUT = /\((\w*)(?::(\w+))?\)\s*-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
+const HOP_OUT =
+  /\((\w*)(?::(\w+))?\)\s*-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
-const HOP_IN = /\((\w*)(?::(\w+))?\)\s*<-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
+const HOP_IN =
+  /\((\w*)(?::(\w+))?\)\s*<-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- pattern matches single Cypher node; no backtracking risk
 const SINGLE_NODE = /\((\w*)(?::(\w+))?\)/i;
 

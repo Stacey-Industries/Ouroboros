@@ -6,51 +6,45 @@
 import type { OrderByClause, WhereCondition } from './cypherEngineSupport';
 import { PROP_TO_COLUMN } from './cypherEngineSupport';
 
-/** Map Cypher property name to SQL column name. */
-export function resolveColumn(property: string): string {
+/**
+ * Build the SQL expression for a node property reference.
+ * Returns `alias.column` for known SQL columns, or
+ * `json_extract(alias.props, '$.key')` for any other key (props fall-through).
+ */
+export function resolveColumnExpression(sqlAlias: string, property: string): string {
   // eslint-disable-next-line security/detect-object-injection -- property is a validated identifier from the parsed query
-  return PROP_TO_COLUMN[property] ?? property;
+  const sqlCol = PROP_TO_COLUMN[property];
+  if (sqlCol) return `${sqlAlias}.${sqlCol}`;
+  const safeKey = sanitizeIdentifier(property);
+  return `json_extract(${sqlAlias}.props, '$.${safeKey}')`;
 }
+
+const LIKE_OPS = new Set(['CONTAINS', 'STARTS WITH', 'ENDS WITH']);
+const PASSTHROUGH_OPS = new Set(['=', '<>', '>', '<', '>=', '<=', 'IN']);
 
 /** Convert Cypher comparison operators to SQL operators. */
 export function cypherOpToSql(op: string): string {
-  switch (op) {
-    case 'CONTAINS':
-    case 'STARTS WITH':
-    case 'ENDS WITH':
-      return 'LIKE';
-    case '=':
-      return '=';
-    case '<>':
-      return '<>';
-    case '>':
-      return '>';
-    case '<':
-      return '<';
-    case '>=':
-      return '>=';
-    case '<=':
-      return '<=';
-    default:
-      return '=';
-  }
+  if (LIKE_OPS.has(op)) return 'LIKE';
+  if (PASSTHROUGH_OPS.has(op)) return op;
+  return '=';
 }
 
-/** Build ORDER BY clause. */
+/** Build ORDER BY clause. Uses resolveColumnExpression so props.* keys sort correctly. */
 export function buildOrderBy(orderBy: OrderByClause[]): string {
   if (orderBy.length === 0) return '';
   return orderBy
-    .map((o) => {
-      const col = resolveColumn(o.property);
-      return `${o.alias}.${col} ${o.direction}`;
-    })
+    .map((o) => `${resolveColumnExpression(o.alias, o.property)} ${o.direction}`)
     .join(', ');
 }
 
-/** Return the SQL expression for a WHERE property (column ref or json_extract). */
-export function buildWhereExpression(property: string, alias: string, colRef: string): string {
-  // eslint-disable-next-line security/detect-object-injection -- property is a validated identifier from the parsed WHERE clause
-  return PROP_TO_COLUMN[property] ? colRef : `json_extract(${alias}.props, '$.${property}')`;
+/** Build the right-hand side of a WHERE condition: a single placeholder or an IN-list. */
+export function buildWhereRhs(cond: WhereCondition): string {
+  if (cond.operator === 'IN') {
+    const values = Array.isArray(cond.value) ? cond.value : [cond.value];
+    if (values.length === 0) return '(NULL)'; // empty IN matches nothing
+    return `(${values.map(() => '?').join(', ')})`;
+  }
+  return '?';
 }
 
 /** Merge a new condition, collapsing OR pairs into a single expression. */
@@ -67,8 +61,13 @@ export function mergeCondition(
   }
 }
 
-/** Push the parameter value for a WHERE condition (handles LIKE wrapping). */
+/** Push the parameter value(s) for a WHERE condition (handles LIKE wrapping and IN). */
 export function pushWhereParam(params: unknown[], cond: WhereCondition): void {
+  if (cond.operator === 'IN') {
+    const values = Array.isArray(cond.value) ? cond.value : [cond.value];
+    for (const v of values) params.push(v);
+    return;
+  }
   if (cond.operator === 'CONTAINS') {
     params.push(`%${cond.value}%`);
   } else if (cond.operator === 'STARTS WITH') {
