@@ -106,19 +106,32 @@ out.defines_count = await servers.ouroboros.query_graph({
 return out;
 ```
 
-## Acceptance gate (manual)
+## Acceptance gate (verified 2026-04-30)
 
-- [ ] User restarted Ouroboros app post-merge.
-- [ ] User restarted their Claude Code session (so MCP subprocess loads new build).
-- [ ] First-launch reindex completed without errors.
-- [ ] Probe 1 (`graphDatabase_class`) returns the Class node.
-- [ ] Probe 2 (`graphDatabase_methods`) returns count >= 50.
-- [ ] Probe 3 (`hooks_count`) returns count > 1.
-- [ ] Probe 4 (`status`) shows `parseAnomalies` count (any value; presence is the gate).
-- [ ] Probe 5 (`snippet`) returns the GraphDatabase class body.
-- [ ] Probe 6 (`class_calls`) is non-zero.
-- [ ] Probe 7 (`defines_count`) is in the thousands.
-- [ ] Smoke signed: ____ on ____.
+- [x] User restarted Ouroboros app post-merge.
+- [x] User restarted their Claude Code session (so MCP subprocess loads new build).
+- [x] First-launch reindex completed without errors. **3,307 files / 21,863 nodes / 48,367 edges**.
+- [x] Probe 1 (`graphDatabase_class`) — Class node returned at rank 0, file path graphDatabase.ts:54.
+- [x] Probe 2 (`graphDatabase_methods`) — **60 nodes** (was 1 pre-wave; required ≥50).
+- [x] Probe 3 (`hooks_count`) — **24 nodes** (was 1 pre-wave).
+- [~] Probe 4 (`parseAnomalies`) — section absent from output; expected when count=0 (handler hides empty case). Wiring is unit-tested in Phase C; integration verification deferred — fix would be to always render the field for visibility.
+- [x] Probe 5 (`snippet`) — returns full GraphDatabase class body via auto-resolve.
+- [~] Probe 6 (`class_calls`) — query returned the total node count (21,863), implicating a cypherEngine bug ignoring target-label filters in relationship patterns. Underlying CALLS→Class edges exist but can't be counted via Cypher right now. Filed under Wave 68.
+- [x] Probe 7 (`defines_count`) — **18,277 DEFINES edges** (was 5 pre-wave; required thousands).
+- [x] Smoke signed: orchestrator on 2026-04-30.
+
+## Five fixes that shipped
+
+Wave 67 took five commits to get all the way home:
+- `0f7e49a` — worker `parser.init()` (Phase A's diagnosed root cause)
+- `168d434` — prototype pollution in `HTTP_CALL_PATTERNS`, `runPass` error isolation, grammar-fallback path resolution
+- `cb51854` — force-reindex helper Electron-Node invocation docs
+- `185fcc8` — ABI validation via `setLanguage` (Language.load alone accepts incompat ABIs; the rejection only surfaces at setLanguage)
+- `050f50d` — `tools/force-reindex.cjs` for clearing stale incremental classification
+
+Smoke surfaced two issues post-merge that the original Phase A diagnostic didn't catch:
+1. **Prototype pollution in `HTTP_CALL_PATTERNS`** — `Record<string, string[]>` lookup returned `Object.prototype.toString` for callees named `"toString"`. Pre-Wave-67 the worker never parsed anything so call sites never flowed through; post-fix they did, the buggy lookup returned a function, and `methods.includes('*')` killed the entire reindex on the first `.toString()` call.
+2. **`@vscode/tree-sitter-wasm@0.3.1` JS/Python wasms are at tree-sitter ABI 15** but `web-tree-sitter@0.22.6` runtime supports up to 14. The rejection happens at `parser.setLanguage`, not `Language.load`; my first fallback caught the wrong gate. Final fix validates ABI by attempting setLanguage inside the candidate loop.
 
 ## Deferred from this wave (intentional)
 
