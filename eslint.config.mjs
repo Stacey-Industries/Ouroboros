@@ -20,6 +20,7 @@ export default tseslint.config(
       'e2e/',
       '*.config.*',
       'spike/',
+      'src/**/__fixtures__/**',
     ],
   },
 

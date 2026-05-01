@@ -180,7 +180,7 @@ function buildLifecycleTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'index_status',
       description:
-        'Get the current indexing status for a project. Pass project name or omit to use the current workspace.',
+        'Get the current indexing status for a project. Reports node/edge counts by label/type. Includes a parseAnomalies count when files were processed but produced no definitions (signal for indexer regressions). Pass project name or omit to use the current workspace.',
       inputSchema: TOOL_SCHEMAS.index_status,
       handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context),
     },

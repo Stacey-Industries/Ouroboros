@@ -27,6 +27,7 @@ import { GraphDatabase } from './graphDatabase';
 import { callResolutionPass } from './indexingPipelineCallResolution';
 import { discoverFiles, filterChangedFiles } from './indexingPipelineIncremental';
 import { definitionPass, importPass, parsePass, structurePass } from './indexingPipelinePasses';
+import { buildIndexResult } from './indexingPipelineResult';
 import type {
   DiscoveredFile,
   IndexedFile,
@@ -223,20 +224,17 @@ export class IndexingPipeline {
     progress: IndexingProgress,
   ): Promise<IndexingResult> {
     const startTime = progress.startedAt;
-
     report('discovery');
     const { allFiles, filesToProcess, isIncrementalRun } = await this.discoverAndResolve(
       options,
       projectName,
       progress,
     );
-
     report('parsing');
     const indexedFiles = await parsePass(this.parser, filesToProcess, (processed) => {
       progress.filesProcessed = processed;
       report('parsing');
     });
-
     const structureFiles = isIncrementalRun ? filesToProcess : allFiles;
     const phaseTimingsMs = await this.runAllPasses(
       { projectName, projectRoot: options.projectRoot },
@@ -246,19 +244,10 @@ export class IndexingPipeline {
     );
     report('finalizing');
     const { nodesCreated, edgesCreated } = this.finalizeIndex(projectName, options, indexedFiles);
-
-    return {
-      projectName,
-      success: true,
-      filesIndexed: indexedFiles.length,
-      filesSkipped: allFiles.length - filesToProcess.length,
-      nodesCreated,
-      edgesCreated,
-      errors: progress.errors,
-      durationMs: Date.now() - startTime,
-      incremental: isIncrementalRun,
-      phaseTimingsMs,
-    };
+    return buildIndexResult({
+      db: this.db, projectName, allFiles, filesToProcess, indexedFiles,
+      nodesCreated, edgesCreated, phaseTimingsMs, progress, isIncrementalRun, startTime,
+    });
   }
 
   private buildIndexProgress(startTime: number, errors: string[]): IndexingProgress {

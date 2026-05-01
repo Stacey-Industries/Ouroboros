@@ -5,6 +5,7 @@
  * used by IndexingPipeline to orchestrate project indexing.
  */
 
+import type { ParseAnomalyResult } from './parseAnomalyDetection';
 import type { ParsedFileResult } from './treeSitterTypes';
 
 // ─── Indexing options ─────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export interface IndexingResult {
   durationMs: number;
   incremental: boolean; // Was this an incremental reindex?
   phaseTimingsMs?: Record<string, number>; // per-pass wall-clock time (ms)
+  parseAnomalies?: ParseAnomalyResult; // Files with zero definitions (regression detection)
 }
 
 // ─── Discovered file (from directory walk) ────────────────────────────────────

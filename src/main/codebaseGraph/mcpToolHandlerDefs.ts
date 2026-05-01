@@ -73,6 +73,24 @@ export async function handleDeleteProject(
   }
 }
 
+// ─── Parse anomalies helper ───────────────────────────────────────────────
+
+function getParseAnomaliesLines(projectName: string, ctx: GraphToolContext): string[] {
+  try {
+    const value = ctx.db.getGraphMetadata(`parse_anomalies:${projectName}`);
+    if (!value) return [];
+    const anomalies = JSON.parse(value) as { count: number; samples: string[] };
+    if (anomalies.count === 0) return [];
+    const lines = [`Parse anomalies: ${anomalies.count} file(s) with no definitions`];
+    for (const sample of anomalies.samples.slice(0, 5)) {
+      lines.push(`  - ${sample}`);
+    }
+    return ['', ...lines];
+  } catch {
+    return [];
+  }
+}
+
 // ─── index_status handler ─────────────────────────────────────────────────────
 
 export async function handleIndexStatus(
@@ -100,6 +118,7 @@ export async function handleIndexStatus(
       '',
       'Edge counts by type:',
       ...Object.entries(edgeCounts).map(([type, count]) => `  ${type}: ${count}`),
+      ...getParseAnomaliesLines(name, ctx),
     ];
     return truncate(lines.join('\n'));
   } catch (err) {
