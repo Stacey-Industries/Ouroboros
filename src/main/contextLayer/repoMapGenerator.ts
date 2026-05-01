@@ -19,6 +19,10 @@ import {
 } from './moduleDetector';
 import { detectFrameworks } from './repoMapGeneratorFrameworks';
 import { queryModuleExports } from './repoMapGeneratorGraph';
+import {
+  compareByHotspotThenFileCount,
+  computeAllModuleHotspotScores,
+} from './repoMapGeneratorRanking';
 
 const REPO_MAP_SIZE_CAP_BYTES = 8192;
 const TRUNCATED_EXPORTS_LIMIT = 5;
@@ -95,6 +99,10 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
     structural: summary,
   }));
 
+  // Phase B2: compute hotspot scores once (per-module COUNT(*) Cypher) and
+  // hand to enforceSizeCap so Step 3 can rank by importance, not file count.
+  const hotspotScores = await computeAllModuleHotspotScores(modules);
+
   return enforceSizeCap(
     buildRepoMapFromSummaries({
       workspaceRoot,
@@ -103,6 +111,7 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
       moduleEntries,
       crossModuleDeps,
     }),
+    hotspotScores,
   );
 }
 
@@ -228,13 +237,11 @@ function buildEmptyRepoMap(workspaceRoot: string): RepoMap {
   };
 }
 
-function enforceSizeCap(repoMap: RepoMap): RepoMap {
+function enforceSizeCap(repoMap: RepoMap, hotspotScores: Map<string, number>): RepoMap {
   let serialized = JSON.stringify(repoMap);
-  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) {
-    return repoMap;
-  }
+  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) return repoMap;
 
-  // Step 1: Truncate exports to first 5 entries, drop imports entirely
+  // Step 1: truncate exports per module + drop imports.
   const trimmedModules = repoMap.modules.map((entry) => ({
     structural: {
       ...entry.structural,
@@ -243,41 +250,49 @@ function enforceSizeCap(repoMap: RepoMap): RepoMap {
     },
     ai: entry.ai,
   }));
-
-  // Step 2: Drop low-weight cross-module dependencies
+  // Step 2: drop low-weight cross-module dependencies.
   const trimmedDeps = repoMap.crossModuleDependencies.filter(
     (dep) => dep.weight >= MIN_DEPENDENCY_WEIGHT_AFTER_TRUNCATION,
   );
 
-  let trimmed: RepoMap = {
+  const trimmed: RepoMap = {
     ...repoMap,
     modules: trimmedModules,
     crossModuleDependencies: trimmedDeps,
   };
-
   serialized = JSON.stringify(trimmed);
-  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) {
-    return trimmed;
-  }
+  if (serialized.length <= REPO_MAP_SIZE_CAP_BYTES) return trimmed;
 
-  // Step 3: Truncate modules to top 30 by fileCount (largest first)
+  // Step 3: hotspot-ranked top-N truncation (Wave 69 Decision 3).
+  return applyHotspotRankedTruncation(trimmed, trimmedModules, trimmedDeps, hotspotScores);
+}
+
+function applyHotspotRankedTruncation(
+  trimmed: RepoMap,
+  trimmedModules: ModuleContextEntry[],
+  trimmedDeps: Array<{ from: string; to: string; weight: number }>,
+  hotspotScores: Map<string, number>,
+): RepoMap {
   const sortedModules = [...trimmedModules]
-    .sort((left, right) => right.structural.fileCount - left.structural.fileCount)
+    .sort((left, right) =>
+      compareByHotspotThenFileCount(
+        hotspotScores,
+        { id: left.structural.module.id, fileCount: left.structural.fileCount },
+        { id: right.structural.module.id, fileCount: right.structural.fileCount },
+      ),
+    )
     .slice(0, MAX_MODULES_AFTER_TRUNCATION);
 
   const remainingModuleIds = new Set(sortedModules.map((entry) => entry.structural.module.id));
   const filteredDeps = trimmedDeps.filter(
     (dep) => remainingModuleIds.has(dep.from) && remainingModuleIds.has(dep.to),
   );
-
-  trimmed = {
+  return {
     ...trimmed,
     modules: sortedModules,
     moduleCount: sortedModules.length,
     crossModuleDependencies: filteredDeps,
   };
-
-  return trimmed;
 }
 
 // matchesAnyPattern / matchesAnyGlob moved to repoMapGeneratorFrameworks.ts.
