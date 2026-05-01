@@ -1,9 +1,18 @@
 // One-shot: delete the "Agent IDE" project from the codebase graph DB so
 // the next IDE launch performs a full reindex (instead of incremental).
 //
-// Usage: node tools/force-reindex.cjs
-//   The IDE app must be CLOSED before running this — better-sqlite3 holds
-//   an exclusive lock when the IDE is open.
+// MUST be run through Electron's Node mode — better-sqlite3's native binding
+// is compiled for Electron's Node ABI, not the system Node ABI.
+//
+// Usage (PowerShell):
+//   $env:ELECTRON_RUN_AS_NODE=1
+//   ./node_modules/electron/dist/electron.exe tools/force-reindex.cjs
+//
+// Usage (bash):
+//   ELECTRON_RUN_AS_NODE=1 ./node_modules/electron/dist/electron.exe tools/force-reindex.cjs
+//
+// The IDE app must be CLOSED before running this — better-sqlite3 holds an
+// exclusive lock when the IDE is open.
 
 const path = require('path');
 const Database = require('better-sqlite3');
