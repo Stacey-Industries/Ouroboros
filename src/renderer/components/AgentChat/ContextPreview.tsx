@@ -4,10 +4,12 @@
  * Tools / System. Toggle state is parent-managed (controlled).
  */
 
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import type { ContextItem, ContextItemKind, ContextPreviewModel } from '../../hooks/useContextPreview';
+import type { MemoryType } from '../../types/electron-memory';
 import { ItemRow } from './ContextPreviewItemRow';
+import { DeleteMemoryConfirm, EditMemoryModal } from './ContextPreviewMemoryModals';
 import type { ContentCache } from './ContextPreviewMemoryRow';
 import { MemoryItemRow } from './ContextPreviewMemoryRow';
 import { RuleGroupSubTabs, usePopoverTabState } from './ContextPreviewRuleSubTabs';
@@ -196,6 +198,36 @@ function PopoverHeader(props: { totalTokens: number; onClose: () => void }): Rea
   );
 }
 
+interface MemoryModal {
+  kind: 'edit' | 'delete';
+  id: string;
+  label: string;
+  description: string;
+  type: MemoryType;
+  content: string;
+}
+
+function useMemoryModal(visibleItems: ContextItem[]): {
+  modal: MemoryModal | null;
+  openEdit: (id: string) => void;
+  openDelete: (id: string) => void;
+  close: () => void;
+} {
+  const [modal, setModal] = useState<MemoryModal | null>(null);
+  const close = useCallback(() => setModal(null), []);
+  const openEdit = useCallback((id: string) => {
+    const item = visibleItems.find((i) => i.id === `memory:${id}` || i.id === id);
+    if (!item) return;
+    setModal({ kind: 'edit', id, label: item.label, description: item.detail ?? '', type: 'user', content: '' });
+  }, [visibleItems]);
+  const openDelete = useCallback((id: string) => {
+    const item = visibleItems.find((i) => i.id === `memory:${id}` || i.id === id);
+    if (!item) return;
+    setModal({ kind: 'delete', id, label: item.label, description: '', type: 'user', content: '' });
+  }, [visibleItems]);
+  return { modal, openEdit, openDelete, close };
+}
+
 function PopoverItemList(props: {
   items: ContextItem[];
   activeKind: ContextItemKind;
@@ -203,14 +235,18 @@ function PopoverItemList(props: {
   onToggleItem?: (id: string) => void;
   projectRoot?: string | null;
   contentCache: ContentCache;
+  onEditClick?: (id: string) => void;
+  onDeleteClick?: (id: string) => void;
 }): React.ReactElement {
-  const { items, activeKind, disabledIds, onToggleItem, projectRoot, contentCache } = props;
+  const { items, activeKind, disabledIds, onToggleItem, projectRoot, contentCache,
+    onEditClick, onDeleteClick } = props;
   if (items.length === 0) return <EmptyTabMessage kind={activeKind} />;
   return (
     <>
       {items.map((item) =>
         item.kind === 'memory' ? (
-          <MemoryItemRow key={item.id} item={item} projectRoot={projectRoot} contentCache={contentCache} />
+          <MemoryItemRow key={item.id} item={item} projectRoot={projectRoot}
+            contentCache={contentCache} onEditClick={onEditClick} onDeleteClick={onDeleteClick} />
         ) : (
           <ItemRow key={item.id} item={item} disabled={disabledIds.has(item.id)} onToggle={onToggleItem} />
         ),
@@ -230,6 +266,7 @@ function ContextPreviewPopover(props: {
   const contentCache = useRef<ContentCache>({});
   const tabs = usePopoverTabState(model);
   const { activeKind, setActiveKind, ruleGroup, setRuleGroup, counts, ruleCounts, visibleItems } = tabs;
+  const { modal, openEdit, openDelete, close } = useMemoryModal(visibleItems);
 
   return (
     <div
@@ -245,17 +282,35 @@ function ContextPreviewPopover(props: {
         <RuleGroupSubTabs active={ruleGroup} counts={ruleCounts} onSelect={setRuleGroup} />
       )}
       <div className="flex-1 overflow-y-auto" role="tabpanel">
-        <PopoverItemList
-          items={visibleItems}
-          activeKind={activeKind}
-          disabledIds={disabledIds}
-          onToggleItem={onToggleItem}
-          projectRoot={projectRoot}
-          contentCache={contentCache.current}
-        />
+        <PopoverItemList items={visibleItems} activeKind={activeKind} disabledIds={disabledIds}
+          onToggleItem={onToggleItem} projectRoot={projectRoot} contentCache={contentCache.current}
+          onEditClick={openEdit} onDeleteClick={openDelete} />
       </div>
+      <ActiveMemoryModal modal={modal} projectRoot={projectRoot} onClose={close} />
     </div>
   );
+}
+
+function ActiveMemoryModal(props: {
+  modal: MemoryModal | null;
+  projectRoot?: string | null;
+  onClose: () => void;
+}): React.ReactElement {
+  const { modal, projectRoot, onClose } = props;
+  if (modal?.kind === 'edit') {
+    return (
+      <EditMemoryModal id={modal.id} initialDescription={modal.description}
+        initialType={modal.type} initialContent={modal.content}
+        projectRoot={projectRoot} onSaved={onClose} onClose={onClose} />
+    );
+  }
+  if (modal?.kind === 'delete') {
+    return (
+      <DeleteMemoryConfirm id={modal.id} label={modal.label}
+        projectRoot={projectRoot} onDeleted={onClose} onClose={onClose} />
+    );
+  }
+  return <></>;
 }
 
 // ─── ContextPreview ───────────────────────────────────────────────────────────
