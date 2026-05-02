@@ -36,7 +36,7 @@ When adding a new xterm feature, find the appropriate phase file rather than add
 
 ### OSC Shell Integration Priority
 
-OSC 633 (VS Code protocol) is preferred. `shellIntegrationAddon.ts` emits typed `ShellIntegrationEvent`s. If 633 is not detected within the first few prompts, `osc133Handler.ts` falls back to OSC 133 heuristics. Command blocks use whichever is active (`osc133Active: boolean | null` — null means undecided).
+OSC 633 (VS Code protocol) is preferred. `shellIntegrationAddon.ts` emits typed `ShellIntegrationEvent`s. If 633 is not detected within the first few prompts, OSC 133 heuristics in `useTerminalSetupData.ts` + `useCommandBlocksController.ts` take over. Command blocks use whichever is active (`osc133Active: boolean | null` — null means undecided).
 
 ### `terminalRegistry` for Cross-Component Access
 
