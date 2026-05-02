@@ -7,6 +7,7 @@
  * to that shared module-scope state owned by hooks.ts.
  */
 
+import type { ApprovalResponse } from './approvalManager';
 import { generateClaudeMd } from './claudeMdGenerator';
 import { getGraphController } from './codebaseGraph/graphControllerSupport';
 import { getConfigValue } from './config';
@@ -51,6 +52,17 @@ export function runPreToolEnforcement(payload: HookPayload): HookDecision {
     }
   }
   return { kind: 'pass' };
+}
+
+/**
+ * Maps a HookDecision to an ApprovalResponse for enforce-class decisions (deny/warn).
+ * Returns null for pass — caller handles pass via normal approval flow.
+ */
+export function resolveEnforcementResponse(payload: HookPayload): ApprovalResponse | null {
+  const decision = runPreToolEnforcement(payload);
+  if (decision.kind === 'deny') return { decision: 'reject', reason: decision.message };
+  if (decision.kind === 'warn') return { decision: 'approve', message: decision.message };
+  return null;
 }
 
 // ─── CLAUDE.md auto-generation ───────────────────────────────────────────────

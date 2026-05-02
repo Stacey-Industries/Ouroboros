@@ -46,6 +46,8 @@ export interface ApprovalRequest {
 export interface ApprovalResponse {
   decision: 'approve' | 'reject';
   reason?: string;
+  /** Advisory message surfaced to the agent via PreToolUse hook stdout (warn decisions only). */
+  message?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────

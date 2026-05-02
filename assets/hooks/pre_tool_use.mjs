@@ -72,11 +72,13 @@ if (!sent) process.exit(0);
 
 let decision = null;
 let reason = null;
+let message = null;
 
 if (toolToken) {
   const result = await waitForApproval(toolToken, requestId, MAX_POLL_MS);
   decision = result.decision;
   reason = result.reason;
+  message = result.message;
 }
 
 if (decision === null) {
@@ -93,6 +95,7 @@ if (decision === null) {
         try { unlinkSync(responsePath); } catch { /* best-effort cleanup */ }
         decision = resp.decision;
         reason = resp.reason || null;
+        message = resp.message || null;
         break;
       } catch {
         // partial write — wait and retry
@@ -105,6 +108,16 @@ if (decision === null) {
 if (decision === 'reject') {
   process.stderr.write(reason || 'Rejected by user in Ouroboros IDE');
   process.exit(2);
+}
+
+// Warn: tool proceeds (exit 0) but advisory message is surfaced to the agent
+// via structured JSON stdout — the documented Claude Code hook protocol for
+// agent-visible context. See roadmap/wave-76-warn-hooks/wave-76-decisions.md.
+if (decision === 'approve' && message) {
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: { permissionDecision: 'allow' },
+    systemMessage: message,
+  }));
 }
 
 process.exit(0);

@@ -38,7 +38,7 @@ import {
   handleSessionEnd,
   handleSessionStart,
   handleSessionStop,
-  runPreToolEnforcement,
+  resolveEnforcementResponse,
 } from './hooksSessionHandlers';
 import { tapSubagentTracker } from './hooksSubagentTap';
 import log from './logger';
@@ -227,9 +227,9 @@ function handleApprovalRequest(payload: HookPayload): void {
   if (payload.type !== 'pre_tool_use' || !payload.toolName || !payload.requestId) return;
 
   // Wave 50 Phase B — deterministic enforcement before normal approval flow.
-  const decision = runPreToolEnforcement(payload);
-  if (decision.kind === 'deny') {
-    void respondToApproval(payload.requestId, { decision: 'reject', reason: decision.message });
+  const enforced = resolveEnforcementResponse(payload);
+  if (enforced) {
+    void respondToApproval(payload.requestId, enforced);
     return;
   }
 

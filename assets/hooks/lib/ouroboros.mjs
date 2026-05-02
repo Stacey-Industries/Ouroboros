@@ -153,19 +153,20 @@ export async function sendEvent(payload, hooksToken, opts = {}) {
   return false;
 }
 
-// approval.wait over ouroboros-tools pipe. Returns { decision, reason } where
+// approval.wait over ouroboros-tools pipe. Returns { decision, reason, message } where
 // decision is 'approve' | 'reject' | null (null = pipe unavailable / timeout).
+// message carries the advisory text for warn decisions (surfaced to agent via stdout).
 export function waitForApproval(toolToken, requestId, waitMs) {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (decision, reason) => {
-      if (!done) { done = true; resolve({ decision, reason }); }
+    const finish = (decision, reason, message) => {
+      if (!done) { done = true; resolve({ decision, reason, message }); }
     };
     let sock;
     try {
       sock = createConnection({ path: TOOL_PIPE_PATH });
     } catch {
-      finish(null, null);
+      finish(null, null, null);
       return;
     }
     sock.setTimeout(waitMs + 2000);
@@ -180,7 +181,7 @@ export function waitForApproval(toolToken, requestId, waitMs) {
         }) + '\n');
       } catch {
         sock.destroy();
-        finish(null, null);
+        finish(null, null, null);
       }
     });
     sock.on('data', (chunk) => {
@@ -192,17 +193,17 @@ export function waitForApproval(toolToken, requestId, waitMs) {
         const resp = JSON.parse(line);
         const inner = resp.result || resp;
         if (inner?.decision) {
-          finish(inner.decision, inner.reason || null);
+          finish(inner.decision, inner.reason || null, inner.message || null);
         } else {
-          finish(null, null);
+          finish(null, null, null);
         }
       } catch {
-        finish(null, null);
+        finish(null, null, null);
       }
       sock.end();
     });
-    sock.on('timeout', () => { sock.destroy(); finish(null, null); });
-    sock.on('error', () => { sock.destroy(); finish(null, null); });
-    sock.on('close', () => finish(null, null));
+    sock.on('timeout', () => { sock.destroy(); finish(null, null, null); });
+    sock.on('error', () => { sock.destroy(); finish(null, null, null); });
+    sock.on('close', () => finish(null, null, null));
   });
 }

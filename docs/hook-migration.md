@@ -27,7 +27,7 @@ For the full classification of all 23 rules (14 global + 9 project), see `roadma
 
 ## The hook stack
 
-Every PreToolUse event flows through `runPreToolEnforcement` in `src/main/hooksSessionHandlers.ts`. Evaluators run in order; the first non-pass decision wins (deny short-circuits; warn is logged and returned but does not block today — see [Escalating a warning to a block](#escalating-a-warning-to-a-block)).
+Every PreToolUse event flows through `runPreToolEnforcement` in `src/main/hooksSessionHandlers.ts`. Evaluators run in order; the first non-pass decision wins (deny short-circuits and blocks; warn surfaces a message to the agent via PreToolUse stdout but does not block — see [Adding a new warn evaluator](#adding-a-new-warn-evaluator)).
 
 | Rule          | Hook file                                  | Trigger                                            | Decision | Allowlist                              |
 |---------------|--------------------------------------------|----------------------------------------------------|----------|----------------------------------------|
@@ -68,19 +68,46 @@ The hooks deliberately have no global kill switch besides `enforcedRules: []`. E
 
 ---
 
-## Escalating a warning to a block
+## Adding a new warn evaluator
 
-Today `warnFullTestSuite` returns a `warn` decision that:
+Wave 76 wired the warn channel end-to-end. `warnFullTestSuite` is now the reference implementation. When a warn fires:
 
-- The IDE main process logs at `info` level (`[hook-enforce] warn`).
-- The harness wire (`assets/hooks/pre_tool_use.mjs`) does NOT forward to stdout, so the agent does not currently see the warning text.
+1. `runPreToolEnforcement` returns `{ kind: 'warn', ruleName, message }`.
+2. `resolveEnforcementResponse` maps this to `{ decision: 'approve', message }`.
+3. `pre_tool_use.mjs` detects `decision === 'approve' && message` and writes structured JSON to stdout:
+   ```json
+   { "hookSpecificOutput": { "permissionDecision": "allow" }, "systemMessage": "<message>" }
+   ```
+4. Claude Code surfaces `systemMessage` as agent-visible context. The tool proceeds (no block).
 
-To make a warning agent-visible, two steps:
+### Warn evaluator template
 
-1. Update `assets/hooks/pre_tool_use.mjs` to write the warn message to stdout when `decision.kind === 'warn'`. Today the script only writes a permission decision when `kind === 'deny'`. A warn-stdout branch would surface the message as additional context for the model on the next turn.
-2. (Optional) Promote the warn to a deny by changing the evaluator to return `{ kind: 'deny', ... }`. This is appropriate when the data shows the warning is repeatedly ignored. For `test-scope` this is intentionally NOT done today — the rule has legitimate exceptions (pre-commit, wave close, user-requested full runs) that a strict block would interfere with.
+```typescript
+// src/main/hooks/warnMyRule.ts
+import type { HookPayload } from '../hooks';
+import { type HookDecision, PASS } from './hookDecision';
 
-If you escalate, update the integration test at `src/main/hooks/hookStack.integration.test.ts` — the warn-path assertions there will start failing, which is the intent.
+const RULE_NAME = 'my-rule';
+
+export function evaluatePreToolUse(payload: HookPayload): HookDecision {
+  if (payload.type !== 'pre_tool_use') return PASS;
+  // ... condition check ...
+  return { kind: 'warn', ruleName: RULE_NAME, message: 'Advisory text for the agent.' };
+}
+```
+
+Register it in `EVALUATORS` in `hooksSessionHandlers.ts` and add the rule name to `hooks.enforcedRules` in the config schema default.
+
+### When to choose warn vs deny
+
+- **deny** — blocks the tool call. Use when the operation is unconditionally wrong (editing a lockfile, writing secrets). The message is shown to the agent and execution stops.
+- **warn** — tool proceeds; agent sees advisory context. Use when the operation has legitimate exceptions that a hard block would interfere with (e.g. `test-scope`: running the full suite is correct at wave close, wrong during implementation).
+
+### Escalating a warning to a block
+
+Change the evaluator to return `{ kind: 'deny', ... }` instead of `warn`. The rest of the pipeline (approval channel, hook script) already handles `deny` correctly. Update any tests asserting the warn path.
+
+For `test-scope` this is intentionally NOT done — the rule has legitimate full-suite cases (pre-commit, wave close, user-requested runs) that a strict block would interrupt.
 
 ---
 
