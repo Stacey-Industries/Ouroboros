@@ -6,6 +6,20 @@
  */
 
 export const tailSchemaExt2 = {
+  /** Wave 78 — persisted Export Usage preferences. */
+  usageExport: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      defaultWindow: {
+        type: 'string',
+        enum: ['24h', '7d', '30d', 'all'],
+        default: '24h',
+      },
+      lastDir: { type: 'string', default: '' },
+    },
+    default: { defaultWindow: '24h', lastDir: '' },
+  },
   /** Wave 57 — agent monitor feature flags (subagent display + diagnostics). */
   agentMonitor: {
     type: 'object',

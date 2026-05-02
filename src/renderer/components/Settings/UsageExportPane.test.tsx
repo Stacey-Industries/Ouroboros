@@ -1,5 +1,5 @@
 /**
- * UsageExportPane.test.tsx — Wave 37 Phase C
+ * UsageExportPane.test.tsx — Wave 37 Phase C / Wave 78 Phase B
  * @vitest-environment jsdom
  *
  * Tests for UsageExportPane:
@@ -7,6 +7,7 @@
  *  - "Export now" button calls IPC with correct windowStart <= windowEnd
  *  - shows success / error feedback after export
  *  - lastExportInfo readout renders when data is present, absent when null
+ *  - Wave 78: usageExport prefs loaded on mount; persisted on export success
  */
 
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
@@ -17,10 +18,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockExportUsage = vi.fn();
 const mockLastExportInfo = vi.fn();
+const mockConfigGet = vi.fn();
+const mockConfigSet = vi.fn();
 
 Object.defineProperty(window, 'electronAPI', {
   writable: true,
   value: {
+    config: {
+      get: mockConfigGet,
+      set: mockConfigSet,
+    },
     ecosystem: {
       exportUsage: mockExportUsage,
       lastExportInfo: mockLastExportInfo,
@@ -39,6 +46,8 @@ beforeEach(() => {
   vi.resetAllMocks();
   mockLastExportInfo.mockResolvedValue({ success: true, info: null });
   mockExportUsage.mockResolvedValue({ success: true, rowsWritten: 0, path: '/tmp/out.jsonl' });
+  mockConfigGet.mockResolvedValue(undefined);
+  mockConfigSet.mockResolvedValue({ success: true });
 });
 
 afterEach(() => {
