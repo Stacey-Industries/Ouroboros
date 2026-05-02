@@ -42,7 +42,6 @@ Chat subsystem: manages conversation threads in SQLite, bridges the renderer ↔
 | `threadStore.ts` | `AgentChatThreadStore` facade — CRUD, branching, workspace filtering, max 100 threads. |
 | `threadStoreSqlite.ts` | SQLite backend — `threads` + `messages` tables with FK cascade, schema v1. |
 | `threadStoreSqliteHelpers.ts` | SQL query helpers extracted from the SQLite runtime. |
-| `threadStoreRuntimeSupport.ts` | JSON file backend (legacy) — `{sha1(id)}.json` per thread, mutation queue serializes writes. |
 | `threadStoreSupport.ts` | Shared normalization: `normalizeThreadRecord`, `upsertMessage`, `hashThreadId`, `isDecorativeLine`. |
 | `threadHydrator.ts` | Rehydrates thread from orchestration session on crash recovery. |
 
@@ -74,9 +73,7 @@ Renderer (IPC)  →  AgentChatService (index.ts)
                        │       ├── BridgePersist — SQLite writes on completion
                        │       ├── BridgeMonitor — IPC stream emission + flush timer
                        │       └── BridgeGit    — revert-to-snapshot
-                       ├── AgentChatThreadStore
-                       │       ├── ThreadStoreSqliteRuntime  (primary)
-                       │       └── AgentChatThreadStoreRuntime (JSON, legacy)
+                       ├── AgentChatThreadStore (SQLite-only)
                        └── EventProjector (session updates → thread records)
 ```
 
@@ -91,9 +88,9 @@ Renderer (IPC)  →  AgentChatService (index.ts)
 
 ## Gotchas
 
-- **Two storage backends coexist**: SQLite is primary; JSON runtime is legacy. Both share `threadStoreSupport.ts` normalization. `listThreads` reads from SQLite only — JSON threads not in the DB are invisible.
+- **SQLite is the only storage backend**: a JSON file runtime existed historically but was removed. All threads live in SQLite via `threadStoreSqlite.ts`; normalization happens in `threadStoreSupport.ts`.
 - **Pre-snapshot hash**: Bridge captures `git rev-parse HEAD` before each turn into `preSnapshotHash`. `revertToSnapshot` runs `git checkout` — **destructive, cannot be undone**.
-- **Title logic duplicated**: `threadStoreSqlite.ts` and `threadStoreRuntimeSupport.ts` both implement `isDecorativeLine` + title trimming. Changes must be applied in both.
+- **Title logic in `threadStoreSqlite.ts`**: `isDecorativeLine` + title trimming live in the SQLite runtime; no duplicate elsewhere.
 - **Sticky orchestration fields**: `eventProjector.ts` preserves `linkedTerminalId` and `claudeSessionId` from the existing thread link — early lifecycle events fire before the adapter sets these fields.
 - **`isNonEmptyString` exported from two places**: canonical in `utils.ts`, re-exported from `threadStoreSupport.ts` for backward compat.
 - **`tokenCalibration` is a module-level singleton**: `tokenCalibrationStore` is imported directly in `BridgePersist.ts` — not injected. Reset state in tests by resetting the module.
@@ -126,8 +123,7 @@ Renderer (IPC)  →  AgentChatService (index.ts)
 | `chatOrchestrationRequestSupport.ts` | Request preparation — resolves send options (mode, provider, model, effort, permissionMode), builds `TaskRequest`, derives/generates thread titles.                      |
 | `threadStore.ts`                     | `AgentChatThreadStore` class — facade over the SQLite runtime backend. CRUD for threads + messages, branching, workspace filtering, max 100 threads.                     |
 | `threadStoreSqlite.ts`               | SQLite runtime — `threads` + `messages` tables with FK cascade. Schema version 1. Auto-titles from assistant responses.                                                  |
-| `threadStoreRuntimeSupport.ts`       | JSON file runtime (original backend) — reads/writes `{sha1(threadId)}.json` in `userData/agent-chat/threads/`. Mutation queue serializes writes.                         |
-| `threadStoreSupport.ts`              | Normalization — `normalizeThreadRecord`, `normalizeMessages`, `upsertMessage`, `hashThreadId`. Shared by both storage backends.                                          |
+| `threadStoreSupport.ts`              | Normalization — `normalizeThreadRecord`, `normalizeMessages`, `upsertMessage`, `hashThreadId`.                                                                            |
 | `eventProjector.ts`                  | Session → thread projector — syncs orchestration session state into thread records (status, link, messages). Called on `onSessionUpdate`.                                |
 | `eventProjectorSupport.ts`           | Builds projected messages from `TaskSessionRecord` — context, progress, verification, result, assistant. Deterministic IDs: `agent-chat:{sessionId}:{kind}`.             |
 | `responseProjector.ts`               | Converts provider results/failures into `AgentChatMessageRecord`. Merges adjacent text blocks, formats tool/cost/duration summaries.                                     |
@@ -143,16 +139,14 @@ Renderer (IPC)  →  AgentChatService (index.ts)
                        │       ├── streams chunks → renderer via IPC events
                        │       ├── buffers chunks for reconnection after refresh
                        │       └── captures git HEAD pre-snapshot for revert
-                       ├── AgentChatThreadStore
-                       │       ├── ThreadStoreSqliteRuntime (primary)
-                       │       └── AgentChatThreadStoreRuntime (JSON fallback)
+                       ├── AgentChatThreadStore (SQLite-only)
                        └── EventProjector (session updates → thread records)
 ```
 
 ## Patterns
 
 - **Deterministic message IDs**: `agent-chat:{sessionId}:assistant` (and `:context`, `:progress`, `:verification`, `:result`). The bridge and projector both write to the same ID — prevents duplicates after crash recovery.
-- **Mutation queue**: JSON runtime serializes all writes through `runMutation()`. SQLite backend uses transactions instead.
+- **SQLite transactions**: `threadStoreSqlite.ts` writes via better-sqlite3 transactions. There is no longer a JSON file fallback.
 - **Stream chunk buffering**: Bridge holds chunks in memory per-thread so renderer refresh can replay without re-querying.
 - **Reconcile on list**: `listThreads` cross-references bridge's active thread IDs — threads stuck in `running`/`submitting` without an active send get reset to `idle`.
 - **Auto-titling**: First user message → initial title. After first assistant response, `updateTitleFromResponse` replaces it with a summary (first meaningful sentence, skipping decorative lines like `★ Insight ───`). Max 60 chars.
@@ -161,10 +155,10 @@ Renderer (IPC)  →  AgentChatService (index.ts)
 
 ## Gotchas
 
-- **Two storage backends coexist**: SQLite is primary (instantiated in `threadStore.ts`); JSON runtime (`threadStoreRuntimeSupport.ts`) is the original implementation. Both share normalization via `threadStoreSupport.ts`.
+- **SQLite is the only storage backend**: `threadStore.ts` instantiates `threadStoreSqlite.ts`. A JSON file runtime existed historically but was removed; only SQLite-shaped data is read or written.
 - **Projector vs bridge content ownership**: The event projector derives assistant content from session metadata (`providerArtifact.lastMessage`), but the streaming bridge accumulates real response text from deltas. The projector explicitly preserves existing assistant content to avoid overwriting — see `eventProjector.ts:41-43`.
 - **Pre-snapshot hash**: Before each agent turn, the bridge captures `git rev-parse HEAD` into `AgentChatOrchestrationLink.preSnapshotHash`. `revertToSnapshot` uses `git checkout` — destructive and not undoable.
-- **Title logic duplicated**: Both `threadStoreSqlite.ts` and `threadStoreRuntimeSupport.ts` implement `isDecorativeLine` + `summarizeForTitle`. Changes must be made in both.
+- **Title logic in `threadStoreSqlite.ts`**: `isDecorativeLine` + `summarizeForTitle` live in the SQLite runtime. No duplicate elsewhere.
 - **`isNonEmptyString` exported from two places**: `utils.ts` (canonical) and re-exported from `threadStoreSupport.ts` for backward compat.
 - **Sticky orchestration fields**: `eventProjector.ts:84-92` preserves `linkedTerminalId` and `claudeSessionId` from existing thread link when the session update doesn't carry them (early lifecycle events fire before the adapter populates these).
 

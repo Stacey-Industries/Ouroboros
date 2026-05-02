@@ -11,7 +11,7 @@ Builds the repo map, module summaries, and cross-module deps that get injected i
 | `contextLayerControllerSupport.ts`| Directory-walk module detection and the file-walk `RepoMapSummary` builder. Wave 69 Phase D removed import analysis + graph analysis seams.                                  |
 | `contextLayerControllerHelpers.ts`| Low-level helpers: `buildDirTree`, `makeModule`, `isCodeFile`, `selectRepresentativeFiles`, `computeModuleHash`, `normalizePath`.                                             |
 | `contextLayerRefresher.ts`        | Dirty-module refresh — hash-based caching only post-Wave-69.                                                                                                                  |
-| `contextLayerAiSummarizer.ts`     | Optional Haiku calls for natural-language module descriptions. Circuit-breaker after 3 failures.                                                                              |
+| `moduleSummarizer.ts`             | Optional Haiku calls for natural-language module descriptions. Circuit-breaker after 3 failures. Persisted to `<workspaceRoot>/.ouroboros/module-summaries.json`.             |
 | `contextLayerModuleSummary.ts`    | `buildSingleModuleSummary` + `selectModuleSummariesForGoal` — goal-conditioned ranking of cached summaries.                                                                   |
 | `repoMapGenerator.ts`             | Async repo-map builder. Plumbs graph-backed exports + hotspot ranking + cross-module deps. Soft-fallback when graph isn't ready.                                              |
 | `repoMapGeneratorGraph.ts`        | Per-module Cypher: `MATCH (n) WHERE file_path STARTS WITH '<rootPath>' AND labels(n) IN ['Class','Function','Method'] RETURN n.name, n.signature, labels(n) AS kind LIMIT 50` |
@@ -60,54 +60,12 @@ enforceSizeCap()                         hotspot-ranked top-N truncation under m
 
 ## Gotchas
 
-- **`isCodeFile` is duplicated**: `contextLayerControllerHelpers.ts` uses array `.includes`; `importGraphAnalyzer.ts` uses `Set.has`. Keep extension lists in sync when adding languages.
-- **`resolveRelativeImport` is duplicated**: Identical logic exists independently in `contextLayerControllerSupport.ts` and `languageStrategies.ts`. Do not consolidate without checking test coverage — each is tested separately.
-- **Path alias loading must precede graph analysis**: `configureTypeScriptAliases` in `languageStrategies.ts` mutates module-level alias state. Call `loadPathAliases()` before `buildResolvedImportGraph()` or TS path aliases (e.g. `@renderer/*`) won't resolve.
 - **File splits follow the `max-lines: 300` ESLint rule**: Controller → Support → Helpers → Refresher is a deliberate 4-way split, not a layering decision. Don't merge them.
 - **Dynamic imports for cache invalidation**: `contextPacketBuilder` and `contextSelectionSupport` are loaded via `import()` inside event handlers to avoid circular dependencies with the orchestration layer.
+- **Module-detection is directory-driven post-Wave-69**: the older three-stage pipeline (directory walk + barrel/import signals + import-graph refinement via `importGraphAnalyzer.ts` + `languageStrategies.ts`) was removed in Wave 69 Phase D. Module identity now comes from `moduleDetector*.ts` against directory structure; cross-module deps and exports come from the codebase graph.
 
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->
-# contextLayer — Repo-aware context enrichment for agent sessions
 
-Builds three context layers (repo map, module summaries, dependency graph) from the repo indexer's data and injects them into context packets before they reach the LLM provider.
-
-## Key Files
-
-| File                        | Role                                                                                                                                                                                           |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `contextLayerController.ts` | Main controller — indexes workspace, detects modules from directory structure, caches summaries, enriches context packets. Singleton via `initContextLayer()` / `getContextLayerController()`. |
-| `languageStrategies.ts`     | Language-specific import extraction + resolution for 10 languages (TS/JS, Python, Java, Kotlin, Go, Rust, C/C++, Ruby, PHP, C#). Self-contained — no project imports.                          |
-| `importGraphAnalyzer.ts`    | "Option C" — builds resolved import graph, computes module cohesion metrics, and iteratively refines module boundaries via seed-based clustering.                                              |
-| `contextLayerTypes.ts`      | Config interface (`ContextLayerConfig`): enabled, maxModules, maxSizeBytes, debounceMs, autoSummarize, moduleDepthLimit.                                                                       |
-
-## Architecture
-
-Three-stage module detection pipeline:
-
-1. **Option A** — Directory structure walk (`detectModules` → `collectModulesFromTree`). Adaptive depth, not fixed — leaf dirs with code files become modules.
-2. **Option B** — Barrel/import signal analysis (`applyImportAnalysis`). Counts barrel vs. direct imports per module, derives boundary strength (strong/moderate/weak).
-3. **Option C** — Import graph refinement (`applyGraphAnalysis` via `importGraphAnalyzer`). Resolves actual imports, measures cohesion, moves misplaced files to better-fitting modules.
-
-## Key Patterns
-
-- **Caching**: Module summaries are hashed by `filePath|size|modifiedAt`. Unchanged modules are skipped on re-index. Dirty modules tracked via `dirtyModuleIds` set.
-- **Debounced file changes**: `onFileChange` buffers paths for 2s before processing. Prevents rapid-fire rebuilds on save storms.
-- **Init cooldown**: 5-minute cooldown between full re-indexes. Prevents startup init + `session_start` hook from double-indexing.
-- **AI enrichment**: Optional Haiku calls to generate natural-language module descriptions. Fire-and-forget (doesn't block `enrichPacket`). Circuit-breaker after 3 consecutive failures. Persisted to `.ouroboros/module-summaries.json`.
-- **Goal-based selection**: `selectModuleSummariesForGoal` scores modules against goal keywords, boosting strong-boundary and high-cohesion modules.
-
-## Dependencies
-
-- **Upstream**: `../orchestration/repoIndexer` (provides `RepoIndexSnapshot`, `IndexedRepoFile`), `../orchestration/types` (provides `ContextPacket`, `ModuleContextSummary`, `RepoMapSummary`)
-- **Downstream consumers**: `../orchestration/providers/claudeCodeAdapter` (calls `enrichPacket` before sending to provider)
-- **Side effects on events**: Clears `contextPacketBuilder` and `contextSelectionSupport` caches on file change / git commit
-
-## Gotchas
-
-- **`isCodeFile` is duplicated** in both `contextLayerController.ts` and `importGraphAnalyzer.ts` (array `.includes` vs `Set.has`). Keep them in sync if adding languages.
-- **`resolveRelativeImport` is duplicated** across controller and analyzer — each has its own copy with identical logic.
-- **Path alias loading**: `configureTypeScriptAliases` mutates module-level state in `languageStrategies.ts`. Must be called before `buildResolvedImportGraph` or aliased imports won't resolve.
-- **Graph analysis is expensive**: Only runs on refresh when ≥10% of modules are dirty (or ≥5 absolute). For small incremental edits, only barrel/import analysis runs.
-- **Module depth limit default is 6**: Configurable via `ContextLayerConfig.moduleDepthLimit`. Directories deeper than this get absorbed into a single module.
+(Pre-Wave-69 Option A/B/C pipeline section was removed in 2026-05 — that pipeline no longer exists. The auto-generated section above describes the current graph-backed shape.)

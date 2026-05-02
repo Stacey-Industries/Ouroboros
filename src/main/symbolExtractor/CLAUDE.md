@@ -36,10 +36,10 @@ Extracts exported symbols (functions, classes, interfaces, types, enums, consts)
 
 | Module | Usage |
 |--------|-------|
-| `contextLayer/contextLayerController.ts` | Extracts symbols from project files for context enrichment |
 | `contextLayer/moduleSummarizer.ts` | Uses symbol lists to build module summaries |
-| `codebaseGraph/graphParser*.ts` | Feeds extracted symbols into graph node construction |
-| `internalMcp/internalMcpToolsGraph.ts` | Exposes symbol search via MCP tool responses |
+| `renderer/hooks/useSymbolOutline.ts` | Powers the symbol outline panel in the renderer |
+
+(The codebase graph uses tree-sitter directly via `codebaseGraph/treeSitterParser*.ts` — not the regex extractor here. The standalone MCP server reuses the IDE's graph tool handlers; `internalMcp/` no longer contains a separate symbol-graph tool surface.)
 
 ## `SymbolIndex` API
 
