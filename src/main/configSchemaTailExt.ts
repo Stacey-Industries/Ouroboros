@@ -297,16 +297,6 @@ export const tailSchemaExt = {
     },
     default: { telemetryEnabled: true, mode: 'current', autoRetrainEnabled: true },
   },
-  /** Wave 51 Phase B — internalMcp transport selector. Default 'sse' preserves
-   *  existing behavior; 'stdio' opts into the JSON-RPC subprocess wrapper. */
-  internalMcp: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      transport: { type: 'string', enum: ['sse', 'stdio'], default: 'sse' },
-    },
-    default: { transport: 'sse' },
-  },
   /** Wave 51 Phase B — CodeMode launch wiring. excludeFromMultiplex is the per-server opt-out. */
   codemode: {
     type: 'object',

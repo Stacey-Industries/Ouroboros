@@ -102,7 +102,6 @@ const FAKE_MAIN_OUT = '/fake/main/out';
 interface ConfigShape {
   internalMcpUseStrictConfig?: boolean;
   internalMcpScope?: 'always' | 'task-gated' | 'never';
-  internalMcp?: { transport?: 'sse' | 'stdio' };
   codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
 }
 
@@ -110,7 +109,6 @@ function applyConfig(shape: ConfigShape): void {
   mockGetConfigValue.mockImplementation((key: string) => {
     if (key === 'internalMcpUseStrictConfig') return shape.internalMcpUseStrictConfig !== false;
     if (key === 'internalMcpScope') return shape.internalMcpScope ?? 'task-gated';
-    if (key === 'internalMcp') return shape.internalMcp;
     if (key === 'codemode') return shape.codemode;
     if (key === 'internalMcpEnabled') return true;
     return undefined;
@@ -165,7 +163,6 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
   it('would-have-routed → direct-inject; settings file gets the ouroboros entry', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
 
@@ -175,7 +172,6 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
       ouroborosExcludedFromMultiplex: false,
       internalMcpScope: 'task-gated',
       taskNeedsGraphTools: true,
-      transport: 'stdio',
     });
     expect(baseline).toBe('route-through-codemode');
 
@@ -202,7 +198,6 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
   it('passes-through direct-inject untouched when failure flag set (no double-downgrade)', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'sse' },
       codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
@@ -223,7 +218,6 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
   it('preserves omit when failure flag set (scope gate is not crash-recovery territory)', async () => {
     applyConfig({
       internalMcpScope: 'never',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -245,7 +239,6 @@ describe('settings cleanup — coherent state post-downgrade', () => {
   it('downgrade path emits direct-inject ouroboros XOR no entry — never both', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -273,7 +266,6 @@ describe('repeated spawns are evaluated independently', () => {
   it('failure on spawn N does not poison spawn N+1 when acquire succeeds again', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
 
@@ -303,7 +295,6 @@ describe('repeated spawns are evaluated independently', () => {
   it('successive failures all downgrade, no escalation or state leak', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
 
@@ -329,7 +320,6 @@ describe('telemetry records the downgraded decision, not the original', () => {
   it('records direct-inject when route-through-codemode was downgraded', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({

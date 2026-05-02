@@ -33,10 +33,6 @@ interface CodeModeConfig {
   excludeFromMultiplex?: string[];
 }
 
-interface InternalMcpConfig {
-  transport?: 'sse' | 'stdio';
-}
-
 interface ScopeConfigShape {
   raw: 'always' | 'task-gated' | 'never';
 }
@@ -56,7 +52,6 @@ export function isCodeModeLaunchEnabled(): boolean {
 /** Resolve the upstream server names CodeMode should proxy for this spawn. */
 async function resolveProxiedServerNames(projectRoot: string | undefined): Promise<string[]> {
   const cfg = getConfigValue('codemode') as CodeModeConfig | undefined;
-  const internalMcp = getConfigValue('internalMcp') as InternalMcpConfig | undefined;
   const entries = await getMcpServers(projectRoot);
   // Phase C: delegate the inclusion rule to the routing policy. We treat the
   // task as graph-needing (taskNeedsGraphTools=true) because at acquire-time
@@ -69,7 +64,6 @@ async function resolveProxiedServerNames(projectRoot: string | undefined): Promi
     ouroborosExcludedFromMultiplex: excludes.includes('ouroboros'),
     internalMcpScope: readScopeRaw(),
     taskNeedsGraphTools: true,
-    transport: internalMcp?.transport === 'stdio' ? 'stdio' : 'sse',
   });
   // Wave 53k Phase B‴: CodeMode's mcpClient.ts is stdio-only (see codemode
   // CLAUDE.md gotcha "mcpClient.ts is stdio-only by design"). HTTP/SSE

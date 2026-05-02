@@ -153,8 +153,6 @@ export interface AppConfig {
   internalMcpScope?: 'always' | 'task-gated' | 'never';
   /** Wave 48 Phase D — use --mcp-config + --strict-mcp-config on each spawn (default true). */
   internalMcpUseStrictConfig?: boolean;
-  /** Wave 51 Phase B — internalMcp transport selector ('sse' default | 'stdio'). */
-  internalMcp?: { transport?: 'sse' | 'stdio' };
   /** Wave 53b Phase B — online ranker hit-rate telemetry. Phase C adds mode (default 'current'). */
   contextRanker?: {
     telemetryEnabled?: boolean;

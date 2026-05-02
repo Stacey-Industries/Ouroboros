@@ -96,7 +96,6 @@ const FAKE_MAIN_OUT = '/fake/main/out';
 interface ConfigShape {
   internalMcpUseStrictConfig?: boolean;
   internalMcpScope?: 'always' | 'task-gated' | 'never';
-  internalMcp?: { transport?: 'sse' | 'stdio' };
   codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
 }
 
@@ -104,7 +103,6 @@ function applyConfig(shape: ConfigShape): void {
   mockGetConfigValue.mockImplementation((key: string) => {
     if (key === 'internalMcpUseStrictConfig') return shape.internalMcpUseStrictConfig !== false;
     if (key === 'internalMcpScope') return shape.internalMcpScope ?? 'task-gated';
-    if (key === 'internalMcp') return shape.internalMcp;
     if (key === 'codemode') return shape.codemode;
     if (key === 'internalMcpEnabled') return true;
     return undefined;
@@ -156,7 +154,6 @@ describe('settings-write shape', () => {
     // the standalone shape regardless of `internalMcp.transport`.
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'sse' },
       codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
@@ -176,36 +173,10 @@ describe('settings-write shape', () => {
     await result!.cleanup();
   });
 
-  it('direct-inject + stdio transport: writes {ouroboros: {command, args}} pointing at the built script', async () => {
-    applyConfig({
-      internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
-      codemode: { enabled: false },
-    });
-    const result = await buildScopedMcpConfig({
-      goalShape: 'code',
-      sessionId: SESSION_ID,
-      mainOutDir: FAKE_MAIN_OUT,
-    });
-    expect(result).not.toBeNull();
-    const entry = readWrittenConfig(result!.configPath).mcpServers['ouroboros'];
-    expect(entry.url).toBeUndefined();
-    // Wave 60 Phase C+ (binding fix): command is the IDE's Electron binary
-    // (process.execPath) launched in Node mode (ELECTRON_RUN_AS_NODE=1).
-    expect(entry.command).toBe(process.execPath);
-    expect(entry.env?.ELECTRON_RUN_AS_NODE).toBe('1');
-    expect(entry.args).toBeDefined();
-    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
-    expect(entry.args![0]).toContain('fake');
-    expect(entry.args!.length).toBe(1);
-    expect(result!.routingDecision).toBe('direct-inject');
-    await result!.cleanup();
-  });
 
   it('route-through-codemode: ouroboros omitted from mcpServers (proxy surfaces it)', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -223,7 +194,6 @@ describe('settings-write shape', () => {
   it('omit (scope=never): ouroboros absent regardless of other flags', async () => {
     applyConfig({
       internalMcpScope: 'never',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -245,7 +215,6 @@ describe('settings-write shape', () => {
     });
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -276,7 +245,6 @@ describe('settings-write shape', () => {
     });
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -294,29 +262,6 @@ describe('settings-write shape', () => {
   });
 });
 
-// ─── Transport guard: route-through-codemode requires stdio ──────────────────
-
-describe('route-through-codemode requires stdio transport', () => {
-  it('falls back to direct-inject when codemode.enabled=true but transport=sse', async () => {
-    applyConfig({
-      internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'sse' },
-      codemode: { enabled: true },
-    });
-    const result = await buildScopedMcpConfig({
-      goalShape: 'code',
-      sessionId: SESSION_ID,
-      mainOutDir: FAKE_MAIN_OUT,
-    });
-    expect(result).not.toBeNull();
-    expect(result!.routingDecision).toBe('direct-inject');
-    const entry = readWrittenConfig(result!.configPath).mcpServers['ouroboros'];
-    // Wave 60 Phase E: standalone shape regardless of transport config.
-    expect(entry.command).toBe(process.execPath);
-    expect(entry.args![0]).toMatch(/ouroborosMcp\.js$/);
-    await result!.cleanup();
-  });
-});
 
 // ─── Telemetry emission ──────────────────────────────────────────────────────
 
@@ -324,7 +269,6 @@ describe('telemetry emission', () => {
   it('emits a record with the routing decision and serversIncluded for direct-inject', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'sse' },
       codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
@@ -336,7 +280,6 @@ describe('telemetry emission', () => {
     const record = captureTelemetryRecord();
     expect(record).not.toBeNull();
     expect(record!.routingDecision).toBe('direct-inject');
-    expect(record!.transport).toBe('sse');
     expect(record!.codemodeEnabled).toBe(false);
     expect(record!.spawnId).toBe(SESSION_ID);
     expect(record!.serversIncluded).toContain('ouroboros');
@@ -346,7 +289,6 @@ describe('telemetry emission', () => {
   it('emits route-through-codemode and excludes ouroboros from serversIncluded', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -357,7 +299,6 @@ describe('telemetry emission', () => {
     expect(result).not.toBeNull();
     const record = captureTelemetryRecord();
     expect(record!.routingDecision).toBe('route-through-codemode');
-    expect(record!.transport).toBe('stdio');
     expect(record!.codemodeEnabled).toBe(true);
     expect(record!.serversIncluded).not.toContain('ouroboros');
     await result!.cleanup();
@@ -366,7 +307,6 @@ describe('telemetry emission', () => {
   it('emits omit when scope gate excludes ouroboros entirely', async () => {
     applyConfig({
       internalMcpScope: 'never',
-      internalMcp: { transport: 'stdio' },
       codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
@@ -384,7 +324,6 @@ describe('telemetry emission', () => {
   it('records a sane mcpConfigBytes / tokenEstimate for direct-inject', async () => {
     applyConfig({
       internalMcpScope: 'always',
-      internalMcp: { transport: 'sse' },
       codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
@@ -417,7 +356,6 @@ describe('cleanup', () => {
   it('removes the temp config file once cleanup() resolves', async () => {
     applyConfig({
       internalMcpScope: 'always',
-      internalMcp: { transport: 'sse' },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
