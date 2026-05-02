@@ -81,6 +81,22 @@ export async function handleDeleteProject(
 
 // ─── get_graph_schema handler ─────────────────────────────────────────────────
 
+const SUPPORTED_CYPHER_FEATURES = [
+  'MATCH (n:Label) WHERE ... RETURN ...',
+  'MATCH (a)-[:TYPE]->(b), (a)<-[:TYPE]-(b)',
+  'MATCH (a)-[:TYPE*1..N]->(b)  — variable-length path',
+  'MATCH (a)-[:X]->(b), (b)-[:Y]->(c)  — multi-pattern (comma-separated)',
+  'OPTIONAL MATCH (a)-[:TYPE]->(b)  — LEFT JOIN; unmatched right side returns null',
+  'UNWIND [v1, v2, ...] AS x  — literal list only; no pipeline UNWIND',
+  'WHERE: =, <>, <, >, <=, >=, CONTAINS, STARTS WITH, ENDS WITH, IN, AND, OR',
+  'RETURN n.prop, COUNT(*), COUNT(n), labels(n), DISTINCT',
+  'ORDER BY n.prop [ASC|DESC], LIMIT N',
+  'Node columns (direct): name, qualified_name, file_path, start_line, end_line, label, id, project',
+  'Any other property name falls through to JSON_EXTRACT on the node props blob',
+  'indexed_at comparisons: ISO date strings (e.g. "2026-01-01") are auto-coerced to epoch ms',
+  'NOT supported: WITH (pipeline), parametric UNWIND, function calls (datetime(), length(), etc.)',
+];
+
 export async function handleGetGraphSchema(ctx: GraphToolContext): Promise<string> {
   try {
     const schema = ctx.queryEngine.getGraphSchema();
@@ -102,6 +118,9 @@ export async function handleGetGraphSchema(ctx: GraphToolContext): Promise<strin
       '',
       'Sample qualified names:',
       ...schema.sampleNames.qualifiedNames.map((n) => `  ${n}`),
+      '',
+      'Supported Cypher features (query_graph):',
+      ...SUPPORTED_CYPHER_FEATURES.map((f) => `  ${f}`),
     ];
     return truncate(lines.join('\n'));
   } catch (err) {
