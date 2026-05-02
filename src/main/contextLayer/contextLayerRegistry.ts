@@ -56,6 +56,12 @@ export async function initContextLayer(options: InitContextLayerOptions): Promis
   sharedConfig = options.config;
 
   const root = normalizeRoot(options.workspaceRoot);
+  if (!root) {
+    log.info(
+      '[context-layer] Shared options registered; deferring controller init until a real workspace root is acquired',
+    );
+    return;
+  }
   defaultRoot = root;
 
   const existing = registry.get(root);

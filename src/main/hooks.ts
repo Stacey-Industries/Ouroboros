@@ -312,10 +312,17 @@ function evictOrphanedSessions(): void {
   }
 }
 
+function onConnectionDisconnect(sessionIds: string[]): void {
+  for (const sessionId of sessionIds) {
+    log.info(`[disconnect] synthesizing agent_stop for terminated session ${sessionId}`);
+    dispatchToRenderer({ type: 'agent_stop', sessionId, timestamp: Date.now() });
+  }
+}
+
 export async function startHooksServer(window: BrowserWindow): Promise<{ port: number | string }> {
   mainWindow = window;
   setInterval(evictOrphanedSessions, 5 * 60 * 1000);
-  return startHooksNetServer(window, pendingQueue, dispatchToRenderer);
+  return startHooksNetServer(window, pendingQueue, dispatchToRenderer, onConnectionDisconnect);
 }
 
 export function stopHooksServer(): Promise<void> {

@@ -126,17 +126,33 @@ function tryAuthenticate(buffer: string, socket: net.Socket, connId: number): st
   return buffer.slice(nl + 1);
 }
 
+function handleSocketError(error: NodeJS.ErrnoException, connId: number): void {
+  // Suppress benign disconnect races: client closed the socket before our
+  // last write landed (EPIPE/ECONNRESET) or our write was queued after .end()
+  // raced past us (ERR_STREAM_WRITE_AFTER_END).
+  if (error.code === 'EPIPE' || error.code === 'ECONNRESET') return;
+  if (error.code === 'ERR_STREAM_WRITE_AFTER_END') return;
+  if (error.message?.includes('write after end')) return;
+  log.error(`#${connId} socket error: ${error.message}`);
+}
+
 function handleSocket(
   socket: net.Socket,
   connId: number,
   onPayload: (p: HookPayload) => void,
+  onDisconnect: (sessionIds: string[]) => void,
 ): void {
   log.debug(`connection #${connId} opened`);
   let rawBuffer = '';
   let authenticated = false;
   socket.setEncoding('utf8');
   socket.setTimeout(60_000);
-
+  const startedSessions = new Set<string>();
+  const tracked = (p: HookPayload) => {
+    if (p.type === 'agent_start') startedSessions.add(p.sessionId);
+    else if (p.type === 'agent_end' || p.type === 'agent_stop') startedSessions.delete(p.sessionId);
+    onPayload(p);
+  };
   socket.on('data', (chunk: string) => {
     let nextBuffer = rawBuffer + chunk;
     if (!authenticated) {
@@ -145,32 +161,22 @@ function handleSocket(
       nextBuffer = result;
       authenticated = true;
     }
-    rawBuffer = processSocketChunk({ socket, connId, buffer: nextBuffer, onPayload });
+    rawBuffer = processSocketChunk({ socket, connId, buffer: nextBuffer, onPayload: tracked });
   });
   socket.on('timeout', () => {
     socket.end();
-    // Force-destroy after grace period to prevent half-open socket handle leaks
-    setTimeout(() => {
-      if (!socket.destroyed) socket.destroy();
-    }, 5_000);
+    setTimeout(() => { if (!socket.destroyed) socket.destroy(); }, 5_000);
   });
-  socket.on('error', (error: NodeJS.ErrnoException) => {
-    // Suppress benign disconnect races: client closed the socket before our
-    // last write landed (EPIPE/ECONNRESET) or our write was queued after .end()
-    // raced past us (ERR_STREAM_WRITE_AFTER_END).
-    if (error.code === 'EPIPE' || error.code === 'ECONNRESET') return;
-    if (error.code === 'ERR_STREAM_WRITE_AFTER_END') return;
-    if (error.message?.includes('write after end')) return;
-    log.error(`#${connId} socket error: ${error.message}`);
-  });
-  socket.on('close', () => {
-    log.debug(`connection #${connId} closed`);
-  });
+  socket.on('error', (error: NodeJS.ErrnoException) => handleSocketError(error, connId));
+  socket.on('close', () => { log.debug(`#${connId} closed`); if (startedSessions.size > 0) onDisconnect([...startedSessions]); });
 }
 
-function createNetServer(onPayload: (p: HookPayload) => void): net.Server {
+function createNetServer(
+  onPayload: (p: HookPayload) => void,
+  onDisconnect: (sessionIds: string[]) => void,
+): net.Server {
   const nextServer = net.createServer((socket) =>
-    handleSocket(socket, ++connectionCounter, onPayload),
+    handleSocket(socket, ++connectionCounter, onPayload, onDisconnect),
   );
   nextServer.maxConnections = 64;
   return nextServer;
@@ -213,6 +219,7 @@ export async function startHooksNetServer(
   window: BrowserWindow,
   pendingQueue: HookPayload[],
   onPayload: (p: HookPayload) => void,
+  onDisconnect: (sessionIds: string[]) => void,
 ): Promise<{ port: number | string }> {
   window.webContents.on('did-finish-load', () => {
     flushPendingQueueToWindow(window, pendingQueue);
@@ -225,7 +232,7 @@ export async function startHooksNetServer(
   }
 
   if (process.platform === 'win32') {
-    const pipeServer = createNetServer(onPayload);
+    const pipeServer = createNetServer(onPayload, onDisconnect);
     try {
       await listenPipe(pipeServer, PIPE_NAME);
       server = pipeServer;
@@ -239,7 +246,7 @@ export async function startHooksNetServer(
   }
 
   const port = getConfigValue('hooksServerPort') as number;
-  const tcpServer = createNetServer(onPayload);
+  const tcpServer = createNetServer(onPayload, onDisconnect);
   await listenTcp(tcpServer, port);
   server = tcpServer;
   log.info(`TCP server listening on 127.0.0.1:${port}`);
