@@ -160,10 +160,26 @@ The remaining audit sections were swept in a second triage pass on the same day.
 **Section C — Settings audit (5 VERIFIED-PARTIAL items filed as wave)**
 - All five items are real feature-implementation work, not cleanup deletes. Filed as `roadmap/future/settings-partial-wiring-fixes.md` (two bundles: backend wiring fixes for `webAccessPassword` UI feedback / `useMcpHost` gating / `modelSlots.claudeMdGeneration` slot; persistence fixes for Export Usage time window + output path).
 
-### Still untouched
+### Audit batches handled in third pass (2026-05-01 → 2026-05-02)
 
-- A3 orphaned IPC: 2 truly orphan channels (`app:rebuildAndRestart`, `perf:markFirstRender`) + 1 naming collision (`shell:openExtensionsFolder` vs `extensions:openFolder`). Small batch, ready for a future cleanup pass.
-- A1 PARTIAL items (5 — see above).
+**Section A3 — Orphaned IPC (3 of 3 channels deleted)**
+- `app:rebuildAndRestart` — security-positive removal (unrestricted shell-spawn surface, no UI entry point). Dropped main handler + `runBuildCommand` + `handleRebuildAndRestart` helpers, preload bridge, renderer `AppAPI` type field, web stub, channel catalog entry.
+- `perf:markFirstRender` — back-compat alias for `perf:mark('first-render')`. Renderer always uses the canonical `perf:mark`. Dropped `handleFirstRender` helper, registration, 2 dedicated test cases, preload bridge, renderer `PerfAPI` type field, channel catalog entry.
+- `shell:openExtensionsFolder` — naming collision with the live `extensions:openFolder`. Verified renderer uses only the latter (`useExtensionsSectionSupport.ts:220`). Dropped `openExtensionsFolder` helper, registration, preload bridge, `ShellAPI` field, web stub, channel catalog entry.
+- `memory:read` — KEEP per audit; pre-wired for `roadmap/future/memory-curation-completion.md` (already filed).
+
+**Section A1 PARTIAL items (4 of 5 actioned; 1 skipped per audit)**
+- `escapePowerShellArg` consolidation — replaced 3 byte-identical local copies (`ptyCodex.ts`, `codexAppServerProcess.ts`, `codexExecRunnerHelpers.ts`) with imports from the canonical `src/main/ptyArgEscape.ts`. Security-positive: single source of truth for PowerShell argument escaping.
+- `enableEmacsMode` removal — stub function returned null and warned; no UI option referenced 'emacs' anywhere in Settings or schema. Dropped the function, narrowed `KeybindingMode` to `'default' | 'vim'`, removed the dead branch in `MonacoEditor.hooks.ts`, dropped barrel export.
+- `useFormatOnSave` deletion — barrel-exported but zero direct consumers. Deleted the 65-line file plus barrel exports. When LSP formatting lands, it should plug into Monaco directly via `DocumentFormattingEditProvider`.
+- `useOutsideClick` extraction — extracted to `src/renderer/hooks/useOutsideClick.ts` with canonical signature `(ref, open, onClose)` and `pointerdown` (touch-aware). Replaced all 3 in-place definitions; behavior more permissive on touch surfaces. Test file co-located with 5 cases.
+- `TOOL_COLORS` 2× duplication — SKIPPED per audit's "intentional" classification (`Analytics/CLAUDE.md` documents the hardcoded-by-design rationale; the Analytics dashboard map and the ApprovalDialog map serve different surfaces).
+
+### Audit batches now complete
+
+A1, A2 (partial — 1 inline + 1 wave filed), A3, A6, A7, C (filed as wave). The audit-verification-pass.md is fully triaged. Remaining work is implementation, not classification:
+- `roadmap/future/config-key-cleanup-followups.md` — 5 A2 deletes that need test-rework or load-bearing migration sequencing
+- `roadmap/future/settings-partial-wiring-fixes.md` — 5 Section C feature implementations
 
 ---
 
