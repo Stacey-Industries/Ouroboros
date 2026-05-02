@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-05-02
+
+Wave-burn batch — nine waves shipped in parallel from `roadmap/future/`.
+
+### Added
+- **Wave 72 — chat thread swipe navigation.** `useSwipeNavigation` mounted on `AgentChatWorkspace` root with wrap-around thread cycling; closes the Wave 32 Phase I deferral.
+- **Wave 73 — skill executions persisted on chat messages.** `SkillExecutionRecord[]` now lands in SQLite via the assistant message record, so reopened historical threads show their skill executions in the details drawer (renderer falls back to persisted state when the live `AgentEventsContext` doesn't have the session).
+- **Wave 75 — memory curation completion.** Inline drill-down preview for memory entries (Phase A) plus `memory:write` / `memory:delete` IPC handlers and edit/delete UI with atomic write-then-rename, idempotent delete, and confirmation modals (Phase B).
+- **Wave 76 — warn-class hook decisions surface to agent.** `pre_tool_use.mjs` now emits structured JSON stdout (`hookSpecificOutput.permissionDecision: 'allow'` + `systemMessage`) for `warn` decisions; `warnFullTestSuite` actually nudges the agent. Pattern documented in `docs/hook-migration.md`.
+- **Wave 77 — Cypher engine Wave A.** `OPTIONAL MATCH` (LEFT JOIN), `UNWIND` (VALUES CTE), multi-pattern `MATCH`, and `indexed_at` ISO→epoch coercion added to the mini-engine. `get_graph_schema` advertises `supportedCypherFeatures`. `STARTS WITH` / `ENDS WITH` no longer false-positive the unsupported-clause check.
+- **Wave 78 — settings panel partial-wiring fixes.** webAccessPassword "✓ Password set" badge via `config:hasWebPassword`; useMcpHost main-process gating in `injectStandaloneMcpEntry`; `modelSlots.claudeMdGeneration` slot threaded into `buildProviderEnv`; `usageExport.defaultWindow` and `usageExport.lastDir` persisted across export sessions.
+- **Wave 80 — graph edge confidence on CALLS.** Per-resolution-path confidence (import-resolved 0.95, same-file 0.85, name-unique 0.80, new-expression class 0.65) emitted at indexing time; `min_confidence` filter param on `trace_call_path` and `detect_changes` (default 0); `confidence` field disclosed in `get_graph_schema`.
+
+### Changed
+- **Wave 74 — IPC handler decomposition.** `miscRegistrars.ts` (336 lines, 10 unrelated domains) split into 8 named per-domain handler files (`updaterHandlers`, `costHandlers`, `usageHandlers`, `crashHandlers`, `shellHistoryHandlers`, `symbolHandlers`, `approvalHandlers`, `trustHandlers`). No behavior change; channel contract preserved. `misc.ts` imports the named registrars directly.
+
+### Removed
+- **Wave 79 — deprecated config keys removed (deprecation windows expired per audit).** `windowSessions`, `codemode.routeInternalMcp`, `internalMcp.transport`, `InjectOptions.transport`, and `InjectOptions.stdioTransportPath` deleted. `InjectOptions.stdioTransportPath` removal followed the audit-mandated 3-step order (caller → fixtures → field). `migrateWindowSessionsToSessions` removed; stale barrel re-export in `session/index.ts` cleaned up (caught by `/review`'s dead-export check).
+
+### Process notes
+- All nine waves drafted plans via `/wave-plan` and gap-checked via `/review` before merge. The mechanical review caught real defects in three waves (73 dead-value threading on the renderer side, 76 silent-drop in `notifyApprovalResolved`, 79 stale barrel re-export) — all self-corrected before merge. Each wave's artifacts live in its own `roadmap/wave-NN-{slug}/` folder.
+- `/wave-plan` and `/review` slash commands updated in this batch to write into the per-wave folder convention introduced earlier.
+
 ## [2.8.0] - 2026-04-29
 
 ### Added
