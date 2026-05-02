@@ -1,11 +1,8 @@
 /**
  * electron-mobile-access.d.ts — IPC type contract for the mobileAccess namespace.
  *
- * Wave 33a Phase B. Types mirror src/main/mobileAccess/types.ts — duplicated
- * here because renderer types cannot import from src/main at runtime.
- *
- * TODO(Wave 33a): Move QrPayload + PairedDevice to src/shared/ once the shared
- * types directory is expanded to support renderer-safe cross-boundary imports.
+ * Types mirror src/main/mobileAccess/types.ts — duplicated here because renderer
+ * types cannot import from src/main at runtime.
  */
 
 /** Payload encoded in the QR code shown during the pairing flow. */

@@ -1,6 +1,5 @@
 /**
  * en.ts — English string table (primary locale).
- * Wave 38 Phase A: placeholder copy; Phase G will finalize translations.
  */
 export const EN_STRINGS = {
   onboarding: {

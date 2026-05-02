@@ -99,12 +99,8 @@ function ThreadTabs({
   threads: AgentChatThreadRecord[];
 }): React.ReactElement {
   // data-no-swipe: horizontal tab scroller — scrollWidth check in useSwipeNavigation already
-  // blocks it, but explicit opt-out is belt-and-suspenders (per Phase I spec).
-  // TODO(Wave 32 Phase I — session cycling): mount useSwipeNavigation on the AgentChatWorkspace
-  // root (or RightSidebar container) with onSwipeLeft/onSwipeRight cycling onSelectThread across
-  // threads[]. The tab bar is too narrow for reliable axis disambiguation — the full workspace
-  // panel is the right mount point. Deferred: AgentChatWorkspace has no stable root ref in its
-  // slot API.
+  // blocks it, but explicit opt-out is belt-and-suspenders.
+  // Workspace-level swipe-cycling tracked in roadmap/future/agent-chat-swipe-navigation.md.
   return (
     <div
       className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto"
