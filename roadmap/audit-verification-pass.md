@@ -175,11 +175,28 @@ The remaining audit sections were swept in a second triage pass on the same day.
 - `useOutsideClick` extraction — extracted to `src/renderer/hooks/useOutsideClick.ts` with canonical signature `(ref, open, onClose)` and `pointerdown` (touch-aware). Replaced all 3 in-place definitions; behavior more permissive on touch surfaces. Test file co-located with 5 cases.
 - `TOOL_COLORS` 2× duplication — SKIPPED per audit's "intentional" classification (`Analytics/CLAUDE.md` documents the hardcoded-by-design rationale; the Analytics dashboard map and the ApprovalDialog map serve different surfaces).
 
+### Audit closeout (2026-05-02)
+
+**Section A5 — Unused dependencies** — 3 of 5 packages removed (`depcheck`, `remark-gfm`, `babel-plugin-react-compiler`). 2 audit false positives caught and corrected:
+- `jsdom` — required by `@vitest-environment jsdom` directive in 5 renderer tests; audit's "vitest has its own jsdom" claim was wrong. Restored.
+- `@xenova/transformers` — `src/main/embeddings/embeddingProvider.ts:1-6` documents the local ONNX provider as the DEFAULT; Voyage AI is the secondary option. Audit had the primary/secondary inverted. Restored.
+
+**Section A8 — TODO inventory** — 3 of 5 already covered (monaco-emacs deletion landed in commit 349fb4a; `useSwipeNavigation` mount filed as `roadmap/future/agent-chat-swipe-navigation.md`; rulesAndSkills install path tracked under Wave 41 follow-up). 2 remaining filed as small waves:
+- `roadmap/future/skill-executions-persistence.md` — 3-step plan from the inline TODO
+- `roadmap/future/misc-registrars-decomposition.md` — ~10 domain extraction from the 336-line `miscRegistrars.ts`
+
+**Section A6 open question** — `glassOpacity` is **not** vestigial despite the `glass` theme being gone. Verified 30+ live references across `useTheme.ts`, `useTheme.tokens.ts`, `useTheme.actions.ts`, Settings UI, and the extension-host proxy. The key drives `--glass-dim` for the always-on transparency feature (mica-electron on Windows, vibrancy on macOS). KEEP.
+
 ### Audit batches now complete
 
-A1, A2 (partial — 1 inline + 1 wave filed), A3, A6, A7, C (filed as wave). The audit-verification-pass.md is fully triaged. Remaining work is implementation, not classification:
-- `roadmap/future/config-key-cleanup-followups.md` — 5 A2 deletes that need test-rework or load-bearing migration sequencing
-- `roadmap/future/settings-partial-wiring-fixes.md` — 5 Section C feature implementations
+A1, A2 (partial — 1 inline + 1 wave filed), A3, A4 (clean per audit), A5 (3 removed; 2 false positives flagged), A6, A7, A8 (3 covered; 2 filed), B (cleaned during Phase 1), C (filed as wave). The audit-verification-pass.md is fully triaged.
+
+Remaining work is implementation, not classification — captured in 13 future waves under `roadmap/future/`:
+- 9 STILL-RELEVANT waves filed during initial triage round (context-injection-completion, graph-mcp-polish, telemetry-archival-completion, agent-chat-swipe-navigation, cypher-engine-feature-additions, graph-edge-confidence-scoring, disabled-rules-honor-at-send-path, warn-hooks-stdout-surfacing, memory-curation-completion)
+- 2 cleanup waves filed during second-pass triage (config-key-cleanup-followups, settings-partial-wiring-fixes)
+- 2 A8 follow-up waves filed during closeout (skill-executions-persistence, misc-registrars-decomposition)
+
+Plus 5 deferred items preserved under `roadmap/deferred/` for future activation (iOS mobile packaging, Codex transport architecture, mobile access + session dispatch, cross-window IDE-tool delegation, tree-sitter grammar upgrade).
 
 ---
 
