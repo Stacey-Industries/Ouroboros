@@ -59,7 +59,7 @@ const TOOL_SCHEMAS = {
   search_graph: {
     type: 'object',
     properties: {
-      query: { type: 'string', description: 'Symbol name to search (preferred). Substring match.' },
+      query: { type: 'string', description: 'Symbol IDENTIFIER (PascalCase/camelCase, no spaces). Substring match. ✓ "ChatWorkbenchArtifactPane", "parseConfig". ✗ "chat workbench artifact pane" returns zero.' },
       name_pattern: { type: 'string', description: 'Deprecated alias for query.' },
       label: { type: 'string' },
       project: { type: 'string' },
@@ -79,11 +79,7 @@ const TOOL_SCHEMAS = {
   get_architecture: {
     type: 'object',
     properties: {
-      aspects: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Which aspects to include. Default: ["all"]',
-      },
+      aspects: { type: 'array', items: { type: 'string' }, description: 'Which aspects: "languages","packages","entry_points","routes","hotspots","boundaries","services","layers","clusters","file_tree","adr","all". Default ["all"]. Pre-refactor: ["hotspots"].' },
       project: { type: 'string' },
     },
     required: [],
@@ -103,7 +99,7 @@ const TOOL_SCHEMAS = {
   get_code_snippet: {
     type: 'object',
     properties: {
-      symbol: { type: 'string', description: 'Symbol name or qualified name (preferred).' },
+      symbol: { type: 'string', description: 'Symbol IDENTIFIER (PascalCase/camelCase). ✓ "ChatWorkbenchArtifactPane". ✗ "chat workbench artifact pane".' },
       qualified_name: { type: 'string', description: 'Deprecated alias for symbol.' },
     },
     required: [],
@@ -111,7 +107,7 @@ const TOOL_SCHEMAS = {
   trace_call_path: {
     type: 'object',
     properties: {
-      symbol: { type: 'string', description: 'Function/method name to trace (preferred).' },
+      symbol: { type: 'string', description: 'Function/method IDENTIFIER (PascalCase/camelCase). ✓ "parseConfig". ✗ "parse config".' },
       function_name: { type: 'string', description: 'Deprecated alias for symbol.' },
       direction: {
         type: 'string',
@@ -127,8 +123,8 @@ const TOOL_SCHEMAS = {
   detect_changes: {
     type: 'object',
     properties: {
-      scope: { type: 'string', enum: ['unstaged', 'staged', 'all', 'branch'] },
-      base_branch: { type: 'string' },
+      scope: { type: 'string', enum: ['unstaged', 'staged', 'all', 'branch'], description: '"unstaged"=working-tree vs HEAD; "staged"=index vs HEAD; "all"=both vs HEAD; "branch"=current vs base_branch (requires base_branch).' },
+      base_branch: { type: 'string', description: 'Required when scope="branch". Branch to diff against (e.g., "main").' },
       depth: { type: 'number' },
     },
     required: [],
@@ -211,7 +207,7 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'search_graph',
       description:
-        'Symbol search (prefer over Grep). Returns graph nodes with file:line + metadata. Grep returns text matches including comments; search_graph returns actual definitions. Pass query or name_pattern (deprecated).',
+        'Symbol search (prefer over Grep). Pass query as the IDENTIFIER (PascalCase/camelCase, no spaces) — natural-language phrases return zero results. ✓ "ChatWorkbenchArtifactPane". ✗ "chat workbench artifact pane". Returns graph nodes with file:line + metadata. Grep returns text matches including comments; search_graph returns actual definitions.',
       inputSchema: TOOL_SCHEMAS.search_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -231,14 +227,14 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
     {
       name: 'search_code',
       description:
-        'Regex search across source files. Use for STRING content (error messages, log lines, literal text). For SYMBOL queries (function/class names) prefer search_graph — it filters out comments and same-name false positives.',
+        'String search across source files. Default is SUBSTRING (special chars are escaped); pass regex: true for regex mode. Use for STRING content (error messages, log lines, literal text). For SYMBOL queries (function/class names) prefer search_graph — it filters out comments and same-name false positives.',
       inputSchema: TOOL_SCHEMAS.search_code,
       handler: async (a: Record<string, unknown>) => handleSearchCode(a, context),
     },
     {
       name: 'get_code_snippet',
       description:
-        'Symbol body retrieval (prefer over Read for single symbols). Returns source for function/class. Pass symbol or qualified_name (deprecated). Auto-resolves bare names if unique.',
+        'Symbol body retrieval (prefer over Read for single symbols). Pass symbol as the IDENTIFIER (PascalCase/camelCase, no spaces). ✓ "parseConfig". ✗ "parse config function". Auto-resolves bare names if unique.',
       inputSchema: TOOL_SCHEMAS.get_code_snippet,
       handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
     },
@@ -251,7 +247,7 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
     {
       name: 'trace_call_path',
       description:
-        "Caller/callee graph (prefer over Grep). Pass symbol or function_name (deprecated). direction: 'inbound'/'callers', 'outbound'/'callees', 'both' (default). Returns call edges with risk labels.",
+        "Caller/callee graph (prefer over Grep). Pass symbol as the IDENTIFIER (PascalCase/camelCase, no spaces). ✓ \"parseConfig\". ✗ \"parse config\". direction: 'inbound'/'callers', 'outbound'/'callees', 'both' (default). Returns call edges with risk labels.",
       inputSchema: TOOL_SCHEMAS.trace_call_path,
       handler: async (a: Record<string, unknown>) => {
         try {
@@ -283,7 +279,7 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
     {
       name: 'query_graph',
       description:
-        'Complex relationship queries. Cypher-subset: MATCH (n:Label), (a)-[:TYPE]->(b), (a)-[:TYPE*1..3]->(b); WHERE n.prop {=,<>,<,>,<=,>=,CONTAINS,STARTS WITH,ENDS WITH} AND/OR; RETURN n.prop, COUNT(*), labels(n), DISTINCT; ORDER BY, LIMIT. Capped at 200 rows. Use search_graph for simple symbol lookups. Call get_graph_schema first to discover node labels and edge types.',
+        'Complex relationship queries. Cypher-subset: MATCH (n:Label), (a)-[:TYPE]->(b), (a)-[:TYPE*1..3]->(b); WHERE n.prop {=,<>,<,>,<=,>=,CONTAINS,STARTS WITH,ENDS WITH,IN} AND/OR; RETURN n.prop, COUNT(*), labels(n), DISTINCT; ORDER BY, LIMIT. Node columns: name, qualified_name, file_path, start_line, end_line, label, id, project. Any other property name (e.g. n.signature) falls through to JSON_EXTRACT against the node\'s props blob. Use labels(n) for the node label string; for set-membership use either `n.label IN [\'A\',\'B\']` or `labels(n) IN [\'A\',\'B\']` (or `MATCH (n:Label)`). Capped at 200 rows. Use search_graph for simple symbol lookups. Call get_graph_schema first to discover node labels, edge types, and exact property names.',
       inputSchema: TOOL_SCHEMAS.query_graph,
       handler: async (a: Record<string, unknown>) => {
         try {
