@@ -72,25 +72,47 @@ function buildFileImportMap(
   return fileImportMap;
 }
 
+// ─── Confidence constants (Phase A calibration) ───────────────────────────────
+// Each value corresponds to a resolution path ordered by reliability.
+// See roadmap/wave-80-edge-confidence/phase-a-calibration.md for rationale.
+
+const CONFIDENCE_IMPORT_RESOLVED = 0.95;
+const CONFIDENCE_SAME_FILE = 0.85;
+const CONFIDENCE_NAME_UNIQUE = 0.80;
+const CONFIDENCE_NEW_EXPRESSION_CLASS = 0.65;
+
 // ─── Callee resolution ────────────────────────────────────────────────────────
+
+interface CalleeResolution {
+  calleeQn: string;
+  confidence: number;
+}
 
 function resolveCallee(
   calleeName: string,
   fileCtx: FileCallContext,
   ctx: CallResolutionContext,
   isNewExpression = false,
-): string | null {
-  if (fileCtx.importedNames.has(calleeName)) return fileCtx.importedNames.get(calleeName)!;
+): CalleeResolution | null {
+  if (fileCtx.importedNames.has(calleeName)) {
+    return { calleeQn: fileCtx.importedNames.get(calleeName)!, confidence: CONFIDENCE_IMPORT_RESOLVED };
+  }
   const sameFileDef = fileCtx.fileDefs.find((d) => d.name === calleeName);
-  if (sameFileDef) return `${fileCtx.fileQn}.${sameFileDef.name}`;
+  if (sameFileDef) {
+    return { calleeQn: `${fileCtx.fileQn}.${sameFileDef.name}`, confidence: CONFIDENCE_SAME_FILE };
+  }
   const candidates = ctx.symbolsByName.get(calleeName) ?? [];
   if (candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0];
+  if (candidates.length === 1) {
+    return { calleeQn: candidates[0], confidence: CONFIDENCE_NAME_UNIQUE };
+  }
   // Multiple candidates: for `new X()` prefer the Class node (qualified name ends with .X
   // and the node was registered via the Class label). Caller passes isNewExpression.
   if (isNewExpression) {
     const classCandidate = candidates.find((id) => ctx.classIds?.has(id));
-    if (classCandidate) return classCandidate;
+    if (classCandidate) {
+      return { calleeQn: classCandidate, confidence: CONFIDENCE_NEW_EXPRESSION_CLASS };
+    }
   }
   return null;
 }
@@ -115,14 +137,15 @@ function resolveCallEdges(
       );
       if (!enclosingDef) continue;
       const callerQn = `${fileQn}.${enclosingDef.name}`;
-      const calleeQn = resolveCallee(call.calleeName, fileCtx, ctx, call.isNewExpression);
-      if (calleeQn && calleeQn !== callerQn) {
+      const resolved = resolveCallee(call.calleeName, fileCtx, ctx, call.isNewExpression);
+      if (resolved && resolved.calleeQn !== callerQn) {
         edges.push({
           project: ctx.projectName,
           source_id: callerQn,
-          target_id: calleeQn,
+          target_id: resolved.calleeQn,
           type: call.isAsync ? 'ASYNC_CALLS' : 'CALLS',
           props: {},
+          confidence: resolved.confidence,
         });
       }
     }

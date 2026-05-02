@@ -46,8 +46,8 @@ export function buildCoreStatements(db: Database.Database): Record<string, Datab
       VALUES (@id, @project, @label, @name, @qualified_name, @file_path, @start_line, @end_line, @props)
     `),
     insertEdge: db.prepare(`
-      INSERT OR REPLACE INTO edges (project, source_id, target_id, type, props)
-      VALUES (@project, @source_id, @target_id, @type, @props)
+      INSERT OR REPLACE INTO edges (project, source_id, target_id, type, props, confidence)
+      VALUES (@project, @source_id, @target_id, @type, @props, @confidence)
     `),
     deleteNode: db.prepare('DELETE FROM nodes WHERE id = ?'),
     deleteEdge: db.prepare('DELETE FROM edges WHERE id = ?'),
@@ -228,6 +228,7 @@ export function rowToEdge(row: unknown): GraphEdge {
     target_id: r.target_id as string,
     type: r.type as EdgeType,
     props: JSON.parse(r.props as string),
+    confidence: typeof r.confidence === 'number' ? r.confidence : 1.0,
   };
 }
 

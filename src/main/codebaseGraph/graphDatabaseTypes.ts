@@ -137,6 +137,7 @@ export interface GraphEdge {
   target_id: string; // FK -> nodes.id
   type: EdgeType;
   props: Record<string, unknown>; // JSON properties
+  confidence?: number; // 0.0–1.0; omit to use default 1.0 (set explicitly by call-resolution pass)
 }
 
 // ─── Query/Filter types ──────────────────────────────────────────────────────
