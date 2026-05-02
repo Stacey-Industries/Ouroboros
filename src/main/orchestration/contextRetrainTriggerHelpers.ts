@@ -21,7 +21,26 @@ export { findPython, resetPythonCache };
 
 /* ── Row counting ─────────────────────────────────────────────────────── */
 
-export async function countRows(filePath: string): Promise<number> {
+// eslint-disable-next-line security/detect-unsafe-regex -- bounded date pattern; quantifiers are non-overlapping
+const OUTCOMES_GLOB_RE = /^context-outcomes-\d{4}-\d{2}-\d{2}(?:\.\d+)?\.jsonl$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- bounded date pattern; quantifiers are non-overlapping
+const DECISIONS_GLOB_RE = /^context-decisions-\d{4}-\d{2}-\d{2}(?:\.\d+)?\.jsonl$/;
+
+function classifyJsonlBasename(name: string): boolean {
+  return OUTCOMES_GLOB_RE.test(name) || DECISIONS_GLOB_RE.test(name);
+}
+
+async function isDirectory(p: string): Promise<boolean> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- caller-supplied trusted path
+    const st = await fs.promises.stat(p);
+    return st.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function countRowsInFile(filePath: string): Promise<number> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- caller-supplied trusted path
     const content = await fs.promises.readFile(filePath, 'utf8');
@@ -29,6 +48,32 @@ export async function countRows(filePath: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Wave 70 Phase A2: support both single-file (legacy) and directory paths.
+ * When `pathOrDir` is a directory, sums rows across all date-rotated
+ * `context-{outcomes,decisions}-YYYY-MM-DD[.N].jsonl` files inside.
+ *
+ * Backward compat: single-file usage unchanged. Tests that pass a non-
+ * existent file path still get 0 (via the file-mode fallback).
+ */
+export async function countRows(pathOrDir: string): Promise<number> {
+  if (!(await isDirectory(pathOrDir))) return countRowsInFile(pathOrDir);
+
+  let total = 0;
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- caller-supplied trusted path
+    const entries = await fs.promises.readdir(pathOrDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (!classifyJsonlBasename(entry.name)) continue;
+      total += await countRowsInFile(`${pathOrDir}/${entry.name}`);
+    }
+  } catch {
+    // Unreadable directory — fall through with whatever we accumulated
+  }
+  return total;
 }
 
 /* ── Summary line parsing ─────────────────────────────────────────────── */

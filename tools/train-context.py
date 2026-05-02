@@ -78,8 +78,7 @@ _warned_missing: set[str] = set()
 # JSONL loading
 # ---------------------------------------------------------------------------
 
-def load_jsonl(path: Path) -> list[dict]:
-    """Load a JSONL file, skipping malformed lines with a stderr warning."""
+def _load_one_jsonl(path: Path) -> list[dict]:
     records: list[dict] = []
     with open(path, encoding="utf-8") as fh:
         for lineno, line in enumerate(fh, 1):
@@ -95,6 +94,26 @@ def load_jsonl(path: Path) -> list[dict]:
                     file=sys.stderr,
                 )
     return records
+
+
+def load_jsonl(path: Path, kind: Optional[str] = None) -> list[dict]:
+    """Load a JSONL file, or aggregate all matching date-rotated files in a directory.
+
+    Wave 70 Phase A2: when `path` is a directory and `kind` is "decisions" or
+    "outcomes", glob all `context-<kind>-YYYY-MM-DD[.N].jsonl` files inside and
+    return a concatenated record list. Single-file usage unchanged.
+    """
+    if path.is_dir() and kind in ("decisions", "outcomes"):
+        records: list[dict] = []
+        for entry in sorted(path.iterdir()):
+            if not entry.is_file():
+                continue
+            name = entry.name
+            if not name.startswith(f"context-{kind}-") or not name.endswith(".jsonl"):
+                continue
+            records.extend(_load_one_jsonl(entry))
+        return records
+    return _load_one_jsonl(path)
 
 
 # ---------------------------------------------------------------------------
@@ -382,8 +401,8 @@ def main() -> None:
         sys.exit(1)
 
     print("-- Loading data ----------------------------------------------")
-    decisions = load_jsonl(args.decisions)
-    outcomes = load_jsonl(args.outcomes)
+    decisions = load_jsonl(args.decisions, kind="decisions")
+    outcomes = load_jsonl(args.outcomes, kind="outcomes")
 
     X, y, w, n_synthetic = build_dataset(decisions, outcomes)
 

@@ -27,6 +27,7 @@ import { registerAllTelemetryDrainHandlers } from './mainTelemetryHandlers';
 import { buildApplicationMenu } from './menu';
 import { initDecisionWriter } from './orchestration/contextDecisionWriter';
 import { initOutcomeWriter } from './orchestration/contextOutcomeWriter';
+import { startContextRetrainTriggerIfEnabled } from './orchestration/contextRetrainStartup';
 import { killAllWarm } from './orchestration/providers/claudeWarmProcessManager';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 // prettier-ignore
@@ -223,6 +224,11 @@ async function initTelemetryAndWriters(ud: string): Promise<void> {
   scheduleResearchCachePurge(ud);
   registerAllTelemetryDrainHandlers();
   await runParityQueueDrain();
+  // Wave 70 Phase A2: wire the context-ranker auto-retrain trigger. Default
+  // on; gated by `contextRanker.autoRetrainEnabled`. Required to drive Wave 31's
+  // soak gate forward — the shadow-mode classifier was scoring against frozen
+  // bundled defaults pre-Wave-70.
+  startContextRetrainTriggerIfEnabled(ud);
 }
 
 async function initWindowsAndServices(defaultRoot: string | undefined): Promise<void> {

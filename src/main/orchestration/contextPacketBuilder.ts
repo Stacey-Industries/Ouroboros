@@ -152,19 +152,20 @@ async function enrichPacketWithSystemInstructions(
 }
 
 async function enrichPacket(packet: ContextPacket, request: TaskRequest): Promise<ContextPacket> {
-  const withLayer = await enrichPacketWithContextLayer(packet, request.goal);
+  const withLayer = await enrichPacketWithContextLayer(packet, request.goal, request.model);
   return enrichPacketWithSystemInstructions(withLayer, request);
 }
 
 async function enrichPacketWithContextLayer(
   packet: ContextPacket,
   goal: string,
+  model?: string,
 ): Promise<ContextPacket> {
   try {
     const { getContextLayerController } = await import('../contextLayer/contextLayerController');
     const layerController = getContextLayerController();
     if (layerController) {
-      const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(goal));
+      const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(goal), model);
       return enriched.packet;
     }
   } catch {

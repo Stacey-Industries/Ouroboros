@@ -162,7 +162,12 @@ export interface AppConfig {
   /** Wave 51 Phase B — internalMcp transport selector ('sse' default | 'stdio'). */
   internalMcp?: { transport?: 'sse' | 'stdio' };
   /** Wave 53b Phase B — online ranker hit-rate telemetry. Phase C adds mode (default 'current'). */
-  contextRanker?: { telemetryEnabled?: boolean; mode?: 'current' | 'tuned' | 'experimental' };
+  contextRanker?: {
+    telemetryEnabled?: boolean;
+    mode?: 'current' | 'tuned' | 'experimental';
+    /** Wave 70 Phase A2 — wire startContextRetrainTrigger at startup (default true). */
+    autoRetrainEnabled?: boolean;
+  };
   /** Wave 51 Phase B — CodeMode launch wiring + routing policy flag (Phase C). */
   codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
   /** Wave 3B feature flag — route PTY through PtyHost utility process */

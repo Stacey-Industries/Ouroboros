@@ -289,8 +289,13 @@ export const tailSchemaExt = {
         enum: ['current', 'tuned', 'experimental'],
         default: 'current',
       },
+      /** Wave 70 Phase A2 — wire startContextRetrainTrigger at startup. Default
+       *  on; toggle off as a kill switch if the trainer misbehaves on a user's
+       *  machine. With learnedRanker still off, the trainer feeds the
+       *  shadow-mode classifier — required to satisfy Wave 31's soak gate. */
+      autoRetrainEnabled: { type: 'boolean', default: true },
     },
-    default: { telemetryEnabled: true, mode: 'current' },
+    default: { telemetryEnabled: true, mode: 'current', autoRetrainEnabled: true },
   },
   /** Wave 51 Phase B — internalMcp transport selector. Default 'sse' preserves
    *  existing behavior; 'stdio' opts into the JSON-RPC subprocess wrapper. */

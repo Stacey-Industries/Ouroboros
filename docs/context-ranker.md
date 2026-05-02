@@ -241,6 +241,33 @@ does not bake in a particular metric choice.
 
 ---
 
+## Auto-retrain (Wave 70 Phase A2)
+
+The shadow-mode classifier (`contextClassifier.ts`) ships with hand-tuned bundled defaults
+(`BUNDLED_CONTEXT_WEIGHTS`). At startup the IDE wires `startContextRetrainTrigger` —
+which watches `<userData>` for `context-outcomes-*.jsonl` row growth and spawns
+`tools/train-context.py` once 200 new outcomes accumulate (with a 5-minute cooldown).
+Successful retrains hot-swap weights via `reloadContextWeights()` and log:
+
+```
+[context-ranker] retrain succeeded samples=N auc=0.xx version=<ISO>
+```
+
+**Config flag:** `contextRanker.autoRetrainEnabled` (default `true`). Toggle off as a
+kill switch if the trainer misbehaves on a user's machine.
+
+**Why this matters for the soak gate.** Without auto-retrain, the shadow-mode classifier
+scores every chat session against `BUNDLED_CONTEXT_WEIGHTS` forever — Wave 31's soak
+conditions (≥1000 outcomes + AUC > 0.75 + shadow-mode A/B overlap ≥80%) are unreachable
+because no fresh AUC is ever produced. Phase A2 is the missing leg of that soak.
+
+**Multi-file aware.** Both `countRows` (TS) and `load_jsonl` (Python) glob across all
+date-rotated `context-{outcomes,decisions}-YYYY-MM-DD[.N].jsonl` files in the userData
+directory. Pre-Wave-70 the trigger only saw a single canonical file that doesn't
+exist post-Wave-29.5 (writers became date-rotated).
+
+---
+
 ## Offline analysis (removed 2026-05)
 
 The `analyze-ranker-hit-rate.ts` script set was deleted in 2026-05. Live

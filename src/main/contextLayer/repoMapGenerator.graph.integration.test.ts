@@ -19,8 +19,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CypherEngine } from '../codebaseGraph/cypherEngine';
 import { GraphDatabase } from '../codebaseGraph/graphDatabase';
+import type { IndexedRepoFile, RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { RepoFacts } from '../orchestration/types';
-import type { RepoIndexSnapshot, IndexedRepoFile } from '../orchestration/repoIndexer';
 
 vi.mock('../codebaseGraph/graphControllerSupport', () => ({
   getGraphController: vi.fn(),

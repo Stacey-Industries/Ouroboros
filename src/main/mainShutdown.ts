@@ -17,6 +17,7 @@ import log from './logger';
 import { closeEditProvenance, disposeCodebaseGraph } from './mainStartup';
 import { closeDecisionWriter } from './orchestration/contextDecisionWriter';
 import { closeOutcomeWriter } from './orchestration/contextOutcomeWriter';
+import { stopContextRetrainTrigger } from './orchestration/contextRetrainStartup';
 import { shutdownCodexAppServerProcesses } from './orchestration/providers/codexAppServerProcess';
 import { deleteTokenFile } from './pipeAuth';
 import { closeCorrectionWriter } from './research/correctionWriter';
@@ -46,6 +47,7 @@ function closeSyncStores(): void {
   closeTelemetryStore();
   closeEditProvenance();
   stopRetrainObserver();
+  stopContextRetrainTrigger();
   clearQualityTimers();
 }
 
