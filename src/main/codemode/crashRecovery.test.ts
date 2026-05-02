@@ -103,7 +103,7 @@ interface ConfigShape {
   internalMcpUseStrictConfig?: boolean;
   internalMcpScope?: 'always' | 'task-gated' | 'never';
   internalMcp?: { transport?: 'sse' | 'stdio' };
-  codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
+  codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
 }
 
 function applyConfig(shape: ConfigShape): void {
@@ -166,7 +166,7 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
 
     // Sanity: without failure, the policy is route-through-codemode.
@@ -203,7 +203,7 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'sse' },
-      codemode: { enabled: false, routeInternalMcp: false },
+      codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -224,7 +224,7 @@ describe('buildScopedMcpConfig downgrades when codemodeAcquireFailed=true', () =
     applyConfig({
       internalMcpScope: 'never',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -246,7 +246,7 @@ describe('settings cleanup — coherent state post-downgrade', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -274,7 +274,7 @@ describe('repeated spawns are evaluated independently', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
 
     // Spawn 1 — acquire failed, downgrade applies.
@@ -304,7 +304,7 @@ describe('repeated spawns are evaluated independently', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
 
     const decisions: RoutingDecision[] = [];
@@ -330,7 +330,7 @@ describe('telemetry records the downgraded decision, not the original', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',

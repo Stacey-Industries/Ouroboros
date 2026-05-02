@@ -162,8 +162,8 @@ export interface AppConfig {
     /** Wave 70 Phase A2 — wire startContextRetrainTrigger at startup (default true). */
     autoRetrainEnabled?: boolean;
   };
-  /** Wave 51 Phase B — CodeMode launch wiring + routing policy flag (Phase C). */
-  codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
+  /** Wave 51 Phase B — CodeMode launch wiring. */
+  codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
   /** Wave 3B feature flag — route PTY through PtyHost utility process */
   usePtyHost: boolean;
   /** Wave 3B feature flag — route extensions through ExtensionHost utility process */

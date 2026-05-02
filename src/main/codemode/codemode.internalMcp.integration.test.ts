@@ -97,7 +97,7 @@ interface ConfigShape {
   internalMcpUseStrictConfig?: boolean;
   internalMcpScope?: 'always' | 'task-gated' | 'never';
   internalMcp?: { transport?: 'sse' | 'stdio' };
-  codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
+  codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
 }
 
 function applyConfig(shape: ConfigShape): void {
@@ -157,7 +157,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'sse' },
-      codemode: { enabled: false, routeInternalMcp: false },
+      codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -180,7 +180,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: false, routeInternalMcp: false },
+      codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -206,7 +206,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -224,7 +224,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'never',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -246,7 +246,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -277,7 +277,7 @@ describe('settings-write shape', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -297,11 +297,11 @@ describe('settings-write shape', () => {
 // ─── Transport guard: route-through-codemode requires stdio ──────────────────
 
 describe('route-through-codemode requires stdio transport', () => {
-  it('falls back to direct-inject when routeInternalMcp=true but transport=sse', async () => {
+  it('falls back to direct-inject when codemode.enabled=true but transport=sse', async () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'sse' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -325,7 +325,7 @@ describe('telemetry emission', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'sse' },
-      codemode: { enabled: false, routeInternalMcp: false },
+      codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -347,7 +347,7 @@ describe('telemetry emission', () => {
     applyConfig({
       internalMcpScope: 'task-gated',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -367,7 +367,7 @@ describe('telemetry emission', () => {
     applyConfig({
       internalMcpScope: 'never',
       internalMcp: { transport: 'stdio' },
-      codemode: { enabled: true, routeInternalMcp: true },
+      codemode: { enabled: true },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'code',
@@ -385,7 +385,7 @@ describe('telemetry emission', () => {
     applyConfig({
       internalMcpScope: 'always',
       internalMcp: { transport: 'sse' },
-      codemode: { enabled: false, routeInternalMcp: false },
+      codemode: { enabled: false },
     });
     const result = await buildScopedMcpConfig({
       goalShape: 'casual',

@@ -174,8 +174,6 @@ function makeCleanup(configPath: string): () => Promise<void> {
 
 interface CodemodeConfig {
   enabled?: boolean;
-  /** Wave 53l Phase B — deprecated; ignored by routing. Kept on type for back-compat. */
-  routeInternalMcp?: boolean;
   excludeFromMultiplex?: string[];
 }
 

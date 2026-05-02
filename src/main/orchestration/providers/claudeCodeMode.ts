@@ -30,12 +30,6 @@ import { decideInternalMcpRouting } from './internalMcpRoutingPolicy';
 
 interface CodeModeConfig {
   enabled?: boolean;
-  /**
-   * Wave 53l Phase B — kept on the type for backward compatibility with
-   * older config files but no longer consulted by routing. Exclusion is
-   * the per-server gate now (see `excludeFromMultiplex`).
-   */
-  routeInternalMcp?: boolean;
   excludeFromMultiplex?: string[];
 }
 
