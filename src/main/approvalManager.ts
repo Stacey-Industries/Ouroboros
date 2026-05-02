@@ -46,6 +46,8 @@ export interface ApprovalRequest {
 export interface ApprovalResponse {
   decision: 'approve' | 'reject';
   reason?: string;
+  /** Advisory message surfaced to the agent via PreToolUse hook stdout (warn decisions only). */
+  message?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -194,7 +196,7 @@ export function cancelApprovalRequest(requestId: string, reason = 'cancelled'): 
   clearQueuedResponseWrite(requestId);
   pendingRequests.delete(requestId);
   log.info(`[approval] cancelled ${requestId}: ${reason}`);
-  notifyApprovalResolved(requestId, 'reject');
+  notifyApprovalResolved(requestId, { decision: 'reject' });
   return true;
 }
 
@@ -306,7 +308,10 @@ async function attemptFileWrite(
       const retrySuffix =
         queuedAttempt > 0 || attempt > 0 ? ` (retry ${queuedAttempt + attempt})` : '';
       log.debug(`wrote response for ${requestId}: ${decision}${retrySuffix}`);
-      notifyApprovalResolved(requestId, decision);
+      // Parse the full response from data so the pipe waiter receives message
+      // as well as decision (warn decisions carry an agent-facing message field).
+      const fullResponse: ApprovalResponse = JSON.parse(opts.data) as ApprovalResponse;
+      notifyApprovalResolved(requestId, fullResponse);
       return { success: true, lastError: undefined };
     } catch (err) {
       lastError = err;
