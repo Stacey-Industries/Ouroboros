@@ -10,6 +10,12 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 // ─── DDL ─────────────────────────────────────────────────────────────────────
 
 export const TELEMETRY_SCHEMA_SQL = `
+-- Wave 70 Phase C3: auto_vacuum=INCREMENTAL must be set BEFORE any tables
+-- are created. On a fresh DB this enables incremental free-page reclamation
+-- triggered by PRAGMA incremental_vacuum (or implicit on subsequent writes).
+-- Pre-existing DBs would need a full VACUUM to take effect — acceptable; the
+-- 30-day purge means any hot-tier file size growth is bounded regardless.
+PRAGMA auto_vacuum = INCREMENTAL;
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
 PRAGMA foreign_keys = ON;

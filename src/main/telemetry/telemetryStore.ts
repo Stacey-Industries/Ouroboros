@@ -21,6 +21,10 @@ import type { HookPayload } from '../hooks';
 import log from '../logger';
 import { openDatabase } from '../storage/database';
 import {
+  createTelemetryJsonlMirror,
+  type TelemetryJsonlMirror,
+} from './telemetryJsonlMirror';
+import {
   type InvocationRow,
   migrateSchemaVersion,
   type OutcomeRow,
@@ -104,6 +108,8 @@ interface StoreState {
   queue: PendingEvent[];
   intervalHandle: ReturnType<typeof setInterval>;
   purgeHandle: ReturnType<typeof setInterval>;
+  /** Wave 70 Phase C2 — JSONL cold-tier archive (retention disabled). */
+  jsonlMirror: TelemetryJsonlMirror | null;
 }
 
 let singleton: TelemetryStore | null = null;
@@ -168,14 +174,17 @@ function enqueueEvent(state: StoreState, payload: HookPayload): string {
   const id = crypto.randomUUID();
   if (!isFlagEnabled()) return id;
   const correlationId = payload.correlationId ?? crypto.randomUUID();
-  state.queue.push({
+  const redacted = redactPayload(payload);
+  const row = {
     id,
     type: payload.type,
     sessionId: payload.sessionId,
     correlationId,
     timestamp: payload.timestamp,
-    payload: JSON.stringify(redactPayload(payload)),
-  });
+  };
+  state.queue.push({ ...row, payload: JSON.stringify(redacted) });
+  // Wave 70 Phase C2 — dual-write to JSONL archive (fire-and-forget).
+  state.jsonlMirror?.appendEvent({ ...row, payload: redacted });
   return id;
 }
 
@@ -279,6 +288,12 @@ function closeStore(state: StoreState): void {
     }
   }
   try {
+    state.jsonlMirror?.close();
+  } catch (err) {
+    log.warn('[telemetry] jsonl mirror close error', err);
+  }
+  state.jsonlMirror = null;
+  try {
     state.db.close();
   } catch {
     // Already closed
@@ -288,7 +303,8 @@ function closeStore(state: StoreState): void {
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function openTelemetryStore(userDataDir: string): TelemetryStore {
-  const dbPath = path.join(userDataDir, 'telemetry', 'telemetry.db');
+  const telemetryDir = path.join(userDataDir, 'telemetry');
+  const dbPath = path.join(telemetryDir, 'telemetry.db');
   const db = openDatabase(dbPath);
   db.exec(TELEMETRY_SCHEMA_SQL);
   migrateSchemaVersion(db);
@@ -297,6 +313,8 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
     queue: [],
     intervalHandle: setInterval(() => undefined, 1 << 30),
     purgeHandle: setInterval(() => undefined, 1 << 30),
+    // Wave 70 Phase C2 — cold-tier JSONL archive (retention disabled).
+    jsonlMirror: createTelemetryJsonlMirror(telemetryDir),
   };
   clearInterval(state.intervalHandle);
   clearInterval(state.purgeHandle);
