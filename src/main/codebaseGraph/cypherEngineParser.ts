@@ -17,6 +17,27 @@ import type { OrderByClause, WhereCondition } from './cypherEngineSupport';
 // Multiple conditions joined by AND / OR.
 // Anything that doesn't match these shapes throws — silent drop hides bugs.
 
+const SUPPORTED_FEATURES_HINT =
+  'Supported: MATCH, OPTIONAL MATCH, UNWIND [...] AS x, WHERE, RETURN, ORDER BY, LIMIT. ' +
+  'NOT supported: WITH (pipeline operator). See get_graph_schema for the full feature list.';
+
+/**
+ * Throw a clear error if the query contains a top-level clause that the engine
+ * does not support. Currently only WITH is permanently unsupported; OPTIONAL MATCH
+ * and UNWIND are handled by dedicated parse paths.
+ */
+export function assertNoUnsupportedClauses(query: string): void {
+  const upper = query.toUpperCase();
+  // Match WITH as a clause keyword: must be at start or after whitespace,
+  // and followed by whitespace or end-of-string (not "WITHOUT", "WIDTH", etc.)
+  if (/(?:^|\s)WITH\s/i.test(upper)) {
+    throw new Error(
+      `Cypher feature not supported by Ouroboros mini-engine: WITH (pipeline operator). ` +
+        SUPPORTED_FEATURES_HINT,
+    );
+  }
+}
+
 /** Extract the content of a named clause from the query string. */
 export function extractClause(query: string, clause: string): string | null {
   const clauseUpper = clause.toUpperCase();

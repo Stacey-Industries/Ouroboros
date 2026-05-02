@@ -9,7 +9,10 @@
  * - MATCH (n:Label) WHERE ... RETURN ...
  * - MATCH (n:Label)-[:TYPE]->(m:Label) WHERE ... RETURN ...
  * - MATCH (n)-[:TYPE*1..3]->(m) WHERE ... RETURN ...
- * - WHERE: =, <>, CONTAINS, STARTS WITH, ENDS WITH, >, <, >=, <=, AND, OR
+ * - MATCH (a)-[:X]->(b), (b)-[:Y]->(c) — multi-pattern
+ * - OPTIONAL MATCH (a)-[:TYPE]->(b) — LEFT JOIN
+ * - UNWIND ['a','b'] AS x — literal list expansion
+ * - WHERE: =, <>, CONTAINS, STARTS WITH, ENDS WITH, >, <, >=, <=, AND, OR, IN
  * - RETURN with property access (n.name, n.file_path)
  * - ORDER BY, LIMIT, COUNT, DISTINCT
  *
@@ -17,7 +20,7 @@
  * Results capped at 200 rows.
  */
 
-import { extractClause, parseOrderBy, parseWhere } from './cypherEngineParser';
+import { assertNoUnsupportedClauses, extractClause, parseOrderBy, parseWhere } from './cypherEngineParser';
 import {
   buildOrderBy,
   buildWhereRhs,
@@ -105,6 +108,8 @@ export class CypherEngine {
   // ═══════════════════════════════════════════════════════════════════════════
 
   private parse(query: string): ParsedQuery {
+    assertNoUnsupportedClauses(query);
+
     const matchClause = extractClause(query, 'MATCH');
     const whereClause = extractClause(query, 'WHERE');
     const returnClause = extractClause(query, 'RETURN');
