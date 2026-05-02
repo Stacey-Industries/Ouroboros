@@ -5,7 +5,7 @@
  *   - skip when `codemode.enabled` is false
  *   - skip (and join) when CodeMode is already enabled in this process
  *   - graceful downgrade when codemodeManager.enableCodeMode rejects
- *   - ouroboros inclusion gated on transport === 'stdio' AND routeInternalMcp
+ *   - ouroboros included by default when codemode on; excluded via excludeFromMultiplex
  *   - disable runs only when this caller owns the lifecycle
  */
 
@@ -96,29 +96,16 @@ describe('acquireCodeModeForLaunch', () => {
     expect(enableFn).not.toHaveBeenCalled();
   });
 
-  it('omits ouroboros from proxied set when transport !== stdio', async () => {
+  it('includes ouroboros by default when codemode enabled (Wave 79: transport gate removed)', async () => {
     setConfig({ codemode: { enabled: true } });
     await acquireCodeModeForLaunch('/proj');
     const names = enableFn.mock.calls[0][0] as string[];
-    expect(names).not.toContain('ouroboros');
+    expect(names).toContain('ouroboros');
     expect(names).toEqual(expect.arrayContaining(['sentry', 'github']));
   });
 
-  it('includes ouroboros by default when transport === stdio (Wave 53l Phase B)', async () => {
-    setConfig({
-      codemode: { enabled: true },
-      internalMcp: { transport: 'stdio' },
-    });
-    await acquireCodeModeForLaunch('/proj');
-    const names = enableFn.mock.calls[0][0] as string[];
-    expect(names).toContain('ouroboros');
-  });
-
   it('omits ouroboros when excludeFromMultiplex contains it', async () => {
-    setConfig({
-      codemode: { enabled: true, excludeFromMultiplex: ['ouroboros'] },
-      internalMcp: { transport: 'stdio' },
-    });
+    setConfig({ codemode: { enabled: true, excludeFromMultiplex: ['ouroboros'] } });
     await acquireCodeModeForLaunch('/proj');
     const names = enableFn.mock.calls[0][0] as string[];
     expect(names).not.toContain('ouroboros');
@@ -167,8 +154,8 @@ describe('acquireCodeModeForLaunch', () => {
     expect(enableFn.mock.calls[0][1]).toBe('global');
   });
 
-  it('skips enable when there are no upstream servers to proxy', async () => {
-    setConfig({ codemode: { enabled: true } });
+  it('skips enable when no upstream servers and ouroboros excluded from multiplex', async () => {
+    setConfig({ codemode: { enabled: true, excludeFromMultiplex: ['ouroboros'] } });
     serversFn.mockResolvedValue([]);
     const h = await acquireCodeModeForLaunch('/proj');
     expect(h.ownsLifecycle).toBe(false);
