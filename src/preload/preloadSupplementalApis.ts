@@ -121,7 +121,6 @@ export const supplementalApis: SupplementalApis = {
     unsubscribe: () => ipcRenderer.invoke('perf:unsubscribe'),
     onMetrics: (callback) => onChannel<PerfMetrics>('perf:metrics', callback),
     mark: (phase: string) => ipcRenderer.invoke('perf:mark', phase),
-    markFirstRender: () => ipcRenderer.invoke('perf:markFirstRender'),
     getStartupTimings: () => ipcRenderer.invoke('perf:getStartupTimings'),
     getRuntimeMetrics: () => ipcRenderer.invoke('perf:getRuntimeMetrics'),
     getStartupHistory: (limit?: number) => ipcRenderer.invoke('perf:getStartupHistory', { limit }),

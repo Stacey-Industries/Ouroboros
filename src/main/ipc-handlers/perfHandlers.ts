@@ -2,7 +2,6 @@
  * perfHandlers.ts — IPC handlers for performance metrics channels.
  *
  * Registers perf:ping, perf:subscribe, perf:unsubscribe, perf:mark,
- * perf:markFirstRender (back-compat alias for perf:mark('first-render')),
  * perf:getStartupTimings, perf:getRuntimeMetrics, and perf:getStartupHistory.
  */
 
@@ -68,12 +67,6 @@ function handleMark(
   return ok();
 }
 
-function handleFirstRender(): { success: true } {
-  markStartup('first-render');
-  flushStartupLog();
-  return ok();
-}
-
 async function handleGetStartupHistory(
   _event: Electron.IpcMainInvokeEvent,
   args: { limit?: number } = {},
@@ -88,7 +81,6 @@ export function registerPerfHandlers(channels: ChannelList): void {
   registerChannel(channels, 'perf:subscribe', (event) => subscribeToPerfMetrics(event));
   registerChannel(channels, 'perf:unsubscribe', (event) => unsubscribeFromPerfMetrics(event));
   registerChannel(channels, 'perf:mark', handleMark);
-  registerChannel(channels, 'perf:markFirstRender', handleFirstRender);
   registerChannel(channels, 'perf:getStartupTimings', () => ok({ timings: getStartupTimings() }));
   registerChannel(channels, 'perf:getRuntimeMetrics', () =>
     ok({ metrics: getLatestPerfMetrics() }),

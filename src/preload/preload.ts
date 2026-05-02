@@ -170,7 +170,6 @@ const appAPI: ElectronAPI['app'] = {
   showStreamCompletionNotification: (options) =>
     ipcRenderer.invoke('app:showStreamCompletionNotification', options),
 
-  rebuildAndRestart: () => ipcRenderer.invoke('app:rebuildAndRestart'),
   rebuildWeb: () => ipcRenderer.invoke('app:rebuildWeb'),
 
   onMenuEvent: (callback) => {
@@ -242,7 +241,6 @@ const appAPI: ElectronAPI['app'] = {
 
 const shellAPI: ElectronAPI['shell'] = {
   showItemInFolder: (fullPath) => ipcRenderer.invoke('shell:showItemInFolder', fullPath),
-  openExtensionsFolder: () => ipcRenderer.invoke('shell:openExtensionsFolder'),
 };
 
 // â”€â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

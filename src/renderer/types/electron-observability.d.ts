@@ -109,7 +109,6 @@ export interface PerfAPI {
   unsubscribe: () => Promise<IpcResult>;
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void;
   mark: (phase: StartupMark['phase']) => Promise<IpcResult>;
-  markFirstRender: () => Promise<IpcResult>;
   getStartupTimings: () => Promise<StartupTimingsResult>;
   getRuntimeMetrics: () => Promise<RuntimeMetricsResult>;
   getStartupHistory: (limit?: number) => Promise<StartupHistoryResult>;

@@ -303,7 +303,6 @@ export interface AppAPI {
   notify: (options: NotifyOptions) => Promise<NotifyResult>;
   /** Wave 22 Phase E — desktop notification on chat stream completion (unfocused-only). */
   showStreamCompletionNotification: (options: StreamCompletionNotifyOptions) => Promise<IpcResult>;
-  rebuildAndRestart: () => Promise<IpcResult>;
   rebuildWeb: () => Promise<IpcResult>;
   onMenuEvent: (callback: (event: MenuEvent) => void) => () => void;
   /** Custom window controls (frame: false on Windows) */
@@ -342,7 +341,6 @@ export interface AppAPI {
 
 export interface ShellAPI {
   showItemInFolder: (fullPath: string) => Promise<IpcResult>;
-  openExtensionsFolder: () => Promise<IpcResult>;
 }
 
 export interface ThemeAPI {

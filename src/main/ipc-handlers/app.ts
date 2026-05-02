@@ -44,18 +44,6 @@ function showItemInFolder(fullPath: string): HandlerResult {
   }
 }
 
-async function openExtensionsFolder(): Promise<HandlerResult> {
-  try {
-    const extensionsPath = path.join(app.getPath('userData'), 'extensions');
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from app.getPath('userData'), not user input
-    await fs.mkdir(extensionsPath, { recursive: true });
-    await shell.openPath(extensionsPath);
-    return { success: true };
-  } catch (err) {
-    return toErrorResult(err);
-  }
-}
-
 async function openExternalUrl(url: string): Promise<HandlerResult> {
   try {
     if (path.isAbsolute(url)) {
@@ -140,8 +128,6 @@ function registerShellHandlers(channels: string[]): void {
   });
   channels.push('shell:showItemInFolder');
 
-  ipcMain.handle('shell:openExtensionsFolder', () => openExtensionsFolder());
-  channels.push('shell:openExtensionsFolder');
 }
 
 function registerAppMetadataHandlers(channels: string[]): void {
@@ -196,36 +182,8 @@ function registerTitlebarHandlers(channels: string[], senderWindow: SenderWindow
   channels.push('titlebar:setOverlayColors');
 }
 
-function runBuildCommand(cwd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const cmd = 'npm run build && npm run build:web';
-    exec(cmd, { cwd, timeout: 300000 }, (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(stderr || err.message));
-      } else {
-        resolve(stdout);
-      }
-    });
-  });
-}
-
 function getProjectRoot(): string {
   return app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-}
-
-async function handleRebuildAndRestart(): Promise<HandlerResult> {
-  try {
-    broadcastToWebClients('app:rebuilding', { status: 'building' });
-    await runBuildCommand(getProjectRoot());
-    broadcastToWebClients('app:rebuilding', { status: 'restarting' });
-    setTimeout(() => {
-      app.relaunch();
-      app.exit(0);
-    }, 500);
-    return { success: true };
-  } catch (err) {
-    return toErrorResult(err);
-  }
 }
 
 function handleRebuildWeb(): Promise<HandlerResult> {
@@ -258,9 +216,7 @@ function handleRebuildWeb(): Promise<HandlerResult> {
 }
 
 function registerRebuildHandlers(channels: string[]): void {
-  ipcMain.handle('app:rebuildAndRestart', handleRebuildAndRestart);
   ipcMain.handle('app:rebuildWeb', handleRebuildWeb);
-  channels.push('app:rebuildAndRestart');
   channels.push('app:rebuildWeb');
 }
 

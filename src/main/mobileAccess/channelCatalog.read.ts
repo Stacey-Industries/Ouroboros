@@ -164,7 +164,6 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   'perf:getStartupHistory': { class: 'paired-read', timeoutClass: 'short' },
   'perf:getStartupTimings': { class: 'paired-read', timeoutClass: 'short' },
   'perf:mark': { class: 'paired-read', timeoutClass: 'short' },
-  'perf:markFirstRender': { class: 'paired-read', timeoutClass: 'short' },
   'perf:subscribe': { class: 'paired-read', timeoutClass: 'short' },
   'perf:unsubscribe': { class: 'paired-read', timeoutClass: 'short' },
 

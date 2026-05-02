@@ -75,7 +75,6 @@ export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
   'app:openCrashLogDir':            { class: 'desktop-only', timeoutClass: 'short' },
   'app:openExternal':               { class: 'desktop-only', timeoutClass: 'short' },
   'app:open-logs-folder':           { class: 'desktop-only', timeoutClass: 'short' },
-  'app:rebuildAndRestart':          { class: 'desktop-only', timeoutClass: 'long' },
   'app:rebuildWeb':                 { class: 'desktop-only', timeoutClass: 'long' },
   'app:showStreamCompletionNotification': { class: 'desktop-only', timeoutClass: 'short' },
 
@@ -149,7 +148,6 @@ export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
   'sessionCrud:openChatWindow':     { class: 'desktop-only', timeoutClass: 'normal' },
 
   // ── shell (opens native shell / Finder / Explorer) ───────────────────────────
-  'shell:openExtensionsFolder':     { class: 'desktop-only', timeoutClass: 'short' },
   'shell:showItemInFolder':         { class: 'desktop-only', timeoutClass: 'short' },
 
   // ── titlebar (desktop window chrome) ─────────────────────────────────────────

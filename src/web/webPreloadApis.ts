@@ -177,7 +177,6 @@ function buildAppCoreApi(t: WebSocketTransport) {
     notify: (options: unknown) => t.invoke('app:notify', options),
     showStreamCompletionNotification: (options: unknown) =>
       t.invoke('app:showStreamCompletionNotification', options),
-    rebuildAndRestart: desktopOnlyNoop(),
     rebuildWeb: () => t.invoke('app:rebuildWeb'),
     saveFileDialog: (defaultName: string, content: string) =>
       t.invoke('dialog:saveFile', defaultName, content),
@@ -238,7 +237,6 @@ export function buildAppApi(t: WebSocketTransport) {
 export function buildShellThemeApis(t: WebSocketTransport) {
   const shellAPI = {
     showItemInFolder: desktopOnlyNoop(),
-    openExtensionsFolder: desktopOnlyNoop(),
   };
   const themeAPI = {
     get: () => t.invoke('theme:get'),

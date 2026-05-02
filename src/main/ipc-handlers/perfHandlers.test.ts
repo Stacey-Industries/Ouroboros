@@ -107,7 +107,6 @@ describe('registerPerfHandlers', () => {
         'perf:subscribe',
         'perf:unsubscribe',
         'perf:mark',
-        'perf:markFirstRender',
         'perf:getStartupTimings',
         'perf:getRuntimeMetrics',
         'perf:getStartupHistory',
@@ -152,30 +151,6 @@ describe('registerPerfHandlers', () => {
     const result = handlers['perf:mark']?.({} as never, 'totally-fake-phase' as never);
     expect(result).toMatchObject({ success: false });
     expect(mockMarkStartup).not.toHaveBeenCalled();
-  });
-
-  it('perf:markFirstRender (back-compat) calls markStartup, logs summary, and appends record', () => {
-    mockFormatSummary.mockReturnValue('app-ready=10ms first-render=200ms');
-    handlers['perf:markFirstRender']?.({} as never, ...([] as never[]));
-
-    expect(mockMarkStartup).toHaveBeenCalledWith('first-render');
-    expect(mockLogInfo).toHaveBeenCalledWith(
-      '[perf] startup:',
-      'app-ready=10ms first-render=200ms',
-    );
-    expect(mockAppendRecord).toHaveBeenCalledWith(mockGetStartupTimings());
-    expect(handlers['perf:markFirstRender']?.({} as never, ...([] as never[]))).toMatchObject({
-      success: true,
-    });
-  });
-
-  it('perf:markFirstRender does NOT log when summary is empty', () => {
-    mockFormatSummary.mockReturnValue('');
-    vi.clearAllMocks();
-    handlers['perf:markFirstRender']?.({} as never, ...([] as never[]));
-
-    expect(mockLogInfo).not.toHaveBeenCalled();
-    expect(mockAppendRecord).toHaveBeenCalledTimes(1);
   });
 
   it('perf:mark(first-render) does NOT log when summary is empty', () => {
