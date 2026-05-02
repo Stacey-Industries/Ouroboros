@@ -6,30 +6,16 @@
  * MobileLayoutContext so users can reach the file tree from any panel.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import { useToastContext } from '../../contexts/ToastContext';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import { NotificationBadge } from '../shared/NotificationCenter';
 import type { TitleBarAction } from './TitleBar';
 import { getMenuDefinitions } from './TitleBar.menus';
 import { dropdownStyle, MenuItemRow, menuItemRowStyle, separatorStyle } from './TitleBar.navbar';
-
-function useOutsideClick(
-  ref: React.RefObject<HTMLElement | null>,
-  isOpen: boolean,
-  onClose: () => void,
-) {
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleClick(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [ref, isOpen, onClose]);
-}
 
 const MOBILE_ITEM_STYLE: React.CSSProperties = {
   ...menuItemRowStyle,

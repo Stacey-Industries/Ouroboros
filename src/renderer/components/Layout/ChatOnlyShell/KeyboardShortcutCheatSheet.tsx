@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { TOGGLE_SHORTCUT_CHEATSHEET_EVENT } from '../../../hooks/appEventNames';
+import { useOutsideClick } from '../../../hooks/useOutsideClick';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,25 +124,6 @@ function useDismissOnEsc(open: boolean, onClose: () => void): void {
   }, [open, onClose]);
 }
 
-// ── Outside-click dismiss hook ────────────────────────────────────────────────
-
-function useOutsideClick(
-  open: boolean,
-  cardRef: React.RefObject<HTMLDivElement | null>,
-  onClose: () => void,
-): void {
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: PointerEvent): void => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', handler);
-    return () => {
-      document.removeEventListener('pointerdown', handler);
-    };
-  }, [open, cardRef, onClose]);
-}
-
 // ── Modal overlay ─────────────────────────────────────────────────────────────
 
 interface CheatSheetModalProps {
@@ -164,7 +146,7 @@ function CheatSheetCardHeader({ onClose }: { onClose: () => void }): React.React
 
 function CheatSheetModal({ onClose }: CheatSheetModalProps): React.ReactElement {
   const cardRef = useRef<HTMLDivElement>(null);
-  useOutsideClick(true, cardRef, onClose);
+  useOutsideClick(cardRef, true, onClose);
 
   return createPortal(
     <div className="fixed inset-0 z-[9998] flex items-center justify-center"

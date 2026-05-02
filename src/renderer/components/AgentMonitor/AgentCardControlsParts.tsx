@@ -1,27 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { ActionIconButton } from './AgentCardControls';
 import type { AgentSession } from './types';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
-export function useOutsideClick(
-  ref: React.RefObject<HTMLDivElement | null>,
-  open: boolean,
-  onClose: () => void,
-): void {
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClick(event: MouseEvent): void {
-      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
-    }
-
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open, onClose, ref]);
-}
+export { useOutsideClick };
 
 export function useExportSession(
   session: AgentSession,
