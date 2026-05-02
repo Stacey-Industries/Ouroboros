@@ -269,7 +269,7 @@ export function DeleteMemoryConfirm({
         <div className="px-4 py-4 text-[12px] text-text-semantic-secondary">
           Delete{' '}
           <span className="font-medium text-text-semantic-primary">{label}</span>
-          {'? This removes the file and its MEMORY.md index line.'}
+          {'? This cannot be undone. The file and its MEMORY.md index line will be removed.'}
         </div>
         {error && <div className="px-4 pb-2"><ErrorAlert message={error} /></div>}
         <ModalFooter>

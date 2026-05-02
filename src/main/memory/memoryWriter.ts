@@ -23,12 +23,12 @@ export interface WriteFrontmatter {
   type: MemoryType;
 }
 
-export interface WriteResult {
+interface WriteResult {
   success: true;
   id: string;
 }
 
-export interface WriteError {
+interface WriteError {
   success: false;
   error: string;
 }

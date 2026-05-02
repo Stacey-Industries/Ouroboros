@@ -15,7 +15,7 @@ import { ipcMain } from 'electron';
 
 import { listMemoryEntries, readMemoryEntry } from '../memory/memoryReader';
 import { startMemoryWatcher } from '../memory/memoryWatcher';
-import type { MemoryType, WriteFrontmatter } from '../memory/memoryWriter';
+import type { WriteFrontmatter } from '../memory/memoryWriter';
 import { deleteMemoryEntry, writeMemoryEntry } from '../memory/memoryWriter';
 
 type FailResult = { success: false; error: string };
@@ -108,5 +108,3 @@ export function registerMemoryHandlers(initialCwd?: string): string[] {
   activateWatcher(initialCwd ?? process.cwd());
   return channels;
 }
-
-export type { MemoryType };
