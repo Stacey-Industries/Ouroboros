@@ -36,8 +36,40 @@ export interface MemoryReadResult {
   error?: string;
 }
 
+export type MemoryType = 'user' | 'feedback' | 'project' | 'reference';
+
+export interface MemoryWriteFrontmatter {
+  description: string;
+  type: MemoryType;
+}
+
+export interface MemoryWriteArgs {
+  projectRoot?: string;
+  id: string;
+  content: string;
+  frontmatter: MemoryWriteFrontmatter;
+}
+
+export interface MemoryWriteResult {
+  success: boolean;
+  id?: string;
+  error?: string;
+}
+
+export interface MemoryDeleteArgs {
+  projectRoot?: string;
+  id: string;
+}
+
+export interface MemoryDeleteResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface MemoryAPI {
   list: (projectRoot?: string) => Promise<MemoryListResult>;
   read: (args: { projectRoot?: string; id: string }) => Promise<MemoryReadResult>;
+  write: (args: MemoryWriteArgs) => Promise<MemoryWriteResult>;
+  delete: (args: MemoryDeleteArgs) => Promise<MemoryDeleteResult>;
   onChanged: (callback: () => void) => () => void;
 }
