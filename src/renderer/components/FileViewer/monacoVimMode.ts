@@ -105,28 +105,7 @@ export function disableVimMode(): void {
   }
 }
 
-/**
- * Enable Emacs keybindings on a Monaco editor instance.
- *
- * Stub implementation — will use `monaco-emacs` package when available.
- *
- * @param _editor - The Monaco standalone code editor
- * @returns A dispose function, or null if not available
- */
-export async function enableEmacsMode(
-  _editor: monaco.editor.IStandaloneCodeEditor,
-): Promise<(() => void) | null> {
-  void _editor;
-  // TODO: Install and integrate `monaco-emacs` package
-  // import { EmacsExtension } from 'monaco-emacs';
-  // const ext = new EmacsExtension(editor);
-  // ext.start();
-  // return () => ext.dispose();
-  log.warn('Emacs mode not yet implemented — install monaco-emacs package');
-  return null;
-}
-
-export type KeybindingMode = 'default' | 'vim' | 'emacs';
+export type KeybindingMode = 'default' | 'vim';
 
 export function filePathToUri(filePath: string): monaco.Uri {
   const normalized = filePath.replace(/\\/g, '/');

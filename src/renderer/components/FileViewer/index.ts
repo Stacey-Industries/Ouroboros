@@ -41,7 +41,7 @@ export { MonacoEditorHost } from './MonacoEditorHost';
 export { disposeMonacoModel as disposeMonacoHostModel } from './MonacoEditorHost';
 export { registerInlineCompletionProvider } from './monacoInlineCompletions';
 export type { KeybindingMode } from './monacoVimMode';
-export { disableVimMode, enableEmacsMode, enableVimMode } from './monacoVimMode';
+export { disableVimMode, enableVimMode } from './monacoVimMode';
 export type {
   AddExcerptFormProps,
   MultiBufferManagerProps,

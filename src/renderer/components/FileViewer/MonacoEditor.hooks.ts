@@ -11,7 +11,6 @@ import { mountMonacoEditor, type RuntimeInput } from './MonacoEditor.mount';
 import { useMonacoLspLifecycle } from './monacoLsp';
 import {
   buildDiffDecorations,
-  enableEmacsMode,
   enableVimMode,
   setHostSavedVersion,
 } from './monacoVimMode';
@@ -106,10 +105,6 @@ export function useMonacoEditorModes(input: RuntimeInput): void {
     }
     if (input.keybindingMode === 'vim' && input.vimStatusRef.current) {
       void enableVimMode(editor, input.vimStatusRef.current).then((dispose) => {
-        if (dispose) input.vimDisposeRef.current = dispose;
-      });
-    } else if (input.keybindingMode === 'emacs') {
-      void enableEmacsMode(editor).then((dispose) => {
         if (dispose) input.vimDisposeRef.current = dispose;
       });
     }
