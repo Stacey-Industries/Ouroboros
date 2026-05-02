@@ -121,7 +121,7 @@ describe('updater:download handler — downgrade block', () => {
 
     handlers = captureHandlers();
 
-    const { registerUpdaterHandlers } = await import('./miscRegistrars');
+    const { registerUpdaterHandlers } = await import('./updaterHandlers');
     const channels: string[] = [];
     registerUpdaterHandlers(channels);
   });
