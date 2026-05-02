@@ -278,14 +278,19 @@ export async function buildPrompt(
 // Claude CLI spawner
 // ---------------------------------------------------------------------------
 
-export function spawnClaude(prompt: string, model: string, cwd?: string): Promise<string> {
+export function spawnClaude(
+  prompt: string,
+  model: string,
+  cwd?: string,
+  extraEnv?: Record<string, string>,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = ['-p', '--output-format', 'text', '--model', model];
     const child = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: CLAUDE_TIMEOUT_MS,
       cwd: cwd || undefined,
-      env: { ...process.env, OUROBOROS_INTERNAL: '1' },
+      env: { ...process.env, OUROBOROS_INTERNAL: '1', ...extraEnv },
     });
 
     let stdout = '';

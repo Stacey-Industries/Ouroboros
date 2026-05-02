@@ -8,7 +8,7 @@ import fsSync from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { setSecureKey } from '../auth/secureKeyStore';
+import { hasSecureKey, setSecureKey } from '../auth/secureKeyStore';
 import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config';
 import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes';
 import log from '../logger';
@@ -123,44 +123,37 @@ function interceptSecrets(key: string, value: unknown): unknown {
   });
 }
 
+function handleConfigSet(_event: IpcMainInvokeEvent, key: unknown, value: unknown): unknown {
+  try {
+    const safeValue = interceptSecrets(key as string, value);
+    setConfigValue(key as keyof AppConfig, safeValue as AppConfig[keyof AppConfig]);
+    notifyExternalConfigChange(getConfig());
+    if (key === 'contextLayer') {
+      import('../contextLayer/contextLayerController')
+        .then(({ getContextLayerController }) => {
+          const ctrl = getContextLayerController();
+          if (ctrl) {
+            ctrl.onConfigChange(value as ContextLayerConfig).catch((err: unknown) => {
+              log.warn('onConfigChange failed:', err);
+            });
+          }
+        })
+        .catch((err) => {
+          log.warn('failed to import controller:', err);
+        });
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: toErrorMessage(error) };
+  }
+}
+
 function createCoreHandlers(): ConfigHandlerEntry[] {
   return [
-    {
-      channel: 'config:getAll',
-      handler: () => sanitizeConfig(getConfig()),
-    },
-    {
-      channel: 'config:get',
-      handler: (_event, key) => sanitizeConfigValue(key as keyof AppConfig),
-    },
-    {
-      channel: 'config:set',
-      handler: (_event, key, value) => {
-        try {
-          const safeValue = interceptSecrets(key as string, value);
-          setConfigValue(key as keyof AppConfig, safeValue as AppConfig[keyof AppConfig]);
-          notifyExternalConfigChange(getConfig());
-          // Notify context layer controller on config change
-          if (key === 'contextLayer') {
-            import('../contextLayer/contextLayerController')
-              .then(({ getContextLayerController }) => {
-                const ctrl = getContextLayerController();
-                if (ctrl) {
-                  ctrl.onConfigChange(value as ContextLayerConfig).catch((err: unknown) => {
-                    log.warn('onConfigChange failed:', err);
-                  });
-                }
-              })
-              .catch((err) => {
-                log.warn('failed to import controller:', err);
-              });
-          }
-          return { success: true };
-        } catch (error) {
-          return { success: false, error: toErrorMessage(error) };
-        }
-      },
-    },
+    { channel: 'config:getAll', handler: () => sanitizeConfig(getConfig()) },
+    { channel: 'config:get', handler: (_event, key) => sanitizeConfigValue(key as keyof AppConfig) },
+    { channel: 'config:hasWebPassword', handler: () => hasSecureKey('web-access-password') },
+    { channel: 'config:set', handler: handleConfigSet },
   ];
 }
 

@@ -257,9 +257,10 @@ export const tailSchema = {
     type: 'boolean',
     default: false,
   },
+  /** Wave 78 — default true so existing installs keep MCP injection active. */
   useMcpHost: {
     type: 'boolean',
-    default: false,
+    default: true,
   },
   /** Wave 6 (#103) — max concurrent background agent jobs. Default 2. */
   backgroundJobsMaxConcurrent: {

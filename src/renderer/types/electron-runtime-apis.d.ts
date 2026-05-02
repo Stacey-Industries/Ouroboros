@@ -157,6 +157,7 @@ export interface ConfigAPI {
   getAll: () => Promise<AppConfig>;
   get: <K extends keyof AppConfig>(key: K) => Promise<AppConfig[K]>;
   set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<IpcResult>;
+  hasWebPassword: () => Promise<boolean>;
   export: () => Promise<ConfigExportResult>;
   import: () => Promise<ConfigImportResult>;
   openSettingsFile: () => Promise<ConfigOpenFileResult>;
