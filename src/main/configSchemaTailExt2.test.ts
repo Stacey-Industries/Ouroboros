@@ -26,10 +26,22 @@ describe('tailSchemaExt2 — agentMonitor schema', () => {
     expect(sub.diagnostics).toBe(false);
   });
 
+  it('default has subagentDisplay.enabled: true', () => {
+    const d = tailSchemaExt2.agentMonitor.default as Record<string, unknown>;
+    const sub = d.subagentDisplay as Record<string, unknown>;
+    expect(sub.enabled).toBe(true);
+  });
+
   it('subagentDisplay property has diagnostics defaulting to false', () => {
     const props = tailSchemaExt2.agentMonitor.properties as Record<string, Record<string, unknown>>;
     const subProps = props.subagentDisplay.properties as Record<string, Record<string, unknown>>;
     expect(subProps.diagnostics.default).toBe(false);
+  });
+
+  it('subagentDisplay property has enabled defaulting to true', () => {
+    const props = tailSchemaExt2.agentMonitor.properties as Record<string, Record<string, unknown>>;
+    const subProps = props.subagentDisplay.properties as Record<string, Record<string, unknown>>;
+    expect(subProps.enabled.default).toBe(true);
   });
 
   it('subagentDisplay property has diagnostics type boolean', () => {

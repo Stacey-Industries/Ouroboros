@@ -35,9 +35,12 @@ describe('TreeSitterParser — modernTs.ts regression fixture (Wave 67)', () => 
       byKind.set(def.kind, list);
     }
 
-    // Classes: abstract + full + decorated. Order may vary; assert membership.
+    // Classes: abstract + full + decorated + auto-accessor. Order may vary; assert membership.
+    // AutoAccessorClass exercises the TS 5.0 `accessor` keyword — if the grammar
+    // doesn't recognize it as a class-member modifier, this assertion catches the regression.
+    // See roadmap/deferred/tree-sitter-grammar-upgrade.md.
     expect(byKind.get('Class')).toEqual(
-      expect.arrayContaining(['AbstractWidget', 'FullClass', 'DecoratedClass']),
+      expect.arrayContaining(['AbstractWidget', 'FullClass', 'DecoratedClass', 'AutoAccessorClass']),
     );
 
     // Function: top-level decorator helper + generic with const T.
@@ -46,7 +49,7 @@ describe('TreeSitterParser — modernTs.ts regression fixture (Wave 67)', () => 
     // Methods: at least one from each class. exact-match-irrelevant; assert count >= 4.
     expect((byKind.get('Method') ?? []).length).toBeGreaterThanOrEqual(4);
 
-    // Total: at least 9 definitions (3 classes + 2 functions + 4 methods minimum).
-    expect(result.definitions.length).toBeGreaterThanOrEqual(9);
+    // Total: at least 10 definitions (4 classes + 2 functions + 4 methods minimum).
+    expect(result.definitions.length).toBeGreaterThanOrEqual(10);
   });
 });

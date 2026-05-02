@@ -61,6 +61,7 @@ ADR file: `roadmap/decisions/wave-67.md`. Six decisions:
 - Reformatting source files to "work around" the bug (we fix the indexer, not the inputs)
 - Changing the `extractDefinitions` walker semantics
 - Other Wave 66 follow-ups (cypherEngine `r.props` access, `labels()` silent drop, Project camelCase mismatch — those go in a separate Wave 68 cypherEngine quality wave)
+- **Edge confidence scoring** — `CALLS` edges currently all default to `confidence = 1.0` regardless of resolution reliability. Sibling concern, separate wave: `roadmap/future/graph-edge-confidence-scoring.md`. Recommended sequencing: Wave 67 ships first (fixes which calls get emitted), then confidence scoring (fixes how reliably they're scored). Doing them in the other order means re-tuning confidence heuristics once Wave 67 changes the population of edges.
 
 ## Phases
 

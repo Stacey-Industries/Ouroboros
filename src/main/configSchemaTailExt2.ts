@@ -16,13 +16,11 @@ export const tailSchemaExt2 = {
         additionalProperties: false,
         properties: {
           diagnostics: { type: 'boolean', default: false },
-          // Gated until Phase E soak confirms no regressions. Per project memory:
-          // experimental fix, not a destructive flag, but default flip deferred to Phase E.
-          enabled: { type: 'boolean', default: false },
+          enabled: { type: 'boolean', default: true },
         },
-        default: { diagnostics: false, enabled: false },
+        default: { diagnostics: false, enabled: true },
       },
     },
-    default: { subagentDisplay: { diagnostics: false, enabled: false } },
+    default: { subagentDisplay: { diagnostics: false, enabled: true } },
   },
 };

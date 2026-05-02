@@ -103,3 +103,16 @@ declare const __INJECTED__: string;
 export function pick<const T>(x: T): T {
   return x;
 }
+
+// ─── Auto-accessor keyword (TS 5.0 stage-3 decorators) ─────────────────────
+// If the grammar doesn't recognize `accessor` as a class-member modifier,
+// AutoAccessorClass will either be missing from the Class extraction or
+// produce wrong member nodes (e.g. a property literally named "accessor"
+// instead of an auto-accessor for `name`). See
+// roadmap/deferred/tree-sitter-grammar-upgrade.md for the upgrade path
+// if this assertion fails.
+
+export class AutoAccessorClass {
+  accessor name = 'default';
+  accessor count: number = 0;
+}
