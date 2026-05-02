@@ -241,31 +241,19 @@ does not bake in a particular metric choice.
 
 ---
 
-## How to re-run the offline analysis
+## Offline analysis (removed 2026-05)
 
-```bash
-cd "C:/Web App/Agent IDE"
-npx tsx scripts/analyze-ranker-hit-rate.ts
-```
+The `analyze-ranker-hit-rate.ts` script set was deleted in 2026-05. Live
+router signals (Wave 53 telemetry restoration, merged 2026-04-26) now drive
+ranker tuning decisions instead of periodic corpus runs. Historical analysis
+remains at `roadmap/archive/wave-53b-analysis.md` and `wave-53b-data.json`.
 
-**Output:**
-- `stdout` — human-readable report (the current snapshot is `roadmap/wave-53b-analysis.md`).
-- `roadmap/wave-53b-data.json` — machine-readable archive. Overwritten each run.
-  Commit the archive if longitudinal comparison matters.
+The interpretation thresholds below are preserved for context — if a future
+analyzer is built, it should use the same rubric:
 
-**What the output means:**
 - Mean hit rate ≥ 70% → no change recommended.
 - 40–70% → tune weight scheme; Phase C's variant is the right starting point.
-- < 40% → redesign recommended. Phase C's variant ships as a starting point, but
-  the structural problem requires a new ranker architecture.
-
-**Recommended cadence:** quarterly. First authoritative re-run target: 2026-07-28
-(after three months of unified-corpus accumulation from Wave 53a's parity
-infrastructure).
-
-**Variant comparison:** once a meaningful sample of sessions has run in `tuned` or
-`experimental` mode (approximately 100+ sessions per mode), run the offline analyzer
-and filter `ranker.selection.v1` records by mode to compare per-mode any-hit rates.
+- < 40% → redesign recommended; structural problem requires a new ranker architecture.
 
 ### Graduation path
 

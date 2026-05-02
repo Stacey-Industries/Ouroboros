@@ -155,15 +155,6 @@ export function buildHooksApi(t: WebSocketTransport) {
   };
 }
 
-/** @deprecated Use buildConfigApi / buildFilesApi / buildHooksApi directly */
-export function buildDataApis(t: WebSocketTransport) {
-  return {
-    configAPI: buildConfigApi(t),
-    filesAPI: buildFilesApi(t),
-    hooksAPI: buildHooksApi(t),
-  };
-}
-
 // ─── App API ─────────────────────────────────────────────────────────────────
 
 const MENU_EVENTS = [
@@ -255,11 +246,6 @@ export function buildShellThemeApis(t: WebSocketTransport) {
     onChange: (cb: (theme: unknown) => void) => t.on('theme:changed', cb),
   };
   return { shellAPI, themeAPI };
-}
-
-/** @deprecated Use buildAppApi / buildShellThemeApis directly */
-export function buildAppApis(t: WebSocketTransport) {
-  return { appAPI: buildAppApi(t), ...buildShellThemeApis(t) };
 }
 
 // ─── Git API ─────────────────────────────────────────────────────────────────

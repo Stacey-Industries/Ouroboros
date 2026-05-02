@@ -150,11 +150,6 @@ export function buildWindowExtensionsApis(t: WebSocketTransport) {
   return { windowAPI, extensionsAPI };
 }
 
-/** @deprecated Use buildLspApi / buildWindowExtensionsApis directly */
-export function buildToolingApis(t: WebSocketTransport) {
-  return { lspAPI: buildLspApi(t), ...buildWindowExtensionsApis(t) };
-}
-
 // ─── MCP + MCP Store APIs ────────────────────────────────────────────────────
 
 export function buildMcpApis(t: WebSocketTransport) {
@@ -219,11 +214,6 @@ export function buildStoreContextApis(t: WebSocketTransport) {
   return { extensionStoreAPI, contextAPI, ideToolsAPI };
 }
 
-/** @deprecated Use buildMcpApis / buildStoreContextApis directly */
-export function buildIntegrationApis(t: WebSocketTransport) {
-  return { ...buildMcpApis(t), ...buildStoreContextApis(t) };
-}
-
 // ─── Agent Chat API ──────────────────────────────────────────────────────────
 // Channel names hardcoded from src/main/agentChat/events.ts
 
@@ -280,11 +270,6 @@ export function buildOrchestrationApis(t: WebSocketTransport) {
     onProgress: (cb: (progress: unknown) => void) => t.on('contextLayer:progress', cb),
   };
   return { codemodeAPI, orchestrationAPI, contextLayerAPI };
-}
-
-/** @deprecated Use buildAgentChatApi / buildOrchestrationApis directly */
-export function buildAgentApis(t: WebSocketTransport) {
-  return { agentChatAPI: buildAgentChatApi(t), ...buildOrchestrationApis(t) };
 }
 
 // ─── Mobile Access API ────────────────────────────────────────────────────────
