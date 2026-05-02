@@ -6,8 +6,8 @@ works, the weight modes introduced in Wave 53b, how the online telemetry is coll
 and how to measure and interpret hit rates.
 
 **Cross-references:**
-- `roadmap/archive/wave-53b-analysis.md` — Phase A offline analysis (provisional numbers)
-- `roadmap/decisions/wave-53b.md` — ADR for Wave 53b architectural choices
+- `roadmap/archive/wave-53b/waveplan-53b-analysis.md` — Phase A offline analysis (provisional numbers)
+- `roadmap/archive/wave-53b/wave-53b-decisions.md` — ADR for Wave 53b architectural choices
 - `docs/telemetry-parity.md` — telemetry parity infrastructure and queue lifecycle
 
 ---

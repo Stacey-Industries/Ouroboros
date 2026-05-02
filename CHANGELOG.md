@@ -109,7 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   archiving completed waves moved `wave-53c-output/` under it; Tailwind
   v4's auto-source scan trips on Windows path encodings (`\afa0da`-shaped
   hex segments) above U+10FFFF.
-- Wave 53k ADR (`roadmap/decisions/wave-53k.md`) documents nine architecture
+- Wave 53k ADR (`roadmap/archive/wave-53k/wave-53k-decisions.md`) documents nine architecture
   decisions, including the Decision-2 reversal (toggle-flag → destructive
   write) and Decision 9 (SDK adoption pulled forward from a Wave 53m punt).
 

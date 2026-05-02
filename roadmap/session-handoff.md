@@ -1,6 +1,6 @@
 # Roadmap Session Handoff — 2026-04-26 (updated for Wave 47)
 
-> **Wave 47 shipped** on 2026-04-26 (chat workbench follow-through). Active development continues. See wave-47 result brief at `roadmap/auto-briefs/wave-47-result.md`.
+> **Wave 47 shipped** on 2026-04-26 (chat workbench follow-through). Active development continues. See wave-47 result brief at `roadmap/archive/wave-47/wave-47-auto-brief.md`.
 
 ---
 
