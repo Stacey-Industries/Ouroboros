@@ -273,6 +273,7 @@ export function ComposerContextPreview(props: ComposerContextPreviewProps): Reac
       onToggle={handleToggle}
       onToggleItem={handleToggleItem}
       disabledIds={disabledIds}
+      projectRoot={projectRoot}
     />
   );
 }

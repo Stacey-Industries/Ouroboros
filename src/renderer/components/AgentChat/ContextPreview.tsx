@@ -4,14 +4,12 @@
  * Tools / System. Toggle state is parent-managed (controlled).
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 
-import type {
-  ContextItem,
-  ContextItemKind,
-  ContextPreviewModel,
-} from '../../hooks/useContextPreview';
-import { isToggleableKind } from '../../hooks/useContextPreview';
+import type { ContextItem, ContextItemKind, ContextPreviewModel } from '../../hooks/useContextPreview';
+import { ItemRow } from './ContextPreviewItemRow';
+import type { ContentCache } from './ContextPreviewMemoryRow';
+import { MemoryItemRow } from './ContextPreviewMemoryRow';
 import { RuleGroupSubTabs, usePopoverTabState } from './ContextPreviewRuleSubTabs';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
@@ -41,6 +39,8 @@ export interface ContextPreviewProps {
   onToggleItem?: (id: string) => void;
   /** Set of item IDs currently disabled (unchecked) by the user. */
   disabledIds?: ReadonlySet<string>;
+  /** Project root passed to memory:read for inline drill-down. */
+  projectRoot?: string | null;
 }
 
 // ─── Strip ────────────────────────────────────────────────────────────────────
@@ -156,85 +156,6 @@ function TabBar(props: {
   );
 }
 
-function ManagedBadge(): React.ReactElement {
-  return (
-    <span
-      className="shrink-0 rounded px-1 text-[10px] text-text-semantic-faint border border-border-subtle"
-      title="Managed by Claude CLI — cannot be toggled"
-    >
-      managed
-    </span>
-  );
-}
-
-function DisabledBadge(): React.ReactElement {
-  return (
-    <span
-      className="shrink-0 rounded px-1 text-[10px] text-text-semantic-faint border border-border-subtle"
-      title="MCP server is disabled — not active in this session"
-    >
-      disabled
-    </span>
-  );
-}
-
-// Rule items only toggle if their id encodes a known scope (`rule:global:` or
-// `rule:project:`). Managed/Local rules keep the legacy `rule:<filePath>` form.
-function isToggleableItem(item: ContextItem): boolean {
-  if (!isToggleableKind(item.kind)) return false;
-  if (item.kind !== 'rule') return true;
-  return item.id.startsWith('rule:global:') || item.id.startsWith('rule:project:');
-}
-
-function ItemRowControl(props: {
-  item: ContextItem;
-  disabled: boolean;
-  onToggle?: (id: string) => void;
-}): React.ReactElement {
-  const { item, disabled, onToggle } = props;
-  if (!isToggleableItem(item)) return <ManagedBadge />;
-  return (
-    <input
-      type="checkbox"
-      checked={!disabled}
-      onChange={() => onToggle?.(item.id)}
-      aria-label={`Toggle ${item.label}`}
-      data-testid={`context-item-checkbox-${item.id}`}
-      className="shrink-0 accent-interactive-accent"
-    />
-  );
-}
-
-function ItemRow(props: {
-  item: ContextItem;
-  disabled: boolean;
-  onToggle?: (id: string) => void;
-}): React.ReactElement {
-  const { item, disabled, onToggle } = props;
-  const dimmed = isToggleableItem(item) && disabled;
-  return (
-    <div
-      className={['flex items-center gap-2 px-3 py-1 text-[11px]', dimmed ? 'opacity-40' : ''].join(
-        ' ',
-      )}
-    >
-      <ItemRowControl item={item} disabled={disabled} onToggle={onToggle} />
-      <span className="flex-1 truncate text-text-semantic-primary" title={item.label}>
-        {item.label}
-      </span>
-      {item.serverDisabled && <DisabledBadge />}
-      {item.detail && !item.serverDisabled && (
-        <span className="shrink-0 text-text-semantic-faint" title={item.detail}>
-          {item.detail}
-        </span>
-      )}
-      <span className="shrink-0 tabular-nums text-text-semantic-faint">
-        ~{item.estimatedTokens}
-      </span>
-    </div>
-  );
-}
-
 const EMPTY_TAB_MESSAGES: Partial<Record<ContextItemKind, string>> = {
   memory: 'No memory entries for this project.',
   rule: 'No rules loaded for this session.',
@@ -275,16 +196,40 @@ function PopoverHeader(props: { totalTokens: number; onClose: () => void }): Rea
   );
 }
 
+function PopoverItemList(props: {
+  items: ContextItem[];
+  activeKind: ContextItemKind;
+  disabledIds: ReadonlySet<string>;
+  onToggleItem?: (id: string) => void;
+  projectRoot?: string | null;
+  contentCache: ContentCache;
+}): React.ReactElement {
+  const { items, activeKind, disabledIds, onToggleItem, projectRoot, contentCache } = props;
+  if (items.length === 0) return <EmptyTabMessage kind={activeKind} />;
+  return (
+    <>
+      {items.map((item) =>
+        item.kind === 'memory' ? (
+          <MemoryItemRow key={item.id} item={item} projectRoot={projectRoot} contentCache={contentCache} />
+        ) : (
+          <ItemRow key={item.id} item={item} disabled={disabledIds.has(item.id)} onToggle={onToggleItem} />
+        ),
+      )}
+    </>
+  );
+}
+
 function ContextPreviewPopover(props: {
   model: ContextPreviewModel;
   onClose: () => void;
   onToggleItem?: (id: string) => void;
   disabledIds: ReadonlySet<string>;
+  projectRoot?: string | null;
 }): React.ReactElement {
-  const { model, onClose, onToggleItem, disabledIds } = props;
+  const { model, onClose, onToggleItem, disabledIds, projectRoot } = props;
+  const contentCache = useRef<ContentCache>({});
   const tabs = usePopoverTabState(model);
-  const { activeKind, setActiveKind, ruleGroup, setRuleGroup, counts, ruleCounts, visibleItems } =
-    tabs;
+  const { activeKind, setActiveKind, ruleGroup, setRuleGroup, counts, ruleCounts, visibleItems } = tabs;
 
   return (
     <div
@@ -300,18 +245,14 @@ function ContextPreviewPopover(props: {
         <RuleGroupSubTabs active={ruleGroup} counts={ruleCounts} onSelect={setRuleGroup} />
       )}
       <div className="flex-1 overflow-y-auto" role="tabpanel">
-        {visibleItems.length > 0 ? (
-          visibleItems.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              disabled={disabledIds.has(item.id)}
-              onToggle={onToggleItem}
-            />
-          ))
-        ) : (
-          <EmptyTabMessage kind={activeKind} />
-        )}
+        <PopoverItemList
+          items={visibleItems}
+          activeKind={activeKind}
+          disabledIds={disabledIds}
+          onToggleItem={onToggleItem}
+          projectRoot={projectRoot}
+          contentCache={contentCache.current}
+        />
       </div>
     </div>
   );
@@ -325,6 +266,7 @@ export function ContextPreview({
   onToggle,
   onToggleItem,
   disabledIds = new Set(),
+  projectRoot,
 }: ContextPreviewProps): React.ReactElement {
   return (
     <div className="relative" data-testid="context-preview">
@@ -334,6 +276,7 @@ export function ContextPreview({
           onClose={onToggle}
           onToggleItem={onToggleItem}
           disabledIds={disabledIds}
+          projectRoot={projectRoot}
         />
       )}
       <ContextPreviewStrip model={model} isOpen={isOpen} onToggle={onToggle} />
