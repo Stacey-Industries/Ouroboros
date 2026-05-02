@@ -1,3 +1,5 @@
+import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
+
 import type {
   AgentChatContentBlock,
   AgentChatMessageRecord,
@@ -18,6 +20,8 @@ export interface ProjectAssistantMessageArgs {
   timestamp: number;
   /** Structured content blocks captured during streaming (tool cards, thinking, text) */
   blocks?: import('./types').AgentChatContentBlock[];
+  /** Skill invocations accumulated from hook events during this turn. */
+  skillExecutions?: SkillExecutionRecord[];
 }
 
 export interface ProjectFailureMessageArgs {
@@ -123,6 +127,8 @@ function applyOptionalFields(
   if (args.durationMs != null) message.durationSummary = formatDuration(args.durationMs);
   if (args.tokenUsage) message.tokenUsage = args.tokenUsage;
   if (args.model) message.model = args.model;
+  if (args.skillExecutions && args.skillExecutions.length > 0)
+    message.skillExecutions = args.skillExecutions;
 }
 
 function sealAndMergeBlocks(blocks: AgentChatContentBlock[]): AgentChatContentBlock[] {
