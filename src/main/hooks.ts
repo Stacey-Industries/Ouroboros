@@ -40,6 +40,7 @@ import {
   handleSessionStop,
   runPreToolEnforcement,
 } from './hooksSessionHandlers';
+import { tapSkillExecution } from './hooksSkillExecutionTap';
 import { tapSubagentTracker } from './hooksSubagentTap';
 import log from './logger';
 import { shadowRouteHookEvent } from './router/routerShadow';
@@ -102,8 +103,6 @@ export interface ToolCallEvent extends AgentEvent {
     callId: string;
   };
 }
-
-// truncatePayloadForDispatch is imported from hooksDispatchLogic.ts
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -214,11 +213,7 @@ function dispatchLifecycleEvent(payload: HookPayload): void {
   }
   if (dispatchNewEventType(payload)) return;
 
-  const isEndEvent =
-    payload.type === 'session_stop' ||
-    payload.type === 'agent_stop' ||
-    payload.type === 'agent_end';
-
+  const isEndEvent = payload.type === 'session_stop' || payload.type === 'agent_stop' || payload.type === 'agent_end';
   if (isEndEvent) handleSessionEnd(payload);
   if (payload.type === 'session_stop') handleSessionStop(payload, sessionCwdMap);
 }
@@ -254,10 +249,9 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 }
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
+  tapSkillExecution(rawPayload);
   if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
-    log.info(
-      `suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`,
-    );
+    log.info(`suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;
   }
@@ -303,6 +297,7 @@ function runHookTaps(payload: HookPayload): void {
   tapPreToolResearch(payload);
   tapGraphUsage(payload);
   tapRankerRead(payload);
+  tapSkillExecution(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -346,9 +341,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
   if (payload.type === 'agent_end') {
     const id = payload.sessionId;
-    // 2-second delay: long enough to absorb in-flight hook events arriving
-    // after agent_end (pipe/network latency), short enough to stop suppressing
-    // legitimate events with the same session ID quickly.
+    // 2-second delay absorbs in-flight hook events arriving after agent_end.
     setTimeout(() => syntheticSessionIds.delete(id), 2_000);
   }
 

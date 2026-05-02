@@ -13,7 +13,7 @@ import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -39,6 +39,7 @@ export const SCHEMA_SQL = `
     costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
     model TEXT, checkpointCommit TEXT,
     reactions TEXT, collapsedByDefault INTEGER DEFAULT 0,
+    skillExecutions TEXT,
     PRIMARY KEY (id, threadId)
   );
   CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
@@ -106,6 +107,8 @@ export interface RawMessageRow {
   reactions: string | null;
   /** Wave 22 Phase A — 1 when the message should render collapsed by default. */
   collapsedByDefault: number | null;
+  /** Wave 73 — JSON array of SkillExecutionRecord objects. NULL when none. */
+  skillExecutions: string | null;
 }
 
 // ── Parse / convert helpers ──────────────────────────────────────────
@@ -138,6 +141,7 @@ function applyOptionalJsonFields(base: AgentChatMessageRecord, row: RawMessageRo
   if (row.error) base.error = parseJsonField(row.error);
   if (row.tokenUsage) base.tokenUsage = parseJsonField(row.tokenUsage);
   if (row.blocks) base.blocks = parseJsonField(row.blocks);
+  if (row.skillExecutions) base.skillExecutions = parseJsonField(row.skillExecutions);
 }
 
 function applyOptionalStringFields(base: AgentChatMessageRecord, row: RawMessageRow): void {

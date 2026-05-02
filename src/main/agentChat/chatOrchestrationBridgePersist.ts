@@ -47,6 +47,7 @@ async function upsertAssistantMessage(
       tokenUsage: message.tokenUsage,
       model: message.model,
       blocks: message.blocks,
+      skillExecutions: message.skillExecutions,
     });
   }
   return runtime.threadStore.appendMessage(threadId, message);
@@ -193,6 +194,7 @@ export async function persistCompletedTurn(
     durationMs: progress.durationMs,
     timestamp: runtime.now(),
     blocks: ctx.accumulatedBlocks,
+    skillExecutions: ctx.skillExecutions,
   });
   try {
     await persistCompletedTurnInner(ctx, runtime, assistantMessage, providerSessionIdFromStream);

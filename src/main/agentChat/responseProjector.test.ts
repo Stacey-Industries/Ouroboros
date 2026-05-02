@@ -73,6 +73,30 @@ describe('projectProviderResultToAssistantMessage', () => {
   registerEmptyResponseTest();
   registerOrchestrationLinkTest();
   registerCostFormatTest();
+
+  test('propagates skillExecutions when provided', () => {
+    const skills = [
+      { skillName: 'wave-plan', agentId: 'a1', agentType: 'sonnet', startedAt: 100, status: 'completed' as const },
+    ];
+    const result = projectProviderResultToAssistantMessage({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      responseText: 'Done',
+      timestamp: 1000,
+      skillExecutions: skills,
+    });
+    expect(result.skillExecutions).toEqual(skills);
+  });
+
+  test('omits skillExecutions when not provided', () => {
+    const result = projectProviderResultToAssistantMessage({
+      threadId: 'thread-1',
+      messageId: 'msg-1',
+      responseText: 'Done',
+      timestamp: 1000,
+    });
+    expect(result.skillExecutions).toBeUndefined();
+  });
 });
 
 describe('formatToolsSummary', () => {

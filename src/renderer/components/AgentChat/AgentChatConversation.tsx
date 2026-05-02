@@ -38,12 +38,17 @@ function useThreadModelUsage(
   return useMemo(() => buildThreadModelUsage(thread?.messages), [thread?.messages]);
 }
 
-function useActiveSkillExecutions(sessionId?: string): SkillExecutionRecord[] {
+function useActiveSkillExecutions(
+  sessionId: string | undefined,
+  messages: ReturnType<typeof useAgentChatThread>['activeThread']['messages'],
+): SkillExecutionRecord[] {
   const { agents } = useAgentEventsContext();
   return useMemo(() => {
-    if (!sessionId) return [];
-    return agents.find((s) => s.id === sessionId)?.skillExecutions ?? [];
-  }, [agents, sessionId]);
+    const live = sessionId ? (agents.find((s) => s.id === sessionId)?.skillExecutions ?? []) : [];
+    if (live.length > 0) return live;
+    const lastAssistant = [...(messages ?? [])].reverse().find((m) => m.role === 'assistant');
+    return lastAssistant?.skillExecutions ?? [];
+  }, [agents, sessionId, messages]);
 }
 
 /* ── Conversation sub-sections (extracted for max-lines-per-function) ──── */
@@ -54,7 +59,7 @@ function ConversationDrawer(): React.ReactElement | null {
   const actions = useAgentChatActions();
   const sessionId =
     details.details?.link?.sessionId ?? thread.activeThread?.latestOrchestration?.sessionId;
-  const skillExecutions = useActiveSkillExecutions(sessionId);
+  const skillExecutions = useActiveSkillExecutions(sessionId, thread.activeThread?.messages);
 
   return (
     <AgentChatDetailsDrawer
