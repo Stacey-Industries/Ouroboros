@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 
 import { getConfigValue } from '../config';
+import { registerActiveSends } from '../hooksSkillExecutionTap';
 import log from '../logger';
 import { detectCorrection } from '../research/correctionDetector';
 import { getCorrectionStore } from '../research/correctionStore';
@@ -220,6 +221,7 @@ function buildRuntime(deps: AgentChatOrchestrationBridgeDeps): AgentChatBridgeRu
   const streamChunkListeners = new Set<StreamChunkListener>();
   const activeSends = new Map<string, ActiveStreamContext>();
   const pendingCancels = new Set<string>();
+  registerActiveSends(activeSends);
   return {
     createId: deps.createId ?? randomUUID,
     getSettings:
