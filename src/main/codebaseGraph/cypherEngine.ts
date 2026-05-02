@@ -20,7 +20,16 @@
  * Results capped at 200 rows.
  */
 
-import { assertNoUnsupportedClauses, extractClause, parseOrderBy, parseWhere } from './cypherEngineParser';
+import { buildOptionalHopJoin, buildUnwindSql } from './cypherEngineNewFeatures';
+import {
+  assertNoUnsupportedClauses,
+  extractClause,
+  extractOptionalMatchClause,
+  extractUnwindClause,
+  parseOrderBy,
+  parseUnwind,
+  parseWhere,
+} from './cypherEngineParser';
 import {
   buildOrderBy,
   buildWhereRhs,
@@ -37,6 +46,7 @@ import type {
   OrderByClause,
   ParsedQuery,
   ReturnField,
+  UnwindClause,
   VarpathStartContext,
   WhereCondition,
 } from './cypherEngineSupport';
@@ -52,15 +62,11 @@ import {
 } from './cypherEngineSupport';
 import type { GraphDatabase } from './graphDatabase';
 
-// ─── Public types ─────────────────────────────────────────────────────────────
-
 export interface CypherQueryResult {
   columns: string[];
   rows: Record<string, unknown>[];
   total: number;
 }
-
-// ─── CypherEngine ─────────────────────────────────────────────────────────────
 
 export class CypherEngine {
   constructor(
@@ -70,115 +76,100 @@ export class CypherEngine {
 
   execute(query: string): CypherQueryResult {
     const trimmed = query.trim();
-
-    // Safety: reject anything that looks like a write operation
-    if (isWriteQuery(trimmed)) {
-      throw new Error('Only read-only queries are allowed');
-    }
-
+    if (isWriteQuery(trimmed)) throw new Error('Only read-only queries are allowed');
     const parsed = this.parse(trimmed);
     const sql = this.toSql(parsed);
-
     const rawRows = this.db.rawQuery(sql.text, sql.params) as Record<string, unknown>[];
-
-    // Map rows to use the Cypher RETURN column names
     const mappedRows = rawRows.map((row) => {
       const mapped: Record<string, unknown> = {};
       for (const field of parsed.returnFields) {
         mapped[field.outputName] = (row as Record<string, unknown>)[field.outputName] ?? null;
       }
-      // Handle COUNT results
       if (parsed.isCount && row['_count'] !== undefined) {
         const countKey = parsed.returnFields[0]?.outputName ?? 'count';
-        // eslint-disable-next-line security/detect-object-injection -- countKey is derived from validated RETURN field names
+        // eslint-disable-next-line security/detect-object-injection -- countKey from validated RETURN fields
         mapped[countKey] = row['_count'];
       }
       return mapped;
     });
-
-    return {
-      columns: parsed.returnFields.map((f) => f.outputName),
-      rows: mappedRows,
-      total: mappedRows.length,
-    };
+    return { columns: parsed.returnFields.map((f) => f.outputName), rows: mappedRows, total: mappedRows.length };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Parser (delegates to cypherEngineParser.ts standalone functions)
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ═══ Parser ════════════════════════════════════════════════════════════════
 
   private parse(query: string): ParsedQuery {
     assertNoUnsupportedClauses(query);
-
     const matchClause = extractClause(query, 'MATCH');
-    const whereClause = extractClause(query, 'WHERE');
+    const unwindStr = extractUnwindClause(query);
+    if (!matchClause && !unwindStr) throw new Error('Query must contain a MATCH clause');
     const returnClause = extractClause(query, 'RETURN');
-    const orderByClause = extractClause(query, 'ORDER BY');
-    const limitClause = extractClause(query, 'LIMIT');
-
-    if (!matchClause) throw new Error('Query must contain a MATCH clause');
     if (!returnClause) throw new Error('Query must contain a RETURN clause');
-
-    const match = parseMatch(matchClause);
+    const match = matchClause
+      ? parseMatch(matchClause)
+      : { kind: 'single' as const, alias: '_n', label: null };
+    const optionalMatchStr = extractOptionalMatchClause(query);
+    const unwind: UnwindClause | null = unwindStr ? parseUnwind(unwindStr) : null;
+    const whereClause = extractClause(query, 'WHERE');
     const where = whereClause ? parseWhere(whereClause) : [];
     const { fields: returnFields, isCount, isDistinct } = parseReturn(returnClause);
+    const orderByClause = extractClause(query, 'ORDER BY');
     const orderBy = orderByClause ? parseOrderBy(orderByClause) : [];
-
-    let limit = MAX_ROWS;
-    if (limitClause) {
-      const parsed = parseInt(limitClause.trim(), 10);
-      if (!isNaN(parsed) && parsed > 0) limit = Math.min(parsed, MAX_ROWS);
-    }
-
-    return { match, where, returnFields, orderBy, limit, isCount, isDistinct };
+    const limit = this.parseLimit(extractClause(query, 'LIMIT'));
+    const optionalMatch = optionalMatchStr ? parseMatch(optionalMatchStr) : null;
+    return { match, where, returnFields, orderBy, limit, isCount, isDistinct, optionalMatch, unwind };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SQL Generator
-  // ═══════════════════════════════════════════════════════════════════════════
+  private parseLimit(limitClause: string | null): number {
+    if (!limitClause) return MAX_ROWS;
+    const n = parseInt(limitClause.trim(), 10);
+    return !isNaN(n) && n > 0 ? Math.min(n, MAX_ROWS) : MAX_ROWS;
+  }
+
+  // ═══ SQL Generator ══════════════════════════════════════════════════════════
 
   private toSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
+    if (parsed.unwind) {
+      return buildUnwindSql({
+        parsed,
+        unwind: parsed.unwind,
+        projectName: this.projectName,
+        buildSelectColumns: (p, ...aliases) => this.buildSelectColumns(p, ...aliases),
+        addWhereConditions: (w, c, pa) => this.addWhereConditions(w, c, pa),
+      });
+    }
     switch (parsed.match.kind) {
-      case 'single':
-        return this.singleNodeSql(parsed);
-      case 'hop':
-        return this.singleHopSql(parsed);
-      case 'varpath':
-        return this.varpathSql(parsed);
+      case 'single': return this.singleNodeSql(parsed);
+      case 'hop': return this.singleHopSql(parsed);
+      case 'varpath': return this.varpathSql(parsed);
     }
   }
 
-  /** Single node match: MATCH (n:Label) ... */
   private singleNodeSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
     const match = parsed.match as Extract<MatchPattern, { kind: 'single' }>;
     if (match.label === 'Project') return this.singleProjectSql(parsed, match);
     const params: unknown[] = [];
     const alias = match.alias || '_n0';
-    const selectCols = this.buildSelectColumns(parsed, alias);
+    const optAliases = this.optionalMatchAliases(parsed.optionalMatch);
+    const selectCols = this.buildSelectColumns(parsed, alias, ...optAliases);
     const conditions: string[] = [`${alias}.project = ?`];
     params.push(this.projectName);
-    if (match.label) {
-      conditions.push(`${alias}.label = ?`);
-      params.push(match.label);
-    }
+    if (match.label) { conditions.push(`${alias}.label = ?`); params.push(match.label); }
     this.addWhereConditions(parsed.where, conditions, params);
+    const optJoin = parsed.optionalMatch ? buildOptionalHopJoin(parsed.optionalMatch, alias) : '';
     const orderBy = buildOrderBy(parsed.orderBy);
     const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
     const sql = [
       `SELECT ${distinct}${selectCols}`,
       `FROM nodes ${alias}`,
+      optJoin,
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ]
-      .filter(Boolean)
-      .join(' ');
+    ].filter(Boolean).join(' ');
     params.push(parsed.limit);
     return { text: sql, params };
   }
 
-  /** MATCH (p:Project) — routes to projects table since Project columns
-   * (indexed_at, node_count, etc.) live there, not on the nodes table. */
   private singleProjectSql(
     parsed: ParsedQuery,
     match: Extract<MatchPattern, { kind: 'single' }>,
@@ -189,72 +180,49 @@ export class CypherEngine {
       : parsed.returnFields.length === 0
         ? `${alias}.*`
         : parsed.returnFields
-            .map((f) =>
-              f.property === '*' ? `${alias}.*` : `${alias}.${f.property} AS ${f.outputName}`,
-            )
+            .map((f) => f.property === '*' ? `${alias}.*` : `${alias}.${f.property} AS ${f.outputName}`)
             .join(', ');
-    const sql = `SELECT ${cols} FROM projects ${alias} WHERE ${alias}.name = ? LIMIT ?`;
-    return { text: sql, params: [this.projectName, parsed.limit] };
+    return { text: `SELECT ${cols} FROM projects ${alias} WHERE ${alias}.name = ? LIMIT ?`, params: [this.projectName, parsed.limit] };
   }
 
-  /** Build WHERE conditions for a single-hop query. */
-  private buildHopConditions(
-    match: Extract<MatchPattern, { kind: 'hop' }>,
-    params: unknown[],
-  ): string[] {
+  private buildHopConditions(match: Extract<MatchPattern, { kind: 'hop' }>, params: unknown[]): string[] {
     const { left, right, edgeType } = match;
     const conditions: string[] = [`${left.alias}.project = ?`];
     params.push(this.projectName);
-    if (left.label) {
-      conditions.push(`${left.alias}.label = ?`);
-      params.push(left.label);
-    }
-    if (right.label) {
-      conditions.push(`${right.alias}.label = ?`);
-      params.push(right.label);
-    }
-    if (edgeType) {
-      conditions.push(`e.type = ?`);
-      params.push(edgeType);
-    }
+    if (left.label) { conditions.push(`${left.alias}.label = ?`); params.push(left.label); }
+    if (right.label) { conditions.push(`${right.alias}.label = ?`); params.push(right.label); }
+    if (edgeType) { conditions.push(`e.type = ?`); params.push(edgeType); }
     return conditions;
   }
 
-  /** Single hop: MATCH (n)-[:TYPE]->(m) ... */
   private singleHopSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
     const match = parsed.match as Extract<MatchPattern, { kind: 'hop' }>;
     const params: unknown[] = [];
     const { left, right, edgeAlias: cypherEdgeAlias, direction } = match;
-
     const selectAliases = [left.alias, right.alias];
     if (cypherEdgeAlias) selectAliases.push(cypherEdgeAlias);
     const selectCols = this.buildSelectColumns(parsed, ...selectAliases);
     const joinCondition = buildHopJoinCondition('e', left.alias, right.alias, direction);
     const conditions = this.buildHopConditions(match, params);
-
     this.addWhereConditions(parsed.where, conditions, params);
-
+    const optJoin = parsed.optionalMatch ? buildOptionalHopJoin(parsed.optionalMatch, left.alias) : '';
+    const rightJoinCol = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
     const orderBy = buildOrderBy(parsed.orderBy);
     const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
-    const rightJoinCol = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
-
     const sql = [
       `SELECT ${distinct}${selectCols}`,
       `FROM nodes ${left.alias}`,
       `JOIN edges e ON ${joinCondition}`,
       `JOIN nodes ${right.alias} ON ${right.alias}.id = ${rightJoinCol}`,
+      optJoin,
       `WHERE ${conditions.join(' AND ')}`,
       orderBy ? `ORDER BY ${orderBy}` : '',
       `LIMIT ?`,
-    ]
-      .filter(Boolean)
-      .join(' ');
-
+    ].filter(Boolean).join(' ');
     params.push(parsed.limit);
     return { text: sql, params };
   }
 
-  /** Variable-length path: MATCH (n)-[:TYPE*1..3]->(m) ... */
   private varpathSql(parsed: ParsedQuery): { text: string; params: unknown[] } {
     const match = parsed.match as Extract<MatchPattern, { kind: 'varpath' }>;
     const params: unknown[] = [];
@@ -263,48 +231,30 @@ export class CypherEngine {
       resolveColumnExpression: (alias, p) => resolveColumnExpression(alias, p),
       cypherOpToSql: (op) => cypherOpToSql(op),
     };
-
     const startCtx: VarpathStartContext = { left, projectName: this.projectName };
     const startConditions = buildVarpathStartConditions(startCtx, parsed.where, params, resolvers);
     const endConditions = buildVarpathEndConditions(right, parsed.where, params, resolvers);
-    const rawSelectParts = buildVarpathSelectParts(
-      parsed.returnFields,
-      left.alias,
-      right.alias,
-      (alias, p) => resolveColumnExpression(alias, p),
-    );
-
+    const rawSelectParts = buildVarpathSelectParts(parsed.returnFields, left.alias, right.alias, (alias, p) => resolveColumnExpression(alias, p));
     const typeFilter = edgeType ? `AND e.type = '${sanitizeIdentifier(edgeType)}'` : '';
     const nextNode = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
-    const edgeJoin =
-      direction === 'outbound'
-        ? `e.source_id = r.current_id ${typeFilter}`
-        : `e.target_id = r.current_id ${typeFilter}`;
+    const edgeJoin = direction === 'outbound'
+      ? `e.source_id = r.current_id ${typeFilter}`
+      : `e.target_id = r.current_id ${typeFilter}`;
     const endWhere = endConditions.length > 0 ? `AND ${endConditions.join(' AND ')}` : '';
     const selectParts = rawSelectParts.length === 0 ? ['n_end.*'] : rawSelectParts;
-    const orderBy = buildOrderBy(parsed.orderBy);
-    const distinct = parsed.isDistinct ? 'DISTINCT ' : '';
-
-    const sql = buildVarpathSqlTemplate({
-      startConditions,
-      nextNode,
-      edgeJoin,
-      endWhere,
-      distinct,
-      selectParts,
-      orderBy,
-    });
+    const sql = buildVarpathSqlTemplate({ startConditions, nextNode, edgeJoin, endWhere, distinct: parsed.isDistinct ? 'DISTINCT ' : '', selectParts, orderBy: buildOrderBy(parsed.orderBy) });
     params.push(maxHops, minHops, maxHops, parsed.limit);
     return { text: sql, params };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SQL building helpers
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ═══ Shared helpers ══════════════════════════════════════════════════════════
 
-  /** Build SELECT column list from RETURN fields. The last entry of
-   * availableAliases is treated as the Cypher edge alias when present
-   * (singleHopSql passes it after node aliases); maps to SQL alias 'e'. */
+  /** Return the right-side node alias(es) from an optional match pattern, for SELECT inclusion. */
+  private optionalMatchAliases(om: MatchPattern | null): string[] {
+    if (!om || om.kind !== 'hop') return [];
+    return [om.right.alias || '_opt_r'];
+  }
+
   private buildSelectColumns(parsed: ParsedQuery, ...availableAliases: string[]): string {
     if (parsed.isCount) return 'COUNT(*) AS _count';
     const edgeAliases = availableAliases.slice(2);
@@ -316,23 +266,14 @@ export class CypherEngine {
     return cols.length > 0 ? cols.join(', ') : `${availableAliases[0]}.*`;
   }
 
-  /** Resolve a single RETURN field into its SQL projection string (or empty). */
-  private buildSelectColumnExpr(
-    field: ReturnField,
-    availableAliases: string[],
-    edgeAliases: string[],
-  ): string {
+  private buildSelectColumnExpr(field: ReturnField, availableAliases: string[], edgeAliases: string[]): string {
     const edgeColumns = new Set(['id', 'project', 'source_id', 'target_id', 'type', 'confidence']);
     const isEdge = edgeAliases.includes(field.alias);
     const sqlAlias = isEdge ? 'e' : field.alias;
-    if (field.property === '*') {
-      return availableAliases.includes(field.alias) ? `${sqlAlias}.*` : '';
-    }
+    if (field.property === '*') return availableAliases.includes(field.alias) ? `${sqlAlias}.*` : '';
     if (isEdge) {
       const safeKey = sanitizeIdentifier(field.property);
-      const ref = edgeColumns.has(field.property)
-        ? `${sqlAlias}.${field.property}`
-        : `json_extract(${sqlAlias}.props, '$.${safeKey}')`;
+      const ref = edgeColumns.has(field.property) ? `${sqlAlias}.${field.property}` : `json_extract(${sqlAlias}.props, '$.${safeKey}')`;
       return `${ref} AS ${field.outputName}`;
     }
     if (!availableAliases.includes(field.alias)) {
@@ -342,24 +283,17 @@ export class CypherEngine {
     return `${resolveColumnExpression(sqlAlias, field.property)} AS ${field.outputName}`;
   }
 
-  /** Add WHERE conditions to the SQL conditions array. */
-  private addWhereConditions(
-    where: WhereCondition[],
-    conditions: string[],
-    params: unknown[],
-  ): void {
+  private addWhereConditions(where: WhereCondition[], conditions: string[], params: unknown[]): void {
     let prevConjunction: 'AND' | 'OR' | null = null;
     for (const cond of where) {
       const expression = resolveColumnExpression(cond.alias, cond.property);
       const sqlOp = cypherOpToSql(cond.operator);
       const rhs = buildWhereRhs(cond);
-      const condStr = `${expression} ${sqlOp} ${rhs}`;
-      mergeCondition(conditions, condStr, prevConjunction);
+      mergeCondition(conditions, `${expression} ${sqlOp} ${rhs}`, prevConjunction);
       pushWhereParam(params, cond);
       prevConjunction = cond.conjunction;
     }
   }
 }
 
-// Re-export types that consumers may need
 export type { MatchPattern, OrderByClause, ParsedQuery, ReturnField, WhereCondition };

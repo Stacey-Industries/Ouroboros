@@ -39,6 +39,12 @@ export interface WhereCondition {
   conjunction: 'AND' | 'OR' | null;
 }
 
+/** Parsed UNWIND clause: a literal value list and the AS alias. */
+export interface UnwindClause {
+  values: (string | number)[];
+  alias: string;
+}
+
 export interface ParsedQuery {
   match: MatchPattern;
   where: WhereCondition[];
@@ -47,6 +53,10 @@ export interface ParsedQuery {
   limit: number;
   isCount: boolean;
   isDistinct: boolean;
+  /** OPTIONAL MATCH pattern — translates to LEFT JOIN. */
+  optionalMatch: MatchPattern | null;
+  /** UNWIND clause — literal list expansion via VALUES CTE. */
+  unwind: UnwindClause | null;
 }
 
 export interface ReturnField {
@@ -94,13 +104,13 @@ const VARPATH_IN = new RegExp(
 );
 // Groups: 1=leftAlias, 2=leftLabel, 3=edgeAlias, 4=edgeType, 5=rightAlias, 6=rightLabel
 // Edge bracket syntax handled: [], [r], [:TYPE], [r:TYPE]
-// eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
 const HOP_OUT =
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded quantifiers (\w*, \w+) prevent catastrophic backtracking; input capped by extractClause
   /\((\w*)(?::(\w+))?\)\s*-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*->\s*\((\w*)(?::(\w+))?\)/i;
-// eslint-disable-next-line security/detect-unsafe-regex -- pattern matches Cypher hop syntax; bounded quantifiers prevent catastrophic backtracking
 const HOP_IN =
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded quantifiers (\w*, \w+) prevent catastrophic backtracking; input capped by extractClause
   /\((\w*)(?::(\w+))?\)\s*<-\[\s*(\w+)?\s*(?::(\w+))?\s*\]\s*-\s*\((\w*)(?::(\w+))?\)/i;
-// eslint-disable-next-line security/detect-unsafe-regex -- pattern matches single Cypher node; no backtracking risk
+// eslint-disable-next-line security/detect-unsafe-regex -- simple node pattern; no backtracking risk
 const SINGLE_NODE = /\((\w*)(?::(\w+))?\)/i;
 
 function tryVarpath(matchStr: string): MatchPattern | null {

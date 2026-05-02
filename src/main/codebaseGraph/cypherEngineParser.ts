@@ -28,9 +28,10 @@ const SUPPORTED_FEATURES_HINT =
  */
 export function assertNoUnsupportedClauses(query: string): void {
   const upper = query.toUpperCase();
-  // Match WITH as a clause keyword: must be at start or after whitespace,
-  // and followed by whitespace or end-of-string (not "WITHOUT", "WIDTH", etc.)
-  if (/(?:^|\s)WITH\s/i.test(upper)) {
+  // Strip Cypher string operators "STARTS WITH" and "ENDS WITH" before checking for
+  // the bare WITH clause keyword, which would be a pipeline operator (not yet supported).
+  const stripped = upper.replace(/(?:STARTS|ENDS)\s+WITH/g, '__OP__');
+  if (/(?:^|\s)WITH\s/.test(stripped)) {
     throw new Error(
       `Cypher feature not supported by Ouroboros mini-engine: WITH (pipeline operator). ` +
         SUPPORTED_FEATURES_HINT,
@@ -38,26 +39,81 @@ export function assertNoUnsupportedClauses(query: string): void {
   }
 }
 
+/** All clause keywords used as boundaries, longest-first so OPTIONAL MATCH beats MATCH. */
+const CLAUSE_BOUNDARIES = [
+  'OPTIONAL MATCH',
+  'ORDER BY',
+  'MATCH',
+  'WHERE',
+  'RETURN',
+  'LIMIT',
+  'UNWIND',
+];
+
+/** Find the start index of `keyword` in `upper`, ensuring it is word-bounded. */
+function findKeywordIndex(upper: string, keyword: string): number {
+  let start = 0;
+  while (start < upper.length) {
+    const idx = upper.indexOf(keyword, start);
+    if (idx === -1) return -1;
+    const before = idx === 0 || /\s/.test(upper[idx - 1]);
+    const after =
+      idx + keyword.length >= upper.length || /[\s(]/.test(upper[idx + keyword.length]);
+    if (before && after) return idx;
+    start = idx + 1;
+  }
+  return -1;
+}
+
+/** Find the nearest clause boundary in `upper` (starting from position 0), skipping one boundary. */
+function nextBoundaryIn(upper: string, skipBoundary: string): number {
+  let min = Infinity;
+  for (const b of CLAUSE_BOUNDARIES) {
+    if (b === skipBoundary) continue;
+    const pos = findKeywordIndex(upper, b);
+    if (pos !== -1 && pos < min) min = pos;
+  }
+  return min;
+}
+
 /** Extract the content of a named clause from the query string. */
 export function extractClause(query: string, clause: string): string | null {
-  const clauseUpper = clause.toUpperCase();
-  const queryUpper = query.toUpperCase();
-
-  const idx = queryUpper.indexOf(clauseUpper);
+  const upper = query.toUpperCase();
+  const idx = findKeywordIndex(upper, clause);
   if (idx === -1) return null;
 
-  const afterClause = idx + clauseUpper.length;
+  // Plain MATCH must not be part of OPTIONAL MATCH
+  if (clause === 'MATCH' && upper.slice(0, idx).trimEnd().endsWith('OPTIONAL')) return null;
+
+  const afterClause = idx + clause.length;
+  const tail = upper.slice(afterClause);
+  const boundary = nextBoundaryIn(tail, clause);
   const content = query.slice(afterClause);
+  return boundary === Infinity ? content.trim() : content.slice(0, boundary).trim();
+}
 
-  const nextClauses = ['MATCH', 'WHERE', 'RETURN', 'ORDER BY', 'LIMIT']
-    .filter((c) => c !== clause)
-    .map((c) => {
-      const cIdx = content.toUpperCase().indexOf(c);
-      return cIdx === -1 ? Infinity : cIdx;
-    });
+/** Extract the OPTIONAL MATCH clause content, or null if absent. */
+export function extractOptionalMatchClause(query: string): string | null {
+  const upper = query.toUpperCase();
+  const idx = findKeywordIndex(upper, 'OPTIONAL MATCH');
+  if (idx === -1) return null;
+  const afterClause = idx + 'OPTIONAL MATCH'.length;
+  const tail = upper.slice(afterClause);
+  const boundary = nextBoundaryIn(tail, 'OPTIONAL MATCH');
+  const content = query.slice(afterClause);
+  return boundary === Infinity ? content.trim() : content.slice(0, boundary).trim();
+}
 
-  const nextBoundary = Math.min(...nextClauses);
-  return nextBoundary === Infinity ? content.trim() : content.slice(0, nextBoundary).trim();
+/** Extract the UNWIND clause content (list + AS alias), or null if absent. */
+export function extractUnwindClause(query: string): string | null {
+  const upper = query.toUpperCase();
+  const idx = findKeywordIndex(upper, 'UNWIND');
+  if (idx === -1) return null;
+  const afterClause = idx + 'UNWIND'.length;
+  const tail = upper.slice(afterClause);
+  const boundary = nextBoundaryIn(tail, 'UNWIND');
+  const content = query.slice(afterClause);
+  return boundary === Infinity ? content.trim() : content.slice(0, boundary).trim();
 }
 
 // ─── WHERE parsing ────────────────────────────────────────────────────────────
@@ -241,4 +297,19 @@ export function parseOrderBy(orderByStr: string): OrderByClause[] {
     }
   }
   return clauses;
+}
+
+// ─── UNWIND parsing ───────────────────────────────────────────────────────────
+
+/** Parse UNWIND clause content: `['v1','v2'] AS alias` → { values, alias }. */
+export function parseUnwind(unwindStr: string): import('./cypherEngineSupport').UnwindClause {
+  const m = /^\s*\[([^\]]*)\]\s+AS\s+(\w+)\s*$/i.exec(unwindStr);
+  if (!m) {
+    throw new Error(
+      `Unsupported UNWIND syntax: "${unwindStr}". ` +
+        `Expected: UNWIND ['v1', 'v2', ...] AS alias (literal list only).`,
+    );
+  }
+  const values = parseInListValues(m[1]);
+  return { values, alias: m[2] };
 }
