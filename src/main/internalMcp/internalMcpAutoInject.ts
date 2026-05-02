@@ -118,14 +118,10 @@ export interface InjectOptions {
    * `buildInjectOptions` resolves this from the IDE's main-out directory.
    */
   standaloneScriptPath?: string;
-  /** @deprecated Use `standaloneScriptPath`. Kept for back-compat with callers
-   *  that haven't been updated yet — falls back to this field if `standaloneScriptPath`
-   *  is absent. Removed in a future wave. */
-  stdioTransportPath?: string;
 }
 
 function buildOuroborosEntry(_serverPort: number, opts: InjectOptions): ServerEntry {
-  const scriptPath = opts.standaloneScriptPath ?? opts.stdioTransportPath;
+  const scriptPath = opts.standaloneScriptPath;
   if (!scriptPath) {
     throw new Error('ouroboros injection requires standaloneScriptPath');
   }

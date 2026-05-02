@@ -36,6 +36,6 @@ export { type InternalMcpTransport } from './internalMcpTypes';
  */
 export function buildInjectOptions(mainOutDir: string): InjectOptions {
   return {
-    stdioTransportPath: path.join(mainOutDir, 'ouroborosMcp.js'),
+    standaloneScriptPath: path.join(mainOutDir, 'ouroborosMcp.js'),
   };
 }
