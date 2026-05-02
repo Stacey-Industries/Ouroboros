@@ -81,3 +81,29 @@ Bundles three audit follow-ups: context-injection completion, graph-MCP polish, 
 **Rationale:** Pure infrastructure-completion. The model-aware budget table already exists and is tested. The only change is connecting it to the actual model identifier from the request.
 
 **Consequences:** Opus-tagged requests get 16 KB / 4K-token repo-map slices. Sonnet gets 12 KB / 3K. Default falls through to 8 KB / 2K as before. No regression risk — `model: undefined` continues to use the default.
+
+---
+
+## End-of-wave additions
+
+Filled in at wave close (2026-05-02).
+
+### Decision 7: extend retrain trigger to glob date-rotated files (mid-wave)
+
+**Context:** During Phase A2 implementation, discovered the retrain trigger was designed to watch a single `context-outcomes.jsonl` file, but `contextOutcomeWriter.ts` (Wave 29.5 M2) writes date-rotated files. Without an extension, the wire-up would have been hollow — the trigger would only see today's file.
+
+**Pick:** Smallest-diff dir-glob extension. `countRows` (TS) and `load_jsonl` (Python) both accept either a single file or a directory; when given a directory, glob `context-{outcomes,decisions}-YYYY-MM-DD[.N].jsonl` and aggregate.
+
+**Rationale:** Alternative was to introduce a separate "retrain trigger v2" with a directory-watch loop. Bigger change, more surface to test. The single-file API stays unchanged — directory mode is a strict superset.
+
+**Consequences:** Trainer sees the full corpus across all rotated files. The trigger's `fs.watch(dir)` fires on any file change in the directory (the watcher already handles the file-not-yet-existing case with `error → noop`). No back-compat break for existing test fixtures (single-file mode unchanged).
+
+### Decision 8: HIGH-A (initTraceBatcher) skipped — already wired in Wave 41 Phase F
+
+**Context:** The audit-verification-pass plan (filed 2026-05-01) identified HIGH-A — `initTraceBatcher`/`drainTraceBatcher` lifecycle unwired in production. Verified during Phase C that this was incorrect: Wave 41 Phase F (commit `cfe1f80`) wired both at `telemetryStore.ts:330` and `:340` inside `initTelemetryStore`/`closeTelemetryStore`.
+
+**Pick:** Skip HIGH-A from Phase C. Document in ADR.
+
+**Rationale:** The plan was working from `archive/waves-15-29-review-addendum.md` which predated Wave 41 Phase F by ~12 waves. Verifying the live code before acting is non-optional per `~/.claude/CLAUDE.md`.
+
+**Consequences:** Phase C scope reduced from four items to three (C2, C3, C4). HIGH-D (`purgeRetainedRows` scheduling) was also already wired by Wave 41; only the `auto_vacuum = INCREMENTAL` PRAGMA addition remained.

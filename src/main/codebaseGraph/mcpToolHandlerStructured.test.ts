@@ -11,7 +11,6 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../logger', () => ({
