@@ -18,6 +18,7 @@ export interface BfsOptions {
   direction: 'outbound' | 'inbound';
   maxDepth: number;
   maxNodes?: number;
+  minConfidence?: number; // 0.0–1.0; default 0 (no filtering)
 }
 
 /** Build the BFS SQL and run it. Returns rows with id/depth/path. */
@@ -25,12 +26,14 @@ export function runBfsTraversal(
   db: Database.Database,
   opts: BfsOptions,
 ): Array<{ id: string; depth: number; path: string[] }> {
-  const { startNodeId, edgeTypes, direction, maxDepth, maxNodes = 200 } = opts;
+  const { startNodeId, edgeTypes, direction, maxDepth, maxNodes = 200, minConfidence } = opts;
   const typeList = edgeTypes.map((t) => `'${t}'`).join(',');
+  const confidenceClause =
+    minConfidence !== undefined && minConfidence > 0 ? ` AND e.confidence >= ${minConfidence}` : '';
   const edgeCondition =
     direction === 'outbound'
-      ? `e.source_id = r.id AND e.type IN (${typeList})`
-      : `e.target_id = r.id AND e.type IN (${typeList})`;
+      ? `e.source_id = r.id AND e.type IN (${typeList})${confidenceClause}`
+      : `e.target_id = r.id AND e.type IN (${typeList})${confidenceClause}`;
   const nextNode = direction === 'outbound' ? 'e.target_id' : 'e.source_id';
 
   const sql = `

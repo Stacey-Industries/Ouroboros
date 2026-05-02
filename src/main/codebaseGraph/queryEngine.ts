@@ -18,6 +18,7 @@ import {
   buildRiskSummaryFromNodes,
   CALL_EDGE_TYPES,
   classifyRisk,
+  collectTraceEdges,
   deduplicateTraceResult,
   getGitChangedFiles,
   getNodeSignature,
@@ -39,13 +40,6 @@ import type {
   TraceNode,
   TraceResult,
 } from './queryEngineTypes';
-
-function collectTraceEdges(pathNodes: string[], traceEdges: TraceEdge[]): void {
-  for (let i = 0; i < pathNodes.length - 1; i++) {
-    // eslint-disable-next-line security/detect-object-injection -- i is a bounded loop index over a trusted array
-    traceEdges.push({ source: pathNodes[i], target: pathNodes[i + 1], type: 'CALLS' });
-  }
-}
 
 // ─── QueryEngine ──────────────────────────────────────────────────────────────
 
@@ -152,6 +146,7 @@ export class QueryEngine {
         direction,
         maxDepth: clampedDepth,
         maxNodes: MAX_BFS_NODES,
+        minConfidence: options.minConfidence,
       });
       this.collectBfsResults(bfsResults, options, acc);
     }
@@ -177,7 +172,13 @@ export class QueryEngine {
     const classifyFn = (node: GraphNode, depth: number): RiskLevel =>
       classifyRisk(this.db, node, depth);
 
-    const impactedCallers = buildImpactedCallers(this.db, changedSymbols, clampedDepth, classifyFn);
+    const impactedCallers = buildImpactedCallers({
+      db: this.db,
+      changedSymbols,
+      clampedDepth,
+      classifyFn,
+      minConfidence: options.minConfidence,
+    });
 
     const riskSummary: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
     for (const caller of impactedCallers) {
