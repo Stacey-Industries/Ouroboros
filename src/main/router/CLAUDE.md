@@ -14,17 +14,18 @@ Three-layer cascade that selects HAIKU / SONNET / OPUS for each chat prompt. Als
 
 The active model-selection feature is now Wave 61's **delegation coach** at `src/main/delegationCoach/`. The router stays in place serving bundled weights for any consumer that calls `routePromptSync()`; flip `autoRetrainEnabled: true` only if you have a tier-balanced label distribution OR want to re-enable retraining for experimentation.
 
-The mythical `llmJudge.ts` referenced below is documented in this file but never shipped — it would be the missing piece for de-escalation labels. Defer until there's a concrete need; the delegation coach addresses the user-facing pain that originally motivated it.
+An LLM judge (sampled async scorer for routing quality, controlled by `llmJudgeSampleRate`) was scoped but never shipped — it would be the missing piece for de-escalation labels. Defer until there's a concrete need; the delegation coach addresses the user-facing pain that originally motivated it. The `llmJudgeSampleRate` config field is still in the schema but inert.
 
-## Architecture: Three-Layer Cascade
+## Architecture: Two-Layer Cascade (Layer 3 unwired)
 
 ```
 Layer 1 — ruleEngine.ts       (sync, 0ms)   deterministic pattern matching
 Layer 2 — classifier.ts       (sync, ~5ms)  logistic regression (bundled weights)
-Layer 3 — llmFallback.ts      (async, ~300ms) Haiku API call, in-memory cache
+Layer 3 — (unimplemented)     placeholder for future async LLM fallback
 
 Each layer yields to the next when confidence is below threshold.
-Falls back to SONNET on any error or complete miss.
+When both Layer 1 and Layer 2 decline, routePromptSync returns null
+and the caller falls back to SONNET.
 ```
 
 ## File Map
@@ -36,7 +37,6 @@ Falls back to SONNET on any error or complete miss.
 | `ruleEngine.ts`             | Layer 1 — deterministic rules: slash commands, keyword patterns, follow-up confirmation detection            |
 | `featureExtractor.ts`       | Extracts the 19 numeric features consumed by Layer 2                                                         |
 | `classifier.ts`             | Layer 2 — pure-TS logistic regression; loads weights from `model/router-weights.json`                        |
-| `llmFallback.ts`            | Layer 3 — async Haiku API call; 2s timeout, 5-minute in-memory cache                                         |
 | `routerFeedback.ts`         | Builds `EnrichedRoutingLogEntry` with trace ID, counterfactuals, workspace hash                              |
 | `routerLogger.ts`           | Appends enriched entries to `{userData}/router-decisions.jsonl`                                              |
 | `qualitySignalCollector.ts` | Tracks implicit quality signals (regeneration, abort, git commit) → `router-quality-signals.jsonl`           |
@@ -44,7 +44,6 @@ Falls back to SONNET on any error or complete miss.
 | `routerShadow.ts`           | Shadow-routes terminal `user_prompt_submit` hook events for training data (never changes model)              |
 | `retrainTrigger.ts`         | Polls signal count; when ≥50 new samples, exports data + spawns `tools/train-router.py`                      |
 | `routerExporter.ts`         | Merges decisions + signals by `traceId` → `router-full-extracted.jsonl` / `router-full-judged.jsonl`         |
-| `llmJudge.ts`               | Sampled async judge — scores routing quality via Haiku; controlled by `llmJudgeSampleRate`                   |
 | `index.ts`                  | Barrel re-export — only import from here, not from individual files                                          |
 
 Helper modules (`routerExporterHelpers.ts`, `retrainTriggerHelpers.ts`, `qualitySignalCollectorHelpers.ts`) exist purely to keep their parent under 300 lines.
@@ -64,10 +63,9 @@ Helper modules (`routerExporterHelpers.ts`, `retrainTriggerHelpers.ts`, `quality
 ## Gotchas
 
 - **Logistic regression uses `.at(i)` not `[i]`** throughout `classifier.ts` to satisfy `eslint-plugin-security`'s `detect-object-injection` rule. Don't simplify these to bracket access.
-- **Layer 3 (LLM fallback) is not wired into `routePromptSync()`** — it's implemented but the orchestrator's sync path has no async escape hatch. It exists for future async routing or manual invocation.
+- **Layer 3 (LLM fallback) is unimplemented.** `routePromptSync()` returns null when both Layer 1 and Layer 2 decline; the orchestrator has no async escape hatch. The `llmFallback.ts` and `llmJudge.ts` files referenced in older docs were never shipped — see Wave 61 maintenance-only mode above.
 - **`routerLastRetrainCount` is persisted to electron-store** via `config.ts`. After a retrain, the signal baseline is saved so subsequent checks measure _new_ signals only.
 - **Trainer script resolves from two locations**: dev (`app.getAppPath()/tools/train-router.py`) and packaged (`process.resourcesPath/train-router.py`). Only the dev path exists in the repo.
-- **`llmFallback.ts` calls `createAnthropicClient()`** from `orchestration/providers/anthropicAuth` — requires valid auth. Falls back to `SONNET` silently on any error including auth failure.
 - **`workspaceRootHash`** in enriched log entries is a SHA-256 prefix of the workspace path, not the path itself — for privacy. Don't log raw paths.
 
 ## Data Flow (Training Pipeline)
