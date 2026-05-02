@@ -128,15 +128,42 @@ UUID v7 follow-up (Wave 15) — never needed; Wave 47 stash@{0}/{1} drops (Wave 
 
 - **`list_projects` 0-stat refresh bug** — verification confirms the bug persists. The `projects` table caches `node_count` / `edge_count` columns, but the indexer can't call `upsertProject()` to refresh them due to an `INSERT OR REPLACE` cascade-delete bug documented in `graphControllerCompat.integration.test.ts:189-193`. `handleListProjects` reads the cached zeros instead of calling `getNodeCount()` live. Should be filed as a future wave (probably bundled with the broader `index_status` quality work in `graph-mcp-polish.md` or `cypher-engine-feature-additions.md`, or as a standalone `list_projects-stat-refresh` wave).
 
-### Audit batches not yet processed
+### Audit batches handled in second pass (2026-05-01 evening)
 
-Per the prior session's handoff:
+The remaining audit sections were swept in a second triage pass on the same day. Status:
 
-- **Section A1 — Dead code** (53 items): includes 12 high-confidence DELETE candidates, 6 PARTIAL needs-judgment items, 4 DROPPED-INTENT (`llmFallback.ts`, `llmJudge.ts`, etc.)
-- **Section A2 — Dead config keys**: `windowSessions` removal needs both reads removed in same change; `llmJudgeSampleRate` UI controls nothing
-- **Section A6 — Docs drift** (13 items): 2 HIGH-severity (Wave-51 sections describe deleted architecture)
-- **Section A7 — Stale CLAUDE.md files**: ~13 entries to fix; auto-generated sections also stale
-- **Section C — Settings audit**: VERIFIED-PARTIAL items (`webAccessPassword` UI feedback, `useMcpHost` main-process gating, `modelSlots.claudeMdGeneration` wiring)
+**Section A1 — Dead code (12 high-confidence DELETEs + DROPPED-INTENT items closed)**
+- Deleted: `src/renderer/components/primitives/` directory (12 files), `osc133Handler.ts`, 3 unused hooks + tests, 5 dead `build*Apis` exports surgically removed.
+- Deleted scripts: `analyze-graph-adherence.ts`, `analyze-ranker-hit-rate*` (4 files), `measure-mcp-token-cost.ts`, `manual-seq-test.mjs`. Synced `docs/hook-migration.md` and `docs/context-ranker.md`.
+- Deleted artifacts: 2 timestamped vite configs, `tmp_monitor.py`, plus untracked gitignored cruft (`.lint-report.json`, `tsconfig.web.tsbuildinfo`, `vitest-results.json`, `tools/__pycache__/`).
+- Stale TODO comments dropped: `en.ts` Wave 38 Phase G, `AgentChatTabBar.tsx` Wave 32 Phase I, `electron-mobile-access.d.ts` Wave 33a.
+- DROPPED-INTENT: removed `RouteOptions.skipLayer3` scaffolding from `orchestrator.ts`; synced `router/CLAUDE.md` to remove `llmFallback.ts` / `llmJudge.ts` file map references.
+- PARTIAL items (`escapePowerShellArg` 3× dup, `enableEmacsMode`, `useFormatOnSave` barrel, `useOutsideClick` 3× dup, `TOOL_COLORS` 2× dup) NOT touched — needs design judgment beyond cleanup scope.
+
+**Section A2 — Dead config keys (1 of 6 cleanly removed)**
+- Removed: `routerSettings.llmJudgeSampleRate` (schema, type, UI slider, search entry, 5 test fixtures, router CLAUDE.md note).
+- Filed as `roadmap/future/config-key-cleanup-followups.md`: `windowSessions` (large surface + sessionMigration), `codemode.routeInternalMcp` (test rework), `internalMcp.transport` (test rework), `InjectOptions.transport` field (small), `InjectOptions.stdioTransportPath` (3-step caller migration). Each blocked on test-rework or load-bearing sequencing that warranted its own commits.
+- KEEP per audit: `multiRoots`, `autoRetrainEnabled`, `TRAINING_CUTOFF_DATE`, `ecosystem.rulesAndSkillsInstallEnabled` (latter already filed).
+
+**Section A6 — Docs drift (all 13 items fixed)**
+- HIGH severity: rewrote `docs/architecture.md` "MCP transport and CodeMode routing (Wave 51)" section to describe the current Wave 60 standalone server; replaced `docs/codemode-internalmcp-routing.md` (108 lines of pre-Wave-60 operator guide) with a tombstone pointing at the standalone module CLAUDE.md.
+- MEDIUM severity: 6 path/filename corrections across `docs/architecture.md`, `docs/context-injection.md`, `docs/context-ranker.md`.
+- LOW severity: theme count 5→8, "Canvas renderer"→WebGL via @xterm/addon-webgl, `chatPrimary`→`immersiveChat` in data-model, `glass`→`material` in root CLAUDE.md folder map, removed broken README screenshot link.
+
+**Section A7 — Stale CLAUDE.mds (4 of 4 subsystem files refreshed)**
+- `agentChat/CLAUDE.md` — dropped 5 references to deleted `threadStoreRuntimeSupport.ts`; updated both auto-gen and manual:preserved sections to reflect SQLite-only reality.
+- `contextLayer/CLAUDE.md` — replaced `contextLayerAiSummarizer.ts` row with `moduleSummarizer.ts`; dropped 3 gotchas pointing at deleted `importGraphAnalyzer.ts` / `languageStrategies.ts`; replaced pre-Wave-69 manual section with tombstone.
+- `orchestration/providers/CLAUDE.md` — corrected "three providers" → "two" (no `anthropicApiAdapter` exists); moved `anthropicAuth.ts` reference out (lives at `auth/providers/`); replaced stale manual section.
+- `symbolExtractor/CLAUDE.md` — corrected Consumers table: removed phantom `graphParser*.ts` and `internalMcpToolsGraph.ts` rows; added real consumer `useSymbolOutline.ts`.
+- `router/CLAUDE.md` — already updated in the A1 commit (skipLayer3 + llmFallback removal pass).
+
+**Section C — Settings audit (5 VERIFIED-PARTIAL items filed as wave)**
+- All five items are real feature-implementation work, not cleanup deletes. Filed as `roadmap/future/settings-partial-wiring-fixes.md` (two bundles: backend wiring fixes for `webAccessPassword` UI feedback / `useMcpHost` gating / `modelSlots.claudeMdGeneration` slot; persistence fixes for Export Usage time window + output path).
+
+### Still untouched
+
+- A3 orphaned IPC: 2 truly orphan channels (`app:rebuildAndRestart`, `perf:markFirstRender`) + 1 naming collision (`shell:openExtensionsFolder` vs `extensions:openFolder`). Small batch, ready for a future cleanup pass.
+- A1 PARTIAL items (5 — see above).
 
 ---
 
