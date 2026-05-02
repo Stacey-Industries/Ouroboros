@@ -321,6 +321,8 @@ export interface AppConfig {
   ecosystem?: EcosystemSettings;
   /** Wave 38 Phase A+C — platform settings: onboarding, language, update channel, crash reporter, changelog gate. Phase C adds dismissedEmptyStates. */
   platform?: PlatformConfig;
+  /** Wave 78 — persisted Export Usage preferences. */
+  usageExport?: { defaultWindow?: '24h' | '7d' | '30d' | 'all'; lastDir?: string };
 }
 
 export type {

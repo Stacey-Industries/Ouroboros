@@ -15,6 +15,7 @@ import {
 import { getConfigValue, setConfigValue } from './config';
 import type { ClaudeMdSettings } from './configTypes';
 import log from './logger';
+import { buildProviderEnv } from './ptyEnv';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -120,10 +121,11 @@ async function spawnClaudeWithRetry(
   model: string,
   cwd?: string,
 ): Promise<string | undefined> {
+  const slotEnv = buildProviderEnv('claudeMdGeneration');
   let lastErr: string | undefined;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await spawnClaude(prompt, model, cwd);
+      return await spawnClaude(prompt, model, cwd, slotEnv);
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
       const isRateLimit = /rate|429/i.test(lastErr);

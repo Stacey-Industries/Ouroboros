@@ -1,5 +1,5 @@
 /**
- * UsageExportPane.tsx — Wave 37 Phase C
+ * UsageExportPane.tsx — Wave 37 Phase C / Wave 78 Phase B
  *
  * Settings pane for exporting cost-history as JSONL.
  * Composes: window picker, output path input, export button, status row,
@@ -43,36 +43,44 @@ function windowBounds(opt: WindowOption): { windowStart: number; windowEnd: numb
   return { windowStart: starts[opt], windowEnd: now };
 }
 
-function defaultOutputPath(): string {
+function timestampedFilename(): string {
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   return `usage-export-${ts}.jsonl`;
 }
 
+function buildInitialPath(lastDir: string): string {
+  if (!lastDir) return timestampedFilename();
+  const sep = lastDir.endsWith('/') || lastDir.endsWith('\\') ? '' : '/';
+  return `${lastDir}${sep}${timestampedFilename()}`;
+}
+
+function dirFromPath(filePath: string): string {
+  const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  return idx > 0 ? filePath.slice(0, idx) : '';
+}
+
+function persistExportPrefs(windowOpt: WindowOption, exportedPath: string): void {
+  const lastDir = dirFromPath(exportedPath);
+  void window.electronAPI.config.set('usageExport', { defaultWindow: windowOpt, lastDir });
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-function useUsageExport() {
-  const [windowOpt, setWindowOpt] = useState<WindowOption>('24h');
-  const [outputPath, setOutputPath] = useState(defaultOutputPath);
-  const [status, setStatus] = useState<ExportStatus>({ kind: 'idle' });
-  const [lastExport, setLastExport] = useState<LastExportInfo | null>(null);
-  const mountedRef = useRef(true);
+interface ExportHandlerDeps {
+  setStatus: (s: ExportStatus) => void;
+  setLastExport: (i: LastExportInfo) => void;
+}
 
-  useEffect(() => {
-    mountedRef.current = true;
-    window.electronAPI.ecosystem
-      .lastExportInfo()
-      .then((res) => {
-        if (mountedRef.current && res.success) setLastExport(res.info ?? null);
-      })
-      .catch(() => undefined);
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const handleExport = useCallback(async () => {
+function useExportHandler(
+  mountedRef: React.MutableRefObject<boolean>,
+  windowOpt: WindowOption,
+  outputPath: string,
+  deps: ExportHandlerDeps,
+): () => Promise<void> {
+  const { setStatus, setLastExport } = deps;
+  return useCallback(async () => {
     setStatus({ kind: 'busy' });
-    const resolvedPath = outputPath.trim() || defaultOutputPath();
+    const resolvedPath = outputPath.trim() || timestampedFilename();
     try {
       const res = await window.electronAPI.ecosystem.exportUsage({
         ...windowBounds(windowOpt),
@@ -82,6 +90,7 @@ function useUsageExport() {
       if (res.success) {
         setStatus({ kind: 'ok', message: `${res.rowsWritten} rows written to ${res.path}` });
         setLastExport({ path: res.path, at: Date.now(), rows: res.rowsWritten });
+        persistExportPrefs(windowOpt, res.path);
       } else {
         setStatus({ kind: 'err', message: res.error });
       }
@@ -89,7 +98,32 @@ function useUsageExport() {
       if (!mountedRef.current) return;
       setStatus({ kind: 'err', message: err instanceof Error ? err.message : String(err) });
     }
-  }, [windowOpt, outputPath]);
+  }, [mountedRef, windowOpt, outputPath, setStatus, setLastExport]);
+}
+
+function useUsageExport() {
+  const [windowOpt, setWindowOpt] = useState<WindowOption>('24h');
+  const [outputPath, setOutputPath] = useState(timestampedFilename);
+  const [status, setStatus] = useState<ExportStatus>({ kind: 'idle' });
+  const [lastExport, setLastExport] = useState<LastExportInfo | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    void window.electronAPI.ecosystem.lastExportInfo().then((res) => {
+      if (mountedRef.current && res.success) setLastExport(res.info ?? null);
+    });
+    void window.electronAPI.config.get('usageExport').then((prefs) => {
+      if (!mountedRef.current) return;
+      if (prefs?.defaultWindow) setWindowOpt(prefs.defaultWindow);
+      if (prefs?.lastDir) setOutputPath(buildInitialPath(prefs.lastDir));
+    });
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const handleExport = useExportHandler(
+    mountedRef, windowOpt, outputPath, { setStatus, setLastExport },
+  );
 
   return { windowOpt, setWindowOpt, outputPath, setOutputPath, status, lastExport, handleExport };
 }

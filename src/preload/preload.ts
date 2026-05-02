@@ -89,6 +89,7 @@ const configAPI: ElectronAPI['config'] = {
   getAll: () => ipcRenderer.invoke('config:getAll'),
   get: (key) => ipcRenderer.invoke('config:get', key),
   set: (key, value) => ipcRenderer.invoke('config:set', key, value),
+  hasWebPassword: () => ipcRenderer.invoke('config:hasWebPassword'),
   export: () => ipcRenderer.invoke('config:export'),
   import: () => ipcRenderer.invoke('config:import'),
   openSettingsFile: () => ipcRenderer.invoke('config:openSettingsFile'),

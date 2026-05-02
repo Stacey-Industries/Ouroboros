@@ -109,6 +109,10 @@ async function injectStandaloneMcpEntry(): Promise<void> {
     log.info('[internal-mcp] disabled by config (internalMcpEnabled=false) — skipping injection');
     return;
   }
+  if (!getConfigValue('useMcpHost')) {
+    log.info('[internal-mcp] useMcpHost disabled — skipping injection');
+    return;
+  }
   const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   if (!workspaceRoot) {
     log.info('[internal-mcp] no project root — skipping injection');

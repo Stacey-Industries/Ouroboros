@@ -2,7 +2,7 @@
  * GeneralWebAccessSubsection.tsx — Web remote access settings (password + port).
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
@@ -12,18 +12,44 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
+function useWebPasswordSet(draftValue: string): boolean {
+  const [isSet, setIsSet] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.config
+      .hasWebPassword()
+      .then((v) => setIsSet(v))
+      .catch(() => setIsSet(false));
+  }, [draftValue]);
+
+  return isSet;
+}
+
+function PasswordSetBadge(): React.ReactElement {
+  return (
+    <span style={badgeStyle}>
+      &#10003; Password set
+    </span>
+  );
+}
+
 function PasswordField({
   value,
   onChange,
+  isSet,
 }: {
   value: string;
   onChange: (v: string) => void;
+  isSet: boolean;
 }): React.ReactElement {
   return (
     <div style={fieldRowStyle}>
-      <label className="text-text-semantic-muted" style={labelStyle}>
-        Password
-      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+        <label className="text-text-semantic-muted" style={labelStyle}>
+          Password
+        </label>
+        {isSet && <PasswordSetBadge />}
+      </div>
       <input
         type="password"
         value={value}
@@ -72,6 +98,7 @@ function PortField({
 }
 
 export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElement {
+  const passwordIsSet = useWebPasswordSet(draft.webAccessPassword ?? '');
   return (
     <section>
       <SectionLabel>Web Remote Access</SectionLabel>
@@ -81,6 +108,7 @@ export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElem
       <PasswordField
         value={draft.webAccessPassword ?? ''}
         onChange={(v) => onChange('webAccessPassword', v)}
+        isSet={passwordIsSet}
       />
       <PortField
         value={draft.webAccessPort ?? 7890}
@@ -92,8 +120,15 @@ export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElem
 
 const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px', lineHeight: 1.5 };
 const fieldRowStyle: React.CSSProperties = { marginBottom: '14px' };
-const labelStyle: React.CSSProperties = { fontSize: '12px', display: 'block', marginBottom: '6px' };
+const labelStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '0' };
 const hintStyle: React.CSSProperties = { fontSize: '11px', marginTop: '4px', lineHeight: 1.4 };
+const badgeStyle: React.CSSProperties = {
+  fontSize: '11px',
+  padding: '1px 6px',
+  borderRadius: '4px',
+  background: 'var(--status-success-subtle)',
+  color: 'var(--status-success)',
+};
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '6px 10px',

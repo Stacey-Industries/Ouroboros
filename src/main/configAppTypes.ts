@@ -236,4 +236,6 @@ export interface AppConfig {
   hooks?: { enforcedRules: string[]; enforceGraphFirst?: boolean };
   /** Wave 57 — agent monitor feature flags. */
   agentMonitor?: { subagentDisplay?: { diagnostics?: boolean; enabled?: boolean } };
+  /** Wave 78 — persisted Export Usage preferences. */
+  usageExport?: { defaultWindow?: '24h' | '7d' | '30d' | 'all'; lastDir?: string };
 }
