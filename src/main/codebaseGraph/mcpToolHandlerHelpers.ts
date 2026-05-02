@@ -112,11 +112,13 @@ export async function handleTraceCallPath(
   if (!functionName) {
     return "Error: missing required parameter 'symbol'";
   }
+  const minConfidence = (args.min_confidence as number) ?? 0;
   const result = queryEngine.traceCallPath({
     functionName,
     direction: resolveDirection(args.direction),
     depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
     riskLabels: (args.risk_labels as boolean) ?? false,
+    minConfidence: minConfidence > 0 ? minConfidence : undefined,
   });
   return formatTraceResult(result, functionName);
 }
@@ -170,10 +172,12 @@ export async function handleDetectChanges(
   args: Record<string, unknown>,
   queryEngine: QueryEngine,
 ): Promise<McpToolResult> {
+  const rawMinConf = (args.min_confidence as number) ?? 0;
   const result = await queryEngine.detectChanges({
     scope: (args.scope as 'unstaged' | 'staged' | 'all' | 'branch') ?? 'all',
     baseBranch: args.base_branch as string | undefined,
     depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
+    minConfidence: rawMinConf > 0 ? rawMinConf : undefined,
   });
 
   if (result.changedFiles.length === 0) {

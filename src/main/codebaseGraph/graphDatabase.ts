@@ -193,6 +193,7 @@ export class GraphDatabase {
       target_id: edge.target_id,
       type: edge.type,
       props: JSON.stringify(edge.props),
+      confidence: edge.confidence ?? 1.0,
     });
   }
 

@@ -66,7 +66,23 @@ beforeAll(() => {
     },
   ]);
 
-  // Insert a CALLS edge: callerFn → helperFn
+  // Insert an extra node for confidence-filter tests
+  db.insertNodes([
+    {
+      id: `${PROJECT}.src/c.ts.lowConfFn`,
+      project: PROJECT,
+      label: 'Function',
+      name: 'lowConfFn',
+      qualified_name: `${PROJECT}.src/c.ts.lowConfFn`,
+      file_path: 'src/c.ts',
+      start_line: 1,
+      end_line: 5,
+      props: {},
+    },
+  ]);
+
+  // Insert a high-confidence CALLS edge (default 1.0): callerFn → helperFn
+  // Insert a low-confidence CALLS edge (0.65): callerFn → lowConfFn
   db.insertEdges([
     {
       project: PROJECT,
@@ -74,6 +90,14 @@ beforeAll(() => {
       target_id: `${PROJECT}.src/a.ts.helperFn`,
       type: 'CALLS',
       props: {},
+    },
+    {
+      project: PROJECT,
+      source_id: `${PROJECT}.src/b.ts.callerFn`,
+      target_id: `${PROJECT}.src/c.ts.lowConfFn`,
+      type: 'CALLS',
+      props: {},
+      confidence: 0.65,
     },
   ]);
 
@@ -107,7 +131,7 @@ describe('handleSearchGraph — parameter handling (Wave 70)', () => {
     // Pre-Wave-70 the name_pattern alias would still surface helperFn; now it
     // is treated as no filter, returning the full table.
     const result = await handleSearchGraph({ name_pattern: 'helperFn' }, ctx);
-    expect(result).toContain('Found 2 nodes');
+    expect(result).toContain('Found 3 nodes');
   });
 
   it('returns filtered results (not full table scan) when query is provided', async () => {
@@ -122,7 +146,7 @@ describe('handleSearchGraph — parameter handling (Wave 70)', () => {
 
   it('returns all nodes when no query filter is given', async () => {
     const result = await handleSearchGraph({}, ctx);
-    expect(result).toContain('Found 2 nodes');
+    expect(result).toContain('Found 3 nodes');
   });
 });
 
@@ -188,5 +212,36 @@ describe('handleTraceCallPath — direction aliasing', () => {
       ctx.queryEngine,
     );
     expect(outbound).toBe(callees);
+  });
+});
+
+// ─── handleTraceCallPath — min_confidence filtering (Wave 80) ─────────────────
+
+describe('handleTraceCallPath — min_confidence filtering', () => {
+  it('min_confidence: 0 (default) returns all callees including low-confidence', async () => {
+    const result = await handleTraceCallPath(
+      { symbol: 'callerFn', direction: 'outbound', min_confidence: 0 },
+      ctx.queryEngine,
+    );
+    expect(result).toContain('helperFn');
+    expect(result).toContain('lowConfFn');
+  });
+
+  it('min_confidence: 0.8 filters out the 0.65-confidence edge to lowConfFn', async () => {
+    const result = await handleTraceCallPath(
+      { symbol: 'callerFn', direction: 'outbound', min_confidence: 0.8 },
+      ctx.queryEngine,
+    );
+    expect(result).toContain('helperFn');
+    expect(result).not.toContain('lowConfFn');
+  });
+
+  it('omitting min_confidence returns all callees (default behavior unchanged)', async () => {
+    const withoutFilter = await handleTraceCallPath(
+      { symbol: 'callerFn', direction: 'outbound' },
+      ctx.queryEngine,
+    );
+    expect(withoutFilter).toContain('helperFn');
+    expect(withoutFilter).toContain('lowConfFn');
   });
 });

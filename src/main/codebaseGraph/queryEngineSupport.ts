@@ -17,6 +17,7 @@ import type {
   DetectChangesOptions,
   ImpactedCaller,
   RiskLevel,
+  TraceEdge,
   TraceNode,
   TraceResult,
 } from './queryEngineTypes';
@@ -27,6 +28,15 @@ export const MAX_BFS_NODES = 200;
 export const MAX_DEPTH = 5;
 export const CALL_EDGE_TYPES: EdgeType[] = ['CALLS', 'HTTP_CALLS', 'ASYNC_CALLS'];
 export const SYMBOL_LABELS = ['Function', 'Method', 'Class', 'Interface', 'Type', 'Enum'] as const;
+
+// ─── Trace edge helpers ───────────────────────────────────────────────────────
+
+export function collectTraceEdges(pathNodes: string[], traceEdges: TraceEdge[]): void {
+  for (let i = 0; i < pathNodes.length - 1; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a bounded loop index over a trusted array
+    traceEdges.push({ source: pathNodes[i], target: pathNodes[i + 1], type: 'CALLS' });
+  }
+}
 
 // ─── Risk classification ──────────────────────────────────────────────────────
 
@@ -102,12 +112,21 @@ export function buildChangedSymbols(
   return changedSymbols;
 }
 
-export function buildImpactedCallers(
-  db: GraphDatabase,
-  changedSymbols: ChangedSymbol[],
-  clampedDepth: number,
-  classifyFn: (node: GraphNode, depth: number) => RiskLevel,
-): ImpactedCaller[] {
+interface ImpactedCallersOptions {
+  db: GraphDatabase;
+  changedSymbols: ChangedSymbol[];
+  clampedDepth: number;
+  classifyFn: (node: GraphNode, depth: number) => RiskLevel;
+  minConfidence?: number;
+}
+
+export function buildImpactedCallers({
+  db,
+  changedSymbols,
+  clampedDepth,
+  classifyFn,
+  minConfidence,
+}: ImpactedCallersOptions): ImpactedCaller[] {
   const impactedCallers: ImpactedCaller[] = [];
   const seen = new Set<string>();
   const changedIds = new Set(changedSymbols.map((s) => s.qualifiedName));
@@ -119,6 +138,7 @@ export function buildImpactedCallers(
       direction: 'inbound',
       maxDepth: clampedDepth,
       maxNodes: 100,
+      minConfidence,
     });
 
     for (const result of bfsResults) {

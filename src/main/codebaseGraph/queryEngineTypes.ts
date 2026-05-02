@@ -9,6 +9,7 @@ export interface TraceCallPathOptions {
   direction: 'inbound' | 'outbound' | 'both';
   depth: number; // 1-5
   riskLabels: boolean; // Include risk classification
+  minConfidence?: number; // 0.0–1.0; default 0 (no filtering)
 }
 
 export interface TraceNode {
@@ -45,6 +46,7 @@ export interface DetectChangesOptions {
   scope: ChangeScope;
   baseBranch?: string; // For branch scope
   depth: number; // BFS depth for blast radius (1-5)
+  minConfidence?: number; // 0.0–1.0; default 0 (no filtering)
 }
 
 export interface ChangedSymbol {
