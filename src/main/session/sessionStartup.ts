@@ -11,7 +11,6 @@
  * One setInterval fires both; interval = SEVEN_DAYS_MS (the shorter window).
  */
 
-import type { AppConfig } from '../config';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import {
@@ -23,15 +22,9 @@ import { closeFolderStore, initFolderStore } from './folderStore';
 import { loadQueue } from './sessionDispatchQueue';
 import { startDispatchRunner, stopDispatchRunner } from './sessionDispatchRunner';
 import { runSessionGc, SEVEN_DAYS_MS } from './sessionGc';
-import { migrateWindowSessionsToSessions } from './sessionMigration';
 import { closeSessionStore, getSessionStore, initSessionStore } from './sessionStore';
 import { runSoftDeleteGc } from './softDeleteGc';
 import { getWorktreeManager } from './worktreeManager';
-
-export interface ConfigAccess {
-  get: <K extends keyof AppConfig>(key: K) => AppConfig[K];
-  set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
-}
 
 let gcInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -90,15 +83,14 @@ export async function scanOrphanWorktrees(): Promise<void> {
 }
 
 /**
- * Initialise the session store and migrate windowSessions → sessionsData.
+ * Initialise the session store.
  * Called from main.ts after telemetry is up and before window creation.
  */
-export async function initSessionServices(config: ConfigAccess): Promise<void> {
+export async function initSessionServices(): Promise<void> {
   initSessionStore();
   initPinnedContextStore();
   initProfileStore();
   initFolderStore();
-  await migrateWindowSessionsToSessions(config.get, config.set);
   // Run GC once at startup, then weekly (interval covers both 7-day and 30-day passes).
   runAllGc();
   gcInterval = setInterval(runAllGc, SEVEN_DAYS_MS);

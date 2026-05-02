@@ -35,7 +35,6 @@ describe('AppConfig — structural shape', () => {
       bookmarks: [],
       fileTreeIgnorePatterns: [],
       multiRoots: [],
-      windowSessions: [],
       customPrompt: '',
       promptPreset: 'default',
       claudeCliSettings: {

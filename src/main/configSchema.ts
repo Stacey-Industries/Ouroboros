@@ -155,32 +155,6 @@ export const schema: Record<string, unknown> = {
     items: { type: 'string' },
     default: [],
   },
-  /**
-   * @deprecated Wave 40 Phase D — write path removed; canonical store is sessionsData.
-   * Retained for one release so config validation tolerates existing user data.
-   * The read path in restoreWindowSessions falls back to this key when sessionsData
-   * contains no sessions with bounds. Remove in the next cleanup wave.
-   */
-  windowSessions: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        projectRoots: { type: 'array', items: { type: 'string' }, default: [] },
-        bounds: {
-          type: 'object',
-          properties: {
-            x: { type: 'number' },
-            y: { type: 'number' },
-            width: { type: 'number' },
-            height: { type: 'number' },
-            isMaximized: { type: 'boolean' },
-          },
-        },
-      },
-    },
-    default: [],
-  },
   customPrompt: {
     type: 'string',
     default: '',

@@ -48,10 +48,7 @@ function buildLiveBoundsByRoot(): Map<string, Session['bounds']> {
   return map;
 }
 
-/**
- * Persist current window bounds into sessionsData (canonical store).
- * No longer writes to the legacy windowSessions key (Wave 40 Phase D).
- */
+/** Persist current window bounds into sessionsData (canonical store). */
 export function persistWindowSessions(): void {
   try {
     const existing = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
@@ -73,18 +70,10 @@ function restoreOneSession(session: WindowSession): BrowserWindow | null {
   return win;
 }
 
-/**
- * Restore windows on startup.
- * Reads from sessionsData (canonical store) first; falls back to the legacy
- * windowSessions key for one-release transition (Wave 40 Phase D).
- */
+/** Restore windows on startup from sessionsData (canonical store). */
 export function restoreWindowSessions(): BrowserWindow[] {
   const sessionsData = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
-  const canonical = Array.isArray(sessionsData) ? sessionsDataToWindowSessions(sessionsData) : [];
-  const source =
-    canonical.length > 0
-      ? canonical
-      : ((getConfigValue('windowSessions') as WindowSession[] | undefined) ?? []);
-  if (!Array.isArray(source) || source.length === 0) return [];
+  const source = Array.isArray(sessionsData) ? sessionsDataToWindowSessions(sessionsData) : [];
+  if (source.length === 0) return [];
   return source.map(restoreOneSession).filter((w): w is BrowserWindow => w !== null);
 }

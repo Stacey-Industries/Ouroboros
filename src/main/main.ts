@@ -8,7 +8,7 @@ import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenR
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import { startClaudeUsagePoller } from './claudeUsagePoller';
 import { enableCodeModeUserLevel } from './codemode/codemodeStartup';
-import { getConfigValue, setConfigValue } from './config';
+import { getConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { initialiseCrashReporter } from './crashReporter';
 import { initExtensions } from './extensionsApi';
@@ -263,8 +263,7 @@ async function initializeApplication(): Promise<void> {
   await fireBootRestore(defaultRoot);
   const ud = app.getPath('userData');
   await initTelemetryAndWriters(ud);
-  const cfg = { get: getConfigValue, set: setConfigValue };
-  await runStartupStep('[main] session services', () => initSessionServices(cfg));
+  await runStartupStep('[main] session services', () => initSessionServices());
   registerBuiltinProviders();
   await migrateSecretsIfNeeded();
   setTokenFilePath(ud);

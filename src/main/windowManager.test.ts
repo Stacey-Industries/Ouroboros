@@ -698,20 +698,6 @@ describe('restoreWindowSessions', () => {
     expect(wm.getWindowCount()).toBe(2);
   });
 
-  it('falls back to windowSessions when sessionsData has no boundsed sessions', () => {
-    mocks.getConfigValue.mockImplementation((key: string) => {
-      if (key === 'sessionsData') return [{ projectRoot: '/proj/a', id: 's1' }];
-      if (key === 'windowSessions') {
-        return [{ projectRoots: ['/proj/legacy'], bounds: undefined }];
-      }
-      return undefined;
-    });
-    const wins = wm.restoreWindowSessions();
-    expect(wins).toHaveLength(1);
-    const managed = wm.getAllWindows()[0];
-    expect(managed.projectRoot).toBe('/proj/legacy');
-  });
-
   it('skips sessionsData sessions without bounds', () => {
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'sessionsData') {
@@ -721,20 +707,6 @@ describe('restoreWindowSessions', () => {
     });
     const wins = wm.restoreWindowSessions();
     expect(wins).toHaveLength(0);
-  });
-
-  it('skips sessions with empty projectRoots (legacy path)', () => {
-    mocks.getConfigValue.mockImplementation((key: string) => {
-      if (key === 'windowSessions') {
-        return [
-          { projectRoots: [], bounds: undefined },
-          { projectRoots: ['/proj/valid'], bounds: undefined },
-        ];
-      }
-      return undefined;
-    });
-    const wins = wm.restoreWindowSessions();
-    expect(wins).toHaveLength(1);
   });
 
   it('applies validated bounds when sessionsData session has valid bounds', () => {
