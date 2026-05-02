@@ -24,7 +24,6 @@
  *   internalMcpScope      — `internalMcpScope` from Wave 48
  *   taskNeedsGraphTools   — derived from Wave 48 goal classification (true when
  *                           task-gated would inject)
- *   transport             — `internalMcp.transport` from Phase B
  *
  * No I/O, no logger, no side effects: callers compose this with their own
  * config reads + crash-recovery downgrade. See `claudeCodeMode.ts` for the
@@ -33,7 +32,6 @@
  */
 
 import type { InternalMcpScope } from '../../internalMcp/internalMcpScope';
-import type { InternalMcpTransport } from '../../internalMcp/internalMcpTypes';
 
 export type RoutingDecision = 'direct-inject' | 'route-through-codemode' | 'omit';
 
@@ -49,7 +47,6 @@ export interface RoutingInputs {
   internalMcpScope: InternalMcpScope;
   /** Wave 48 task signal — `true` when the spawn's goal is code-shaped (or scope='always'). */
   taskNeedsGraphTools: boolean;
-  transport: InternalMcpTransport;
 }
 
 /** Hard gate: scope='never' or task-gated without a graph-shaped task → omit. */
@@ -59,19 +56,10 @@ function isOmitted(inputs: RoutingInputs): boolean {
   return false;
 }
 
-/**
- * CodeMode routing requires both feature flags AND the stdio transport.
- *
- * CodeMode's MCP client is stdio-only (Phase A decision; SSE in CodeMode was
- * the rejected option). Routing ouroboros through the proxy when transport
- * is still 'sse' would dead-end at `connectUpstream` — so we keep the spawn
- * on direct-inject until the operator flips both the routing flag and the
- * transport flag.
- */
 function isRoutedThroughCodemode(inputs: RoutingInputs): boolean {
   if (!inputs.codemodeEnabled) return false;
   if (inputs.ouroborosExcludedFromMultiplex) return false;
-  return inputs.transport === 'stdio';
+  return true;
 }
 
 /**

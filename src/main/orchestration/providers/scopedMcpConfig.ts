@@ -38,7 +38,6 @@ import path, { join } from 'path';
 
 import { getConfigValue } from '../../config';
 import { type InternalMcpScope, resolveInternalMcpScope } from '../../internalMcp/internalMcpScope';
-import type { InternalMcpTransport } from '../../internalMcp/internalMcpTypes';
 import log from '../../logger';
 import { classifyGoal, type GoalShape } from './goalClassifier';
 import {
@@ -98,11 +97,6 @@ async function readGlobalMcpServers(): Promise<McpServerMap> {
 // binary in Node mode. No port, no bridge, no transport branching, no live
 // URL dependency — the standalone resolves DB path itself from %APPDATA%.
 // ---------------------------------------------------------------------------
-
-function resolveTransport(): InternalMcpTransport {
-  const cfg = getConfigValue('internalMcp') as { transport?: string } | undefined;
-  return cfg?.transport === 'stdio' ? 'stdio' : 'sse';
-}
 
 function buildOuroborosEntry(mainOutDir: string): McpServerEntry {
   const standalonePath = path.join(mainOutDir, 'ouroborosMcp.js');
@@ -174,8 +168,6 @@ function makeCleanup(configPath: string): () => Promise<void> {
 
 interface CodemodeConfig {
   enabled?: boolean;
-  /** Wave 53l Phase B — deprecated; ignored by routing. Kept on type for back-compat. */
-  routeInternalMcp?: boolean;
   excludeFromMultiplex?: string[];
 }
 
@@ -206,7 +198,6 @@ function deriveRoutingDecision(opts: ScopedMcpConfigOptions): RoutingDecision {
     ouroborosExcludedFromMultiplex: flags.ouroborosExcluded,
     internalMcpScope: readScopeFromConfig(),
     taskNeedsGraphTools: true,
-    transport: resolveTransport(),
   });
   const final = opts.codemodeAcquireFailed ? downgradeOnCodemodeFailure(decision) : decision;
   log.info('[scoped-mcp] routing decision:', final, '(scope:', scope.reason + ')');
@@ -277,7 +268,6 @@ function emitSpawnCostTelemetry(args: {
       spawnId: args.opts.sessionId,
       routingDecision: args.decision,
       internalMcpScope: readScopeFromConfig(),
-      transport: resolveTransport(),
       codemodeEnabled: flags.enabled,
       ...cost,
     });

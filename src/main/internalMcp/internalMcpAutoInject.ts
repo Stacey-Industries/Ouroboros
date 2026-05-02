@@ -3,7 +3,6 @@ import os from 'os';
 import path from 'path';
 
 import log from '../logger';
-import type { InternalMcpTransport } from './internalMcpTypes';
 
 // ---------------------------------------------------------------------------
 // Wave 53g: Claude Code reads MCP server config from `.mcp.json` at project
@@ -119,18 +118,10 @@ export interface InjectOptions {
    * `buildInjectOptions` resolves this from the IDE's main-out directory.
    */
   standaloneScriptPath?: string;
-  /** @deprecated Use `standaloneScriptPath`. Kept for back-compat with callers
-   *  that haven't been updated yet — falls back to this field if `standaloneScriptPath`
-   *  is absent. Removed in a future wave. */
-  stdioTransportPath?: string;
-  /** @deprecated SSE transport removed in Wave 60. Field accepted for
-   *  back-compat with stale config files but ignored — entry shape is always
-   *  the standalone now. */
-  transport?: InternalMcpTransport;
 }
 
 function buildOuroborosEntry(_serverPort: number, opts: InjectOptions): ServerEntry {
-  const scriptPath = opts.standaloneScriptPath ?? opts.stdioTransportPath;
+  const scriptPath = opts.standaloneScriptPath;
   if (!scriptPath) {
     throw new Error('ouroboros injection requires standaloneScriptPath');
   }

@@ -17,11 +17,6 @@ vi.mock('./sessionStore', () => ({
   getSessionStore: (...args: unknown[]) => getSessionStoreMock(...args),
 }));
 
-const migrateMock = vi.fn().mockResolvedValue({ migrated: 0 });
-vi.mock('./sessionMigration', () => ({
-  migrateWindowSessionsToSessions: (...args: unknown[]) => migrateMock(...args),
-}));
-
 const runSessionGcMock = vi.fn().mockResolvedValue({ purged: 0 });
 vi.mock('./sessionGc', () => ({
   runSessionGc: (...args: unknown[]) => runSessionGcMock(...args),
@@ -71,28 +66,24 @@ vi.mock('./sessionDispatchRunner', () => ({
 import { closeSessionServices, initSessionServices } from './sessionStartup';
 
 describe('sessionStartup', () => {
-  const get = vi.fn().mockReturnValue(undefined);
-  const set = vi.fn();
-
   beforeEach(() => {
     initSessionStoreMock.mockClear();
     closeSessionStoreMock.mockClear();
-    migrateMock.mockClear();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('initSessionServices calls initSessionStore then migration', async () => {
-    await initSessionServices({ get, set });
+  it('initSessionServices calls initSessionStore', async () => {
+    await initSessionServices();
     expect(initSessionStoreMock).toHaveBeenCalledTimes(1);
-    expect(migrateMock).toHaveBeenCalledWith(get, set);
+    closeSessionServices(); // clear interval
   });
 
   it('initSessionServices triggers GC at startup', async () => {
     runSessionGcMock.mockClear();
-    await initSessionServices({ get, set });
+    await initSessionServices();
     // GC fires async (void) — give microtasks a tick
     await Promise.resolve();
     expect(runSessionGcMock).toHaveBeenCalledTimes(1);
@@ -102,20 +93,5 @@ describe('sessionStartup', () => {
   it('closeSessionServices delegates to closeSessionStore', () => {
     closeSessionServices();
     expect(closeSessionStoreMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('initSessionServices awaits migration completion', async () => {
-    let resolved = false;
-    migrateMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            resolved = true;
-            resolve({ migrated: 3 });
-          }, 5);
-        }),
-    );
-    await initSessionServices({ get, set });
-    expect(resolved).toBe(true);
   });
 });

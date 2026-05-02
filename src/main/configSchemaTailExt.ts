@@ -297,27 +297,15 @@ export const tailSchemaExt = {
     },
     default: { telemetryEnabled: true, mode: 'current', autoRetrainEnabled: true },
   },
-  /** Wave 51 Phase B — internalMcp transport selector. Default 'sse' preserves
-   *  existing behavior; 'stdio' opts into the JSON-RPC subprocess wrapper. */
-  internalMcp: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      transport: { type: 'string', enum: ['sse', 'stdio'], default: 'sse' },
-    },
-    default: { transport: 'sse' },
-  },
-  /** Wave 51 Phase B + Wave 53l Phase B. routeInternalMcp deprecated in
-   *  53l (back-compat only); excludeFromMultiplex is the per-server opt-out. */
+  /** Wave 51 Phase B — CodeMode launch wiring. excludeFromMultiplex is the per-server opt-out. */
   codemode: {
     type: 'object',
     additionalProperties: false,
     properties: {
       enabled: { type: 'boolean', default: false },
-      routeInternalMcp: { type: 'boolean', default: false },
       excludeFromMultiplex: { type: 'array', items: { type: 'string' }, default: [] },
     },
-    default: { enabled: false, routeInternalMcp: false, excludeFromMultiplex: [] },
+    default: { enabled: false, excludeFromMultiplex: [] },
   },
   /** Wave 38 Phase A+C — platform-level settings: onboarding gate, language, update channel, crash reporter.
    *  Phase C adds dismissedEmptyStates.

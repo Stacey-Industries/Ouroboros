@@ -105,7 +105,7 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
     // Wave 60 Phase E: SSE shape removed. The entry is always the standalone
     // (Electron-as-Node) regardless of legacy transport config.
     await injectIntoProjectSettings(projectRoot, 12345, {
-      stdioTransportPath: '/fake/ouroborosMcp.js',
+      standaloneScriptPath: '/fake/ouroborosMcp.js',
     });
 
     const mcpJson = await readJson(mcpJsonPath());
@@ -118,10 +118,9 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
     expect(servers?.ouroboros?.args).toEqual(['/fake/ouroborosMcp.js']);
   });
 
-  it('writes .mcp.json with stdio shape when transport is stdio (includes type)', async () => {
+  it('writes .mcp.json with stdio shape (includes type field)', async () => {
     await injectIntoProjectSettings(projectRoot, 12345, {
-      transport: 'stdio',
-      stdioTransportPath: '/fake/ouroborosMcp.js',
+      standaloneScriptPath: '/fake/ouroborosMcp.js',
     });
 
     const mcpJson = await readJson(mcpJsonPath());
@@ -138,7 +137,7 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
     });
 
     await injectIntoProjectSettings(projectRoot, 99999, {
-      stdioTransportPath: '/fake/ouroborosMcp.js',
+      standaloneScriptPath: '/fake/ouroborosMcp.js',
     });
 
     const mcpJson = await readJson(mcpJsonPath());
@@ -158,7 +157,7 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
 
 describe('injectIntoProjectSettings — ~/.claude.json enable flag', () => {
   it('adds ouroboros to enabledMcpjsonServers for the project (creates entry if absent)', async () => {
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const claudeJson = await readJson(claudeJsonPath());
     const projects = claudeJson?.projects as Record<string, Record<string, unknown>> | undefined;
@@ -176,7 +175,7 @@ describe('injectIntoProjectSettings — ~/.claude.json enable flag', () => {
       },
     });
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const claudeJson = await readJson(claudeJsonPath());
     const projects = claudeJson?.projects as Record<string, Record<string, unknown>> | undefined;
@@ -186,8 +185,8 @@ describe('injectIntoProjectSettings — ~/.claude.json enable flag', () => {
   });
 
   it('is idempotent — second call does not duplicate ouroboros in the array', async () => {
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
-    await injectIntoProjectSettings(projectRoot, 67890, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 67890, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const claudeJson = await readJson(claudeJsonPath());
     const projects = claudeJson?.projects as Record<string, Record<string, unknown>> | undefined;
@@ -205,7 +204,7 @@ describe('injectIntoProjectSettings — ~/.claude.json enable flag', () => {
       },
     });
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const claudeJson = await readJson(claudeJsonPath());
     const projects = claudeJson?.projects as Record<string, Record<string, unknown>> | undefined;
@@ -222,7 +221,7 @@ describe('injectIntoProjectSettings — ~/.claude.json enable flag', () => {
       projects: {},
     });
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const claudeJson = await readJson(claudeJsonPath());
     expect(claudeJson?.numStartups).toBe(42);
@@ -241,7 +240,7 @@ describe('injectIntoProjectSettings — legacy cleanup', () => {
       mcpServers: { ouroboros: { url: 'http://127.0.0.1:99/sse' } },
     });
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const settings = await readJson(legacySettingsPath());
     expect(settings?.mcpServers).toBeUndefined();
@@ -256,7 +255,7 @@ describe('injectIntoProjectSettings — legacy cleanup', () => {
       },
     });
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const settings = await readJson(legacySettingsPath());
     const servers = settings?.mcpServers as Record<string, unknown> | undefined;
@@ -271,7 +270,7 @@ describe('injectIntoProjectSettings — legacy cleanup', () => {
     // Wait a hair so mtime would change if a write happened.
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const afterStat = await fs.stat(legacySettingsPath());
     expect(afterStat.mtimeMs).toBe(beforeStat.mtimeMs);
@@ -284,14 +283,14 @@ describe('injectIntoProjectSettings — legacy cleanup', () => {
 
 describe('injectIntoProjectSettings — tolerance', () => {
   it('does not throw when project root has no .mcp.json yet', async () => {
-    await expect(injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' })).resolves.toBeUndefined();
+    await expect(injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' })).resolves.toBeUndefined();
     const mcpJson = await readJson(mcpJsonPath());
     expect(mcpJson?.mcpServers).toBeDefined();
   });
 
   it('does not throw when ~/.claude.json does not exist yet', async () => {
     // beforeEach creates fakeHome but not the .claude.json file.
-    await expect(injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' })).resolves.toBeUndefined();
+    await expect(injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' })).resolves.toBeUndefined();
     const claudeJson = await readJson(claudeJsonPath());
     expect(claudeJson?.projects).toBeDefined();
   });
@@ -299,7 +298,7 @@ describe('injectIntoProjectSettings — tolerance', () => {
   it('skips the .mcp.json write if existing file is invalid JSON (does not corrupt user state)', async () => {
     await fs.writeFile(mcpJsonPath(), '{ this is not valid json', 'utf-8');
 
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
 
     const raw = await fs.readFile(mcpJsonPath(), 'utf-8');
     expect(raw).toBe('{ this is not valid json'); // Untouched.
@@ -312,7 +311,7 @@ describe('injectIntoProjectSettings — tolerance', () => {
 
 describe('removeFromProjectSettings', () => {
   it('removes ouroboros from .mcp.json', async () => {
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
     await removeFromProjectSettings(projectRoot);
 
     const mcpJson = await readJson(mcpJsonPath());
@@ -321,7 +320,7 @@ describe('removeFromProjectSettings', () => {
   });
 
   it('removes ouroboros from ~/.claude.json enabledMcpjsonServers', async () => {
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
     await removeFromProjectSettings(projectRoot);
 
     const claudeJson = await readJson(claudeJsonPath());
@@ -336,7 +335,7 @@ describe('removeFromProjectSettings', () => {
     await writeJson(mcpJsonPath(), {
       mcpServers: { 'user-server': { url: 'http://example/sse' } },
     });
-    await injectIntoProjectSettings(projectRoot, 12345, { stdioTransportPath: '/fake/ouroborosMcp.js' });
+    await injectIntoProjectSettings(projectRoot, 12345, { standaloneScriptPath: '/fake/ouroborosMcp.js' });
     await removeFromProjectSettings(projectRoot);
 
     const mcpJson = await readJson(mcpJsonPath());

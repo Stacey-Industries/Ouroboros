@@ -29,7 +29,6 @@ import type {
   TerminalSessionSnapshot,
   ThemingConfig,
   WindowBounds,
-  WindowSession,
   WorkspaceLayout,
   WorkspaceSnapshot,
 } from './configTypes';
@@ -74,11 +73,6 @@ export interface AppConfig {
   profiles?: import('@shared/types/profile').Profile[];
   /** All open project roots for multi-root workspace support (deprecated — use per-window roots) */
   multiRoots: string[];
-  /**
-   * @deprecated Wave 40 Phase D — write path removed; canonical store is sessionsData.
-   * Retained for config-validation tolerance. Remove next cleanup wave.
-   */
-  windowSessions: WindowSession[];
   /** Empty string = use shell default PS1 */
   customPrompt: string;
   /** 'default' | 'minimal' | 'powerline' | 'git' | 'custom' */
@@ -159,8 +153,6 @@ export interface AppConfig {
   internalMcpScope?: 'always' | 'task-gated' | 'never';
   /** Wave 48 Phase D — use --mcp-config + --strict-mcp-config on each spawn (default true). */
   internalMcpUseStrictConfig?: boolean;
-  /** Wave 51 Phase B — internalMcp transport selector ('sse' default | 'stdio'). */
-  internalMcp?: { transport?: 'sse' | 'stdio' };
   /** Wave 53b Phase B — online ranker hit-rate telemetry. Phase C adds mode (default 'current'). */
   contextRanker?: {
     telemetryEnabled?: boolean;
@@ -168,8 +160,8 @@ export interface AppConfig {
     /** Wave 70 Phase A2 — wire startContextRetrainTrigger at startup (default true). */
     autoRetrainEnabled?: boolean;
   };
-  /** Wave 51 Phase B — CodeMode launch wiring + routing policy flag (Phase C). */
-  codemode?: { enabled?: boolean; routeInternalMcp?: boolean };
+  /** Wave 51 Phase B — CodeMode launch wiring. */
+  codemode?: { enabled?: boolean; excludeFromMultiplex?: string[] };
   /** Wave 3B feature flag — route PTY through PtyHost utility process */
   usePtyHost: boolean;
   /** Wave 3B feature flag — route extensions through ExtensionHost utility process */
