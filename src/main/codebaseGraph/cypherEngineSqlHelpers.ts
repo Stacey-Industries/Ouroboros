@@ -61,11 +61,24 @@ export function mergeCondition(
   }
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+const INDEXED_AT_PROPS = new Set(['indexed_at', 'indexedAt']);
+
+/** Coerce ISO date strings to epoch ms for indexed_at comparisons (stored as INTEGER). */
+function coerceIndexedAt(cond: WhereCondition, value: unknown): unknown {
+  if (!INDEXED_AT_PROPS.has(cond.property)) return value;
+  if (typeof value === 'string' && ISO_DATE_RE.test(value)) {
+    const ms = Date.parse(value);
+    return isNaN(ms) ? value : ms;
+  }
+  return value;
+}
+
 /** Push the parameter value(s) for a WHERE condition (handles LIKE wrapping and IN). */
 export function pushWhereParam(params: unknown[], cond: WhereCondition): void {
   if (cond.operator === 'IN') {
     const values = Array.isArray(cond.value) ? cond.value : [cond.value];
-    for (const v of values) params.push(v);
+    for (const v of values) params.push(coerceIndexedAt(cond, v));
     return;
   }
   if (cond.operator === 'CONTAINS') {
@@ -75,7 +88,7 @@ export function pushWhereParam(params: unknown[], cond: WhereCondition): void {
   } else if (cond.operator === 'ENDS WITH') {
     params.push(`%${cond.value}`);
   } else {
-    params.push(cond.value);
+    params.push(coerceIndexedAt(cond, cond.value));
   }
 }
 

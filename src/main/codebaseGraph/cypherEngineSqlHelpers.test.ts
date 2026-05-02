@@ -235,6 +235,56 @@ describe('cypherEngineSqlHelpers', () => {
       });
       expect(params).toEqual(['Class']);
     });
+
+    it('coerces ISO date string to epoch ms for indexed_at', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'p',
+        property: 'indexed_at',
+        operator: '>',
+        value: '2024-01-01',
+        conjunction: null,
+      });
+      expect(typeof params[0]).toBe('number');
+      expect(params[0]).toBe(Date.parse('2024-01-01'));
+    });
+
+    it('coerces ISO datetime string to epoch ms for indexedAt (camelCase)', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'p',
+        property: 'indexedAt',
+        operator: '>=',
+        value: '2024-06-15T12:00:00Z',
+        conjunction: null,
+      });
+      expect(typeof params[0]).toBe('number');
+      expect(params[0]).toBe(Date.parse('2024-06-15T12:00:00Z'));
+    });
+
+    it('does not coerce ISO string for non-indexed_at properties', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'n',
+        property: 'name',
+        operator: '=',
+        value: '2024-01-01',
+        conjunction: null,
+      });
+      expect(params[0]).toBe('2024-01-01');
+    });
+
+    it('coerces ISO dates inside IN list for indexed_at', () => {
+      const params: unknown[] = [];
+      pushWhereParam(params, {
+        alias: 'p',
+        property: 'indexed_at',
+        operator: 'IN',
+        value: ['2024-01-01', '2024-06-01'],
+        conjunction: null,
+      });
+      expect(params).toEqual([Date.parse('2024-01-01'), Date.parse('2024-06-01')]);
+    });
   });
 
   describe('isWriteQuery', () => {
