@@ -98,9 +98,8 @@ function ThreadTabs({
   onSelectThread: (threadId: string) => void;
   threads: AgentChatThreadRecord[];
 }): React.ReactElement {
-  // data-no-swipe: horizontal tab scroller — scrollWidth check in useSwipeNavigation already
-  // blocks it, but explicit opt-out is belt-and-suspenders.
-  // Workspace-level swipe-cycling tracked in roadmap/future/agent-chat-swipe-navigation.md.
+  // data-no-swipe: horizontal tab scroller opt-out — belt-and-suspenders alongside
+  // the scrollWidth guard in useSwipeNavigation.  Swipe cycling mounted in Wave 72.
   return (
     <div
       className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto"

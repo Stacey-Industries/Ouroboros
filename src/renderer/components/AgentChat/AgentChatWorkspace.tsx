@@ -5,11 +5,13 @@ import { useToastContext } from '../../contexts/ToastContext';
 import { SWITCH_SIDEBAR_VIEW_EVENT, TOGGLE_SIDE_CHAT_EVENT } from '../../hooks/appEventNames';
 import { useConfig } from '../../hooks/useConfig';
 import { useStreamCompletionNotifications } from '../../hooks/useStreamCompletionNotifications';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import { IdePanels, useBranchCompare } from './AgentChatWorkspace.compare';
 import { useWorkspaceStoreSync } from './AgentChatWorkspace.storeSync';
+import { cycleThread } from './AgentChatWorkspace.swipe';
 import { DensityProvider } from './DensityContext';
 import { PinnedContextBar } from './PinnedContextBar';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -217,6 +219,22 @@ function useWorkspaceActions(
   return { onRemember, onSpec, onOpenMemories, onCloseTab };
 }
 
+function useWorkspaceSwipe(
+  ref: React.RefObject<HTMLDivElement | null>,
+  model: AgentChatWorkspaceModel,
+): void {
+  const { threads, activeThreadId, selectThread } = model;
+  const onLeft = useCallback(() => {
+    const id = cycleThread(threads, activeThreadId, 'left');
+    if (id) selectThread(id);
+  }, [threads, activeThreadId, selectThread]);
+  const onRight = useCallback(() => {
+    const id = cycleThread(threads, activeThreadId, 'right');
+    if (id) selectThread(id);
+  }, [threads, activeThreadId, selectThread]);
+  useSwipeNavigation(ref, { onSwipeLeft: onLeft, onSwipeRight: onRight });
+}
+
 interface WorkspaceSetup {
   model: AgentChatWorkspaceModel;
   store: ReturnType<typeof createAgentChatStore>;
@@ -271,14 +289,18 @@ function useWorkspaceSetup(props: AgentChatWorkspaceProps): WorkspaceSetup {
 
 export function AgentChatWorkspace(props: AgentChatWorkspaceProps): React.ReactElement {
   const { activeSessionId = null, variant = 'ide' } = props;
+  const setup = useWorkspaceSetup(props);
   const { store, sideChat, isDrawerOpen, setIsDrawerOpen, compareState, closeCompare, onCloseTab } =
-    useWorkspaceSetup(props);
+    setup;
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  useWorkspaceSwipe(workspaceRef, setup.model);
 
   return (
     <WorkspaceVariantContext.Provider value={variant}>
       <AgentChatStoreContext.Provider value={store}>
         <DensityProvider>
           <div
+            ref={workspaceRef}
             data-tour-anchor="chat"
             className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel"
             style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}
