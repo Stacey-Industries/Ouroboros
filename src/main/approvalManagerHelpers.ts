@@ -4,7 +4,7 @@
  * Extracted to keep approvalManager.ts under the 300-line ESLint limit.
  */
 
-import type { ApprovalRequest } from './approvalManager';
+import type { ApprovalRequest, ApprovalResponse } from './approvalManager';
 import { notifyWaiters } from './approvalWaiterRegistry';
 import { getConfigValue } from './config';
 import { broadcastToWebClients } from './web/webServer';
@@ -12,9 +12,11 @@ import { getAllActiveWindows } from './windowManager';
 
 /**
  * Notify all active windows and web clients that an approval request was resolved.
- * Also unblocks any pipe waiters blocked on this requestId.
+ * Also unblocks any pipe waiters blocked on this requestId, forwarding the full
+ * response so warn-class message fields reach the approval.wait pipe caller.
  */
-export function notifyApprovalResolved(requestId: string, decision: string): void {
+export function notifyApprovalResolved(requestId: string, response: ApprovalResponse): void {
+  const { decision } = response;
   const windows = getAllActiveWindows();
   for (const win of windows) {
     if (!win.isDestroyed()) {
@@ -28,7 +30,7 @@ export function notifyApprovalResolved(requestId: string, decision: string): voi
     }
   }
   broadcastToWebClients('approval:resolved', { requestId, decision });
-  notifyWaiters(requestId, { decision: decision as 'approve' | 'reject' });
+  notifyWaiters(requestId, response);
 }
 
 /**
