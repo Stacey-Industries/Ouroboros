@@ -71,11 +71,15 @@ const INSERT_MESSAGE_SQL = `
     (id, threadId, role, content, createdAt, statusKind, orchestration,
      contextSummary, verificationPreview, error, toolsSummary, costSummary,
      durationSummary, tokenUsage, blocks, model, checkpointCommit,
-     reactions, collapsedByDefault)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     reactions, collapsedByDefault, skillExecutions)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function prepareInsertMessage(db: Database): BetterSqlite3.Statement {
   return db.prepare(INSERT_MESSAGE_SQL);
+}
+
+function serializeArray(arr: unknown[] | undefined): string | null {
+  return arr && arr.length > 0 ? JSON.stringify(arr) : null;
 }
 
 export function runInsertMessage(
@@ -102,7 +106,8 @@ export function runInsertMessage(
     s(msg.blocks),
     msg.model ?? null,
     msg.checkpointCommit ?? null,
-    msg.reactions && msg.reactions.length > 0 ? JSON.stringify(msg.reactions) : null,
+    serializeArray(msg.reactions),
     msg.collapsedByDefault ? 1 : null,
+    serializeArray(msg.skillExecutions),
   );
 }

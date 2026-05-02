@@ -64,6 +64,12 @@ function migrateV8(db: Database): void {
   }
 }
 
+function migrateV9(db: Database): void {
+  const c = msgCols(db);
+  if (!hasCol(c, 'skillExecutions'))
+    db.exec('ALTER TABLE messages ADD COLUMN skillExecutions TEXT');
+}
+
 /**
  * Apply all stepwise ALTER TABLE migrations. Version-gating is intentionally
  * omitted — every `migrateVN` is idempotent (guarded internally by `hasCol`),
@@ -82,4 +88,5 @@ export function applyColumnMigrations(db: Database, _currentVersion: number): vo
   migrateV5(db);
   migrateV6(db);
   migrateV8(db);
+  migrateV9(db);
 }

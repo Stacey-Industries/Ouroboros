@@ -110,11 +110,11 @@ describe('prepareInsertMessage', () => {
 // ── runInsertMessage ───────────────────────────────────────────────────────────
 
 describe('runInsertMessage', () => {
-  it('calls stmt.run with 19 params', () => {
+  it('calls stmt.run with 20 params', () => {
     const ranParams: unknown[][] = [];
     const stmt = { run: (...p: unknown[]) => { ranParams.push(p); } } as never;
     runInsertMessage(stmt, 'thread-1', makeMessage());
-    expect(ranParams[0]).toHaveLength(19);
+    expect(ranParams[0]).toHaveLength(20);
   });
 
   it('passes message id, threadId, role, content, createdAt as first params', () => {
@@ -150,7 +150,21 @@ describe('runInsertMessage', () => {
     const ranParams: unknown[][] = [];
     const stmt = { run: (...p: unknown[]) => { ranParams.push(p); } } as never;
     runInsertMessage(stmt, 'thread-1', makeMessage({ collapsedByDefault: true }));
-    // collapsedByDefault is last param (index 18)
+    // collapsedByDefault is param index 18
     expect(ranParams[0][18]).toBe(1);
+  });
+
+  it('JSON-encodes skillExecutions when present, null when absent', () => {
+    const ranParams: unknown[][] = [];
+    const stmt = { run: (...p: unknown[]) => { ranParams.push(p); } } as never;
+    const skills = [{ skillName: 'wave-plan', agentId: 'a1', agentType: 'sonnet', startedAt: 1, status: 'completed' as const }];
+    runInsertMessage(stmt, 'thread-1', makeMessage({ skillExecutions: skills }));
+    // skillExecutions is param index 19
+    expect(ranParams[0][19]).toBe(JSON.stringify(skills));
+
+    const ranParams2: unknown[][] = [];
+    const stmt2 = { run: (...p: unknown[]) => { ranParams2.push(p); } } as never;
+    runInsertMessage(stmt2, 'thread-1', makeMessage());
+    expect(ranParams2[0][19]).toBeNull();
   });
 });

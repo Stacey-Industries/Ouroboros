@@ -81,17 +81,24 @@ describe('applyColumnMigrations', () => {
     expect(executed.some((s) => s.includes('ADD COLUMN isSideChat'))).toBe(true);
   });
 
+  it('adds skillExecutions column to messages when missing (v9)', () => {
+    const { db, executed } = makeDb({ messages: [], threads: [] });
+    applyColumnMigrations(db, 0);
+    expect(executed.some((s) => s.includes('ADD COLUMN skillExecutions'))).toBe(true);
+  });
+
   it('is idempotent — no exec calls when all columns already present', () => {
     const allMsgCols = [
       'id', 'threadId', 'role', 'content', 'createdAt',
       'model', 'checkpointCommit', 'reactions', 'collapsedByDefault',
+      'skillExecutions',
     ];
     const allThdCols = [
       'id', 'workspaceRoot', 'tags', 'pinned', 'deletedAt',
       'branchName', 'forkOfMessageId', 'parentThreadId', 'isSideChat',
     ];
     const { db, executed } = makeDb({ messages: allMsgCols, threads: allThdCols });
-    applyColumnMigrations(db, 8);
+    applyColumnMigrations(db, 9);
     expect(executed).toHaveLength(0);
   });
 
