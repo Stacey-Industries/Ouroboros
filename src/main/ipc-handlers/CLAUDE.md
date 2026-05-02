@@ -20,7 +20,7 @@ export function registerXxxHandlers(senderWindow: SenderWindow): string[] {
 - **`senderWindow`** resolves `IpcMainInvokeEvent` → `BrowserWindow` for sending events back to the renderer.
 - Some registrars also export a `cleanup*` function (watchers, subscriptions).
 
-Two co-existing signatures exist: primary domain registrars (exported in `index.ts`, called by `../ipc.ts`) and sub-registrars (aggregated into `misc.ts` via `miscRegistrars.ts`, receiving a shared channel list). New catch-all handlers go in `miscRegistrars.ts`, not `misc.ts` directly.
+Two co-existing signatures exist: primary domain registrars (exported in `index.ts`, called by `../ipc.ts`) and sub-registrars (aggregated into `misc.ts`, receiving a shared channel list). New domain handlers go in their own named `*Handlers.ts` file; `misc.ts` imports them directly.
 
 ## Response Convention
 
@@ -49,7 +49,7 @@ ESLint's `security/detect-non-literal-fs-filename` fires even on trusted paths (
 ## Gotchas
 
 - **`agentChat.ts` is a re-export hub**: `files.ts` and `git.ts` import context cache helpers from `agentChat.ts`, not directly from `agentChatContext.ts`. This is intentional — don't "clean up" those imports.
-- **`misc.ts` vs `miscRegistrars.ts`**: `misc.ts` is the thin aggregator. Add new catch-all handlers as sub-registrar functions in `miscRegistrars.ts`, not directly in `misc.ts`.
+- **`misc.ts` is the thin aggregator**: It imports named per-domain registrars directly. New domains get their own `*Handlers.ts` file; add the import + call in `misc.ts`.
 - **Web client broadcasts**: Handlers pushing events to the renderer (watchers, config changes, agent chat events) must also call `broadcastToWebClients()` from `../web/webServer` for web-mode parity.
 - **No AgentLoopController**: Was removed as dead code. `agentChatOrchestration.ts` is a minimal factory. Don't re-introduce a controller layer.
 - **Channel naming**: `domain:action` format throughout (e.g. `files:readFile`, `git:status`). PTY data channels embed session ID: `pty:data:${id}`.
