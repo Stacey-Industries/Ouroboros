@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from 'child_process';
 
+import { escapePowerShellArg } from '../../ptyArgEscape';
 import { CodexAppServerFramingParser, encodeCodexAppServerMessage } from './codexAppServerFraming';
 import type {
   CodexAppServerIncomingMessage,
@@ -31,10 +32,6 @@ export interface CodexAppServerProcessHandle {
 }
 
 const processRegistry = new Map<string, CodexAppServerProcessHandle>();
-
-function escapePowerShellArg(arg: string): string {
-  return `'${arg.replace(/'/g, "''")}'`;
-}
 
 export function buildCodexAppServerArgs(options: CodexAppServerSpawnOptions): {
   command: string;

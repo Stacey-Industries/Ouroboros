@@ -1,6 +1,7 @@
 import { type ChildProcess, exec } from 'child_process';
 
 import log from '../../logger';
+import { escapePowerShellArg } from '../../ptyArgEscape';
 import { withStableWindowsShellEnv } from './codexWindowsShellEnv';
 
 // ---------------------------------------------------------------------------
@@ -137,10 +138,6 @@ export interface CodexSessionState {
 // ---------------------------------------------------------------------------
 // Arg building
 // ---------------------------------------------------------------------------
-
-function escapePowerShellArg(arg: string): string {
-  return `'${arg.replace(/'/g, "''")}'`;
-}
 
 export function buildCodexExecArgs(options: CodexExecSpawnOptions): CodexExecArgs {
   const imageArgs = (options.imagePaths ?? []).flatMap((imagePath) => ['--image', imagePath]);

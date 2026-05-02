@@ -1,9 +1,6 @@
 import { buildCodexCliArgs } from './codex';
 import type { CodexCliSettings } from './config';
-
-function escapePowerShellArg(arg: string): string {
-  return `'${arg.replace(/'/g, "''")}'`;
-}
+import { escapePowerShellArg } from './ptyArgEscape';
 
 export function buildCodexArgs(settings: CodexCliSettings): string[] {
   return buildCodexCliArgs(settings);
