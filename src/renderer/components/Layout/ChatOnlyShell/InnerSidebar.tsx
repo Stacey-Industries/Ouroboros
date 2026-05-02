@@ -118,14 +118,15 @@ function TabPanel({
   id: InnerSidebarTab;
   label: string;
 }): React.ReactElement {
+  const isActive = activeTab === id;
   return (
     <div
       role="tabpanel"
       id={`inner-sidebar-panel-${id}`}
       aria-labelledby={`inner-sidebar-tab-${id}`}
-      hidden={activeTab !== id}
+      hidden={!isActive}
       data-testid={`inner-sidebar-panel-${id}`}
-      className="flex min-h-0 flex-1 flex-col"
+      className={isActive ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}
     >
       {content ?? <EmptyTabBody label={label} />}
     </div>

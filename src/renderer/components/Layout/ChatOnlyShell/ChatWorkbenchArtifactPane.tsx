@@ -150,7 +150,7 @@ export function ChatWorkbenchArtifactPane({
 
   return (
     <aside
-      className="flex w-[340px] shrink-0 flex-col border-l border-border-semantic bg-surface-panel/95"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden border-l border-border-semantic bg-surface-panel/95"
       data-testid="chat-workbench-artifact-pane"
     >
       <ArtifactPaneHeader title={artifact.title} subtitle={artifact.subtitle} onClose={onClose} />
