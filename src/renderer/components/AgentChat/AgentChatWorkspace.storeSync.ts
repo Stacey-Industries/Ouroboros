@@ -77,8 +77,9 @@ function useSyncStateIntoStore(
       isAutocompleteOpen: context.isAutocompleteOpen,
       mentions: context.mentions,
       allFiles: context.allFiles,
+      disabledLocalIds: model.disabledLocalIds,
     });
-  }, [store, context]);
+  }, [store, context, model.disabledLocalIds]);
 }
 
 function useSyncModelSettingsIntoStore(
@@ -124,6 +125,7 @@ function useSyncActionsIntoStore(
       onOpenAutocomplete: context.openAutocomplete,
       onAddMention: context.addMention,
       onRemoveMention: context.removeMention,
+      setDisabledLocalIds: model.setDisabledLocalIds,
     });
   }, [readOnly, store, model, context]);
 }

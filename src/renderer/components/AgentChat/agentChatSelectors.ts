@@ -59,6 +59,7 @@ export function useAgentChatContextFiles(): AgentChatContextFilesState {
       mentions: s.mentions,
       allFiles: s.allFiles,
       attachments: s.attachments,
+      disabledLocalIds: s.disabledLocalIds,
     })),
   );
 }
@@ -119,6 +120,7 @@ export function useAgentChatActions(): AgentChatActions {
       onEditQueuedMessage: s.onEditQueuedMessage,
       onDeleteQueuedMessage: s.onDeleteQueuedMessage,
       onSendQueuedMessageNow: s.onSendQueuedMessageNow,
+      setDisabledLocalIds: s.setDisabledLocalIds,
     })),
   );
 }

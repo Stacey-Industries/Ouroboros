@@ -1,8 +1,9 @@
-# Disabled rule IDs honored at chat send path
+# Disabled file/mention IDs honored at chat send path
 
 **Status:** WAVE-IT — small standalone wave, trust-eroding bug
 **Source:** `roadmap/audit-verification-pass.md` Section D item #15 (Wave 59 follow-up)
 **Filed:** 2026-05-01
+**Re-scoped:** 2026-05-02 — original framing assumed rule toggles were broken; verification showed rules already work via Wave 62 filesystem mechanism (`fireRuleToggleIpc` → `toggleRuleFile` IPC). The actual bug is files and @mentions: their popover toggles only update renderer-local `useState` and never cross IPC. Wave scope refocused accordingly.
 
 ## The bug
 

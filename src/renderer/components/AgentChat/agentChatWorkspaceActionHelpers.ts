@@ -7,9 +7,7 @@ import { type Dispatch, type SetStateAction } from 'react';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
 import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
 import type {
-  AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
-  AgentChatOrchestrationLink,
   AgentChatSendMessageOverrides,
   AgentChatThreadRecord,
   CodexModelOption,
@@ -43,6 +41,10 @@ export interface SendMessageArgs {
   setIsSending: Dispatch<SetStateAction<boolean>>;
   setPendingUserMessage: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
+  /** Wave 71 — popover-local disabled IDs (file:<path>, mention:<i>:<label>) */
+  disabledLocalIds?: ReadonlySet<string>;
+  /** Wave 71 — clear local-disabled set after a successful send */
+  setDisabledLocalIds?: Dispatch<SetStateAction<ReadonlySet<string>>>;
 }
 
 export type AgentChatActionArgs = SendMessageArgs & {
@@ -60,41 +62,102 @@ export function getErrorMessage(error: unknown): string {
 }
 export async function saveAllDirtyBuffers(): Promise<void> {
   const promises: Promise<void>[] = [];
-  window.dispatchEvent(new CustomEvent(SAVE_ALL_DIRTY_EVENT, {
-    detail: { addPromise: (promise: Promise<void>) => promises.push(promise) },
-  }));
+  window.dispatchEvent(
+    new CustomEvent(SAVE_ALL_DIRTY_EVENT, {
+      detail: { addPromise: (promise: Promise<void>) => promises.push(promise) },
+    }),
+  );
   if (promises.length > 0) await Promise.all(promises);
 }
-function isCodexModel(model: string | undefined, codexModels: CodexModelOption[] | undefined): boolean {
+function isCodexModel(
+  model: string | undefined,
+  codexModels: CodexModelOption[] | undefined,
+): boolean {
   return Boolean(model) && (codexModels ?? []).some((entry) => entry.id === model);
 }
 export function getThreadIdForSend(threadId: string | null): string | undefined {
   return isDraftThreadId(threadId) ? undefined : (threadId ?? undefined);
 }
+function disabledFilePaths(disabled: ReadonlySet<string>): Set<string> {
+  const out = new Set<string>();
+  disabled.forEach((id) => {
+    if (id.startsWith('file:')) out.add(id.slice('file:'.length));
+  });
+  return out;
+}
+
+function disabledMentionIndexes(disabled: ReadonlySet<string>): Set<number> {
+  const out = new Set<number>();
+  disabled.forEach((id) => {
+    if (!id.startsWith('mention:')) return;
+    const rest = id.slice('mention:'.length);
+    const sep = rest.indexOf(':');
+    if (sep <= 0) return;
+    const idx = Number(rest.slice(0, sep));
+    if (Number.isInteger(idx)) out.add(idx);
+  });
+  return out;
+}
+
 export function buildContextSelection(
   contextFilePaths?: string[],
   mentionRanges?: UserSelectedFileRange[],
+  disabledLocalIds?: ReadonlySet<string>,
 ): { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] } | undefined {
   if (!contextFilePaths?.length) return undefined;
-  const result: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] } = { userSelectedFiles: contextFilePaths };
-  if (mentionRanges?.length) result.userSelectedRanges = mentionRanges;
+  const disabled = disabledLocalIds ?? new Set<string>();
+  const droppedPaths = disabledFilePaths(disabled);
+  const filteredFiles = droppedPaths.size
+    ? contextFilePaths.filter((p) => !droppedPaths.has(p))
+    : contextFilePaths;
+  if (!filteredFiles.length) return undefined;
+  const result: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] } = {
+    userSelectedFiles: filteredFiles,
+  };
+  if (mentionRanges?.length) {
+    const droppedIdx = disabledMentionIndexes(disabled);
+    const filteredMentions = droppedIdx.size
+      ? mentionRanges.filter((_, i) => !droppedIdx.has(i))
+      : mentionRanges;
+    if (filteredMentions.length) result.userSelectedRanges = filteredMentions;
+  }
   return result;
 }
-function applyModelOverride(overrides: Record<string, string>, model: string, codexModels?: CodexModelOption[]): void {
-  if (isAnthropicAutoModel(model)) { overrides.provider = 'claude-code'; return; }
+function applyModelOverride(
+  overrides: Record<string, string>,
+  model: string,
+  codexModels?: CodexModelOption[],
+): void {
+  if (isAnthropicAutoModel(model)) {
+    overrides.provider = 'claude-code';
+    return;
+  }
   overrides.provider = isCodexModel(model, codexModels) ? 'codex' : 'claude-code';
   overrides.model = model;
 }
-function applyScalarOverrides(overrides: AgentChatSendMessageOverrides, chatOverrides: ChatOverrides): void {
+function applyScalarOverrides(
+  overrides: AgentChatSendMessageOverrides,
+  chatOverrides: ChatOverrides,
+): void {
   if (chatOverrides.effort) overrides.effort = chatOverrides.effort;
-  if (chatOverrides.permissionMode && chatOverrides.permissionMode !== 'default') overrides.permissionMode = chatOverrides.permissionMode;
+  if (chatOverrides.permissionMode && chatOverrides.permissionMode !== 'default')
+    overrides.permissionMode = chatOverrides.permissionMode;
   if (chatOverrides.profileId) overrides.profileId = chatOverrides.profileId;
-  if (chatOverrides.toolOverrides !== undefined) overrides.toolOverrides = chatOverrides.toolOverrides;
+  if (chatOverrides.toolOverrides !== undefined)
+    overrides.toolOverrides = chatOverrides.toolOverrides;
 }
-export function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[] }): AgentChatSendMessageOverrides | undefined {
+export function buildChatOverrides(args: {
+  chatOverrides?: ChatOverrides;
+  codexModels?: CodexModelOption[];
+}): AgentChatSendMessageOverrides | undefined {
   if (!args.chatOverrides) return undefined;
   const overrides: AgentChatSendMessageOverrides = {};
-  if (args.chatOverrides.model) applyModelOverride(overrides as Record<string, string>, args.chatOverrides.model, args.codexModels);
+  if (args.chatOverrides.model)
+    applyModelOverride(
+      overrides as Record<string, string>,
+      args.chatOverrides.model,
+      args.codexModels,
+    );
   applyScalarOverrides(overrides, args.chatOverrides);
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
@@ -111,7 +174,10 @@ export function mergeReturnedThread(
 // ── Send request helpers ──────────────────────────────────────────────────────
 
 type SendRequest = {
-  threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[];
+  threadId?: string;
+  workspaceRoot: string;
+  content: string;
+  attachments?: ImageAttachment[];
   contextSelection?: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] };
   overrides?: AgentChatSendMessageOverrides;
   metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean };
@@ -125,141 +191,73 @@ export async function sendAgentChatRequest(
   if (!result.success) throw new Error(result.error ?? failureMessage);
   return result;
 }
-export function buildComposerRequest(args: SendMessageArgs, content: string, skillExpansion?: string): SendRequest {
+export function buildComposerRequest(
+  args: SendMessageArgs,
+  content: string,
+  skillExpansion?: string,
+): SendRequest {
   return {
     threadId: getThreadIdForSend(args.activeThreadId),
     workspaceRoot: args.projectRoot as string,
     content,
     attachments: args.attachments?.length ? args.attachments : undefined,
-    contextSelection: buildContextSelection(args.contextFilePaths, args.mentionRanges),
-    overrides: buildChatOverrides({ chatOverrides: args.chatOverrides, codexModels: args.codexModels }),
+    contextSelection: buildContextSelection(
+      args.contextFilePaths,
+      args.mentionRanges,
+      args.disabledLocalIds,
+    ),
+    overrides: buildChatOverrides({
+      chatOverrides: args.chatOverrides,
+      codexModels: args.codexModels,
+    }),
     metadata: { source: 'composer', usedAdvancedControls: Boolean(args.contextFilePaths?.length) },
     skillExpansion,
   };
 }
-export function buildResendRequest(args: AgentChatActionArgs, content: string, source: 'edit' | 'retry'): SendRequest {
-  return { threadId: args.activeThreadId ?? undefined, workspaceRoot: args.projectRoot as string, content, metadata: { source, usedAdvancedControls: false } };
+export function buildResendRequest(
+  args: AgentChatActionArgs,
+  content: string,
+  source: 'edit' | 'retry',
+): SendRequest {
+  return {
+    threadId: args.activeThreadId ?? undefined,
+    workspaceRoot: args.projectRoot as string,
+    content,
+    metadata: { source, usedAdvancedControls: false },
+  };
 }
-export function applyComposerSuccess(args: SendMessageArgs, result: Awaited<ReturnType<typeof sendAgentChatRequest>>): void {
+export function applyComposerSuccess(
+  args: SendMessageArgs,
+  result: Awaited<ReturnType<typeof sendAgentChatRequest>>,
+): void {
   args.setAttachments?.([]);
+  args.setDisabledLocalIds?.(new Set());
   mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId);
-  /* pendingUserMessage stays set until the persisted user message appears — see usePendingUserMessageClearEffect. */ clearPersistedDraft(result.thread?.id ?? args.activeThreadId);
-  if (isDraftThreadId(args.activeThreadId) && result.thread) clearPersistedDraft(args.activeThreadId);
+  /* pendingUserMessage stays set until the persisted user message appears — see usePendingUserMessageClearEffect. */ clearPersistedDraft(
+    result.thread?.id ?? args.activeThreadId,
+  );
+  if (isDraftThreadId(args.activeThreadId) && result.thread)
+    clearPersistedDraft(args.activeThreadId);
 }
 export function applyComposerFailure(args: SendMessageArgs, content: string, error: unknown): void {
   args.setError(getErrorMessage(error));
   args.setDraft(content);
   args.setPendingUserMessage(null);
 }
-export function applyResendSuccess(args: AgentChatActionArgs, result: Awaited<ReturnType<typeof sendAgentChatRequest>>, source: 'edit' | 'retry'): void {
+export function applyResendSuccess(
+  args: AgentChatActionArgs,
+  result: Awaited<ReturnType<typeof sendAgentChatRequest>>,
+  source: 'edit' | 'retry',
+): void {
   mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId);
-  if (source === 'edit') { args.setDraft(''); clearPersistedDraft(result.thread?.id ?? args.activeThreadId); }
+  if (source === 'edit') {
+    args.setDraft('');
+    clearPersistedDraft(result.thread?.id ?? args.activeThreadId);
+  }
 }
 export function applyResendFailure(args: AgentChatActionArgs, error: unknown): void {
   args.setError(getErrorMessage(error));
 }
 
-// ── Send flows ────────────────────────────────────────────────────────────────
-
-async function resolveSkill(content: string): Promise<{ displayContent: string; skillExpansion?: string }> {
-  return { displayContent: content };
-}
-export async function sendComposerMessage(args: SendMessageArgs): Promise<void> {
-  if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.');
-  const rawContent = args.draft.trim();
-  if ((!rawContent && !args.attachments?.length) || args.isSending) return;
-  const { displayContent, skillExpansion } = await resolveSkill(rawContent);
-  args.setIsSending(true); args.setError(null); args.setDraft(''); args.setPendingUserMessage(displayContent);
-  try {
-    await saveAllDirtyBuffers();
-    applyComposerSuccess(args, await sendAgentChatRequest(buildComposerRequest(args, displayContent, skillExpansion), 'Unable to send the chat message.'));
-  } catch (sendError) {
-    applyComposerFailure(args, displayContent, sendError);
-  } finally { args.setIsSending(false); }
-}
-export function queueOrFail(args: AgentChatActionArgs, message: AgentChatMessageRecord, source: 'edit' | 'retry'): boolean {
-  if (!args.pendingResendRef) { args.setError('The agent is still working. Wait for it to finish or stop it first.'); return false; }
-  args.pendingResendRef.current = { message, source };
-  args.setError('Queued — this will send once the agent finishes. Press Stop to run it now.');
-  return true;
-}
-export async function sendResentMessage(args: AgentChatActionArgs, message: AgentChatMessageRecord, source: 'edit' | 'retry'): Promise<void> {
-  if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.');
-  const content = message.content.trim();
-  if (!content || args.isSending) return;
-  const threadStatus = args.activeThread?.status;
-  if (threadStatus === 'running' || threadStatus === 'submitting') { queueOrFail(args, message, source); return; }
-  args.setIsSending(true); args.setError(null);
-  try {
-    await saveAllDirtyBuffers();
-    applyResendSuccess(args, await sendAgentChatRequest(buildResendRequest(args, content, source), source === 'edit' ? 'Unable to send the edited message.' : 'Unable to retry the message.'), source);
-  } catch (sendError) { applyResendFailure(args, sendError); }
-  finally { args.setIsSending(false); }
-}
-export async function resolveLinkedSessionId(link: AgentChatOrchestrationLink): Promise<string | null> {
-  if (link.sessionId) return link.sessionId;
-  const result = (await window.electronAPI.agentChat.getLinkedDetails(link)) as AgentChatLinkedDetailsResult;
-  if (!result.success) throw new Error(result.error ?? 'Unable to open linked orchestration details.');
-  return result.session?.id ?? result.link?.sessionId ?? null;
-}
-export async function forkAndSendEdit(args: AgentChatActionArgs, message: AgentChatMessageRecord, content: string): Promise<void> {
-  const forkResult = await window.electronAPI.agentChat.forkThread({ sourceThreadId: message.threadId, fromMessageId: message.id, includeHistory: true, isSideChat: false });
-  if (!forkResult.success || !forkResult.thread) throw new Error(forkResult.error ?? 'Unable to create branch for edit.');
-  mergeReturnedThread(forkResult.thread, args.setThreads, args.setActiveThreadId);
-  const branchArgs = { ...args, activeThreadId: forkResult.thread.id };
-  await saveAllDirtyBuffers();
-  applyResendSuccess(branchArgs, await sendAgentChatRequest(buildResendRequest(branchArgs, content, 'edit'), 'Unable to send the edited message.'), 'edit');
-}
-export async function editAndResendOnBranch(args: AgentChatActionArgs, message: AgentChatMessageRecord): Promise<void> {
-  if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.');
-  const content = message.content.trim();
-  if (!content || args.isSending) return;
-  const threadStatus = args.activeThread?.status;
-  if (threadStatus === 'running' || threadStatus === 'submitting') { queueOrFail(args, message, 'edit'); return; }
-  args.setIsSending(true); args.setError(null);
-  try { await forkAndSendEdit(args, message, content); }
-  catch (editError) { applyResendFailure(args, editError); }
-  finally { args.setIsSending(false); }
-}
-
-// ── Stop task helpers ─────────────────────────────────────────────────────────
-
-function markThreadCancelled(a: AgentChatActionArgs, threadId: string): void {
-  a.setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, status: 'cancelled' as const } : t)));
-}
-async function stopByTaskId(a: AgentChatActionArgs, threadId: string | undefined, taskId: string): Promise<boolean> {
-  if (!hasElectronAPI()) return false;
-  if (threadId) markThreadCancelled(a, threadId);
-  try { await window.electronAPI.agentChat.cancelTask(taskId); } catch (e) { a.setError(getErrorMessage(e)); }
-  return true;
-}
-async function stopByThreadId(a: AgentChatActionArgs, threadId: string): Promise<void> {
-  if (!hasElectronAPI()) return;
-  markThreadCancelled(a, threadId);
-  try { await window.electronAPI.agentChat.cancelByThreadId(threadId); } catch { /* best-effort */ }
-}
-function stopSendingInFlight(a: AgentChatActionArgs): void {
-  if (!a.isSending) return;
-  a.setIsSending(false);
-  if (a.pendingUserMessage) a.setDraft(a.pendingUserMessage);
-  a.setPendingUserMessage(null);
-}
-export async function executeStopTask(a: AgentChatActionArgs): Promise<void> {
-  const threadId = a.activeThread?.id;
-  const taskId = a.activeThread?.latestOrchestration?.taskId;
-  if (taskId) { const stopped = await stopByTaskId(a, threadId, taskId); if (stopped) return; }
-  if (threadId) await stopByThreadId(a, threadId);
-  stopSendingInFlight(a);
-}
-
-/**
- * Fire any resend request that was queued while the thread was busy. Called
- * by useFlushPendingResend when the thread transitions from busy → idle.
- */
-export async function flushPendingResend(args: AgentChatActionArgs): Promise<void> {
-  const pending = args.pendingResendRef?.current;
-  if (!pending) return;
-  args.pendingResendRef!.current = null;
-  if (pending.source === 'edit') await editAndResendOnBranch(args, pending.message);
-  else await sendResentMessage(args, pending.message, pending.source);
-}
+// Send flows + stop helpers extracted to ./agentChatWorkspaceSendFlows.ts to
+// keep this file under the 300-line ESLint cap.

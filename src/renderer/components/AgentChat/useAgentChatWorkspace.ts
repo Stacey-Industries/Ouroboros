@@ -89,6 +89,11 @@ export interface AgentChatWorkspaceModel {
   deleteQueuedMessage: (id: string) => void;
   /** Interrupt the current task and immediately send the queued message. */
   sendQueuedMessageNow: (id: string) => Promise<void>;
+  /** Wave 71 — popover-local toggles (file:<path>, mention:<i>:<label>). */
+  disabledLocalIds: ReadonlySet<string>;
+  setDisabledLocalIds: import('react').Dispatch<
+    import('react').SetStateAction<ReadonlySet<string>>
+  >;
 }
 
 /* ---------- Controller ---------- */
@@ -100,20 +105,38 @@ function useControllerState() {
   const [contextFilePaths, setContextFilePaths] = useState<string[]>([]);
   const [mentionRanges, setMentionRanges] = useState<UserSelectedFileRange[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
+  const [disabledLocalIds, setDisabledLocalIds] = useState<ReadonlySet<string>>(new Set());
   const pendingResendRef = useRef<QueuedResend | null>(null);
   // Memoize so the controller-level useMemo can detect stability — without
   // this, a fresh object literal every render cascades into model + slashCmd
   // re-creation and triggers an infinite Zustand setState loop in storeSync.
   return useMemo(
     () => ({
-      draft, setDraft, isSending, setIsSending,
-      pendingUserMessage, setPendingUserMessage,
-      contextFilePaths, setContextFilePaths,
-      mentionRanges, setMentionRanges,
-      attachments, setAttachments,
+      draft,
+      setDraft,
+      isSending,
+      setIsSending,
+      pendingUserMessage,
+      setPendingUserMessage,
+      contextFilePaths,
+      setContextFilePaths,
+      mentionRanges,
+      setMentionRanges,
+      attachments,
+      setAttachments,
+      disabledLocalIds,
+      setDisabledLocalIds,
       pendingResendRef,
     }),
-    [draft, isSending, pendingUserMessage, contextFilePaths, mentionRanges, attachments],
+    [
+      draft,
+      isSending,
+      pendingUserMessage,
+      contextFilePaths,
+      mentionRanges,
+      attachments,
+      disabledLocalIds,
+    ],
   );
 }
 

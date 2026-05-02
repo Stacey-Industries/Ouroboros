@@ -7,6 +7,8 @@
  * selecting only actions never triggers re-renders.
  */
 
+import type * as React from 'react';
+
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
@@ -57,6 +59,8 @@ export interface AgentChatContextFilesState {
   mentions: MentionItem[];
   allFiles: FileEntry[];
   attachments: ImageAttachment[];
+  /** Wave 71 — popover-local toggles (file:<path>, mention:<i>:<label>) */
+  disabledLocalIds: ReadonlySet<string>;
 }
 
 /* ── Model / provider settings ────────────────────── */
@@ -114,6 +118,8 @@ export interface AgentChatActions {
   onEditQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
   onSendQueuedMessageNow: (id: string) => Promise<void>;
+  /** Wave 71 — controlled setter for the popover-local disabled set. */
+  setDisabledLocalIds: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
 }
 
 /* ── Full store ───────────────────────────────────── */

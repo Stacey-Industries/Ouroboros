@@ -5,7 +5,7 @@
  * Wave 25 Phase C: intercepts /research, /spec-with-research, /implement-with-research
  * before the normal send path when researchEnabled is true.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import type {
@@ -23,12 +23,12 @@ import {
   useComposerToggleState,
   useSessionData,
 } from './AgentChatComposerSection.helpers';
+import { useResearchIntercept } from './AgentChatComposerSection.research';
 import type { ModelContextUsage } from './AgentChatConversation';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ComposerProfile } from './ComposerProfile';
 import { McpChatToggles } from './McpChatToggles';
 import type { MentionItem } from './MentionAutocomplete';
-import { buildFollowupPrompt, parseResearchCommand, runResearchAndPin } from './researchCommands';
 import { ResearchIndicator } from './ResearchIndicator';
 import { ResearchModeToggle } from './ResearchModeToggle';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -79,74 +79,15 @@ export interface ComposerSectionProps {
   /** taskId for mid-turn injection — drives lightning-bolt inject button. */
   activeMidTurnTaskId?: string | null;
   onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
+  disabledLocalIds?: ReadonlySet<string>;
+  setDisabledLocalIds?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
 }
 
 function isThreadBusy(status: string | undefined): boolean {
   return status === 'submitting' || status === 'running';
 }
 
-// ─── Research intercept hook ──────────────────────────────────────────────────
-
-interface ResearchInterceptOpts {
-  draft: string;
-  activeSessionId: string | null | undefined;
-  researchEnabled: boolean;
-  onDraftChange: (value: string) => void;
-  onSend: () => Promise<void>;
-}
-
-interface ResearchInterceptResult {
-  isResearching: boolean;
-  researchTopic: string;
-  wrappedOnSend: () => Promise<void>;
-  handleCancel: () => void;
-}
-
-function useResearchCancel(
-  setIsResearching: (v: boolean) => void,
-  setResearchTopic: (v: string) => void,
-  cancelledRef: React.MutableRefObject<boolean>,
-) {
-  useEffect(() => {
-    function onCancelEvent(): void {
-      cancelledRef.current = true;
-      setIsResearching(false);
-    }
-    window.addEventListener('agent-ide:cancel-research', onCancelEvent);
-    return () => window.removeEventListener('agent-ide:cancel-research', onCancelEvent);
-  }, [cancelledRef, setIsResearching]);
-
-  return useCallback(() => {
-    cancelledRef.current = true;
-    setIsResearching(false);
-    setResearchTopic('');
-  }, [cancelledRef, setIsResearching, setResearchTopic]);
-}
-
-function useResearchIntercept(opts: ResearchInterceptOpts): ResearchInterceptResult {
-  const { draft, activeSessionId, researchEnabled, onDraftChange, onSend } = opts;
-  const [isResearching, setIsResearching] = useState(false);
-  const [researchTopic, setResearchTopic] = useState('');
-  const cancelledRef = useRef(false);
-  const handleCancel = useResearchCancel(setIsResearching, setResearchTopic, cancelledRef);
-
-  const wrappedOnSend = useCallback(async () => {
-    const parsed = researchEnabled ? parseResearchCommand(draft) : null;
-    if (!parsed || !activeSessionId) return onSend();
-    cancelledRef.current = false;
-    setIsResearching(true);
-    setResearchTopic(parsed.topic);
-    onDraftChange('');
-    await runResearchAndPin({ sessionId: activeSessionId, topic: parsed.topic });
-    if (cancelledRef.current) { setResearchTopic(''); return; }
-    setIsResearching(false);
-    setResearchTopic('');
-    const followup = buildFollowupPrompt(parsed.cmd, parsed.topic);
-    if (followup) { onDraftChange(followup); await onSend(); }
-  }, [draft, activeSessionId, researchEnabled, onDraftChange, onSend]);
-
-  return { isResearching, researchTopic, wrappedOnSend, handleCancel };
-}
+// Research intercept hook lives in ./AgentChatComposerSection.research.ts
 
 // ─── Composer render helper ───────────────────────────────────────────────────
 
@@ -175,6 +116,8 @@ function buildComposerContextProps(props: ComposerInnerProps) {
     onAttachmentsChange: props.onAttachmentsChange,
     activeMidTurnTaskId: props.activeMidTurnTaskId,
     onInjectMidTurn: props.onInjectMidTurn,
+    disabledLocalIds: props.disabledLocalIds,
+    setDisabledLocalIds: props.setDisabledLocalIds,
   };
 }
 
@@ -269,14 +212,20 @@ function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
             <button
               type="button"
               className={`text-xs px-2 py-0.5 rounded border border-border-semantic text-text-semantic-muted${toggle.showTools ? ' bg-interactive-accent-subtle' : ''}`}
-              onClick={() => { toggle.setShowTools((v: boolean) => !v); toggle.setShowMcp(false); }}
+              onClick={() => {
+                toggle.setShowTools((v: boolean) => !v);
+                toggle.setShowMcp(false);
+              }}
             >
               Tools
             </button>
             <button
               type="button"
               className={`text-xs px-2 py-0.5 rounded border border-border-semantic text-text-semantic-muted${toggle.showMcp ? ' bg-interactive-accent-subtle' : ''}`}
-              onClick={() => { toggle.setShowMcp((v: boolean) => !v); toggle.setShowTools(false); }}
+              onClick={() => {
+                toggle.setShowMcp((v: boolean) => !v);
+                toggle.setShowTools(false);
+              }}
             >
               MCP
             </button>
@@ -301,11 +250,15 @@ function useComposerSectionState(props: ComposerSectionProps) {
     onSend: props.onSend,
   });
   const { profileId, toolOverrides, mcpServerOverrides, setProfileId } = useSessionData(
-    props.activeSessionId, props.chatOverrides, props.onChatOverridesChange,
+    props.activeSessionId,
+    props.chatOverrides,
+    props.onChatOverridesChange,
   );
   const profile = useActiveProfile(profileId);
   const toggle = useComposerToggleState(
-    toolOverrides, props.chatOverrides, props.onChatOverridesChange,
+    toolOverrides,
+    props.chatOverrides,
+    props.onChatOverridesChange,
   );
   return { research, profileId, toolOverrides, mcpServerOverrides, setProfileId, profile, toggle };
 }
@@ -330,7 +283,12 @@ export function ComposerSection(props: ComposerSectionProps): React.ReactElement
         chatOverrides={props.chatOverrides}
         onChatOverridesChange={props.onChatOverridesChange}
       />
-      <ComposerInner {...props} wrappedOnSend={wrappedOnSend} isResearching={isResearching} handleCancel={handleCancel} />
+      <ComposerInner
+        {...props}
+        wrappedOnSend={wrappedOnSend}
+        isResearching={isResearching}
+        handleCancel={handleCancel}
+      />
     </>
   );
 }

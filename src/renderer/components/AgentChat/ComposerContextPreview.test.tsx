@@ -77,14 +77,18 @@ describe('ComposerContextPreview', () => {
   });
 
   it('reflects pinned file count in the strip label', () => {
-    const pinned = [{ estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' }];
+    const pinned = [
+      { estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' },
+    ];
     render(<ComposerContextPreview pinnedFiles={pinned} />);
     const toggle = screen.getByTestId('context-preview-toggle');
     expect(toggle.textContent).toMatch(/file/i);
   });
 
   it('toggling a file checkbox flips its disabled state', () => {
-    const pinned = [{ estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' }];
+    const pinned = [
+      { estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' },
+    ];
     render(<ComposerContextPreview pinnedFiles={pinned} />);
     fireEvent.click(screen.getByTestId('context-preview-toggle'));
     fireEvent.click(screen.getByRole('tab', { name: /Files/i }));
@@ -152,7 +156,7 @@ describe('ComposerContextPreview', () => {
     expect(screen.getByText('Max subscription')).toBeDefined();
   });
 
-  it('Wave 64 — when claudeSessionId matches an agent, popover shows that session\'s rules', () => {
+  it("Wave 64 — when claudeSessionId matches an agent, popover shows that session's rules", () => {
     render(<ComposerContextPreview claudeSessionId="s1" />);
     fireEvent.click(screen.getByTestId('context-preview-toggle'));
     expect(screen.getByText('testing')).toBeDefined();
@@ -178,5 +182,43 @@ describe('ComposerContextPreview', () => {
     registerChatSessionMock.mockClear();
     render(<ComposerContextPreview claudeSessionId="s1" />);
     expect(registerChatSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('Wave 71 — controlled mode: toggling a file calls setDisabledLocalIds with the file: id', () => {
+    const setIds = vi.fn();
+    const pinned = [
+      { estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' },
+    ];
+    render(
+      <ComposerContextPreview
+        pinnedFiles={pinned}
+        disabledLocalIds={new Set()}
+        setDisabledLocalIds={setIds}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    fireEvent.click(screen.getByRole('tab', { name: /Files/i }));
+    fireEvent.click(screen.getByTestId('context-item-checkbox-file:/p/README.md'));
+    expect(setIds).toHaveBeenCalledTimes(1);
+    const updater = setIds.mock.calls[0][0] as (prev: ReadonlySet<string>) => ReadonlySet<string>;
+    const next = updater(new Set());
+    expect(next.has('file:/p/README.md')).toBe(true);
+  });
+
+  it('Wave 71 — controlled mode: disabledLocalIds prop drives checkbox state', () => {
+    const pinned = [
+      { estimatedTokens: 400, name: 'README.md', path: '/p/README.md', relativePath: 'README.md' },
+    ];
+    render(
+      <ComposerContextPreview
+        pinnedFiles={pinned}
+        disabledLocalIds={new Set(['file:/p/README.md'])}
+        setDisabledLocalIds={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    fireEvent.click(screen.getByRole('tab', { name: /Files/i }));
+    const cb = screen.getByTestId('context-item-checkbox-file:/p/README.md') as HTMLInputElement;
+    expect(cb.checked).toBe(false);
   });
 });

@@ -49,6 +49,7 @@ const DEFAULT_CONTEXT_FILES: AgentChatContextFilesState = {
   mentions: [],
   allFiles: [],
   attachments: [],
+  disabledLocalIds: new Set<string>(),
 };
 
 const DEFAULT_MODEL: AgentChatModelState = {
@@ -92,6 +93,7 @@ const NOOP_ACTIONS: AgentChatActions = {
   onEditQueuedMessage: () => undefined,
   onDeleteQueuedMessage: () => undefined,
   onSendQueuedMessageNow: async () => undefined,
+  setDisabledLocalIds: () => undefined,
 };
 
 /* ── Store factory ────────────────────────────────── */

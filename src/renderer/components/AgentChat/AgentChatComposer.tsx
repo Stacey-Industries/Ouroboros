@@ -9,6 +9,10 @@ import type {
 import type { FileEntry } from '../FileTree/FileListItem';
 import { ChatStatusChipRow } from '../Layout/ChatOnlyShell/ChatStatusChipRow';
 import {
+  buildChatOnlyContextPreviewProps,
+  buildComposerContextBarProps,
+} from './AgentChatComposer.helpers';
+import {
   pickMenuFields,
   useComposerAutocompleteReset,
   useComposerDraftHandlers,
@@ -78,6 +82,8 @@ export type AgentChatComposerProps = {
   /** taskId for mid-turn injection — shows lightning button when streaming. */
   activeMidTurnTaskId?: string | null;
   onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
+  disabledLocalIds?: ReadonlySet<string>;
+  setDisabledLocalIds?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
 };
 
 /* ---------- useComposerState ---------- */
@@ -272,28 +278,23 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
 
 /* ---------- AgentChatComposer ---------- */
 
-function toMentionLabels(
-  mentions: MentionItem[] | undefined,
-): { estimatedTokens: number; label: string }[] {
-  return (mentions ?? []).map((m) => ({ estimatedTokens: m.estimatedTokens, label: m.label }));
-}
-
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
   const { attachmentHandlers } = state;
-  const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } = composerProps;
+  const { chatOverrides, settingsModel } = composerProps;
   const variant = useWorkspaceVariant();
   const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
       {variant === 'chat-only' && (
         <ComposerContextPreview
-          pinnedFiles={composerProps.pinnedFiles}
-          chatOverrides={chatOverrides}
-          settingsModel={settingsModel}
-          mentionLabels={toMentionLabels(composerProps.mentions)}
-          claudeSessionId={claudeSessionId}
+          {...buildChatOnlyContextPreviewProps(
+            composerProps,
+            chatOverrides,
+            settingsModel,
+            claudeSessionId,
+          )}
         />
       )}
       <FloatingComposerContainer
@@ -303,15 +304,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
         onDrop={attachmentHandlers.handleDrop}
       >
         <ComposerBody state={state} composerProps={composerProps} />
-        <ComposerContextBar
-          streamingTokenUsage={streamingTokenUsage}
-          threadModelUsage={threadModelUsage}
-          selectedModel={chatOverrides?.model}
-          settingsModel={settingsModel}
-          codexSettingsModel={composerProps.codexSettingsModel}
-          defaultProvider={composerProps.defaultProvider}
-          codexModels={codexModels}
-        />
+        <ComposerContextBar {...buildComposerContextBarProps(composerProps)} />
         <ComposerFooter {...buildComposerFooterProps(composerProps)} />
       </FloatingComposerContainer>
       {variant === 'chat-only' && <ChatStatusChipRow />}

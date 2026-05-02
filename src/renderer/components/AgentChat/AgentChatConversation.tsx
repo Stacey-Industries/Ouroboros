@@ -95,11 +95,7 @@ function useMidTurnInject(): (tid: string, content: string) => Promise<void> {
   }, []);
 }
 
-function ConversationComposer({
-  streaming,
-}: {
-  streaming: ReturnType<typeof useAgentChatStreaming>;
-}): React.ReactElement {
+function useConversationComposerProps(streaming: ReturnType<typeof useAgentChatStreaming>) {
   const thread = useAgentChatThread();
   const ctx = useAgentChatContextFiles();
   const model = useAgentChatModel();
@@ -109,31 +105,29 @@ function ConversationComposer({
   const onInjectMidTurn = useMidTurnInject();
   const taskId = thread.activeThread?.latestOrchestration?.taskId ?? null;
   const activeMidTurnTaskId = streaming.isStreaming ? taskId : null;
-  return (
-    <ComposerSection
-      activeThread={thread.activeThread} canSend={thread.canSend} hasProject={thread.hasProject}
-      draft={thread.draft} isSending={thread.isSending}
-      onDraftChange={actions.onDraftChange} onSend={actions.onSend} onStop={actions.onStop}
-      pinnedFiles={ctx.pinnedFiles} onRemoveFile={actions.onRemoveFile}
-      contextSummary={ctx.contextSummary} autocompleteResults={ctx.autocompleteResults}
-      isAutocompleteOpen={ctx.isAutocompleteOpen} onAutocompleteQuery={actions.onAutocompleteQuery}
-      onSelectFile={actions.onSelectFile} onCloseAutocomplete={actions.onCloseAutocomplete}
-      onOpenAutocomplete={actions.onOpenAutocomplete}
-      mentions={ctx.mentions} onAddMention={actions.onAddMention}
-      onRemoveMention={actions.onRemoveMention} allFiles={ctx.allFiles}
-      chatOverrides={model.chatOverrides} onChatOverridesChange={actions.onChatOverridesChange}
-      settingsModel={model.settingsModel} codexSettingsModel={model.codexSettingsModel}
-      defaultProvider={model.defaultProvider} modelProviders={model.modelProviders}
-      codexModels={model.codexModels} codexAppServerTransport={model.codexAppServerTransport}
-      threadModelUsage={threadModelUsage} streamingTokenUsage={streaming.streamingTokenUsage}
-      isStreaming={streaming.isStreaming}
-      routedBy={thread.activeThread?.latestOrchestration?.routedBy}
-      slashCommandContext={slash.slashCommandContext ?? undefined}
-      attachments={ctx.attachments} onAttachmentsChange={actions.onAttachmentsChange}
-      activeSessionId={slash.activeSessionId}
-      activeMidTurnTaskId={activeMidTurnTaskId} onInjectMidTurn={onInjectMidTurn}
-    />
-  );
+  return {
+    ...thread,
+    ...ctx,
+    ...model,
+    ...actions,
+    activeThread: thread.activeThread,
+    threadModelUsage,
+    streamingTokenUsage: streaming.streamingTokenUsage,
+    isStreaming: streaming.isStreaming,
+    routedBy: thread.activeThread?.latestOrchestration?.routedBy,
+    slashCommandContext: slash.slashCommandContext ?? undefined,
+    activeSessionId: slash.activeSessionId,
+    activeMidTurnTaskId,
+    onInjectMidTurn,
+  };
+}
+
+function ConversationComposer({
+  streaming,
+}: {
+  streaming: ReturnType<typeof useAgentChatStreaming>;
+}): React.ReactElement {
+  return <ComposerSection {...useConversationComposerProps(streaming)} />;
 }
 
 /* ── Profile diff banner (shown above composer after a mid-thread switch) ─── */

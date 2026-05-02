@@ -27,7 +27,6 @@ import type { ChatOverrides } from './ChatControlsBar';
 import { ContextPreview } from './ContextPreview';
 import type { PinnedFile } from './useAgentChatContext';
 
-
 export interface ComposerContextPreviewProps {
   pinnedFiles?: PinnedFile[];
   chatOverrides?: ChatOverrides;
@@ -41,6 +40,14 @@ export interface ComposerContextPreviewProps {
    * running agent" for backward compat with non-chat surfaces.
    */
   claudeSessionId?: string;
+  /**
+   * Wave 71 — when provided, the popover runs in controlled mode: the parent
+   * owns the local-disabled set so it can be threaded into the send path and
+   * cleared after a successful send. When absent, falls back to internal state
+   * for backward compat with non-chat mounts.
+   */
+  disabledLocalIds?: ReadonlySet<string>;
+  setDisabledLocalIds?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
 }
 
 function useActiveSessionRulesAndSkills(claudeSessionId?: string): {
@@ -80,7 +87,10 @@ interface AgentSessionLike {
  * Wave 64 — when `claudeSessionId` is set and no agent record exists for it,
  * dispatch SESSION_REGISTER so subsequent InstructionsLoaded events attach.
  */
-function useChatSessionBridge(claudeSessionId: string | undefined, projectRoot: string | null): void {
+function useChatSessionBridge(
+  claudeSessionId: string | undefined,
+  projectRoot: string | null,
+): void {
   const { agents, registerChatSession } = useAgentEventsContext();
   useEffect(() => {
     if (!claudeSessionId) return;
@@ -134,19 +144,28 @@ function fireRuleToggleIpc(id: string, willDisable: boolean, projectRoot: string
   });
 }
 
-function useLocalDisabledIds(): {
+function useLocalDisabledIds(
+  controlledIds?: ReadonlySet<string>,
+  controlledSetter?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>,
+): {
   ids: ReadonlySet<string>;
   toggle: (id: string) => void;
 } {
-  const [ids, setIds] = useState<ReadonlySet<string>>(new Set());
-  const toggle = useCallback((id: string) => {
-    setIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const [internalIds, setInternalIds] = useState<ReadonlySet<string>>(new Set());
+  const isControlled = controlledIds !== undefined && controlledSetter !== undefined;
+  const ids = isControlled ? controlledIds : internalIds;
+  const setter = isControlled ? controlledSetter : setInternalIds;
+  const toggle = useCallback(
+    (id: string) => {
+      setter((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [setter],
+  );
   return { ids, toggle };
 }
 
@@ -211,33 +230,41 @@ function useToggleHandler(
   );
 }
 
-export function ComposerContextPreview({
-  pinnedFiles,
-  chatOverrides,
-  settingsModel,
-  mentionLabels = [],
-  claudeSessionId,
-}: ComposerContextPreviewProps): React.ReactElement {
-  const [isOpen, setIsOpen] = useState(false);
-  const projectRoot = useProjectOptional()?.projectRoot ?? null;
-  useChatSessionBridge(claudeSessionId, projectRoot);
-  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills(claudeSessionId);
+function useComposerContextPreviewModel(
+  props: ComposerContextPreviewProps,
+  projectRoot: string | null,
+) {
+  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills(props.claudeSessionId);
   const mcpTools = useMcpTools(projectRoot);
   const memoryEntries = useMemoryEntries(projectRoot);
-  const { ids: localIds, toggle: toggleLocal } = useLocalDisabledIds();
+  const { ids: localIds, toggle: toggleLocal } = useLocalDisabledIds(
+    props.disabledLocalIds,
+    props.setDisabledLocalIds,
+  );
   const fsDisabledRuleIds = useFilesystemDisabledRuleIds(projectRoot);
   const disabledIds = useMergedDisabledIds(localIds, fsDisabledRuleIds);
   const handleToggleItem = useToggleHandler(fsDisabledRuleIds, toggleLocal, projectRoot);
   const previewModel = useContextPreview({
-    effort: chatOverrides?.effort,
+    effort: props.chatOverrides?.effort,
     loadedRules,
     mcpTools,
     memoryEntries,
-    mentionLabels,
-    model: chatOverrides?.model || settingsModel,
-    pinnedFileNames: pinnedFilesToInput(pinnedFiles),
+    mentionLabels: props.mentionLabels ?? [],
+    model: props.chatOverrides?.model || props.settingsModel,
+    pinnedFileNames: pinnedFilesToInput(props.pinnedFiles),
     skillExecutions,
   });
+  return { previewModel, handleToggleItem, disabledIds };
+}
+
+export function ComposerContextPreview(props: ComposerContextPreviewProps): React.ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+  const projectRoot = useProjectOptional()?.projectRoot ?? null;
+  useChatSessionBridge(props.claudeSessionId, projectRoot);
+  const { previewModel, handleToggleItem, disabledIds } = useComposerContextPreviewModel(
+    props,
+    projectRoot,
+  );
   const handleToggle = useCallback(() => setIsOpen((v) => !v), []);
   return (
     <ContextPreview
