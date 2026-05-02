@@ -3,7 +3,10 @@
  * to keep the factory function and each handler under the max-lines-per-function limit.
  */
 
-import type { GraphToolContext } from './mcpToolHandlers';
+import type { McpToolResult } from '../internalMcp/internalMcpTypes';
+import { textResult } from '../internalMcp/internalMcpTypes';
+import type { CypherEngine } from './cypherEngine';
+import type { GraphToolContext } from './graphTypes';
 import { hasOnlyQuery, runFilteredSearch, runRankedSearch } from './mcpToolHandlerSearch';
 import type { QueryEngine } from './queryEngine';
 
@@ -22,8 +25,9 @@ export async function handleSearchGraph(
   args: Record<string, unknown>,
   ctx: GraphToolContext,
 ): Promise<string> {
-  const namePattern =
-    (args.query as string | undefined) ?? (args.name_pattern as string | undefined);
+  // Wave 70 Phase B3: `name_pattern` deprecated alias dropped. `query` is the
+  // only accepted parameter name.
+  const namePattern = args.query as string | undefined;
   // 3-tier ranked path when caller passed just `query` (no filter args).
   if (namePattern && hasOnlyQuery(args)) {
     return runRankedSearch(ctx, namePattern, (args.limit as number) ?? 100);
@@ -103,10 +107,10 @@ export async function handleTraceCallPath(
   args: Record<string, unknown>,
   queryEngine: QueryEngine,
 ): Promise<string> {
-  const functionName =
-    (args.symbol as string | undefined) ?? (args.function_name as string | undefined);
+  // Wave 70 Phase B3: `function_name` deprecated alias dropped. `symbol` only.
+  const functionName = args.symbol as string | undefined;
   if (!functionName) {
-    return "Error: missing required parameter 'symbol' (or 'function_name')";
+    return "Error: missing required parameter 'symbol'";
   }
   const result = queryEngine.traceCallPath({
     functionName,
@@ -118,25 +122,27 @@ export async function handleTraceCallPath(
 }
 
 // ─── Tool 11: detect_changes handler ─────────────────────────────────────────
+//
+// Wave 70 Phase B1+B2: returns CallToolResult envelope with structuredContent.
+// The text format mirrors the pre-Wave-70 string output for human readers.
 
-export async function handleDetectChanges(
-  args: Record<string, unknown>,
-  queryEngine: QueryEngine,
-): Promise<string> {
-  const result = await queryEngine.detectChanges({
-    scope: (args.scope as 'unstaged' | 'staged' | 'all' | 'branch') ?? 'all',
-    baseBranch: args.base_branch as string | undefined,
-    depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
-  });
-
-  if (result.changedFiles.length === 0) return 'No changes detected.';
-
-  const lines = [
+function buildDetectChangesLines(result: {
+  changedFiles: Array<{ status: string; path: string }>;
+  changedSymbols: Array<{ label: string; name: string; filePath: string | null }>;
+  impactedCallers: Array<{
+    risk: string;
+    label: string;
+    name: string;
+    depth: number;
+    filePath: string | null;
+  }>;
+  riskSummary: Record<string, number>;
+}): string[] {
+  const lines: string[] = [
     `Changed files (${result.changedFiles.length}):`,
     ...result.changedFiles.map((f) => `  [${f.status}] ${f.path}`),
     '',
   ];
-
   if (result.changedSymbols.length > 0) {
     lines.push(`Changed symbols (${result.changedSymbols.length}):`);
     for (const sym of result.changedSymbols) {
@@ -144,7 +150,6 @@ export async function handleDetectChanges(
     }
     lines.push('');
   }
-
   if (result.impactedCallers.length > 0) {
     lines.push(`Impacted callers (${result.impactedCallers.length}):`);
     for (const caller of result.impactedCallers) {
@@ -154,13 +159,43 @@ export async function handleDetectChanges(
     }
     lines.push('');
   }
-
   lines.push('Risk summary:');
   for (const [level, count] of Object.entries(result.riskSummary)) {
     if (count > 0) lines.push(`  ${level}: ${count}`);
   }
+  return lines;
+}
 
-  return truncate(lines.join('\n'));
+export async function handleDetectChanges(
+  args: Record<string, unknown>,
+  queryEngine: QueryEngine,
+): Promise<McpToolResult> {
+  const result = await queryEngine.detectChanges({
+    scope: (args.scope as 'unstaged' | 'staged' | 'all' | 'branch') ?? 'all',
+    baseBranch: args.base_branch as string | undefined,
+    depth: Math.min(Math.max((args.depth as number) ?? 3, 1), 5),
+  });
+
+  if (result.changedFiles.length === 0) {
+    return textResult('No changes detected.', {
+      structuredContent: {
+        changedFiles: [],
+        changedSymbols: [],
+        impactedCallers: [],
+        riskSummary: result.riskSummary,
+      },
+    });
+  }
+
+  const lines = buildDetectChangesLines(result);
+  return textResult(truncate(lines.join('\n')), {
+    structuredContent: {
+      changedFiles: result.changedFiles,
+      changedSymbols: result.changedSymbols,
+      impactedCallers: result.impactedCallers,
+      riskSummary: result.riskSummary,
+    },
+  });
 }
 
 // ─── Tool 13: manage_adr handler ─────────────────────────────────────────────
@@ -234,8 +269,9 @@ export async function handleManageAdr(
   ctx: GraphToolContext,
 ): Promise<string> {
   const proj = (args.project as string) ?? ctx.projectName;
-  // Schema accepts `id` and `adr_id` but current DB methods are project-level only;
-  // per-ID targeting deferred to a future wave that adds the storage support.
+  // Wave 70 Phase B3: `adr_id` deprecated alias dropped from the schema.
+  // Current DB methods are project-level only; per-ID targeting deferred to
+  // a future wave that adds the storage support.
   const mode = args.mode as string;
   if (!mode) {
     return "Error: missing required parameter 'mode'";
@@ -265,8 +301,11 @@ export async function handleManageAdr(
 }
 
 // ─── Tool 12: query_graph handler ────────────────────────────────────────────
+//
+// Wave 70 Phase B1+B2: returns CallToolResult envelope with structuredContent
+// (columns + rows + total) so consumers can parse without regex.
 
-export function formatQueryResult(result: {
+function formatQueryResultText(result: {
   columns: string[];
   rows: Array<Record<string, unknown>>;
   total: number;
@@ -285,4 +324,18 @@ export function formatQueryResult(result: {
   }
 
   return truncate(lines.join('\n'));
+}
+
+export async function handleQueryGraph(
+  args: Record<string, unknown>,
+  cypherEngine: CypherEngine,
+): Promise<McpToolResult> {
+  const result = cypherEngine.execute(args.query as string);
+  return textResult(formatQueryResultText(result), {
+    structuredContent: {
+      columns: result.columns,
+      rows: result.rows,
+      total: result.total,
+    },
+  });
 }

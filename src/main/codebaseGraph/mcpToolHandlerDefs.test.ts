@@ -108,30 +108,16 @@ afterAll(() => {
 });
 
 // ─── handleGetCodeSnippet ─────────────────────────────────────────────────────
+//
+// Wave 70 Phase B3: deprecated `qualified_name` alias dropped. `symbol` is the
+// only accepted parameter name.
 
-describe('handleGetCodeSnippet — parameter aliasing', () => {
-  it('accepts natural name: symbol (qualified name)', async () => {
+describe('handleGetCodeSnippet — parameter handling (Wave 70)', () => {
+  it('accepts symbol (qualified name)', async () => {
     const qn = `${PROJECT}.foo.ts.uniqueFn`;
     const result = await handleGetCodeSnippet({ symbol: qn }, ctx);
     expect(result).toContain('uniqueFn');
     expect(result).not.toMatch(/^Error:/);
-    expect(result).not.toContain('Symbol not found');
-  });
-
-  it('accepts legacy name: qualified_name', async () => {
-    const qn = `${PROJECT}.foo.ts.uniqueFn`;
-    const result = await handleGetCodeSnippet({ qualified_name: qn }, ctx);
-    expect(result).toContain('uniqueFn');
-    expect(result).not.toMatch(/^Error:/);
-  });
-
-  it('new name wins when both are passed', async () => {
-    const qn = `${PROJECT}.foo.ts.uniqueFn`;
-    const result = await handleGetCodeSnippet(
-      { symbol: qn, qualified_name: 'nonexistent' },
-      ctx,
-    );
-    expect(result).toContain('uniqueFn');
     expect(result).not.toContain('Symbol not found');
   });
 
@@ -157,38 +143,53 @@ describe('handleGetCodeSnippet — parameter aliasing', () => {
     const result = await handleGetCodeSnippet({}, ctx);
     expect(result).toMatch(/^Error: missing required parameter/);
   });
+
+  it('Wave 70 Phase B3: deprecated qualified_name alias is no longer accepted', async () => {
+    const qn = `${PROJECT}.foo.ts.uniqueFn`;
+    const result = await handleGetCodeSnippet({ qualified_name: qn }, ctx);
+    expect(result).toMatch(/^Error: missing required parameter/);
+  });
 });
 
 // ─── handleIndexStatus ────────────────────────────────────────────────────────
+//
+// Wave 70 Phase B1: now returns the MCP envelope. The legacy parameter alias
+// `project_name` still resolves (back-compat with non-MCP callers); the only
+// formerly-accepted alias dropped here is in the MCP tool schema, not the
+// handler. Detailed envelope coverage lives in mcpToolHandlerStructured.test.ts.
 
-describe('handleIndexStatus — parameter aliasing', () => {
+describe('handleIndexStatus — parameter aliasing (Wave 70 envelope)', () => {
   it('returns live counts when no project arg given (defaults to ctx.projectName)', async () => {
     const result = await handleIndexStatus({}, ctx);
-    expect(result).toContain(PROJECT);
-    expect(result).not.toContain('undefined');
-    expect(result).not.toContain('is not indexed');
+    expect(result.content[0].text).toContain(PROJECT);
+    expect(result.isError).toBeUndefined();
   });
 
-  it('accepts project arg (preferred name)', async () => {
+  it('accepts project arg', async () => {
     const result = await handleIndexStatus({ project: PROJECT }, ctx);
-    expect(result).toContain(PROJECT);
-    expect(result).not.toContain('is not indexed');
+    expect(result.content[0].text).toContain(PROJECT);
+    expect(result.isError).toBeUndefined();
   });
 
-  it('accepts project_name arg (alias)', async () => {
+  it('accepts project_name arg (back-compat alias on the handler)', async () => {
     const result = await handleIndexStatus({ project_name: PROJECT }, ctx);
-    expect(result).toContain(PROJECT);
-    expect(result).not.toContain('is not indexed');
+    expect(result.content[0].text).toContain(PROJECT);
+    expect(result.isError).toBeUndefined();
   });
 
   it('project wins over project_name when both are passed', async () => {
-    const result = await handleIndexStatus({ project: PROJECT, project_name: 'nonexistent' }, ctx);
-    expect(result).toContain(PROJECT);
-    expect(result).not.toContain('is not indexed');
+    const result = await handleIndexStatus(
+      { project: PROJECT, project_name: 'nonexistent' },
+      ctx,
+    );
+    expect(result.content[0].text).toContain(PROJECT);
+    expect(result.isError).toBeUndefined();
   });
 
-  it('reports not-indexed for an unknown project name', async () => {
+  it('flags isError + indexed:false envelope for unknown project name', async () => {
     const result = await handleIndexStatus({ project: 'ghost-project' }, ctx);
-    expect(result).toContain('is not indexed');
+    expect(result.content[0].text).toContain('is not indexed');
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent?.indexed).toBe(false);
   });
 });

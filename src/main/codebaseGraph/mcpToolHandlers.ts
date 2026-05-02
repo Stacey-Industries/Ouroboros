@@ -7,7 +7,8 @@
  * truncates output at ~8000 chars.
  */
 
-import type { McpToolDefinition } from '../internalMcp/internalMcpTypes';
+import type { McpToolDefinition, McpToolResult } from '../internalMcp/internalMcpTypes';
+import { textResult } from '../internalMcp/internalMcpTypes';
 import type { GraphToolContext } from './graphTypes';
 import {
   handleDeleteProject,
@@ -21,9 +22,9 @@ import {
   handleSearchCode,
 } from './mcpToolHandlerDefs';
 import {
-  formatQueryResult,
   handleDetectChanges,
   handleManageAdr,
+  handleQueryGraph,
   handleSearchGraph,
   handleTraceCallPath,
 } from './mcpToolHandlerHelpers';
@@ -60,7 +61,6 @@ const TOOL_SCHEMAS = {
     type: 'object',
     properties: {
       query: { type: 'string', description: 'Symbol IDENTIFIER (PascalCase/camelCase, no spaces). Substring match. ✓ "ChatWorkbenchArtifactPane", "parseConfig". ✗ "chat workbench artifact pane" returns zero.' },
-      name_pattern: { type: 'string', description: 'Deprecated alias for query.' },
       label: { type: 'string' },
       project: { type: 'string' },
       file_pattern: { type: 'string' },
@@ -100,7 +100,6 @@ const TOOL_SCHEMAS = {
     type: 'object',
     properties: {
       symbol: { type: 'string', description: 'Symbol IDENTIFIER (PascalCase/camelCase). ✓ "ChatWorkbenchArtifactPane". ✗ "chat workbench artifact pane".' },
-      qualified_name: { type: 'string', description: 'Deprecated alias for symbol.' },
     },
     required: [],
   },
@@ -108,7 +107,6 @@ const TOOL_SCHEMAS = {
     type: 'object',
     properties: {
       symbol: { type: 'string', description: 'Function/method IDENTIFIER (PascalCase/camelCase). ✓ "parseConfig". ✗ "parse config".' },
-      function_name: { type: 'string', description: 'Deprecated alias for symbol.' },
       direction: {
         type: 'string',
         enum: ['inbound', 'outbound', 'both', 'callers', 'callees'],
@@ -136,7 +134,6 @@ const TOOL_SCHEMAS = {
       mode: { type: 'string', enum: ['list', 'get', 'store', 'update', 'delete'] },
       project: { type: 'string' },
       id: { type: 'string', description: 'ADR identifier (when targeting a specific ADR).' },
-      adr_id: { type: 'string', description: 'Deprecated alias for id.' },
       content: { type: 'string' },
       sections: { type: 'object' },
     },
@@ -153,32 +150,61 @@ const TOOL_SCHEMAS = {
 
 // ---- Factory helpers ----------------------------------------------------------
 
+// Wrap a Promise<string> into the MCP envelope. Used by simple text-only tools.
+async function wrapText(p: Promise<string>): Promise<McpToolResult> {
+  return textResult(await p);
+}
+
+// Run a Promise<string> handler and surface thrown errors via isError:true.
+async function safeText(label: string, p: Promise<string>): Promise<McpToolResult> {
+  try {
+    return textResult(await p);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return textResult(`${label}: ${msg}`, { isError: true });
+  }
+}
+
+// Run a structured handler (returns Promise<McpToolResult>) with error wrapping.
+async function safeStructured(
+  label: string,
+  p: Promise<McpToolResult>,
+): Promise<McpToolResult> {
+  try {
+    return await p;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return textResult(`${label}: ${msg}`, { isError: true });
+  }
+}
+
 function buildLifecycleTools(context: GraphToolContext): McpToolDefinition[] {
   return [
     {
       name: 'index_repository',
       description: 'Index a repository into the codebase knowledge graph.',
       inputSchema: TOOL_SCHEMAS.index_repository,
-      handler: async (a: Record<string, unknown>) => handleIndexRepository(a, context),
+      handler: async (a: Record<string, unknown>) => wrapText(handleIndexRepository(a, context)),
     },
     {
       name: 'list_projects',
       description: 'List all indexed projects with node/edge counts and last index time.',
       inputSchema: TOOL_SCHEMAS.list_projects,
-      handler: async () => handleListProjects(context),
+      handler: async () => wrapText(handleListProjects(context)),
     },
     {
       name: 'delete_project',
       description: 'Remove a project and all its graph data. Irreversible.',
       inputSchema: TOOL_SCHEMAS.delete_project,
-      handler: async (a: Record<string, unknown>) => handleDeleteProject(a, context),
+      handler: async (a: Record<string, unknown>) => wrapText(handleDeleteProject(a, context)),
     },
     {
       name: 'index_status',
       description:
-        'Get the current indexing status for a project. Reports node/edge counts by label/type. Includes a parseAnomalies count when files were processed but produced no definitions (signal for indexer regressions). Pass project name or omit to use the current workspace.',
+        'Get the current indexing status for a project. Reports node/edge counts by label/type. Always emits a parseAnomalies field (count + files) — zero is a positive signal that indexing produced clean output, not a missing field. Pass project name or omit to use the current workspace.',
       inputSchema: TOOL_SCHEMAS.index_status,
-      handler: async (a: Record<string, unknown>) => handleIndexStatus(a, context),
+      handler: async (a: Record<string, unknown>) =>
+        safeStructured('Error getting index status', handleIndexStatus(a, context)),
     },
   ];
 }
@@ -190,14 +216,14 @@ function buildMetaTools(context: GraphToolContext): McpToolDefinition[] {
       description:
         'Graph schema: node/edge counts, relationship patterns, sample names. Call this once at the start of a session involving graph queries to discover what node labels and edge types are available before writing query_graph (Cypher) statements.',
       inputSchema: TOOL_SCHEMAS.get_graph_schema,
-      handler: async () => handleGetGraphSchema(context),
+      handler: async () => wrapText(handleGetGraphSchema(context)),
     },
     {
       name: 'ingest_traces',
       description:
         'Add/strengthen HTTP_CALLS edges. Pass traces as a JSON-serialized string: JSON.stringify([{ fromId, toId, type, weight? }]).',
       inputSchema: TOOL_SCHEMAS.ingest_traces,
-      handler: async (a: Record<string, unknown>) => handleIngestTraces(a, context),
+      handler: async (a: Record<string, unknown>) => wrapText(handleIngestTraces(a, context)),
     },
   ];
 }
@@ -209,34 +235,30 @@ function buildSearchTools(context: GraphToolContext): McpToolDefinition[] {
       description:
         'Symbol search (prefer over Grep). Pass query as the IDENTIFIER (PascalCase/camelCase, no spaces) — natural-language phrases return zero results. ✓ "ChatWorkbenchArtifactPane". ✗ "chat workbench artifact pane". Returns graph nodes with file:line + metadata. Grep returns text matches including comments; search_graph returns actual definitions.',
       inputSchema: TOOL_SCHEMAS.search_graph,
-      handler: async (a: Record<string, unknown>) => {
-        try {
-          return await handleSearchGraph(a, context);
-        } catch (err) {
-          return `Error searching graph: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      },
+      handler: async (a: Record<string, unknown>) =>
+        safeText('Error searching graph', handleSearchGraph(a, context)),
     },
     {
       name: 'get_architecture',
       description:
         'Use when orienting in unfamiliar code or before a refactor. Returns hotspots (most-connected functions), module structure, and file-tree overview. Cheaper than reading multiple files; tells you where a change has the widest impact.',
       inputSchema: TOOL_SCHEMAS.get_architecture,
-      handler: async (a: Record<string, unknown>) => handleGetArchitecture(a, context),
+      handler: async (a: Record<string, unknown>) =>
+        safeStructured('Error getting architecture', handleGetArchitecture(a, context)),
     },
     {
       name: 'search_code',
       description:
         'String search across source files. Default is SUBSTRING (special chars are escaped); pass regex: true for regex mode. Use for STRING content (error messages, log lines, literal text). For SYMBOL queries (function/class names) prefer search_graph — it filters out comments and same-name false positives.',
       inputSchema: TOOL_SCHEMAS.search_code,
-      handler: async (a: Record<string, unknown>) => handleSearchCode(a, context),
+      handler: async (a: Record<string, unknown>) => wrapText(handleSearchCode(a, context)),
     },
     {
       name: 'get_code_snippet',
       description:
         'Symbol body retrieval (prefer over Read for single symbols). Pass symbol as the IDENTIFIER (PascalCase/camelCase, no spaces). ✓ "parseConfig". ✗ "parse config function". Auto-resolves bare names if unique.',
       inputSchema: TOOL_SCHEMAS.get_code_snippet,
-      handler: async (a: Record<string, unknown>) => handleGetCodeSnippet(a, context),
+      handler: async (a: Record<string, unknown>) => wrapText(handleGetCodeSnippet(a, context)),
     },
   ];
 }
@@ -249,26 +271,16 @@ function buildTraceAndChangeTools(context: GraphToolContext): McpToolDefinition[
       description:
         "Caller/callee graph (prefer over Grep). Pass symbol as the IDENTIFIER (PascalCase/camelCase, no spaces). ✓ \"parseConfig\". ✗ \"parse config\". direction: 'inbound'/'callers', 'outbound'/'callees', 'both' (default). Returns call edges with risk labels.",
       inputSchema: TOOL_SCHEMAS.trace_call_path,
-      handler: async (a: Record<string, unknown>) => {
-        try {
-          return await handleTraceCallPath(a, queryEngine);
-        } catch (err) {
-          return `Error tracing call path: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      },
+      handler: async (a: Record<string, unknown>) =>
+        safeText('Error tracing call path', handleTraceCallPath(a, queryEngine)),
     },
     {
       name: 'detect_changes',
       description:
         'Pre-refactor impact analysis. Maps git changes to affected symbols; computes blast radius of what will break.',
       inputSchema: TOOL_SCHEMAS.detect_changes,
-      handler: async (a: Record<string, unknown>) => {
-        try {
-          return await handleDetectChanges(a, queryEngine);
-        } catch (err) {
-          return `Error detecting changes: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      },
+      handler: async (a: Record<string, unknown>) =>
+        safeStructured('Error detecting changes', handleDetectChanges(a, queryEngine)),
     },
   ];
 }
@@ -281,25 +293,15 @@ function buildCypherAndAdrTools(context: GraphToolContext): McpToolDefinition[] 
       description:
         'Complex relationship queries. Cypher-subset: MATCH (n:Label), (a)-[:TYPE]->(b), (a)-[:TYPE*1..3]->(b); WHERE n.prop {=,<>,<,>,<=,>=,CONTAINS,STARTS WITH,ENDS WITH,IN} AND/OR; RETURN n.prop, COUNT(*), labels(n), DISTINCT; ORDER BY, LIMIT. Node columns: name, qualified_name, file_path, start_line, end_line, label, id, project. Any other property name (e.g. n.signature) falls through to JSON_EXTRACT against the node\'s props blob. Use labels(n) for the node label string; for set-membership use either `n.label IN [\'A\',\'B\']` or `labels(n) IN [\'A\',\'B\']` (or `MATCH (n:Label)`). Capped at 200 rows. Use search_graph for simple symbol lookups. Call get_graph_schema first to discover node labels, edge types, and exact property names.',
       inputSchema: TOOL_SCHEMAS.query_graph,
-      handler: async (a: Record<string, unknown>) => {
-        try {
-          return formatQueryResult(cypherEngine.execute(a.query as string));
-        } catch (err) {
-          return `Query error: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      },
+      handler: async (a: Record<string, unknown>) =>
+        safeStructured('Query error', handleQueryGraph(a, cypherEngine)),
     },
     {
       name: 'manage_adr',
       description: 'Manage Architecture Decision Records (ADR). Modes: list, get, store, update, delete.',
       inputSchema: TOOL_SCHEMAS.manage_adr,
-      handler: async (a: Record<string, unknown>) => {
-        try {
-          return await handleManageAdr(a, context);
-        } catch (err) {
-          return `Error managing ADR: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      },
+      handler: async (a: Record<string, unknown>) =>
+        safeText('Error managing ADR', handleManageAdr(a, context)),
     },
   ];
 }

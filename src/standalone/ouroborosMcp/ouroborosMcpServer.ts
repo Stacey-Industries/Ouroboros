@@ -113,8 +113,10 @@ function registerHandlers(tools: McpToolDefinition[]): Server {
       };
     }
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
-    const text = await tool.handler(args, '');
-    return { content: [{ type: 'text', text }], isError: false };
+    // Wave 70 Phase B1: handlers return the MCP CallToolResult envelope
+    // directly (`{content, isError?, structuredContent?}`). Pre-Wave-70 they
+    // returned a string and this function wrapped with `isError: false`.
+    return await tool.handler(args, '');
   });
   return server;
 }

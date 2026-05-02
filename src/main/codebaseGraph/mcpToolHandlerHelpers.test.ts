@@ -95,22 +95,19 @@ afterAll(() => {
 
 // ─── handleSearchGraph ────────────────────────────────────────────────────────
 
-describe('handleSearchGraph — parameter aliasing', () => {
-  it('accepts natural name: query', async () => {
+describe('handleSearchGraph — parameter handling (Wave 70)', () => {
+  it('accepts query', async () => {
     const result = await handleSearchGraph({ query: 'helperFn' }, ctx);
     expect(result).toContain('helperFn');
     expect(result).not.toContain('18,331');
   });
 
-  it('accepts legacy name: name_pattern', async () => {
+  it('Wave 70 Phase B3: deprecated name_pattern alias is no longer accepted', async () => {
+    // Without `query`, the ranked path is skipped and the filtered path runs.
+    // Pre-Wave-70 the name_pattern alias would still surface helperFn; now it
+    // is treated as no filter, returning the full table.
     const result = await handleSearchGraph({ name_pattern: 'helperFn' }, ctx);
-    expect(result).toContain('helperFn');
-  });
-
-  it('new name wins when both are passed', async () => {
-    const result = await handleSearchGraph({ query: 'helperFn', name_pattern: 'callerFn' }, ctx);
-    expect(result).toContain('helperFn');
-    expect(result).not.toContain('callerFn');
+    expect(result).toContain('Found 2 nodes');
   });
 
   it('returns filtered results (not full table scan) when query is provided', async () => {
@@ -131,30 +128,21 @@ describe('handleSearchGraph — parameter aliasing', () => {
 
 // ─── handleTraceCallPath ──────────────────────────────────────────────────────
 
-describe('handleTraceCallPath — parameter aliasing', () => {
-  it('accepts natural name: symbol', async () => {
+describe('handleTraceCallPath — parameter handling (Wave 70)', () => {
+  it('accepts symbol', async () => {
     const result = await handleTraceCallPath({ symbol: 'callerFn' }, ctx.queryEngine);
     expect(result).toContain('callerFn');
     expect(result).not.toMatch(/^Error:/);
   });
 
-  it('accepts legacy name: function_name', async () => {
+  it('Wave 70 Phase B3: deprecated function_name alias is no longer accepted', async () => {
     const result = await handleTraceCallPath({ function_name: 'callerFn' }, ctx.queryEngine);
-    expect(result).toContain('callerFn');
-    expect(result).not.toMatch(/^Error:/);
+    expect(result).toBe("Error: missing required parameter 'symbol'");
   });
 
-  it('new name wins when both are passed', async () => {
-    const result = await handleTraceCallPath(
-      { symbol: 'callerFn', function_name: 'helperFn' },
-      ctx.queryEngine,
-    );
-    expect(result).toContain('callerFn');
-  });
-
-  it('returns error string (not TypeError) when neither symbol nor function_name given', async () => {
+  it('returns error string when symbol is missing', async () => {
     const result = await handleTraceCallPath({}, ctx.queryEngine);
-    expect(result).toBe("Error: missing required parameter 'symbol' (or 'function_name')");
+    expect(result).toBe("Error: missing required parameter 'symbol'");
   });
 });
 

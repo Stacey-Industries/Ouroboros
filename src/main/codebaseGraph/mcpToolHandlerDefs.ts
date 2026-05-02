@@ -11,6 +11,12 @@ import type { EdgeType } from './graphDatabaseTypes';
 import { truncate } from './mcpToolHandlerHelpers';
 import type { GraphToolContext } from './mcpToolHandlers';
 
+// Wave 70 Phase B1+B2 — `handleIndexStatus` and `handleGetArchitecture` were
+// moved to `mcpToolHandlerStructured.ts` (envelope-returning handlers with
+// `structuredContent`). Re-export them here for back-compat with existing
+// imports from `mcpToolHandlerDefs`.
+export { handleGetArchitecture, handleIndexStatus } from './mcpToolHandlerStructured';
+
 // ─── index_repository handler ─────────────────────────────────────────────────
 
 export async function handleIndexRepository(
@@ -73,59 +79,6 @@ export async function handleDeleteProject(
   }
 }
 
-// ─── Parse anomalies helper ───────────────────────────────────────────────
-
-function getParseAnomaliesLines(projectName: string, ctx: GraphToolContext): string[] {
-  try {
-    const value = ctx.db.getGraphMetadata(`parse_anomalies:${projectName}`);
-    if (!value) return [];
-    const anomalies = JSON.parse(value) as { count: number; samples: string[] };
-    if (anomalies.count === 0) return [];
-    const lines = [`Parse anomalies: ${anomalies.count} file(s) with no definitions`];
-    for (const sample of anomalies.samples.slice(0, 5)) {
-      lines.push(`  - ${sample}`);
-    }
-    return ['', ...lines];
-  } catch {
-    return [];
-  }
-}
-
-// ─── index_status handler ─────────────────────────────────────────────────────
-
-export async function handleIndexStatus(
-  args: Record<string, unknown>,
-  ctx: GraphToolContext,
-): Promise<string> {
-  try {
-    const name =
-      (args.project as string | undefined) ??
-      (args.project_name as string | undefined) ??
-      ctx.projectName;
-    const project = ctx.db.getProject(name);
-    if (!project) return `Project "${name}" is not indexed. Run index_repository first.`;
-    const nodeCounts = ctx.db.getNodeLabelCounts(name);
-    const edgeCounts = ctx.db.getEdgeTypeCounts(name);
-    const lines = [
-      `Project: ${name}`,
-      `Root: ${project.root_path}`,
-      `Indexed: ${new Date(project.indexed_at).toISOString()}`,
-      `Total nodes: ${project.node_count}`,
-      `Total edges: ${project.edge_count}`,
-      '',
-      'Node counts by label:',
-      ...Object.entries(nodeCounts).map(([label, count]) => `  ${label}: ${count}`),
-      '',
-      'Edge counts by type:',
-      ...Object.entries(edgeCounts).map(([type, count]) => `  ${type}: ${count}`),
-      ...getParseAnomaliesLines(name, ctx),
-    ];
-    return truncate(lines.join('\n'));
-  } catch (err) {
-    return `Error getting index status: ${err instanceof Error ? err.message : String(err)}`;
-  }
-}
-
 // ─── get_graph_schema handler ─────────────────────────────────────────────────
 
 export async function handleGetGraphSchema(ctx: GraphToolContext): Promise<string> {
@@ -156,26 +109,8 @@ export async function handleGetGraphSchema(ctx: GraphToolContext): Promise<strin
   }
 }
 
-// ─── get_architecture handler ─────────────────────────────────────────────────
-
-export async function handleGetArchitecture(
-  args: Record<string, unknown>,
-  ctx: GraphToolContext,
-): Promise<string> {
-  try {
-    const aspects = (args.aspects as string[]) ?? ['all'];
-    const result = ctx.queryEngine.getArchitecture(
-      aspects as Parameters<typeof ctx.queryEngine.getArchitecture>[0],
-    );
-    const lines = [`Architecture: ${result.projectName}`, ''];
-    for (const [aspect, content] of Object.entries(result.aspects)) {
-      lines.push(`## ${aspect}`, content, '');
-    }
-    return truncate(lines.join('\n'));
-  } catch (err) {
-    return `Error getting architecture: ${err instanceof Error ? err.message : String(err)}`;
-  }
-}
+// `handleGetArchitecture` moved to `mcpToolHandlerStructured.ts` — re-exported
+// at the top of this file for back-compat.
 
 // ─── search_code handler ──────────────────────────────────────────────────────
 
@@ -269,9 +204,8 @@ export async function handleGetCodeSnippet(
   ctx: GraphToolContext,
 ): Promise<string> {
   try {
-    const raw =
-      (args.symbol as string | undefined) ?? (args.qualified_name as string | undefined);
-    if (!raw) return "Error: missing required parameter 'symbol' (or 'qualified_name')";
+    const raw = args.symbol as string | undefined;
+    if (!raw) return "Error: missing required parameter 'symbol'";
     const resolved = resolveQualifiedName(raw, ctx);
     if (resolved.error) return resolved.error;
     if (!resolved.qn) return `Symbol not found: ${raw}`;
