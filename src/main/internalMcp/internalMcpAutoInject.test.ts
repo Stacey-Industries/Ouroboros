@@ -118,9 +118,8 @@ describe('injectIntoProjectSettings — .mcp.json (the file Claude Code actually
     expect(servers?.ouroboros?.args).toEqual(['/fake/ouroborosMcp.js']);
   });
 
-  it('writes .mcp.json with stdio shape when transport is stdio (includes type)', async () => {
+  it('writes .mcp.json with stdio shape (includes type field)', async () => {
     await injectIntoProjectSettings(projectRoot, 12345, {
-      transport: 'stdio',
       stdioTransportPath: '/fake/ouroborosMcp.js',
     });
 
