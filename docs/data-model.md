@@ -52,7 +52,7 @@ interface AppConfig {
   // Wave 17/20/28/32 layout preset engine
   layout: {
     presets: { v2: boolean };        // default true
-    chatPrimary: boolean;            // default true
+    immersiveChat: boolean;          // default false (chat-only shell flag; chatPrimary was a Wave 32 migration source key, not live)
     dragAndDrop: boolean;            // default true
     customLayoutsPerSession: Record<string, unknown>;
     customLayoutsMru: string[];

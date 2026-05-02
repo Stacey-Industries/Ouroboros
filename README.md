@@ -6,8 +6,6 @@ Built with Electron 41, React 19, TypeScript, and Monaco Editor. Runs on Windows
 
 This project is developed from within itself. Claude Code runs as a terminal session inside Ouroboros — editing the source code of the app it's running in. The snake eats its own tail.
 
-![Screenshot](docs/assets/screenshot.png)
-
 ## What it does
 
 Ouroboros sits between you and your AI coding agent. Instead of a bare terminal, you get:

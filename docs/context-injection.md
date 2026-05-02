@@ -146,7 +146,7 @@ Snippets are accepted greedily in tier order until the byte + token budget is ex
 
 ### Stage 7 — Lean Packet Mode (Wave 31)
 
-**File:** `src/main/orchestration/claudeCodeContextBuilder.ts` (and config gating)
+**File:** `src/main/orchestration/providers/claudeCodeContextBuilder.ts` (and config gating)
 
 When `config.context.packetMode === 'lean'` (default `'full'`):
 

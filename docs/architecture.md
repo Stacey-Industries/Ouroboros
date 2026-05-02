@@ -477,7 +477,7 @@ hooks.ts PostToolUse events + stream-json tool_use
 
 ### Terminal Instances
 
-All sessions rendered simultaneously with `display: none/block` toggling (prevents xterm.js teardown/recreation on tab switch). Canvas renderer is used (not WebGL). Double-rAF guard for fit() calls after open().
+All sessions rendered simultaneously with `display: none/block` toggling (prevents xterm.js teardown/recreation on tab switch). WebGL renderer via `@xterm/addon-webgl` is loaded synchronously before `term.open()`. Double-rAF guard for fit() calls after open().
 
 ### File Viewer
 
@@ -485,7 +485,7 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
 
 ### Theming
 
-5 built-in themes defined as CSS var maps in `src/renderer/themes/`. Applied by setting vars on `document.documentElement.style`. Terminal theme colors derived from `--term-*` CSS vars. Theme switch triggers `theme:changed` IPC event + `requestAnimationFrame` sync.
+8 built-in themes (cursor, high-contrast, kiro, light, material, modern, retro, warp) defined as CSS var maps in `src/renderer/themes/`. Applied by setting vars on `document.documentElement.style`. Terminal theme colors derived from `--term-*` CSS vars. Theme switch triggers `theme:changed` IPC event + `requestAnimationFrame` sync.
 
 ## Ownership Rules
 
@@ -635,26 +635,19 @@ See `docs/claude-md-lifecycle.md` for the full lifecycle: when to generate, when
 
 ---
 
-## MCP transport and CodeMode routing (Wave 51)
+## Graph MCP server (Wave 60)
 
-The IDE has two MCP optimization mechanisms that converged in Wave 51: **CodeMode** (replaces many tool schemas with a single `execute_code` tool) and **internalMcp** (the SSE-based ouroboros server with graph tools). Phase A picked **stdio in internalMcp** as the bridge — CodeMode's `mcpClient.ts` stays stdio-only, internalMcp gained a stdio transport that mirrors the SSE tool surface.
+The graph-oriented MCP tools (`search_graph`, `trace_call_path`, `get_architecture`, etc.) are served by a **standalone Node binary** at `src/standalone/ouroborosMcp/`. Claude Code spawns it as a stdio child process; it reads the IDE's SQLite graph DB directly and never writes back. The IDE no longer hosts the MCP server in-process.
 
-### Per-spawn routing decision
+CodeMode's universal multiplexer (Wave 53l) intercepts every MCP server reference in the spawn's config. Tools surface to the agent as `servers.ouroboros.*` inside `execute_code` rather than as separate top-level tools. `codemode.excludeFromMultiplex` opts specific servers out per spawn.
 
-For each headless spawn, `scopedMcpConfig.ts` calls `internalMcpRoutingPolicy.decideInternalMcpRouting` to pick one of three outcomes:
+Implementation references:
 
-| Decision | When | Effect on the temp MCP config |
-|---|---|---|
-| `direct-inject` | Wave 48 scope says "inject" AND (CodeMode off OR transport=sse OR routeInternalMcp=false) | Writes `{ouroboros: <entry>}` (sse `url` or stdio `command/args` based on transport flag) |
-| `route-through-codemode` | CodeMode enabled + `routeInternalMcp=true` + transport=stdio + scope says inject | Omits `ouroboros`; CodeMode's `__codemode_proxy` already exposes graph tools as `servers.ouroboros.*` |
-| `omit` | Wave 48 scope says skip (scope=`never`, or task-gated + non-graph task) | No `ouroboros` entry; user-global servers still pass through |
+| Surface | Path |
+|---|---|
+| Standalone server entry | `src/standalone/ouroborosMcp/ouroborosMcp.ts` |
+| Per-spawn injection | `src/main/internalMcp/internalMcpAutoInject.ts` |
+| Multiplex policy | `src/main/codemode/codemodeStartup.ts`, `src/main/orchestration/providers/internalMcpRoutingPolicy.ts` |
+| Schema handshake | `src/standalone/ouroborosMcp/ouroborosMcpSchema.ts` (refuses incompatible DB versions) |
 
-Crash-recovery path: if `claudeCodeMode.acquireCodeModeForLaunch` reports `ownsLifecycle:false` while `codemode.enabled=true`, the policy is downgraded via `downgradeOnCodemodeFailure` so the spawn falls back to direct-inject rather than launching without graph tools.
-
-### Cost telemetry
-
-Each call to `buildScopedMcpConfig` appends a record to `~/.ouroboros/telemetry/mcp-spawn-cost.jsonl` (see `mcpSpawnCostTelemetry.ts`). Fields include the routing decision, internalMcp scope, transport, MCP config bytes (`JSON.stringify(mcpServers).length`), server count, and a token estimate (`bytes / 4` — coarse approximation, sufficient for relative comparisons).
-
-The rollup script `npx tsx scripts/measure-mcp-token-cost.ts` reads this stream, splits by routing decision, and emits a per-week markdown table of median + p25/p75 plus the 5 largest direct-inject spawns. Run it post-soak to drive the `routeInternalMcp` default flip — see `roadmap/session-handoff.md` "Wave 51 follow-ups" for the protocol.
-
-For the deeper design context (option matrix, paper-spike rationale, phase commits) see `roadmap/wave-51-plan.md` and `roadmap/wave-51-decision.md`. For operator-facing configuration, telemetry reading, and rollback, see `docs/codemode-internalmcp-routing.md`.
+Pre-Wave-60 design (SSE-based in-process server, per-spawn `routeInternalMcp` flag, `internalMcpStdioTransport.ts` adapter) is fully archived — see `roadmap/archive/wave-51-plan.md` and `roadmap/archive/wave-51-decision.md` for the historical decision matrix.

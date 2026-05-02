@@ -6,7 +6,7 @@ works, the weight modes introduced in Wave 53b, how the online telemetry is coll
 and how to measure and interpret hit rates.
 
 **Cross-references:**
-- `roadmap/wave-53b-analysis.md` — Phase A offline analysis (provisional numbers)
+- `roadmap/archive/wave-53b-analysis.md` — Phase A offline analysis (provisional numbers)
 - `roadmap/decisions/wave-53b.md` — ADR for Wave 53b architectural choices
 - `docs/telemetry-parity.md` — telemetry parity infrastructure and queue lifecycle
 
@@ -18,7 +18,7 @@ At every IDE-orchestrated spawn, `contextPacketBuilder.ts` calls
 `selectContextFiles()` (in `contextSelectorWorkflow.ts`), which scores all
 candidate files against 10 weighted reasons and returns an ordered
 `RankedContextFile[]`. The top N files (subject to token/byte budget) are
-serialized by `claudeCodeContextBuilder.ts:74` into:
+serialized by `providers/claudeCodeContextBuilder.ts:74` into:
 
 ```xml
 <relevant_code>
@@ -76,7 +76,7 @@ The `current` path is unchanged from pre-Wave-53b behavior.
 
 ### Variant weight tables
 
-**Tuned mode** (`contextRankerVariant.ts` — `TUNED_WEIGHTS`):
+**Tuned mode** (`contextSelectorRankerVariant.ts` — `TUNED_WEIGHTS`):
 
 | Reason | Current | Tuned | Delta | Rationale |
 |---|---|---|---|---|

@@ -48,7 +48,7 @@ If the discovery doesn't fit any existing CLAUDE.md, add it to the most directly
 | `src/renderer/components/` | Feature folders: Layout, Terminal, FileTree, FileViewer, AgentMonitor, CommandPalette, Settings |
 | `src/renderer/hooks/`      | Shared hooks: useConfig, useTheme, usePty, useAgentEvents, useFileWatcher                       |
 | `src/renderer/contexts/`   | React contexts: ProjectContext                                                                  |
-| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro, glass, light, high-contrast)              |
+| `src/renderer/themes/`     | Theme definitions (retro, modern, warp, cursor, kiro, material, light, high-contrast)           |
 | `src/renderer/types/`      | `electron.d.ts` — full IPC type contract                                                        |
 
 Each subdirectory has its own `CLAUDE.md` with a subsystem-specific file map.
