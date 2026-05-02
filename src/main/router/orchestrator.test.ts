@@ -12,7 +12,6 @@ describe('orchestrator — routePromptSync', () => {
       layer3Enabled: false,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
-      llmJudgeSampleRate: 0,
     });
     expect(r).toBeNull();
   });
@@ -25,7 +24,6 @@ describe('orchestrator — routePromptSync', () => {
       layer3Enabled: false,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: true,
-      llmJudgeSampleRate: 0,
     });
     expect(r?.tier).toBe('OPUS');
     expect(r?.model).toBe('claude-opus-4-6');

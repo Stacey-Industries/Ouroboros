@@ -205,8 +205,6 @@ export const tailSchema = {
       layer3Enabled: { type: 'boolean', default: true },
       layer2ConfidenceThreshold: { type: 'number', default: 0.6 },
       paranoidMode: { type: 'boolean', default: false },
-      /** Fraction of routing decisions sampled for LLM judge scoring (0 = disabled). */
-      llmJudgeSampleRate: { type: 'number', minimum: 0, maximum: 1, default: 0 },
       /** Wave 53 — log shadow router decision even when user overrides the model. */
       shadowMode: { type: 'boolean', default: true },
       /** Wave 61 — gate the periodic retrain observer; default off (see Wave 61 ADR). */
@@ -219,7 +217,6 @@ export const tailSchema = {
       layer3Enabled: true,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
-      llmJudgeSampleRate: 0,
       shadowMode: true,
       autoRetrainEnabled: false,
     },

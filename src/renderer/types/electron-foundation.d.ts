@@ -107,8 +107,6 @@ export interface RouterSettings {
   layer3Enabled: boolean;
   layer2ConfidenceThreshold: number;
   paranoidMode: boolean;
-  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
-  llmJudgeSampleRate: number;
 }
 
 export interface WorkspaceSnapshot {

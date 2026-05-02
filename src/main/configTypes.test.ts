@@ -145,7 +145,6 @@ describe('configTypes — RouterSettings', () => {
       layer3Enabled: true,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
-      llmJudgeSampleRate: 0,
     };
     expect(r.enabled).toBe(true);
   });

@@ -4,7 +4,6 @@
  * Extracted to stay under ESLint 300-line file limit.
  */
 
-import type { CSSProperties } from 'react';
 import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
@@ -27,7 +26,6 @@ export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   layer3Enabled: true,
   layer2ConfidenceThreshold: 0.6,
   paranoidMode: false,
-  llmJudgeSampleRate: 0,
 };
 
 export function updateRouterThreshold(
@@ -40,11 +38,6 @@ export function updateRouterThreshold(
   }
   updateSetting('layer2ConfidenceThreshold', Math.min(1, Math.max(0, parsed)));
 }
-
-const sliderStyle: CSSProperties = {
-  width: '100%',
-  accentColor: 'var(--interactive-accent)',
-};
 
 function RouterThresholdSection({
   settings,
@@ -70,43 +63,6 @@ function RouterThresholdSection({
         type="number"
         value={settings.layer2ConfidenceThreshold}
         onChange={(event) => updateRouterThreshold(event.target.value, updateSetting)}
-      />
-    </section>
-  );
-}
-
-function LlmJudgeSampleRateSection({
-  settings,
-  updateSetting,
-}: {
-  settings: RouterSettings;
-  updateSetting: RouterUpdateFn;
-}): React.ReactElement {
-  const rate = settings.llmJudgeSampleRate ?? 0;
-  const label = rate === 0 ? 'Disabled' : `${Math.round(rate * 100)}%`;
-
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    const parsed = Number.parseFloat(event.target.value);
-    if (!Number.isFinite(parsed)) return;
-    updateSetting('llmJudgeSampleRate', Math.min(1, Math.max(0, parsed)));
-  }
-
-  return (
-    <section>
-      <SectionLabel>LLM Judge Sample Rate</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
-        Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.
-        Currently: <span className="text-text-semantic-primary">{label}</span>
-      </p>
-      <input
-        aria-label="LLM judge sample rate"
-        max={1}
-        min={0}
-        step={0.05}
-        style={sliderStyle}
-        type="range"
-        value={rate}
-        onChange={handleChange}
       />
     </section>
   );
@@ -143,7 +99,6 @@ function RouterToggles({
         title="Router Paranoid Mode"
         onChange={(value) => updateSetting('paranoidMode', value)}
       />
-      <LlmJudgeSampleRateSection settings={settings} updateSetting={updateSetting} />
     </>
   );
 }

@@ -41,7 +41,6 @@ function enableRouter(): void {
     layer3Enabled: false,
     layer2ConfidenceThreshold: 0.3,
     paranoidMode: false,
-    llmJudgeSampleRate: 0,
   });
 }
 
@@ -53,7 +52,6 @@ function disableRouter(): void {
     layer3Enabled: false,
     layer2ConfidenceThreshold: 0.6,
     paranoidMode: false,
-    llmJudgeSampleRate: 0,
   });
 }
 

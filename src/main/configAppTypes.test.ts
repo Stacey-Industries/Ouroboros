@@ -113,7 +113,6 @@ describe('AppConfig — structural shape', () => {
         layer3Enabled: true,
         layer2ConfidenceThreshold: 0.6,
         paranoidMode: false,
-        llmJudgeSampleRate: 0,
       },
       routerLastRetrainCount: 0,
       internalMcpEnabled: true,

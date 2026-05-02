@@ -14,7 +14,6 @@ describe('DEFAULT_ROUTER_SETTINGS', () => {
     expect(DEFAULT_ROUTER_SETTINGS.layer3Enabled).toBe(true);
     expect(DEFAULT_ROUTER_SETTINGS.layer2ConfidenceThreshold).toBe(0.6);
     expect(DEFAULT_ROUTER_SETTINGS.paranoidMode).toBe(false);
-    expect(DEFAULT_ROUTER_SETTINGS.llmJudgeSampleRate).toBe(0);
   });
 });
 

@@ -213,8 +213,6 @@ export interface RouterSettings {
   layer2ConfidenceThreshold: number;
   /** Always route to Opus regardless of classification. */
   paranoidMode: boolean;
-  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
-  llmJudgeSampleRate: number;
   /**
    * Wave 53 — when true, run feature extraction + decision logging on every
    * prompt even when the user supplied a manual model override. The override
@@ -239,7 +237,6 @@ export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   layer3Enabled: true,
   layer2ConfidenceThreshold: 0.6,
   paranoidMode: false,
-  llmJudgeSampleRate: 0,
   shadowMode: true,
   autoRetrainEnabled: false,
 };

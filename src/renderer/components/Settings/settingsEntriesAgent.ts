@@ -119,8 +119,4 @@ export const AGENT_ENTRIES = createEntries('agent', 'Agent', [
     'Background Jobs Concurrency',
     'Maximum number of background agent jobs that can run in parallel (1–8). Applies on next restart.',
   ],
-  [
-    'LLM Judge Sample Rate',
-    'Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.',
-  ],
 ]);

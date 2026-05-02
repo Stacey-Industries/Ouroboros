@@ -244,8 +244,6 @@ export interface RouterSettings {
   layer2ConfidenceThreshold: number;
   /** Always route to Opus regardless of classification. */
   paranoidMode: boolean;
-  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
-  llmJudgeSampleRate: number;
   /** Wave 53 — log shadow router decision even when user overrides the model. */
   shadowMode?: boolean;
   /**

@@ -34,7 +34,6 @@ function makeDraft(overrides: Partial<AppConfig> = {}): AppConfig {
       layer3Enabled: true,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
-      llmJudgeSampleRate: 0,
     },
     backgroundJobsMaxConcurrent: 2,
     ...overrides,

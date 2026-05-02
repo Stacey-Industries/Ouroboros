@@ -14,7 +14,7 @@ Three-layer cascade that selects HAIKU / SONNET / OPUS for each chat prompt. Als
 
 The active model-selection feature is now Wave 61's **delegation coach** at `src/main/delegationCoach/`. The router stays in place serving bundled weights for any consumer that calls `routePromptSync()`; flip `autoRetrainEnabled: true` only if you have a tier-balanced label distribution OR want to re-enable retraining for experimentation.
 
-An LLM judge (sampled async scorer for routing quality, controlled by `llmJudgeSampleRate`) was scoped but never shipped — it would be the missing piece for de-escalation labels. Defer until there's a concrete need; the delegation coach addresses the user-facing pain that originally motivated it. The `llmJudgeSampleRate` config field is still in the schema but inert.
+An LLM judge (sampled async scorer for routing quality) was scoped but never shipped — it would be the missing piece for de-escalation labels. Defer until there's a concrete need; the delegation coach addresses the user-facing pain that originally motivated it. The `llmJudgeSampleRate` config field was removed in 2026-05.
 
 ## Architecture: Two-Layer Cascade (Layer 3 unwired)
 
