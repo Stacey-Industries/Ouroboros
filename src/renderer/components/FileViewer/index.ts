@@ -60,5 +60,3 @@ export type { SymbolOutlineProps } from './SymbolOutline';
 export { SymbolOutline } from './SymbolOutline';
 export type { FoldRange } from './useFoldRanges';
 export { useFoldRanges } from './useFoldRanges';
-export type { UseFormatOnSaveOptions } from './useFormatOnSave';
-export { useFormatOnSave } from './useFormatOnSave';
