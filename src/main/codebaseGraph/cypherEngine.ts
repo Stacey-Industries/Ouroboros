@@ -20,7 +20,12 @@
  * Results capped at 200 rows.
  */
 
-import { buildOptionalHopJoin, buildUnwindSql } from './cypherEngineNewFeatures';
+import {
+  buildMultiPatternSql,
+  buildOptionalHopJoin,
+  buildUnwindSql,
+  parseMultiPattern,
+} from './cypherEngineNewFeatures';
 import {
   assertNoUnsupportedClauses,
   extractClause,
@@ -42,6 +47,7 @@ import {
 } from './cypherEngineSqlHelpers';
 import type {
   CypherResolvers,
+  HopPattern,
   MatchPattern,
   OrderByClause,
   ParsedQuery,
@@ -97,6 +103,13 @@ export class CypherEngine {
 
   // ═══ Parser ════════════════════════════════════════════════════════════════
 
+  private parseMatchPattern(matchClause: string | null): MatchPattern {
+    if (!matchClause) return { kind: 'single', alias: '_n', label: null };
+    const multiPatterns = parseMultiPattern(matchClause);
+    if (multiPatterns) return { kind: 'multipat', patterns: multiPatterns };
+    return parseMatch(matchClause);
+  }
+
   private parse(query: string): ParsedQuery {
     assertNoUnsupportedClauses(query);
     const matchClause = extractClause(query, 'MATCH');
@@ -104,9 +117,7 @@ export class CypherEngine {
     if (!matchClause && !unwindStr) throw new Error('Query must contain a MATCH clause');
     const returnClause = extractClause(query, 'RETURN');
     if (!returnClause) throw new Error('Query must contain a RETURN clause');
-    const match = matchClause
-      ? parseMatch(matchClause)
-      : { kind: 'single' as const, alias: '_n', label: null };
+    const match = this.parseMatchPattern(matchClause);
     const optionalMatchStr = extractOptionalMatchClause(query);
     const unwind: UnwindClause | null = unwindStr ? parseUnwind(unwindStr) : null;
     const whereClause = extractClause(query, 'WHERE');
@@ -138,6 +149,12 @@ export class CypherEngine {
       });
     }
     switch (parsed.match.kind) {
+      case 'multipat': return buildMultiPatternSql({
+        parsed,
+        patterns: parsed.match.patterns,
+        projectName: this.projectName,
+        addWhereConditions: (w, c, pa) => this.addWhereConditions(w, c, pa),
+      });
       case 'single': return this.singleNodeSql(parsed);
       case 'hop': return this.singleHopSql(parsed);
       case 'varpath': return this.varpathSql(parsed);
@@ -296,4 +313,4 @@ export class CypherEngine {
   }
 }
 
-export type { MatchPattern, OrderByClause, ParsedQuery, ReturnField, WhereCondition };
+export type { HopPattern, MatchPattern, OrderByClause, ParsedQuery, ReturnField, WhereCondition };

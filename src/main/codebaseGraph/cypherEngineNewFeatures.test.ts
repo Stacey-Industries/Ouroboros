@@ -2,14 +2,14 @@
  * cypherEngineNewFeatures.test.ts — Unit + integration coverage for Wave-77 helpers.
  *
  * buildOptionalHopJoin: unit-tested directly (pure SQL string builder).
- * buildUnwindSql: integration-tested via CypherEngine to verify full query execution.
+ * buildUnwindSql / multi-pattern MATCH: integration-tested via CypherEngine.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CypherEngine } from './cypherEngine';
 import { GraphDatabase } from './graphDatabase';
-import { buildOptionalHopJoin } from './cypherEngineNewFeatures';
+import { buildOptionalHopJoin, parseMultiPattern } from './cypherEngineNewFeatures';
 import type { MatchPattern } from './cypherEngineSupport';
 
 // ─── buildOptionalHopJoin unit tests ─────────────────────────────────────────
@@ -181,5 +181,74 @@ describe('CypherEngine — OPTIONAL MATCH', () => {
     expect(() =>
       engine.execute('WITH 1 AS x MATCH (n) RETURN n.name'),
     ).toThrow(/Cypher feature not supported.*WITH/);
+  });
+});
+
+// ─── parseMultiPattern unit tests ────────────────────────────────────────────
+
+describe('parseMultiPattern', () => {
+  it('returns null for a single-pattern string', () => {
+    expect(parseMultiPattern('(a)-[:CALLS]->(b)')).toBeNull();
+  });
+
+  it('parses two-hop chain into two HopPatterns', () => {
+    const result = parseMultiPattern('(a)-[:CALLS]->(b), (b)-[:DEFINES]->(c)');
+    expect(result).not.toBeNull();
+    expect(result!.length).toBe(2);
+    expect(result![0].kind).toBe('hop');
+    expect(result![0].left.alias).toBe('a');
+    expect(result![0].right.alias).toBe('b');
+    expect(result![0].edgeType).toBe('CALLS');
+    expect(result![1].left.alias).toBe('b');
+    expect(result![1].right.alias).toBe('c');
+    expect(result![1].edgeType).toBe('DEFINES');
+  });
+
+  it('throws when a sub-pattern is not a hop', () => {
+    expect(() => parseMultiPattern('(a), (b)-[:X]->(c)')).toThrow(/must be a hop/);
+  });
+});
+
+// ─── Multi-pattern MATCH integration ─────────────────────────────────────────
+
+const MULTI_PROJECT = 'multi-pattern-test';
+
+function seedMulti(db: GraphDatabase): void {
+  db.upsertProject({ name: MULTI_PROJECT, root_path: '/tmp', indexed_at: 1000, node_count: 3, edge_count: 2 });
+  db.insertNodes([
+    { id: 'ma', project: MULTI_PROJECT, label: 'Function', name: 'caller', qualified_name: `${MULTI_PROJECT}.caller`, file_path: 'a.ts', start_line: 1, end_line: 5, props: {} },
+    { id: 'mb', project: MULTI_PROJECT, label: 'Class', name: 'Svc', qualified_name: `${MULTI_PROJECT}.Svc`, file_path: 'b.ts', start_line: 1, end_line: 10, props: {} },
+    { id: 'mc', project: MULTI_PROJECT, label: 'Function', name: 'handler', qualified_name: `${MULTI_PROJECT}.handler`, file_path: 'c.ts', start_line: 1, end_line: 5, props: {} },
+  ]);
+  db.insertEdges([
+    { project: MULTI_PROJECT, source_id: 'ma', target_id: 'mb', type: 'CALLS', props: {} },
+    { project: MULTI_PROJECT, source_id: 'mb', target_id: 'mc', type: 'DEFINES', props: {} },
+  ]);
+}
+
+describe('CypherEngine — multi-pattern MATCH', () => {
+  let db: GraphDatabase;
+  let engine: CypherEngine;
+
+  beforeEach(() => { db = new GraphDatabase(':memory:'); seedMulti(db); engine = new CypherEngine(db, MULTI_PROJECT); });
+  afterEach(() => db.close());
+
+  it('two-hop chain returns the linked triple', () => {
+    const r = engine.execute('MATCH (a)-[:CALLS]->(b), (b)-[:DEFINES]->(c) RETURN a.name, b.name, c.name');
+    expect(r.total).toBe(1);
+    expect(r.rows[0].a_name).toBe('caller');
+    expect(r.rows[0].b_name).toBe('Svc');
+    expect(r.rows[0].c_name).toBe('handler');
+  });
+
+  it('returns empty when chain is broken', () => {
+    const r = engine.execute('MATCH (a)-[:CALLS]->(b), (b)-[:CALLS]->(c) RETURN a.name, c.name');
+    expect(r.total).toBe(0);
+  });
+
+  it('label filters narrow results correctly', () => {
+    const r = engine.execute('MATCH (a:Function)-[:CALLS]->(b:Class), (b)-[:DEFINES]->(c:Function) RETURN c.name');
+    expect(r.total).toBe(1);
+    expect(r.rows[0].c_name).toBe('handler');
   });
 });

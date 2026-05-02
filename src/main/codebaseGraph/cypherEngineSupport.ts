@@ -5,16 +5,18 @@
 
 // ─── Internal AST types ───────────────────────────────────────────────────────
 
+export type HopPattern = {
+  kind: 'hop';
+  left: { alias: string; label: string | null };
+  right: { alias: string; label: string | null };
+  edgeAlias: string | null;
+  edgeType: string | null;
+  direction: 'outbound' | 'inbound';
+};
+
 export type MatchPattern =
   | { kind: 'single'; alias: string; label: string | null }
-  | {
-      kind: 'hop';
-      left: { alias: string; label: string | null };
-      right: { alias: string; label: string | null };
-      edgeAlias: string | null;
-      edgeType: string | null;
-      direction: 'outbound' | 'inbound';
-    }
+  | HopPattern
   | {
       kind: 'varpath';
       left: { alias: string; label: string | null };
@@ -23,7 +25,8 @@ export type MatchPattern =
       minHops: number;
       maxHops: number;
       direction: 'outbound' | 'inbound';
-    };
+    }
+  | { kind: 'multipat'; patterns: HopPattern[] };
 
 export type WhereValue = string | number | (string | number)[];
 
@@ -141,10 +144,7 @@ function tryVarpath(matchStr: string): MatchPattern | null {
   return null;
 }
 
-function hopFromMatch(
-  m: RegExpExecArray,
-  direction: 'outbound' | 'inbound',
-): Extract<MatchPattern, { kind: 'hop' }> {
+function hopFromMatch(m: RegExpExecArray, direction: 'outbound' | 'inbound'): HopPattern {
   return {
     kind: 'hop',
     left: { alias: m[1] || '_n0', label: m[2] || null },
