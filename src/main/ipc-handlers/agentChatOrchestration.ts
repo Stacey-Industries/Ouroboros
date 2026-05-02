@@ -9,6 +9,7 @@
 import { formatMemoriesForContext } from '../agentChat/memoryExtractor';
 import { sessionMemoryStore } from '../agentChat/sessionMemory';
 import log from '../logger';
+import { buildContextPacket } from '../orchestration/contextPacketBuilder';
 import { injectPinnedContext } from '../orchestration/contextPacketBuilderPins';
 import { formatGraphSummary } from '../orchestration/graphSummaryBuilder';
 import { createClaudeCodeAdapter } from '../orchestration/providers/claudeCodeAdapter';
@@ -103,16 +104,49 @@ function buildEmptyContextPacket(request: TaskRequest): ContextPacket {
   };
 }
 
-function resolveContextPacket(request: TaskRequest): ContextPacket | undefined {
+function attachGraphSummaryIfMissing(
+  packet: ContextPacket,
+  graphSummary: import('../orchestration/graphSummaryBuilder').GraphSummary,
+): void {
+  if (packet.graphSummary) return;
+  const section = formatGraphSummary(graphSummary);
+  if (section) packet.graphSummary = section;
+}
+
+async function rebuildPacketForModel(
+  request: TaskRequest,
+  ctx: import('./agentChatContext').CachedContext,
+): Promise<ContextPacket | undefined> {
+  try {
+    const result = await buildContextPacket({
+      request,
+      repoFacts: ctx.snapshot.repoFacts,
+      repoSnapshot: ctx.snapshot,
+    });
+    ctx.cachedPacket = result.packet;
+    ctx.cachedPacketModel = request.model;
+    attachGraphSummaryIfMissing(result.packet, ctx.graphSummary);
+    return result.packet;
+  } catch (err) {
+    log.warn('[resolveContextPacket] rebuild failed, falling back to cached packet:', err);
+    return ctx.cachedPacket;
+  }
+}
+
+// Wave 70 follow-up: the worker warms `ctx.cachedPacket` with a `dummyRequest`
+// that has `model: undefined`, so the contextLayer enrichment bakes the
+// Haiku-default 8 KB repo-map slice regardless of the actual chat model.
+// Rebuild on model mismatch so `repoMapBudgets.ts` applies the right tier.
+async function resolveContextPacket(request: TaskRequest): Promise<ContextPacket | undefined> {
   const ctx = getCachedContext(request.workspaceRoots);
   log.info('createTask.getCachedContext:', ctx ? 'hit' : 'miss');
-  if (!ctx?.cachedPacket) return undefined;
-  const packet = ctx.cachedPacket;
-  if (!packet.graphSummary) {
-    const graphSection = formatGraphSummary(ctx.graphSummary);
-    if (graphSection) packet.graphSummary = graphSection;
+  if (!ctx) return undefined;
+
+  if (ctx.cachedPacket && ctx.cachedPacketModel === request.model) {
+    attachGraphSummaryIfMissing(ctx.cachedPacket, ctx.graphSummary);
+    return ctx.cachedPacket;
   }
-  return packet;
+  return rebuildPacketForModel(request, ctx);
 }
 
 async function injectMemories(
@@ -148,7 +182,7 @@ async function createTask(
   const taskId = request.taskId ?? createId('task');
   const sessionId = request.sessionId ?? createId('session');
 
-  let contextPacket = resolveContextPacket(request);
+  let contextPacket = await resolveContextPacket(request);
   await injectMemories(contextPacket ?? ({} as ContextPacket), request.workspaceRoots);
   if (request.skillExpansion && contextPacket)
     contextPacket.skillInstructions = request.skillExpansion;

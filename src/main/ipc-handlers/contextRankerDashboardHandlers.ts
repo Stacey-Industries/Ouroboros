@@ -12,6 +12,7 @@ import { ipcMain } from 'electron';
 
 import log from '../logger';
 import { getActiveWeights } from '../orchestration/contextClassifier';
+import { getContextRetrainStatus } from '../orchestration/contextRetrainStartup';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,11 +21,29 @@ export interface ContextRankerFeature {
   weight: number;
 }
 
+/**
+ * Wave 70 follow-up — surface auto-retrain trigger status alongside the active
+ * weights. Lets a Settings → Context Ranker readout show whether the trigger
+ * is wired, when it last ran, and what its outcome was. Pre-fix the getter
+ * was exported from `contextRetrainStartup.ts` but never reached the renderer.
+ */
+export interface ContextRetrainStatusDTO {
+  wired: boolean;
+  enabled?: boolean;
+  lastRunAt?: string | null;
+  lastOutcome?: 'success' | 'failure' | 'skipped' | null;
+  lastError?: string | null;
+  rowCountAtLastRun?: number;
+  nextTriggerRowCount?: number;
+}
+
 export interface ContextRankerDashboard {
   version: string;
   trainedAt: string;
   auc: number | null;
   topFeatures: ContextRankerFeature[];
+  /** Wave 70 — auto-retrain trigger status, or null if the getter throws. */
+  retrain: ContextRetrainStatusDTO | null;
 }
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
@@ -49,11 +68,20 @@ export function getRankerDashboard(): ContextRankerDashboard {
   const isBundled = w.version === 'bundled-1';
   const auc = isBundled || w.metrics.heldOutAuc === 0 ? null : w.metrics.heldOutAuc;
 
+  let retrain: ContextRetrainStatusDTO | null;
+  try {
+    retrain = getContextRetrainStatus();
+  } catch (err) {
+    log.warn('[contextRankerDashboard] retrain status read failed:', err);
+    retrain = null;
+  }
+
   return {
     version: w.version,
     trainedAt: w.metrics.trainedAt,
     auc,
     topFeatures: computeTopFeatures(w.featureOrder, w.weights),
+    retrain,
   };
 }
 

@@ -20,10 +20,7 @@ import { getConfigValue } from '../config';
 import type { HookPayload } from '../hooks';
 import log from '../logger';
 import { openDatabase } from '../storage/database';
-import {
-  createTelemetryJsonlMirror,
-  type TelemetryJsonlMirror,
-} from './telemetryJsonlMirror';
+import { createTelemetryJsonlMirror, type TelemetryJsonlMirror } from './telemetryJsonlMirror';
 import {
   type InvocationRow,
   migrateSchemaVersion,
@@ -42,6 +39,12 @@ import {
   queryOutcomes,
   queryTraces,
 } from './telemetryStoreQueries';
+import {
+  appendMirror,
+  writeInvocationWithMirror,
+  writeOutcomeWithMirror,
+  writeTraceWithMirror,
+} from './telemetryStoreWriters';
 import { drainTraceBatcher, initTraceBatcher } from './traceBatcher';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -183,75 +186,23 @@ function enqueueEvent(state: StoreState, payload: HookPayload): string {
     timestamp: payload.timestamp,
   };
   state.queue.push({ ...row, payload: JSON.stringify(redacted) });
-  // Wave 70 Phase C2 — dual-write to JSONL archive (fire-and-forget).
-  state.jsonlMirror?.appendEvent({ ...row, payload: redacted });
+  appendMirror(state, 'event', { ...row, payload: redacted });
   return id;
 }
 
 function writeOutcome(state: StoreState, opts: RecordOutcomeOpts): void {
   if (!isFlagEnabled()) return;
-  try {
-    state.db
-      .prepare(
-        'INSERT OR REPLACE INTO outcomes (event_id, kind, exit_code, duration_ms, stderr_hash, signals, confidence) VALUES (?,?,?,?,?,?,?)',
-      )
-      .run(
-        opts.eventId,
-        opts.kind,
-        opts.exitCode ?? null,
-        opts.durationMs ?? null,
-        opts.stderrHash ?? null,
-        JSON.stringify(opts.signals ?? []),
-        opts.confidence ?? 'low',
-      );
-  } catch (err) {
-    log.warn('[telemetry] outcome insert failed', err);
-  }
+  writeOutcomeWithMirror(state, opts);
 }
 
 function writeTrace(state: StoreState, opts: RecordTraceOpts): void {
   if (!isFlagEnabled()) return;
-  try {
-    state.db
-      .prepare(
-        'INSERT OR IGNORE INTO orchestration_traces (id, trace_id, session_id, phase, timestamp, payload) VALUES (?,?,?,?,?,?)',
-      )
-      .run(
-        opts.id,
-        opts.traceId,
-        opts.sessionId,
-        opts.phase,
-        opts.timestamp ?? Date.now(),
-        JSON.stringify(opts.payload ?? {}),
-      );
-  } catch (err) {
-    log.error('[telemetry] recordTrace error', err);
-  }
+  writeTraceWithMirror(state, opts);
 }
 
 function writeInvocation(state: StoreState, opts: RecordInvocationOpts): void {
   if (!isFlagEnabled()) return;
-  try {
-    state.db
-      .prepare(
-        `INSERT INTO research_invocations
-        (id, correlation_id, session_id, topic, trigger_reason, artifact_hash, hit_cache, latency_ms, timestamp)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      )
-      .run(
-        crypto.randomUUID(),
-        opts.correlationId,
-        opts.sessionId,
-        opts.topic,
-        opts.triggerReason,
-        opts.artifactHash ?? null,
-        opts.hitCache ? 1 : 0,
-        opts.latencyMs,
-        opts.timestamp ?? Date.now(),
-      );
-  } catch (err) {
-    log.warn('[telemetry] invocation insert failed', err);
-  }
+  writeInvocationWithMirror(state, opts);
 }
 
 function schedulePurge(state: StoreState): void {

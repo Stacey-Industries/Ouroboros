@@ -134,12 +134,10 @@ export interface ContextRankerFeature {
   weight: number;
 }
 
-export interface ContextRankerDashboard {
-  version: string;
-  trainedAt: string;
-  auc: number | null;
-  topFeatures: ContextRankerFeature[];
-}
+// prettier-ignore
+export interface ContextRetrainStatusDTO { wired: boolean; enabled?: boolean; lastRunAt?: string | null; lastOutcome?: 'success' | 'failure' | 'skipped' | null; lastError?: string | null; rowCountAtLastRun?: number; nextTriggerRowCount?: number; }
+// prettier-ignore
+export interface ContextRankerDashboard { version: string; trainedAt: string; auc: number | null; topFeatures: ContextRankerFeature[]; retrain: ContextRetrainStatusDTO | null; }
 
 export type ContextRankerDashboardResult =
   | { success: true; dashboard: ContextRankerDashboard }
