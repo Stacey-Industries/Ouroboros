@@ -46,7 +46,6 @@ interface HookSpawnCostPayload {
   model: string;
   routingDecision: string;
   internalMcpScope: string;
-  transport: string;
   codemodeEnabled: boolean;
   ideSession: boolean;
   mcpConfigBytes: number;
@@ -109,7 +108,6 @@ function toMcpRecord(record: QueueRecord, payload: HookSpawnCostPayload): McpSpa
     routingDecision: (payload.routingDecision as McpSpawnCostRecord['routingDecision']) ?? 'omit',
     internalMcpScope:
       (payload.internalMcpScope as McpSpawnCostRecord['internalMcpScope']) ?? 'never',
-    transport: (payload.transport as McpSpawnCostRecord['transport']) ?? 'sse',
     codemodeEnabled: payload.codemodeEnabled,
     mcpConfigBytes: payload.mcpConfigBytes,
     serverCount: payload.serverCount,

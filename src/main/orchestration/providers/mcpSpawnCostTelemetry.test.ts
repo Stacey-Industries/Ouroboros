@@ -40,7 +40,6 @@ function sampleRecord(overrides: Partial<McpSpawnCostRecord> = {}): McpSpawnCost
     spawnId: 'spawn-1',
     routingDecision: 'direct-inject',
     internalMcpScope: 'task-gated',
-    transport: 'sse',
     codemodeEnabled: false,
     mcpConfigBytes: 480,
     serverCount: 2,

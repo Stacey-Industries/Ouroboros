@@ -33,8 +33,6 @@ export interface McpSpawnCostRecord {
   routingDecision: RoutingDecision;
   /** Wave 48 scope config in effect for this spawn. */
   internalMcpScope: InternalMcpScopeName;
-  /** Configured ouroboros transport (Phase B). */
-  transport: McpTransportName;
   /** `codemode.enabled` flag at the time of the spawn. */
   codemodeEnabled: boolean;
   /** Byte length of `JSON.stringify(mcpServers)` written to the temp config. */
