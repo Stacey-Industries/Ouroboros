@@ -25,7 +25,7 @@ import {
   MissingProjectState,
   PendingUserBubble,
 } from './AgentChatMessageComponents';
-import { useAgentChatThread } from './agentChatSelectors';
+import { useAgentChatThreadView } from './agentChatSelectors';
 import { dispatchDiffReviewEvent } from './AgentChatStreamingHelpers';
 import { AgentConflictBanner } from './AgentConflictBanner';
 import { useDensity } from './DensityContext';
@@ -263,7 +263,7 @@ function ConversationBodyWithThread(
   props: ConversationBodyProps &
     BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
 ): React.ReactElement {
-  const { threads } = useAgentChatThread();
+  const { threads } = useAgentChatThreadView();
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <ConflictBanners activeThread={props.activeThread} />

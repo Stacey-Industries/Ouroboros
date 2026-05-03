@@ -11,6 +11,7 @@ import { ChatStatusChipRow } from '../Layout/ChatOnlyShell/ChatStatusChipRow';
 import {
   buildChatOnlyContextPreviewProps,
   buildComposerContextBarProps,
+  toMentionLabels,
 } from './AgentChatComposer.helpers';
 import {
   pickMenuFields,
@@ -282,19 +283,24 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
   const { attachmentHandlers } = state;
-  const { chatOverrides, settingsModel } = composerProps;
+  const { chatOverrides, settingsModel, mentions } = composerProps;
   const variant = useWorkspaceVariant();
   const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
+  // Stabilize `mentionLabels` reference per `mentions` so `useContextPreview`'s
+  // memo doesn't invalidate on every keystroke (draft changes re-render this
+  // component but `mentions` reference only changes on add/remove).
+  const mentionLabels = useMemo(() => toMentionLabels(mentions), [mentions]);
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
       {variant === 'chat-only' && (
         <ComposerContextPreview
-          {...buildChatOnlyContextPreviewProps(
+          {...buildChatOnlyContextPreviewProps({
             composerProps,
             chatOverrides,
             settingsModel,
             claudeSessionId,
-          )}
+            mentionLabels,
+          })}
         />
       )}
       <FloatingComposerContainer

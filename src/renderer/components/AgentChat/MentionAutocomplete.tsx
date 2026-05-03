@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FileEntry } from '../FileTree/FileListItem';
 import {
   type AutocompleteResult,
+  buildFileMentionIndex,
   buildMentionResults,
   getMentionTypeColor,
 } from './MentionAutocompleteSupport';
@@ -206,15 +207,56 @@ function useMentionAutocompleteKeyboard(args: MentionKeyboardArgs): (event: Keyb
   );
 }
 
+/**
+ * Debounce ms for the mention query before re-running search. Without this,
+ * each keystroke triggers Fuse.search across the full file index (~300-450ms
+ * on a 5K-file index for long queries) — backspacing through a long mention
+ * path queues many synchronous searches and freezes the renderer.
+ */
+const QUERY_DEBOUNCE_MS = 120;
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const handle = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(handle);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+function buildMentionResultsTimed(args: Parameters<typeof buildMentionResults>[0]) {
+  const t0 = performance.now();
+  const out = buildMentionResults(args);
+  const t1 = performance.now();
+  if (t1 - t0 > 2) {
+    console.warn('[trace:build-mention-results]', {
+      ms: +(t1 - t0).toFixed(1),
+      query: args.query,
+      indexSize: args.fileIndex.files.length,
+      results: out.length,
+    });
+  }
+  return out;
+}
+
 function useMentionAutocompleteState(
   props: MentionAutocompleteProps,
   listRef: React.RefObject<HTMLDivElement | null>,
 ) {
   const { query, allFiles, selectedMentions, isOpen, onSelect, onClose, symbolResults } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const debouncedQuery = useDebouncedValue(query, QUERY_DEBOUNCE_MS);
+  const fileIndex = useMemo(() => buildFileMentionIndex(allFiles), [allFiles]);
   const results = useMemo(
-    () => buildMentionResults({ query, allFiles, selectedMentions, isOpen, symbolResults }),
-    [query, allFiles, selectedMentions, isOpen, symbolResults],
+    () =>
+      buildMentionResultsTimed({
+        query: debouncedQuery,
+        fileIndex,
+        selectedMentions,
+        isOpen,
+        symbolResults,
+      }),
+    [debouncedQuery, fileIndex, selectedMentions, isOpen, symbolResults],
   );
   const handleKeyDown = useMentionAutocompleteKeyboard({
     isOpen,

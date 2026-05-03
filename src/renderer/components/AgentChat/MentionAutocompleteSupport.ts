@@ -2,8 +2,6 @@
  * MentionAutocompleteSupport.ts — Builder helpers for MentionAutocomplete.
  * Extracted to keep MentionAutocomplete.tsx under the 300-line limit.
  */
-import Fuse from 'fuse.js';
-
 import type { FileEntry } from '../FileTree/FileListItem';
 import type { MentionItem, MentionType, SymbolGraphNode } from './MentionAutocomplete';
 
@@ -32,17 +30,6 @@ export const SPECIAL_MENTIONS: Array<{
     key: '@codebase',
   },
 ];
-
-const FILE_FUSE_OPTIONS = {
-  keys: [
-    { name: 'name', weight: 0.6 },
-    { name: 'relativePath', weight: 0.4 },
-  ],
-  threshold: 0.4,
-  distance: 200,
-  minMatchCharLength: 1,
-  includeScore: true,
-};
 
 export function getMentionTypeColor(type: MentionType): string {
   if (type === 'file') return 'var(--interactive-accent)';
@@ -126,19 +113,40 @@ export function buildSpecialMentions(
   }
 }
 
+/**
+ * Cached file-mention search structures. Build once per `allFiles` change;
+ * reuse across keystrokes to avoid re-deduping dirs.
+ *
+ * Note: file matching is plain ranked substring (see `buildFileMentions`),
+ * not Fuse fuzzy search. Fuse.search on a 5K-file index measured 300-450ms
+ * per query — substring is single-digit ms with similar UX for typed paths.
+ */
+export interface FileMentionIndex {
+  files: FileEntry[];
+  uniqueDirs: string[];
+}
+
+export function buildFileMentionIndex(allFiles: FileEntry[]): FileMentionIndex {
+  const seenDirs = new Set<string>();
+  const uniqueDirs: string[] = [];
+  for (const file of allFiles) {
+    const dir = file.dir;
+    if (!dir || seenDirs.has(dir)) continue;
+    seenDirs.add(dir);
+    uniqueDirs.push(dir);
+  }
+  return { files: allFiles, uniqueDirs };
+}
+
 function buildFolderMentionsSubstring(
   query: string,
-  allFiles: FileEntry[],
+  uniqueDirs: string[],
   selectedKeys: Set<string>,
   items: AutocompleteResult[],
 ): void {
   const lowerQuery = query.toLowerCase();
-  const seenDirs = new Set<string>();
-  for (const file of allFiles) {
+  for (const dir of uniqueDirs) {
     if (items.length >= MAX_RESULTS) break;
-    const dir = file.dir;
-    if (!dir || seenDirs.has(dir)) continue;
-    seenDirs.add(dir);
     if (lowerQuery && !dir.toLowerCase().includes(lowerQuery)) continue;
     if (!selectedKeys.has(`@folder:${dir}`)) items.push(buildFolderMentionResult(dir));
   }
@@ -146,26 +154,29 @@ function buildFolderMentionsSubstring(
 
 export function buildFolderMentions(
   query: string,
-  allFiles: FileEntry[],
+  index: FileMentionIndex,
   selectedKeys: Set<string>,
   items: AutocompleteResult[],
 ): void {
-  buildFolderMentionsSubstring(query, allFiles, selectedKeys, items);
+  buildFolderMentionsSubstring(query, index.uniqueDirs, selectedKeys, items);
 }
 
-function buildFileMentionsFuzzy(
-  query: string,
-  allFiles: FileEntry[],
-  selectedKeys: Set<string>,
-  items: AutocompleteResult[],
-): void {
-  const fuse = new Fuse(allFiles, FILE_FUSE_OPTIONS);
-  const results = fuse.search(query, { limit: MAX_RESULTS });
-  for (const result of results) {
-    if (items.length >= MAX_RESULTS) break;
-    const file = result.item;
-    if (!selectedKeys.has(`@file:${file.path}`)) items.push(buildFileMentionResult(file));
+/**
+ * Score a substring match. Lower is better. Returns null if no match.
+ * Ranks: basename-prefix < basename-mid < dirname. Within a tier, matches
+ * earlier in the path beat later ones. This mirrors VS Code's quick-open
+ * heuristic and is what users actually expect when typing path fragments.
+ */
+function scoreFileMatch(relativePath: string, lowerQuery: string): number | null {
+  const lowerPath = relativePath.toLowerCase();
+  const matchIdx = lowerPath.indexOf(lowerQuery);
+  if (matchIdx === -1) return null;
+  const slashIdx = lowerPath.lastIndexOf('/');
+  const basenameStart = slashIdx + 1;
+  if (matchIdx >= basenameStart) {
+    return matchIdx === basenameStart ? matchIdx : 1000 + (matchIdx - basenameStart);
   }
+  return 10000 + matchIdx;
 }
 
 function buildFileMentionsAll(
@@ -181,15 +192,25 @@ function buildFileMentionsAll(
 
 export function buildFileMentions(
   query: string,
-  allFiles: FileEntry[],
+  index: FileMentionIndex,
   selectedKeys: Set<string>,
   items: AutocompleteResult[],
 ): void {
-  if (query) {
-    buildFileMentionsFuzzy(query, allFiles, selectedKeys, items);
-  } else {
-    buildFileMentionsAll(allFiles, selectedKeys, items);
+  if (!query) {
+    buildFileMentionsAll(index.files, selectedKeys, items);
+    return;
   }
+  const lowerQuery = query.toLowerCase();
+  const matches: { file: FileEntry; score: number }[] = [];
+  for (const file of index.files) {
+    if (selectedKeys.has(`@file:${file.path}`)) continue;
+    const score = scoreFileMatch(file.relativePath, lowerQuery);
+    if (score === null) continue;
+    matches.push({ file, score });
+  }
+  matches.sort((a, b) => a.score - b.score);
+  const limit = Math.min(matches.length, MAX_RESULTS - items.length);
+  for (let i = 0; i < limit; i++) items.push(buildFileMentionResult(matches[i].file));
 }
 
 function looksLikeSymbolQuery(query: string): boolean {
@@ -212,20 +233,20 @@ function buildSymbolMentions(
 
 export interface BuildMentionResultsArgs {
   query: string;
-  allFiles: FileEntry[];
+  fileIndex: FileMentionIndex;
   selectedMentions: MentionItem[];
   isOpen: boolean;
   symbolResults?: SymbolGraphNode[];
 }
 
 export function buildMentionResults(args: BuildMentionResultsArgs): AutocompleteResult[] {
-  const { query, allFiles, selectedMentions, isOpen, symbolResults } = args;
+  const { query, fileIndex, selectedMentions, isOpen, symbolResults } = args;
   if (!isOpen) return [];
   const selectedKeys = new Set(selectedMentions.map((mention) => mention.key));
   const items: AutocompleteResult[] = [];
   buildSpecialMentions(query, selectedKeys, items);
-  buildFileMentions(query, allFiles, selectedKeys, items);
-  if (items.length < MAX_RESULTS) buildFolderMentions(query, allFiles, selectedKeys, items);
+  buildFileMentions(query, fileIndex, selectedKeys, items);
+  if (items.length < MAX_RESULTS) buildFolderMentions(query, fileIndex, selectedKeys, items);
   if (symbolResults?.length && items.length < MAX_RESULTS) {
     buildSymbolMentions(query, selectedKeys, items, symbolResults);
   }

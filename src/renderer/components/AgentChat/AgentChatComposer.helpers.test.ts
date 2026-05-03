@@ -24,7 +24,13 @@ describe('buildChatOnlyContextPreviewProps', () => {
       disabledLocalIds: new Set(['file:/x.ts']),
       setDisabledLocalIds: setIds,
     } as never;
-    const props = buildChatOnlyContextPreviewProps(composerProps, undefined, undefined, undefined);
+    const props = buildChatOnlyContextPreviewProps({
+      composerProps,
+      chatOverrides: undefined,
+      settingsModel: undefined,
+      claudeSessionId: undefined,
+      mentionLabels: [],
+    });
     expect(props.disabledLocalIds?.has('file:/x.ts')).toBe(true);
     expect(props.setDisabledLocalIds).toBe(setIds);
   });

@@ -40,6 +40,22 @@ export interface AgentChatThreadState {
   pendingUserMessage: string | null;
 }
 
+/**
+ * Slim variant of AgentChatThreadState that excludes draft/canSend. Components
+ * that render message lists (AgentChatConversation, ConversationBody) must use
+ * this selector to avoid re-rendering on every keystroke — draft churn would
+ * otherwise force the entire conversation tree to reconcile per character.
+ */
+export interface AgentChatThreadViewState {
+  activeThread: AgentChatThreadRecord | null;
+  threads: AgentChatThreadRecord[];
+  error: string | null;
+  hasProject: boolean;
+  isLoading: boolean;
+  isSending: boolean;
+  pendingUserMessage: string | null;
+}
+
 /* ── Details drawer state ─────────────────────────── */
 
 export interface AgentChatDetailsState {

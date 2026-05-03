@@ -84,6 +84,7 @@ const MAX_FILES = 5000;
 const SKIP_DIRS = new Set([
   'node_modules',
   '.git',
+  '.claude',
   '.next',
   'dist',
   'build',

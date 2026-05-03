@@ -16,6 +16,7 @@ import {
   useAgentChatQueue,
   useAgentChatSlash,
   useAgentChatThread,
+  useAgentChatThreadView,
 } from './agentChatSelectors';
 import { buildThreadModelUsage } from './ChatControlsBarSupport';
 import type { ProfileSwitchedDetail } from './ComposerProfile';
@@ -40,7 +41,9 @@ function useThreadModelUsage(
 
 function useActiveSkillExecutions(
   sessionId: string | undefined,
-  messages: ReturnType<typeof useAgentChatThread>['activeThread']['messages'],
+  messages:
+    | NonNullable<ReturnType<typeof useAgentChatThread>['activeThread']>['messages']
+    | undefined,
 ): SkillExecutionRecord[] {
   const { agents } = useAgentEventsContext();
   return useMemo(() => {
@@ -54,7 +57,7 @@ function useActiveSkillExecutions(
 /* ── Conversation sub-sections (extracted for max-lines-per-function) ──── */
 
 function ConversationDrawer(): React.ReactElement | null {
-  const thread = useAgentChatThread();
+  const thread = useAgentChatThreadView();
   const details = useAgentChatDetails();
   const actions = useAgentChatActions();
   const sessionId =
@@ -204,7 +207,7 @@ function InlineEventStrip(): React.ReactElement | null {
 /* ── Main conversation component ─────────────────────────────────────────── */
 
 export function AgentChatConversation(): React.ReactElement {
-  const thread = useAgentChatThread();
+  const thread = useAgentChatThreadView();
   const actions = useAgentChatActions();
   const streaming = useAgentChatStreaming(thread.activeThread?.id ?? null);
   const approvalSessionIds = [

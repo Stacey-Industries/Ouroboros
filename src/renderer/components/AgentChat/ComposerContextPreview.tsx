@@ -230,6 +230,8 @@ function useToggleHandler(
   );
 }
 
+const EMPTY_MENTION_LABELS: { estimatedTokens: number; label: string }[] = [];
+
 function useComposerContextPreviewModel(
   props: ComposerContextPreviewProps,
   projectRoot: string | null,
@@ -244,14 +246,20 @@ function useComposerContextPreviewModel(
   const fsDisabledRuleIds = useFilesystemDisabledRuleIds(projectRoot);
   const disabledIds = useMergedDisabledIds(localIds, fsDisabledRuleIds);
   const handleToggleItem = useToggleHandler(fsDisabledRuleIds, toggleLocal, projectRoot);
+  // Stabilize derived array refs so `useContextPreview`'s memo doesn't
+  // invalidate on every keystroke. `props.pinnedFiles` is stable from the
+  // store (useShallow); `pinnedFilesToInput` would otherwise produce a fresh
+  // mapped array on every render.
+  const pinnedFileNames = useMemo(() => pinnedFilesToInput(props.pinnedFiles), [props.pinnedFiles]);
+  const mentionLabels = props.mentionLabels ?? EMPTY_MENTION_LABELS;
   const previewModel = useContextPreview({
     effort: props.chatOverrides?.effort,
     loadedRules,
     mcpTools,
     memoryEntries,
-    mentionLabels: props.mentionLabels ?? [],
+    mentionLabels,
     model: props.chatOverrides?.model || props.settingsModel,
-    pinnedFileNames: pinnedFilesToInput(props.pinnedFiles),
+    pinnedFileNames,
     skillExecutions,
   });
   return { previewModel, handleToggleItem, disabledIds };

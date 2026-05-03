@@ -18,6 +18,7 @@ import type {
   AgentChatQueueState,
   AgentChatSlashState,
   AgentChatThreadState,
+  AgentChatThreadViewState,
 } from './agentChatStore.types';
 
 /* ── Group selectors ──────────────────────────────── */
@@ -29,6 +30,28 @@ export function useAgentChatThread(): AgentChatThreadState {
       threads: s.threads,
       canSend: s.canSend,
       draft: s.draft,
+      error: s.error,
+      hasProject: s.hasProject,
+      isLoading: s.isLoading,
+      isSending: s.isSending,
+      pendingUserMessage: s.pendingUserMessage,
+    })),
+  );
+}
+
+/**
+ * Slim variant of useAgentChatThread that excludes draft/canSend. Use this in
+ * components that render the message list (AgentChatConversation,
+ * ConversationBodyWithThread, ConversationDrawer) so they do NOT re-render on
+ * every keystroke. Draft churn through the full thread selector forces the
+ * entire conversation tree to reconcile per character — a 2-3s freeze in
+ * threads with many messages.
+ */
+export function useAgentChatThreadView(): AgentChatThreadViewState {
+  return useAgentChatStoreContext(
+    useShallow((s) => ({
+      activeThread: s.activeThread,
+      threads: s.threads,
       error: s.error,
       hasProject: s.hasProject,
       isLoading: s.isLoading,

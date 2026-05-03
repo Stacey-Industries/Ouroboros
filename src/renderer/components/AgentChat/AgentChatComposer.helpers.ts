@@ -12,17 +12,26 @@ export function toMentionLabels(
   return (mentions ?? []).map((m) => ({ estimatedTokens: m.estimatedTokens, label: m.label }));
 }
 
-export function buildChatOnlyContextPreviewProps(
-  composerProps: AgentChatComposerProps,
-  chatOverrides: ChatOverrides | undefined,
-  settingsModel: string | undefined,
-  claudeSessionId: string | undefined,
-) {
+export interface BuildChatOnlyContextPreviewPropsArgs {
+  composerProps: AgentChatComposerProps;
+  chatOverrides: ChatOverrides | undefined;
+  settingsModel: string | undefined;
+  claudeSessionId: string | undefined;
+  /**
+   * Pre-memoized labels so the caller can produce a stable reference per
+   * `composerProps.mentions`. Computing this inside would create a new array
+   * each render and invalidate `useContextPreview`'s memo on every keystroke.
+   */
+  mentionLabels: { estimatedTokens: number; label: string }[];
+}
+
+export function buildChatOnlyContextPreviewProps(args: BuildChatOnlyContextPreviewPropsArgs) {
+  const { composerProps, chatOverrides, settingsModel, claudeSessionId, mentionLabels } = args;
   return {
     pinnedFiles: composerProps.pinnedFiles,
     chatOverrides,
     settingsModel,
-    mentionLabels: toMentionLabels(composerProps.mentions),
+    mentionLabels,
     claudeSessionId,
     disabledLocalIds: composerProps.disabledLocalIds,
     setDisabledLocalIds: composerProps.setDisabledLocalIds,
