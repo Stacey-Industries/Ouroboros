@@ -13,7 +13,7 @@ Format per `~/.claude/rules/best-practice-spectrum.md`:
 
 **Context:**
 
-<!-- Fill: what's being decided, why now (the 2-3s stutter root cause), what the bar is (preserve all parity behaviors). -->
+The AgentChat composer at `src/renderer/components/AgentChat/AgentChatComposerInput.tsx` uses `rich-textarea` v0.27, an overlay-style React component that re-renders the highlight token tree from scratch on every value change. Live session investigation on 2026-05-02 showed this pattern produces 2-3 second renderer freezes when backspacing through inserted `@` mentions — confirmed via the `[trace:fuse-search]` instrumentation that surfaced 300-450ms Fuse.js searches doubled by React StrictMode in dev. Pre-wave fixes (substring search replacing Fuse, view selector for the conversation, memoized context preview) reduced the search cost to ~5ms but residual stutter remains. Research (haiku-research-extractor on 2026-05-02 via Context7, sources `/facebook/lexical` and `/sodenn/lexical-beautiful-mentions`) attributes the residual stutter to `rich-textarea`'s render-children pattern: every keystroke re-runs `tokenizeComposerHighlights` over the full value and re-renders all spans, not just the affected range. The bar is preserving every existing composer behavior — `@` mention dropdown with file/folder/diff/terminal/codebase/symbol items, `/` slash command menu, per-thread draft persistence, image paste, drag-from-FileTree, quote-to-composer, auto-resize, mid-turn inject button, send/stop/queue states — while eliminating the structural cause of per-keystroke full-tree re-renders.
 
 **Options considered:**
 
@@ -26,11 +26,30 @@ Format per `~/.claude/rules/best-practice-spectrum.md`:
 
 **Rationale:**
 
-<!-- Fill: why Lexical fits the wave's constraints (React 19, perf model, active plugin ecosystem with lexical-beautiful-mentions, encapsulated migration). -->
+Four independently weighted factors all favor Lexical over the alternatives:
+
+1. **Reconciliation model fits the bug.** Lexical's immutable-node tree commits a delta per keystroke that touches only the affected text node. `rich-textarea` re-renders the entire highlight overlay; Slate has the same issue at scale; TipTap inherits ProseMirror's transactional model which is closer to what we want but ships a much larger bundle. The user-visible bug is structurally caused by overlay-render-everything; Lexical structurally eliminates it.
+2. **React 19 compatibility, today.** Lexical core and `@lexical/react` are explicitly tested against React 19 per Context7 docs. `lexical-beautiful-mentions` (sodenn, benchmark 92.5) supports the same. Slate has a history of React major-version regressions; TipTap's React adapter lags ProseMirror core releases.
+3. **Plugin ecosystem covers our parity surface.** `lexical-beautiful-mentions` provides exactly the `@`-trigger + chip token + custom menu component shape we need, with a stable `useBeautifulMentions` hook for programmatic insertion (drop-from-filetree, quote-to-composer). PlainTextPlugin handles the rest. We don't need to write a custom mention engine.
+4. **Encapsulation is cheap.** New code lives under `src/renderer/components/AgentChat/lexicalComposer/`. The existing helpers (`MentionChipsBar`, `SlashCommandMenu`, `mentions[]` store, draft persistence, image attachments, the pre-wave perf fixes) all stay. The bridge surface from Lexical → existing helpers is small and well-defined per the audit phase. If Lexical surfaces an unexpected blocker mid-wave, reverting is 1 directory + 1 dependency line + a branching import.
+
+The in-house "fix `rich-textarea`" path was rejected because the research determined it would only get to 100-150ms responsiveness (memoize tokenization + portal dropdown + CSS contain) versus Lexical's 16ms target. The user's reported symptom is "perceptible stutter," not "slow but functional" — Path A's ceiling is below the bar.
 
 **Consequences:**
 
-<!-- Fill: what this commits us to (Lexical learning curve, pinning lexical-beautiful-mentions, watching for React 19 issues), what we punt to a future wave (Lexical migration of other surfaces, JSON-state draft persistence). -->
+What this commits us to:
+
+- Adding three runtime dependencies (`lexical`, `@lexical/react`, `lexical-beautiful-mentions`) and removing one (`rich-textarea`) at Phase F. Net dependency count rises by 2.
+- Pinning `lexical-beautiful-mentions` to a specific minor version verified against React 19 at wave start. If the upstream surfaces a React 19 incompatibility we can't work around, fallback per the wave-plan risk row is to build a custom mention plugin on raw Lexical primitives — costs ~1 day of additional work in Phase C.
+- A small Lexical learning curve for the next implementer who touches the composer. Mitigation: the audit phase produces an integration-seam document and sequence diagram before any implementation begins; the existing helpers (chip bar, slash menu, store) are unchanged so the surface area to learn is narrow.
+- A custom Lexical plugin (`SlashCommandPlugin.ts`) becomes part of our maintenance footprint. The plugin is small (~50 lines) and its contract is stable — it watches editor state for cursor-position `/` patterns and toggles the existing `SlashCommandMenu` open state. Documented in the Phase D test surface.
+- Auto-resize behavior moves from `rich-textarea`'s `autoHeight` JS to CSS rules on the ContentEditable container. Acceptable visual difference of up to ~4px is documented as a known regression in the wave-plan risk table.
+
+What we punt to a future wave:
+
+- **Lexical migration of other text inputs.** The IDE has other text-entry surfaces (Settings panel inputs, search overlays, terminal command-palette) — none of those have the perf problem this wave addresses, and no parity bar pushes us to migrate them. Each is a separate decision; keep the existing implementations.
+- **JSON-state draft persistence.** Lexical can serialize `editor.getEditorState().toJSON()` to preserve mention chip positions across thread switches and reloads. Current behavior already loses partial mentions on thread switch (chips rebuild from `mentions[]` store, not from draft text). No user-visible win; the schema migration adds restore complexity. A future wave can revisit if telemetry shows users wanting chip-position fidelity.
+- **Removing the `useAgentChatThreadView` selector and `useContextPreview` memoizations** introduced pre-wave. These are general perf wins regardless of editor engine; they remain after this wave. Their removal is not anticipated but if a future wave reshapes the chat-only conversation tree they may become unnecessary.
 
 ---
 
