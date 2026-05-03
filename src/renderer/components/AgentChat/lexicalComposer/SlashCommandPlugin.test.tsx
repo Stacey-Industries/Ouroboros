@@ -22,6 +22,7 @@ import { BeautifulMentionNode } from 'lexical-beautiful-mentions';
 import React, { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { SlashCommand } from '../SlashCommandMenu';
 import type { SlashState } from './SlashCommandPlugin';
 import { SlashCommandPlugin } from './SlashCommandPlugin';
 
@@ -273,5 +274,168 @@ describe('SlashCommandPlugin', () => {
       const last = calls[calls.length - 1][0];
       expect(last.isOpen).toBe(false);
     });
+  });
+});
+
+/* ---------- keyboard navigation tests (Phase E) ---------- */
+
+function makeCmd(id: string): SlashCommand {
+  return { id, label: id, description: id, icon: '>', action: vi.fn() };
+}
+
+type KbdHarnessProps = {
+  onSlashStateChange: (state: SlashState) => void;
+  slashSelectRef: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
+  editorRef: React.MutableRefObject<LexicalEditor | null>;
+  commands: SlashCommand[];
+};
+
+function KbdHarness({
+  onSlashStateChange,
+  editorRef,
+  commands,
+}: KbdHarnessProps): React.ReactElement {
+  return (
+    <LexicalComposer initialConfig={BASE_CONFIG}>
+      <PlainTextPlugin
+        contentEditable={
+          <ContentEditable aria-label="composer" aria-multiline="true" role="textbox" />
+        }
+        placeholder={<div />}
+        ErrorBoundary={LexicalErrorBoundary}
+      />
+      <SlashCommandPlugin
+        onSlashStateChange={onSlashStateChange}
+        slashCommands={commands}
+        draft="/"
+        onChange={vi.fn()}
+      />
+      <EditorRefCapture editorRef={editorRef} />
+    </LexicalComposer>
+  );
+}
+
+describe('SlashCommandPlugin keyboard navigation (Phase E)', () => {
+  it('(f) ArrowDown cycles selectedIndex 0→1→2→0 with 3 commands', async () => {
+    const states: SlashState[] = [];
+    const editorRef: React.MutableRefObject<LexicalEditor | null> = { current: null };
+    const slashSelectRef: React.MutableRefObject<((cmd: SlashCommand) => void) | null> = {
+      current: null,
+    };
+    const commands = [makeCmd('clear'), makeCmd('new'), makeCmd('compact')];
+
+    render(
+      <KbdHarness
+        onSlashStateChange={(s) => states.push(s)}
+        slashSelectRef={slashSelectRef}
+        editorRef={editorRef}
+        commands={commands}
+      />,
+    );
+    await waitFor(() => expect(editorRef.current).not.toBeNull());
+
+    // Open the menu by typing '/'
+    await setTextAndCursor(editorRef.current!, '/', 1);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last?.isOpen).toBe(true);
+    });
+
+    // ArrowDown three times — cycles 0→1→2→0
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_DOWN_COMMAND, null);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.selectedIndex).toBe(1);
+    });
+
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_DOWN_COMMAND, null);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.selectedIndex).toBe(2);
+    });
+
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_DOWN_COMMAND, null);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.selectedIndex).toBe(0);
+    });
+  });
+
+  it('(g) ArrowUp decrements selectedIndex with wrap', async () => {
+    const states: SlashState[] = [];
+    const editorRef: React.MutableRefObject<LexicalEditor | null> = { current: null };
+    const slashSelectRef: React.MutableRefObject<((cmd: SlashCommand) => void) | null> = {
+      current: null,
+    };
+    const commands = [makeCmd('clear'), makeCmd('new'), makeCmd('compact')];
+
+    render(
+      <KbdHarness
+        onSlashStateChange={(s) => states.push(s)}
+        slashSelectRef={slashSelectRef}
+        editorRef={editorRef}
+        commands={commands}
+      />,
+    );
+    await waitFor(() => expect(editorRef.current).not.toBeNull());
+
+    await setTextAndCursor(editorRef.current!, '/', 1);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last?.isOpen).toBe(true);
+    });
+
+    // ArrowUp from 0 → wraps to 2
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_UP_COMMAND, null);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.selectedIndex).toBe(2);
+    });
+
+    // ArrowUp again → 1
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_UP_COMMAND, null);
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.selectedIndex).toBe(1);
+    });
+  });
+
+  it('(h) Enter with selectedIndex=1 calls slashCommands[1].action and closes menu', async () => {
+    const states: SlashState[] = [];
+    const editorRef: React.MutableRefObject<LexicalEditor | null> = { current: null };
+    const slashSelectRef: React.MutableRefObject<((cmd: SlashCommand) => void) | null> = {
+      current: null,
+    };
+    const cmd0 = makeCmd('clear');
+    const cmd1 = makeCmd('new');
+    const commands = [cmd0, cmd1];
+
+    render(
+      <KbdHarness
+        onSlashStateChange={(s) => states.push(s)}
+        slashSelectRef={slashSelectRef}
+        editorRef={editorRef}
+        commands={commands}
+      />,
+    );
+    await waitFor(() => expect(editorRef.current).not.toBeNull());
+
+    await setTextAndCursor(editorRef.current!, '/', 1);
+    await waitFor(() => expect(states[states.length - 1]?.isOpen).toBe(true));
+
+    // Move to index 1
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ARROW_DOWN_COMMAND, null);
+    await waitFor(() => expect(states[states.length - 1].selectedIndex).toBe(1));
+
+    // Press Enter — should call cmd1.action and close menu
+    const fakeEnter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+    editorRef.current!.dispatchCommand((await import('lexical')).KEY_ENTER_COMMAND, fakeEnter);
+
+    await waitFor(() => {
+      const last = states[states.length - 1];
+      expect(last.isOpen).toBe(false);
+    });
+    expect(cmd1.action).toHaveBeenCalled();
+    expect(cmd0.action).not.toHaveBeenCalled();
   });
 });

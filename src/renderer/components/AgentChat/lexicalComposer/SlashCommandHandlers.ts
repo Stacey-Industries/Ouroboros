@@ -85,3 +85,36 @@ export function executeSlashSelection(args: SlashActionArgs, cmd: SlashCommand):
   }
   args.onCloseSlashMenu();
 }
+
+/* ---------- executeSlashSelectionFromPlugin ---------- */
+
+/**
+ * Bridge variant called from `useSlashSelectHandler` (parent-driven select via
+ * SlashCommandMenu) and from `useSlashEnter` in slashKeyboardNav.ts. Wraps the
+ * positional args into the `SlashActionArgs` shape `executeSlashSelection`
+ * expects. Lives here (not in SlashCommandPlugin.tsx) to avoid a circular
+ * import between SlashCommandPlugin and slashKeyboardNav.
+ */
+export function executeSlashSelectionFromPlugin(
+  editor: LexicalEditor,
+  cmd: SlashCommand,
+  args: {
+    draft: string;
+    onChange: (v: string) => void;
+    onAddMention?: (mention: MentionItem) => void;
+    slashCommandContext?: SlashCommandContext;
+    onCloseSlashMenu: () => void;
+  },
+): void {
+  executeSlashSelection(
+    {
+      editor,
+      draft: args.draft,
+      onChange: args.onChange,
+      onAddMention: args.onAddMention,
+      slashCommandContext: args.slashCommandContext,
+      onCloseSlashMenu: args.onCloseSlashMenu,
+    },
+    cmd,
+  );
+}

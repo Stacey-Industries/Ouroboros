@@ -13,34 +13,33 @@
  * the SlashCommandMenu UI; the plugin also populates slashSelectHandlerRef so
  * the parent can imperatively invoke the selection action without needing its
  * own reference to the Lexical editor instance.
+ *
+ * Phase E: image paste, FileTree drop, quote listener, slash kbd nav.
+ *
+ * Hooks and plugin components are extracted to lexicalComposerHooks.ts and
+ * lexicalComposerPlugins.tsx for max-lines compliance — see those files for
+ * the implementations.
  */
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
-import { $createParagraphNode, $createTextNode, $getRoot, type EditorState } from 'lexical';
-import {
-  BeautifulMentionNode,
-  type BeautifulMentionsItem,
-  BeautifulMentionsPlugin,
-} from 'lexical-beautiful-mentions';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { $getRoot, type EditorState } from 'lexical';
+import { BeautifulMentionNode } from 'lexical-beautiful-mentions';
+import React, { useCallback } from 'react';
 
 import type { AgentChatMessageRecord, CodexModelOption } from '../../../types/electron';
 import type { FileEntry } from '../../FileTree/FileListItem';
-import { findLastUserMessageContent } from '../AgentChatComposerParts';
 import type { ChatOverrides } from '../ChatControlsBar';
-import { cyclePermissionMode, resolveChatControlProvider } from '../ChatControlsBar';
 import type { MentionItem, SymbolGraphNode } from '../MentionAutocomplete';
 import type { SlashCommand, SlashCommandContext } from '../SlashCommandMenu';
-import { ChatKeyboardPlugin } from './ChatKeyboardPlugin';
-import { LexicalMentionBridge } from './LexicalMentionBridge';
-import { LexicalMentionMenuItem } from './LexicalMentionMenuItem';
-import { buildMentionSearchFn } from './lexicalMentionSearch';
-import { SlashCommandPlugin, type SlashState, useSlashSelectHandler } from './SlashCommandPlugin';
+import {
+  useCyclePermissionCallback,
+  useEscapeCallback,
+  useMentionSearch,
+  useRestoreCallback,
+  useSendCallback,
+} from './lexicalComposerHooks';
+import { ComposerEditable, ComposerPlugins } from './lexicalComposerPlugins';
+import { type SlashState, useSlashSelectHandler } from './SlashCommandPlugin';
 
 /* ---------- prop types ---------- */
 
@@ -75,7 +74,7 @@ export type LexicalChatComposerProps = {
   onSlashStateChange?: (state: SlashState) => void;
   /**
    * Slash command list — built from slashCommandContext by the parent.
-   * Passed to the selection handler so the editor can run the action.
+   * Passed to SlashCommandPlugin for keyboard-nav Enter-to-select (Phase E).
    */
   slashCommands?: SlashCommand[];
   /** Slash command context — provides onClearChat, onRemember, etc. */
@@ -87,6 +86,9 @@ export type LexicalChatComposerProps = {
    * editor.update() mutation happens inside the Lexical tree.
    */
   slashSelectHandlerRef?: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
+  // --- Phase E: auxiliary parity ---
+  /** Called when image files are pasted into the composer (Phase E). */
+  onImagePaste?: (files: File[]) => void;
 };
 
 /* ---------- initial config (stable reference, created once) ---------- */
@@ -100,263 +102,59 @@ const INITIAL_CONFIG = {
   },
 };
 
-/* ---------- DisabledPlugin ---------- */
+/* ---------- inner composer hooks ---------- */
 
-function DisabledPlugin({ disabled }: { disabled: boolean }): null {
-  const [editor] = useLexicalComposerContext();
-  useEffect(() => {
-    editor.setEditable(!disabled);
-  }, [editor, disabled]);
-  return null;
-}
-
-/* ---------- DraftSyncPlugin ---------- */
-
-/**
- * Populates the editor from `draft` when the value changes externally (e.g.
- * thread switch). Skips the update when the editor already matches to avoid
- * a cursor-jump on every keystroke.
- */
-function DraftSyncPlugin({ draft }: { draft: string }): null {
-  const [editor] = useLexicalComposerContext();
-  const lastAppliedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (lastAppliedRef.current === draft) return;
-    let currentText = '';
-    editor.getEditorState().read(() => {
-      currentText = $getRoot().getTextContent();
-    });
-    if (currentText === draft) {
-      lastAppliedRef.current = draft;
-      return;
-    }
-    lastAppliedRef.current = draft;
-    editor.update(() => {
-      const root = $getRoot();
-      root.clear();
-      const p = $createParagraphNode();
-      if (draft) p.append($createTextNode(draft));
-      root.append(p);
-    });
-  }, [editor, draft]);
-
-  return null;
-}
-
-/* ---------- keyboard callback hooks ---------- */
-
-function useSendCallback(onSubmit: () => Promise<void>): () => void {
-  return useCallback(() => void onSubmit(), [onSubmit]);
-}
-
-function useEscapeCallback(
-  editor: ReturnType<typeof useLexicalComposerContext>[0],
-  onChange: (v: string) => void,
-): () => void {
-  return useCallback(() => {
-    onChange('');
-    editor.update(() => {
-      const root = $getRoot();
-      root.clear();
-      root.append($createParagraphNode());
-    });
-  }, [editor, onChange]);
-}
-
-function useRestoreCallback(
-  editor: ReturnType<typeof useLexicalComposerContext>[0],
-  messages: AgentChatMessageRecord[] | undefined,
-  onChange: (v: string) => void,
-): () => void {
-  return useCallback(() => {
-    const lastContent = findLastUserMessageContent(messages);
-    if (!lastContent) return;
-    onChange(lastContent);
-    editor.update(() => {
-      const root = $getRoot();
-      root.clear();
-      const p = $createParagraphNode();
-      p.append($createTextNode(lastContent));
-      root.append(p);
-    });
-  }, [editor, messages, onChange]);
-}
-
-type CycleArgs = {
-  chatOverrides?: ChatOverrides;
-  onChatOverridesChange?: (o: ChatOverrides) => void;
-  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  codexModels?: CodexModelOption[];
-  codexAppServerTransport?: boolean;
-};
-
-function useCyclePermissionCallback(args: CycleArgs): () => void {
-  const { chatOverrides, onChatOverridesChange, defaultProvider, codexModels } = args;
-  const { codexAppServerTransport } = args;
-  return useCallback(() => {
-    if (!chatOverrides || !onChatOverridesChange) return;
-    const provider = resolveChatControlProvider(
-      chatOverrides.model,
-      defaultProvider ?? 'claude-code',
-      codexModels,
-    );
-    onChatOverridesChange({
-      ...chatOverrides,
-      permissionMode: cyclePermissionMode(chatOverrides.permissionMode, provider, {
-        codexAppServerTransport,
-      }),
-    });
-  }, [chatOverrides, onChatOverridesChange, defaultProvider, codexModels, codexAppServerTransport]);
-}
-
-/* ---------- mention search hook ---------- */
-
-function useMentionSearch(
-  allFiles: FileEntry[] | undefined,
-  mentions: MentionItem[] | undefined,
-  symbolResults: SymbolGraphNode[] | undefined,
-): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
-  return useMemo(
-    () =>
-      buildMentionSearchFn({
-        allFiles: allFiles ?? [],
-        selectedMentions: mentions ?? [],
-        symbolResults,
-      }),
-    [allFiles, mentions, symbolResults],
-  );
-}
-
-/* ---------- editable surface ---------- */
-
-type EditableProps = { placeholderText: string; disabled: boolean };
-
-function ComposerEditable({ placeholderText, disabled }: EditableProps): React.ReactElement {
-  return (
-    <PlainTextPlugin
-      contentEditable={
-        <div className="lexical-composer-scroll">
-          <ContentEditable
-            aria-label={placeholderText}
-            aria-multiline="true"
-            role="textbox"
-            aria-disabled={disabled}
-            className="block w-full outline-none text-sm text-text-semantic-primary caret-text-semantic-primary"
-          />
-        </div>
-      }
-      placeholder={
-        <div
-          className="pointer-events-none absolute top-0 left-0 select-none text-sm text-text-semantic-muted"
-          aria-hidden="true"
-        >
-          {placeholderText}
-        </div>
-      }
-      ErrorBoundary={LexicalErrorBoundary}
-    />
-  );
-}
-
-/* ---------- plugin bundle ---------- */
-
-type PluginsProps = {
-  draft: string;
-  disabled: boolean;
-  handleChange: (editorState: EditorState) => void;
-  onSend: () => void;
-  onEscape: () => void;
-  onRestoreLastMessage: () => void;
-  onCyclePermissionMode: () => void;
-  onSearch: (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]>;
-  addMention?: (mention: MentionItem) => void;
-  removeMention?: (key: string) => void;
-  onSlashStateChange?: (state: SlashState) => void;
-};
-
-function ComposerPlugins(p: PluginsProps): React.ReactElement {
-  return (
-    <>
-      <HistoryPlugin />
-      <OnChangePlugin onChange={p.handleChange} ignoreSelectionChange />
-      <DraftSyncPlugin draft={p.draft} />
-      <DisabledPlugin disabled={p.disabled} />
-      <ChatKeyboardPlugin
-        onSend={p.onSend}
-        onEscape={p.onEscape}
-        onRestoreLastMessage={p.onRestoreLastMessage}
-        onCyclePermissionMode={p.onCyclePermissionMode}
-      />
-      <BeautifulMentionsPlugin
-        triggers={['@']}
-        onSearch={p.onSearch}
-        menuItemComponent={LexicalMentionMenuItem}
-        menuItemLimit={25}
-      />
-      {p.addMention && p.removeMention && (
-        <LexicalMentionBridge addMention={p.addMention} removeMention={p.removeMention} />
-      )}
-      {p.onSlashStateChange && <SlashCommandPlugin onSlashStateChange={p.onSlashStateChange} />}
-    </>
-  );
-}
-
-function buildSlashHandlerArgs(
+function useInnerComposerHandlers(
   props: LexicalChatComposerProps,
-  draft: string,
-  onChange: (v: string) => void,
+  editor: ReturnType<typeof useLexicalComposerContext>[0],
 ) {
-  return {
-    draft,
-    onChange,
-    onAddMention: props.addMention,
-    slashCommandContext: props.slashCommandContext,
-    onSlashStateChange: props.onSlashStateChange,
-  };
-}
-
-/* ---------- inner composer (needs LexicalComposer context) ---------- */
-
-function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
-  const [editor] = useLexicalComposerContext();
-  const { onChange, onSubmit, disabled = false, placeholder, draft } = props;
-  const placeholderText = placeholder ?? 'Ask the agent... (/ for commands, @ to mention files)';
-
+  const { onChange, onSubmit, draft } = props;
   const onSend = useSendCallback(onSubmit);
   const onEscape = useEscapeCallback(editor, onChange);
   const onRestoreLastMessage = useRestoreCallback(editor, props.messages, onChange);
   const onCyclePermissionMode = useCyclePermissionCallback(props);
   const onSearch = useMentionSearch(props.allFiles, props.mentions, props.symbolResults);
-  // Phase D: populate the imperative slash-select handler ref
-  useSlashSelectHandler(
-    editor,
-    props.slashSelectHandlerRef,
-    buildSlashHandlerArgs(props, draft, onChange),
-  );
-
+  useSlashSelectHandler(editor, props.slashSelectHandlerRef, {
+    draft,
+    onChange,
+    onAddMention: props.addMention,
+    slashCommandContext: props.slashCommandContext,
+    onSlashStateChange: props.onSlashStateChange,
+  });
   const handleChange = useCallback(
     (editorState: EditorState) => {
       editorState.read(() => onChange($getRoot().getTextContent()));
     },
     [onChange],
   );
+  return { onSend, onEscape, onRestoreLastMessage, onCyclePermissionMode, onSearch, handleChange };
+}
 
+/* ---------- inner composer (needs LexicalComposer context) ---------- */
+
+function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
+  const [editor] = useLexicalComposerContext();
+  const { onChange, disabled = false, placeholder, draft } = props;
+  const placeholderText = placeholder ?? 'Ask the agent... (/ for commands, @ to mention files)';
+  const h = useInnerComposerHandlers(props, editor);
   return (
     <>
       <ComposerEditable placeholderText={placeholderText} disabled={disabled} />
       <ComposerPlugins
         draft={draft}
+        onChange={onChange}
         disabled={disabled}
-        handleChange={handleChange}
-        onSend={onSend}
-        onEscape={onEscape}
-        onRestoreLastMessage={onRestoreLastMessage}
-        onCyclePermissionMode={onCyclePermissionMode}
-        onSearch={onSearch}
+        handleChange={h.handleChange}
+        onSend={h.onSend}
+        onEscape={h.onEscape}
+        onRestoreLastMessage={h.onRestoreLastMessage}
+        onCyclePermissionMode={h.onCyclePermissionMode}
+        onSearch={h.onSearch}
         addMention={props.addMention}
         removeMention={props.removeMention}
         onSlashStateChange={props.onSlashStateChange}
+        slashCommands={props.slashCommands ?? []}
+        onImagePaste={props.onImagePaste}
       />
     </>
   );

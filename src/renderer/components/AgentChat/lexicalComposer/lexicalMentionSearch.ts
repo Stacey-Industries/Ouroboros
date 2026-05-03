@@ -69,6 +69,11 @@ function extractOptionalFields(data: NonNullable<RawData>): {
   return { estimatedTokens: tokens, startLine, endLine, symbolType };
 }
 
+/** Build the data payload for INSERT_MENTION_COMMAND from a MentionItem. */
+export function buildMentionDataPayload(mention: MentionItem): MentionItemData {
+  return toData(mention);
+}
+
 function toData(mention: MentionItem): MentionItemData {
   return {
     mentionKey: mention.key,

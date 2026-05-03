@@ -80,6 +80,7 @@ export function ComposerInputSection({ state, composerProps: cp }: SubProps): Re
       slashCommands={slashCommands}
       slashCommandContext={cp.slashCommandContext}
       slashSelectHandlerRef={slashSelectHandlerRef}
+      onImagePaste={state.attachmentHandlers.handleImageFiles}
     />
   );
 }

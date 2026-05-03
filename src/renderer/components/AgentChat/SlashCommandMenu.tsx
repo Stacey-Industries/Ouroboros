@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { CommandDefinition } from '../../../shared/types/claudeConfig';
-
 export interface SlashCommand {
   id: string;
   label: string;
@@ -17,10 +15,8 @@ export interface SlashCommandMenuProps {
   onSelect: (cmd: SlashCommand) => void;
   onClose: () => void;
   isOpen: boolean;
-}
-
-function dispatchIdeEvent(eventName: string, detail?: string): void {
-  window.dispatchEvent(new CustomEvent(eventName, detail ? { detail } : undefined));
+  /** External selectedIndex — when provided (Lexical path), overrides internal state. */
+  selectedIndex?: number;
 }
 
 function filterCommands(query: string, commands: SlashCommand[]): SlashCommand[] {
@@ -160,11 +156,24 @@ function useSlashCommandMenuState(props: SlashCommandMenuProps): {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const filtered = useMemo(() => filterCommands(query, commands), [query, commands]);
-  const handleKeyDown = useSlashCommandKeyboard({ isOpen, filtered, selectedIndex, setSelectedIndex, onSelect, onClose });
+  const handleKeyDown = useSlashCommandKeyboard({
+    isOpen,
+    filtered,
+    selectedIndex,
+    setSelectedIndex,
+    onSelect,
+    onClose,
+  });
   useEffect(() => setSelectedIndex(0), [filtered.length, query]);
+  // Sync from external selectedIndex (Lexical path). Legacy path leaves it undefined.
+  useEffect(() => {
+    if (props.selectedIndex !== undefined) setSelectedIndex(props.selectedIndex);
+  }, [props.selectedIndex]);
   useEffect(() => {
     if (!listRef.current) return;
-    listRef.current.querySelectorAll('[data-slash-item]')[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+    listRef.current
+      .querySelectorAll('[data-slash-item]')
+      [selectedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
   useEffect(() => {
     if (!isOpen) return;
@@ -178,93 +187,26 @@ export function SlashCommandMenu(props: SlashCommandMenuProps): React.ReactEleme
   const { selectedIndex, setSelectedIndex, listRef, filtered } = useSlashCommandMenuState(props);
   if (!props.isOpen || filtered.length === 0) return null;
   return (
-    <div ref={listRef} className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay shadow-xl">
+    <div
+      ref={listRef}
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay shadow-xl"
+    >
       <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted">
         Slash Commands
       </div>
       {filtered.map((cmd, index) => (
-        <SlashCommandItem key={cmd.id} cmd={cmd} selected={index === selectedIndex}
-          onMouseDown={() => props.onSelect(cmd)} onMouseEnter={() => setSelectedIndex(index)}
+        <SlashCommandItem
+          key={cmd.id}
+          cmd={cmd}
+          selected={index === selectedIndex}
+          onMouseDown={() => props.onSelect(cmd)}
+          onMouseEnter={() => setSelectedIndex(index)}
         />
       ))}
     </div>
   );
 }
 
-export interface SlashCommandContext {
-  onClearChat?: () => void;
-  onCompactChat?: () => void;
-  onNewThread?: () => void;
-  onRemember?: (content: string) => void;
-  onOpenMemories?: () => void;
-  onSpec?: (featureName: string) => void;
-  commands?: CommandDefinition[];
-  /** Wave 25 Phase C — true when the research.explicit feature flag is on. */
-  researchEnabled?: boolean;
-}
-
-function buildCommandSlashCommands(commands: CommandDefinition[]): SlashCommand[] {
-  return commands.map((cmd) => ({
-    id: `${cmd.scope}:${cmd.id}`,
-    label: cmd.name,
-    description: cmd.description,
-    icon: cmd.scope === 'user' ? '◈' : '▣',
-    action: () => {},
-    clearDraft: false,
-  }));
-}
-
-const RESEARCH_COMMANDS: SlashCommand[] = [
-  {
-    id: 'research',
-    label: 'Research',
-    description: 'Research a library or topic and pin the artifact as context',
-    icon: '⬡',
-    // Intercepted by useResearchIntercept in the composer — action is never called.
-    action: () => {},
-    clearDraft: true,
-  },
-  {
-    id: 'spec-with-research',
-    label: 'Spec with Research',
-    description: 'Research first, then generate a spec',
-    icon: '✦',
-    action: () => {},
-    clearDraft: true,
-  },
-  {
-    id: 'implement-with-research',
-    label: 'Implement with Research',
-    description: 'Research first, then implement',
-    icon: '▶',
-    action: () => {},
-    clearDraft: true,
-  },
-];
-
-function buildContextualCommands(ctx: SlashCommandContext): SlashCommand[] {
-  return [
-    { id: 'clear', label: 'Clear', description: 'Clear the conversation', icon: '⌫', action: () => ctx.onClearChat?.() },
-    { id: 'compact', label: 'Compact', description: 'Summarize conversation to save context', icon: '◇', action: () => ctx.onCompactChat?.() },
-    { id: 'new', label: 'New Thread', description: 'Start a new conversation thread', icon: '+', action: () => ctx.onNewThread?.() },
-    { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
-  ];
-}
-
-const STATIC_SLASH_COMMANDS: SlashCommand[] = [
-  { id: 'settings', label: 'Settings', description: 'Open settings panel', icon: '⚙', action: () => dispatchIdeEvent('agent-ide:open-settings') },
-  { id: 'terminal', label: 'Terminal', description: 'Open a new terminal tab', icon: '>', action: () => dispatchIdeEvent('agent-ide:new-terminal') },
-  { id: 'file', label: 'File', description: 'Open file picker (Ctrl+P)', icon: '◰', action: () => dispatchIdeEvent('agent-ide:open-file-picker') },
-  { id: 'context', label: 'Context', description: 'Build project context packet', icon: '⬡', action: () => dispatchIdeEvent('agent-ide:open-context-builder') },
-  { id: 'diff', label: 'Diff', description: 'Attach current git diff as context', icon: '±', action: () => {} },
-  { id: 'theme', label: 'Theme', description: 'Open theme selector', icon: '◈', action: () => dispatchIdeEvent('agent-ide:open-settings', 'appearance') },
-  { id: 'help', label: 'Help', description: 'Show keyboard shortcuts and tips', icon: '?', action: () => dispatchIdeEvent('agent-ide:open-settings', 'keybindings') },
-  { id: 'remember', label: 'Remember', description: 'Save a memory for future sessions', icon: '◆', action: () => {}, clearDraft: true },
-  { id: 'spec', label: 'Spec', description: 'Scaffold requirements/design/tasks for a feature', icon: '✦', action: () => {}, clearDraft: true },
-];
-
-export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[] {
-  const researchEntries = ctx.researchEnabled !== false ? RESEARCH_COMMANDS : [];
-  const commandEntries = buildCommandSlashCommands(ctx.commands ?? []);
-  return [...buildContextualCommands(ctx), ...STATIC_SLASH_COMMANDS, ...researchEntries, ...commandEntries];
-}
+// Slash command definitions + builder live in slashCommandDefinitions.ts; re-exported
+// here for backward compatibility with all existing importers.
+export { buildChatSlashCommands, type SlashCommandContext } from './slashCommandDefinitions';

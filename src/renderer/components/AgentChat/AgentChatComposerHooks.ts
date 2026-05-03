@@ -15,121 +15,39 @@ import { handleComposerChange, handleComposerKeyDown } from './AgentChatComposer
 import { autoResizeTextarea } from './AgentChatComposerParts';
 import {
   appendAttachments,
-  buildMentionInsertion,
   readAttachmentFiles,
   selectComposerFile,
   selectComposerMention,
   selectComposerSlash,
-  setDraftValue,
 } from './AgentChatComposerSupport';
 import type { ChatOverrides } from './ChatControlsBar';
+import {
+  useAttachmentDragHandlers,
+  usePasteHandler,
+  useRemoveAttachment,
+} from './imageAttachmentSupport';
 import type { MentionItem } from './MentionAutocomplete';
 import { QUOTE_EVENT_NAME, type QuoteEventDetail } from './quoteComposer';
 import type { SlashCommand, SlashCommandContext } from './SlashCommandMenu';
 
-function hasImageItems(event: React.DragEvent): boolean {
-  return Array.from(event.dataTransfer.items).some((i) => i.type.startsWith('image/'));
-}
-
-function hasFileTreeData(event: React.DragEvent): boolean {
-  return event.dataTransfer.types.includes('application/json');
-}
-
-function buildMentionFromDrop(jsonData: string): MentionItem | null {
-  try {
-    const parsed = JSON.parse(jsonData);
-    if (!parsed.path || typeof parsed.path !== 'string') return null;
-    const isDir = Boolean(parsed.isDirectory);
-    const name = parsed.name || parsed.path.split(/[\\/]/).pop() || parsed.path;
-    return {
-      type: isDir ? 'folder' : 'file',
-      key: `@${isDir ? 'folder' : 'file'}:${parsed.path}`,
-      label: name,
-      path: parsed.relativePath || parsed.path,
-      estimatedTokens: isDir ? 5000 : 500,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function insertDroppedPath(
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
-  lastSyncedDraft: React.MutableRefObject<string>,
-  onChange: (value: string) => void,
-  path: string,
-): void {
-  const textarea = textareaRef.current;
-  if (!textarea) return;
-  const cursor = textarea.selectionStart ?? textarea.value.length;
-  const insertion = buildMentionInsertion(path);
-  const next = textarea.value.slice(0, cursor) + insertion + textarea.value.slice(cursor);
-  setDraftValue(textareaRef, lastSyncedDraft, onChange, next);
-  const newCursor = cursor + insertion.length;
-  textarea.setSelectionRange(newCursor, newCursor);
-  textarea.focus();
-}
-
-function useAttachmentDragHandlers(
+function useImageActions(
   handleFiles: (files: File[]) => Promise<void>,
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
-  lastSyncedDraft: React.MutableRefObject<string>,
-  onChange: (value: string) => void,
-) {
-  const [isDragging, setIsDragging] = useState(false);
-  const handleDragOver = useCallback((event: React.DragEvent) => {
-    if (!hasImageItems(event) && !hasFileTreeData(event)) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
-    setIsDragging(true);
-  }, []);
-  const handleDragLeave = useCallback(() => setIsDragging(false), []);
-  const handleDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      setIsDragging(false);
-      void handleFiles(
-        Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')),
-      );
-      const jsonData = event.dataTransfer.getData('application/json');
-      if (!jsonData) return;
-      const mention = buildMentionFromDrop(jsonData);
-      if (mention) insertDroppedPath(textareaRef, lastSyncedDraft, onChange, mention.path);
-    },
-    [handleFiles, textareaRef, lastSyncedDraft, onChange],
-  );
-  return { isDragging, handleDragOver, handleDragLeave, handleDrop };
-}
-
-function useRemoveAttachment(
   attachments: ImageAttachment[],
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
 ) {
-  return useCallback(
-    (name: string) => {
-      const index = attachments.findIndex((a) => a.name === name);
-      if (index === -1) return;
-      const next = [...attachments];
-      next.splice(index, 1);
-      onAttachmentsChange?.(next);
-    },
-    [attachments, onAttachmentsChange],
-  );
-}
-
-function usePasteHandler(handleFiles: (files: File[]) => Promise<void>) {
-  return useCallback(
-    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const imageFiles = Array.from(event.clipboardData.items)
-        .filter((item) => item.type.startsWith('image/'))
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => Boolean(file));
-      if (!imageFiles.length) return;
-      event.preventDefault();
-      void handleFiles(imageFiles);
+  const handlePickImage = useCallback(async () => {
+    if (!onAttachmentsChange || !window.electronAPI?.files?.showImageDialog) return;
+    const result = await window.electronAPI.files.showImageDialog();
+    if (result.success && !result.cancelled && result.attachments?.length)
+      onAttachmentsChange([...attachments, ...(result.attachments as ImageAttachment[])]);
+  }, [attachments, onAttachmentsChange]);
+  const handleImageFiles = useCallback(
+    (files: File[]) => {
+      void handleFiles(files);
     },
     [handleFiles],
   );
+  return { handlePickImage, handleImageFiles };
 }
 
 export function useImageAttachmentHandlers(
@@ -150,15 +68,19 @@ export function useImageAttachmentHandlers(
   const nullRef = useRef<HTMLTextAreaElement>(null);
   const nullDraft = useRef('');
   const drag = useAttachmentDragHandlers(
-    handleFiles, opts?.textareaRef ?? nullRef, opts?.lastSyncedDraft ?? nullDraft, opts?.onChange ?? noop,
+    handleFiles,
+    opts?.textareaRef ?? nullRef,
+    opts?.lastSyncedDraft ?? nullDraft,
+    opts?.onChange ?? noop,
   );
-  const handlePickImage = useCallback(async () => {
-    if (!onAttachmentsChange || !window.electronAPI?.files?.showImageDialog) return;
-    const result = await window.electronAPI.files.showImageDialog();
-    if (result.success && !result.cancelled && result.attachments?.length)
-      onAttachmentsChange([...attachments, ...(result.attachments as ImageAttachment[])]);
-  }, [attachments, onAttachmentsChange]);
-  return { ...drag, handlePaste: usePasteHandler(handleFiles), handlePickImage, handleRemoveAttachment: useRemoveAttachment(attachments, onAttachmentsChange) };
+  const actions = useImageActions(handleFiles, attachments, onAttachmentsChange);
+  return {
+    ...drag,
+    handlePaste: usePasteHandler(handleFiles),
+    handleImageFiles: actions.handleImageFiles,
+    handlePickImage: actions.handlePickImage,
+    handleRemoveAttachment: useRemoveAttachment(attachments, onAttachmentsChange),
+  };
 }
 
 export interface ComposerDraftHandlersArgs {
@@ -281,8 +203,12 @@ export function useComposerMenuState() {
 export function useQuoteListener(draft: string, onChange: (value: string) => void): void {
   const draftRef = useRef(draft);
   const onChangeRef = useRef(onChange);
-  useEffect(() => { draftRef.current = draft; }, [draft]);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
   useEffect(() => {
     const handler = (e: Event): void => {
       const detail = (e as CustomEvent<QuoteEventDetail>).detail;

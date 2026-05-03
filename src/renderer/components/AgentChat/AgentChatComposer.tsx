@@ -95,6 +95,8 @@ export type ComposerState = {
   isMentionAutocompleteOpen: boolean;
   slashQuery: string | null;
   isSlashMenuOpen: boolean;
+  /** Slash-menu highlighted row index (Lexical path — from SlashState.selectedIndex). */
+  slashSelectedIndex: number;
   useMentionSystem: boolean;
   attachmentHandlers: ReturnType<typeof useImageAttachmentHandlers>;
   slashCommands: ReturnType<typeof buildChatSlashCommands>;
@@ -155,14 +157,35 @@ function useComposerHandlers(
 
 function useSlashState(menu: ReturnType<typeof useComposerMenuState>) {
   const slashSelectHandlerRef = useRef<((cmd: SlashCommand) => void) | null>(null);
+  const slashSelectedIndexRef = useRef(0);
+  const [slashSelectedIndex, setSlashSelectedIndex] = React.useState(0);
   const onSlashStateChange = useCallback(
     (s: SlashState) => {
       menu.setIsSlashMenuOpen(s.isOpen);
       menu.setSlashQuery(s.query);
+      if (s.selectedIndex !== slashSelectedIndexRef.current) {
+        slashSelectedIndexRef.current = s.selectedIndex;
+        setSlashSelectedIndex(s.selectedIndex);
+      }
     },
     [menu],
   );
-  return { slashSelectHandlerRef, onSlashStateChange };
+  return { slashSelectHandlerRef, onSlashStateChange, slashSelectedIndex };
+}
+
+function useComposerSideEffects(
+  props: AgentChatComposerProps,
+  refs: {
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+    lastSyncedDraft: React.MutableRefObject<string>;
+  },
+  menuState: ReturnType<typeof useComposerMenuState>,
+): void {
+  useComposerDraftSync(refs.textareaRef, refs.lastSyncedDraft, props.draft);
+  useComposerAutocompleteReset(
+    menuState.setSelectedIndex,
+    (props.autocompleteResults ?? []).length,
+  );
 }
 
 function useComposerState(props: AgentChatComposerProps): ComposerState {
@@ -171,7 +194,7 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   const lastSyncedDraft = useRef(props.draft);
   const menuState = useComposerMenuState();
   const useMentionSystem = Boolean(props.onAddMention);
-  const { slashSelectHandlerRef, onSlashStateChange } = useSlashState(menuState);
+  const slash = useSlashState(menuState);
   const attachmentHandlers = useImageAttachmentHandlers(attachments ?? [], onAttachmentsChange, {
     textareaRef,
     lastSyncedDraft,
@@ -187,16 +210,13 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
     { textareaRef, lastSyncedDraft, useMentionSystem },
     menuState,
   );
-  useComposerDraftSync(textareaRef, lastSyncedDraft, props.draft);
-  useComposerAutocompleteReset(
-    menuState.setSelectedIndex,
-    (props.autocompleteResults ?? []).length,
-  );
+  useComposerSideEffects(props, { textareaRef, lastSyncedDraft }, menuState);
   return {
     textareaRef,
     lastSyncedDraft,
-    slashSelectHandlerRef,
-    onSlashStateChange,
+    slashSelectHandlerRef: slash.slashSelectHandlerRef,
+    onSlashStateChange: slash.onSlashStateChange,
+    slashSelectedIndex: slash.slashSelectedIndex,
     useMentionSystem,
     attachmentHandlers,
     slashCommands,

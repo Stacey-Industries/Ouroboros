@@ -66,6 +66,9 @@ export type ComposerInputProps = {
   slashCommandContext?: SlashCommandContext;
   /** Imperative handle — populated by useSlashSelectHandler; call ref.current?.(cmd) from SlashCommandMenu.onSelect. */
   slashSelectHandlerRef?: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
+  // --- Phase E: auxiliary parity (Lexical path only) ---
+  /** Called with image File[] when images are pasted — bridges to useImageAttachmentHandlers. */
+  onImagePaste?: (files: File[]) => void;
 };
 
 /**

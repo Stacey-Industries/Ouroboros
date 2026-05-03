@@ -181,6 +181,7 @@ function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
       slashCommands={props.slashCommands}
       slashCommandContext={props.slashCommandContext}
       slashSelectHandlerRef={props.slashSelectHandlerRef}
+      onImagePaste={props.onImagePaste}
     />
   );
 }
