@@ -177,6 +177,10 @@ function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
       symbolResults={props.symbolResults}
       addMention={props.addMention}
       removeMention={props.removeMention}
+      onSlashStateChange={props.onSlashStateChange}
+      slashCommands={props.slashCommands}
+      slashCommandContext={props.slashCommandContext}
+      slashSelectHandlerRef={props.slashSelectHandlerRef}
     />
   );
 }

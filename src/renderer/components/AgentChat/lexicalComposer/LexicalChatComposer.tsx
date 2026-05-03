@@ -7,6 +7,12 @@
  * Phase C: BeautifulMentionsPlugin wired for @ trigger only. LexicalMentionBridge
  * syncs chip additions/removals to the mentions[] zustand store via props
  * (bridging option a — explicit prop threading, no context coupling).
+ *
+ * Phase D: SlashCommandPlugin detects cursor-position / patterns and reports
+ * open/query state via onSlashStateChange. The parent (AgentChatComposer) owns
+ * the SlashCommandMenu UI; the plugin also populates slashSelectHandlerRef so
+ * the parent can imperatively invoke the selection action without needing its
+ * own reference to the Lexical editor instance.
  */
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -29,10 +35,12 @@ import { findLastUserMessageContent } from '../AgentChatComposerParts';
 import type { ChatOverrides } from '../ChatControlsBar';
 import { cyclePermissionMode, resolveChatControlProvider } from '../ChatControlsBar';
 import type { MentionItem, SymbolGraphNode } from '../MentionAutocomplete';
+import type { SlashCommand, SlashCommandContext } from '../SlashCommandMenu';
 import { ChatKeyboardPlugin } from './ChatKeyboardPlugin';
 import { LexicalMentionBridge } from './LexicalMentionBridge';
 import { LexicalMentionMenuItem } from './LexicalMentionMenuItem';
 import { buildMentionSearchFn } from './lexicalMentionSearch';
+import { SlashCommandPlugin, type SlashState, useSlashSelectHandler } from './SlashCommandPlugin';
 
 /* ---------- prop types ---------- */
 
@@ -59,6 +67,26 @@ export type LexicalChatComposerProps = {
   addMention?: (mention: MentionItem) => void;
   /** Called when a mention chip is removed from the editor (Phase C). */
   removeMention?: (key: string) => void;
+  // --- Phase D: slash command integration ---
+  /**
+   * Called whenever the slash-command menu open/query state changes.
+   * The parent uses this to drive SlashCommandMenu isOpen + query props.
+   */
+  onSlashStateChange?: (state: SlashState) => void;
+  /**
+   * Slash command list — built from slashCommandContext by the parent.
+   * Passed to the selection handler so the editor can run the action.
+   */
+  slashCommands?: SlashCommand[];
+  /** Slash command context — provides onClearChat, onRemember, etc. */
+  slashCommandContext?: SlashCommandContext;
+  /**
+   * Imperative handle: the parent passes a ref; InnerComposer sets
+   * ref.current to a function that executes the chosen slash command.
+   * The parent calls this ref from SlashCommandMenu.onSelect so the
+   * editor.update() mutation happens inside the Lexical tree.
+   */
+  slashSelectHandlerRef?: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
 };
 
 /* ---------- initial config (stable reference, created once) ---------- */
@@ -244,6 +272,7 @@ type PluginsProps = {
   onSearch: (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]>;
   addMention?: (mention: MentionItem) => void;
   removeMention?: (key: string) => void;
+  onSlashStateChange?: (state: SlashState) => void;
 };
 
 function ComposerPlugins(p: PluginsProps): React.ReactElement {
@@ -268,8 +297,23 @@ function ComposerPlugins(p: PluginsProps): React.ReactElement {
       {p.addMention && p.removeMention && (
         <LexicalMentionBridge addMention={p.addMention} removeMention={p.removeMention} />
       )}
+      {p.onSlashStateChange && <SlashCommandPlugin onSlashStateChange={p.onSlashStateChange} />}
     </>
   );
+}
+
+function buildSlashHandlerArgs(
+  props: LexicalChatComposerProps,
+  draft: string,
+  onChange: (v: string) => void,
+) {
+  return {
+    draft,
+    onChange,
+    onAddMention: props.addMention,
+    slashCommandContext: props.slashCommandContext,
+    onSlashStateChange: props.onSlashStateChange,
+  };
 }
 
 /* ---------- inner composer (needs LexicalComposer context) ---------- */
@@ -284,6 +328,12 @@ function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
   const onRestoreLastMessage = useRestoreCallback(editor, props.messages, onChange);
   const onCyclePermissionMode = useCyclePermissionCallback(props);
   const onSearch = useMentionSearch(props.allFiles, props.mentions, props.symbolResults);
+  // Phase D: populate the imperative slash-select handler ref
+  useSlashSelectHandler(
+    editor,
+    props.slashSelectHandlerRef,
+    buildSlashHandlerArgs(props, draft, onChange),
+  );
 
   const handleChange = useCallback(
     (editorState: EditorState) => {
@@ -306,6 +356,7 @@ function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
         onSearch={onSearch}
         addMention={props.addMention}
         removeMention={props.removeMention}
+        onSlashStateChange={props.onSlashStateChange}
       />
     </>
   );

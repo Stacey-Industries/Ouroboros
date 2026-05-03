@@ -10,7 +10,9 @@ import type React from 'react';
 import type { AgentChatMessageRecord, CodexModelOption } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import type { ChatOverrides } from './ChatControlsBar';
+import type { SlashState } from './lexicalComposer/SlashCommandPlugin';
 import type { MentionItem, SymbolGraphNode } from './MentionAutocomplete';
+import type { SlashCommand, SlashCommandContext } from './SlashCommandMenu';
 
 export type ComposerInputProps = {
   canSend: boolean;
@@ -55,6 +57,15 @@ export type ComposerInputProps = {
   addMention?: (mention: MentionItem) => void;
   /** Called when a mention chip is removed (bridges to mentions[] store). */
   removeMention?: (key: string) => void;
+  // --- Phase D: slash command integration (Lexical path only) ---
+  /** Callback fired by SlashCommandPlugin when slash state changes. */
+  onSlashStateChange?: (state: SlashState) => void;
+  /** Commands to pass through to SlashCommandPlugin for action dispatch. */
+  slashCommands?: SlashCommand[];
+  /** Context forwarded to each slash command's action handler. */
+  slashCommandContext?: SlashCommandContext;
+  /** Imperative handle — populated by useSlashSelectHandler; call ref.current?.(cmd) from SlashCommandMenu.onSelect. */
+  slashSelectHandlerRef?: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
 };
 
 /**

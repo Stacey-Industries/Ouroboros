@@ -23,22 +23,22 @@ import {
   useQuoteListener,
 } from './AgentChatComposerHooks';
 import {
-  AttachmentChipsBar,
   buildComposerFooterProps,
   ComposerContextBar,
   ComposerFooter,
-  ComposerInput,
-  ComposerMenus,
 } from './AgentChatComposerParts';
-import { noop } from './AgentChatComposerSupport';
-import { AgentChatContextBar } from './AgentChatContextBar';
+import { ComposerBody } from './AgentChatComposerSubcomponents';
 import { useChatActiveThread } from './agentChatSelectors';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ComposerContextPreview } from './ComposerContextPreview';
 import { FloatingComposerContainer } from './FloatingComposerContainer';
+import type { SlashState } from './lexicalComposer/SlashCommandPlugin';
 import type { MentionItem } from './MentionAutocomplete';
-import { MentionChipsBar } from './MentionChip';
-import { buildChatSlashCommands, type SlashCommandContext } from './SlashCommandMenu';
+import {
+  buildChatSlashCommands,
+  type SlashCommand,
+  type SlashCommandContext,
+} from './SlashCommandMenu';
 import type { PinnedFile } from './useAgentChatContext';
 import { useWorkspaceVariant } from './WorkspaceVariantContext';
 
@@ -87,9 +87,7 @@ export type AgentChatComposerProps = {
   setDisabledLocalIds?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
 };
 
-/* ---------- useComposerState ---------- */
-
-type ComposerState = {
+export type ComposerState = {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   selectedIndex: number;
@@ -100,26 +98,29 @@ type ComposerState = {
   useMentionSystem: boolean;
   attachmentHandlers: ReturnType<typeof useImageAttachmentHandlers>;
   slashCommands: ReturnType<typeof buildChatSlashCommands>;
+  slashSelectHandlerRef: React.MutableRefObject<((cmd: SlashCommand) => void) | null>;
+  onSlashStateChange: (state: SlashState) => void;
   closeAutocomplete: () => void;
   closeMentionAutocomplete: () => void;
   closeSlashMenu: () => void;
   handlers: ReturnType<typeof useComposerDraftHandlers>;
 };
 
-type ComposerRefs = {
+type HandlerRefs = {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
+  useMentionSystem: boolean;
 };
 
 function useComposerHandlers(
   p: AgentChatComposerProps,
-  refs: ComposerRefs,
+  refs: HandlerRefs,
   menu: ReturnType<typeof useComposerMenuState>,
-  useMentionSystem: boolean,
 ) {
+  const { textareaRef, lastSyncedDraft, useMentionSystem } = refs;
   return useComposerDraftHandlers({
-    textareaRef: refs.textareaRef,
-    lastSyncedDraft: refs.lastSyncedDraft,
+    textareaRef,
+    lastSyncedDraft,
     draft: p.draft,
     messages: p.messages,
     canSend: p.canSend,
@@ -152,12 +153,25 @@ function useComposerHandlers(
   });
 }
 
+function useSlashState(menu: ReturnType<typeof useComposerMenuState>) {
+  const slashSelectHandlerRef = useRef<((cmd: SlashCommand) => void) | null>(null);
+  const onSlashStateChange = useCallback(
+    (s: SlashState) => {
+      menu.setIsSlashMenuOpen(s.isOpen);
+      menu.setSlashQuery(s.query);
+    },
+    [menu],
+  );
+  return { slashSelectHandlerRef, onSlashStateChange };
+}
+
 function useComposerState(props: AgentChatComposerProps): ComposerState {
   const { onCloseAutocomplete, slashCommandContext, attachments, onAttachmentsChange } = props;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSyncedDraft = useRef(props.draft);
   const menuState = useComposerMenuState();
   const useMentionSystem = Boolean(props.onAddMention);
+  const { slashSelectHandlerRef, onSlashStateChange } = useSlashState(menuState);
   const attachmentHandlers = useImageAttachmentHandlers(attachments ?? [], onAttachmentsChange, {
     textareaRef,
     lastSyncedDraft,
@@ -170,9 +184,8 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   const closeAutocomplete = useCallback(() => onCloseAutocomplete?.(), [onCloseAutocomplete]);
   const handlers = useComposerHandlers(
     props,
-    { textareaRef, lastSyncedDraft },
+    { textareaRef, lastSyncedDraft, useMentionSystem },
     menuState,
-    useMentionSystem,
   );
   useComposerDraftSync(textareaRef, lastSyncedDraft, props.draft);
   useComposerAutocompleteReset(
@@ -182,6 +195,8 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   return {
     textareaRef,
     lastSyncedDraft,
+    slashSelectHandlerRef,
+    onSlashStateChange,
     useMentionSystem,
     attachmentHandlers,
     slashCommands,
@@ -191,98 +206,6 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   };
 }
 
-/* ---------- ComposerMenusSection ---------- */
-
-type ComposerSubProps = { state: ComposerState; composerProps: AgentChatComposerProps };
-
-function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
-  const { allFiles = [], autocompleteResults = [], isAutocompleteOpen = false, mentions = [] } = cp;
-  const { handlers, slashCommands } = state;
-  return (
-    <ComposerMenus
-      allFiles={allFiles}
-      autocompleteResults={autocompleteResults}
-      handleFileSelect={handlers.handleFileSelect}
-      handleMentionSelect={handlers.handleMentionSelect}
-      isAutocompleteOpen={isAutocompleteOpen}
-      isMentionAutocompleteOpen={state.isMentionAutocompleteOpen}
-      isSlashMenuOpen={state.isSlashMenuOpen}
-      mentionQuery={state.mentionQuery}
-      mentions={mentions}
-      onCloseMentionAutocomplete={state.closeMentionAutocomplete}
-      onCloseSlashMenu={state.closeSlashMenu}
-      onSlashSelect={handlers.handleSlashSelect}
-      selectedIndex={state.selectedIndex}
-      slashCommands={slashCommands}
-      slashQuery={state.slashQuery}
-      useMentionSystem={state.useMentionSystem}
-    />
-  );
-}
-
-/* ---------- ComposerBody ---------- */
-
-function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
-  const { attachmentHandlers, handlers } = state;
-  return (
-    <ComposerInput
-      canSend={cp.canSend}
-      disabled={cp.disabled}
-      draft={cp.draft}
-      handleChange={handlers.handleChange}
-      handleDragLeave={attachmentHandlers.handleDragLeave}
-      handleDragOver={attachmentHandlers.handleDragOver}
-      handleDrop={attachmentHandlers.handleDrop}
-      handleKeyDown={handlers.handleKeyDown}
-      handlePaste={attachmentHandlers.handlePaste}
-      isSending={cp.isSending}
-      onPickImage={attachmentHandlers.handlePickImage}
-      onStop={cp.onStop}
-      onSubmit={cp.onSubmit}
-      threadIsBusy={cp.threadIsBusy ?? false}
-      textareaRef={state.textareaRef}
-      useMentionSystem={state.useMentionSystem}
-      onCloseAutocomplete={state.closeAutocomplete}
-      onCloseMentionAutocomplete={state.closeMentionAutocomplete}
-      activeMidTurnTaskId={cp.activeMidTurnTaskId}
-      onInjectMidTurn={cp.onInjectMidTurn}
-      allFiles={cp.allFiles}
-      mentions={cp.mentions}
-      addMention={cp.onAddMention}
-      removeMention={cp.onRemoveMention}
-    />
-  );
-}
-
-function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
-  const mentions = cp.mentions ?? [];
-  const totalMentionTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
-  return (
-    <div className="px-3">
-      <AgentChatContextBar
-        pinnedFiles={cp.pinnedFiles ?? []}
-        onRemoveFile={cp.onRemoveFile ?? noop}
-        contextSummary={cp.contextSummary ?? null}
-      />
-      {state.useMentionSystem && (
-        <MentionChipsBar
-          mentions={mentions}
-          onRemove={cp.onRemoveMention ?? noop}
-          totalTokens={totalMentionTokens}
-        />
-      )}
-      <AttachmentChipsBar
-        attachments={cp.attachments ?? []}
-        onRemove={state.attachmentHandlers.handleRemoveAttachment}
-      />
-      <ComposerMenusSection state={state} composerProps={cp} />
-      <ComposerInputSection state={state} composerProps={cp} />
-    </div>
-  );
-}
-
-/* ---------- AgentChatComposer ---------- */
-
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
@@ -290,9 +213,6 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const { chatOverrides, settingsModel, mentions } = composerProps;
   const variant = useWorkspaceVariant();
   const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
-  // Stabilize `mentionLabels` reference per `mentions` so `useContextPreview`'s
-  // memo doesn't invalidate on every keystroke (draft changes re-render this
-  // component but `mentions` reference only changes on add/remove).
   const mentionLabels = useMemo(() => toMentionLabels(mentions), [mentions]);
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
