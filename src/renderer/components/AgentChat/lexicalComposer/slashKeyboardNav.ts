@@ -16,7 +16,8 @@ import {
 } from 'lexical';
 import { type MutableRefObject, useEffect } from 'react';
 
-import type { SlashCommand } from '../SlashCommandMenu';
+import type { MentionItem } from '../MentionAutocomplete';
+import type { SlashCommand, SlashCommandContext } from '../SlashCommandMenu';
 import { executeSlashSelectionFromPlugin } from './SlashCommandHandlers';
 
 type Editor = ReturnType<typeof useLexicalComposerContext>[0];
@@ -40,6 +41,16 @@ export type SlashEnterOpts = {
   draft: string;
   onChange: (v: string) => void;
   refs: SlashNavRefs;
+  /**
+   * Wave 81 smoke fix: the keyboard-Enter selection path was previously
+   * dropping these, so non-/clear commands (especially /spec) silently
+   * no-op'd because executeSlashSelectionFromPlugin couldn't reach the
+   * IDE-side action handlers. Mouse-click selection went through a
+   * different path (useSlashSelectHandler) that did pass them, which is
+   * why the bug surfaced asymmetrically.
+   */
+  slashCommandContext?: SlashCommandContext;
+  onAddMention?: (mention: MentionItem) => void;
 };
 
 export function useSlashArrowDown(
@@ -86,7 +97,7 @@ export function useSlashArrowUp(
 }
 
 export function useSlashEnter(editor: Editor, opts: SlashEnterOpts): void {
-  const { onSlashStateChange, draft, onChange, refs } = opts;
+  const { onSlashStateChange, draft, onChange, refs, slashCommandContext, onAddMention } = opts;
   const { isOpenRef, selectedIndexRef, filteredRef } = refs;
   useEffect(() => {
     return editor.registerCommand(
@@ -100,6 +111,8 @@ export function useSlashEnter(editor: Editor, opts: SlashEnterOpts): void {
         executeSlashSelectionFromPlugin(editor, cmd, {
           draft,
           onChange,
+          slashCommandContext,
+          onAddMention,
           onCloseSlashMenu: () => {
             isOpenRef.current = false;
             selectedIndexRef.current = 0;
@@ -110,5 +123,15 @@ export function useSlashEnter(editor: Editor, opts: SlashEnterOpts): void {
       },
       COMMAND_PRIORITY_HIGH,
     );
-  }, [editor, onSlashStateChange, draft, onChange, isOpenRef, selectedIndexRef, filteredRef]);
+  }, [
+    editor,
+    onSlashStateChange,
+    draft,
+    onChange,
+    isOpenRef,
+    selectedIndexRef,
+    filteredRef,
+    slashCommandContext,
+    onAddMention,
+  ]);
 }

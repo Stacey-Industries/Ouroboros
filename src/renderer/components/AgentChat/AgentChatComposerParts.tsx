@@ -15,7 +15,6 @@ import { resolveActiveModel } from './ChatControlsBarSupport';
 import { ContextUsageBar } from './ContextUsageBar';
 import { EffortEstimate } from './EffortEstimate';
 import type { MentionItem } from './MentionAutocomplete';
-import { MentionAutocomplete } from './MentionAutocomplete';
 import type { SlashCommand } from './SlashCommandMenu';
 import { SlashCommandMenu } from './SlashCommandMenu';
 import { useWorkspaceVariant } from './WorkspaceVariantContext';
@@ -189,6 +188,9 @@ export type ComposerMenusProps = {
 };
 
 export function ComposerMenus(props: ComposerMenusProps): React.ReactElement {
+  // Wave 81 Phase F: Lexical owns @-mentions via BeautifulMentionsPlugin's
+  // own dropdown (LexicalMentionMenuItem). SlashCommandMenu is still driven
+  // here — Lexical's SlashCommandPlugin reuses the same component.
   return (
     <div className="relative">
       {props.isSlashMenuOpen && props.slashQuery !== null && (
@@ -198,23 +200,6 @@ export function ComposerMenus(props: ComposerMenusProps): React.ReactElement {
           onSelect={props.onSlashSelect}
           onClose={props.onCloseSlashMenu}
           isOpen
-        />
-      )}
-      {props.useMentionSystem && props.isMentionAutocompleteOpen && props.mentionQuery !== null && (
-        <MentionAutocomplete
-          query={props.mentionQuery}
-          allFiles={props.allFiles}
-          selectedMentions={props.mentions}
-          onSelect={props.handleMentionSelect}
-          onClose={props.onCloseMentionAutocomplete}
-          isOpen
-        />
-      )}
-      {!props.useMentionSystem && props.isAutocompleteOpen && (
-        <AutocompleteDropdown
-          results={props.autocompleteResults}
-          selectedIndex={props.selectedIndex}
-          onSelect={props.handleFileSelect}
         />
       )}
     </div>

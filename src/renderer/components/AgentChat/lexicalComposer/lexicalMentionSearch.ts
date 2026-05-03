@@ -119,22 +119,40 @@ export interface MentionSearchArgs {
 }
 
 /**
- * Build the onSearch handler for BeautifulMentionsPlugin.
- * Captures allFiles, selectedMentions, symbolResults in a closure so the
- * returned function always reflects the latest values.
+ * Build the onSearch handler for BeautifulMentionsPlugin from a pre-built
+ * FileMentionIndex. Lifting the file index out of this builder lets callers
+ * memoize it on `allFiles` alone — so adding/removing mentions doesn't force a
+ * full re-index over the project's ~thousands of files (Wave 81 stutter fix).
  */
-export function buildMentionSearchFn(
-  args: MentionSearchArgs,
-): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
-  const fileIndex: FileMentionIndex = buildFileMentionIndex(args.allFiles);
+export function buildMentionSearchFnFromIndex(args: {
+  fileIndex: FileMentionIndex;
+  selectedMentions: MentionItem[];
+  symbolResults?: SymbolGraphNode[];
+}): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
   return async (_trigger: string, query?: string | null): Promise<BeautifulMentionsItem[]> => {
     const results = buildMentionResults({
       query: query ?? '',
-      fileIndex,
+      fileIndex: args.fileIndex,
       selectedMentions: args.selectedMentions,
       isOpen: true,
       symbolResults: args.symbolResults,
     });
     return results.map((r) => toBeautifulItem(r.mention));
   };
+}
+
+/**
+ * Convenience wrapper: builds the file index then composes the search fn.
+ * Prefer `buildMentionSearchFnFromIndex` from React code so `useMemo` can
+ * cache the file index independently from the mention/symbol args.
+ */
+export function buildMentionSearchFn(
+  args: MentionSearchArgs,
+): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
+  const fileIndex: FileMentionIndex = buildFileMentionIndex(args.allFiles);
+  return buildMentionSearchFnFromIndex({
+    fileIndex,
+    selectedMentions: args.selectedMentions,
+    symbolResults: args.symbolResults,
+  });
 }

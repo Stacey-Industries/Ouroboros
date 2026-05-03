@@ -1,26 +1,20 @@
 /**
  * AgentChatComposerInput.tsx — ComposerTextarea + ComposerInput components.
  *
- * Extracted from AgentChatComposerParts.tsx to stay under the 300-line limit.
- * Types and pure-logic helpers live in AgentChatComposerTypes.ts.
+ * Wave 81 Phase F: Lexical is the only composer engine. The rich-textarea
+ * dependency, LegacyRichTextarea component, AgentChatComposerHighlights, and
+ * the `tokenizeComposerHighlights` / `renderHighlights` overlay path are
+ * gone — recovery procedure (per wave plan risks) is `git revert` of the
+ * Phase F merge if Lexical surfaces a regression in production.
  */
 
 import React from 'react';
-import { RichTextarea } from 'rich-textarea';
 
 import { hapticImpact } from '../../../web/capacitor';
-import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
-import { renderHighlights } from './AgentChatComposerHighlights';
-import { getTextareaStyle } from './AgentChatComposerSupport';
-import {
-  type ComposerInputProps,
-  isComposerMentionHighlight,
-  tokenizeComposerHighlights,
-} from './AgentChatComposerTypes';
+import { type ComposerInputProps } from './AgentChatComposerTypes';
 import { LexicalChatComposer } from './lexicalComposer/LexicalChatComposer';
 
 export type { ComposerInputProps };
-export { isComposerMentionHighlight, tokenizeComposerHighlights };
 
 /* ---------- SendButton ---------- */
 
@@ -142,23 +136,7 @@ function MidTurnInjectButton(props: {
   );
 }
 
-function makeTextareaFocusHandlers(breakpoint: string) {
-  return {
-    onFocus(e: React.FocusEvent<HTMLTextAreaElement>): void {
-      e.currentTarget.style.borderColor = 'var(--interactive-accent)';
-      e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';
-      if (breakpoint === 'phone') {
-        e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }
-    },
-    onBlurCapture(e: React.FocusEvent<HTMLTextAreaElement>): void {
-      e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';
-      e.currentTarget.style.boxShadow = 'none';
-    },
-  };
-}
-
-function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
+function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   return (
     <LexicalChatComposer
       draft={props.draft}
@@ -184,46 +162,6 @@ function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
       onImagePaste={props.onImagePaste}
     />
   );
-}
-
-function LegacyRichTextarea(props: ComposerInputProps): React.ReactElement {
-  const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
-  const breakpoint = useViewportBreakpoint();
-  const focusHandlers = makeTextareaFocusHandlers(breakpoint);
-  return (
-    <div className="w-full">
-      <RichTextarea
-        ref={props.textareaRef}
-        value={props.draft}
-        onChange={(event) => props.handleChange(event.target.value)}
-        onKeyDown={props.handleKeyDown}
-        onPaste={props.handlePaste}
-        onBlur={() => {
-          setTimeout(() => {
-            props.onCloseSlashMenu?.();
-            if (props.useMentionSystem) props.onCloseMentionAutocomplete?.();
-            else props.onCloseAutocomplete?.();
-          }, 200);
-        }}
-        placeholder="Ask the agent... (/ for commands, @ to mention files)"
-        disabled={props.disabled}
-        rows={1}
-        autoHeight
-        className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-        style={{ ...baseStyle, width: '100%', maxHeight: 'calc(40vh)' }}
-        {...focusHandlers}
-      >
-        {renderHighlights}
-      </RichTextarea>
-    </div>
-  );
-}
-
-function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
-  if (import.meta.env.VITE_LEXICAL_COMPOSER === '1') {
-    return <LexicalTextarea {...props} />;
-  }
-  return <LegacyRichTextarea {...props} />;
 }
 
 function PickImageButton({

@@ -23,8 +23,31 @@ If the discovery doesn't fit any existing CLAUDE.md, add it to the most directly
 - `npm run dev` — start dev server + Electron (hot-reload renderer)
 - `npm run build` — production build (electron-vite)
 - `npm run dist` — build + package with electron-builder
-- `npm test` — run vitest (unit tests)
+- `npm test` — run the full vitest suite (~5 min, agent-unfriendly — prefer scoped scripts below)
 - `npm run test:watch` — vitest in watch mode
+
+### Scoped vitest scripts — agents should prefer these
+
+The full suite consistently exceeds agent timeouts (~280-400s). After touching files in a subsystem, run the matching scoped script — each finishes in 30-120s. Composition: scoped runs are NOT mutually exhaustive (e.g. `test:agentchat` is a subset of `test:renderer`), pick the smallest one that covers your change.
+
+| Script | Path scope | Use when you touched |
+|---|---|---|
+| `test:main` | `src/main` | Electron main process, IPC handlers, native deps |
+| `test:renderer` | `src/renderer` | React UI (large — prefer narrower) |
+| `test:agentchat` | `src/renderer/components/AgentChat` | Chat composer, conversation, mentions, slash menu |
+| `test:lexical` | `…/AgentChat/lexicalComposer` | Lexical composer plugins / bridge |
+| `test:layout` | `src/renderer/components/Layout` | App shell, panes, title bar, workbench |
+| `test:filetree` | `src/renderer/components/FileTree` | File tree |
+| `test:codebasegraph` | `src/main/codebaseGraph` | Graph indexer / queries |
+| `test:orchestration` | `src/main/orchestration` | Orchestration runtime |
+| `test:ipc` | `src/main/ipc-handlers` | IPC handler implementations |
+| `test:hooks` | `src/main/hookInstaller`, `src/main/hooks` | Hook installer / named pipe server |
+| `test:preload` | `src/preload` | contextBridge surface |
+| `test:web` | `src/web` | Web stub layer (mobile / capacitor) |
+| `test:shared` | `src/shared` | Shared types / pure helpers |
+| `test:tools` | `tools`, `scripts` | Build / analysis tooling |
+
+Full suite + lint + typecheck still runs at commit/wave-end. Scoped runs are for the implementation loop.
 
 ## Key Files
 

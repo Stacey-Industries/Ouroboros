@@ -56,21 +56,23 @@ export function replaceWithSlashId(
 
 /* ---------- runSlashAction — mirrors runComposerSlashCommand ---------- */
 
+function runRemember(args: SlashActionArgs): void {
+  const text = args.draft.replace(/^\/remember\s*/i, '').trim();
+  if (text) args.slashCommandContext?.onRemember?.(text);
+}
+
+function runSpec(args: SlashActionArgs): void {
+  const featureName = args.draft.replace(/^\/spec\s*/i, '').trim();
+  if (featureName) args.slashCommandContext?.onSpec?.(featureName);
+}
+
 function runSlashAction(args: SlashActionArgs, cmd: SlashCommand): void {
-  if (cmd.id === 'remember') {
-    const text = args.draft.replace(/^\/remember\s*/i, '').trim();
-    if (text) args.slashCommandContext?.onRemember?.(text);
-    return;
-  }
+  if (cmd.id === 'remember') return runRemember(args);
   if (cmd.id === 'diff') {
     args.onAddMention?.(DIFF_MENTION);
     return;
   }
-  if (cmd.id === 'spec') {
-    const featureName = args.draft.replace(/^\/spec\s*/i, '').trim();
-    args.slashCommandContext?.onSpec?.(featureName);
-    return;
-  }
+  if (cmd.id === 'spec') return runSpec(args);
   cmd.action();
 }
 

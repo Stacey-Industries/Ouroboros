@@ -1,16 +1,17 @@
 /**
  * @vitest-environment jsdom
  *
- * AgentChatComposerInput.test.tsx — Phase G haptic wiring.
+ * AgentChatComposerInput.test.tsx — ComposerInput + SendButton.
  *
- * Verifies that hapticImpact('light') is called when the SendButton is clicked.
+ * Wave 81 Phase F: Lexical is the only composer engine. The rich-textarea
+ * mock is gone; LexicalChatComposer is stubbed so ComposerInput tests stay
+ * focused on the chrome (Send / Stop / Queue / haptics). End-to-end Lexical
+ * behavior is covered by the lexicalComposer/ test suite.
  */
 
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ─── Haptics mock ─────────────────────────────────────────────────────────────
-// vi.hoisted() so the variable is ready when vi.mock factory runs.
 const { mockHapticImpact } = vi.hoisted(() => ({
   mockHapticImpact: vi.fn().mockResolvedValue(undefined),
 }));
@@ -19,27 +20,15 @@ vi.mock('../../../web/capacitor', () => ({
   hapticImpact: mockHapticImpact,
 }));
 
-vi.mock('rich-textarea', () => ({
-  RichTextarea: ({
-    children,
-    ...props
-  }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
-    children?: ((value: string) => React.ReactNode) | React.ReactNode;
-  }) => {
-    const { value = '' } = props;
-    return (
-      <textarea {...props}>
-        {typeof children === 'function' ? children(String(value)) : children}
-      </textarea>
-    );
-  },
+vi.mock('./lexicalComposer/LexicalChatComposer', () => ({
+  LexicalChatComposer: () => <div data-testid="lexical-composer-stub" aria-label="composer stub" />,
 }));
 
 import { ComposerInput, SendButton } from './AgentChatComposerInput';
 
 afterEach(() => cleanup());
 
-describe('SendButton — Phase G haptics', () => {
+describe('SendButton — haptics', () => {
   beforeEach(() => {
     mockHapticImpact.mockClear();
   });
@@ -60,21 +49,18 @@ describe('SendButton — Phase G haptics', () => {
       <SendButton canSend={false} isSending={false} willQueue={false} onClick={onClick} />,
     );
     fireEvent.click(getByRole('button'));
-    // button is disabled — onClick not called, haptic not called
     expect(mockHapticImpact).not.toHaveBeenCalled();
     expect(onClick).not.toHaveBeenCalled();
   });
 });
 
 describe('ComposerInput', () => {
-  it('closes the slash menu on blur', () => {
-    vi.useFakeTimers();
-    const onCloseSlashMenu = vi.fn();
-    const { getByPlaceholderText } = render(
+  it('mounts the Lexical composer stub', () => {
+    const { getByTestId } = render(
       <ComposerInput
         canSend={true}
         disabled={false}
-        draft="/"
+        draft=""
         handleChange={vi.fn()}
         handleDragLeave={vi.fn()}
         handleDragOver={vi.fn()}
@@ -86,17 +72,9 @@ describe('ComposerInput', () => {
         threadIsBusy={false}
         textareaRef={{ current: null }}
         useMentionSystem={true}
-        onCloseMentionAutocomplete={vi.fn()}
-        onCloseAutocomplete={vi.fn()}
-        onCloseSlashMenu={onCloseSlashMenu}
       />,
     );
-
-    fireEvent.blur(getByPlaceholderText('Ask the agent... (/ for commands, @ to mention files)'));
-    vi.runAllTimers();
-
-    expect(onCloseSlashMenu).toHaveBeenCalledOnce();
-    vi.useRealTimers();
+    expect(getByTestId('lexical-composer-stub')).toBeDefined();
   });
 
   it('shows queue-send button instead of stop when busy and draft can be queued', () => {

@@ -70,24 +70,3 @@ export type ComposerInputProps = {
   /** Called with image File[] when images are pasted — bridges to useImageAttachmentHandlers. */
   onImagePaste?: (files: File[]) => void;
 };
-
-/**
- * Returns true if `part` is a complete mention token (bare or bracketed).
- *
- * Bracketed form: `@[…]` — content may include spaces; matched when the part
- * starts with `@[` and ends with `]`.
- * Bare form: `@` followed by one or more non-whitespace, non-`@` chars.
- */
-export function isComposerMentionHighlight(part: string): boolean {
-  return /^@\[[^\]]+\]$/.test(part) || /^(?:@|@@)[^\s@]+$/.test(part);
-}
-
-/**
- * Splits `value` into alternating non-token / token segments for highlight
- * rendering. Bracketed mentions (`@[…]`) are matched before bare mentions
- * (`@\S+`) so that `@[foo bar]` is captured as a single token rather than
- * `@[foo` truncated at the space.
- */
-export function tokenizeComposerHighlights(value: string): string[] {
-  return value.split(/((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g);
-}

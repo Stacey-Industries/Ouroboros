@@ -107,6 +107,16 @@ export type SlashCommandPluginProps = {
   draft: string;
   /** onChange — forwarded to executeSlashSelectionFromPlugin. */
   onChange: (v: string) => void;
+  /**
+   * Wave 81 smoke fix: the keyboard-Enter path needs slashCommandContext +
+   * onAddMention to actually execute IDE-side actions (/spec, /diff, /clear,
+   * /compact, ...). Without these, executeSlashSelectionFromPlugin runs but
+   * `args.slashCommandContext?.onSpec?.()` resolves to undefined → no-op.
+   * Mouse-click select goes through useSlashSelectHandler which already
+   * passes them; this prop closes the asymmetry.
+   */
+  slashCommandContext?: SlashCommandContext;
+  onAddMention?: (mention: MentionItem) => void;
 };
 
 /* ---------- absolute-offset helper ---------- */
@@ -213,6 +223,8 @@ export function SlashCommandPlugin({
   slashCommands,
   draft,
   onChange,
+  slashCommandContext,
+  onAddMention,
 }: SlashCommandPluginProps): null {
   const [editor] = useLexicalComposerContext();
   const refs: SlashNavRefs = {
@@ -225,7 +237,14 @@ export function SlashCommandPlugin({
   useSlashUpdateListener(editor, slashCommands, onSlashStateChange, refs);
   useSlashArrowDown(editor, onSlashStateChange, refs);
   useSlashArrowUp(editor, onSlashStateChange, refs);
-  useSlashEnter(editor, { onSlashStateChange, draft, onChange, refs });
+  useSlashEnter(editor, {
+    onSlashStateChange,
+    draft,
+    onChange,
+    refs,
+    slashCommandContext,
+    onAddMention,
+  });
 
   return null;
 }

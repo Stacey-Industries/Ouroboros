@@ -134,7 +134,7 @@ function SlashCommandItem({
         onMouseDown();
       }}
       onMouseEnter={onMouseEnter}
-      className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}
+      className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-interactive-selection' : ''}`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-raised text-[11px] text-text-semantic-muted">
         {cmd.icon}

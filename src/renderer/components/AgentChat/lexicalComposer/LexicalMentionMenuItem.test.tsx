@@ -43,24 +43,24 @@ describe('LexicalMentionMenuItem', () => {
     expect(screen.getByText('src/lib/fileUtils.ts')).toBeDefined();
   });
 
-  it('applies bg-surface-overlay class when selected', () => {
+  it('applies bg-interactive-selection class when selected', () => {
     const { container } = render(
       <ul>
         <LexicalMentionMenuItem selected={true} item={makeItem()} label="" itemValue="" />
       </ul>,
     );
     const li = container.querySelector('li');
-    expect(li?.className).toContain('bg-surface-overlay');
+    expect(li?.className).toContain('bg-interactive-selection');
   });
 
-  it('does NOT apply bg-surface-overlay when not selected', () => {
+  it('does NOT apply bg-interactive-selection when not selected', () => {
     const { container } = render(
       <ul>
         <LexicalMentionMenuItem selected={false} item={makeItem()} label="" itemValue="" />
       </ul>,
     );
     const li = container.querySelector('li');
-    expect(li?.className).not.toContain('bg-surface-overlay');
+    expect(li?.className).not.toContain('bg-interactive-selection');
   });
 
   it('shows line number when startLine >= 0 in data', () => {

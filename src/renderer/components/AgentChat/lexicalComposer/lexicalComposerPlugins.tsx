@@ -16,11 +16,12 @@ import { type BeautifulMentionsItem, BeautifulMentionsPlugin } from 'lexical-bea
 import React, { useEffect, useRef } from 'react';
 
 import type { MentionItem } from '../MentionAutocomplete';
-import type { SlashCommand } from '../SlashCommandMenu';
+import type { SlashCommand, SlashCommandContext } from '../SlashCommandMenu';
 import { ChatKeyboardPlugin } from './ChatKeyboardPlugin';
 import { LexicalDropPlugin } from './LexicalDropPlugin';
 import { LexicalImagePastePlugin } from './LexicalImagePastePlugin';
 import { LexicalMentionBridge } from './LexicalMentionBridge';
+import { LexicalMentionMenu } from './LexicalMentionMenu';
 import { LexicalMentionMenuItem } from './LexicalMentionMenuItem';
 import { LexicalQuoteListener } from './LexicalQuoteListener';
 import { SlashCommandPlugin, type SlashState } from './SlashCommandPlugin';
@@ -109,6 +110,8 @@ export type PluginsProps = {
   removeMention?: (key: string) => void;
   onSlashStateChange?: (state: SlashState) => void;
   slashCommands: SlashCommand[];
+  /** Wave 81 smoke fix: needed by SlashCommandPlugin's keyboard-Enter path. */
+  slashCommandContext?: SlashCommandContext;
   onImagePaste?: (files: File[]) => void;
 };
 
@@ -128,8 +131,17 @@ export function ComposerPlugins(p: PluginsProps): React.ReactElement {
       <BeautifulMentionsPlugin
         triggers={['@']}
         onSearch={p.onSearch}
+        menuComponent={LexicalMentionMenu}
         menuItemComponent={LexicalMentionMenuItem}
         menuItemLimit={25}
+        // Wave 81 smoke fix: deterministic deletion path. With this on,
+        // backspacing into a chip replaces the BeautifulMentionNode with a
+        // text node containing the trigger char (`@`), which reliably fires
+        // 'destroyed' on the original node so LexicalMentionBridge's mutation
+        // listener can sync the removal to the mentions[] store. The user
+        // gets to backspace once more to remove the trigger — that's a small
+        // UX cost and gives a chance to undo the removal by typing again.
+        showMentionsOnDelete={true}
       />
       {p.addMention && p.removeMention && (
         <LexicalMentionBridge addMention={p.addMention} removeMention={p.removeMention} />
@@ -140,6 +152,8 @@ export function ComposerPlugins(p: PluginsProps): React.ReactElement {
           slashCommands={p.slashCommands}
           draft={p.draft}
           onChange={p.onChange}
+          slashCommandContext={p.slashCommandContext}
+          onAddMention={p.addMention}
         />
       )}
       {p.onImagePaste && <LexicalImagePastePlugin onImagePaste={p.onImagePaste} />}

@@ -15,7 +15,8 @@ import { findLastUserMessageContent } from '../AgentChatComposerParts';
 import type { ChatOverrides } from '../ChatControlsBar';
 import { cyclePermissionMode, resolveChatControlProvider } from '../ChatControlsBar';
 import type { MentionItem, SymbolGraphNode } from '../MentionAutocomplete';
-import { buildMentionSearchFn } from './lexicalMentionSearch';
+import { buildFileMentionIndex } from '../MentionAutocompleteSupport';
+import { buildMentionSearchFnFromIndex } from './lexicalMentionSearch';
 
 type Editor = ReturnType<typeof useLexicalComposerContext>[0];
 
@@ -85,13 +86,18 @@ export function useMentionSearch(
   mentions: MentionItem[] | undefined,
   symbolResults: SymbolGraphNode[] | undefined,
 ): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
+  // Split memos: the file index is expensive (~thousands of files) and only
+  // changes when the project file list changes — NOT on every mention add /
+  // remove. Wave 81 perf fix: rebuilding the index on every mentions[] change
+  // contributed to residual @-backspace stutter.
+  const fileIndex = useMemo(() => buildFileMentionIndex(allFiles ?? []), [allFiles]);
   return useMemo(
     () =>
-      buildMentionSearchFn({
-        allFiles: allFiles ?? [],
+      buildMentionSearchFnFromIndex({
+        fileIndex,
         selectedMentions: mentions ?? [],
         symbolResults,
       }),
-    [allFiles, mentions, symbolResults],
+    [fileIndex, mentions, symbolResults],
   );
 }

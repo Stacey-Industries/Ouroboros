@@ -115,7 +115,37 @@ function getMentionIcon(type: MentionType): React.ReactElement {
 /**
  * Custom menu item for BeautifulMentionsPlugin.
  * Uses item.value / item.displayValue per audit §2d (NOT deprecated itemValue/label).
+ *
+ * BeautifulMentionsPlugin spreads `option.data` (our serialized MentionItem
+ * fields: mentionKey, mentionType, mentionLabel, mentionPath, estimatedTokens,
+ * startLine, endLine, symbolType, value) directly into the menu-item props
+ * along with the legitimate ones (role, tabIndex, aria-*, onClick,
+ * onMouseDown, onMouseEnter). We strip the data fields + library-internal
+ * `itemValue` / `label` before forwarding to the <li> so React doesn't warn
+ * about unknown DOM attributes (Wave 81 smoke fix).
  */
+const PROPS_TO_STRIP = new Set([
+  'itemValue',
+  'label',
+  'value',
+  'mentionKey',
+  'mentionType',
+  'mentionLabel',
+  'mentionPath',
+  'estimatedTokens',
+  'startLine',
+  'endLine',
+  'symbolType',
+]);
+
+function stripNonDomProps<T extends Record<string, unknown>>(rest: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(rest)) {
+    if (!PROPS_TO_STRIP.has(k)) out[k] = rest[k];
+  }
+  return out as Partial<T>;
+}
+
 export const LexicalMentionMenuItem = React.forwardRef<
   HTMLLIElement,
   BeautifulMentionsMenuItemProps
@@ -133,8 +163,8 @@ export const LexicalMentionMenuItem = React.forwardRef<
     <li
       ref={ref}
       data-active={selected}
-      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}
-      {...rest}
+      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-interactive-selection' : ''}`}
+      {...stripNonDomProps(rest as Record<string, unknown>)}
     >
       <span className="shrink-0" style={{ color }}>
         {getMentionIcon(mentionType)}

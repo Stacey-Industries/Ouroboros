@@ -7,12 +7,23 @@
  * This keeps the bridge decoupled from any specific context shape and makes
  * the data flow explicit and traceable.
  *
- * Detection approach (per Phase A audit §2c): no dedicated removal callback
- * exists in lexical-beautiful-mentions. We diff getMentions() on every editor
- * state change against prevMentionsRef to detect additions and removals.
+ * Detection approach (Wave 81 smoke fix, take 2): two listeners belt-and-
+ * suspenders style.
+ *   1. registerMutationListener fires immediately on BeautifulMentionNode
+ *      'created' / 'destroyed' — fast path.
+ *   2. registerUpdateListener reconciles on every commit by scanning all
+ *      BeautifulMentionNodes in the current editor state against our cached
+ *      nodeKey → mentionItem.key map — slow safety net. If the mutation
+ *      listener missed a removal for any reason (replace-rewrite paths,
+ *      decorator-delete shortcuts, library oddities), the reconciler catches
+ *      it on the next update.
+ *
+ * We track nodeKey → mentionItem.key in a ref so 'destroyed' / drift checks
+ * can fire the correct removeMention(key) without re-reading the gone node.
  */
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { useBeautifulMentions } from 'lexical-beautiful-mentions';
+import { $getNodeByKey, $nodesOfType } from 'lexical';
+import { $isBeautifulMentionNode, BeautifulMentionNode } from 'lexical-beautiful-mentions';
 import { useEffect, useRef } from 'react';
 
 import type { MentionItem } from '../MentionAutocomplete';
@@ -23,33 +34,68 @@ export type LexicalMentionBridgeProps = {
   removeMention: (key: string) => void;
 };
 
-type LiveMention = { trigger: string; value: string; data: Record<string, unknown> | undefined };
+type Editor = ReturnType<typeof useLexicalComposerContext>[0];
 
-function mentionKey(m: LiveMention): string {
-  // Reconstruct the canonical key from data if available; fall back to a
-  // trigger+value composite so the diff always has a stable identity.
-  const key = m.data?.['mentionKey'];
-  return typeof key === 'string' ? key : `${m.trigger}${m.value}`;
+function readMentionItemForNode(editor: Editor, nodeKey: string): MentionItem | null {
+  let item: MentionItem | null = null;
+  editor.getEditorState().read(() => {
+    const node = $getNodeByKey(nodeKey);
+    if (!node || !$isBeautifulMentionNode(node)) return;
+    const exported = node.exportJSON() as {
+      data?: Record<string, string | boolean | number | null>;
+    };
+    item = mentionItemFromData(exported.data);
+  });
+  return item;
 }
 
-function diffMentions(
-  prev: Map<string, LiveMention>,
-  next: LiveMention[],
-): { added: LiveMention[]; removedKeys: string[] } {
-  const nextMap = new Map<string, LiveMention>();
-  for (const m of next) nextMap.set(mentionKey(m), m);
+function handleCreated(
+  editor: Editor,
+  nodeKey: string,
+  cache: Map<string, string>,
+  addMention: (m: MentionItem) => void,
+): void {
+  if (cache.has(nodeKey)) return; // already added — guard against duplicate fire
+  const item = readMentionItemForNode(editor, nodeKey);
+  if (!item) return;
+  cache.set(nodeKey, item.key);
+  addMention(item);
+}
 
-  const added: LiveMention[] = [];
-  for (const [k, m] of nextMap) {
-    if (!prev.has(k)) added.push(m);
+function handleDestroyed(
+  nodeKey: string,
+  cache: Map<string, string>,
+  removeMention: (key: string) => void,
+): void {
+  const mentionKey = cache.get(nodeKey);
+  if (!mentionKey) return;
+  cache.delete(nodeKey);
+  removeMention(mentionKey);
+}
+
+/**
+ * Fallback reconciler: scan the live editor state for BeautifulMentionNode
+ * keys and compare against our cache. Anything in the cache but not in the
+ * live state was destroyed without firing the mutation listener — fire
+ * removeMention now.
+ */
+function reconcileMissed(
+  editor: Editor,
+  cache: Map<string, string>,
+  removeMention: (key: string) => void,
+): void {
+  const liveKeys = new Set<string>();
+  editor.getEditorState().read(() => {
+    for (const node of $nodesOfType(BeautifulMentionNode)) {
+      liveKeys.add(node.getKey());
+    }
+  });
+  for (const [nodeKey, mentionKey] of cache) {
+    if (!liveKeys.has(nodeKey)) {
+      cache.delete(nodeKey);
+      removeMention(mentionKey);
+    }
   }
-
-  const removedKeys: string[] = [];
-  for (const k of prev.keys()) {
-    if (!nextMap.has(k)) removedKeys.push(k);
-  }
-
-  return { added, removedKeys };
 }
 
 export function LexicalMentionBridge({
@@ -57,30 +103,23 @@ export function LexicalMentionBridge({
   removeMention,
 }: LexicalMentionBridgeProps): null {
   const [editor] = useLexicalComposerContext();
-  const { getMentions } = useBeautifulMentions();
-  const prevRef = useRef<Map<string, LiveMention>>(new Map());
+  const cache = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
-    return editor.registerUpdateListener(() => {
-      const current = getMentions() as LiveMention[];
-      const { added, removedKeys } = diffMentions(prevRef.current, current);
-
-      // Build new map before firing callbacks so prevRef is always up to date
-      const nextMap = new Map<string, LiveMention>();
-      for (const m of current) nextMap.set(mentionKey(m), m);
-      prevRef.current = nextMap;
-
-      for (const m of added) {
-        const rawData = m.data as Record<string, string | boolean | number | null> | undefined;
-        const item = mentionItemFromData(rawData);
-        if (item) addMention(item);
-      }
-
-      for (const key of removedKeys) {
-        removeMention(key);
+    const unsubMutation = editor.registerMutationListener(BeautifulMentionNode, (mutations) => {
+      for (const [nodeKey, mutation] of mutations) {
+        if (mutation === 'created') handleCreated(editor, nodeKey, cache.current, addMention);
+        else if (mutation === 'destroyed') handleDestroyed(nodeKey, cache.current, removeMention);
       }
     });
-  }, [editor, getMentions, addMention, removeMention]);
+    const unsubUpdate = editor.registerUpdateListener(() => {
+      reconcileMissed(editor, cache.current, removeMention);
+    });
+    return () => {
+      unsubMutation();
+      unsubUpdate();
+    };
+  }, [editor, addMention, removeMention]);
 
   return null;
 }

@@ -3,8 +3,6 @@
  * Hooks live in AgentChatComposerHooks.ts.
  * Extracted to keep AgentChatComposer.tsx under the 300-line limit.
  */
-import type React from 'react';
-
 import type { ImageAttachment, ImageMimeType } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { autoResizeTextarea } from './AgentChatComposerParts';
@@ -22,20 +20,6 @@ export const DIFF_MENTION: MentionItem = {
   path: '@diff',
   estimatedTokens: 2000,
 };
-
-/* ---------- Style helpers ---------- */
-
-export function getTextareaStyle(hasAttachmentButton: boolean): React.CSSProperties {
-  return {
-    borderColor: 'var(--border-subtle, var(--border-default))',
-    borderRadius: 8,
-    fontFamily: 'var(--font-ui)',
-    minHeight: 40,
-    padding: hasAttachmentButton ? '10px 72px 10px 12px' : '10px 44px 10px 12px',
-    lineHeight: 1.4,
-    transition: 'border-color 150ms ease, box-shadow 150ms ease',
-  };
-}
 
 /* ---------- Attachment file readers ---------- */
 
@@ -232,28 +216,29 @@ export function selectComposerMention(
 
 /* ---------- Slash command helpers ---------- */
 
-function runComposerSlashCommand(
-  args: {
-    draft: string;
-    slashCommandContext?: SlashCommandContext;
-    onAddMention?: (mention: MentionItem) => void;
-  },
-  cmd: SlashCommand,
-): void {
-  if (cmd.id === 'remember') {
-    const text = args.draft.replace(/^\/remember\s*/i, '').trim();
-    if (text) args.slashCommandContext?.onRemember?.(text);
-    return;
-  }
+type RunComposerSlashCommandArgs = {
+  draft: string;
+  slashCommandContext?: SlashCommandContext;
+  onAddMention?: (mention: MentionItem) => void;
+};
+
+function runComposerRemember(args: RunComposerSlashCommandArgs): void {
+  const text = args.draft.replace(/^\/remember\s*/i, '').trim();
+  if (text) args.slashCommandContext?.onRemember?.(text);
+}
+
+function runComposerSpec(args: RunComposerSlashCommandArgs): void {
+  const featureName = args.draft.replace(/^\/spec\s*/i, '').trim();
+  if (featureName) args.slashCommandContext?.onSpec?.(featureName);
+}
+
+function runComposerSlashCommand(args: RunComposerSlashCommandArgs, cmd: SlashCommand): void {
+  if (cmd.id === 'remember') return runComposerRemember(args);
   if (cmd.id === 'diff') {
     args.onAddMention?.(DIFF_MENTION);
     return;
   }
-  if (cmd.id === 'spec') {
-    const featureName = args.draft.replace(/^\/spec\s*/i, '').trim();
-    args.slashCommandContext?.onSpec?.(featureName);
-    return;
-  }
+  if (cmd.id === 'spec') return runComposerSpec(args);
   cmd.action();
 }
 

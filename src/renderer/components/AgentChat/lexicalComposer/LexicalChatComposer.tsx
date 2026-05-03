@@ -95,7 +95,18 @@ export type LexicalChatComposerProps = {
 
 const INITIAL_CONFIG = {
   namespace: 'ChatComposer',
-  theme: {},
+  theme: {
+    // beautifulMentions: keys are regex patterns matching the trigger char.
+    // We render the @-chip as an inline accent-colored pill that contrasts
+    // against the composer surface in both light and dark themes. The
+    // legacy chip styling lives in MentionChip.tsx — we deliberately mirror
+    // its visual language here so the in-composer chip and the chip-bar
+    // chip read as the same affordance.
+    beautifulMentions: {
+      '@': 'inline-flex items-center mx-0.5 px-1.5 py-0.5 rounded font-medium bg-interactive-accent-subtle text-interactive-accent',
+      '@Focused': 'ring-2 ring-interactive-focus',
+    },
+  },
   nodes: [BeautifulMentionNode],
   onError: (error: Error) => {
     console.error('[LexicalChatComposer]', error);
@@ -154,6 +165,7 @@ function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
         removeMention={props.removeMention}
         onSlashStateChange={props.onSlashStateChange}
         slashCommands={props.slashCommands ?? []}
+        slashCommandContext={props.slashCommandContext}
         onImagePaste={props.onImagePaste}
       />
     </>

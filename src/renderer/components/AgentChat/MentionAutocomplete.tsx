@@ -148,7 +148,7 @@ function MentionResult({
   return (
     <button
       data-active={selected}
-      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}
+      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-interactive-selection' : ''}`}
       onMouseDown={(event) => {
         event.preventDefault();
         onMouseDown();
