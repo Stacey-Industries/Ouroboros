@@ -9,7 +9,11 @@ import { RichTextarea } from 'rich-textarea';
 
 import { hapticImpact } from '../../../web/capacitor';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
+import type { AgentChatMessageRecord, CodexModelOption } from '../../types/electron';
+import { renderHighlights } from './AgentChatComposerHighlights';
 import { getTextareaStyle } from './AgentChatComposerSupport';
+import type { ChatOverrides } from './ChatControlsBar';
+import { LexicalChatComposer } from './lexicalComposer/LexicalChatComposer';
 
 /* ---------- SendButton ---------- */
 
@@ -58,7 +62,7 @@ export function SendButton(props: {
         color: props.canSend ? 'var(--text-semantic-primary)' : 'var(--text-semantic-muted)',
       }}
     >
-      {props.willQueue ? <QueueIcon /> : '\u2191'}
+      {props.willQueue ? <QueueIcon /> : '↑'}
     </button>
   );
 }
@@ -112,9 +116,16 @@ export type ComposerInputProps = {
   /** taskId of the active warm process — enables mid-turn inject button when streaming. */
   activeMidTurnTaskId?: string | null;
   onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
+  // --- Lexical-path only (ignored by the legacy RichTextarea path) ---
+  /** Message history — ArrowUp restore-last-message in LexicalChatComposer. */
+  messages?: AgentChatMessageRecord[];
+  /** Chat overrides — Shift+Tab permission cycle in LexicalChatComposer. */
+  chatOverrides?: ChatOverrides;
+  onChatOverridesChange?: (overrides: ChatOverrides) => void;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  codexModels?: CodexModelOption[];
+  codexAppServerTransport?: boolean;
 };
-
-const ACCENT = { color: '#58a6ff' };
 
 /**
  * Returns true if `part` is a complete mention token (bare or bracketed).
@@ -127,10 +138,6 @@ export function isComposerMentionHighlight(part: string): boolean {
   return /^@\[[^\]]+\]$/.test(part) || /^(?:@|@@)[^\s@]+$/.test(part);
 }
 
-function isHighlightedToken(part: string): boolean {
-  return isComposerMentionHighlight(part) || /^\/\S/.test(part);
-}
-
 /**
  * Splits `value` into alternating non-token / token segments for highlight
  * rendering. Bracketed mentions (`@[…]`) are matched before bare mentions
@@ -139,15 +146,6 @@ function isHighlightedToken(part: string): boolean {
  */
 export function tokenizeComposerHighlights(value: string): string[] {
   return value.split(/((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g);
-}
-
-function renderHighlights(value: string): React.ReactNode {
-  const parts = tokenizeComposerHighlights(value);
-  return parts.map((part, i) => (
-    <span key={i} style={isHighlightedToken(part) ? ACCENT : undefined}>
-      {part}
-    </span>
-  ));
 }
 
 /* ---------- MidTurnInjectButton ---------- */
@@ -167,14 +165,12 @@ function MidTurnInjectButton(props: {
   onInject: (taskId: string, content: string) => Promise<void>;
 }): React.ReactElement {
   const disabled = props.draft.trim() === '';
-
   function handleClick(): void {
     const content = props.draft.trim();
     if (!content) return;
     props.onChange('');
     void props.onInject(props.taskId, content);
   }
-
   return (
     <button
       type="button"
@@ -183,13 +179,7 @@ function MidTurnInjectButton(props: {
       disabled={disabled}
       onClick={handleClick}
       className="absolute flex items-center justify-center rounded-md transition-all duration-100 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-30"
-      style={{
-        top: '6px',
-        right: '38px',
-        width: '28px',
-        height: '28px',
-        color: 'var(--status-warning)',
-      }}
+      style={{ top: '6px', right: '38px', width: '28px', height: '28px', color: 'var(--status-warning)' }}
     >
       <LightningIcon />
     </button>
@@ -212,7 +202,25 @@ function makeTextareaFocusHandlers(breakpoint: string) {
   };
 }
 
-function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
+function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
+  return (
+    <LexicalChatComposer
+      draft={props.draft}
+      onChange={props.handleChange}
+      onSubmit={props.onSubmit}
+      disabled={props.disabled}
+      hasAttachmentButton={Boolean(props.onPickImage)}
+      messages={props.messages}
+      chatOverrides={props.chatOverrides}
+      onChatOverridesChange={props.onChatOverridesChange}
+      defaultProvider={props.defaultProvider}
+      codexModels={props.codexModels}
+      codexAppServerTransport={props.codexAppServerTransport}
+    />
+  );
+}
+
+function LegacyRichTextarea(props: ComposerInputProps): React.ReactElement {
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
   const breakpoint = useViewportBreakpoint();
   const focusHandlers = makeTextareaFocusHandlers(breakpoint);
@@ -236,17 +244,20 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         rows={1}
         autoHeight
         className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-        style={{
-          ...baseStyle,
-          width: '100%',
-          maxHeight: 'calc(40vh)' /* 40vh: expands freely before scrolling */,
-        }}
+        style={{ ...baseStyle, width: '100%', maxHeight: 'calc(40vh)' }}
         {...focusHandlers}
       >
         {renderHighlights}
       </RichTextarea>
     </div>
   );
+}
+
+function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
+  if (import.meta.env.VITE_LEXICAL_COMPOSER === '1') {
+    return <LexicalTextarea {...props} />;
+  }
+  return <LegacyRichTextarea {...props} />;
 }
 
 function PickImageButton({
@@ -281,10 +292,7 @@ function PickImageButton({
 }
 
 function ComposerActionButton(
-  props: ComposerInputProps & {
-    showQueue: boolean;
-    showStop: boolean;
-  },
+  props: ComposerInputProps & { showQueue: boolean; showStop: boolean },
 ): React.ReactElement {
   if (props.showStop) return <StopButton onClick={() => void props.onStop?.()} />;
   return (

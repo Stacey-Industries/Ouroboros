@@ -20,3 +20,22 @@ expect.extend({ toHaveNoViolations });
 vi.mock('electron-log/renderer', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), verbose: vi.fn() },
 }));
+
+// lexical-beautiful-mentions calls window.matchMedia at module load time.
+// jsdom does not implement matchMedia — stub it globally so any test file
+// that transitively imports Lexical packages does not crash the worker.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (_query: string) => ({
+      matches: false,
+      media: _query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+}
