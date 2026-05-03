@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.2] - 2026-05-02
+
+### Performance
+- **Chat composer hot-path fixes.** Live session investigation surfaced a 2-3 second renderer freeze when backspacing through inserted `@` mentions in the chat-only composer. Four compounding issues fixed:
+  - `useProjectFileIndex` now skips `.claude/` (treated like `.git`); empty-`@` dropdown no longer flooded by command/rule/setting/worktree files.
+  - `MentionAutocompleteSupport` replaces Fuse.js fuzzy search (300-450ms per call on a 5K-file index) with ranked substring matching (basename-prefix > basename-mid > dirname). Per-call cost ~3-5ms. 120ms debounce added on the query as defense-in-depth.
+  - `useAgentChatThreadView` selector added (excludes `draft` + `canSend`); `AgentChatConversation`, `ConversationDrawer`, `ConversationBodyWithThread` switched to it. Previous selector caused full message-list reconciliation on every keystroke.
+  - `mentionLabels` and `pinnedFileNames` memoized at the producer (`AgentChatComposer`) and consumer (`ComposerContextPreview`) boundaries; `useContextPreview` no longer recomputes 30+ times per keystroke. `buildChatOnlyContextPreviewProps` refactored to options-object signature.
+
+### Fixed
+- **Wave 79 transport-field cleanup completed.** Wave 79 removed `internalMcp.transport` from the config schema but missed `McpSpawnCostRecord.transport` in the downstream telemetry record type, causing a typecheck failure on master HEAD. Field removed from the type, the drain handler payload, and the test fixture.
+
+### Chore
+- ESLint import-sort and prettier autofix applied to nine pre-existing master-broken test files (`src/main/codebaseGraph/`, `src/main/ipc-handlers/`).
+
+### Docs
+- Wave 81 plan added: `roadmap/wave-81-composer-engine-migration/`. Migrates the chat composer from `rich-textarea` to Lexical with `lexical-beautiful-mentions` to address residual stutter not eliminated by this release's hot-path fixes (root cause: `rich-textarea`'s overlay-render-everything pattern).
+
 ## [2.11.1] - 2026-05-02
 
 ### Fixed
