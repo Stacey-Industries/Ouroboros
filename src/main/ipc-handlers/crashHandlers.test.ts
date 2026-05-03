@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
-  app: { getPath: vi.fn().mockReturnValue('/tmp/userData'), getVersion: vi.fn().mockReturnValue('0.0.0') },
+  app: {
+    getPath: vi.fn().mockReturnValue('/tmp/userData'),
+    getVersion: vi.fn().mockReturnValue('0.0.0'),
+  },
   ipcMain: { handle: vi.fn() },
   shell: { openPath: vi.fn().mockResolvedValue('') },
 }));
@@ -30,6 +33,7 @@ vi.mock('../logger', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerCrashLogHandlers } from './crashHandlers';
 
 describe('registerCrashLogHandlers', () => {

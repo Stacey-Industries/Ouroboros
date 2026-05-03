@@ -28,6 +28,7 @@ vi.mock('../codexRateLimits', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerUsageHandlers } from './usageHandlers';
 
 describe('registerUsageHandlers', () => {

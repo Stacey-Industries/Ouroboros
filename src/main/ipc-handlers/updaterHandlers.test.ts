@@ -15,6 +15,7 @@ vi.mock('../updater', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerUpdaterHandlers } from './updaterHandlers';
 
 describe('registerUpdaterHandlers', () => {

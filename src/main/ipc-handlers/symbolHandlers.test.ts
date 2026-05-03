@@ -17,6 +17,7 @@ vi.mock('./pathSecurity', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerSymbolHandlers } from './symbolHandlers';
 
 describe('registerSymbolHandlers', () => {

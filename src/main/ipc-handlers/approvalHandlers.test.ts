@@ -21,6 +21,7 @@ vi.mock('../approvalMemory', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerApprovalHandlers } from './approvalHandlers';
 
 describe('registerApprovalHandlers', () => {

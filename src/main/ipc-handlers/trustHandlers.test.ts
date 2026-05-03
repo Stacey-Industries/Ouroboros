@@ -12,6 +12,7 @@ vi.mock('../workspaceTrust', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerTrustHandlers } from './trustHandlers';
 
 describe('registerTrustHandlers', () => {

@@ -8,9 +8,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CypherEngine } from './cypherEngine';
-import { GraphDatabase } from './graphDatabase';
 import { buildOptionalHopJoin, parseMultiPattern } from './cypherEngineNewFeatures';
 import type { MatchPattern } from './cypherEngineSupport';
+import { GraphDatabase } from './graphDatabase';
 
 // ─── buildOptionalHopJoin unit tests ─────────────────────────────────────────
 
@@ -76,11 +76,61 @@ function seed(db: GraphDatabase): void {
     edge_count: 3,
   });
   db.insertNodes([
-    { id: 'fn1', project: PROJECT, label: 'Function', name: 'alpha', qualified_name: `${PROJECT}.alpha`, file_path: 'a.ts', start_line: 1, end_line: 5, props: {} },
-    { id: 'fn2', project: PROJECT, label: 'Function', name: 'beta', qualified_name: `${PROJECT}.beta`, file_path: 'a.ts', start_line: 6, end_line: 10, props: {} },
-    { id: 'fn3', project: PROJECT, label: 'Function', name: 'gamma', qualified_name: `${PROJECT}.gamma`, file_path: 'b.ts', start_line: 1, end_line: 5, props: {} },
-    { id: 'cls1', project: PROJECT, label: 'Class', name: 'Widget', qualified_name: `${PROJECT}.Widget`, file_path: 'c.ts', start_line: 1, end_line: 20, props: {} },
-    { id: 'cls2', project: PROJECT, label: 'Class', name: 'Gadget', qualified_name: `${PROJECT}.Gadget`, file_path: 'c.ts', start_line: 21, end_line: 40, props: {} },
+    {
+      id: 'fn1',
+      project: PROJECT,
+      label: 'Function',
+      name: 'alpha',
+      qualified_name: `${PROJECT}.alpha`,
+      file_path: 'a.ts',
+      start_line: 1,
+      end_line: 5,
+      props: {},
+    },
+    {
+      id: 'fn2',
+      project: PROJECT,
+      label: 'Function',
+      name: 'beta',
+      qualified_name: `${PROJECT}.beta`,
+      file_path: 'a.ts',
+      start_line: 6,
+      end_line: 10,
+      props: {},
+    },
+    {
+      id: 'fn3',
+      project: PROJECT,
+      label: 'Function',
+      name: 'gamma',
+      qualified_name: `${PROJECT}.gamma`,
+      file_path: 'b.ts',
+      start_line: 1,
+      end_line: 5,
+      props: {},
+    },
+    {
+      id: 'cls1',
+      project: PROJECT,
+      label: 'Class',
+      name: 'Widget',
+      qualified_name: `${PROJECT}.Widget`,
+      file_path: 'c.ts',
+      start_line: 1,
+      end_line: 20,
+      props: {},
+    },
+    {
+      id: 'cls2',
+      project: PROJECT,
+      label: 'Class',
+      name: 'Gadget',
+      qualified_name: `${PROJECT}.Gadget`,
+      file_path: 'c.ts',
+      start_line: 21,
+      end_line: 40,
+      props: {},
+    },
   ]);
   db.insertEdges([
     { project: PROJECT, source_id: 'fn1', target_id: 'cls1', type: 'CALLS', props: {} },
@@ -101,9 +151,7 @@ describe('CypherEngine — UNWIND', () => {
   afterEach(() => db.close());
 
   it('UNWIND literal list returns matching nodes', () => {
-    const result = engine.execute(
-      "UNWIND ['alpha', 'beta'] AS name MATCH (n) RETURN n.name",
-    );
+    const result = engine.execute("UNWIND ['alpha', 'beta'] AS name MATCH (n) RETURN n.name");
     expect(result.rows.length).toBe(2);
     const names = result.rows.map((r) => r.n_name);
     expect(new Set(names)).toEqual(new Set(['alpha', 'beta']));
@@ -118,9 +166,7 @@ describe('CypherEngine — UNWIND', () => {
   });
 
   it('UNWIND with no matches returns empty rows', () => {
-    const result = engine.execute(
-      "UNWIND ['nonexistent'] AS name MATCH (n) RETURN n.name",
-    );
+    const result = engine.execute("UNWIND ['nonexistent'] AS name MATCH (n) RETURN n.name");
     expect(result.rows.length).toBe(0);
   });
 
@@ -140,9 +186,9 @@ describe('CypherEngine — UNWIND', () => {
   });
 
   it('UNWIND invalid syntax throws descriptive error', () => {
-    expect(() =>
-      engine.execute("UNWIND 'alpha' AS name MATCH (n) RETURN n.name"),
-    ).toThrow(/Unsupported UNWIND syntax/);
+    expect(() => engine.execute("UNWIND 'alpha' AS name MATCH (n) RETURN n.name")).toThrow(
+      /Unsupported UNWIND syntax/,
+    );
   });
 });
 
@@ -178,9 +224,9 @@ describe('CypherEngine — OPTIONAL MATCH', () => {
   });
 
   it('WITH error still fires before OPTIONAL MATCH is attempted', () => {
-    expect(() =>
-      engine.execute('WITH 1 AS x MATCH (n) RETURN n.name'),
-    ).toThrow(/Cypher feature not supported.*WITH/);
+    expect(() => engine.execute('WITH 1 AS x MATCH (n) RETURN n.name')).toThrow(
+      /Cypher feature not supported.*WITH/,
+    );
   });
 });
 
@@ -214,11 +260,47 @@ describe('parseMultiPattern', () => {
 const MULTI_PROJECT = 'multi-pattern-test';
 
 function seedMulti(db: GraphDatabase): void {
-  db.upsertProject({ name: MULTI_PROJECT, root_path: '/tmp', indexed_at: 1000, node_count: 3, edge_count: 2 });
+  db.upsertProject({
+    name: MULTI_PROJECT,
+    root_path: '/tmp',
+    indexed_at: 1000,
+    node_count: 3,
+    edge_count: 2,
+  });
   db.insertNodes([
-    { id: 'ma', project: MULTI_PROJECT, label: 'Function', name: 'caller', qualified_name: `${MULTI_PROJECT}.caller`, file_path: 'a.ts', start_line: 1, end_line: 5, props: {} },
-    { id: 'mb', project: MULTI_PROJECT, label: 'Class', name: 'Svc', qualified_name: `${MULTI_PROJECT}.Svc`, file_path: 'b.ts', start_line: 1, end_line: 10, props: {} },
-    { id: 'mc', project: MULTI_PROJECT, label: 'Function', name: 'handler', qualified_name: `${MULTI_PROJECT}.handler`, file_path: 'c.ts', start_line: 1, end_line: 5, props: {} },
+    {
+      id: 'ma',
+      project: MULTI_PROJECT,
+      label: 'Function',
+      name: 'caller',
+      qualified_name: `${MULTI_PROJECT}.caller`,
+      file_path: 'a.ts',
+      start_line: 1,
+      end_line: 5,
+      props: {},
+    },
+    {
+      id: 'mb',
+      project: MULTI_PROJECT,
+      label: 'Class',
+      name: 'Svc',
+      qualified_name: `${MULTI_PROJECT}.Svc`,
+      file_path: 'b.ts',
+      start_line: 1,
+      end_line: 10,
+      props: {},
+    },
+    {
+      id: 'mc',
+      project: MULTI_PROJECT,
+      label: 'Function',
+      name: 'handler',
+      qualified_name: `${MULTI_PROJECT}.handler`,
+      file_path: 'c.ts',
+      start_line: 1,
+      end_line: 5,
+      props: {},
+    },
   ]);
   db.insertEdges([
     { project: MULTI_PROJECT, source_id: 'ma', target_id: 'mb', type: 'CALLS', props: {} },
@@ -230,11 +312,17 @@ describe('CypherEngine — multi-pattern MATCH', () => {
   let db: GraphDatabase;
   let engine: CypherEngine;
 
-  beforeEach(() => { db = new GraphDatabase(':memory:'); seedMulti(db); engine = new CypherEngine(db, MULTI_PROJECT); });
+  beforeEach(() => {
+    db = new GraphDatabase(':memory:');
+    seedMulti(db);
+    engine = new CypherEngine(db, MULTI_PROJECT);
+  });
   afterEach(() => db.close());
 
   it('two-hop chain returns the linked triple', () => {
-    const r = engine.execute('MATCH (a)-[:CALLS]->(b), (b)-[:DEFINES]->(c) RETURN a.name, b.name, c.name');
+    const r = engine.execute(
+      'MATCH (a)-[:CALLS]->(b), (b)-[:DEFINES]->(c) RETURN a.name, b.name, c.name',
+    );
     expect(r.total).toBe(1);
     expect(r.rows[0].a_name).toBe('caller');
     expect(r.rows[0].b_name).toBe('Svc');
@@ -247,7 +335,9 @@ describe('CypherEngine — multi-pattern MATCH', () => {
   });
 
   it('label filters narrow results correctly', () => {
-    const r = engine.execute('MATCH (a:Function)-[:CALLS]->(b:Class), (b)-[:DEFINES]->(c:Function) RETURN c.name');
+    const r = engine.execute(
+      'MATCH (a:Function)-[:CALLS]->(b:Class), (b)-[:DEFINES]->(c:Function) RETURN c.name',
+    );
     expect(r.total).toBe(1);
     expect(r.rows[0].c_name).toBe('handler');
   });

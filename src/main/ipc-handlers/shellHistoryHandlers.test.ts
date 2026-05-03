@@ -13,6 +13,7 @@ vi.mock('./miscSymbolSearch', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerShellHistoryHandlers } from './shellHistoryHandlers';
 
 describe('registerShellHistoryHandlers', () => {

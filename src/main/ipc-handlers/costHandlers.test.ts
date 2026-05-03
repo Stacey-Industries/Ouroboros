@@ -15,6 +15,7 @@ vi.mock('../costHistory', () => ({
 }));
 
 import { ipcMain } from 'electron';
+
 import { registerCostHandlers } from './costHandlers';
 
 describe('registerCostHandlers', () => {
