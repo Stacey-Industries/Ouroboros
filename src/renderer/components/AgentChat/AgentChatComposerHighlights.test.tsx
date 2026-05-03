@@ -55,9 +55,7 @@ describe('renderHighlights', () => {
   });
 
   it('renders mixed plain + mention + slash correctly', () => {
-    const { container } = render(
-      <>{renderHighlights('send @src/foo.ts /clear now')}</>,
-    );
+    const { container } = render(<>{renderHighlights('send @src/foo.ts /clear now')}</>);
     const highlighted = Array.from(container.querySelectorAll('span')).filter(
       (s) => s.style.color !== '',
     );

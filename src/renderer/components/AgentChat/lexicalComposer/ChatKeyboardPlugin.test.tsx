@@ -150,10 +150,7 @@ describe('ChatKeyboardPlugin', () => {
     render(<Harness onRestoreLastMessage={onRestoreLastMessage} editorRef={editorRef} />);
     await waitFor(() => expect(editorRef.current).not.toBeNull());
 
-    editorRef.current!.dispatchCommand(
-      KEY_ARROW_UP_COMMAND,
-      makeKeyEvent({ key: 'ArrowUp' }),
-    );
+    editorRef.current!.dispatchCommand(KEY_ARROW_UP_COMMAND, makeKeyEvent({ key: 'ArrowUp' }));
     expect(onRestoreLastMessage).toHaveBeenCalledOnce();
   });
 

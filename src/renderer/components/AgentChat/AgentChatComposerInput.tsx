@@ -2,6 +2,7 @@
  * AgentChatComposerInput.tsx — ComposerTextarea + ComposerInput components.
  *
  * Extracted from AgentChatComposerParts.tsx to stay under the 300-line limit.
+ * Types and pure-logic helpers live in AgentChatComposerTypes.ts.
  */
 
 import React from 'react';
@@ -9,11 +10,17 @@ import { RichTextarea } from 'rich-textarea';
 
 import { hapticImpact } from '../../../web/capacitor';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
-import type { AgentChatMessageRecord, CodexModelOption } from '../../types/electron';
 import { renderHighlights } from './AgentChatComposerHighlights';
 import { getTextareaStyle } from './AgentChatComposerSupport';
-import type { ChatOverrides } from './ChatControlsBar';
+import {
+  type ComposerInputProps,
+  isComposerMentionHighlight,
+  tokenizeComposerHighlights,
+} from './AgentChatComposerTypes';
 import { LexicalChatComposer } from './lexicalComposer/LexicalChatComposer';
+
+export type { ComposerInputProps };
+export { isComposerMentionHighlight, tokenizeComposerHighlights };
 
 /* ---------- SendButton ---------- */
 
@@ -91,63 +98,6 @@ function StopButton(props: { onClick: () => void }): React.ReactElement {
   );
 }
 
-/* ---------- ComposerInput ---------- */
-
-export type ComposerInputProps = {
-  canSend: boolean;
-  disabled: boolean;
-  draft: string;
-  handleChange: (value: string) => void;
-  handleDragLeave: () => void;
-  handleDragOver: (event: React.DragEvent) => void;
-  handleDrop: (event: React.DragEvent) => void;
-  handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  handlePaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  isSending: boolean;
-  onPickImage?: () => Promise<void>;
-  onStop?: () => Promise<void>;
-  onSubmit: () => Promise<void>;
-  threadIsBusy: boolean;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  useMentionSystem: boolean;
-  onCloseAutocomplete?: () => void;
-  onCloseMentionAutocomplete?: () => void;
-  onCloseSlashMenu?: () => void;
-  /** taskId of the active warm process — enables mid-turn inject button when streaming. */
-  activeMidTurnTaskId?: string | null;
-  onInjectMidTurn?: (taskId: string, content: string) => Promise<void>;
-  // --- Lexical-path only (ignored by the legacy RichTextarea path) ---
-  /** Message history — ArrowUp restore-last-message in LexicalChatComposer. */
-  messages?: AgentChatMessageRecord[];
-  /** Chat overrides — Shift+Tab permission cycle in LexicalChatComposer. */
-  chatOverrides?: ChatOverrides;
-  onChatOverridesChange?: (overrides: ChatOverrides) => void;
-  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  codexModels?: CodexModelOption[];
-  codexAppServerTransport?: boolean;
-};
-
-/**
- * Returns true if `part` is a complete mention token (bare or bracketed).
- *
- * Bracketed form: `@[…]` — content may include spaces; matched when the part
- * starts with `@[` and ends with `]`.
- * Bare form: `@` followed by one or more non-whitespace, non-`@` chars.
- */
-export function isComposerMentionHighlight(part: string): boolean {
-  return /^@\[[^\]]+\]$/.test(part) || /^(?:@|@@)[^\s@]+$/.test(part);
-}
-
-/**
- * Splits `value` into alternating non-token / token segments for highlight
- * rendering. Bracketed mentions (`@[…]`) are matched before bare mentions
- * (`@\S+`) so that `@[foo bar]` is captured as a single token rather than
- * `@[foo` truncated at the space.
- */
-export function tokenizeComposerHighlights(value: string): string[] {
-  return value.split(/((?<=^|\s)@\[[^\]]+\]|(?<=^|\s)(?:@|@@)[^\s@]+|(?<=^|\s)\/\S+)/g);
-}
-
 /* ---------- MidTurnInjectButton ---------- */
 
 function LightningIcon(): React.ReactElement {
@@ -179,7 +129,13 @@ function MidTurnInjectButton(props: {
       disabled={disabled}
       onClick={handleClick}
       className="absolute flex items-center justify-center rounded-md transition-all duration-100 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-30"
-      style={{ top: '6px', right: '38px', width: '28px', height: '28px', color: 'var(--status-warning)' }}
+      style={{
+        top: '6px',
+        right: '38px',
+        width: '28px',
+        height: '28px',
+        color: 'var(--status-warning)',
+      }}
     >
       <LightningIcon />
     </button>
@@ -216,6 +172,11 @@ function LexicalTextarea(props: ComposerInputProps): React.ReactElement {
       defaultProvider={props.defaultProvider}
       codexModels={props.codexModels}
       codexAppServerTransport={props.codexAppServerTransport}
+      allFiles={props.allFiles}
+      mentions={props.mentions}
+      symbolResults={props.symbolResults}
+      addMention={props.addMention}
+      removeMention={props.removeMention}
     />
   );
 }

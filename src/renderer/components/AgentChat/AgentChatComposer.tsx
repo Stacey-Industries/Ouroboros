@@ -246,6 +246,10 @@ function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): R
       onCloseMentionAutocomplete={state.closeMentionAutocomplete}
       activeMidTurnTaskId={cp.activeMidTurnTaskId}
       onInjectMidTurn={cp.onInjectMidTurn}
+      allFiles={cp.allFiles}
+      mentions={cp.mentions}
+      addMention={cp.onAddMention}
+      removeMention={cp.onRemoveMention}
     />
   );
 }

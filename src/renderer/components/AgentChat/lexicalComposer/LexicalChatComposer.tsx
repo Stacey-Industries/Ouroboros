@@ -2,8 +2,11 @@
  * LexicalChatComposer.tsx — Lexical-based plain-text chat composer.
  *
  * Phase B: shell behind VITE_LEXICAL_COMPOSER flag. Provides full keyboard
- * parity with the rich-textarea path. No mention plugin yet (Phase C).
- * BeautifulMentionNode is registered now to prevent Phase C runtime crashes.
+ * parity with the rich-textarea path.
+ *
+ * Phase C: BeautifulMentionsPlugin wired for @ trigger only. LexicalMentionBridge
+ * syncs chip additions/removals to the mentions[] zustand store via props
+ * (bridging option a — explicit prop threading, no context coupling).
  */
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -12,20 +15,24 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
+import { $createParagraphNode, $createTextNode, $getRoot, type EditorState } from 'lexical';
 import {
-  $createParagraphNode,
-  $createTextNode,
-  $getRoot,
-  type EditorState,
-} from 'lexical';
-import { BeautifulMentionNode } from 'lexical-beautiful-mentions';
-import React, { useCallback, useEffect, useRef } from 'react';
+  BeautifulMentionNode,
+  type BeautifulMentionsItem,
+  BeautifulMentionsPlugin,
+} from 'lexical-beautiful-mentions';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { AgentChatMessageRecord, CodexModelOption } from '../../../types/electron';
+import type { FileEntry } from '../../FileTree/FileListItem';
 import { findLastUserMessageContent } from '../AgentChatComposerParts';
 import type { ChatOverrides } from '../ChatControlsBar';
 import { cyclePermissionMode, resolveChatControlProvider } from '../ChatControlsBar';
+import type { MentionItem, SymbolGraphNode } from '../MentionAutocomplete';
 import { ChatKeyboardPlugin } from './ChatKeyboardPlugin';
+import { LexicalMentionBridge } from './LexicalMentionBridge';
+import { LexicalMentionMenuItem } from './LexicalMentionMenuItem';
+import { buildMentionSearchFn } from './lexicalMentionSearch';
 
 /* ---------- prop types ---------- */
 
@@ -42,6 +49,16 @@ export type LexicalChatComposerProps = {
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   codexModels?: CodexModelOption[];
   codexAppServerTransport?: boolean;
+  /** All indexed files for mention search (Phase C). */
+  allFiles?: FileEntry[];
+  /** Currently selected mentions — excluded from search results (Phase C). */
+  mentions?: MentionItem[];
+  /** Symbol graph results for symbol-type mention search (Phase C). */
+  symbolResults?: SymbolGraphNode[];
+  /** Called when a mention chip is inserted into the editor (Phase C). */
+  addMention?: (mention: MentionItem) => void;
+  /** Called when a mention chip is removed from the editor (Phase C). */
+  removeMention?: (key: string) => void;
 };
 
 /* ---------- initial config (stable reference, created once) ---------- */
@@ -165,6 +182,24 @@ function useCyclePermissionCallback(args: CycleArgs): () => void {
   }, [chatOverrides, onChatOverridesChange, defaultProvider, codexModels, codexAppServerTransport]);
 }
 
+/* ---------- mention search hook ---------- */
+
+function useMentionSearch(
+  allFiles: FileEntry[] | undefined,
+  mentions: MentionItem[] | undefined,
+  symbolResults: SymbolGraphNode[] | undefined,
+): (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]> {
+  return useMemo(
+    () =>
+      buildMentionSearchFn({
+        allFiles: allFiles ?? [],
+        selectedMentions: mentions ?? [],
+        symbolResults,
+      }),
+    [allFiles, mentions, symbolResults],
+  );
+}
+
 /* ---------- editable surface ---------- */
 
 type EditableProps = { placeholderText: string; disabled: boolean };
@@ -196,6 +231,47 @@ function ComposerEditable({ placeholderText, disabled }: EditableProps): React.R
   );
 }
 
+/* ---------- plugin bundle ---------- */
+
+type PluginsProps = {
+  draft: string;
+  disabled: boolean;
+  handleChange: (editorState: EditorState) => void;
+  onSend: () => void;
+  onEscape: () => void;
+  onRestoreLastMessage: () => void;
+  onCyclePermissionMode: () => void;
+  onSearch: (trigger: string, query?: string | null) => Promise<BeautifulMentionsItem[]>;
+  addMention?: (mention: MentionItem) => void;
+  removeMention?: (key: string) => void;
+};
+
+function ComposerPlugins(p: PluginsProps): React.ReactElement {
+  return (
+    <>
+      <HistoryPlugin />
+      <OnChangePlugin onChange={p.handleChange} ignoreSelectionChange />
+      <DraftSyncPlugin draft={p.draft} />
+      <DisabledPlugin disabled={p.disabled} />
+      <ChatKeyboardPlugin
+        onSend={p.onSend}
+        onEscape={p.onEscape}
+        onRestoreLastMessage={p.onRestoreLastMessage}
+        onCyclePermissionMode={p.onCyclePermissionMode}
+      />
+      <BeautifulMentionsPlugin
+        triggers={['@']}
+        onSearch={p.onSearch}
+        menuItemComponent={LexicalMentionMenuItem}
+        menuItemLimit={25}
+      />
+      {p.addMention && p.removeMention && (
+        <LexicalMentionBridge addMention={p.addMention} removeMention={p.removeMention} />
+      )}
+    </>
+  );
+}
+
 /* ---------- inner composer (needs LexicalComposer context) ---------- */
 
 function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
@@ -207,6 +283,7 @@ function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
   const onEscape = useEscapeCallback(editor, onChange);
   const onRestoreLastMessage = useRestoreCallback(editor, props.messages, onChange);
   const onCyclePermissionMode = useCyclePermissionCallback(props);
+  const onSearch = useMentionSearch(props.allFiles, props.mentions, props.symbolResults);
 
   const handleChange = useCallback(
     (editorState: EditorState) => {
@@ -218,15 +295,17 @@ function InnerComposer(props: LexicalChatComposerProps): React.ReactElement {
   return (
     <>
       <ComposerEditable placeholderText={placeholderText} disabled={disabled} />
-      <HistoryPlugin />
-      <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
-      <DraftSyncPlugin draft={draft} />
-      <DisabledPlugin disabled={disabled} />
-      <ChatKeyboardPlugin
+      <ComposerPlugins
+        draft={draft}
+        disabled={disabled}
+        handleChange={handleChange}
         onSend={onSend}
         onEscape={onEscape}
         onRestoreLastMessage={onRestoreLastMessage}
         onCyclePermissionMode={onCyclePermissionMode}
+        onSearch={onSearch}
+        addMention={props.addMention}
+        removeMention={props.removeMention}
       />
     </>
   );
