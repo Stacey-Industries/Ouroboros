@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.1] - 2026-05-02
+
+### Fixed
+- **Upgrade-boot config validation.** Wave 79 removed deprecated config keys from the schema (`additionalProperties: false`) but did not migrate stored configs, so users upgrading from 2.10.x crashed at startup with `Config schema violation: routerSettings/codemode must NOT have additional properties`. `runConfigPreflight()` now strips the removed keys (`windowSessions`, `routerSettings.llmJudgeSampleRate`, `codemode.routeInternalMcp`, `internalMcp.transport`) idempotently before electron-store validates.
+
 ## [2.11.0] - 2026-05-02
 
 Wave-burn batch — nine waves shipped in parallel from `roadmap/future/`.

@@ -12,6 +12,9 @@ import path from 'path';
  * Currently handles:
  * - `profiles` written as a non-array (observed: object keyed by OS username
  *   containing a stale config snapshot from a buggy code path). Reset to [].
+ * - Deprecated keys removed by upstream waves whose schemas use
+ *   `additionalProperties: false` (an upgraded user's stored config still has
+ *   them, so electron-store rejects the file). Each strip is idempotent.
  */
 export function runConfigPreflight(): void {
   try {
@@ -49,7 +52,42 @@ function sanitize(data: Record<string, unknown>): boolean {
     data.profiles = [];
     dirty = true;
   }
+  if (stripDeprecatedKeys(data)) {
+    dirty = true;
+  }
   return dirty;
+}
+
+/**
+ * Remove keys that were dropped from the schema in prior waves but may still
+ * exist in upgraded users' stored configs. Schemas use
+ * `additionalProperties: false`, so a stale key blocks startup.
+ */
+function stripDeprecatedKeys(data: Record<string, unknown>): boolean {
+  let dirty = false;
+  // Wave 79 — top-level windowSessions removed (migration to sessionsData expired).
+  if ('windowSessions' in data) {
+    delete data.windowSessions;
+    dirty = true;
+  }
+  // 2026-05-01 inline cleanup — routerSettings.llmJudgeSampleRate removed.
+  if (deleteNestedKey(data, 'routerSettings', 'llmJudgeSampleRate')) dirty = true;
+  // Wave 79 — codemode.routeInternalMcp removed.
+  if (deleteNestedKey(data, 'codemode', 'routeInternalMcp')) dirty = true;
+  // Wave 79 — internalMcp.transport removed.
+  if (deleteNestedKey(data, 'internalMcp', 'transport')) dirty = true;
+  return dirty;
+}
+
+function deleteNestedKey(
+  data: Record<string, unknown>,
+  parent: string,
+  child: string,
+): boolean {
+  const value = Reflect.get(data, parent);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (!Reflect.has(value, child)) return false;
+  return Reflect.deleteProperty(value, child);
 }
 
 /**

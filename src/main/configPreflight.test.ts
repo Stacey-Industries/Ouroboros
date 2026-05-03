@@ -105,4 +105,68 @@ describe('runConfigPreflight', () => {
     const after = readConfig(file);
     expect('profiles' in after).toBe(false);
   });
+
+  it('strips wave-79 windowSessions top-level key', async () => {
+    const dir = makeTmpUserData();
+    const file = writeConfig(dir, {
+      activeTheme: 'modern',
+      windowSessions: [{ id: 'old', bounds: {} }],
+    });
+    const { runConfigPreflight } = await loadModule(dir);
+    runConfigPreflight();
+    const after = readConfig(file);
+    expect('windowSessions' in after).toBe(false);
+    expect(after.activeTheme).toBe('modern');
+  });
+
+  it('strips routerSettings.llmJudgeSampleRate while leaving other router keys', async () => {
+    const dir = makeTmpUserData();
+    const file = writeConfig(dir, {
+      routerSettings: { llmJudgeSampleRate: 0.3, autoRetrainEnabled: true },
+    });
+    const { runConfigPreflight } = await loadModule(dir);
+    runConfigPreflight();
+    const after = readConfig(file);
+    const router = after.routerSettings as Record<string, unknown>;
+    expect('llmJudgeSampleRate' in router).toBe(false);
+    expect(router.autoRetrainEnabled).toBe(true);
+  });
+
+  it('strips wave-79 codemode.routeInternalMcp while leaving other codemode keys', async () => {
+    const dir = makeTmpUserData();
+    const file = writeConfig(dir, {
+      codemode: { routeInternalMcp: true, enabled: true },
+    });
+    const { runConfigPreflight } = await loadModule(dir);
+    runConfigPreflight();
+    const after = readConfig(file);
+    const codemode = after.codemode as Record<string, unknown>;
+    expect('routeInternalMcp' in codemode).toBe(false);
+    expect(codemode.enabled).toBe(true);
+  });
+
+  it('strips wave-79 internalMcp.transport while leaving other internalMcp keys', async () => {
+    const dir = makeTmpUserData();
+    const file = writeConfig(dir, {
+      internalMcp: { transport: 'sse', enabled: true },
+    });
+    const { runConfigPreflight } = await loadModule(dir);
+    runConfigPreflight();
+    const after = readConfig(file);
+    const internalMcp = after.internalMcp as Record<string, unknown>;
+    expect('transport' in internalMcp).toBe(false);
+    expect(internalMcp.enabled).toBe(true);
+  });
+
+  it('is idempotent — running twice on a stripped config does not rewrite', async () => {
+    const dir = makeTmpUserData();
+    const file = writeConfig(dir, {
+      codemode: { routeInternalMcp: true, enabled: true },
+    });
+    const { runConfigPreflight } = await loadModule(dir);
+    runConfigPreflight();
+    const mtimeAfterFirst = fs.statSync(file).mtimeMs;
+    runConfigPreflight();
+    expect(fs.statSync(file).mtimeMs).toBe(mtimeAfterFirst);
+  });
 });
