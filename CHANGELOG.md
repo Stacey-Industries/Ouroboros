@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-05-03
+
+### Changed
+- **Composer engine: rich-textarea → Lexical (Wave 81).** The chat composer now uses Lexical (`lexical` + `@lexical/react` + `lexical-beautiful-mentions`) instead of `rich-textarea`'s overlay model. Backspacing through `@` mentions no longer triggers the 2-3 second renderer freeze that motivated the wave — Lexical's immutable-node reconciliation only re-renders the affected text node per keystroke instead of re-tokenizing and re-rendering all spans. The `@`-dropdown is now driven by `BeautifulMentionsPlugin`'s `LexicalMentionMenuItem` (positioned above the cursor via a custom `menuComponent`); `/` slash commands still use the existing `SlashCommandMenu`, driven by a small custom `SlashCommandPlugin` that watches editor state. Backspace into a chip uses `showMentionsOnDelete={true}` for deterministic deletion — first backspace replaces the chip with the trigger char (`@`) and re-opens the menu, second backspace removes the `@` entirely. Bundle delta: +115 KB gz versus the pre-wave baseline.
+- **Smoke-time fixes shipped with the cutover.** Backspace-on-chip now syncs to the chip-bar via a mutation listener + reconciler in `LexicalMentionBridge`. `useMentionSearch` no longer rebuilds the file index on every mention add/remove (residual stutter eliminated). Slash-command Enter selection now plumbs `slashCommandContext` + `onAddMention`, fixing the silent no-op on `/spec`/`/clear`/`/diff` etc. via Enter (mouse-click already worked). Selecting `/spec` with an empty draft no longer toasts "invalid feature name". Selected-item highlight in the slash + `@` menus changed from `bg-surface-overlay` (zero contrast against the menu container) to `bg-interactive-selection`. In-composer chip styling now visible via `theme.beautifulMentions['@']`. `LexicalMentionMenuItem` strips library-spread `option.data` props before forwarding to the `<li>` to silence React unknown-DOM-attribute warnings.
+
+### Removed
+- `rich-textarea` dependency. `LegacyRichTextarea` branch in `AgentChatComposerInput.tsx`. `AgentChatComposerHighlights.tsx` (overlay helper for the legacy textarea path) and its test. Dead helpers `tokenizeComposerHighlights` / `isComposerMentionHighlight` (`AgentChatComposerTypes.ts`) and `getTextareaStyle` (`AgentChatComposerSupport.ts`) along with their dedicated test files (`AgentChatComposerTypes.test.ts`, `AgentChatComposerMentions.test.ts`).
+
+### Added
+- **14 scoped vitest scripts + parallel `test:all` runner.** `npm test` runs the full suite (~5 min wall-clock) which consistently exceeded agent timeouts. The new `test:main` / `test:renderer` / `test:agentchat` / `test:lexical` / `test:layout` / `test:codebasegraph` / `test:orchestration` / `test:ipc` / `test:hooks` / `test:preload` / `test:web` / `test:shared` / `test:tools` / `test:filetree` scripts each finish in 30-120s. `npm run test:all` runs the full suite as 4 parallel vitest shards via `scripts/test-all-parallel.mjs` (~344s vs serial ~480s). CLAUDE.md documents the routing table for future agent runs.
+
+### Documentation
+- Wave 81 Phase A audit (`roadmap/wave-81-composer-engine-migration/phase-a-audit.md`) committed.
+- Six gotcha entries appended to `src/renderer/components/AgentChat/CLAUDE.md` documenting the load-bearing Phase F decisions.
+- `/spec featureName` Enter-send flow filed as a follow-up in `roadmap/follow-ups/follow-ups.md` — pre-existing structural break (the slash menu closes on whitespace, so the IDE-side `onSpec` never fires when the user types arguments after the command name). Fix path: add a send-time interceptor mirroring `useResearchIntercept`.
+
 ## [2.11.2] - 2026-05-02
 
 ### Performance
