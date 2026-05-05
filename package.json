@@ -64,6 +64,7 @@
     "cap:build:android:release": "node ./tools/build-android-release.js",
     "cap:build:android:debug": "npm run build:web && cap sync android",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
+    "repro": "node scripts/repro-electron.mjs",
     "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty && node tools/build-changelog.js"
   },
   "dependencies": {

@@ -1,4 +1,5 @@
 import eslint from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
@@ -98,6 +99,37 @@ export default tseslint.config(
   // ── Relaxed rules for test files ─────────────────────────────────
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    rules: {
+      'max-lines-per-function': 'off',
+      'max-lines': 'off',
+    },
+  },
+
+  // ── Node.js script files (scripts/*.mjs) — Node globals + complexity ──
+  {
+    files: ['scripts/**/*.mjs'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+    },
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      'no-undef': 'off', // Node globals handled via languageOptions.globals
+      'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', 10],
+      'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 3],
+      'max-params': ['error', 4],
+      'no-console': 'off', // Scripts intentionally use console for user feedback
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+    },
+  },
+
+  // ── Relaxed rules for .mjs test files ───────────────────────────────
+  {
+    files: ['scripts/**/*.test.mjs'],
     rules: {
       'max-lines-per-function': 'off',
       'max-lines': 'off',

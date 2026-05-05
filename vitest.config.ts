@@ -26,7 +26,7 @@ export default defineConfig({
     include: [
       'src/**/*.test.{ts,tsx}',
       'tools/**/*.test.{ts,js}',
-      'scripts/**/*.test.ts',
+      'scripts/**/*.test.{ts,mjs}',
       'e2e/**/*.test.ts',
     ],
     setupFiles: ['./vitest.setup.ts'],
