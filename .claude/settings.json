@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": "node \"C:\\Web App\\Agent IDE\\assets\\hooks\\pre_push_full_check.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"C:\\Web App\\Agent IDE\\assets\\hooks\\pre_commit_secrets.mjs\""
           }
         ]
       }
