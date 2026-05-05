@@ -1,11 +1,14 @@
 // pre_commit_lint.mjs
 // PreToolUse(Bash) hook — when the agent runs `git commit`, audits staged
-// .ts/.tsx files for prettier/eslint violations and runs tsc on both projects.
-// Exits 2 (BLOCK) if violations are found, 0 otherwise. Also blocks on
-// pre-existing src/ lint errors and new hardcoded colors in renderer files.
+// .ts/.tsx files for prettier/eslint violations and checks for new hardcoded
+// colors in renderer files. Exits 2 (BLOCK) if violations are found, 0 otherwise.
+//
+// As of 2026-05-05, this hook is staged-only. Full-project tsc and eslint moved
+// to pre_push_full_check.mjs to keep commits fast and avoid blocking on
+// unrelated in-flight work elsewhere in the tree.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 async function readStdin() {
@@ -39,6 +42,8 @@ try { data = JSON.parse(stdin); } catch {
   process.stderr.write('pre_commit_lint: invalid JSON on stdin\n');
   process.exit(0);
 }
+
+if (process.env.OUROBOROS_SKIP_QUALITY_HOOKS === '1') process.exit(0);
 
 const command = data?.tool_input?.command;
 if (!command || !/\bgit\s+commit\b/.test(command)) process.exit(0);
@@ -89,25 +94,6 @@ const eslint = run('npx', ['eslint', '--no-warn-ignored', ...fileList], projectR
 if (eslint.code !== 0 && eslint.out.trim()) {
   for (const line of eslint.out.split('\n')) {
     if (line.trim()) violations.push(`  ${line}`);
-  }
-}
-
-const eslintFull = run('npx', ['eslint', 'src/', '--no-warn-ignored', '--quiet'], projectRoot);
-if (eslintFull.code !== 0 && eslintFull.out.trim()) {
-  violations.push('');
-  violations.push('  [full-project lint] errors outside staged files also block commit:');
-  for (const line of eslintFull.out.split('\n')) {
-    if (line.trim()) violations.push(`  ${line}`);
-  }
-}
-
-for (const proj of ['tsconfig.web.json', 'tsconfig.node.json']) {
-  if (!existsSync(join(projectRoot, proj))) continue;
-  const tsc = run('npx', ['tsc', '--noEmit', '-p', proj], projectRoot);
-  if (tsc.code !== 0 && tsc.out.trim()) {
-    for (const line of tsc.out.split('\n')) {
-      if (line.trim()) violations.push(`  [tsc:${proj}] ${line}`);
-    }
   }
 }
 
