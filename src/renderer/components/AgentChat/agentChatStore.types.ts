@@ -38,6 +38,15 @@ export interface AgentChatThreadState {
   isLoading: boolean;
   isSending: boolean;
   pendingUserMessage: string | null;
+  /**
+   * Wave 82.1 — the active project root for this workspace. Mirrors the
+   * `projectRoot` prop passed to AgentChatWorkspace. ComposerContextPreview
+   * reads from here instead of ProjectContext, because in chat-only workbench
+   * mode the workbench's active project (LayoutState.activeProject) is
+   * decoupled from ProjectContext.projectRoot (which is projectRoots[0] of
+   * the multi-root list and never updates on rail switch).
+   */
+  projectRoot: string | null;
 }
 
 /**
@@ -136,6 +145,13 @@ export interface AgentChatActions {
   onSendQueuedMessageNow: (id: string) => Promise<void>;
   /** Wave 71 — controlled setter for the popover-local disabled set. */
   setDisabledLocalIds: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
+  /**
+   * Wave 82.1 — optional surface so consumers can route deletes through the
+   * workspace's canonical action when wired (avoids row-flash). Undefined when
+   * the store mount is legacy (chat-only sidebar in IDE shell); fall through
+   * to `window.electronAPI.agentChat.deleteThread`.
+   */
+  deleteThread?: (threadId: string) => Promise<void>;
 }
 
 /* ── Full store ───────────────────────────────────── */

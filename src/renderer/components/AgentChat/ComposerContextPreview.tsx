@@ -16,6 +16,7 @@
  */
 
 import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
+import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
@@ -23,12 +24,16 @@ import { useProjectOptional } from '../../contexts/ProjectContext';
 import type { McpToolItem } from '../../hooks/useContextPreview';
 import { parseRuleToggleId, useContextPreview } from '../../hooks/useContextPreview';
 import { useMemoryEntries } from '../../hooks/useMemoryEntries';
+import type { ImageAttachment } from '../../types/electron';
 import type { ChatOverrides } from './ChatControlsBar';
+import { useFilesystemRules } from './ComposerContextPreview.fsRules';
 import { ContextPreview } from './ContextPreview';
 import type { PinnedFile } from './useAgentChatContext';
 
 export interface ComposerContextPreviewProps {
   pinnedFiles?: PinnedFile[];
+  /** Wave 82 — attachments surface in the Files tab so they're visible. */
+  attachments?: ImageAttachment[];
   chatOverrides?: ChatOverrides;
   settingsModel?: string;
   mentionLabels?: { estimatedTokens: number; label: string }[];
@@ -48,31 +53,61 @@ export interface ComposerContextPreviewProps {
    */
   disabledLocalIds?: ReadonlySet<string>;
   setDisabledLocalIds?: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>;
+  /**
+   * Wave 82.1 — explicit project root for the popover's project-scoped IPCs
+   * (rule files, MCP servers, memory entries). When provided, takes precedence
+   * over `ProjectContext.projectRoot`. The chat-only workbench passes its
+   * `LayoutState.activeProject` here because `ProjectContext.projectRoot` is
+   * tied to the multi-root list's first entry and does not track the rail's
+   * active project. Without this, the popover queried the wrong project's
+   * rule files (symptom: 0 project rules in either project).
+   */
+  projectRoot?: string | null;
 }
 
-function useActiveSessionRulesAndSkills(claudeSessionId?: string): {
+function logRulesSelection(args: {
+  claudeSessionId: string | undefined;
+  agentCount: number;
+  target: AgentSessionLike | undefined;
+}): void {
+  const { claudeSessionId, agentCount, target } = args;
+  log.info('[trace:rules] useActiveSessionRulesAndSkills', {
+    claudeSessionId: claudeSessionId ?? null,
+    agentCount,
+    targetFound: !!target,
+    targetId: target?.id?.slice(-8) ?? null,
+    targetStatus: target?.status ?? null,
+    loadedRulesCount: target?.loadedRules?.length ?? 0,
+    pickedViaFallback: !claudeSessionId,
+  });
+}
+
+function useActiveSessionRulesAndSkills(
+  claudeSessionId: string | undefined,
+  projectRoot: string | null,
+): {
   loadedRules: LoadedRule[];
   skillExecutions: SkillExecutionRecord[];
 } {
   const { agents } = useAgentEventsContext();
+  // Stable filesystem-rules read for the no-session case. When a chat thread
+  // has no claudeSessionId yet (fresh thread, no first send), we used to fall
+  // back to "most recent running agent" — which surfaced the IDE's terminal
+  // Claude Code session and its fluctuating loadedRules, causing the count
+  // to pop in and out. Filesystem rules give a stable baseline.
+  const filesystemRules = useFilesystemRules(projectRoot);
   return useMemo(() => {
-    const target = claudeSessionId
-      ? agents.find((s) => s.id === claudeSessionId)
-      : pickMostRecent(agents);
+    if (!claudeSessionId) {
+      logRulesSelection({ claudeSessionId, agentCount: agents.length, target: undefined });
+      return { loadedRules: filesystemRules, skillExecutions: [] };
+    }
+    const target = agents.find((s) => s.id === claudeSessionId);
+    logRulesSelection({ claudeSessionId, agentCount: agents.length, target });
     return {
       loadedRules: target?.loadedRules ?? [],
       skillExecutions: target?.skillExecutions ?? [],
     };
-  }, [agents, claudeSessionId]);
-}
-
-function pickMostRecent(agents: readonly AgentSessionLike[]): AgentSessionLike | undefined {
-  const running = agents.filter((s) => s.status === 'running');
-  if (running.length > 0) return running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b));
-  return agents.reduce<AgentSessionLike | undefined>((a, b) => {
-    if (!a) return b;
-    return b.startedAt > a.startedAt ? b : a;
-  }, undefined);
+  }, [agents, claudeSessionId, filesystemRules]);
 }
 
 interface AgentSessionLike {
@@ -236,7 +271,10 @@ function useComposerContextPreviewModel(
   props: ComposerContextPreviewProps,
   projectRoot: string | null,
 ) {
-  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills(props.claudeSessionId);
+  const { loadedRules, skillExecutions } = useActiveSessionRulesAndSkills(
+    props.claudeSessionId,
+    projectRoot,
+  );
   const mcpTools = useMcpTools(projectRoot);
   const memoryEntries = useMemoryEntries(projectRoot);
   const { ids: localIds, toggle: toggleLocal } = useLocalDisabledIds(
@@ -252,7 +290,19 @@ function useComposerContextPreviewModel(
   // mapped array on every render.
   const pinnedFileNames = useMemo(() => pinnedFilesToInput(props.pinnedFiles), [props.pinnedFiles]);
   const mentionLabels = props.mentionLabels ?? EMPTY_MENTION_LABELS;
+  // Wave 82 — surface attachments in popover. Token estimate is the byte
+  // length of the base64 data divided by 4 (matches the same heuristic used
+  // for other context items). For non-image attachments we count the name.
+  const attachments = useMemo(
+    () =>
+      (props.attachments ?? []).map((a) => ({
+        estimatedTokens: Math.max(1, Math.ceil((a.base64Data?.length ?? a.name.length) / 4)),
+        name: a.name,
+      })),
+    [props.attachments],
+  );
   const previewModel = useContextPreview({
+    attachments,
     effort: props.chatOverrides?.effort,
     loadedRules,
     mcpTools,
@@ -267,7 +317,18 @@ function useComposerContextPreviewModel(
 
 export function ComposerContextPreview(props: ComposerContextPreviewProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
-  const projectRoot = useProjectOptional()?.projectRoot ?? null;
+  // Wave 82.1 — prefer explicit prop over ProjectContext (chat-only workbench
+  // passes its LayoutState.activeProject because the multi-root context isn't
+  // rail-aware). Falls back to ProjectContext for IDE-shell mounts.
+  const contextProjectRoot = useProjectOptional()?.projectRoot ?? null;
+  const projectRoot = props.projectRoot ?? contextProjectRoot;
+  useEffect(() => {
+    log.info('[trace:projectRoot] ComposerContextPreview', {
+      propProjectRoot: props.projectRoot,
+      contextProjectRoot,
+      final: projectRoot,
+    });
+  }, [props.projectRoot, contextProjectRoot, projectRoot]);
   useChatSessionBridge(props.claudeSessionId, projectRoot);
   const { previewModel, handleToggleItem, disabledIds } = useComposerContextPreviewModel(
     props,

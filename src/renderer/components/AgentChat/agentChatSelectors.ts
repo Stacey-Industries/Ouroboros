@@ -35,6 +35,7 @@ export function useAgentChatThread(): AgentChatThreadState {
       isLoading: s.isLoading,
       isSending: s.isSending,
       pendingUserMessage: s.pendingUserMessage,
+      projectRoot: s.projectRoot,
     })),
   );
 }
@@ -161,3 +162,13 @@ export const useChatActiveThread = () => useAgentChatStoreContext((s) => s.activ
 export const useChatIsDetailsOpen = (): boolean => useAgentChatStoreContext((s) => s.isDetailsOpen);
 
 export const useChatHasProject = (): boolean => useAgentChatStoreContext((s) => s.hasProject);
+
+/**
+ * Wave 82.1 — read the workspace's active project root from the store.
+ * This is mirrored from the `projectRoot` prop passed to AgentChatWorkspace,
+ * which (in chat-only workbench mode) is `LayoutState.activeProject` — the
+ * rail-tracked active project. Use this instead of `ProjectContext.projectRoot`
+ * for any consumer inside the chat tree that needs project-scoped data.
+ */
+export const useChatProjectRoot = (): string | null =>
+  useAgentChatStoreContext((s) => s.projectRoot);

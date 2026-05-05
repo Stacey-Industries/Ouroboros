@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import type { PanelSizes, WorkspaceLayout } from '../../types/electron';
 import { LspStatus } from './LspStatus';
 import { StatusBarAuthIndicator } from './StatusBarAuthIndicator';
-import { BranchButton, BranchIcon, Divider, LayoutControl, StatusItem } from './StatusBarControls';
+import { Divider, LayoutControl, StatusItem } from './StatusBarControls';
 
 export interface StatusBarLayoutProps {
   layouts: WorkspaceLayout[];
@@ -21,8 +21,12 @@ export interface StatusBarProps {
   projectRoot?: string | null;
   lineCount?: number;
   language?: string;
-  gitBranch?: string | null;
   layout?: StatusBarLayoutProps;
+  /**
+   * Wave 82.1 — git branch surfaced by AppLayoutConnected. Currently plumbed
+   * but not yet rendered by StatusBar's body; reserved for follow-up wiring.
+   */
+  gitBranch?: string | null;
 }
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
@@ -97,35 +101,6 @@ function relativePath(filePath: string, projectRoot: string | null | undefined):
     : filePath;
 }
 
-function GitSection({
-  gitBranch,
-  projectRoot,
-}: {
-  gitBranch?: string | null;
-  projectRoot?: string | null;
-}): React.ReactElement | null {
-  if (!gitBranch) {
-    return null;
-  }
-
-  return projectRoot ? (
-    <>
-      <BranchButton gitBranch={gitBranch} projectRoot={projectRoot} />
-      <Divider />
-    </>
-  ) : (
-    <>
-      <StatusItem title={`Branch: ${gitBranch}`}>
-        <span className="flex items-center gap-1">
-          <BranchIcon />
-          <span className="truncate max-w-[120px]">{gitBranch}</span>
-        </span>
-      </StatusItem>
-      <Divider />
-    </>
-  );
-}
-
 function FileSection({
   activeFilePath,
   displayLanguage,
@@ -187,7 +162,6 @@ export function StatusBar({
   projectRoot,
   lineCount,
   language,
-  gitBranch,
   layout,
 }: StatusBarProps): React.ReactElement {
   const relPath = useMemo(
@@ -205,7 +179,6 @@ export function StatusBar({
       style={STATUS_BAR_STYLE}
     >
       <div className="flex items-center min-w-0 overflow-hidden">
-        <GitSection gitBranch={gitBranch} projectRoot={projectRoot} />
         <FileSection
           activeFilePath={activeFilePath}
           displayLanguage={displayLanguage}
