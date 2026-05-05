@@ -1,6 +1,6 @@
-import path from 'path'
+import path from 'path';
 
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 // better-sqlite3 is compiled for Electron's Node ABI in the project, but vitest
 // runs under system Node which may have a different ABI. If a Node-24-compatible
@@ -9,7 +9,7 @@ import { defineConfig } from 'vitest/config'
 const sqliteFreshDir = path.join(
   process.env.LOCALAPPDATA ?? '/tmp',
   'Temp/sqlite-fresh/node_modules/better-sqlite3',
-)
+);
 
 export default defineConfig({
   resolve: {
@@ -23,7 +23,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,js}', 'scripts/**/*.test.ts'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'tools/**/*.test.{ts,js}',
+      'scripts/**/*.test.ts',
+      'e2e/**/*.test.ts',
+    ],
     setupFiles: ['./vitest.setup.ts'],
     globals: false,
     // Fork-per-file isolation: forcibly kills each file's process after tests
@@ -56,12 +61,7 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'lcov', 'html'],
       reportsDirectory: 'coverage',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.d.ts',
-        'src/renderer/types/**',
-        'node_modules/**',
-      ],
+      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'src/renderer/types/**', 'node_modules/**'],
       thresholds: {
         // Start low — ratchet up as coverage improves
         lines: 5,
@@ -71,4 +71,4 @@ export default defineConfig({
       },
     },
   },
-})
+});

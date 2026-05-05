@@ -17,7 +17,7 @@ export default tseslint.config(
       'src/renderer/out/',
       'build-resources/',
       'coverage/',
-      'e2e/',
+      'e2e/**/*.spec.ts',
       '*.config.*',
       'spike/',
       'src/**/__fixtures__/**',
@@ -60,7 +60,7 @@ export default tseslint.config(
 
       // ── Complexity / size guards ──────────────────────────────────
       'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
       'max-depth': ['error', 3],
       'max-params': ['error', 4],
