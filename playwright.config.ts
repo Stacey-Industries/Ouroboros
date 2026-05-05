@@ -26,12 +26,27 @@ export default defineConfig({
     {
       name: 'electron',
       testDir: './e2e',
-      testIgnore: './e2e/mobile/**',
+      testIgnore: ['./e2e/mobile/**', '**/_repro-*.spec.ts'],
       use: {},
       // Electron tests need the claude stub on PATH and known token values.
       // Per-project globalSetup is supported in Playwright ≥ 1.39 via the
       // `globalSetup` field at the project level.
       // See: https://playwright.dev/docs/test-global-setup-teardown#configure-globalsetup-and-globalteardown
+    },
+
+    // ── repro-electron — wave-83 agent-driven bug-repro harness ─────────────
+    // Runs specs matching _repro-*.spec.ts only; never included in test:e2e (CI).
+    // To invoke: npx playwright test --project=repro-electron e2e/_repro-<slug>.spec.ts
+    // Or use the npm run repro -- <slug> driver (Phase 2).
+    // timeout: 120s to account for cold Electron launch (~30-60s) + test steps.
+    // retries: 0 — repro specs are one-shot; automatic retry masks the bug.
+    {
+      name: 'repro-electron',
+      testDir: './e2e',
+      testMatch: ['**/_repro-*.spec.ts'],
+      use: { trace: 'on' },
+      timeout: 120_000,
+      retries: 0,
     },
 
     // ── mobileWeb — iPhone 14 ─────────────────────────────────────────────────
