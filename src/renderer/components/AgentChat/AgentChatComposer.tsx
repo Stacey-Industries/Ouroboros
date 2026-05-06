@@ -1,5 +1,4 @@
-import log from 'electron-log/renderer';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 
 import type {
   AgentChatMessageRecord,
@@ -227,14 +226,6 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   };
 }
 
-function useTraceClaudeSessionId(claudeSessionId: string | undefined): void {
-  useEffect(() => {
-    log.info('[trace:rules] composer claudeSessionId', {
-      claudeSessionId: claudeSessionId ?? null,
-    });
-  }, [claudeSessionId]);
-}
-
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
@@ -242,7 +233,6 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const { chatOverrides, settingsModel, mentions } = composerProps;
   const variant = useWorkspaceVariant();
   const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
-  useTraceClaudeSessionId(claudeSessionId);
   // Wave 82.1 — read the workspace's active project root from the store. In
   // chat-only workbench mode this is rail-tracked LayoutState.activeProject,
   // not ProjectContext.projectRoot (= multi-root[0]).

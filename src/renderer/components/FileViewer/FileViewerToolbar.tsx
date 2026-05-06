@@ -1,5 +1,4 @@
-import log from 'electron-log/renderer';
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useRef } from 'react';
 
 import { ToolbarButton } from './ToolbarButton';
 
@@ -214,75 +213,8 @@ function ClaudeMdToggle({
   );
 }
 
-// Wave 82.1 — measure the Edit/Exit button on every render. Goal: tell apart
-// "React rendered the button but CSS hides/zeroes it" (computed style) vs
-// "button is rendered with normal box and an overlay sits on top" (rect ok).
-// Logged on each render, including the post-Exit render where the button is
-// reportedly invisible despite identical DOM.
-function rectSummary(el: Element | null | undefined): object | null {
-  if (!el) return null;
-  const r = el.getBoundingClientRect();
-  return { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right };
-}
-
-function logButtonMeasurement(btn: HTMLButtonElement, editMode: boolean): void {
-  const rect = btn.getBoundingClientRect();
-  const cs = window.getComputedStyle(btn);
-  // Wave 82.1 — also capture the ancestor chain so we can tell whether the
-  // toolbar / its containing pane are widening on edit toggle (which would
-  // explain Edit button moving from x:1206 to x:1300 between initial and
-  // post-exit renders).
-  const editControlsEl = btn.parentElement;
-  const toolbarEl = editControlsEl?.parentElement;
-  const chromeRootEl = toolbarEl?.parentElement;
-  const paneEl = chromeRootEl?.parentElement;
-  log.info('[trace:EditBtn] measure', {
-    editMode,
-    rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-    editControlsRect: rectSummary(editControlsEl),
-    toolbarRect: rectSummary(toolbarEl),
-    chromeRootRect: rectSummary(chromeRootEl),
-    paneRect: rectSummary(paneEl),
-    display: cs.display,
-    visibility: cs.visibility,
-    opacity: cs.opacity,
-    color: cs.color,
-    backgroundColor: cs.backgroundColor,
-    borderColor: cs.borderColor,
-    title: btn.title,
-    textContent: btn.textContent,
-  });
-}
-
-function useEditButtonMeasure(
-  ref: React.RefObject<HTMLDivElement | null>,
-  editMode: boolean,
-  enabled: boolean,
-): void {
-  useEffect(() => {
-    if (!enabled) return;
-    const id = requestAnimationFrame(() => {
-      const btn = ref.current?.querySelector<HTMLButtonElement>('button');
-      if (!btn) {
-        log.warn('[trace:EditBtn] measure: button not found', {
-          containerExists: Boolean(ref.current),
-          editMode,
-        });
-        return;
-      }
-      logButtonMeasurement(btn, editMode);
-    });
-    return () => cancelAnimationFrame(id);
-  });
-}
-
 function EditControls(props: EditControlsProps): React.ReactElement | null {
-  log.info('[trace:EditBtn] EditControls render', {
-    hasOnSave: Boolean(props.onSave),
-    editMode: props.editMode,
-  });
   const containerRef = useRef<HTMLDivElement>(null);
-  useEditButtonMeasure(containerRef, props.editMode, Boolean(props.onSave));
   if (!props.onSave) return null;
 
   return (
@@ -291,10 +223,7 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
       <ToolbarButton
         label={props.editMode ? 'Exit' : 'Edit'}
         active={props.editMode}
-        onClick={() => {
-          log.info('[trace:FileViewer] Edit/Exit toolbar click', { wasEditMode: props.editMode });
-          props.setEditMode(!props.editMode);
-        }}
+        onClick={() => props.setEditMode(!props.editMode)}
         title={props.editMode ? 'Exit edit mode' : 'Edit file'}
       />
       {props.editMode && (

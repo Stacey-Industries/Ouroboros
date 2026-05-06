@@ -1,4 +1,3 @@
-import log from 'electron-log/renderer';
 import { useCallback } from 'react';
 
 import {
@@ -66,10 +65,6 @@ export function useOpenFileActionInternal(
 export function useCloseFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
   return useCallback(
     (filePath: string) => {
-      log.info('[trace:FileViewer] closeFile called', {
-        filePath,
-        stack: new Error().stack?.split('\n').slice(1, 8).join(' | '),
-      });
       disposeMonacoModel(filePath);
       setOpenFiles((prev) => {
         const removedIndex = prev.findIndex((file) => file.path === filePath);

@@ -16,7 +16,6 @@
  */
 
 import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
-import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
@@ -65,23 +64,6 @@ export interface ComposerContextPreviewProps {
   projectRoot?: string | null;
 }
 
-function logRulesSelection(args: {
-  claudeSessionId: string | undefined;
-  agentCount: number;
-  target: AgentSessionLike | undefined;
-}): void {
-  const { claudeSessionId, agentCount, target } = args;
-  log.info('[trace:rules] useActiveSessionRulesAndSkills', {
-    claudeSessionId: claudeSessionId ?? null,
-    agentCount,
-    targetFound: !!target,
-    targetId: target?.id?.slice(-8) ?? null,
-    targetStatus: target?.status ?? null,
-    loadedRulesCount: target?.loadedRules?.length ?? 0,
-    pickedViaFallback: !claudeSessionId,
-  });
-}
-
 function useActiveSessionRulesAndSkills(
   claudeSessionId: string | undefined,
   projectRoot: string | null,
@@ -98,24 +80,14 @@ function useActiveSessionRulesAndSkills(
   const filesystemRules = useFilesystemRules(projectRoot);
   return useMemo(() => {
     if (!claudeSessionId) {
-      logRulesSelection({ claudeSessionId, agentCount: agents.length, target: undefined });
       return { loadedRules: filesystemRules, skillExecutions: [] };
     }
     const target = agents.find((s) => s.id === claudeSessionId);
-    logRulesSelection({ claudeSessionId, agentCount: agents.length, target });
     return {
       loadedRules: target?.loadedRules ?? [],
       skillExecutions: target?.skillExecutions ?? [],
     };
   }, [agents, claudeSessionId, filesystemRules]);
-}
-
-interface AgentSessionLike {
-  id: string;
-  status: string;
-  startedAt: number;
-  loadedRules?: LoadedRule[];
-  skillExecutions?: SkillExecutionRecord[];
 }
 
 /**
@@ -322,13 +294,6 @@ export function ComposerContextPreview(props: ComposerContextPreviewProps): Reac
   // rail-aware). Falls back to ProjectContext for IDE-shell mounts.
   const contextProjectRoot = useProjectOptional()?.projectRoot ?? null;
   const projectRoot = props.projectRoot ?? contextProjectRoot;
-  useEffect(() => {
-    log.info('[trace:projectRoot] ComposerContextPreview', {
-      propProjectRoot: props.projectRoot,
-      contextProjectRoot,
-      final: projectRoot,
-    });
-  }, [props.projectRoot, contextProjectRoot, projectRoot]);
   useChatSessionBridge(props.claudeSessionId, projectRoot);
   const { previewModel, handleToggleItem, disabledIds } = useComposerContextPreviewModel(
     props,

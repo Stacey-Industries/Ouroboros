@@ -1,8 +1,8 @@
 # Wave 82 — Result Brief
 
 **Wave:** 82 — Chat-Only Polish Bundle
-**Status:** Round 2 patches in (post-Cole-smoke 2026-05-03); 9 items fixed; 2 deferred to user re-verification; NOT pushed.
-**Drafted:** 2026-05-03 (initial); revised 2026-05-03 (post-smoke round 2).
+**Status:** 14 of 15 items closed. **B2 (heat map) NOT closed** — round-5 smoke (2026-05-06) still showed no border on agent-edited files; deferred to a follow-up that requires runtime instrumentation. See `roadmap/follow-ups/2026-05-06-file-heat-map-still-broken.md`.
+**Drafted:** 2026-05-03 (initial); revised 2026-05-03 (post-smoke round 2); closed 2026-05-06 (post-smoke round 5, B2 deferred).
 
 ## Round 2 patch log (post-smoke)
 
@@ -18,10 +18,10 @@ After Cole's manual smoke walk, the following items were re-fixed:
 - **F2 (UI doesn't refresh on project switch)**: `ChatWorkbenchBody.useBodyContent` now uses `layout.activeProject ?? props.projectRoot` so the workbench rail's active project wins over the global ProjectContext root. Workspace re-mounts on switch.
 - **H2 (image attachments invisible)**: Wired `attachments` through `buildChatOnlyContextPreviewProps` → `ComposerContextPreview` → `useContextPreview`. They now appear in the Files tab.
 
-## Items still deferred to next user smoke
+## Items still open after round-5 smoke (2026-05-06)
 
-- **B2 (heat map)**: User unsure if their work counted as "agent edits". They will re-verify by triggering a Claude tool call from the in-app chat and checking for colored borders. The fix is in (`extractFilePath` JSON parse), but visual confirmation requires real agent edit traffic.
-- **C3 (set as active semantics)**: User asked "is there an indicator/flag for active project?" — clarification needed. The desync-clearing logic IS in place; user needs to confirm whether the "active" state is observable in the UI.
+- **B2 (heat map) — NOT CLOSED.** Round-5 smoke confirmed: with the heat-map toggle ON, asking the in-app chat to write/edit a file still does NOT produce a colored left-border on the file-tree row. Two fixes attempted in wave-82.x (extending `EDIT_TOOL_NAMES` to MCP-style names; `extractFilePath` JSON parse) were insufficient. Per `~/.claude/rules/debug-before-fix.md`, the next attempt requires runtime instrumentation, not another guess. Filed as `roadmap/follow-ups/2026-05-06-file-heat-map-still-broken.md` with a repro and an investigation plan.
+- **C3 (set-as-active semantics)**: User asked "is there an indicator/flag for active project?" — clarification was given (rail icon highlights when selected; desync-clearing kicks in when removed). No further code change needed unless the user surfaces a follow-up question.
 
 **Authored by:** Orchestrator (autonomous execution per Cole's "get everything fixed, or attempted to be fixed; I'll smoke test when back; you can hold off on submitting" handoff).
 

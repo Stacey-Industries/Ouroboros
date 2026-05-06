@@ -1,4 +1,3 @@
-import log from 'electron-log/renderer';
 import React, { useEffect } from 'react';
 
 import { WORKBENCH_NEW_SESSION_EVENT } from '../../../hooks/appEventNames';
@@ -130,13 +129,6 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
   // didn't refresh the AgentChatWorkspace — it stayed bound to the IDE's main
   // project root and the chat list didn't update.
   const effectiveProjectRoot = props.layout.activeProject ?? props.projectRoot;
-  useEffect(() => {
-    log.info('[trace:projectRoot] body effective changed', {
-      layoutActiveProject: props.layout.activeProject,
-      fallbackProjectRoot: props.projectRoot,
-      effective: effectiveProjectRoot,
-    });
-  }, [props.layout.activeProject, props.projectRoot, effectiveProjectRoot]);
   return {
     state,
     handlers,

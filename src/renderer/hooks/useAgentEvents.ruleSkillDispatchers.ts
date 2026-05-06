@@ -6,7 +6,6 @@
  */
 
 import type { LoadedRule } from '@shared/types/ruleActivity';
-import log from 'electron-log/renderer';
 import type { Dispatch } from 'react';
 
 import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
@@ -62,11 +61,6 @@ function flushRuleLoadQueue(dispatch: Dispatch<AgentAction>): void {
   ruleLoadFlushScheduled = false;
   if (ruleLoadQueue.length === 0) return;
   const entries = ruleLoadQueue.splice(0, ruleLoadQueue.length);
-  log.info('[trace:rules] flushRuleLoadQueue', {
-    count: entries.length,
-    sessionIds: entries.map((e) => e.sessionId.slice(-8)),
-    ts: Date.now(),
-  });
   dispatch({ type: 'RULES_BATCH_LOADED', entries });
 }
 

@@ -197,7 +197,6 @@ function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   // and rail use. Decouples chat-only workbench's active project from
   // ProjectContext.projectRoot (= multi-root[0], not rail-aware).
   useEffect(() => {
-    log.info('[trace:projectRoot] AgentChatWorkspace mirror', args.projectRoot);
     store.setState({ projectRoot: args.projectRoot ?? null });
   }, [store, args.projectRoot]);
 }

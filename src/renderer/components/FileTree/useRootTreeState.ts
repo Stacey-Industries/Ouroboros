@@ -144,22 +144,15 @@ function loadRootWithCancellation({
   let cancelled = false;
   setIsLoading(true);
   setError(null);
-  log.info('[trace:fileTree] loadRoot START', { root });
 
   void loadRootChildren(root, shouldIgnore)
     .then((nodes) => {
-      log.info('[trace:fileTree] loadRoot RESOLVED', {
-        root,
-        cancelled,
-        nodeCount: nodes.length,
-        firstFew: nodes.slice(0, 3).map((n) => ({ name: n.name, isDir: n.isDirectory })),
-      });
       if (cancelled) return;
       setRootNodes(nodes);
       loadedDirsRef.current.add(normPath(root));
     })
     .catch((error: unknown) => {
-      log.warn('[trace:fileTree] loadRoot ERROR', { root, error: String(error) });
+      log.warn('[fileTree] loadRoot failed', { root, error: String(error) });
       if (!cancelled) setError(String(error));
     })
     .finally(() => {
@@ -181,11 +174,6 @@ function useRootLoader({
   setError,
 }: RootLoaderArgs): void {
   useEffect(() => {
-    log.info('[trace:fileTree] useRootLoader effect', {
-      root,
-      enabled,
-      alreadyLoaded: loadedDirsRef.current.has(normPath(root)),
-    });
     if (!enabled) {
       setIsLoading(false);
       return;

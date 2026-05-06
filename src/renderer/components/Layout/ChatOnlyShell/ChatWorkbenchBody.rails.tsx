@@ -66,7 +66,7 @@ function useActiveProjectValidator(
     if (!isReady) return;
     if (!activeProject) return;
     if (projects.includes(activeProject)) return;
-    log.warn('[trace:rail] validator CLEARING activeProject', {
+    log.warn('[rail] active project not in workbench list — clearing', {
       activeProject,
       projects,
       isReady,
@@ -244,12 +244,6 @@ export function TwoTierRailSurface(props: TwoTierRailSurfaceProps): React.ReactE
   const projectState = layout.getProjectState(activeProject ?? '');
   const projects = useWorkbenchProjects();
   const isReady = useProjectsReady();
-  log.info('[trace:rail] TwoTierRailSurface', {
-    isReady,
-    activeProject,
-    projectsCount: projects.length,
-    projects,
-  });
   useActiveProjectValidator(layout, projects, isReady);
   return (
     <RailSurfaceView
