@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0] - 2026-05-06
+
+### Fixed
+- **Wave 82 — chat-only polish bundle (14 of 15 user-reported bugs).** Multi-round smoke walks across rounds 1-5 closed the bulk of the post-Lexical (v2.12.0) chat-only / chat-workbench surface defects:
+  - **C1** chat add/delete row-flash — optimistic update; routes delete through the workspace's canonical action to remove the race with `useSyncStateIntoStore`.
+  - **F1** FileViewer toolbar persistence — defensive fall-through in `renderInitialViewerState` so the toolbar stays mounted across the brief content=null transition during edit-mode toggles.
+  - **F1c** Monaco minimap dual-scroll / residual decoration ruler — `verticalScrollbarSize: 0`, `verticalSliderSize: 0`, `useShadows: false`, plus disabled `overviewRulerLanes`/`overviewRulerBorder`/`hideCursorInOverviewRuler` when minimap is on.
+  - **F2 / C3** chat-project binding (Wave 82.1 follow-up). Workbench `LayoutState.activeProject` is now mirrored into a per-workspace field on `AgentChatStore`; `ComposerContextPreview` and `WorkbenchRulesPanel` read from the store rather than `ProjectContext` (which is `multiRoots[0]` and isn't rail-aware). Prior symptom: rules popover showed 16 user / 0 project rules in either project; chat workspace stayed bound to the IDE's main root after rail switch.
+  - **F4** menu collapse — "New Session" + "New Chat in Active Session" → single "New Chat" (Ctrl+N). The dispatched `WORKBENCH_NEW_SESSION_EVENT` is unchanged so the canonical handler chain (`handleCreateSession` → orchestration session row + thread + activation) is intact.
+  - **G** artifact pane top-strip + Recent section removed; timeline outer card scroll fixed via `min-h-0 flex-1 overflow-hidden` on the drawer aside so the inner list's `overflow-y-auto` actually engages.
+  - **H2** image attachments now thread through `buildChatOnlyContextPreviewProps` → `ComposerContextPreview` → `useContextPreview` and appear as `attachment:`-prefixed entries in the popover's Files tab.
+  - **B3** branch indicator removed from the chat-only status bar (`ChatOnlyStatusBar` was a separate mount, not just `StatusBar`).
+  - **WorkbenchMenuBar.test.tsx** assertions updated for the F4 rename ("New Session" → "New Chat").
+
+### Changed
+- **Lint-debt cleanup folded into the wave.** Extracted `chatHistorySidebarCompletions.ts` (+ test) from `ChatHistorySidebar.tsx`; extracted `ContextPreview.popover.tsx` (+ test) from `ContextPreview.tsx` with a `PopoverContent` subcomponent split for the function-line cap; extracted `DockCloseButton` from `ChatWorkbenchTerminalDock.tsx`; dropped a stale `log.info` cold-boot trace from `FileTree.tsx`.
+
+### Removed
+- **Investigation trace logging** stripped after round-5 smoke confirmed the wave-82.x fixes are working: F1 instrumentation in FileViewer / FileViewerToolbar / FileViewerManager (`[trace:FileViewer]`, `[trace:EditBtn]`), rules-popover binding traces in AgentChatComposer / ComposerContextPreview (`[trace:rules]`), projectRoot mirror / body-effective / setActiveProject / TwoTierRailSurface render traces (`[trace:projectRoot]`, `[trace:rail]`), useRootTreeState cold-boot traces (`[trace:fileTree]`), `flushRuleLoadQueue` trace. Baseline structural warns kept (rail-validator divergence, `loadRoot` error path).
+
+### Open / Deferred
+- **B2 file-tree heat map** is not closed by this release. Round-5 smoke confirmed colored borders still don't appear after agent edits despite two attempted fixes in wave-82.x (extending `EDIT_TOOL_NAMES` to MCP-style names; `extractFilePath` JSON parse). Filed as `roadmap/follow-ups/2026-05-06-file-heat-map-still-broken.md` with repro steps and an instrumented investigation plan — next attempt requires runtime evidence per `~/.claude/rules/debug-before-fix.md`, not another code-read guess.
+
+### Documentation
+- Wave 82 plan / decisions / phase audits / auto-brief / handoff committed under `roadmap/wave-82-chat-only-polish-bundle/`.
+- Wave 82.1 plan + result brief committed under `roadmap/wave-82.1-chat-project-binding/`.
+- Outstanding follow-up digest as of 2026-05-03 captured at `roadmap/follow-ups/outstanding-2026-05-03.md` (~100 unique open items across Chat/UI, Telemetry, MCP, Graph, Performance, and prior-wave follow-ups).
+
+## [2.13.0] - 2026-05-05
+
+### Added
+- **Wave 83 — Playwright-electron repro harness.** `npm run repro -- <slug>` driver runs `e2e/_repro-<slug>.spec.ts` against the built Electron app and writes artifacts (screenshot, console + network logs, optional video) under `artifacts/repro-<slug>-<timestamp>/`. Template at `e2e/_repro-template.spec.ts` includes a `reproArtifacts` helper for consistent artifact emission. Onboarding doc at `docs/repro-harness.md`. Path A (consumer MCP exposure) and Path B (preload bridge) deferred — single npm-run path is the v1 surface.
+
 ## [2.12.0] - 2026-05-03
 
 ### Changed
