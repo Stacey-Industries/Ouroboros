@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 
-import { useProject } from '../../../contexts/ProjectContext';
 import { OPEN_FILE_EVENT } from '../../../hooks/appEventNames';
 import { useRulesAndSkills } from '../../../hooks/useRulesAndSkills';
 import { RulesTab } from '../../AgentChat/RulesTab';
@@ -16,6 +15,12 @@ export interface ChatWorkbenchUtilityDrawerProps {
   activeTab: ChatWorkbenchUtilityTab;
   onSelectTab: (tab: ChatWorkbenchUtilityTab) => void;
   onClose: () => void;
+  /**
+   * Wave 82.1 — the workbench's rail-tracked active project. Used by the
+   * Rules tab so it queries the actual visible project instead of
+   * `ProjectContext.projectRoot` (= multi-root[0], not rail-aware).
+   */
+  activeProject: string | null;
 }
 
 function tabLabel(tab: ChatWorkbenchUtilityTab): string {
@@ -124,8 +129,7 @@ function openFileInEditor(filePath: string): void {
   window.dispatchEvent(new CustomEvent(OPEN_FILE_EVENT, { detail: { filePath } }));
 }
 
-function WorkbenchRulesPanel(): React.ReactElement {
-  const { projectRoot } = useProject();
+function WorkbenchRulesPanel({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
   const { rules, createRule } = useRulesAndSkills(projectRoot);
   const handleCreateRule = useCallback(
     async (type: 'claude-md' | 'agents-md'): Promise<void> => {
@@ -148,10 +152,16 @@ function WorkbenchRulesPanel(): React.ReactElement {
   );
 }
 
-function DrawerContent({ activeTab }: { activeTab: ChatWorkbenchUtilityTab }): React.ReactElement {
+function DrawerContent({
+  activeTab,
+  activeProject,
+}: {
+  activeTab: ChatWorkbenchUtilityTab;
+  activeProject: string | null;
+}): React.ReactElement {
   if (activeTab === 'approvals') return <WorkbenchApprovalPanel />;
   if (activeTab === 'review') return <ReviewPanel />;
-  if (activeTab === 'rules') return <WorkbenchRulesPanel />;
+  if (activeTab === 'rules') return <WorkbenchRulesPanel projectRoot={activeProject} />;
   if (activeTab === 'monitor')
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -197,11 +207,18 @@ export function ChatWorkbenchUtilityDrawer({
   activeTab,
   onSelectTab,
   onClose,
+  activeProject,
 }: ChatWorkbenchUtilityDrawerProps): React.ReactElement {
   const counts = useTabCounts();
   return (
     <aside
-      className="flex w-[360px] shrink-0 flex-col border-l border-border-semantic bg-surface-panel/95"
+      // Wave 82.1 — added `min-h-0 flex-1 overflow-hidden` so the aside fills
+      // its bounded parent (the wrapper div in WorkbenchRightPane has
+      // `flex-1 min-h-0 overflow-hidden`). Without these, default flex
+      // behaviour (`flex: 0 1 auto`) sized the aside to its content height,
+      // which made the inner `TimelineGroupList`'s `overflow-y-auto` ineffective
+      // (no bounded parent → no overflow → outer session list didn't scroll).
+      className="flex min-h-0 w-[360px] flex-1 shrink-0 flex-col overflow-hidden border-l border-border-semantic bg-surface-panel/95"
       data-testid="chat-workbench-utility-drawer"
     >
       <DrawerHeader onClose={onClose} />
@@ -216,7 +233,7 @@ export function ChatWorkbenchUtilityDrawer({
           />
         ))}
       </div>
-      <DrawerContent activeTab={activeTab} />
+      <DrawerContent activeTab={activeTab} activeProject={activeProject} />
     </aside>
   );
 }

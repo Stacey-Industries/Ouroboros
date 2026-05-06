@@ -22,11 +22,7 @@ export interface InnerSidebarTerminalsProps {
   onActivateInDock?: () => void;
 }
 
-function NewTerminalRow({
-  onCreate,
-}: {
-  onCreate?: () => void;
-}): React.ReactElement | null {
+function NewTerminalRow({ onCreate }: { onCreate?: () => void }): React.ReactElement | null {
   if (!onCreate) return null;
   return (
     <div className="shrink-0 border-b border-border-semantic px-3 py-2">
@@ -54,28 +50,46 @@ interface TerminalRowProps {
   active: boolean;
   label: string;
   onClick: () => void;
+  onClose: () => void;
 }
 
-function TerminalRow({ active, label, onClick }: TerminalRowProps): React.ReactElement {
+function TerminalRow({ active, label, onClick, onClose }: TerminalRowProps): React.ReactElement {
   const cls = active
     ? 'bg-interactive-selection text-text-semantic-primary'
     : 'text-text-semantic-secondary hover:bg-surface-hover hover:text-text-semantic-primary';
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       data-testid="inner-terminals-row"
-      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${cls}`}
+      className={`group flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${cls}`}
     >
-      <span className="truncate">{label}</span>
-    </button>
+      <button type="button" onClick={onClick} className="flex-1 truncate text-left">
+        {label}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        title="Close terminal"
+        aria-label="Close terminal"
+        data-testid="inner-terminals-row-close"
+        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-text-semantic-muted hover:text-status-error transition-opacity"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
 function useTerminalsHandlers(
   terminal: UseTerminalSessionsReturn | undefined,
   onActivateInDock: (() => void) | undefined,
-): { handleSelect: (id: string) => void; handleCreate: () => void } {
+): {
+  handleSelect: (id: string) => void;
+  handleCreate: () => void;
+  handleClose: (id: string) => void;
+} {
   const handleSelect = useCallback(
     (id: string) => {
       terminal?.setActiveSessionId?.(id);
@@ -87,7 +101,13 @@ function useTerminalsHandlers(
     void terminal?.spawnSession?.();
     onActivateInDock?.();
   }, [terminal, onActivateInDock]);
-  return { handleSelect, handleCreate };
+  const handleClose = useCallback(
+    (id: string) => {
+      terminal?.handleTerminalClose?.(id);
+    },
+    [terminal],
+  );
+  return { handleSelect, handleCreate, handleClose };
 }
 
 interface TerminalsBodyProps {
@@ -95,6 +115,7 @@ interface TerminalsBodyProps {
   activeId: string | null;
   hasTerminalApi: boolean;
   onSelect: (id: string) => void;
+  onClose: (id: string) => void;
 }
 
 function TerminalsBody({
@@ -102,6 +123,7 @@ function TerminalsBody({
   activeId,
   hasTerminalApi,
   onSelect,
+  onClose,
 }: TerminalsBodyProps): React.ReactElement {
   if (sessions.length === 0) {
     const msg = hasTerminalApi
@@ -117,6 +139,7 @@ function TerminalsBody({
           active={s.id === activeId}
           label={s.title || s.id}
           onClick={() => onSelect(s.id)}
+          onClose={() => onClose(s.id)}
         />
       ))}
     </>
@@ -128,7 +151,10 @@ export function InnerSidebarTerminals({
   onActivateInDock,
 }: InnerSidebarTerminalsProps): React.ReactElement {
   const sessions = terminal?.sessions ?? [];
-  const { handleSelect, handleCreate } = useTerminalsHandlers(terminal, onActivateInDock);
+  const { handleSelect, handleCreate, handleClose } = useTerminalsHandlers(
+    terminal,
+    onActivateInDock,
+  );
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -141,6 +167,7 @@ export function InnerSidebarTerminals({
           activeId={terminal?.activeSessionId ?? null}
           hasTerminalApi={Boolean(terminal)}
           onSelect={handleSelect}
+          onClose={handleClose}
         />
       </div>
     </div>

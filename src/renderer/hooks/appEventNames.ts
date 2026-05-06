@@ -51,9 +51,13 @@ export const TOGGLE_SHORTCUT_CHEATSHEET_EVENT = 'agent-ide:toggle-shortcut-cheat
 export const OPEN_MULTI_SESSION_EVENT = 'agent-ide:open-multi-session';
 // Wave 59 Phase E — chat search overlay
 export const OPEN_CHAT_SEARCH_EVENT = 'agent-ide:open-chat-search-overlay';
-// Wave 59 Phase C — workbench top menu bar events
+// Wave 59 Phase C — workbench top menu bar events.
+// Wave 82.1 — `WORKBENCH_NEW_CHAT_EVENT` was removed when the
+// "New Chat in Active Session" menu item was collapsed into the single
+// "New Chat" entry. Both menu items dispatched the same logical action from
+// the user's perspective; the second one was a UI duplicate of an internal
+// data-model distinction (sessions vs threads) that never surfaced visibly.
 export const WORKBENCH_NEW_SESSION_EVENT = 'agent-ide:workbench-new-session';
-export const WORKBENCH_NEW_CHAT_EVENT = 'agent-ide:workbench-new-chat';
 export const WORKBENCH_OPEN_PROJECT_EVENT = 'agent-ide:workbench-open-project';
 export const WORKBENCH_TOGGLE_OUTER_RAIL_EVENT = 'agent-ide:workbench-toggle-outer-rail';
 export const WORKBENCH_TOGGLE_INNER_SIDEBAR_EVENT = 'agent-ide:workbench-toggle-inner-sidebar';

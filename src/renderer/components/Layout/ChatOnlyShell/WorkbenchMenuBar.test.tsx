@@ -39,14 +39,14 @@ describe('WorkbenchMenuBar', () => {
     it('clicking File opens its dropdown', () => {
       render(<WorkbenchMenuBar />);
       fireEvent.click(screen.getByText('File'));
-      expect(screen.getByText('New Session')).toBeDefined();
+      expect(screen.getByText('New Chat')).toBeDefined();
     });
 
     it('clicking File twice closes the dropdown', () => {
       render(<WorkbenchMenuBar />);
       fireEvent.click(screen.getByText('File'));
       fireEvent.click(screen.getByText('File'));
-      expect(screen.queryByText('New Session')).toBeNull();
+      expect(screen.queryByText('New Chat')).toBeNull();
     });
 
     it('clicking Edit opens its dropdown with Find in Chat', () => {
@@ -101,10 +101,10 @@ describe('WorkbenchMenuBar', () => {
       expect(dispatched).toContain('agent-ide:workbench-toggle-outer-rail');
     });
 
-    it('New Session dispatches agent-ide:workbench-new-session', () => {
+    it('New Chat dispatches agent-ide:workbench-new-session', () => {
       render(<WorkbenchMenuBar />);
       fireEvent.click(screen.getByText('File'));
-      fireEvent.click(screen.getByText('New Session'));
+      fireEvent.click(screen.getByText('New Chat'));
       expect(dispatched).toContain('agent-ide:workbench-new-session');
     });
 
@@ -120,7 +120,7 @@ describe('WorkbenchMenuBar', () => {
     it('Alt+F opens the File menu', () => {
       render(<WorkbenchMenuBar />);
       fireEvent.keyDown(document, { key: 'f', altKey: true });
-      expect(screen.getByText('New Session')).toBeDefined();
+      expect(screen.getByText('New Chat')).toBeDefined();
     });
 
     it('Alt+E opens the Edit menu', () => {
@@ -150,9 +150,9 @@ describe('WorkbenchMenuBar', () => {
     it('Escape closes an open menu', () => {
       render(<WorkbenchMenuBar />);
       fireEvent.keyDown(document, { key: 'f', altKey: true });
-      expect(screen.getByText('New Session')).toBeDefined();
+      expect(screen.getByText('New Chat')).toBeDefined();
       fireEvent.keyDown(document, { key: 'Escape' });
-      expect(screen.queryByText('New Session')).toBeNull();
+      expect(screen.queryByText('New Chat')).toBeNull();
     });
   });
 });

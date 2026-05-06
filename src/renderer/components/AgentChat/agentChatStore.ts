@@ -32,6 +32,7 @@ const DEFAULT_THREAD: AgentChatThreadState = {
   isLoading: false,
   isSending: false,
   pendingUserMessage: null,
+  projectRoot: null,
 };
 
 const DEFAULT_DETAILS: AgentChatDetailsState = {

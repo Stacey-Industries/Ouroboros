@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useCallback } from 'react';
 
 import {
@@ -65,6 +66,10 @@ export function useOpenFileActionInternal(
 export function useCloseFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
   return useCallback(
     (filePath: string) => {
+      log.info('[trace:FileViewer] closeFile called', {
+        filePath,
+        stack: new Error().stack?.split('\n').slice(1, 8).join(' | '),
+      });
       disposeMonacoModel(filePath);
       setOpenFiles((prev) => {
         const removedIndex = prev.findIndex((file) => file.path === filePath);
@@ -221,13 +226,15 @@ export function useSaveFileAction(setOpenFiles: SetOpenFiles) {
 function useSetDirtyAction(setOpenFiles: SetOpenFiles) {
   return useCallback(
     (filePath: string, dirty: boolean) => {
-      setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
-        const changes: Partial<OpenFile> = {};
-        if (file.isDirty !== dirty) changes.isDirty = dirty;
-        if (dirty && file.isPreview) changes.isPreview = false;
-        if (Object.keys(changes).length === 0) return file;
-        return { ...file, ...changes };
-      }));
+      setOpenFiles((prev) =>
+        updateOpenFile(prev, filePath, (file) => {
+          const changes: Partial<OpenFile> = {};
+          if (file.isDirty !== dirty) changes.isDirty = dirty;
+          if (dirty && file.isPreview) changes.isPreview = false;
+          if (Object.keys(changes).length === 0) return file;
+          return { ...file, ...changes };
+        }),
+      );
     },
     [setOpenFiles],
   );
@@ -246,9 +253,11 @@ function useReloadFileAction(setOpenFiles: SetOpenFiles) {
 function useUpdateDraftAction(setOpenFiles: SetOpenFiles) {
   return useCallback(
     (filePath: string, content: string) => {
-      setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) =>
-        file.content === content ? file : applyDraftContent(file, content),
-      ));
+      setOpenFiles((prev) =>
+        updateOpenFile(prev, filePath, (file) =>
+          file.content === content ? file : applyDraftContent(file, content),
+        ),
+      );
     },
     [setOpenFiles],
   );
@@ -257,10 +266,12 @@ function useUpdateDraftAction(setOpenFiles: SetOpenFiles) {
 function useDiscardDraftAction(setOpenFiles: SetOpenFiles) {
   return useCallback(
     (filePath: string) => {
-      setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
-        const restoredContent = file.originalContent ?? file.content ?? '';
-        return { ...file, content: restoredContent, isDirty: false, saveError: null };
-      }));
+      setOpenFiles((prev) =>
+        updateOpenFile(prev, filePath, (file) => {
+          const restoredContent = file.originalContent ?? file.content ?? '';
+          return { ...file, content: restoredContent, isDirty: false, saveError: null };
+        }),
+      );
     },
     [setOpenFiles],
   );

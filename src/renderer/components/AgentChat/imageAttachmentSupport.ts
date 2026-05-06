@@ -58,15 +58,47 @@ export function insertDroppedPath(
   textarea.focus();
 }
 
+// Wave 82 — accept external non-image files via dragOver instead of rejecting.
+function hasAnyExternalFile(event: React.DragEvent): boolean {
+  return Array.from(event.dataTransfer.items).some((i) => i.kind === 'file');
+}
+
+export interface AttachmentDragHandlersOptions {
+  handleFiles: (files: File[]) => Promise<void>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  lastSyncedDraft: React.MutableRefObject<string>;
+  onChange: (value: string) => void;
+  /** Wave 82 — optional: called for non-image external files. Pins via addFile
+   *  so they appear in the context popover's Files/Context group. Without this
+   *  callback wired, non-image drops are silently dropped (legacy behavior). */
+  onPinExternalFile?: (file: File) => void;
+}
+
 export function useAttachmentDragHandlers(
-  handleFiles: (files: File[]) => Promise<void>,
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
-  lastSyncedDraft: React.MutableRefObject<string>,
-  onChange: (value: string) => void,
+  handleFilesOrOptions: ((files: File[]) => Promise<void>) | AttachmentDragHandlersOptions,
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>,
+  lastSyncedDraft?: React.MutableRefObject<string>,
+  onChange?: (value: string) => void,
 ) {
+  // Wave 82 — backward-compatible: legacy positional call signature is preserved
+  // for existing callers; new callers can pass an options object including
+  // onPinExternalFile.
+  const opts: AttachmentDragHandlersOptions =
+    typeof handleFilesOrOptions === 'function'
+      ? {
+          handleFiles: handleFilesOrOptions,
+          textareaRef: textareaRef!,
+          lastSyncedDraft: lastSyncedDraft!,
+          onChange: onChange!,
+        }
+      : handleFilesOrOptions;
+  return useAttachmentDragHandlersImpl(opts);
+}
+
+function useAttachmentDragHandlersImpl(opts: AttachmentDragHandlersOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const handleDragOver = useCallback((event: React.DragEvent) => {
-    if (!hasImageItems(event) && !hasFileTreeData(event)) return;
+    if (!hasImageItems(event) && !hasFileTreeData(event) && !hasAnyExternalFile(event)) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     setIsDragging(true);
@@ -76,15 +108,20 @@ export function useAttachmentDragHandlers(
     (event: React.DragEvent) => {
       event.preventDefault();
       setIsDragging(false);
-      void handleFiles(
-        Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')),
-      );
+      const files = Array.from(event.dataTransfer.files);
+      void opts.handleFiles(files.filter((f) => f.type.startsWith('image/')));
+      if (opts.onPinExternalFile) {
+        for (const f of files) {
+          if (!f.type.startsWith('image/')) opts.onPinExternalFile(f);
+        }
+      }
       const jsonData = event.dataTransfer.getData('application/json');
       if (!jsonData) return;
       const mention = buildMentionFromDrop(jsonData);
-      if (mention) insertDroppedPath(textareaRef, lastSyncedDraft, onChange, mention.path);
+      if (mention)
+        insertDroppedPath(opts.textareaRef, opts.lastSyncedDraft, opts.onChange, mention.path);
     },
-    [handleFiles, textareaRef, lastSyncedDraft, onChange],
+    [opts],
   );
   return { isDragging, handleDragOver, handleDragLeave, handleDrop };
 }

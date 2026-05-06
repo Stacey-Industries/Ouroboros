@@ -25,13 +25,11 @@ function ArtifactHistoryItem({
       type="button"
       data-testid="artifact-history-item"
       data-artifact-key={item.key}
-      className={`rounded border px-2 py-1.5 text-left text-xs transition-colors ${cls}`}
+      title={item.subtitle ? `${item.title} — ${item.subtitle}` : item.title}
+      className={`max-w-[140px] truncate rounded border px-2 py-1 text-left text-[11px] transition-colors ${cls}`}
       onClick={() => onSelect(item)}
     >
-      <div className="truncate font-medium">{item.title}</div>
-      {item.subtitle && (
-        <div className="truncate text-[11px] text-text-semantic-tertiary">{item.subtitle}</div>
-      )}
+      <span className="truncate font-medium">{item.title}</span>
     </button>
   );
 }
@@ -42,6 +40,8 @@ export function ArtifactHistoryList({
   onSelect,
 }: ArtifactHistoryListProps): React.ReactElement | null {
   if (items.length === 0) return null;
+  // Wave 82 — horizontal flex-wrap layout, 5 chips × 2 rows max (10 visible).
+  // Cap enforced upstream by useArtifactHistoryStack's MAX_RECENT.
   return (
     <section
       className="border-b border-border-semantic-subtle px-3 py-2"
@@ -50,7 +50,7 @@ export function ArtifactHistoryList({
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
         Recent
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {items.map((item) => (
           <ArtifactHistoryItem
             key={item.key}

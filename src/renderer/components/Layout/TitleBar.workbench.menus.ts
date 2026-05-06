@@ -4,12 +4,9 @@
  */
 
 import {
-  OPEN_SETTINGS_PANEL_EVENT,
+  OPEN_SETTINGS_EVENT,
   SET_THEME_EVENT,
   TOGGLE_IMMERSIVE_CHAT_EVENT,
-  WORKBENCH_FIND_NEXT_EVENT,
-  WORKBENCH_FIND_PREV_EVENT,
-  WORKBENCH_NEW_CHAT_EVENT,
   WORKBENCH_NEW_SESSION_EVENT,
   WORKBENCH_OPEN_CHAT_SEARCH_EVENT,
   WORKBENCH_OPEN_PROJECT_EVENT,
@@ -28,8 +25,17 @@ export interface WorkbenchMenuOptions {
   recentProjects?: string[];
 }
 
+// Wave 82 — wrap dispatch in try/catch so a misbehaving listener can't
+// propagate exceptions back to the dropdown portal click handler. An
+// unhandled error in the click action could leave the portal mounted with
+// focus trapped — what the user perceived as "File > New Session froze IDE".
 function dispatchEv(name: string, detail?: unknown): void {
-  window.dispatchEvent(new CustomEvent(name, detail != null ? { detail } : undefined));
+  try {
+    window.dispatchEvent(new CustomEvent(name, detail != null ? { detail } : undefined));
+  } catch (err) {
+    // Intentional surfacing of listener errors so menu actions never silently fail.
+    console.warn(`[TitleBar.workbench.menus] dispatch ${name} threw:`, err);
+  }
 }
 
 /** Theme names in display order. Matches themeList in src/renderer/themes/index.ts. */
@@ -65,15 +71,16 @@ function buildWorkbenchFileMenu(opts: WorkbenchMenuOptions): MenuDefinition {
   return {
     label: 'File',
     items: [
+      // Wave 82.1 — collapsed "New Session" + "New Chat in Active Session" into
+      // a single "New Chat" entry. The two were functionally indistinct from a
+      // user perspective (sessions don't surface as distinct entities in the
+      // UI; both spawned a new Claude Code process for the first message).
+      // Branching from message actions is unaffected — that's a per-message
+      // affordance, not a menu item.
       {
-        label: 'New Session',
-        shortcut: 'Ctrl+Shift+N',
-        action: () => dispatchEv(WORKBENCH_NEW_SESSION_EVENT),
-      },
-      {
-        label: 'New Chat in Active Session',
+        label: 'New Chat',
         shortcut: 'Ctrl+N',
-        action: () => dispatchEv(WORKBENCH_NEW_CHAT_EVENT),
+        action: () => dispatchEv(WORKBENCH_NEW_SESSION_EVENT),
       },
       SEPARATOR,
       {
@@ -93,6 +100,8 @@ function buildWorkbenchFileMenu(opts: WorkbenchMenuOptions): MenuDefinition {
 }
 
 function buildWorkbenchEditMenu(): MenuDefinition {
+  // Wave 82 — Find Next / Find Previous removed: ChatSearchOverlay has no
+  // find-next/prev implementation. Add back when overlay supports navigation.
   return {
     label: 'Edit',
     items: [
@@ -104,12 +113,6 @@ function buildWorkbenchEditMenu(): MenuDefinition {
         label: 'Find in Chat',
         shortcut: 'Ctrl+F',
         action: () => dispatchEv(WORKBENCH_OPEN_CHAT_SEARCH_EVENT),
-      },
-      { label: 'Find Next', shortcut: 'F3', action: () => dispatchEv(WORKBENCH_FIND_NEXT_EVENT) },
-      {
-        label: 'Find Previous',
-        shortcut: 'Shift+F3',
-        action: () => dispatchEv(WORKBENCH_FIND_PREV_EVENT),
       },
     ],
   };
@@ -154,18 +157,22 @@ function buildWorkbenchViewMenu(): MenuDefinition {
 }
 
 function buildWorkbenchToolsMenu(): MenuDefinition {
+  // Wave 82 — dispatch OPEN_SETTINGS_EVENT (the workbench-shell event) instead
+  // of OPEN_SETTINGS_PANEL_EVENT (which is only listened to by the IDE-shell
+  // SettingsPanel, not mounted in chat-only). ChatOnlySettingsOverlay wires
+  // OPEN_SETTINGS_EVENT. Tab deep-link for Keyboard Shortcuts not yet supported.
   return {
     label: 'Tools',
     items: [
       {
         label: 'Settings',
         shortcut: 'Ctrl+,',
-        action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT),
+        action: () => dispatchEv(OPEN_SETTINGS_EVENT),
       },
       {
         label: 'Keyboard Shortcuts',
         shortcut: 'Ctrl+K Ctrl+S',
-        action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT, 'keybindings'),
+        action: () => dispatchEv(OPEN_SETTINGS_EVENT, 'keybindings'),
       },
       SEPARATOR,
       { label: 'Theme', submenu: buildThemeSubmenu() },

@@ -103,6 +103,7 @@ function WorkbenchSidePanels({
       onSelectUtilityTab={layout.setActiveUtilityTab}
       onSelectView={layout.setRightPaneView}
       onClose={handleClose}
+      activeProject={layout.activeProject}
     />
   );
 }

@@ -30,7 +30,23 @@ export interface FileHeatData {
 
 const DECAY_THRESHOLD_MS = 30 * 60 * 1000;
 const DECAY_INTERVAL_MS = 60 * 1000;
-const EDIT_TOOL_NAMES = new Set(['Write', 'Edit', 'write', 'edit', 'NotebookEdit']);
+// Wave 82.1 — added the new MCP-style names (`write_file`, `edit_file`,
+// `notebook_edit`). The backend emits both legacy (`Write`, `Edit`) and new
+// forms — see the same dual-list in `FILE_MODIFYING_TOOLS_SET` in
+// AgentChatConversation.tsx. Without the new names, real in-app Claude tool
+// calls didn't register against any heat-map entry (B2 silent failure).
+const EDIT_TOOL_NAMES = new Set([
+  'Write',
+  'Edit',
+  'write',
+  'edit',
+  'NotebookEdit',
+  'write_file',
+  'edit_file',
+  'notebook_edit',
+  'MultiEdit',
+  'multi_edit',
+]);
 
 type SessionList = UseAgentEventsReturn['currentSessions'];
 type ToolCall = SessionList[number]['toolCalls'][number];
@@ -94,7 +110,15 @@ function extractFilePath(inputSummary: string): string | null {
   }
 
   const trimmed = inputSummary.trim();
-  return trimmed.startsWith('{') || trimmed.startsWith('[') ? null : trimmed;
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return trimmed;
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const candidate = parsed.file_path ?? parsed.notebook_path ?? parsed.path;
+    return typeof candidate === 'string' && candidate.length > 0 ? candidate : null;
+  } catch {
+    return null;
+  }
 }
 
 function recordEditToolCall(

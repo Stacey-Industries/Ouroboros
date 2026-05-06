@@ -12,6 +12,13 @@ export interface ProjectContextValue {
   projectRoots: string[];
   projectRoot: string | null;
   projectName: string;
+  /**
+   * `true` once the initial async hydration from `getProjectRoots()` has
+   * settled (resolved or failed). Consumers that validate against
+   * `projectRoots` on cold boot must wait for this to avoid acting on
+   * the empty initial state.
+   */
+  isLoaded: boolean;
   setProjectRoot: (path: string) => void;
   addProjectRoot: (path: string) => void;
   removeProjectRoot: (path: string) => void;
@@ -36,24 +43,31 @@ function mergeSavedRoots(savedRoots: string[], initialRoot: string | null): stri
 
 function useProjectRootState(
   initialRoot: string | null,
-): [string[], React.Dispatch<React.SetStateAction<string[]>>] {
+): [string[], React.Dispatch<React.SetStateAction<string[]>>, boolean] {
   const [projectRoots, setProjectRoots] = useState<string[]>(() =>
     initialRoot ? [initialRoot] : [],
   );
+  const [isLoaded, setIsLoaded] = useState(false);
   const initialRootRef = useRef(initialRoot);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('electronAPI' in window)) return;
+    if (typeof window === 'undefined' || !('electronAPI' in window)) {
+      setIsLoaded(true);
+      return;
+    }
 
-    void window.electronAPI.window.getProjectRoots().then((result) => {
-      const savedRoots = result.roots;
-      if (Array.isArray(savedRoots) && savedRoots.length > 0) {
-        setProjectRoots(mergeSavedRoots(savedRoots, initialRootRef.current));
-      }
-    });
+    void window.electronAPI.window
+      .getProjectRoots()
+      .then((result) => {
+        const savedRoots = result.roots;
+        if (Array.isArray(savedRoots) && savedRoots.length > 0) {
+          setProjectRoots(mergeSavedRoots(savedRoots, initialRootRef.current));
+        }
+      })
+      .finally(() => setIsLoaded(true));
   }, []);
 
-  return [projectRoots, setProjectRoots];
+  return [projectRoots, setProjectRoots, isLoaded];
 }
 
 function useProjectRootActions(
@@ -110,7 +124,7 @@ export function ProjectProvider({
   initialRoot = null,
   children,
 }: ProjectProviderProps): React.ReactElement {
-  const [projectRoots, setProjectRoots] = useProjectRootState(initialRoot);
+  const [projectRoots, setProjectRoots, isLoaded] = useProjectRootState(initialRoot);
   const projectActions = useProjectRootActions(setProjectRoots);
   const projectRoot = projectRoots[0] ?? null;
   const projectName = projectRoot ? basename(projectRoot) : '';
@@ -120,9 +134,10 @@ export function ProjectProvider({
       projectRoots,
       projectRoot,
       projectName,
+      isLoaded,
       ...projectActions,
     }),
-    [projectActions, projectName, projectRoot, projectRoots],
+    [isLoaded, projectActions, projectName, projectRoot, projectRoots],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

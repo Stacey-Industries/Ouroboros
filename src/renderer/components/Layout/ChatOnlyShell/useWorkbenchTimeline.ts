@@ -13,7 +13,10 @@ import {
   dedupeSessions,
 } from './useWorkbenchTimeline.helpers';
 
-const TIMELINE_VISIBLE_LIMIT = 24;
+// Wave 82 — Phase 0 decision 10 (emerging digest). Cap raised so the counter
+// and the visible list no longer disagree wildly. WorkbenchTimelinePanel
+// groups entries by session in render so the larger cap doesn't overwhelm.
+const TIMELINE_VISIBLE_LIMIT = 500;
 
 export type WorkbenchTimelineTone = 'neutral' | 'success' | 'warning' | 'error';
 

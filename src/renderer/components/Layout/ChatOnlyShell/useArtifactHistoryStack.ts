@@ -36,6 +36,9 @@ const DEFAULT_SESSION_STATE: ArtifactSessionState = {
   selectedKey: null,
 };
 
+/** Wave 82 — Phase 0 decision 9 cap (5 chips per row × 2 rows). */
+const MAX_RECENT = 10;
+
 const sessionState = new Map<string, ArtifactSessionState>();
 const listeners = new Set<() => void>();
 
@@ -56,7 +59,8 @@ function upsertHistoryEntry(
   history: ArtifactHistoryEntry[],
   entry: ArtifactHistoryEntry,
 ): ArtifactHistoryEntry[] {
-  return [entry, ...history.filter((candidate) => candidate.key !== entry.key)];
+  const filtered = history.filter((candidate) => candidate.key !== entry.key);
+  return [entry, ...filtered].slice(0, MAX_RECENT);
 }
 
 export function resetArtifactHistoryStackForTests(): void {
@@ -76,6 +80,15 @@ export interface UseArtifactHistoryStackResult {
   selectArtifact: (key: string | null) => void;
 }
 
+/**
+ * Wave 82 — observer with hard cap (MAX_RECENT). Observed artifacts upsert
+ * to the front of history, oldest evicted past the cap. Full LRU
+ * displacement (where the active artifact is excluded from Recent and only
+ * displaced files appear) requires a FileViewerManager close-event
+ * subscription that we don't currently expose — deferred to a follow-up wave.
+ * The cap satisfies the user's stated "Recent shouldn't fill uncontrollably"
+ * requirement; horizontal layout (5 chips × 2 rows) caps visible chips at 10.
+ */
 function useArtifactObserver(
   sessionKey: string,
   observedArtifact: ArtifactHistoryEntry | ArtifactHistoryEntry[] | null,

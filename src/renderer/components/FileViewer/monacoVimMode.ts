@@ -126,6 +126,33 @@ export function getOrCreateModel(
   return monaco.editor.createModel(content, language, uri);
 }
 
+/**
+ * Build the minimap + overview-ruler + vertical-scrollbar option subset.
+ * Used by both `createEditorOptions` (construction time) and
+ * `useMonacoEditorOptions` (reactive update). Centralizing keeps the two
+ * in sync — without this, undefined `showMinimap` left Monaco at its
+ * default 3-lane overview ruler, which renders as a residual vertical
+ * strip on the right edge of the editor.
+ */
+export function buildMinimapEditorOptions(
+  showMinimap: boolean | undefined,
+): Partial<monaco.editor.IEditorOptions> {
+  const on = showMinimap ?? true;
+  return {
+    minimap: { enabled: on },
+    scrollbar: {
+      vertical: on ? 'hidden' : 'auto',
+      horizontal: 'auto',
+      verticalScrollbarSize: on ? 0 : 14,
+      verticalSliderSize: on ? 0 : 14,
+      useShadows: !on,
+    },
+    overviewRulerLanes: on ? 0 : 3,
+    overviewRulerBorder: !on,
+    hideCursorInOverviewRuler: on,
+  };
+}
+
 export function createEditorOptions(
   readOnly: boolean,
   wordWrap: boolean | undefined,
@@ -135,7 +162,7 @@ export function createEditorOptions(
     readOnly,
     theme: 'ouroboros',
     automaticLayout: true,
-    minimap: { enabled: showMinimap ?? true },
+    ...buildMinimapEditorOptions(showMinimap),
     stickyScroll: { enabled: true, maxLineCount: 5 },
     lineNumbers: 'on',
     lineNumbersMinChars: 3,

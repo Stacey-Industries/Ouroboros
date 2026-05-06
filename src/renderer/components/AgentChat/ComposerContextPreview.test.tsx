@@ -70,9 +70,34 @@ describe('ComposerContextPreview', () => {
     expect(screen.getByTestId('context-preview-popover')).toBeDefined();
   });
 
-  it('shows the active rule from the running agent in the Rules tab', () => {
+  it('falls back to filesystem rules in the Rules tab when no claudeSessionId is set', async () => {
+    Object.defineProperty(window, 'electronAPI', {
+      value: {
+        ...window.electronAPI,
+        rulesAndSkills: {
+          listRuleFiles: vi.fn().mockResolvedValue({
+            success: true,
+            ruleFiles: [
+              {
+                id: 'testing',
+                scope: 'project',
+                filePath: '/p/.claude/rules/testing.md',
+                content: '',
+                description: '',
+              },
+            ],
+          }),
+          onChanged: vi.fn(() => () => undefined),
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
     render(<ComposerContextPreview />);
     fireEvent.click(screen.getByTestId('context-preview-toggle'));
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(screen.getByText('testing')).toBeDefined();
   });
 

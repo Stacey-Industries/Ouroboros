@@ -19,6 +19,8 @@ interface WorkbenchRightPaneProps {
   onSelectUtilityTab: (tab: ChatWorkbenchUtilityTab) => void;
   onSelectView: (view: RightPaneView) => void;
   onClose: () => void;
+  /** Wave 82.1 — workbench rail's active project, threaded into utility drawer. */
+  activeProject: string | null;
 }
 
 const VIEW_LABEL: Record<RightPaneView, string> = {
@@ -184,6 +186,7 @@ export function WorkbenchRightPane({
   onSelectUtilityTab,
   onSelectView,
   onClose,
+  activeProject,
 }: WorkbenchRightPaneProps): React.ReactElement {
   return (
     <aside
@@ -201,6 +204,7 @@ export function WorkbenchRightPane({
             activeTab={activeUtilityTab}
             onSelectTab={onSelectUtilityTab}
             onClose={onClose}
+            activeProject={activeProject}
           />
         )}
       </div>

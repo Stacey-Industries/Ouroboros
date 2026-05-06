@@ -132,6 +132,9 @@ export interface UseContextPreviewInput {
   model?: string;
   pinnedFileNames: { estimatedTokens: number; name: string; path: string }[];
   skillExecutions: SkillExecutionRecord[];
+  /** Wave 82 — pasted/dropped attachments (images and external files). They
+   *  surface under the Files tab so they're not invisible from the popover. */
+  attachments?: { estimatedTokens: number; name: string }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +181,7 @@ function buildSkillItems(skills: SkillExecutionRecord[]): ContextItem[] {
 function buildFileItems(
   pinnedFiles: UseContextPreviewInput['pinnedFileNames'],
   mentions: UseContextPreviewInput['mentionLabels'],
+  attachments: UseContextPreviewInput['attachments'] = [],
 ): ContextItem[] {
   const fileItems: ContextItem[] = pinnedFiles.map((f) => ({
     detail: f.path,
@@ -194,7 +198,17 @@ function buildFileItems(
     kind: 'mention' as const,
     label: m.label,
   }));
-  return [...fileItems, ...mentionItems];
+  // Wave 82 — attachments appear under Files (kind: 'file') so they're
+  // visible in the popover. Distinguished by `attachment:` id prefix.
+  const attachmentItems: ContextItem[] = attachments.map((a, i) => ({
+    detail: 'attachment',
+    enabled: true,
+    estimatedTokens: a.estimatedTokens,
+    id: `attachment:${i}:${a.name}`,
+    kind: 'file' as const,
+    label: a.name,
+  }));
+  return [...fileItems, ...attachmentItems, ...mentionItems];
 }
 
 // Verified against Claude Code 2.1.x as of 2026-04-30 (source: ericbuess/claude-code-docs
@@ -330,7 +344,7 @@ export function useContextPreview(input: UseContextPreviewInput): ContextPreview
     const ruleItems = buildRuleItems(input.loadedRules);
     const skillItems = buildSkillItems(input.skillExecutions);
     const memoryItems = buildMemoryItems(input.memoryEntries ?? []);
-    const fileItems = buildFileItems(input.pinnedFileNames, input.mentionLabels);
+    const fileItems = buildFileItems(input.pinnedFileNames, input.mentionLabels, input.attachments);
     const builtInItems = buildToolItems();
     const mcpItems = buildMcpToolItems(input.mcpTools ?? []);
     const toolItems = [...builtInItems, ...mcpItems];
@@ -345,6 +359,7 @@ export function useContextPreview(input: UseContextPreviewInput): ContextPreview
     ];
     return { items, totals: computeTotals(items) };
   }, [
+    input.attachments,
     input.effort,
     input.loadedRules,
     input.mcpTools,

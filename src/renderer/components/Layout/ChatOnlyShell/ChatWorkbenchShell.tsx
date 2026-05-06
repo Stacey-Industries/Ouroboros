@@ -18,6 +18,7 @@ import { KeyboardShortcutCheatSheet } from './KeyboardShortcutCheatSheet';
 import { useChatSidebarMode } from './useChatSidebarMode';
 import { useChatWorkbenchLayout } from './useChatWorkbenchLayout';
 import { useTerminalDockState } from './useTerminalDockState';
+import { useWorkbenchMenuEvents } from './useWorkbenchMenuEvents';
 
 interface ChatWorkbenchShellProps {
   projectRoot: string | null;
@@ -223,6 +224,8 @@ function useShellState(props: ChatWorkbenchShellProps): {
   const dock = useTerminalDockState();
   const { launcherOpen, closeLauncher } = useMultiSessionLauncherState();
   const { searchOpen, closeSearch } = useChatSearchState(props.projectRoot);
+  // Wave 82 — wire workbench title-bar menu DOM events to existing handlers.
+  useWorkbenchMenuEvents({ layout, dock });
   return { cycleMode, mode, layout, dock, launcherOpen, closeLauncher, searchOpen, closeSearch };
 }
 

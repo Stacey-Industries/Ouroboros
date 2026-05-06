@@ -6,6 +6,7 @@
  * the inner Chats tab lists all chats whose workspaceRoot matches.
  */
 
+import log from 'electron-log/renderer';
 import React, { useCallback, useMemo } from 'react';
 
 import { useProject } from '../../../contexts/ProjectContext';
@@ -44,6 +45,42 @@ function useWorkbenchProjects(): string[] {
   }, [projectRoots, config?.recentProjects]);
 }
 
+// Wave 82 — clear stale activeProject if it isn't in the merged project list.
+// Without this, layout.activeProject persists in localStorage even after a
+// project is removed, leaving the inner rail showing a project that the outer
+// rail no longer contains.
+//
+// `isReady` gates the validator until both async sources (ProjectContext's
+// getProjectRoots and useConfig's config.getAll) have resolved. On cold boot
+// the localStorage-restored activeProject would otherwise be wiped because
+// `projects` is transiently `[]` while the IPC calls are in flight, leaving
+// the rail entry but no inner state — the user then has to remove and re-add
+// the project to recover.
+function useActiveProjectValidator(
+  layout: LayoutState,
+  projects: string[],
+  isReady: boolean,
+): void {
+  const activeProject = layout.activeProject;
+  React.useEffect(() => {
+    if (!isReady) return;
+    if (!activeProject) return;
+    if (projects.includes(activeProject)) return;
+    log.warn('[trace:rail] validator CLEARING activeProject', {
+      activeProject,
+      projects,
+      isReady,
+    });
+    layout.setActiveProject(null);
+  }, [activeProject, projects, layout, isReady]);
+}
+
+function useProjectsReady(): boolean {
+  const { isLoaded: projectsLoaded } = useProject();
+  const { isLoading: configLoading } = useConfig();
+  return projectsLoaded && !configLoading;
+}
+
 // ── Rail handlers ──────────────────────────────────────────────────────────────
 
 interface RailHandlers {
@@ -54,15 +91,26 @@ interface RailHandlers {
   handleSelectTab: (tab: Parameters<LayoutState['setActiveInnerTab']>[1]) => void;
 }
 
-function useRailHandlers(layout: LayoutState): RailHandlers {
-  const activeProject = layout.activeProject;
-  const { removeProjectRoot } = useProject();
+// Wave 82.1 — clicking a "recent" project on the rail used to call
+// `layout.setActiveProject` only, leaving the project absent from
+// `projectRoots`. Per-window roots (used by `pathSecurity` in the main
+// process) are sourced from `projectRoots`, so `files:readDir` returned
+// `{success:false}` and the file tree silently rendered as empty. Promoting
+// the path via `addProjectRoot` (idempotent) registers it with the sandbox
+// before activation.
+function useProjectSelection(layout: LayoutState): {
+  handleSelectOrAdd: (path: string) => void;
+  handleRemoveProject: (path: string) => void;
+} {
+  const { addProjectRoot, removeProjectRoot } = useProject();
   const { config, set: setConfig } = useConfig();
-  const handleSelectProject = useCallback(
-    (path: string) => layout.setActiveProject(path),
-    [layout],
+  const handleSelectOrAdd = useCallback(
+    (path: string) => {
+      addProjectRoot(path);
+      layout.setActiveProject(path);
+    },
+    [addProjectRoot, layout],
   );
-  const handleAddProject = useCallback((path: string) => layout.setActiveProject(path), [layout]);
   const handleRemoveProject = useCallback(
     (path: string) => {
       removeProjectRoot(path);
@@ -77,6 +125,12 @@ function useRailHandlers(layout: LayoutState): RailHandlers {
     },
     [config?.recentProjects, layout, removeProjectRoot, setConfig],
   );
+  return { handleSelectOrAdd, handleRemoveProject };
+}
+
+function useRailHandlers(layout: LayoutState): RailHandlers {
+  const activeProject = layout.activeProject;
+  const { handleSelectOrAdd, handleRemoveProject } = useProjectSelection(layout);
   const handleOpenSettings = useCallback(() => {
     window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_EVENT));
   }, []);
@@ -87,8 +141,8 @@ function useRailHandlers(layout: LayoutState): RailHandlers {
     [layout, activeProject],
   );
   return {
-    handleSelectProject,
-    handleAddProject,
+    handleSelectProject: handleSelectOrAdd,
+    handleAddProject: handleSelectOrAdd,
     handleRemoveProject,
     handleOpenSettings,
     handleSelectTab,
@@ -188,11 +242,20 @@ export function TwoTierRailSurface(props: TwoTierRailSurfaceProps): React.ReactE
   const { layout, sessionsState, threads, approvalRequests, dock, handlers, terminal } = props;
   const activeProject = layout.activeProject;
   const projectState = layout.getProjectState(activeProject ?? '');
+  const projects = useWorkbenchProjects();
+  const isReady = useProjectsReady();
+  log.info('[trace:rail] TwoTierRailSurface', {
+    isReady,
+    activeProject,
+    projectsCount: projects.length,
+    projects,
+  });
+  useActiveProjectValidator(layout, projects, isReady);
   return (
     <RailSurfaceView
       activeProject={activeProject}
       activeTab={projectState.activeInnerTab}
-      projects={useWorkbenchProjects()}
+      projects={projects}
       railHandlers={useRailHandlers(layout)}
       tabContents={buildInnerTabContents({
         activeProject,

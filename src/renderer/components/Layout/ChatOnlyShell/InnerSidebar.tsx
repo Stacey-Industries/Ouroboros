@@ -157,17 +157,6 @@ function EmptyTabBody({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function SidebarFooter(): React.ReactElement {
-  return (
-    <div
-      className="shrink-0 border-t border-border-semantic px-3 py-1.5"
-      data-testid="inner-sidebar-footer"
-    >
-      <p className="text-[10px] text-text-semantic-faint">Workspace</p>
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function InnerSidebar({
@@ -192,7 +181,6 @@ export function InnerSidebar({
       <SidebarHeader activeProject={activeProject} />
       <TabStrip activeTab={activeTab} onSelectTab={onSelectTab} />
       <TabBody activeTab={activeTab} contentMap={contentMap} />
-      <SidebarFooter />
     </aside>
   );
 }

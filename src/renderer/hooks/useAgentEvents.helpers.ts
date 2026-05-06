@@ -21,9 +21,11 @@ import {
 } from './useAgentEvents.miscReducers';
 import {
   reduceRuleLoaded,
+  reduceRulesBatchLoaded,
   reduceSkillEnd,
   reduceSkillStart,
   type RuleLoadedAction,
+  type RulesBatchLoadedAction,
   type SkillEndAction,
   type SkillStartAction,
 } from './useAgentEvents.ruleSkillReducers';
@@ -125,6 +127,7 @@ export type AgentAction =
   | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
   | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean }
   | RuleLoadedAction
+  | RulesBatchLoadedAction
   | SkillStartAction
   | SkillEndAction
   | TaskCreatedAction
@@ -189,6 +192,8 @@ function reduceSkillAndTaskAction(state: AgentState, action: AgentAction): Agent
   switch (action.type) {
     case 'RULE_LOADED':
       return reduceRuleLoaded(state, action);
+    case 'RULES_BATCH_LOADED':
+      return reduceRulesBatchLoaded(state, action);
     case 'SKILL_START':
       return reduceSkillStart(state, action);
     case 'SKILL_END':

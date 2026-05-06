@@ -1,5 +1,7 @@
-import React from 'react';
+import log from 'electron-log/renderer';
+import React, { useEffect } from 'react';
 
+import { WORKBENCH_NEW_SESSION_EVENT } from '../../../hooks/appEventNames';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { useAgentChatStoreContext } from '../../AgentChat/agentChatStore';
@@ -99,17 +101,47 @@ interface BodyContentProps {
   activeApprovalSessionIds: Array<string | null | undefined>;
 }
 
+// Wave 82 (post-smoke): wire File > New Session menu event to the canonical
+// handleCreateSession handler. The previous redirect to OPEN_MULTI_SESSION_EVENT
+// opened a deprecated launcher overlay; this routes directly to the chat-only
+// new-session flow (creates session + thread, activates, selects).
+function useNewSessionMenuListener(
+  handler: (projectRoot?: string) => Promise<void>,
+  activeProject: string | null,
+): void {
+  useEffect(() => {
+    const onNewSession = (): void => {
+      void handler(activeProject ?? undefined);
+    };
+    window.addEventListener(WORKBENCH_NEW_SESSION_EVENT, onNewSession);
+    return () => window.removeEventListener(WORKBENCH_NEW_SESSION_EVENT, onNewSession);
+  }, [handler, activeProject]);
+}
+
 function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
   const selectThread = useAgentChatStoreContext((s) => s.onSelectThread);
   const reloadThreads = useAgentChatStoreContext((s) => s.reloadThreads);
   const state = useWorkbenchContextState(props.layout, props.dock);
   const handlers = useWorkbenchHandlers(state.activation, selectThread, reloadThreads);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
+  useNewSessionMenuListener(handlers.handleCreateSession, props.layout.activeProject);
+  // Wave 82 (post-smoke): workbench's rail-active project wins over the global
+  // ProjectContext root. Without this override, switching projects in the rail
+  // didn't refresh the AgentChatWorkspace — it stayed bound to the IDE's main
+  // project root and the chat list didn't update.
+  const effectiveProjectRoot = props.layout.activeProject ?? props.projectRoot;
+  useEffect(() => {
+    log.info('[trace:projectRoot] body effective changed', {
+      layoutActiveProject: props.layout.activeProject,
+      fallbackProjectRoot: props.projectRoot,
+      effective: effectiveProjectRoot,
+    });
+  }, [props.layout.activeProject, props.projectRoot, effectiveProjectRoot]);
   return {
     state,
     handlers,
     terminal: props.terminal,
-    projectRoot: props.projectRoot,
+    projectRoot: effectiveProjectRoot,
     activeApprovalSessionIds,
   };
 }
@@ -234,6 +266,7 @@ function MobileRightPaneContent({ state }: { state: WorkbenchState }): React.Rea
       onSelectUtilityTab={state.layout.setActiveUtilityTab}
       onSelectView={state.layout.setRightPaneView}
       onClose={handleClose}
+      activeProject={state.layout.activeProject}
     />
   );
 }

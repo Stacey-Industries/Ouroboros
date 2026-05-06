@@ -23,18 +23,35 @@ export interface BuildChatOnlyContextPreviewPropsArgs {
    * each render and invalidate `useContextPreview`'s memo on every keystroke.
    */
   mentionLabels: { estimatedTokens: number; label: string }[];
+  /**
+   * Wave 82.1 — explicit project root from the workspace store. The popover
+   * uses this for project-scoped IPCs (rule files, MCP servers, memory
+   * entries). In chat-only workbench mode this is `LayoutState.activeProject`,
+   * which does NOT match `ProjectContext.projectRoot` (= multi-root[0]).
+   */
+  projectRoot: string | null;
 }
 
 export function buildChatOnlyContextPreviewProps(args: BuildChatOnlyContextPreviewPropsArgs) {
-  const { composerProps, chatOverrides, settingsModel, claudeSessionId, mentionLabels } = args;
+  const {
+    composerProps,
+    chatOverrides,
+    settingsModel,
+    claudeSessionId,
+    mentionLabels,
+    projectRoot,
+  } = args;
   return {
     pinnedFiles: composerProps.pinnedFiles,
+    // Wave 82 (post-smoke): attachments now flow through to popover Files tab.
+    attachments: composerProps.attachments,
     chatOverrides,
     settingsModel,
     mentionLabels,
     claudeSessionId,
     disabledLocalIds: composerProps.disabledLocalIds,
     setDisabledLocalIds: composerProps.setDisabledLocalIds,
+    projectRoot,
   };
 }
 

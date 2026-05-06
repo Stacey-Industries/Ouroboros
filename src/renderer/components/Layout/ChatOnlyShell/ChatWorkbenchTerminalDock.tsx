@@ -60,11 +60,66 @@ function useDockResize(height: number, onHeightChange: (px: number) => void): Dr
   return { onPointerDown };
 }
 
-function DockHeader({
+const DOCK_BTN_BASE = 'rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors';
+const DOCK_BTN_HOVER = 'hover:bg-surface-hover hover:text-text-semantic-primary';
+const DOCK_BTN_DANGER =
+  'hover:bg-surface-hover hover:text-status-error disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-semantic-secondary';
+
+function DockCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className={`${DOCK_BTN_BASE} ${DOCK_BTN_HOVER}`}
+      onClick={onClose}
+      data-testid="chat-workbench-dock-close"
+      aria-label="Close terminal dock"
+    >
+      ✕
+    </button>
+  );
+}
+
+function DockHeaderActions({
   onSpawn,
+  onCloseSession,
+  canCloseSession,
   onClose,
 }: {
   onSpawn: () => void;
+  onCloseSession: () => void;
+  canCloseSession: boolean;
+  onClose: () => void;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        className={`${DOCK_BTN_BASE} ${DOCK_BTN_HOVER}`}
+        onClick={onSpawn}
+        data-testid="chat-workbench-dock-spawn"
+      >
+        + New
+      </button>
+      <button
+        type="button"
+        disabled={!canCloseSession}
+        className={`${DOCK_BTN_BASE} ${DOCK_BTN_DANGER}`}
+        onClick={onCloseSession}
+        data-testid="chat-workbench-dock-close-session"
+        aria-label="Close active terminal session"
+        title="Close active terminal session"
+      >
+        Close session
+      </button>
+      <DockCloseButton onClose={onClose} />
+    </div>
+  );
+}
+
+function DockHeader(props: {
+  onSpawn: () => void;
+  onCloseSession: () => void;
+  canCloseSession: boolean;
   onClose: () => void;
 }): React.ReactElement {
   return (
@@ -72,25 +127,7 @@ function DockHeader({
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
         Terminal
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
-          onClick={onSpawn}
-          data-testid="chat-workbench-dock-spawn"
-        >
-          + New
-        </button>
-        <button
-          type="button"
-          className="rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors hover:bg-surface-hover hover:text-text-semantic-primary"
-          onClick={onClose}
-          data-testid="chat-workbench-dock-close"
-          aria-label="Close terminal dock"
-        >
-          ✕
-        </button>
-      </div>
+      <DockHeaderActions {...props} />
     </div>
   );
 }
@@ -108,6 +145,31 @@ function DockResizeHandle({ onPointerDown }: DragController): React.ReactElement
   );
 }
 
+function DockTerminalSurface({
+  terminal,
+}: {
+  terminal: UseTerminalSessionsReturn;
+}): React.ReactElement {
+  return (
+    <div className="min-h-0 flex-1 overflow-hidden">
+      <ErrorBoundary label="ChatWorkbenchTerminal">
+        <TerminalManager
+          sessions={terminal.sessions}
+          activeSessionId={terminal.activeSessionId}
+          onRestart={terminal.handleTerminalRestart}
+          onClose={terminal.handleTerminalClose}
+          onTitleChange={terminal.handleTerminalTitleChange}
+          onSpawn={() => void terminal.spawnSession()}
+          recordingSessions={terminal.recordingSessions}
+          onToggleRecording={(id) => void terminal.handleToggleRecording(id)}
+          onSplit={(id) => void terminal.handleSplit(id)}
+          onCloseSplit={terminal.handleCloseSplit}
+        />
+      </ErrorBoundary>
+    </div>
+  );
+}
+
 export function ChatWorkbenchTerminalDock({
   terminal,
   height,
@@ -119,6 +181,9 @@ export function ChatWorkbenchTerminalDock({
     TERMINAL_DOCK_CONSTANTS.MAX_HEIGHT,
     Math.max(TERMINAL_DOCK_CONSTANTS.MIN_HEIGHT, height),
   );
+  const handleCloseSession = useCallback(() => {
+    if (terminal.activeSessionId) terminal.handleTerminalClose(terminal.activeSessionId);
+  }, [terminal]);
 
   return (
     <section
@@ -127,23 +192,13 @@ export function ChatWorkbenchTerminalDock({
       data-testid="chat-workbench-terminal-dock"
     >
       <DockResizeHandle onPointerDown={drag.onPointerDown} />
-      <DockHeader onSpawn={() => void terminal.spawnSession()} onClose={onClose} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <ErrorBoundary label="ChatWorkbenchTerminal">
-          <TerminalManager
-            sessions={terminal.sessions}
-            activeSessionId={terminal.activeSessionId}
-            onRestart={terminal.handleTerminalRestart}
-            onClose={terminal.handleTerminalClose}
-            onTitleChange={terminal.handleTerminalTitleChange}
-            onSpawn={() => void terminal.spawnSession()}
-            recordingSessions={terminal.recordingSessions}
-            onToggleRecording={(id) => void terminal.handleToggleRecording(id)}
-            onSplit={(id) => void terminal.handleSplit(id)}
-            onCloseSplit={terminal.handleCloseSplit}
-          />
-        </ErrorBoundary>
-      </div>
+      <DockHeader
+        onSpawn={() => void terminal.spawnSession()}
+        onCloseSession={handleCloseSession}
+        canCloseSession={Boolean(terminal.activeSessionId)}
+        onClose={onClose}
+      />
+      <DockTerminalSurface terminal={terminal} />
     </section>
   );
 }

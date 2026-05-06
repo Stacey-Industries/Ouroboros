@@ -81,6 +81,7 @@ vi.mock('./AgentChatComposerSubcomponents', () => ({
 
 vi.mock('./agentChatSelectors', () => ({
   useChatActiveThread: vi.fn(() => null),
+  useChatProjectRoot: vi.fn(() => null),
 }));
 
 vi.mock('./ChatControlsBar', () => ({}));

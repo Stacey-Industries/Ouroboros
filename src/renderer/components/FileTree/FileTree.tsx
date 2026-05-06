@@ -50,6 +50,16 @@ function useResolvedRoots(projectRoots: string[], singleRootProp?: string | null
  * expandedPaths in the store tracks ALL expanded paths (roots + subdirectories).
  * This hook ensures newly-added roots are auto-expanded, then delegates
  * toggle/read to the store.
+ *
+ * Cold-boot fix: the previous version persisted the expand via `useEffect`,
+ * which runs AFTER the first render. RootSection has `enabled = isExpanded`
+ * — when `isExpanded` is `false` on first paint (root not yet in
+ * expandedPaths), `useRootLoader`/`useRootFileWatcher` short-circuit and the
+ * tree stays empty until a re-render. To fix that, we compute an
+ * `effectiveExpanded` set synchronously that includes any root we're about
+ * to auto-expand, while a useEffect persists the change to the store. Roots
+ * we've already auto-expanded once are tracked in a ref so user-collapse is
+ * respected on subsequent renders.
  */
 function useExpandedRoots(roots: string[]): {
   expandedRoots: Set<string>;
@@ -58,15 +68,27 @@ function useExpandedRoots(roots: string[]): {
   const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
   const ensureExpanded = useFileTreeStore((s) => s.ensureExpanded);
   const toggleExpand = useFileTreeStore((s) => s.toggleExpand);
+  const seenRootsRef = useRef<Set<string>>(new Set());
 
-  // Auto-expand newly added roots
   useEffect(() => {
     for (const root of roots) {
+      if (seenRootsRef.current.has(root)) continue;
+      seenRootsRef.current.add(root);
       ensureExpanded(root);
     }
   }, [roots, ensureExpanded]);
 
-  return { expandedRoots: expandedPaths, toggleRoot: toggleExpand };
+  const effectiveExpanded = useMemo(() => {
+    const pendingExpand = roots.filter(
+      (r) => !seenRootsRef.current.has(r) && !expandedPaths.has(r),
+    );
+    if (pendingExpand.length === 0) return expandedPaths;
+    const merged = new Set(expandedPaths);
+    for (const r of pendingExpand) merged.add(r);
+    return merged;
+  }, [roots, expandedPaths]);
+
+  return { expandedRoots: effectiveExpanded, toggleRoot: toggleExpand };
 }
 
 function useFileTreeConfig(): {
@@ -279,9 +301,20 @@ function useFileTreeHooks(
   const { getHeatLevel, heatMap } = useFileHeatMap(heatMapEnabled);
   const handleUnpin = useUnpinHandler(bookmarks, setBookmarks, toast);
   return {
-    roots, expandedRoots, toggleRoot, bookmarks, extraIgnorePatterns,
-    query, setQuery, handleSearchSelect, heatMapEnabled, setHeatMapEnabled,
-    inputRef, getHeatLevel, heatMap, handleUnpin,
+    roots,
+    expandedRoots,
+    toggleRoot,
+    bookmarks,
+    extraIgnorePatterns,
+    query,
+    setQuery,
+    handleSearchSelect,
+    heatMapEnabled,
+    setHeatMapEnabled,
+    inputRef,
+    getHeatLevel,
+    heatMap,
+    handleUnpin,
   };
 }
 

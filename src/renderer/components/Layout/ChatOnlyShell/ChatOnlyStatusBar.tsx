@@ -9,42 +9,7 @@
 import React from 'react';
 
 import { useAgentEventsContext } from '../../../contexts/AgentEventsContext';
-import { useGitBranch } from '../../../hooks/useGitBranch';
 import { useDiffReview } from '../../DiffReview/DiffReviewManager';
-
-// ── BranchIcon ────────────────────────────────────────────────────────────────
-
-function BranchIcon(): React.ReactElement {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-    >
-      <circle cx="4" cy="3" r="1.5" />
-      <circle cx="4" cy="13" r="1.5" />
-      <circle cx="12" cy="6" r="1.5" />
-      <line x1="4" y1="4.5" x2="4" y2="11.5" />
-      <path d="M4 4.5 C4 8 12 6.5 12 7.5" />
-    </svg>
-  );
-}
-
-// ── GitBranchItem ─────────────────────────────────────────────────────────────
-
-function GitBranchItem({ branch }: { branch: string | null }): React.ReactElement | null {
-  if (!branch) return null;
-  return (
-    <span className="flex items-center gap-1 text-text-semantic-muted">
-      <BranchIcon />
-      <span className="truncate max-w-[120px]">{branch}</span>
-    </span>
-  );
-}
 
 // ── TokenUsageItem ────────────────────────────────────────────────────────────
 
@@ -111,17 +76,16 @@ function usePendingDiffCount(): number {
 }
 
 export function ChatOnlyStatusBar({
-  projectRoot,
   onOpenDiffOverlay,
 }: ChatOnlyStatusBarProps): React.ReactElement | null {
-  const { branch } = useGitBranch(projectRoot);
   const { currentSessions } = useAgentEventsContext();
   const pendingDiffCount = usePendingDiffCount();
 
-  const hasBranch = Boolean(branch);
+  // Wave 82 (post-smoke): branch indicator removed from chat-only status bar
+  // per Decision 2 — file tree's GitBranchIndicator is the sole readout.
   const hasStreaming = currentSessions.some((s) => s.status === 'running');
   const hasDiffs = pendingDiffCount > 0;
-  const hasAnyContent = hasBranch || hasStreaming || hasDiffs;
+  const hasAnyContent = hasStreaming || hasDiffs;
 
   if (!hasAnyContent) return null;
 
@@ -130,7 +94,6 @@ export function ChatOnlyStatusBar({
       className="flex items-center h-6 px-3 gap-3 bg-transparent text-xs shrink-0"
       data-testid="chat-only-status-bar"
     >
-      <GitBranchItem branch={branch} />
       <TokenUsageItem sessions={currentSessions} />
       <div className="flex-1" />
       <DiffButton count={pendingDiffCount} onOpen={onOpenDiffOverlay} />

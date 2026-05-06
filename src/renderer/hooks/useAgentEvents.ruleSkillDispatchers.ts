@@ -5,6 +5,8 @@
  * Contains: agent end, token update, rule loaded, skill start/end dispatchers.
  */
 
+import type { LoadedRule } from '@shared/types/ruleActivity';
+import log from 'electron-log/renderer';
 import type { Dispatch } from 'react';
 
 import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
@@ -44,32 +46,63 @@ export function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<Age
   });
 }
 
-export function dispatchRuleLoaded(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  const input = payload.input ?? {};
-  const filePath = typeof input.file_path === 'string' ? input.file_path : '';
-  if (!filePath) return;
+/**
+ * Wave 82 — coalesce rule-load events arriving in the same microtask into one
+ * batched dispatch. Rule-load bursts during session bootstrap (≥10 rules)
+ * previously caused per-keystroke composer lag because each dispatch churned
+ * AgentEventsContext value, which cascaded through useSyncStateIntoStore →
+ * Lexical reconcile mid-keystroke. The microtask boundary is intentional: all
+ * synchronous emits from a single Claude Code stream-json chunk land in one
+ * dispatch; cross-tick events still flush promptly.
+ */
+const ruleLoadQueue: { sessionId: string; rule: LoadedRule }[] = [];
+let ruleLoadFlushScheduled = false;
+
+function flushRuleLoadQueue(dispatch: Dispatch<AgentAction>): void {
+  ruleLoadFlushScheduled = false;
+  if (ruleLoadQueue.length === 0) return;
+  const entries = ruleLoadQueue.splice(0, ruleLoadQueue.length);
+  log.info('[trace:rules] flushRuleLoadQueue', {
+    count: entries.length,
+    sessionIds: entries.map((e) => e.sessionId.slice(-8)),
+    ts: Date.now(),
+  });
+  dispatch({ type: 'RULES_BATCH_LOADED', entries });
+}
+
+function buildLoadedRule(payload: HookPayload, filePath: string): LoadedRule {
   const name =
     filePath
       .split(/[/\\]/)
       .pop()
       ?.replace(/\.\w+$/, '') ?? filePath;
+  const input = payload.input ?? {};
   const memoryType = typeof input.memory_type === 'string' ? input.memory_type : 'Project';
   const loadReason = typeof input.load_reason === 'string' ? input.load_reason : 'unknown';
   const globs = Array.isArray(input.globs)
     ? input.globs.filter((g): g is string => typeof g === 'string')
     : undefined;
-  dispatch({
-    type: 'RULE_LOADED',
+  return {
+    filePath,
+    name,
+    memoryType: memoryType as 'User' | 'Project' | 'Local' | 'Managed',
+    loadReason,
+    globs,
+    loadedAt: payload.timestamp,
+  };
+}
+
+export function dispatchRuleLoaded(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+  const input = payload.input ?? {};
+  const filePath = typeof input.file_path === 'string' ? input.file_path : '';
+  if (!filePath) return;
+  ruleLoadQueue.push({
     sessionId: payload.sessionId,
-    rule: {
-      filePath,
-      name,
-      memoryType: memoryType as 'User' | 'Project' | 'Local' | 'Managed',
-      loadReason,
-      globs,
-      loadedAt: payload.timestamp,
-    },
+    rule: buildLoadedRule(payload, filePath),
   });
+  if (ruleLoadFlushScheduled) return;
+  ruleLoadFlushScheduled = true;
+  queueMicrotask(() => flushRuleLoadQueue(dispatch));
 }
 
 export function dispatchSkillStart(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {

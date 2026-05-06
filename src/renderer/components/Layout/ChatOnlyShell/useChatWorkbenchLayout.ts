@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
 import type { InnerSidebarTab } from './InnerSidebar';
@@ -161,8 +162,10 @@ function buildCallbacks(setState: Setter) {
     setUtilityOpen: (open: boolean) => setState((p) => applyUtilityOpen(p, open)),
     setActiveUtilityTab: (tab: ChatWorkbenchUtilityTab) =>
       setState((p) => ({ ...p, activeUtilityTab: tab })),
-    setActiveProject: (projectPath: string | null) =>
-      setState((p) => ({ ...p, activeProject: projectPath })),
+    setActiveProject: (projectPath: string | null) => {
+      log.info('[trace:projectRoot] setActiveProject', { projectPath });
+      setState((p) => ({ ...p, activeProject: projectPath }));
+    },
     setActiveInnerTab: (projectPath: string, tab: InnerSidebarTab) =>
       setState((p) => ({
         ...p,

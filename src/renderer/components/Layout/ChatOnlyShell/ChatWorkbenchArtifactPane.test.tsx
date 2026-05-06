@@ -111,14 +111,18 @@ describe('ChatWorkbenchArtifactPane', () => {
   it('renders an empty state when no artifact is active', () => {
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
     expect(screen.getByTestId('chat-workbench-artifact-pane')).toBeDefined();
-    expect(screen.getByText('Artifacts')).toBeDefined();
+    // Wave 82 — verbose ArtifactPaneHeader removed; thin close strip remains.
     expect(screen.getByText(/Open a file reference or diff from chat/i)).toBeDefined();
+    expect(screen.getByTestId('chat-workbench-artifact-close')).toBeDefined();
   });
 
   it('renders the file viewer content for file artifacts', () => {
     mockArtifactKind = 'file';
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
-    expect(screen.getByTestId('artifact-history-list')).toBeDefined();
+    // Wave 82 (post-smoke): top close strip + Recent section both removed.
+    // FileViewerTabs row is the sole chrome above the editor.
+    expect(screen.queryByTestId('artifact-history-list')).toBeNull();
+    expect(screen.queryByTestId('chat-workbench-artifact-close')).toBeNull();
     expect(screen.getByTestId('file-viewer-tabs')).toBeDefined();
     expect(screen.getByTestId('editor-content')).toBeDefined();
   });
@@ -129,39 +133,18 @@ describe('ChatWorkbenchArtifactPane', () => {
     expect(screen.getByTestId('diff-review-panel')).toBeDefined();
   });
 
-  it('calls onClose when the header close button is clicked', () => {
+  it('calls onClose when the empty-state close button is clicked', () => {
+    // Empty state still has a close affordance (only context where there is no
+    // tab row to render close from).
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
     fireEvent.click(screen.getByTestId('chat-workbench-artifact-close'));
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
-  it('selects a file artifact from history through the viewer manager', () => {
+  it('does not render artifact-history-list (removed in Wave 82 post-smoke)', () => {
     mockArtifactKind = 'file';
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
-    fireEvent.click(screen.getByTestId('artifact-history-item'));
-    expect(mockSelectArtifact).toHaveBeenCalledWith('file:/tmp/example.ts');
-    expect(mockOpenFile).toHaveBeenCalledWith('/tmp/example.ts');
-  });
-
-  it('reopens a diff artifact from history through the diff review manager', () => {
-    mockArtifactKind = 'diff';
-    mockHistory = [
-      {
-        key: 'diff:s1:abc',
-        kind: 'diff',
-        title: 'Diff Review',
-        subtitle: '2 files',
-        review: {
-          sessionId: 's1',
-          snapshotHash: 'abc',
-          projectRoot: '/tmp/project',
-          filePaths: ['src/example.ts'],
-        },
-      },
-    ];
-    render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
-    fireEvent.click(screen.getByTestId('artifact-history-item'));
-    expect(mockSelectArtifact).toHaveBeenCalledWith('diff:s1:abc');
-    expect(mockOpenReview).toHaveBeenCalledWith('s1', 'abc', '/tmp/project', ['src/example.ts']);
+    expect(screen.queryByTestId('artifact-history-list')).toBeNull();
+    expect(screen.queryByTestId('artifact-history-item')).toBeNull();
   });
 });

@@ -15,11 +15,9 @@ import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-const mockBranch = { branch: 'main' as string | null };
-
-vi.mock('../../../hooks/useGitBranch', () => ({
-  useGitBranch: () => mockBranch,
-}));
+// Wave 82 (post-smoke): branch indicator removed from chat-only status bar.
+// useGitBranch is no longer called; left as historical mock (unused) for any
+// downstream re-add.
 
 const mockSessions = {
   currentSessions: [] as Array<{ status: string; inputTokens: number; outputTokens: number }>,
@@ -63,25 +61,26 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   mockDiffReviewState.state = null;
-  mockBranch.branch = 'main';
   mockSessions.currentSessions = [];
 });
 
 describe('ChatOnlyStatusBar', () => {
-  it('renders without throwing when branch is present', () => {
+  it('renders without throwing when there is content (pending diffs)', () => {
+    mockDiffReviewState.state = { files: makeFiles([1]) };
     const { container } = render(
       <ChatOnlyStatusBar projectRoot="/test/project" onOpenDiffOverlay={vi.fn()} />,
     );
     expect(container).toBeDefined();
   });
 
-  it('shows git branch when branch is set', () => {
+  it('does NOT show git branch (Wave 82 — removed; file tree owns branch)', () => {
+    mockDiffReviewState.state = { files: makeFiles([1]) };
     render(<ChatOnlyStatusBar projectRoot="/test/project" onOpenDiffOverlay={vi.fn()} />);
-    expect(screen.getByText('main')).toBeDefined();
+    expect(screen.queryByText('main')).toBeNull();
+    expect(screen.queryByText('master')).toBeNull();
   });
 
-  it('returns null (renders nothing) when no branch, no streaming, no diffs', () => {
-    mockBranch.branch = null;
+  it('returns null (renders nothing) when no streaming, no diffs', () => {
     mockSessions.currentSessions = [];
     mockDiffReviewState.state = null;
     const { container } = render(
@@ -91,14 +90,12 @@ describe('ChatOnlyStatusBar', () => {
   });
 
   it('renders when there is a running session even with no branch', () => {
-    mockBranch.branch = null;
     mockSessions.currentSessions = [{ status: 'running', inputTokens: 1000, outputTokens: 200 }];
     render(<ChatOnlyStatusBar projectRoot="/test/project" onOpenDiffOverlay={vi.fn()} />);
     expect(screen.getByTestId('chat-only-status-bar')).toBeDefined();
   });
 
   it('renders when there are pending diffs even with no branch', () => {
-    mockBranch.branch = null;
     mockDiffReviewState.state = { files: makeFiles([1]) };
     render(<ChatOnlyStatusBar projectRoot="/test/project" onOpenDiffOverlay={vi.fn()} />);
     expect(screen.getByTestId('chat-only-status-bar')).toBeDefined();
@@ -151,6 +148,8 @@ describe('ChatOnlyStatusBar', () => {
   });
 
   it('has no border-t on the footer element (removed in Wave 43 Phase C)', () => {
+    // Wave 82 — needs streaming or diffs to render the footer (branch removed).
+    mockDiffReviewState.state = { files: makeFiles([1]) };
     render(<ChatOnlyStatusBar projectRoot="/test/project" onOpenDiffOverlay={vi.fn()} />);
     const footer = screen.getByTestId('chat-only-status-bar');
     expect(footer.className).not.toContain('border-t');

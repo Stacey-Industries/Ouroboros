@@ -2,7 +2,7 @@
  * useFileViewerState side-effect hooks — git diff base, conflicts, folds, scroll, links, UI reset.
  */
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
 import type { ConflictBlock } from './ConflictResolver';
@@ -20,13 +20,19 @@ interface LoadGitDiffBaseContentInput {
   isActive: () => boolean;
 }
 
-function shouldKeepGitDiffBaseContent(baseContent: string, content: string, diffLines: DiffLineInfo[]): boolean {
+function shouldKeepGitDiffBaseContent(
+  baseContent: string,
+  content: string,
+  diffLines: DiffLineInfo[],
+): boolean {
   return diffLines.length > 0 || baseContent !== content;
 }
 
 async function loadGitDiffBaseContent(input: LoadGitDiffBaseContentInput): Promise<void> {
   const { projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive } = input;
-  const clearIfActive = (): void => { if (isActive()) setDiffBaseContent(null); };
+  const clearIfActive = (): void => {
+    if (isActive()) setDiffBaseContent(null);
+  };
   try {
     const repoResult = await window.electronAPI.git.isRepo(projectRoot);
     if (!repoResult.success || !repoResult.isRepo) return clearIfActive();
@@ -35,7 +41,9 @@ async function loadGitDiffBaseContent(input: LoadGitDiffBaseContentInput): Promi
     if (!isActive()) return;
     const baseContent = baseResult.success ? (baseResult.content ?? '') : null;
     if (baseContent == null) return clearIfActive();
-    setDiffBaseContent(shouldKeepGitDiffBaseContent(baseContent, content, diffLines) ? baseContent : null);
+    setDiffBaseContent(
+      shouldKeepGitDiffBaseContent(baseContent, content, diffLines) ? baseContent : null,
+    );
   } catch {
     clearIfActive();
   }
@@ -53,10 +61,21 @@ export function useGitDiffBaseContent(
     let active = true;
     if (!projectRoot || !filePath || content == null) {
       setDiffBaseContent(null);
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
-    void loadGitDiffBaseContent({ projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive: () => active });
-    return () => { active = false; };
+    void loadGitDiffBaseContent({
+      projectRoot,
+      filePath,
+      content,
+      diffLines,
+      setDiffBaseContent,
+      isActive: () => active,
+    });
+    return () => {
+      active = false;
+    };
   }, [content, diffLines, filePath, projectRoot]);
   return diffBaseContent;
 }
@@ -67,25 +86,36 @@ export function useConflictState(filePath: string | null, content: string | null
   useEffect(() => {
     setConflictBlocks(parseConflictContent(content, hasConflictMarkers, parseConflictBlocks));
   }, [content]);
-  const handleConflictResolved = useCallback((newContent: string) => {
-    setConflictBlocks(parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks));
-    if (!filePath) return;
-    window.dispatchEvent(new CustomEvent('agent-ide:reload-file', { detail: { filePath } }));
-  }, [filePath]);
+  const handleConflictResolved = useCallback(
+    (newContent: string) => {
+      setConflictBlocks(parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks));
+      if (!filePath) return;
+      window.dispatchEvent(new CustomEvent('agent-ide:reload-file', { detail: { filePath } }));
+    },
+    [filePath],
+  );
   return { conflictBlocks, handleConflictResolved };
 }
 
-export function useCollapsedFoldState(filePath: string | null, content: string | null): ViewerFolds {
+export function useCollapsedFoldState(
+  filePath: string | null,
+  content: string | null,
+): ViewerFolds {
   'use no memo';
   const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
-  useEffect(() => { setCollapsedFolds(new Set()); }, [filePath, content]);
+  useEffect(() => {
+    setCollapsedFolds(new Set());
+  }, [filePath, content]);
   const toggleFold = useCallback((startLine: number) => {
     setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine));
   }, []);
   return { collapsedFolds, setCollapsedFolds, toggleFold };
 }
 
-export function useScrollReset(filePath: string | null, scrollRef: React.RefObject<HTMLDivElement | null>): void {
+export function useScrollReset(
+  filePath: string | null,
+  scrollRef: React.RefObject<HTMLDivElement | null>,
+): void {
   'use no memo';
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -98,15 +128,24 @@ export function useLinkHandling(
   projectRoot?: string | null,
 ): void {
   'use no memo';
-  useEffect(() => { ensureLinkStyles(); }, []);
+  useEffect(() => {
+    ensureLinkStyles();
+  }, []);
   useEffect(() => {
     const element = codeRef.current;
     if (!element) return;
-    return attachLinkClickHandler(element, () => filePath, () => projectRoot ?? null);
+    return attachLinkClickHandler(
+      element,
+      () => filePath,
+      () => projectRoot ?? null,
+    );
   }, [codeRef, filePath, projectRoot]);
 }
 
-export function defaultViewModeForFile(isHtml: boolean, isMarkdown: boolean): 'code' | 'diff' | 'preview' {
+export function defaultViewModeForFile(
+  isHtml: boolean,
+  isMarkdown: boolean,
+): 'code' | 'diff' | 'preview' {
   if (isHtml || isMarkdown) return 'preview';
   return 'code';
 }
@@ -118,13 +157,23 @@ export function useResetViewerUi(
   isMarkdown: boolean,
 ): void {
   'use no memo';
+  // Wave 82 — gate reset on filePath only. Previously the dep array included
+  // `resetters`, `isHtml`, `isMarkdown` which caused the effect to re-fire on
+  // any tangential identity churn — nuking edit-mode state, history toggle,
+  // outline visibility mid-session. The toolbar buttons appeared "stuck" to
+  // the user because the toggle states reset back to default after every
+  // unrelated render cycle. The reset is conceptually file-scoped — read
+  // latest values via ref so dep churn doesn't trigger.
+  const latestRef = useRef({ resetters, isHtml, isMarkdown });
+  latestRef.current = { resetters, isHtml, isMarkdown };
   useEffect(() => {
-    resetters.setShowSearch(false);
-    resetters.setShowGoToLine(false);
-    resetters.setViewMode(defaultViewModeForFile(isHtml, isMarkdown));
-    resetters.setShowHistory(false);
-    resetters.setEditMode(false);
-  }, [filePath, resetters, isHtml, isMarkdown]);
+    const current = latestRef.current;
+    current.resetters.setShowSearch(false);
+    current.resetters.setShowGoToLine(false);
+    current.resetters.setViewMode(defaultViewModeForFile(current.isHtml, current.isMarkdown));
+    current.resetters.setShowHistory(false);
+    current.resetters.setEditMode(false);
+  }, [filePath]);
 }
 
 export function useExpandFoldsForSearch(

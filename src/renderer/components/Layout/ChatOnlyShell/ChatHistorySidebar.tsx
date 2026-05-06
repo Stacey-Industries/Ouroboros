@@ -14,7 +14,7 @@
  * Footer slot: placeholder div for Phase C ChatOnlyUserMenu.
  */
 
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 
 import type { AgentChatThreadRecord } from '../../../types/electron';
 import type { AgentChatStoreInstance } from '../../AgentChat/agentChatStore';
@@ -22,17 +22,44 @@ import { AgentChatStoreContext, useAgentChatStoreContext } from '../../AgentChat
 import type { AgentChatStore } from '../../AgentChat/agentChatStore.types';
 import { BranchRenameDialog } from '../../AgentChat/BranchRenameDialog';
 import { ChatHistoryList } from './ChatHistoryList';
+import type { CompletionState } from './chatHistorySidebarCompletions';
+import { useCompletionIndicators } from './chatHistorySidebarCompletions';
 import { ChatOnlyUserMenu } from './ChatOnlyUserMenu';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function PlusIcon(): React.ReactElement {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 2v10M2 7h10" /></svg>;
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
+      <path d="M7 2v10M2 7h10" />
+    </svg>
+  );
 }
 
 function SearchIcon(): React.ReactElement {
-  return <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><circle cx="6" cy="6" r="4" /><line x1="9.5" y1="9.5" x2="12.5" y2="12.5" /></svg>;
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
+      <circle cx="6" cy="6" r="4" />
+      <line x1="9.5" y1="9.5" x2="12.5" y2="12.5" />
+    </svg>
+  );
 }
 
 // ── Collapsed rail (48px icon strip) ─────────────────────────────────────────
@@ -148,57 +175,6 @@ function PinnedBody(props: PinnedBodyProps): React.ReactElement {
 }
 
 // ── Hook: sidebar state ───────────────────────────────────────────────────────
-
-const THREAD_COMPLETION_SEEN_KEY = 'agent-chat:thread-completion-seen';
-
-const COMPLETED_STATUSES = new Set(['complete', 'cancelled', 'failed', 'needs_review']);
-function isCompletedThread(status: AgentChatThreadRecord['status']): boolean {
-  return COMPLETED_STATUSES.has(status);
-}
-
-function loadSeenCompletions(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(THREAD_COMPLETION_SEEN_KEY) ?? 'null') ?? {}; }
-  catch { return {}; }
-}
-
-function persistSeenCompletions(value: Record<string, number>): void {
-  try { localStorage.setItem(THREAD_COMPLETION_SEEN_KEY, JSON.stringify(value)); }
-  catch { /* ignore */ }
-}
-
-function useCompletionIndicators(
-  threads: AgentChatThreadRecord[],
-  activeThreadId: string | null,
-): Record<string, CompletionState> {
-  const [seenCompletions, setSeenCompletions] = useState<Record<string, number>>(() =>
-    loadSeenCompletions(),
-  );
-
-  useEffect(() => {
-    persistSeenCompletions(seenCompletions);
-  }, [seenCompletions]);
-
-  useEffect(() => {
-    if (!activeThreadId) return;
-    const activeThread = threads.find((thread) => thread.id === activeThreadId);
-    if (!activeThread || !isCompletedThread(activeThread.status)) return;
-    setSeenCompletions((prev) => {
-      if ((prev[activeThread.id] ?? 0) >= activeThread.updatedAt) return prev;
-      return { ...prev, [activeThread.id]: activeThread.updatedAt };
-    });
-  }, [activeThreadId, threads]);
-
-  return threads.reduce<Record<string, CompletionState>>((acc, thread) => {
-    if (!isCompletedThread(thread.status)) {
-      acc[thread.id] = 'none';
-      return acc;
-    }
-    acc[thread.id] = (seenCompletions[thread.id] ?? 0) >= thread.updatedAt ? 'seen' : 'unseen';
-    return acc;
-  }, {});
-}
-
-type CompletionState = 'none' | 'unseen' | 'seen';
 interface SidebarState {
   threads: AgentChatThreadRecord[];
   activeThreadId: string | null;
@@ -230,12 +206,32 @@ interface ThreadMutations {
   handleRenamed: () => Promise<void>;
 }
 
-function applyDeleteToStore(store: AgentChatStoreInstance, id: string): void {
-  store.setState((state: AgentChatStore) => ({
-    ...state,
-    threads: state.threads.filter((t: AgentChatThreadRecord) => t.id !== id),
-    activeThread: state.activeThread?.id === id ? null : state.activeThread,
-  }));
+function useSyncThreadsCallback(
+  store: AgentChatStoreInstance | null,
+  workspaceRoot: string | undefined,
+): () => Promise<void> {
+  return useCallback(async (): Promise<void> => {
+    if (!store || !workspaceRoot) return;
+    const nextThreads = await listThreadsForWorkspace(workspaceRoot);
+    store.setState((state: AgentChatStore) => ({
+      ...state,
+      threads: nextThreads,
+      activeThread: nextThreads.find((t) => t.id === state.activeThread?.id) ?? null,
+    }));
+  }, [store, workspaceRoot]);
+}
+
+// Wave 82 — route through workspace's canonical action; direct store mutation
+// raced with useSyncStateIntoStore and caused a ~0.2s row-flash on delete.
+function useDeleteHandler(store: AgentChatStoreInstance | null): (id: string) => Promise<void> {
+  return useCallback(
+    async (id: string): Promise<void> => {
+      const deleteThread = store?.getState().deleteThread;
+      if (deleteThread) await deleteThread(id);
+      else await window.electronAPI?.agentChat?.deleteThread?.(id);
+    },
+    [store],
+  );
 }
 
 function useThreadMutations(
@@ -244,24 +240,9 @@ function useThreadMutations(
   threads: AgentChatThreadRecord[],
   setRenameTarget: (t: AgentChatThreadRecord | null) => void,
 ): ThreadMutations {
-  const syncThreads = useCallback(async (): Promise<void> => {
-    if (!store) return;
-    const workspaceRoot = activeThread?.workspaceRoot ?? threads[0]?.workspaceRoot;
-    if (!workspaceRoot) return;
-    const nextThreads = await listThreadsForWorkspace(workspaceRoot);
-    store.setState((state: AgentChatStore) => ({
-      ...state,
-      threads: nextThreads,
-      activeThread: nextThreads.find((t) => t.id === state.activeThread?.id) ?? null,
-    }));
-  }, [activeThread?.workspaceRoot, store, threads]);
-  const handleDelete = useCallback(
-    async (id: string): Promise<void> => {
-      await window.electronAPI?.agentChat?.deleteThread?.(id);
-      if (store) applyDeleteToStore(store, id);
-    },
-    [store],
-  );
+  const workspaceRoot = activeThread?.workspaceRoot ?? threads[0]?.workspaceRoot;
+  const syncThreads = useSyncThreadsCallback(store, workspaceRoot);
+  const handleDelete = useDeleteHandler(store);
   const handlePin = useCallback(
     async (id: string, pinned: boolean): Promise<void> => {
       await window.electronAPI?.agentChat?.pinThread?.(id, pinned);

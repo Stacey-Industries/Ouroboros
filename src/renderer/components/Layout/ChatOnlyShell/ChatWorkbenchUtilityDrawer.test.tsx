@@ -148,6 +148,9 @@ describe('ChatWorkbenchUtilityDrawer', () => {
     );
 
     expect(screen.getByTestId('workbench-timeline-panel')).toBeTruthy();
+    // Wave 82 — entries are nested in collapsed session groups; expand to reveal.
+    const group = screen.getByTestId('timeline-session-group');
+    fireEvent.click(group.querySelector('button')!);
     expect(screen.getByText('Read')).toBeTruthy();
   });
 

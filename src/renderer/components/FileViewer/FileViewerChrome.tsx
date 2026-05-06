@@ -17,12 +17,16 @@ import { ViewModeBar } from './ViewModeBar';
 const FOLD_GUTTER_WIDTH = 16;
 const DIFF_GUTTER_WIDTH = 6;
 
+// Wave 82.1 — `minWidth: 0` + `width: '100%'` make the chrome track the
+// pane width instead of fitting to content; otherwise edit-mode toolbar
+// growth pushes Edit past the pane's right edge and never recovers.
 const rootStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   minHeight: 0,
+  minWidth: 0,
+  width: '100%',
   height: '100%',
-  backgroundColor: 'transparent',
 };
 
 const bodyStyle: React.CSSProperties = { display: 'flex', flex: 1, minHeight: 0 };

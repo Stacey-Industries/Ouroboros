@@ -16,17 +16,6 @@ import {
 import type { AgentChatStore } from '../../AgentChat/agentChatStore.types';
 import type { WorkbenchRailActions } from './WorkbenchRailContextMenu';
 
-// ── Store helpers (mirrors ChatHistorySidebar pattern) ────────────────────────
-
-function applyLocalDelete(store: AgentChatStoreInstance | null, id: string): void {
-  if (!store) return;
-  store.setState((state: AgentChatStore) => ({
-    ...state,
-    threads: state.threads.filter((t) => t.id !== id),
-    activeThread: state.activeThread?.id === id ? null : state.activeThread,
-  }));
-}
-
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export interface UseWorkbenchRailActionsResult {
@@ -68,17 +57,20 @@ function useThreadActions(
   workspaceRoot: string | undefined,
   setRenameTarget: (t: AgentChatThreadRecord | null) => void,
 ): Pick<WorkbenchRailActions, 'onDeleteThread' | 'onPinThread' | 'onRenameThread'> {
+  // Wave 82 — route through workspace's canonical action; direct store
+  // mutation raced with useSyncStateIntoStore and caused row-flash on delete.
   const onDeleteThread = useCallback(
     async (threadId: string): Promise<void> => {
+      const deleteThread = store?.getState().deleteThread;
+      if (deleteThread) {
+        await deleteThread(threadId);
+        return;
+      }
+      // Fallback: legacy mounts where the workspace action isn't wired.
       const result = await window.electronAPI?.agentChat?.deleteThread?.(threadId);
       if (result && typeof result === 'object' && 'success' in result && result.success === false)
         return;
-      await refreshThreadsAfterMutation(
-        store,
-        workspaceRoot,
-        (id) => applyLocalDelete(store, id),
-        threadId,
-      );
+      await refreshThreadsAfterMutation(store, workspaceRoot, undefined, threadId);
     },
     [store, workspaceRoot],
   );

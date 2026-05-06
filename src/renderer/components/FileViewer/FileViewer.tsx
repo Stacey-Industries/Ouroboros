@@ -1,4 +1,7 @@
-import React, { memo } from 'react';
+// Wave 82.1 — instrumentation: trace render decisions so we can diagnose F1
+// (toolbar disappears after Edit→Exit). Remove after the symptom is closed.
+import log from 'electron-log/renderer';
+import React, { memo, useEffect, useRef } from 'react';
 
 import type { CodeRow } from './codeViewTypes';
 import { EmptyState } from './EmptyState';
@@ -46,10 +49,44 @@ function hasSpecialViewer(props: FileViewerProps): boolean {
 }
 
 function renderInitialViewerState(props: FileViewerProps): React.ReactElement | null {
-  if (!props.filePath && !props.isLoading) return <EmptyState />;
-  if (props.isLoading) return <LoadingState />;
-  if (props.error) return <ErrorDisplay error={props.error} />;
-  if (props.content === null && !hasSpecialViewer(props)) return <EmptyState />;
+  if (!props.filePath && !props.isLoading) {
+    log.info('[trace:FileViewer] renderInitial → EmptyState (no filePath, not loading)', {
+      filePath: props.filePath,
+      isLoading: props.isLoading,
+      hasContent: props.content !== null,
+      isDirty: props.isDirty,
+    });
+    return <EmptyState />;
+  }
+  if (props.isLoading) {
+    log.info('[trace:FileViewer] renderInitial → LoadingState', { filePath: props.filePath });
+    return <LoadingState />;
+  }
+  if (props.error) {
+    log.info('[trace:FileViewer] renderInitial → ErrorDisplay', {
+      filePath: props.filePath,
+      error: props.error,
+    });
+    return <ErrorDisplay error={props.error} />;
+  }
+  // Wave 82 (post-smoke): if filePath is set but content is null, fall through
+  // to the chrome and render with empty content. Returning EmptyState here
+  // momentarily during edit-mode transitions caused the entire toolbar
+  // (Edit/Minimap/Blame/Outline/History) to vanish until the user closed and
+  // reopened the file. Chrome handles null content gracefully.
+  if (props.content === null && !props.filePath && !hasSpecialViewer(props)) return <EmptyState />;
+  // Wave 82.1 — instrument: log the resolved state when chrome will render.
+  // If the toolbar disappears after Edit→Exit, this trace tells us whether
+  // FileViewerChrome stayed mounted (and the toolbar issue is downstream)
+  // or whether something forced one of the early-return EmptyState paths.
+  log.info('[trace:FileViewer] renderInitial → null (chrome path)', {
+    filePath: props.filePath,
+    hasContent: props.content !== null,
+    contentLen: props.content?.length ?? 0,
+    isDirty: props.isDirty,
+    isImage: props.isImage,
+    isBinary: props.isBinary,
+  });
   return null;
 }
 
@@ -81,7 +118,16 @@ function renderSpecialViewer(props: FileViewerProps): React.ReactElement | null 
   return renderInitialViewerState(props) ?? renderFileTypeViewer(props);
 }
 
+function useTraceMountCount(filePath: string | null): void {
+  const countRef = useRef(0);
+  useEffect(() => {
+    countRef.current += 1;
+    log.info(`[trace:EditBtn] FileViewerInner mount #${countRef.current}`, { filePath });
+  }, [filePath]);
+}
+
 const FileViewerInner = memo(function FileViewerInner(props: FileViewerProps): React.ReactElement {
+  useTraceMountCount(props.filePath);
   const s = useFileViewerState(props);
   const specialViewer = renderSpecialViewer(props);
   if (specialViewer) return specialViewer;

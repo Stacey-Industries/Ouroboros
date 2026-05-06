@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import log from 'electron-log/renderer';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type {
   AgentChatMessageRecord,
@@ -28,7 +29,7 @@ import {
   ComposerFooter,
 } from './AgentChatComposerParts';
 import { ComposerBody } from './AgentChatComposerSubcomponents';
-import { useChatActiveThread } from './agentChatSelectors';
+import { useChatActiveThread, useChatProjectRoot } from './agentChatSelectors';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ComposerContextPreview } from './ComposerContextPreview';
 import { FloatingComposerContainer } from './FloatingComposerContainer';
@@ -226,6 +227,14 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   };
 }
 
+function useTraceClaudeSessionId(claudeSessionId: string | undefined): void {
+  useEffect(() => {
+    log.info('[trace:rules] composer claudeSessionId', {
+      claudeSessionId: claudeSessionId ?? null,
+    });
+  }, [claudeSessionId]);
+}
+
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const state = useComposerState(composerProps);
   useQuoteListener(composerProps.draft, composerProps.onChange);
@@ -233,6 +242,11 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
   const { chatOverrides, settingsModel, mentions } = composerProps;
   const variant = useWorkspaceVariant();
   const claudeSessionId = useChatActiveThread()?.latestOrchestration?.claudeSessionId;
+  useTraceClaudeSessionId(claudeSessionId);
+  // Wave 82.1 — read the workspace's active project root from the store. In
+  // chat-only workbench mode this is rail-tracked LayoutState.activeProject,
+  // not ProjectContext.projectRoot (= multi-root[0]).
+  const workspaceProjectRoot = useChatProjectRoot();
   const mentionLabels = useMemo(() => toMentionLabels(mentions), [mentions]);
   return (
     <div data-layout="agent-chat-composer" className="px-4 pb-3 pt-1">
@@ -244,6 +258,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
             settingsModel,
             claudeSessionId,
             mentionLabels,
+            projectRoot: workspaceProjectRoot,
           })}
         />
       )}

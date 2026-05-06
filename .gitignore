@@ -94,6 +94,7 @@ compiler-violations.json
 # Playwright test output
 test-results/
 vitest-results.json
+artifacts/
 
 # Scheduled task runtime state
 .claude/scheduled_tasks.lock

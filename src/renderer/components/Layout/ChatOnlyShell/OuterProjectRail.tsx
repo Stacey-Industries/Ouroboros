@@ -237,6 +237,19 @@ function ProjectList({
 
 // ── Add-project handler ────────────────────────────────────────────────────────
 
+// Wave 82 — also write recentProjects so the project survives window restart.
+// OuterProjectRail previously only updated per-window state (which is in-memory
+// only for chat-only windows); recentProjects is the persistence layer that
+// useWorkbenchProjects falls back to on cold-boot.
+async function persistRecentProject(path: string): Promise<void> {
+  const api = window.electronAPI?.config;
+  if (!api?.get || !api.set) return;
+  const current = (await api.get('recentProjects')) as string[] | null | undefined;
+  const previous = Array.isArray(current) ? current : [];
+  const updated = [path, ...previous.filter((p) => p !== path)].slice(0, 10);
+  await api.set('recentProjects', updated);
+}
+
 function useAddProject(onAddProject: (path: string) => void): () => void {
   const { addProjectRoot } = useProject();
   return useCallback(async () => {
@@ -244,6 +257,7 @@ function useAddProject(onAddProject: (path: string) => void): () => void {
     const result = await window.electronAPI.files.selectFolder();
     if (result.success && result.path) {
       addProjectRoot(result.path);
+      void persistRecentProject(result.path);
       onAddProject(result.path);
     }
   }, [addProjectRoot, onAddProject]) as () => void;

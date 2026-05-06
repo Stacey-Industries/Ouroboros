@@ -11,6 +11,7 @@ import { mountMonacoEditor, type RuntimeInput } from './MonacoEditor.mount';
 import { useMonacoLspLifecycle } from './monacoLsp';
 import {
   buildDiffDecorations,
+  buildMinimapEditorOptions,
   enableVimMode,
   setHostSavedVersion,
 } from './monacoVimMode';
@@ -88,8 +89,12 @@ export function useMonacoEditorOptions(input: RuntimeInput): void {
   }, [input.editorRef, input.wordWrap]);
   useEffect(() => {
     const editor = input.editorRef.current;
-    if (editor && input.showMinimap !== undefined)
-      editor.updateOptions({ minimap: { enabled: input.showMinimap } });
+    if (!editor) return;
+    // Always apply — when `showMinimap` is undefined the construction default
+    // treats it as `true`, so the effect must apply the matching corrections
+    // (ruler off, scrollbar collapsed). Earlier `!== undefined` guard left
+    // Monaco's default 3-lane overview ruler visible as a residual strip.
+    editor.updateOptions(buildMinimapEditorOptions(input.showMinimap));
   }, [input.editorRef, input.showMinimap]);
   useMonacoEditorFontFamily(input.editorRef);
 }
@@ -136,7 +141,11 @@ export interface EditorRuntimeResult {
 
 export function useMonacoEditorRuntime(input: RuntimeInput): EditorRuntimeResult {
   'use no memo';
-  const [scrollMetrics, setScrollMetrics] = useState({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 });
+  const [scrollMetrics, setScrollMetrics] = useState({
+    scrollTop: 0,
+    scrollHeight: 0,
+    clientHeight: 0,
+  });
   const [isEditorHovered, setIsEditorHovered] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

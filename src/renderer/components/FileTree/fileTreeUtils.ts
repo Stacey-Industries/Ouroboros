@@ -4,6 +4,8 @@
  * Extracted from FileTree.tsx to reduce file size and improve reusability.
  */
 
+import log from 'electron-log/renderer';
+
 import type { GitFileStatus } from '../../types/electron';
 import type { TreeNode } from './FileTreeItem';
 
@@ -68,7 +70,16 @@ export async function loadDirChildren(
   shouldIgnore: (name: string) => boolean = (n) => IGNORED_DIRS_BASE.has(n),
 ): Promise<TreeNode[]> {
   const result = await window.electronAPI.files.readDir(dirPath);
-  if (!result.success || !result.items) return [];
+  if (!result.success) {
+    // Wave 82.1 — surface the IPC error so "empty tree" symptoms can be told
+    // apart from "directory exists but is empty". The most common cause is
+    // pathSecurity rejecting a readDir whose target is not in per-window
+    // project roots; without this log, the loader silently returned [] and
+    // the tree rendered as empty with no diagnostic trail.
+    log.warn('[fileTree] readDir failed', { dirPath, error: result.error });
+    return [];
+  }
+  if (!result.items) return [];
 
   const nodes: TreeNode[] = [];
   for (const item of result.items) {

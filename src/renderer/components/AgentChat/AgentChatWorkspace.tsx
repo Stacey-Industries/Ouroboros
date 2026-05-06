@@ -168,6 +168,8 @@ interface WorkspaceWiringArgs {
   onOpenMemories: () => void;
   onSpec: (n: string) => void;
   activeSessionId?: string | null;
+  /** Wave 82.1 — mirrored into the store for popover/sidebar consumers. */
+  projectRoot: string | null;
   readOnly: boolean;
 }
 
@@ -189,6 +191,15 @@ function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   useEffect(() => {
     store.setState({ activeSessionId: activeSessionId ?? null });
   }, [store, activeSessionId]);
+  // Wave 82.1 — mirror this workspace's projectRoot into the store so consumers
+  // outside the AgentChatWorkspace prop chain (ComposerContextPreview popover,
+  // anyone reading via AgentChatStoreContext) get the same value the model
+  // and rail use. Decouples chat-only workbench's active project from
+  // ProjectContext.projectRoot (= multi-root[0], not rail-aware).
+  useEffect(() => {
+    log.info('[trace:projectRoot] AgentChatWorkspace mirror', args.projectRoot);
+    store.setState({ projectRoot: args.projectRoot ?? null });
+  }, [store, args.projectRoot]);
 }
 
 function useWorkspaceActions(
@@ -273,6 +284,7 @@ function useWorkspaceSetup(props: AgentChatWorkspaceProps): WorkspaceSetup {
     onOpenMemories,
     onSpec,
     activeSessionId: props.activeSessionId,
+    projectRoot,
     readOnly,
   });
   return {

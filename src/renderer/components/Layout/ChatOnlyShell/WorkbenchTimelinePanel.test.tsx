@@ -127,6 +127,11 @@ describe('WorkbenchTimelinePanel', () => {
 
     expect(screen.getByTestId('workbench-timeline-panel')).toBeDefined();
     expect(screen.getByText('Timeline')).toBeDefined();
+    // Wave 82 — entries are nested in collapsed session groups by default.
+    // Verify the session group rendered; expand to reveal individual entries.
+    const groups = screen.getAllByTestId('timeline-session-group');
+    expect(groups.length).toBeGreaterThan(0);
+    fireEvent.click(groups[0].querySelector('button')!);
     expect(screen.getByText('Session completed')).toBeDefined();
     expect(screen.getByText('Bash')).toBeDefined();
     expect(screen.getByText('Rule loaded')).toBeDefined();
@@ -186,6 +191,10 @@ describe('WorkbenchTimelinePanel', () => {
     ];
 
     renderPanel();
+
+    // Wave 82 — first expand the session group to reveal the entries.
+    const sessionGroup = screen.getByTestId('timeline-session-group');
+    fireEvent.click(sessionGroup.querySelector('button')!);
 
     // Find the entry whose title is 'User prompt' (from the conversation turn)
     const promptButton = screen

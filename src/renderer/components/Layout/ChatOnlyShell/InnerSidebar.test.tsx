@@ -112,8 +112,8 @@ describe('InnerSidebar', () => {
     expect(screen.getByTestId('custom-code')).toBeDefined();
   });
 
-  it('renders the sidebar footer', () => {
+  it('does not render a sidebar footer (Wave 82 — removed redundant Workspace label)', () => {
     render(<InnerSidebar {...makeProps()} />);
-    expect(screen.getByTestId('inner-sidebar-footer')).toBeDefined();
+    expect(screen.queryByTestId('inner-sidebar-footer')).toBeNull();
   });
 });

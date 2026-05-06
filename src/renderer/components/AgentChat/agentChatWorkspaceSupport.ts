@@ -100,6 +100,34 @@ function useInitialThreadReload(reloadThreads: () => Promise<void>): void {
   }, [reloadThreads]);
 }
 
+interface ClearOnProjectChangeArgs {
+  projectRoot: string | null;
+  setActiveThreadId: Dispatch<SetStateAction<string | null>>;
+  setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
+}
+
+/**
+ * Wave 82.1 — when the workspace's projectRoot CHANGES (not on first mount,
+ * not on add/delete cycles within the same project), immediately clear the
+ * visible thread list and active thread so the conversation pane doesn't
+ * keep showing chats from the previous project while the async reload runs.
+ *
+ * This complements the optimistic update in `useReloadThreads` (which avoids
+ * the "No chats yet" flash on add/delete within the same project — Wave 82
+ * round-2 C1 fix). Project-switch is a meaningful navigation, the brief
+ * empty state is correct.
+ */
+function useClearThreadStateOnProjectChange(args: ClearOnProjectChangeArgs): void {
+  const { projectRoot, setActiveThreadId, setThreads } = args;
+  const previousProjectRootRef = useRef<string | null>(projectRoot);
+  useEffect(() => {
+    if (previousProjectRootRef.current === projectRoot) return;
+    previousProjectRootRef.current = projectRoot;
+    setActiveThreadId(null);
+    setThreads([]);
+  }, [projectRoot, setActiveThreadId, setThreads]);
+}
+
 function useReloadThreads(args: ReloadThreadsArgs): () => Promise<void> {
   const { projectRoot, setActiveThreadId, setError, setIsLoading, setThreads } = args;
 
@@ -112,8 +140,11 @@ function useReloadThreads(args: ReloadThreadsArgs): () => Promise<void> {
       return;
     }
 
-    setThreads([]);
-    setActiveThreadId(null);
+    // Wave 82 (post-smoke): do NOT clear threads to [] before refetch.
+    // The previous clear-then-fill caused the inner sidebar's chat list to
+    // briefly render empty ("No chats yet") on add/delete cycles, producing
+    // a perceptible flash. Optimistic update — only setThreads after the
+    // new data arrives. setIsLoading guards spinner-bearing surfaces.
     setIsLoading(true);
     setError(null);
 
@@ -150,6 +181,7 @@ export function useThreadState({ projectRoot }: ThreadStateArgs) {
     setThreads,
   });
 
+  useClearThreadStateOnProjectChange({ projectRoot, setActiveThreadId, setThreads });
   useInitialThreadReload(reloadThreads);
 
   return useMemo(

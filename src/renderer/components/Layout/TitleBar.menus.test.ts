@@ -62,14 +62,21 @@ describe('getWorkbenchMenuDefinitions', () => {
   });
 
   describe('File menu', () => {
-    it('contains New Session', () => {
-      expect(findItem(getWorkbenchMenuDefinitions(), 'File', 'New Session')).toBeDefined();
+    // Wave 82.1 — "New Session" + "New Chat in Active Session" collapsed into
+    // a single "New Chat" entry. The split exposed an internal data-model
+    // distinction (sessions vs threads) that never surfaced as separate UI.
+    it('contains New Chat', () => {
+      expect(findItem(getWorkbenchMenuDefinitions(), 'File', 'New Chat')).toBeDefined();
     });
 
-    it('contains New Chat in Active Session', () => {
+    it('does not contain the legacy New Session label', () => {
+      expect(findItem(getWorkbenchMenuDefinitions(), 'File', 'New Session')).toBeUndefined();
+    });
+
+    it('does not contain the legacy New Chat in Active Session label', () => {
       expect(
         findItem(getWorkbenchMenuDefinitions(), 'File', 'New Chat in Active Session'),
-      ).toBeDefined();
+      ).toBeUndefined();
     });
 
     it('contains Open Project', () => {
@@ -93,10 +100,10 @@ describe('getWorkbenchMenuDefinitions', () => {
       expect(findItem(getWorkbenchMenuDefinitions(), 'Edit', 'Find in Chat')).toBeDefined();
     });
 
-    it('contains Find Next and Find Previous', () => {
+    it('does NOT contain Find Next / Find Previous (Wave 82 — removed; ChatSearchOverlay has no nav)', () => {
       const menus = getWorkbenchMenuDefinitions();
-      expect(findItem(menus, 'Edit', 'Find Next')).toBeDefined();
-      expect(findItem(menus, 'Edit', 'Find Previous')).toBeDefined();
+      expect(findItem(menus, 'Edit', 'Find Next')).toBeUndefined();
+      expect(findItem(menus, 'Edit', 'Find Previous')).toBeUndefined();
     });
   });
 
@@ -197,8 +204,10 @@ describe('getWorkbenchMenuDefinitions', () => {
       expect(dispatched).toContain('agent-ide:workbench-toggle-artifact-pane');
     });
 
-    it('New Session dispatches agent-ide:workbench-new-session', () => {
-      const item = findItem(getWorkbenchMenuDefinitions(), 'File', 'New Session');
+    it('New Chat dispatches agent-ide:workbench-new-session', () => {
+      // Wave 82.1 — menu label is "New Chat" but it dispatches the existing
+      // WORKBENCH_NEW_SESSION_EVENT (handler/IPC chain unchanged).
+      const item = findItem(getWorkbenchMenuDefinitions(), 'File', 'New Chat');
       item?.action?.();
       expect(dispatched).toContain('agent-ide:workbench-new-session');
     });
