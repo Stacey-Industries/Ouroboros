@@ -28,9 +28,16 @@ import type {
   FlowTrace,
   FlowTracerGetCanonicalFlowsResponse,
   FlowTracerTraceFlowResponse,
+  Narration,
   SavedFlowSummary,
   SymbolRef,
 } from '../../shared/types/flowTracer';
+
+// ── Phase 3 IPC response envelopes ───────────────────────────────────────────
+
+export type FlowTracerGetNarrationResponse =
+  | { success: true; narration: Narration | { stale: true } | null }
+  | { success: false; error: string };
 
 // ── Phase 7 IPC response envelopes ───────────────────────────────────────────
 
@@ -59,6 +66,9 @@ export interface FlowTracerAPI {
   listFlows: () => Promise<CanonicalFlow[]>;
   /** Convenience: returns the FlowTrace directly (throws on error). */
   runTrace: (entryPoint: SymbolRef) => Promise<FlowTrace>;
+  // ── Phase 3: per-symbol narration cache ───────────────────────────────────
+  /** Get cached What+How narration for a symbol; null = cache miss (background generation queued). */
+  getNarration: (symbolRef: SymbolRef) => Promise<FlowTracerGetNarrationResponse>;
   // ── Phase 7: persistence + Mermaid export ──────────────────────────────────
   /** Save a FlowTrace to disk; returns the assigned flow id. */
   saveFlow: (flow: FlowTrace, title: string) => Promise<FlowTracerSaveFlowResponse>;

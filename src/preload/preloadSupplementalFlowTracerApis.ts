@@ -26,6 +26,9 @@ export const flowTracerApi: FlowTracerAPI = {
     return r.flow;
   },
 
+  // ── Phase 3: per-symbol narration cache ───────────────────────────────────
+  getNarration: (symbolRef) => ipcRenderer.invoke('flowTracer:get-narration', symbolRef),
+
   // ── Phase 7: persistence + Mermaid export ──────────────────────────────────
 
   saveFlow: (flow: FlowTrace, title: string) =>
