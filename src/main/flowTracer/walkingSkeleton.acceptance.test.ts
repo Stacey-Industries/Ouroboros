@@ -13,9 +13,6 @@
  *            roadmap/wave-85-flow-tracer/waveplan-85.md (Phase 1 row)
  */
 
-/* eslint-disable max-lines-per-function */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
