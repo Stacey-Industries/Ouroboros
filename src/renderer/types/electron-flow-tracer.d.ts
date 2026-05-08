@@ -4,34 +4,39 @@
  * Re-exports canonical cross-process types from src/shared/types/flowTracer.ts
  * and declares the FlowTracerAPI surface exposed via window.electronAPI.flowTracer.
  *
- * Wave 85 Phase 1 — walking skeleton.
+ * Wave 85 Phase 1 — walking skeleton. Phase 6 — NL resolver method added.
  */
+
+import type {
+  CanonicalFlow,
+  EntryPointCandidate,
+  FlowTrace,
+  FlowTracerGetCanonicalFlowsResponse,
+  FlowTracerResolveNaturalLanguageResponse,
+  FlowTracerTraceFlowResponse,
+  FlowWhyEntry,
+  Narration,
+  SavedFlowSummary,
+  SymbolRef,
+} from '../../shared/types/flowTracer';
 
 export type {
   CanonicalFlow,
   EdgeKind,
+  EntryPointCandidate,
   FlowEdge,
   FlowStep,
   FlowTrace,
   FlowTraceMetadata,
   FlowTracerGetCanonicalFlowsResponse,
+  FlowTracerResolveNaturalLanguageResponse,
   FlowTracerTraceFlowResponse,
   FlowWhyEntry,
   LayerKind,
   Narration,
+  NLResolveResult,
   SavedFlowSummary,
   StepKind,
-  SymbolRef,
-} from '../../shared/types/flowTracer';
-
-import type {
-  CanonicalFlow,
-  FlowTrace,
-  FlowTracerGetCanonicalFlowsResponse,
-  FlowTracerTraceFlowResponse,
-  FlowWhyEntry,
-  Narration,
-  SavedFlowSummary,
   SymbolRef,
 } from '../../shared/types/flowTracer';
 
@@ -65,8 +70,14 @@ export type FlowTracerExportMermaidResponse =
   | { success: true; mermaid: string }
   | { success: false; error: string };
 
+// ── Phase 5 IPC response envelopes ───────────────────────────────────────────
+
+export type FlowTracerRegenerateGalleryResponse =
+  | { success: true; flows: CanonicalFlow[] }
+  | { success: false; error: string };
+
 export interface FlowTracerAPI {
-  /** Returns the hardcoded list of canonical flows available to trace. */
+  /** Returns the canonical flows available to trace (AI gallery or walking-skeleton stub). */
   getCanonicalFlows: () => Promise<FlowTracerGetCanonicalFlowsResponse>;
   /** Traces the flow starting at the given entry point symbol. */
   traceFlow: (entryPoint: SymbolRef) => Promise<FlowTracerTraceFlowResponse>;
@@ -80,6 +91,15 @@ export interface FlowTracerAPI {
   // ── Phase 4: per-flow chain-aware Why narration ────────────────────────────
   /** Get chain-aware Why entries for every step in a flow. Cache hit is instant; miss triggers Haiku CLI call (~2-4s). */
   getFlowWhy: (flow: FlowTrace) => Promise<FlowTracerGetFlowWhyResponse>;
+  // ── Phase 5: gallery regeneration ────────────────────────────────────────
+  /** Force-regenerate the canonical flow gallery via Haiku CLI; returns the new flow list. */
+  regenerateGallery: () => Promise<FlowTracerRegenerateGalleryResponse>;
+  // ── Phase 6: natural-language → symbol resolution ─────────────────────────
+  /**
+   * Resolve a natural-language query to ranked entry-point candidates.
+   * confidence > 0.8 → resolve directly; else → show disambiguation dropdown.
+   */
+  resolveNaturalLanguage: (query: string) => Promise<FlowTracerResolveNaturalLanguageResponse>;
   // ── Phase 7: persistence + Mermaid export ──────────────────────────────────
   /** Save a FlowTrace to disk; returns the assigned flow id. */
   saveFlow: (flow: FlowTrace, title: string) => Promise<FlowTracerSaveFlowResponse>;
@@ -89,4 +109,7 @@ export interface FlowTracerAPI {
   loadFlow: (id: string) => Promise<FlowTracerLoadFlowResponse>;
   /** Convert a FlowTrace to Mermaid sequenceDiagram text (renderer writes to clipboard). */
   exportMermaid: (flow: FlowTrace) => Promise<FlowTracerExportMermaidResponse>;
+  // ── Populated by Phase 5 (when available) ─────────────────────────────────
+  /** Convenience accessor for top-N EntryPointCandidates (used by FlowSearchBar). */
+  getEntryPointCandidates?: () => Promise<EntryPointCandidate[]>;
 }

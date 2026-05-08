@@ -1,24 +1,25 @@
 /**
- * walkingSkeletonStub.test.ts — smoke tests for the Phase 1 hardcoded stub.
+ * walkingSkeletonStub.test.ts — Phase 5 update.
  *
- * Phase 2: getWalkingSkeletonTrace() removed from the stub; only WALKING_SKELETON_FLOWS
- * remains (used by get-canonical-flows until Phase 5 ships the AI gallery).
+ * WALKING_SKELETON_FLOWS moved to canonicalFlows.ts as FALLBACK_FLOWS.
+ * These tests now verify FALLBACK_FLOWS to maintain coverage of the
+ * cold-start fallback contract.
  */
 
 import { describe, expect, it } from 'vitest';
 
 import type { LayerKind } from '../../shared/types/flowTracer';
-import { WALKING_SKELETON_FLOWS } from './walkingSkeletonStub';
+import { FALLBACK_FLOWS } from './canonicalFlows';
 
 const VALID_LAYERS: LayerKind[] = ['user', 'renderer', 'preload', 'main', 'cli', 'filesystem'];
 
-describe('WALKING_SKELETON_FLOWS', () => {
+describe('FALLBACK_FLOWS (moved from walkingSkeletonStub)', () => {
   it('has at least one canonical flow', () => {
-    expect(WALKING_SKELETON_FLOWS.length).toBeGreaterThanOrEqual(1);
+    expect(FALLBACK_FLOWS.length).toBeGreaterThanOrEqual(1);
   });
 
   it('each flow has the required CanonicalFlow shape', () => {
-    for (const flow of WALKING_SKELETON_FLOWS) {
+    for (const flow of FALLBACK_FLOWS) {
       expect(typeof flow.title).toBe('string');
       expect(flow.title.length).toBeGreaterThan(0);
       expect(typeof flow.entryPoint.symbol).toBe('string');

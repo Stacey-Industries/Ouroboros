@@ -1,19 +1,20 @@
 /**
  * src/main/flowTracer/index.ts — Flow Tracer subsystem barrel + IPC handler registrar.
  *
- * Wave 85 Phase 2: flowTracer:trace-flow now calls the real trace engine.
- * Phase 1 walking-skeleton stub replaced; WALKING_SKELETON_FLOWS still used
- * for get-canonical-flows until Phase 5 ships the AI gallery.
+ * Wave 85 Phase 5: flowTracer:get-canonical-flows now calls canonicalFlows.getCanonicalFlows();
+ *   flowTracer:regenerate-gallery added.
  *
  * IPC channels registered here:
- *   flowTracer:get-canonical-flows — returns the canonical CanonicalFlow[]
- *   flowTracer:trace-flow          — traces the entry point via traceEngine
- *   flowTracer:get-narration       — per-symbol What+How narration cache (Phase 3)
- *   flowTracer:get-flow-why        — per-flow chain-aware Why narration (Phase 4)
- *   flowTracer:save-flow           — persist a FlowTrace to disk (Phase 7)
- *   flowTracer:list-saved-flows    — list persisted flows (Phase 7)
- *   flowTracer:load-flow           — load a persisted flow (Phase 7)
- *   flowTracer:export-mermaid      — export FlowTrace as Mermaid text (Phase 7)
+ *   flowTracer:get-canonical-flows        — returns the canonical CanonicalFlow[] (AI gallery or fallback)
+ *   flowTracer:regenerate-gallery         — force-regenerates the gallery via Haiku CLI (Phase 5)
+ *   flowTracer:trace-flow                 — traces the entry point via traceEngine
+ *   flowTracer:get-narration              — per-symbol What+How narration cache (Phase 3)
+ *   flowTracer:get-flow-why               — per-flow chain-aware Why narration (Phase 4)
+ *   flowTracer:save-flow                  — persist a FlowTrace to disk (Phase 7)
+ *   flowTracer:list-saved-flows           — list persisted flows (Phase 7)
+ *   flowTracer:load-flow                  — load a persisted flow (Phase 7)
+ *   flowTracer:export-mermaid             — export FlowTrace as Mermaid text (Phase 7)
+ *   flowTracer:resolve-natural-language   — NL query → ranked EntryPointCandidates (Phase 6)
  *
  * The acceptance test at walkingSkeleton.acceptance.test.ts is the pass criterion.
  */
@@ -23,12 +24,13 @@ import { ipcMain } from 'electron';
 import type { FlowTrace, SymbolRef } from '../../shared/types/flowTracer';
 import { getConfigValue } from '../config';
 import log from '../logger';
+import { generateCanonicalFlows, getCanonicalFlows } from './canonicalFlows';
 import { flowTraceToMermaid } from './flowMermaidExport';
 import { listSavedFlows, loadFlow, saveFlow } from './flowPersistence';
 import { generateFlowWhy, getFlowWhy } from './flowWhyCache';
 import { generateNarration, getNarration } from './narrationCache';
+import { resolveNaturalLanguage } from './nlResolver';
 import { traceFlow } from './traceEngine';
-import { WALKING_SKELETON_FLOWS } from './walkingSkeletonStub';
 
 const DEFAULT_MAX_DEPTH = 6;
 
@@ -94,33 +96,6 @@ function registerPersistenceHandlers(channels: ChannelList): void {
   });
 }
 
-export function registerFlowTracerHandlers(): string[] {
-  const channels: string[] = [];
-
-  reg(channels, 'flowTracer:get-canonical-flows', () => {
-    log.info('[flowTracer] get-canonical-flows — returning walking-skeleton stub');
-    return { success: true as const, flows: WALKING_SKELETON_FLOWS };
-  });
-
-  reg(channels, 'flowTracer:trace-flow', async (_event, entry: unknown) => {
-    const ref = entry as SymbolRef;
-    log.info('[flowTracer] trace-flow entry:', ref?.symbol);
-    try {
-      const flow = await traceFlow(ref, { maxDepth: readMaxDepth() });
-      return { success: true as const, flow };
-    } catch (err) {
-      log.error('[flowTracer] trace-flow error:', err);
-      const msg = err instanceof Error ? err.message : String(err);
-      return { success: false as const, error: msg };
-    }
-  });
-
-  registerPersistenceHandlers(channels);
-  registerNarrationHandlers(channels);
-
-  return channels;
-}
-
 function registerNarrationHandlers(channels: ChannelList): void {
   reg(channels, 'flowTracer:get-narration', async (_event, symbolRef: unknown) => {
     const ref = symbolRef as SymbolRef;
@@ -157,8 +132,68 @@ function registerNarrationHandlers(channels: ChannelList): void {
   });
 }
 
+function registerNLResolverHandler(channels: ChannelList): void {
+  reg(channels, 'flowTracer:resolve-natural-language', async (_event, query: unknown) => {
+    const q = typeof query === 'string' ? query : '';
+    log.info('[flowTracer] resolve-natural-language — query:', q.slice(0, 60));
+    try {
+      const result = await resolveNaturalLanguage(q);
+      return { success: true as const, result };
+    } catch (err) {
+      log.error('[flowTracer] resolve-natural-language error:', err);
+      return { success: false as const, error: String(err) };
+    }
+  });
+}
+
+export function registerFlowTracerHandlers(): string[] {
+  const channels: string[] = [];
+
+  reg(channels, 'flowTracer:get-canonical-flows', async () => {
+    log.info('[flowTracer] get-canonical-flows');
+    try {
+      const flows = await getCanonicalFlows();
+      return { success: true as const, flows };
+    } catch (err) {
+      log.error('[flowTracer] get-canonical-flows error:', err);
+      return { success: false as const, error: String(err) };
+    }
+  });
+
+  reg(channels, 'flowTracer:regenerate-gallery', async () => {
+    log.info('[flowTracer] regenerate-gallery — forced regeneration requested');
+    try {
+      const flows = await generateCanonicalFlows();
+      return { success: true as const, flows };
+    } catch (err) {
+      log.error('[flowTracer] regenerate-gallery error:', err);
+      return { success: false as const, error: String(err) };
+    }
+  });
+
+  reg(channels, 'flowTracer:trace-flow', async (_event, entry: unknown) => {
+    const ref = entry as SymbolRef;
+    log.info('[flowTracer] trace-flow entry:', ref?.symbol);
+    try {
+      const flow = await traceFlow(ref, { maxDepth: readMaxDepth() });
+      return { success: true as const, flow };
+    } catch (err) {
+      log.error('[flowTracer] trace-flow error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false as const, error: msg };
+    }
+  });
+
+  registerPersistenceHandlers(channels);
+  registerNarrationHandlers(channels);
+  registerNLResolverHandler(channels);
+
+  return channels;
+}
+
 export function cleanupFlowTracerHandlers(): void {
   ipcMain.removeHandler('flowTracer:get-canonical-flows');
+  ipcMain.removeHandler('flowTracer:regenerate-gallery');
   ipcMain.removeHandler('flowTracer:trace-flow');
   ipcMain.removeHandler('flowTracer:save-flow');
   ipcMain.removeHandler('flowTracer:list-saved-flows');
@@ -166,4 +201,5 @@ export function cleanupFlowTracerHandlers(): void {
   ipcMain.removeHandler('flowTracer:export-mermaid');
   ipcMain.removeHandler('flowTracer:get-narration');
   ipcMain.removeHandler('flowTracer:get-flow-why');
+  ipcMain.removeHandler('flowTracer:resolve-natural-language');
 }

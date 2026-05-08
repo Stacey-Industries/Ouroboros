@@ -29,6 +29,13 @@ export const flowTracerApi: FlowTracerAPI = {
   // ── Phase 3: per-symbol narration cache ───────────────────────────────────
   getNarration: (symbolRef) => ipcRenderer.invoke('flowTracer:get-narration', symbolRef),
 
+  // ── Phase 5: regenerate gallery ───────────────────────────────────────────
+  regenerateGallery: () => ipcRenderer.invoke('flowTracer:regenerate-gallery'),
+
+  // ── Phase 6: natural-language → symbol resolution ─────────────────────────
+  resolveNaturalLanguage: (query: string) =>
+    ipcRenderer.invoke('flowTracer:resolve-natural-language', query),
+
   // ── Phase 4: per-flow chain-aware Why narration ───────────────────────────
   getFlowWhy: (flow) => ipcRenderer.invoke('flowTracer:get-flow-why', flow),
 
