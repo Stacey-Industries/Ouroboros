@@ -23,6 +23,7 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import { flowTraceToMermaid } from './flowMermaidExport';
 import { listSavedFlows, loadFlow, saveFlow } from './flowPersistence';
+import { generateNarration, getNarration } from './narrationCache';
 import { traceFlow } from './traceEngine';
 import { WALKING_SKELETON_FLOWS } from './walkingSkeletonStub';
 
@@ -112,8 +113,28 @@ export function registerFlowTracerHandlers(): string[] {
   });
 
   registerPersistenceHandlers(channels);
+  registerNarrationHandlers(channels);
 
   return channels;
+}
+
+function registerNarrationHandlers(channels: ChannelList): void {
+  reg(channels, 'flowTracer:get-narration', async (_event, symbolRef: unknown) => {
+    const ref = symbolRef as SymbolRef;
+    log.info('[flowTracer] get-narration — symbol:', ref?.symbol);
+    try {
+      const cached = await getNarration(ref);
+      if (cached !== null) return { success: true as const, narration: cached };
+      // Cache miss — kick off background generation, return null so renderer shows placeholder
+      generateNarration(ref).catch((err) =>
+        log.info('[flowTracer] background narration error for', ref?.symbol, err),
+      );
+      return { success: true as const, narration: null };
+    } catch (err) {
+      log.error('[flowTracer] get-narration error:', err);
+      return { success: false as const, error: String(err) };
+    }
+  });
 }
 
 export function cleanupFlowTracerHandlers(): void {
@@ -123,4 +144,5 @@ export function cleanupFlowTracerHandlers(): void {
   ipcMain.removeHandler('flowTracer:list-saved-flows');
   ipcMain.removeHandler('flowTracer:load-flow');
   ipcMain.removeHandler('flowTracer:export-mermaid');
+  ipcMain.removeHandler('flowTracer:get-narration');
 }

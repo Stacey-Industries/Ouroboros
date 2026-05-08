@@ -230,4 +230,6 @@ export interface AppConfig {
   agentMonitor?: { subagentDisplay?: { diagnostics?: boolean; enabled?: boolean } };
   /** Wave 78 — persisted Export Usage preferences. */
   usageExport?: { defaultWindow?: '24h' | '7d' | '30d' | 'all'; lastDir?: string };
+  /** Wave 85 — Flow Tracer settings: trace depth cap and shared-flow opt-in. */
+  flowTracer?: { maxDepth?: number; saveSharedFlows?: boolean };
 }

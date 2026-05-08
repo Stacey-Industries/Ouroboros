@@ -6,6 +6,21 @@
  */
 
 export const tailSchemaExt2 = {
+  /** Wave 85 — Flow Tracer settings. */
+  flowTracer: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      maxDepth: {
+        type: 'number',
+        minimum: 3,
+        maximum: 12,
+        default: 6,
+      },
+      saveSharedFlows: { type: 'boolean', default: false },
+    },
+    default: { maxDepth: 6, saveSharedFlows: false },
+  },
   /** Wave 78 — persisted Export Usage preferences. */
   usageExport: {
     type: 'object',
