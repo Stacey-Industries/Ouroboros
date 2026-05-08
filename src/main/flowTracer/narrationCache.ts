@@ -204,9 +204,7 @@ async function callCliWithRetry(inputs: NarrationSymbolInput[]): Promise<Map<str
       // the next call will get the same response.
       if (isValidEmptyArrayResponse(text)) {
         recordSuccess();
-        log.info(
-          '[narrationCache] batch returned valid empty array — accepting, no retry',
-        );
+        log.info('[narrationCache] batch returned valid empty array — accepting, no retry');
         return new Map();
       }
       lastText = text;
@@ -303,6 +301,9 @@ export async function generateNarration(ref: SymbolRef): Promise<Narration | nul
  * Index-time batch generation. concurrency=3, ~10 symbols per CLI call.
  * Fire-and-forget at index time; does not block gallery render.
  */
+// DEFERRED-CONSUMER: wave-86 — index-time pre-compute path is specced but not
+// yet wired to the graph-indexer's "first project open" event. See
+// roadmap/follow-ups/2026-05-08-flow-tracer-trace-engine-quality.md.
 export async function batchGenerateNarrations(refs: SymbolRef[]): Promise<void> {
   if (refs.length === 0) return;
   const workspaceRoot = resolveWorkspaceRoot();
@@ -371,6 +372,9 @@ async function runWithConcurrency(
  * Invalidate cache for a symbol by deleting its hash-keyed file.
  * Called when the source file changes (hooked into graph file-change events).
  */
+// DEFERRED-CONSUMER: wave-86 — designed for graph-reindex / file-change hooks;
+// the hook wiring is its own work. See
+// roadmap/follow-ups/2026-05-08-flow-tracer-symbol-body-via-graph-snippet.md.
 export async function invalidateNarration(ref: SymbolRef): Promise<void> {
   const workspaceRoot = resolveWorkspaceRoot();
   if (!workspaceRoot) return;

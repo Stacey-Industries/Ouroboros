@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-05-08
+
+### Added
+- **Wave 85 — Flow Tracer (Phase 1 of "An IDE That Teaches You").** New centre-pane special view that traces a user-facing action through every layer of the running app — User → Renderer → Preload → Main → Claude CLI → Filesystem — with AI-written What/Why/How narration on each step. Opens via Command Palette (`Flow Tracer: Browse Flows` / `Flow Tracer: Search`), View menu (`View → Flow Tracer`), and a DOM event (`agent-ide:open-flow-tracer`).
+  - **Boundary registry + trace engine** (`src/main/flowTracer/boundaryRegistry.ts`, `traceEngine.ts`): Tree-sitter scan of `src/main/**/*.ts` for `ipcMain.handle` registrations + `src/preload/**/*.ts` for bridge mappings; outbound trace via the codebase-memory graph's `trace_call_path`; layer detection per design spec §5.1; depth cap 6 (configurable via `flowTracer.maxDepth`, range 3-12); cycle collapse before topological sort.
+  - **Per-symbol What+How narration cache** (`src/main/flowTracer/narrationCache.ts`): matches `moduleSummarizer.ts` pattern verbatim — `spawnClaude` CLI subprocess against `claude-haiku-4-5-20251001`, JSON output, 2-attempt retry, circuit-breaker after 3 failures, hash-based file cache at `<workspaceRoot>/.ouroboros/narration-cache/<symbolHash>.json`. Auth-constrained (no direct Anthropic API).
+  - **Per-flow chain-aware Why** (`src/main/flowTracer/flowWhyCache.ts`): single CLI call per flow render with the ordered chain of symbols + their cached What+How as context; ask Haiku to name the invariant the user couldn't have guessed; cache to `<flowId>-why.json`.
+  - **Canonical flow gallery** (`src/main/flowTracer/canonicalFlows.ts`): index-time CLI call extracts UI event handler + IPC handler candidates from the codebase-memory graph (~30-80 entries for Agent IDE) and asks Haiku for 8-15 pedagogically-valuable flow titles + entry-point symbols. `FALLBACK_FLOWS` provides cold-start coverage. Refresh button regenerates on demand.
+  - **Natural-language search + disambiguation** (`src/main/flowTracer/nlResolver.ts` + `FlowSearchBar.tsx`): single Haiku CLI call with `{ query, candidates }`; top-5 ranked JSON; confidence > 0.8 resolves directly, else shows disambiguation dropdown.
+  - **Persistence + Mermaid export** (`src/main/flowTracer/flowPersistence.ts`, `flowMermaidExport.ts`): save FlowTrace JSON to `<workspaceRoot>/.ouroboros/flows/<flowId>.json` with atomic temp-rename writes; `flowTracer.saveSharedFlows` setting (default `false`) opts into a `.ouroboros-shared/` location for intentional check-in; Mermaid `sequenceDiagram` export to clipboard.
+  - **Renderer UX surfaces** (`src/renderer/components/FlowTracer/`): `FlowTracerView`, `FlowGallery`, `FlowSearchBar`, `FlowCanvas` (Canvas2D swimlane), `StepInspector` (What/How via `useStepNarration` hook + Why via `useFlowWhy` on hover), `FlowActions` (Save title input + Mermaid clipboard via `useFlowPersistence`), `SavedFlowsPanel`, `useCanonicalFlowsRefresh`. Centre-pane integration via existing `CentrePaneConnected.parts.tsx` special-view registration.
+  - **IPC contract** (10 new channels): `flowTracer:get-canonical-flows`, `:trace-flow`, `:get-narration`, `:get-flow-why`, `:resolve-natural-language`, `:regenerate-gallery`, `:save-flow`, `:list-saved-flows`, `:load-flow`, `:export-mermaid`. Typed in `src/renderer/types/electron-flow-tracer.d.ts`; shared types in `src/shared/types/flowTracer.ts`.
+
+### Architecture decisions (per `roadmap/wave-85-flow-tracer/wave-85-decisions.md`, ADR with 11 decisions)
+- Match `moduleSummarizer.ts` for narration generation — auth-constrained pick, also industry-standard for bounded-candidate prompt decomposition.
+- Hand-rolled swimlane-constrained topological sort (no d3-dag, no elkjs, no Mermaid runtime) — Phase 1 ships sequential-X positions; full topological sort deferred to polish.
+- Tree-sitter for AST scanning (already in `package.json` via the codebase-memory graph indexer).
+- LLM tool-call with bounded candidate list for NL resolution (per CODEXGRAPH NAACL 2025 + Sourcegraph's 2024 trajectory away from embeddings on bounded sets).
+- Hybrid narration cache: per-symbol What+How (index-time, persistent) + per-flow Why (render-time, optionally cached).
+- Centre-pane view; mini-tracer + click-to-trace + symbol-search deferred to Wave 86.
+- Honeycomb test shape (cross-layer integration dominates); orchestrator-owned acceptance test predates Phase 1 implementation.
+- 6-hop depth default, configurable. Saved flows local-only by default (`.ouroboros/` stays gitignored).
+
+### Fixed (post-smoke iteration)
+- **`drawSwimlane` runtime crash** — Phase 1 left a positional/destructured-arg mismatch on `drawEdges`/`drawStepNodes` call sites. Project tsconfig wasn't catching it; jsdom's null `getContext('2d')` skipped the bug in tests; manifested in the real browser. Fixed by passing object literals at call sites.
+- **`canonicalFlows` renderer-event candidate extraction** — compound `(STARTS WITH 'handle' OR STARTS WITH 'on' OR ENDS WITH 'Handler')` clause unsupported by the codebase-graph compat queryGraph engine. Split into three single-condition queries with `(symbol|file|line)` dedupe; defensive `Array.isArray` guard on the return.
+- **`listSavedFlows` crashing on Phase 4 cache files** — Phase 7's directory listing read every `*.json` in `.ouroboros/flows/` and tried `record.flow.metadata.layerCount`, which fails on Phase 4's `<flowId>-why.json` blobs (different shape). Filter `-why.json` from the listing.
+- **Narration prompt missing symbol body** when graph line was stale. Added `rescueBodyByName`: if the line slice doesn't contain the symbol name as a word-bounded token, scan the file for the first declaration-shaped occurrence and re-slice.
+- **Wasted 2nd narration CLI call** when Haiku replied with valid empty `[]` — added `isValidEmptyArrayResponse` short-circuit; record success, return empty Map, no retry.
+- **Hover-panel "spasm"** — removing `onMouseLeave` clear so the inspector stays pinned to the last hovered step + memoizing `hoverRef` so `useStepNarration` doesn't refetch on every render. Smoke logs showed 30+ get-narration calls per second; now fires once per unique step.
+
+### Open / Deferred
+Three follow-ups filed for Wave 86 polish:
+- **Diagram is rudimentary** (`roadmap/follow-ups/2026-05-08-flow-tracer-diagram-rudimentary.md`). The swimlane render is numbered circles + lines; design spec called for layer-color-coded boxes, dashed async edges, boundary labels, LOD, CSS-token color resolution. Canvas2D scaffold is in place; replacing the placeholder draw functions is the work.
+- **Trace engine output quality** (`roadmap/follow-ups/2026-05-08-flow-tracer-trace-engine-quality.md`). Three sub-problems: bridge call expressions (`window.electronAPI.X`) surface as step symbols instead of resolving to main-side handlers; JS keywords (`delete`, etc.) surface as step symbols; every flow truncates at exactly 3 steps (likely depth-cap or boundary-resolution gap; needs instrumentation).
+- **Narration body via graph snippet** (`roadmap/follow-ups/2026-05-08-flow-tracer-symbol-body-via-graph-snippet.md`). `fetchSymbolBody` uses raw file slice; the design spec's referenced `get_code_snippet` graph API would be more robust to stale-line graph data. The `rescueBodyByName` fallback papers over the file-slice case for now.
+
+### Documentation
+- Wave 85 plan (`roadmap/wave-85-flow-tracer/waveplan-85.md` — 14 sections, validated against Sites 1/2/3 from `wave-process.md`).
+- Wave 85 ADR (`roadmap/wave-85-flow-tracer/wave-85-decisions.md` — 11 decisions, all locked).
+- Wave 85 mechanical review (`roadmap/wave-85-flow-tracer/wave-85-mechanical-review.md` — `/review` FLAG verdict, 6 findings, all non-fatal; the 4 dead-export findings now carry `DEFERRED-CONSUMER: wave-86` markers, the 2 universal-quantifier findings live in the trace-engine-quality follow-up).
+- Design spec (`docs/superpowers/specs/2026-05-08-flow-tracer-design.md`).
+- Initiative framing (`ai/vision.md` — "An IDE That Teaches You" three-mode roadmap: Flow Tracer (this), inline captions (Wave 86), galaxy map (Wave 87)).
+
 ## [2.14.0] - 2026-05-06
 
 ### Fixed

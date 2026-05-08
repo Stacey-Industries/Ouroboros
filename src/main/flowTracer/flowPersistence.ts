@@ -159,8 +159,9 @@ export async function loadFlow(id: string, workspaceRoot?: string): Promise<Flow
 /**
  * Delete a saved flow by id.
  * Searches both locations. Does not throw if the file isn't found.
- * Not yet exposed via IPC in Phase 7; wired in a future phase.
  */
+// DEFERRED-CONSUMER: wave-86 — IPC handler + renderer affordance not yet
+// wired. Phase 7 deliberately scoped delete-UI out.
 export async function deleteSavedFlow(id: string, workspaceRoot?: string): Promise<void> {
   const root = workspaceRoot ?? getActiveWorkspaceRoot();
 

@@ -257,6 +257,8 @@ export async function generateFlowWhy(flow: FlowTrace): Promise<FlowWhyEntry[]> 
  * Delete the Why cache file for a flow.
  * Called when a flow is invalidated or deleted.
  */
+// DEFERRED-CONSUMER: wave-86 — designed for flow-deletion / regenerate hooks
+// not yet wired in Phase 7's persistence layer.
 export function invalidateFlowWhy(flowId: string): void {
   const workspaceRoot = resolveWorkspaceRoot();
   if (!workspaceRoot) return;
