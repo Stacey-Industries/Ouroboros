@@ -12,7 +12,11 @@ import type {
   FlowEdge,
   FlowStep,
   FlowTrace,
+  SymbolRef,
 } from '../../../../shared/types/flowTracer';
+import { FlowActions } from './FlowActions';
+import { SavedFlowsPanel } from './SavedFlowsPanel';
+import { StepInspector } from './StepInspector';
 
 // ── Data hook ─────────────────────────────────────────────────────────────────
 
@@ -134,11 +138,20 @@ function SwimlaneCanvas({ trace }: { trace: FlowTrace }): React.ReactElement {
 
 // ── Step list ─────────────────────────────────────────────────────────────────
 
-function StepList({ trace }: { trace: FlowTrace }): React.ReactElement {
+interface StepListProps {
+  trace: FlowTrace;
+  onHover: (step: FlowStep | null) => void;
+}
+
+function StepList({ trace, onHover }: StepListProps): React.ReactElement {
   return (
-    <ol className="mt-2 space-y-1 text-xs font-mono">
+    <ol className="mt-2 space-y-1 text-xs font-mono" onMouseLeave={() => onHover(null)}>
       {trace.steps.map((step, i) => (
-        <li key={step.id} className="flex gap-2 items-start">
+        <li
+          key={step.id}
+          className="flex gap-2 items-start cursor-pointer hover:bg-surface-hover rounded px-1"
+          onMouseEnter={() => onHover(step)}
+        >
           <span className="text-text-semantic-muted w-5 shrink-0">{i + 1}.</span>
           <span className="text-text-semantic-secondary">[{step.layer}]</span>
           <span className="text-text-semantic-primary truncate">{step.symbol}</span>
@@ -183,20 +196,30 @@ type TraceState =
   | { status: 'error'; message: string };
 
 function TraceResult({ state }: { state: TraceState }): React.ReactElement | null {
+  const [hoveredStep, setHoveredStep] = useState<FlowStep | null>(null);
   if (state.status === 'loading')
     return <p className="text-xs text-text-semantic-muted">Tracing…</p>;
   if (state.status === 'error')
     return <p className="text-xs text-status-error">Trace error: {state.message}</p>;
-  if (state.status === 'ready') {
-    return (
-      <div className="flex flex-col gap-2 border border-border-semantic rounded p-3">
+  if (state.status !== 'ready') return null;
+  const hoverRef: SymbolRef | null = hoveredStep
+    ? { symbol: hoveredStep.symbol, file: hoveredStep.file, line: hoveredStep.line }
+    : null;
+  return (
+    <div className="flex flex-col gap-2 border border-border-semantic rounded p-3">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-text-semantic-primary">{state.trace.title}</h3>
-        <SwimlaneCanvas trace={state.trace} />
-        <StepList trace={state.trace} />
+        <FlowActions flow={state.trace} />
       </div>
-    );
-  }
-  return null;
+      <SwimlaneCanvas trace={state.trace} />
+      <StepList trace={state.trace} onHover={setHoveredStep} />
+      <StepInspector
+        flow={state.trace}
+        hoveredStep={hoverRef}
+        hoveredStepId={hoveredStep?.id ?? null}
+      />
+    </div>
+  );
 }
 
 // ── Gallery section ───────────────────────────────────────────────────────────
@@ -242,6 +265,10 @@ export function FlowTracerView(): React.ReactElement {
       );
   }, []);
 
+  const handleLoadSaved = useCallback((trace: FlowTrace) => {
+    setTraceState({ status: 'ready', trace });
+  }, []);
+
   return (
     <div className="flex flex-col h-full overflow-auto p-4 gap-4">
       <div>
@@ -255,6 +282,7 @@ export function FlowTracerView(): React.ReactElement {
         onSelect={handleSelect}
         traceLoading={traceState.status === 'loading'}
       />
+      <SavedFlowsPanel onLoadFlow={handleLoadSaved} />
       <TraceResult state={traceState} />
     </div>
   );

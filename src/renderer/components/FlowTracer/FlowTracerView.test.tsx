@@ -52,12 +52,33 @@ const STUB_TRACE = {
 
 const mockListFlows = vi.fn();
 const mockRunTrace = vi.fn();
+const mockGetNarration = vi.fn();
+const mockGetFlowWhy = vi.fn();
+const mockListSavedFlows = vi.fn();
+const mockLoadFlow = vi.fn();
+const mockSaveFlow = vi.fn();
+const mockExportMermaid = vi.fn();
 
 beforeEach(() => {
   mockListFlows.mockReset();
   mockRunTrace.mockReset();
+  mockGetNarration.mockReset().mockResolvedValue({ success: true, narration: null });
+  mockGetFlowWhy.mockReset().mockResolvedValue({ success: true, entries: [] });
+  mockListSavedFlows.mockReset().mockResolvedValue({ success: true, flows: [] });
+  mockLoadFlow.mockReset().mockResolvedValue({ success: true, flow: STUB_TRACE });
+  mockSaveFlow.mockReset().mockResolvedValue({ success: true, id: 'saved-1' });
+  mockExportMermaid.mockReset().mockResolvedValue({ success: true, mermaid: '' });
   window.electronAPI = {
-    flowTracer: { listFlows: mockListFlows, runTrace: mockRunTrace },
+    flowTracer: {
+      listFlows: mockListFlows,
+      runTrace: mockRunTrace,
+      getNarration: mockGetNarration,
+      getFlowWhy: mockGetFlowWhy,
+      listSavedFlows: mockListSavedFlows,
+      loadFlow: mockLoadFlow,
+      saveFlow: mockSaveFlow,
+      exportMermaid: mockExportMermaid,
+    },
   } as unknown as typeof window.electronAPI;
 });
 
