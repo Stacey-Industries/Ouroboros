@@ -77,6 +77,9 @@ codebase-graph.db
 codebase-graph.db-shm
 codebase-graph.db-wal
 
+# Brainstorming visual companion (scratch HTML mockups, ephemeral)
+.superpowers/
+
 # Build artifact with garbled name
 ``````````````/
 
