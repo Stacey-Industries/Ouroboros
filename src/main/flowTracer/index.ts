@@ -8,6 +8,8 @@
  * IPC channels registered here:
  *   flowTracer:get-canonical-flows — returns the canonical CanonicalFlow[]
  *   flowTracer:trace-flow          — traces the entry point via traceEngine
+ *   flowTracer:get-narration       — per-symbol What+How narration cache (Phase 3)
+ *   flowTracer:get-flow-why        — per-flow chain-aware Why narration (Phase 4)
  *   flowTracer:save-flow           — persist a FlowTrace to disk (Phase 7)
  *   flowTracer:list-saved-flows    — list persisted flows (Phase 7)
  *   flowTracer:load-flow           — load a persisted flow (Phase 7)
@@ -23,6 +25,7 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import { flowTraceToMermaid } from './flowMermaidExport';
 import { listSavedFlows, loadFlow, saveFlow } from './flowPersistence';
+import { generateFlowWhy, getFlowWhy } from './flowWhyCache';
 import { generateNarration, getNarration } from './narrationCache';
 import { traceFlow } from './traceEngine';
 import { WALKING_SKELETON_FLOWS } from './walkingSkeletonStub';
@@ -135,6 +138,23 @@ function registerNarrationHandlers(channels: ChannelList): void {
       return { success: false as const, error: String(err) };
     }
   });
+
+  reg(channels, 'flowTracer:get-flow-why', async (_event, flow: unknown) => {
+    const f = flow as FlowTrace;
+    log.info('[flowTracer] get-flow-why — flow:', f?.id, '(', f?.steps?.length, 'steps)');
+    try {
+      const cached = await getFlowWhy(f.id);
+      if (cached !== null) {
+        log.info('[flowTracer] get-flow-why — cache hit for', f.id);
+        return { success: true as const, entries: cached };
+      }
+      const entries = await generateFlowWhy(f);
+      return { success: true as const, entries };
+    } catch (err) {
+      log.error('[flowTracer] get-flow-why error:', err);
+      return { success: false as const, error: String(err) };
+    }
+  });
 }
 
 export function cleanupFlowTracerHandlers(): void {
@@ -145,4 +165,5 @@ export function cleanupFlowTracerHandlers(): void {
   ipcMain.removeHandler('flowTracer:load-flow');
   ipcMain.removeHandler('flowTracer:export-mermaid');
   ipcMain.removeHandler('flowTracer:get-narration');
+  ipcMain.removeHandler('flowTracer:get-flow-why');
 }

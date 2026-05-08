@@ -16,6 +16,7 @@ export type {
   FlowTraceMetadata,
   FlowTracerGetCanonicalFlowsResponse,
   FlowTracerTraceFlowResponse,
+  FlowWhyEntry,
   LayerKind,
   Narration,
   SavedFlowSummary,
@@ -28,6 +29,7 @@ import type {
   FlowTrace,
   FlowTracerGetCanonicalFlowsResponse,
   FlowTracerTraceFlowResponse,
+  FlowWhyEntry,
   Narration,
   SavedFlowSummary,
   SymbolRef,
@@ -37,6 +39,12 @@ import type {
 
 export type FlowTracerGetNarrationResponse =
   | { success: true; narration: Narration | { stale: true } | null }
+  | { success: false; error: string };
+
+// ── Phase 4 IPC response envelopes ───────────────────────────────────────────
+
+export type FlowTracerGetFlowWhyResponse =
+  | { success: true; entries: FlowWhyEntry[] }
   | { success: false; error: string };
 
 // ── Phase 7 IPC response envelopes ───────────────────────────────────────────
@@ -69,6 +77,9 @@ export interface FlowTracerAPI {
   // ── Phase 3: per-symbol narration cache ───────────────────────────────────
   /** Get cached What+How narration for a symbol; null = cache miss (background generation queued). */
   getNarration: (symbolRef: SymbolRef) => Promise<FlowTracerGetNarrationResponse>;
+  // ── Phase 4: per-flow chain-aware Why narration ────────────────────────────
+  /** Get chain-aware Why entries for every step in a flow. Cache hit is instant; miss triggers Haiku CLI call (~2-4s). */
+  getFlowWhy: (flow: FlowTrace) => Promise<FlowTracerGetFlowWhyResponse>;
   // ── Phase 7: persistence + Mermaid export ──────────────────────────────────
   /** Save a FlowTrace to disk; returns the assigned flow id. */
   saveFlow: (flow: FlowTrace, title: string) => Promise<FlowTracerSaveFlowResponse>;

@@ -86,6 +86,17 @@ export type SavedFlowSummary = {
   source: 'local' | 'shared';
 };
 
+// ── Phase 4 additions ────────────────────────────────────────────────────────
+
+/**
+ * Per-step Why narration entry produced by the chain-aware Why generator.
+ * Cached at <workspaceRoot>/.ouroboros/flows/<flowId>-why.json.
+ */
+export type FlowWhyEntry = {
+  stepId: string; // FlowStep.id
+  why: string; // 1-2 sentences naming the invariant the user couldn't have guessed
+};
+
 // IPC response envelopes (Phase 1 — extends in later phases).
 
 export type FlowTracerGetCanonicalFlowsResponse =

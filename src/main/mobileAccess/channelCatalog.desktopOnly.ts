@@ -52,6 +52,7 @@ export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
   'flowTracer:load-flow': { class: 'desktop-only', timeoutClass: 'normal' },
   'flowTracer:export-mermaid': { class: 'desktop-only', timeoutClass: 'normal' },
   'flowTracer:get-narration': { class: 'desktop-only', timeoutClass: 'long' },
+  'flowTracer:get-flow-why': { class: 'desktop-only', timeoutClass: 'long' },
 
   // ── graph:* (full codebase knowledge graph; requires local index) ─────────────
   // All graph channels are desktop-only. The index is built from the local
