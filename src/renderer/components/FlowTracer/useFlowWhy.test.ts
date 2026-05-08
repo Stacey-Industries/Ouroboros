@@ -15,7 +15,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { FlowTrace, FlowWhyEntry } from '../../../../shared/types/flowTracer';
+import type { FlowTrace, FlowWhyEntry } from '../../../shared/types/flowTracer';
 import { useFlowWhy } from './useFlowWhy';
 
 // ---------------------------------------------------------------------------

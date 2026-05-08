@@ -10,7 +10,7 @@
 
 import React, { useEffect } from 'react';
 
-import type { FlowTrace, SavedFlowSummary } from '../../../../shared/types/flowTracer';
+import type { FlowTrace, SavedFlowSummary } from '../../../shared/types/flowTracer';
 import { useFlowPersistence } from './useFlowPersistence';
 
 interface SavedFlowsPanelProps {

@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import type { FlowTrace } from '../../../../shared/types/flowTracer';
+import type { FlowTrace } from '../../../shared/types/flowTracer';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Narration, SymbolRef } from '../../../../shared/types/flowTracer';
+import type { Narration, SymbolRef } from '../../../shared/types/flowTracer';
 
 // ---------------------------------------------------------------------------
 // Types

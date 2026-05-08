@@ -7,7 +7,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { FlowTrace, SavedFlowSummary } from '../../../../shared/types/flowTracer';
+import type { FlowTrace, SavedFlowSummary } from '../../../shared/types/flowTracer';
 
 // ── Mock useFlowPersistence so SavedFlowsPanel is testable in isolation ───────
 

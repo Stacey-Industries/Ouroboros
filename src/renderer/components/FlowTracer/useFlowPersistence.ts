@@ -15,7 +15,7 @@
 
 import { useCallback, useState } from 'react';
 
-import type { FlowTrace, SavedFlowSummary } from '../../../../shared/types/flowTracer';
+import type { FlowTrace, SavedFlowSummary } from '../../../shared/types/flowTracer';
 
 export type PersistenceStatus =
   | { kind: 'idle' }

@@ -12,8 +12,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Narration, SymbolRef } from '../../../../shared/types/flowTracer';
 import { WHY_PLACEHOLDER } from '../../../main/flowTracer/narrationCachePrompt';
+import type { Narration, SymbolRef } from '../../../shared/types/flowTracer';
 import { useStepNarration } from './useStepNarration';
 
 // ---------------------------------------------------------------------------

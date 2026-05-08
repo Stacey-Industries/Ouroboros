@@ -141,15 +141,23 @@ function hitToInput(hit: Record<string, unknown>): CandidateInput | null {
   };
 }
 
-async function queryGraphSet(
-  searchGraph: (opts: { query: string; projectPath: string; limit: number }) => Promise<unknown[]>,
-  opts: { query: string; projectPath: string; limit: number },
-): Promise<CandidateInput[]> {
-  const hits = await searchGraph(opts).catch(() => [] as unknown[]);
+function queryGraphSet(
+  ctrl: { searchGraph: (q: string, limit?: number) => unknown[] },
+  query: string,
+  limit: number,
+): CandidateInput[] {
+  let hits: unknown[] = [];
+  try {
+    hits = ctrl.searchGraph(query, limit);
+  } catch {
+    return [];
+  }
   const results: CandidateInput[] = [];
   for (const hit of hits) {
-    const input = hitToInput(hit as Record<string, unknown>);
-    if (input) results.push(input);
+    if (hit && typeof hit === 'object') {
+      const input = hitToInput(hit as Record<string, unknown>);
+      if (input) results.push(input);
+    }
   }
   return results;
 }
@@ -158,20 +166,23 @@ async function queryGraphSet(
  * Extract entry-point candidates from the codebase-memory graph.
  * Queries renderer event handlers + main IPC handlers (~30-80 nodes).
  * Returns empty array on graph unavailability (graceful degradation).
+ *
+ * This is the fallback path. Phase 5's `extractEntryPointCandidates` is
+ * preferred and tried first by `getCandidates`; this only fires when
+ * Phase 5's module isn't loadable.
  */
-async function extractCandidatesFromGraph(workspaceRoot: string): Promise<CandidateInput[]> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function extractCandidatesFromGraph(_workspaceRoot: string): Promise<CandidateInput[]> {
   try {
-    const { searchGraph } = await import('../codebaseGraph/mcpToolHandlers');
-    const rendererHits = await queryGraphSet(searchGraph, {
-      query: 'event handler submit send click keyboard input renderer',
-      projectPath: workspaceRoot,
-      limit: 50,
-    });
-    const mainHits = await queryGraphSet(searchGraph, {
-      query: 'ipcMain handle ipc handler main process channel',
-      projectPath: workspaceRoot,
-      limit: 50,
-    });
+    const { getGraphController } = await import('../codebaseGraph/graphControllerSupport');
+    const ctrl = getGraphController();
+    if (!ctrl) return [];
+    const rendererHits = queryGraphSet(
+      ctrl,
+      'event handler submit send click keyboard input renderer',
+      50,
+    );
+    const mainHits = queryGraphSet(ctrl, 'ipcMain handle ipc handler main process channel', 50);
     const seen = new Set(rendererHits.map((r) => `${r.file}:${r.line}`));
     const merged = [...rendererHits];
     for (const hit of mainHits) {

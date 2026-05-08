@@ -13,7 +13,7 @@ import type {
   FlowStep,
   FlowTrace,
   SymbolRef,
-} from '../../../../shared/types/flowTracer';
+} from '../../../shared/types/flowTracer';
 import { FlowActions } from './FlowActions';
 import { FlowSearchBar } from './FlowSearchBar';
 import { SavedFlowsPanel } from './SavedFlowsPanel';

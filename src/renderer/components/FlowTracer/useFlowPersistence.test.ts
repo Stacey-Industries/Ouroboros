@@ -18,7 +18,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { FlowTrace, SavedFlowSummary } from '../../../../shared/types/flowTracer';
+import type { FlowTrace, SavedFlowSummary } from '../../../shared/types/flowTracer';
 
 // ── Mock window.electronAPI ───────────────────────────────────────────────────
 
