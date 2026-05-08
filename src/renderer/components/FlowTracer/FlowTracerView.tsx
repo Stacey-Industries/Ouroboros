@@ -116,8 +116,8 @@ function drawSwimlane(canvas: HTMLCanvasElement, trace: FlowTrace): void {
   const laneH = Math.floor(height / Math.max(layers.length, 1));
   const stepW = Math.floor(width / Math.max(trace.steps.length + 1, 2));
   drawLanes(ctx, layers, laneH, width);
-  drawEdges(ctx, trace.edges, trace.steps, layers, laneH, stepW);
-  drawStepNodes(ctx, trace.steps, layers, laneH, stepW);
+  drawEdges({ ctx, steps: trace.steps, layers, laneH, stepW, edges: trace.edges });
+  drawStepNodes({ ctx, steps: trace.steps, layers, laneH, stepW });
 }
 
 // ── Swimlane canvas component ─────────────────────────────────────────────────

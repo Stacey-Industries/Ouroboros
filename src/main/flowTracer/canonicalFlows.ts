@@ -192,23 +192,48 @@ function extractRendererEventCandidates(
   out: EntryPointCandidate[],
 ): void {
   if (!ctrl) return;
+  // The compat queryGraph engine supports only single-condition WHERE clauses
+  // and labels()/IN. Run three name-pattern queries and dedupe the merged set.
+  const patterns: Array<{ op: 'STARTS WITH' | 'ENDS WITH'; value: string }> = [
+    { op: 'STARTS WITH', value: 'handle' },
+    { op: 'STARTS WITH', value: 'on' },
+    { op: 'ENDS WITH', value: 'Handler' },
+  ];
+  const seen = new Set<string>();
+  let added = 0;
+  for (const { op, value } of patterns) {
+    if (added >= 40) break;
+    const rows = runRendererEventQuery(ctrl, op, value);
+    for (const row of rows) {
+      if (added >= 40) break;
+      const candidate = rowToCandidate(row, 'renderer-event');
+      if (!candidate) continue;
+      const dedupeKey = `${candidate.symbol}|${candidate.file}|${candidate.line}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      out.push(candidate);
+      added += 1;
+    }
+  }
+}
+
+function runRendererEventQuery(
+  ctrl: NonNullable<ReturnType<typeof getGraphController>>,
+  op: 'STARTS WITH' | 'ENDS WITH',
+  value: string,
+): Array<Record<string, unknown>> {
   const escaped = escapeCypher(RENDERER_PREFIX);
-  // Look for functions whose name matches common event handler naming conventions
   const cypher =
     `MATCH (n) WHERE n.file_path STARTS WITH '${escaped}'` +
     ` AND labels(n) IN ['Function', 'Method']` +
-    ` AND (n.name STARTS WITH 'handle' OR n.name STARTS WITH 'on' OR n.name ENDS WITH 'Handler')` +
-    ` RETURN n.name, n.file_path, n.start_line LIMIT 40`;
-  let rows: Array<Record<string, unknown>>;
+    ` AND n.name ${op} '${value}'` +
+    ` RETURN n.name, n.file_path, n.start_line LIMIT 20`;
   try {
-    rows = ctrl.queryGraph(cypher);
+    const rows = ctrl.queryGraph(cypher);
+    return Array.isArray(rows) ? rows : [];
   } catch (err) {
     log.info('[canonicalFlows] renderer-event query failed:', err);
-    return;
-  }
-  for (const row of rows) {
-    const candidate = rowToCandidate(row, 'renderer-event');
-    if (candidate) out.push(candidate);
+    return [];
   }
 }
 
