@@ -5,7 +5,7 @@
  * Narration carries [stub] markers until Phase 2.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   CanonicalFlow,
@@ -146,8 +146,11 @@ interface StepListProps {
 }
 
 function StepList({ trace, onHover }: StepListProps): React.ReactElement {
+  // No onMouseLeave clearing — the inspector stays pinned to the last hovered
+  // step so the user can move the mouse down to read it without it disappearing.
+  // The next onMouseEnter on a different step replaces the inspector content.
   return (
-    <ol className="mt-2 space-y-1 text-xs font-mono" onMouseLeave={() => onHover(null)}>
+    <ol className="mt-2 space-y-1 text-xs font-mono">
       {trace.steps.map((step, i) => (
         <li
           key={step.id}
@@ -199,14 +202,23 @@ type TraceState =
 
 function TraceResult({ state }: { state: TraceState }): React.ReactElement | null {
   const [hoveredStep, setHoveredStep] = useState<FlowStep | null>(null);
+  // Memoize the SymbolRef so useStepNarration's effect deps stay stable
+  // across re-renders that don't change the hovered step. Without this,
+  // every render constructs a fresh object literal and the IPC fires
+  // on every re-render of TraceResult — visible in the smoke logs as
+  // 30+ get-narration calls for the same symbol in rapid succession.
+  const hoverRef = useMemo<SymbolRef | null>(
+    () =>
+      hoveredStep
+        ? { symbol: hoveredStep.symbol, file: hoveredStep.file, line: hoveredStep.line }
+        : null,
+    [hoveredStep],
+  );
   if (state.status === 'loading')
     return <p className="text-xs text-text-semantic-muted">Tracing…</p>;
   if (state.status === 'error')
     return <p className="text-xs text-status-error">Trace error: {state.message}</p>;
   if (state.status !== 'ready') return null;
-  const hoverRef: SymbolRef | null = hoveredStep
-    ? { symbol: hoveredStep.symbol, file: hoveredStep.file, line: hoveredStep.line }
-    : null;
   return (
     <div className="flex flex-col gap-2 border border-border-semantic rounded p-3">
       <div className="flex items-center justify-between gap-2">
