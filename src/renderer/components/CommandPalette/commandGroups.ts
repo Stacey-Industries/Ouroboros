@@ -5,6 +5,7 @@ import {
   SPLIT_EDITOR_EVENT,
 } from '../../hooks/appEventNames';
 import { materialVariantCommands, themeCommands } from './commandGroups.appearance';
+import { flowTracerCommands } from './commandGroups.flowTracer';
 import type { Command } from './types';
 
 interface DispatchCommandConfig {
@@ -308,5 +309,6 @@ export function buildBuiltinCommands(): Command[] {
     ...appCommands(),
     ...gitCommands(),
     ...threadCommands(),
+    ...flowTracerCommands(),
   ];
 }
