@@ -97,6 +97,31 @@ export type FlowWhyEntry = {
   why: string; // 1-2 sentences naming the invariant the user couldn't have guessed
 };
 
+// ── Phase 6 additions ────────────────────────────────────────────────────────
+
+/**
+ * A candidate entry point surfaced for natural-language search.
+ * Extracted from the codebase graph at index time (~30-80 for Agent IDE).
+ * Haiku ranks these given the NL query.
+ */
+export type EntryPointCandidate = {
+  symbol: string; // qualified function/handler name
+  file: string; // project-relative path
+  line: number;
+  confidence: number; // 0.0–1.0 — populated by Haiku ranking, 0 pre-ranking
+  reason: string; // Haiku's brief explanation for this ranking
+};
+
+/**
+ * Result of a natural-language resolution call.
+ * confidence = top-1 candidate's confidence (0 if no matches).
+ * matches = Haiku-ranked list (up to 5 entries).
+ */
+export type NLResolveResult = {
+  matches: EntryPointCandidate[];
+  confidence: number;
+};
+
 // IPC response envelopes (Phase 1 — extends in later phases).
 
 export type FlowTracerGetCanonicalFlowsResponse =
@@ -105,4 +130,10 @@ export type FlowTracerGetCanonicalFlowsResponse =
 
 export type FlowTracerTraceFlowResponse =
   | { success: true; flow: FlowTrace }
+  | { success: false; error: string };
+
+// ── Phase 6 IPC response envelopes ──────────────────────────────────────────
+
+export type FlowTracerResolveNaturalLanguageResponse =
+  | { success: true; result: NLResolveResult }
   | { success: false; error: string };
