@@ -140,10 +140,48 @@ async function fetchSymbolBody(ref: SymbolRef, workspaceRoot: string): Promise<s
     const lines = content.split('\n');
     const start = Math.max(0, ref.line - 1);
     const end = Math.min(lines.length, start + 60);
-    return lines.slice(start, end).join('\n');
+    const sliced = lines.slice(start, end).join('\n');
+    // If the line-based slice doesn't include the symbol body, the graph's
+    // recorded line is stale or wrong — search the file by name and re-slice.
+    if (sliced.includes(ref.symbol)) return sliced;
+    return rescueBodyByName(content, lines, ref.symbol) ?? sliced;
   } catch {
     return `// ${ref.symbol} — body unavailable`;
   }
+}
+
+function rescueBodyByName(_content: string, lines: string[], symbol: string): string | null {
+  // Prefer declaration-shaped hits; fall back to the first occurrence.
+  let firstOccurrence = -1;
+  for (const [i, line] of lines.entries()) {
+    const tokenIdx = wordBoundaryIndexOf(line, symbol);
+    if (tokenIdx < 0) continue;
+    if (firstOccurrence < 0) firstOccurrence = i;
+    const after = line.charAt(tokenIdx + symbol.length);
+    if (after === '(' || after === '=' || after === ':' || after === '<') {
+      const end = Math.min(lines.length, i + 60);
+      return lines.slice(i, end).join('\n');
+    }
+  }
+  if (firstOccurrence < 0) return null;
+  const end = Math.min(lines.length, firstOccurrence + 60);
+  return lines.slice(firstOccurrence, end).join('\n');
+}
+
+function wordBoundaryIndexOf(line: string, token: string): number {
+  let from = 0;
+  while (true) {
+    const idx = line.indexOf(token, from);
+    if (idx < 0) return -1;
+    const before = idx === 0 ? '' : line[idx - 1];
+    if (!isWordChar(before)) return idx;
+    from = idx + 1;
+  }
+}
+
+function isWordChar(c: string): boolean {
+  if (!c) return false;
+  return /^[A-Za-z0-9_$]$/.test(c);
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +199,16 @@ async function callCliWithRetry(inputs: NarrationSymbolInput[]): Promise<Map<str
         recordSuccess();
         return result;
       }
+      // Haiku replied with a valid empty array — it parsed but couldn't generate
+      // narration (e.g., symbol body wasn't in the supplied excerpt). Don't retry;
+      // the next call will get the same response.
+      if (isValidEmptyArrayResponse(text)) {
+        recordSuccess();
+        log.info(
+          '[narrationCache] batch returned valid empty array — accepting, no retry',
+        );
+        return new Map();
+      }
       lastText = text;
       if (attempt === 0) {
         log.info(
@@ -177,6 +225,14 @@ async function callCliWithRetry(inputs: NarrationSymbolInput[]): Promise<Map<str
   recordFailure();
   log.info('[narrationCache] batch failed after 2 attempts. Last output:', lastText.slice(0, 200));
   return new Map();
+}
+
+function isValidEmptyArrayResponse(text: string): boolean {
+  const trimmed = text.trim();
+  // Strip optional markdown fences around a JSON literal.
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  const inner = (fenceMatch ? fenceMatch[1] : trimmed).trim();
+  return inner === '[]';
 }
 
 // ---------------------------------------------------------------------------

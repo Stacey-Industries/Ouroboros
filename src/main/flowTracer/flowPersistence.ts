@@ -107,6 +107,9 @@ export async function listSavedFlows(workspaceRoot?: string): Promise<SavedFlowS
 
     for (const entry of entries) {
       if (!entry.endsWith('.json')) continue;
+      // Phase 4's flow-Why cache writes to `<flowId>-why.json` in this same
+      // directory; those are FlowWhyEntry[] blobs, not saved-flow records.
+      if (entry.endsWith('-why.json')) continue;
       const filePath = path.join(dir, entry);
       try {
         // eslint-disable-next-line security/detect-non-literal-fs-filename
