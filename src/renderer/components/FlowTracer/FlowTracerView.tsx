@@ -15,8 +15,10 @@ import type {
   SymbolRef,
 } from '../../../../shared/types/flowTracer';
 import { FlowActions } from './FlowActions';
+import { FlowSearchBar } from './FlowSearchBar';
 import { SavedFlowsPanel } from './SavedFlowsPanel';
 import { StepInspector } from './StepInspector';
+import { useCanonicalFlowsRefresh } from './useCanonicalFlowsRefresh';
 
 // ── Data hook ─────────────────────────────────────────────────────────────────
 
@@ -224,15 +226,44 @@ function TraceResult({ state }: { state: TraceState }): React.ReactElement | nul
 
 // ── Gallery section ───────────────────────────────────────────────────────────
 
+interface GalleryProps {
+  state: GalleryState;
+  onSelect: (f: CanonicalFlow) => void;
+  traceLoading: boolean;
+  onRefresh: () => Promise<void>;
+  refreshing: boolean;
+}
+
 function Gallery({
   state,
   onSelect,
   traceLoading,
-}: {
-  state: GalleryState;
-  onSelect: (f: CanonicalFlow) => void;
-  traceLoading: boolean;
-}): React.ReactElement | null {
+  onRefresh,
+  refreshing,
+}: GalleryProps): React.ReactElement {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-text-semantic-muted text-xs">Canonical flows</span>
+        <button
+          type="button"
+          onClick={() => void onRefresh()}
+          disabled={refreshing}
+          className="bg-surface-raised text-text-semantic-primary border-border-subtle rounded border px-2 py-0.5 text-xs disabled:opacity-50"
+        >
+          {refreshing ? 'Regenerating…' : 'Regenerate'}
+        </button>
+      </div>
+      <GalleryBody state={state} onSelect={onSelect} traceLoading={traceLoading} />
+    </div>
+  );
+}
+
+function GalleryBody({
+  state,
+  onSelect,
+  traceLoading,
+}: Pick<GalleryProps, 'state' | 'onSelect' | 'traceLoading'>): React.ReactElement {
   if (state.status === 'loading')
     return <p className="text-xs text-text-semantic-muted">Loading flows…</p>;
   if (state.status === 'error')
@@ -248,14 +279,15 @@ function Gallery({
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function FlowTracerView(): React.ReactElement {
+function useFlowTracerController() {
   const galleryState = useCanonicalFlows();
+  const refreshControl = useCanonicalFlowsRefresh();
   const [traceState, setTraceState] = useState<TraceState>({ status: 'idle' });
 
-  const handleSelect = useCallback((flow: CanonicalFlow) => {
+  const traceFromEntry = useCallback((entry: SymbolRef) => {
     setTraceState({ status: 'loading' });
     window.electronAPI.flowTracer
-      .runTrace(flow.entryPoint)
+      .runTrace(entry)
       .then((trace) => setTraceState({ status: 'ready', trace }))
       .catch((err: unknown) =>
         setTraceState({
@@ -265,10 +297,26 @@ export function FlowTracerView(): React.ReactElement {
       );
   }, []);
 
+  const handleSelect = useCallback(
+    (flow: CanonicalFlow) => traceFromEntry(flow.entryPoint),
+    [traceFromEntry],
+  );
   const handleLoadSaved = useCallback((trace: FlowTrace) => {
     setTraceState({ status: 'ready', trace });
   }, []);
 
+  return {
+    galleryState,
+    refreshControl,
+    traceState,
+    traceFromEntry,
+    handleSelect,
+    handleLoadSaved,
+  };
+}
+
+export function FlowTracerView(): React.ReactElement {
+  const c = useFlowTracerController();
   return (
     <div className="flex flex-col h-full overflow-auto p-4 gap-4">
       <div>
@@ -277,13 +325,16 @@ export function FlowTracerView(): React.ReactElement {
           Select a flow to trace its path through the codebase layers.
         </p>
       </div>
+      <FlowSearchBar onResolve={c.traceFromEntry} />
       <Gallery
-        state={galleryState}
-        onSelect={handleSelect}
-        traceLoading={traceState.status === 'loading'}
+        state={c.galleryState}
+        onSelect={c.handleSelect}
+        traceLoading={c.traceState.status === 'loading'}
+        onRefresh={c.refreshControl.refresh}
+        refreshing={c.refreshControl.isRefreshing}
       />
-      <SavedFlowsPanel onLoadFlow={handleLoadSaved} />
-      <TraceResult state={traceState} />
+      <SavedFlowsPanel onLoadFlow={c.handleLoadSaved} />
+      <TraceResult state={c.traceState} />
     </div>
   );
 }
