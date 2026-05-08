@@ -18,6 +18,7 @@ export type {
   FlowTracerTraceFlowResponse,
   LayerKind,
   Narration,
+  SavedFlowSummary,
   StepKind,
   SymbolRef,
 } from '../../shared/types/flowTracer';
@@ -27,8 +28,27 @@ import type {
   FlowTrace,
   FlowTracerGetCanonicalFlowsResponse,
   FlowTracerTraceFlowResponse,
+  SavedFlowSummary,
   SymbolRef,
 } from '../../shared/types/flowTracer';
+
+// ── Phase 7 IPC response envelopes ───────────────────────────────────────────
+
+export type FlowTracerSaveFlowResponse =
+  | { success: true; id: string }
+  | { success: false; error: string };
+
+export type FlowTracerListSavedFlowsResponse =
+  | { success: true; flows: SavedFlowSummary[] }
+  | { success: false; error: string };
+
+export type FlowTracerLoadFlowResponse =
+  | { success: true; flow: FlowTrace }
+  | { success: false; error: string };
+
+export type FlowTracerExportMermaidResponse =
+  | { success: true; mermaid: string }
+  | { success: false; error: string };
 
 export interface FlowTracerAPI {
   /** Returns the hardcoded list of canonical flows available to trace. */
@@ -39,4 +59,13 @@ export interface FlowTracerAPI {
   listFlows: () => Promise<CanonicalFlow[]>;
   /** Convenience: returns the FlowTrace directly (throws on error). */
   runTrace: (entryPoint: SymbolRef) => Promise<FlowTrace>;
+  // ── Phase 7: persistence + Mermaid export ──────────────────────────────────
+  /** Save a FlowTrace to disk; returns the assigned flow id. */
+  saveFlow: (flow: FlowTrace, title: string) => Promise<FlowTracerSaveFlowResponse>;
+  /** List saved flows (lightweight summaries, both local and shared). */
+  listSavedFlows: () => Promise<FlowTracerListSavedFlowsResponse>;
+  /** Load a saved FlowTrace by id. */
+  loadFlow: (id: string) => Promise<FlowTracerLoadFlowResponse>;
+  /** Convert a FlowTrace to Mermaid sequenceDiagram text (renderer writes to clipboard). */
+  exportMermaid: (flow: FlowTrace) => Promise<FlowTracerExportMermaidResponse>;
 }

@@ -72,6 +72,20 @@ export type CanonicalFlow = {
   layers: LayerKind[];
 };
 
+// ── Phase 7 additions ────────────────────────────────────────────────────────
+
+/**
+ * Lightweight summary returned by listSavedFlows.
+ * Does not include the full FlowTrace to keep list payloads small.
+ */
+export type SavedFlowSummary = {
+  id: string;
+  title: string;
+  savedAt: number; // epoch ms
+  layerCount: number;
+  source: 'local' | 'shared';
+};
+
 // IPC response envelopes (Phase 1 — extends in later phases).
 
 export type FlowTracerGetCanonicalFlowsResponse =
