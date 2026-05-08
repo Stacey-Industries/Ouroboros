@@ -1,5 +1,5 @@
 /**
- * ipc.ts â€” Orchestrator that registers all ipcMain handlers by delegating
+ * ipc.ts — Orchestrator that registers all ipcMain handlers by delegating
  * to domain-specific modules in ./ipc-handlers/.
  *
  * Channels mirror the contextBridge API shape in preload.ts.
@@ -9,9 +9,6 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager';
-import { hasSecureKey } from './auth/secureKeyStore';
-import { listCodexModels } from './codex';
-import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
   cleanupCompareProvidersHandlers,
@@ -19,6 +16,7 @@ import {
   cleanupContextRankerDashboardHandlers,
   cleanupDispatchHandlers,
   cleanupFileWatchers,
+  cleanupFlowTracerHandlers,
   cleanupFolderCrudHandlers,
   cleanupLayoutHandlers,
   cleanupMemoryHandlers,
@@ -54,6 +52,7 @@ import {
   registerEmbeddingHandlers,
   registerExtensionStoreHandlers,
   registerFileHandlers,
+  registerFlowTracerIpcHandlers,
   registerFolderCrudHandlers,
   registerGitHandlers,
   registerIdeToolsHandlers,
@@ -66,6 +65,7 @@ import {
   registerPairingHandlers,
   registerPinnedContextHandlers,
   registerProfileCrudHandlers,
+  registerProviderHandlers,
   registerPtyHandlers,
   registerPtyPersistenceHandlers,
   registerResearchControlHandlers,
@@ -86,12 +86,6 @@ import {
 } from './ipc-handlers';
 import log from './logger';
 import { markStartup } from './perfMetrics';
-import { getAllProviders } from './providers';
-import { ClaudeSessionProvider } from './providers/claudeSessionProvider';
-import { CodexSessionProvider } from './providers/codexSessionProvider';
-import { GeminiSessionProvider } from './providers/geminiSessionProvider';
-import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
-import { resolveCodexThreadId } from './ptyCodexCapture';
 import { createPtyPersistence } from './ptyPersistence';
 import { clearRegistry } from './web/handlerRegistry';
 
@@ -166,6 +160,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('usageExporter', () => registerUsageExporterHandlers()),
     ...safeRegister('marketplace', () => registerMarketplaceHandlers()),
     ...safeRegister('memory', () => registerMemoryHandlers()),
+    ...safeRegister('flowTracer', () => registerFlowTracerIpcHandlers()),
   ];
 }
 
@@ -184,14 +179,6 @@ async function withCodeModeManager<T>(
   }
 }
 
-/**
- * Minimal orchestration IPC stubs — only the 3 methods still used:
- * - previewContext / buildContextPacket: used by context builder
- * - cancelTask: used by chat to abort a running Claude Code process
- *
- * The full orchestration task system (AgentLoopController, Anthropic API adapter,
- * tool executor, subagent runner, session store) was removed as dead code.
- */
 function registerOrchestrationStubHandlers(channels: string[]): void {
   ipcMain.handle('orchestration:previewContext', async (_event, request: unknown) => {
     try {
@@ -225,14 +212,7 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
     }
   });
 
-  // NOTE: orchestration:cancelTask has been intentionally removed.
-  // It created a fresh ClaudeCodeAdapter instance on every call (empty process Maps),
-  // so it could never find or kill the running process. Cancel is handled via
-  // agentChat:cancelTask, which routes through the singleton orchestration that
-  // actually owns the running processes. The preload still exposes
-  // orchestration.cancelTask() for renderer compatibility — it now routes to
-  // agentChat:cancelTask under the hood.
-
+  // NOTE: orchestration:cancelTask intentionally removed — see ipc.ts history.
   channels.push('orchestration:previewContext', 'orchestration:buildContextPacket');
 }
 
@@ -253,60 +233,13 @@ function registerCodeModeHandlers(channels: string[]): void {
   channels.push('codemode:enable', 'codemode:disable', 'codemode:status');
 }
 
-async function handleCheckAllAvailability(): Promise<object> {
-  const [claude, codex, gemini] = await Promise.all([
-    new ClaudeSessionProvider().checkAvailability(),
-    new CodexSessionProvider().checkAvailability(),
-    new GeminiSessionProvider().checkAvailability(),
-  ]);
-  return {
-    success: true,
-    availability: { claude: claude.available, codex: codex.available, gemini: gemini.available },
-  };
-}
-
-function registerProviderHandlers(channels: string[]): void {
-  ipcMain.handle('providers:list', async () => {
-    const providers = getAllProviders();
-    const mapped = await Promise.all(
-      providers.map(async (p) => {
-        const hasKey = p.apiKey || (await hasSecureKey(`provider-key:${p.id}`));
-        return { ...p, apiKey: hasKey ? '••••••••' : '' };
-      }),
-    );
-    return mapped;
-  });
-
-  ipcMain.handle('providers:getSlots', () => getConfigValue('modelSlots'));
-  ipcMain.handle('providers:checkAllAvailability', () => handleCheckAllAvailability());
-
-  ipcMain.handle('codex:listModels', () => listCodexModels());
-  ipcMain.handle('codex:resolveThreadId', (_event, args: CodexThreadCaptureArgs) =>
-    resolveCodexThreadId(args),
-  );
-
-  channels.push(
-    'providers:list',
-    'providers:getSlots',
-    'providers:checkAllAvailability',
-    'codex:listModels',
-    'codex:resolveThreadId',
-  );
-}
-
 let handlersRegistered = false;
 let allChannels: string[] = [];
 
-/**
- * Register all ipcMain handlers. Handlers are registered globally (once) and
- * use `event.sender` to determine the calling window. Returns a cleanup
- * function that removes the handlers; only the *last* cleanup call actually
- * unregisters (since handlers are shared across windows).
- */
 export function registerIpcHandlers(win: BrowserWindow): () => void {
   if (handlersRegistered) {
     return () => {
-      /* no-op â€” handled globally */
+      /* no-op — handled globally */
     };
   }
 
@@ -345,10 +278,15 @@ export async function cleanupIpcHandlers(): Promise<void> {
   cleanupDispatchHandlers();
   cleanupSystemPromptHandlers();
   cleanupMemoryHandlers();
+  cleanupFlowTracerHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
-  lspStopAll().catch((error) => { log.error('Failed to stop LSP servers during cleanup:', error); });
-  for (const channel of allChannels) { ipcMain.removeHandler(channel); }
+  lspStopAll().catch((error) => {
+    log.error('Failed to stop LSP servers during cleanup:', error);
+  });
+  for (const channel of allChannels) {
+    ipcMain.removeHandler(channel);
+  }
   clearRegistry();
   allChannels = [];
   handlersRegistered = false;

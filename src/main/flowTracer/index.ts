@@ -5,19 +5,45 @@
  * with stubbed FlowTrace + placeholder narration. No real Tree-sitter scanning yet, no
  * real narration generation, no NL search. Phases 2-7 generalize each layer.
  *
- * Phase 1 stub state: this file currently exports the registrar shape only — no channels
- * are bound. The orchestrator-owned acceptance test at
- * `src/main/flowTracer/walkingSkeleton.acceptance.test.ts` asserts the boundary contract
- * the implementer must deliver. The Phase 1 implementer fills this in.
+ * IPC channels registered here:
+ *   flowTracer:get-canonical-flows — returns the hardcoded CanonicalFlow[]
+ *   flowTracer:trace-flow          — returns a stubbed FlowTrace for the entry point
+ *
+ * The acceptance test at walkingSkeleton.acceptance.test.ts is the pass criterion.
  */
 
+import { ipcMain } from 'electron';
+
+import type { SymbolRef } from '../../shared/types/flowTracer';
+import log from '../logger';
+import { getWalkingSkeletonTrace, WALKING_SKELETON_FLOWS } from './walkingSkeletonStub';
+
+type ChannelList = string[];
+type IpcHandler = Parameters<typeof ipcMain.handle>[1];
+
+function reg(channels: ChannelList, channel: string, handler: IpcHandler): void {
+  ipcMain.handle(channel, handler);
+  channels.push(channel);
+}
+
 export function registerFlowTracerHandlers(): string[] {
-  // Phase 1 implementer: bind `flowTracer:get-canonical-flows` and
-  // `flowTracer:trace-flow` here, returning the shapes asserted by
-  // walkingSkeleton.acceptance.test.ts. See the design spec §5.4 for FlowTrace.
-  return [];
+  const channels: string[] = [];
+
+  reg(channels, 'flowTracer:get-canonical-flows', () => {
+    log.info('[flowTracer] get-canonical-flows — returning walking-skeleton stub');
+    return { success: true as const, flows: WALKING_SKELETON_FLOWS };
+  });
+
+  reg(channels, 'flowTracer:trace-flow', (_event, entry: unknown) => {
+    const ref = entry as SymbolRef;
+    log.info('[flowTracer] trace-flow — returning stub trace for', ref?.symbol);
+    return { success: true as const, flow: getWalkingSkeletonTrace() };
+  });
+
+  return channels;
 }
 
 export function cleanupFlowTracerHandlers(): void {
-  // Phase 1 implementer: removeHandler for each channel registered above.
+  ipcMain.removeHandler('flowTracer:get-canonical-flows');
+  ipcMain.removeHandler('flowTracer:trace-flow');
 }

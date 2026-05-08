@@ -69,6 +69,8 @@ export const WORKBENCH_FIND_NEXT_EVENT = 'agent-ide:workbench-find-next';
 export const WORKBENCH_FIND_PREV_EVENT = 'agent-ide:workbench-find-prev';
 // Wave 59 Phase H — HTML preview discoverability
 export const OPEN_ARTIFACT_PREVIEW_EVENT = 'agent-ide:open-artifact-preview';
+// Wave 85 Phase 1 — Flow Tracer
+export const OPEN_FLOW_TRACER_EVENT = 'agent-ide:open-flow-tracer';
 // Wave 59 Phase C — workbench project switching + theme
 export const WORKBENCH_SWITCH_PROJECT_EVENT = 'agent-ide:workbench-switch-project';
 export const SET_THEME_EVENT = 'agent-ide:set-theme';

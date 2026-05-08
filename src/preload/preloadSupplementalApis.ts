@@ -19,6 +19,7 @@ import type {
 import { agentChatApi } from './preloadSupplementalAgentChatApis';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import type { SupplementalApiKey } from './preloadSupplementalApiKeys';
+import { flowTracerApi } from './preloadSupplementalFlowTracerApis';
 import { folderCrudApi } from './preloadSupplementalFolderApis';
 import { graphApi } from './preloadSupplementalGraphApis';
 import { layoutApi } from './preloadSupplementalLayoutApis';
@@ -314,6 +315,7 @@ export const supplementalApis: SupplementalApis = {
       onChannel<CompareProvidersEventPayload>('compareProviders:event', callback),
   },
 
+  flowTracer: flowTracerApi,
   marketplace: marketplaceApi,
   memory: memoryApi,
   // Wave 37 Phase B+C — ecosystem moat: prompt diff push event + usage exporter

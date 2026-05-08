@@ -130,8 +130,8 @@ describe('getWorkbenchMenuDefinitions', () => {
       expect(findItem(getWorkbenchMenuDefinitions(), 'View', 'Toggle Artifact Pane')).toBeDefined();
     });
 
-    it('contains Switch to IDE Shell', () => {
-      expect(findItem(getWorkbenchMenuDefinitions(), 'View', 'Switch to IDE Shell')).toBeDefined();
+    it('contains Exit Chat Mode', () => {
+      expect(findItem(getWorkbenchMenuDefinitions(), 'View', 'Exit Chat Mode')).toBeDefined();
     });
   });
 

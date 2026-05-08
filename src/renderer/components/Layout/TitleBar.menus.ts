@@ -7,6 +7,7 @@ import {
   GO_BACK_EVENT,
   GO_FORWARD_EVENT,
   OPEN_EXTENSION_STORE_EVENT,
+  OPEN_FLOW_TRACER_EVENT,
   OPEN_MCP_STORE_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
   SAVE_ALL_DIRTY_EVENT,
@@ -144,6 +145,7 @@ const VIEW_MENU_PANELS: MenuItem[] = [
     shortcut: 'Ctrl+\\',
     action: () => dispatchEv('agent-ide:toggle-agent-monitor'),
   },
+  { label: 'Flow Tracer', action: () => dispatchEv(OPEN_FLOW_TRACER_EVENT) },
   {
     label: 'Toggle Terminal',
     shortcut: 'Ctrl+J',

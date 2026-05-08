@@ -134,6 +134,17 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'orchestration:verification',
 
   // ── C. Legacy/internal ────────────────────────────────────────────────────
+  // These are traceLink() stage labels used internally by the subagent link-trace
+  // subsystem — not IPC channel strings, but match the domain:action pattern.
+  'chat:subagentEnd', // traceLink stage — chatOrchestrationBridgeSubagent.ts
+  'chat:subagentStart', // traceLink stage — chatOrchestrationBridgeSubagent.ts
+  'chat:taskBlockObserved', // traceLink stage — chatOrchestrationBridgeProgressBlocks.ts
+  'hook:agentStart', // traceLink stage — hooks.ts
+  'hook:enriched', // traceLink stage — hooksAgentStartEnrich.ts
+  'hook:incoming', // traceLink stage — hooksSubagentTap.ts
+  'memory:changed', // webContents.send push — memory.ts
+  'tracker:recordEnd', // traceLink stage — subagentTracker.ts
+  'tracker:recordStart', // traceLink stage — subagentTracker.ts
   'activeTheme',
   'node:fs',
   'node:path',

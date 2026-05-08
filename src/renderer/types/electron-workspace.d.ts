@@ -12,6 +12,7 @@ import type { EcosystemAPI } from './electron-ecosystem';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type { ExtensionsAPI } from './electron-extensions';
+import type { FlowTracerAPI } from './electron-flow-tracer';
 import type { FolderCrudAPI } from './electron-folder';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
@@ -319,6 +320,7 @@ export interface ElectronAPI {
   research: ResearchAPI;
   workspaceReadList: WorkspaceReadListAPI;
   subagent: SubagentAPI;
+  flowTracer: FlowTracerAPI;
   graph: GraphAPI;
   layout: LayoutAPI;
   mobileAccess: MobileAccessAPI;

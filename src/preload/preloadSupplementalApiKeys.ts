@@ -41,5 +41,6 @@ export type SupplementalApiKey =
   | 'mobileAccess'
   | 'compareProviders'
   | 'ecosystem'
+  | 'flowTracer'
   | 'marketplace'
-  | 'memory'
+  | 'memory';

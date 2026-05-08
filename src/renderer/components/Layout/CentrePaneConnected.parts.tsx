@@ -40,6 +40,9 @@ const TimeTravelPanelConnected = React.lazy(() =>
 const LazyGraphPanel = React.lazy(() =>
   import('./GraphPanel/GraphPanel').then((m) => ({ default: m.GraphPanel })),
 );
+const LazyFlowTracerView = React.lazy(() =>
+  import('../FlowTracer/FlowTracerView').then((m) => ({ default: m.FlowTracerView })),
+);
 
 const layerStyle: React.CSSProperties = {
   position: 'absolute',
@@ -50,34 +53,50 @@ const layerStyle: React.CSSProperties = {
   flexDirection: 'column',
 };
 
+type SimpleViewComponent = React.ComponentType<Record<string, never>>;
+
+const SIMPLE_VIEW_MAP: Partial<Record<SpecialViewType, SimpleViewComponent>> = {
+  usage: UsagePanel,
+  extensions: ExtensionStorePage,
+  mcp: McpStorePage,
+  'usage-dashboard': UsageDashboard,
+  'graph-panel': LazyGraphPanel,
+  'flow-tracer': LazyFlowTracerView,
+};
+
 function resolveSpecialViewContent(
   view: SpecialViewType,
   projectRoot: string | null,
   noop: () => void,
   fallback: React.ReactElement,
 ): React.ReactElement | null {
-  switch (view) {
-    case 'settings':
-      return <React.Suspense fallback={fallback}><SettingsPanel onClose={noop} /></React.Suspense>;
-    case 'usage':
-      return <React.Suspense fallback={fallback}><UsagePanel /></React.Suspense>;
-    case 'context-builder':
-      return projectRoot
-        ? <React.Suspense fallback={fallback}><ContextBuilder projectRoot={projectRoot} onClose={noop} /></React.Suspense>
-        : null;
-    case 'time-travel':
-      return <React.Suspense fallback={fallback}><TimeTravelPanelConnected onClose={noop} /></React.Suspense>;
-    case 'extensions':
-      return <React.Suspense fallback={fallback}><ExtensionStorePage /></React.Suspense>;
-    case 'mcp':
-      return <React.Suspense fallback={fallback}><McpStorePage /></React.Suspense>;
-    case 'usage-dashboard':
-      return <React.Suspense fallback={fallback}><UsageDashboard /></React.Suspense>;
-    case 'graph-panel':
-      return <React.Suspense fallback={fallback}><LazyGraphPanel /></React.Suspense>;
-    default:
-      return null;
+  const Simple = SIMPLE_VIEW_MAP[view];
+  if (Simple)
+    return (
+      <React.Suspense fallback={fallback}>
+        <Simple />
+      </React.Suspense>
+    );
+  if (view === 'settings')
+    return (
+      <React.Suspense fallback={fallback}>
+        <SettingsPanel onClose={noop} />
+      </React.Suspense>
+    );
+  if (view === 'time-travel')
+    return (
+      <React.Suspense fallback={fallback}>
+        <TimeTravelPanelConnected onClose={noop} />
+      </React.Suspense>
+    );
+  if (view === 'context-builder') {
+    return projectRoot ? (
+      <React.Suspense fallback={fallback}>
+        <ContextBuilder projectRoot={projectRoot} onClose={noop} />
+      </React.Suspense>
+    ) : null;
   }
+  return null;
 }
 
 function SpecialViewPanel({
@@ -199,8 +218,15 @@ function renderActiveDiffReview(
 ): React.ReactElement {
   const {
     state,
-    acceptHunk, rejectHunk, acceptAllFile, rejectAllFile,
-    acceptAll, rejectAll, canRollback, rollback, closeReview,
+    acceptHunk,
+    rejectHunk,
+    acceptAllFile,
+    rejectAllFile,
+    acceptAll,
+    rejectAll,
+    canRollback,
+    rollback,
+    closeReview,
   } = review;
   return (
     <LazyDiffReview
@@ -224,8 +250,13 @@ export function CentrePaneConnectedShell(): React.ReactElement {
   const { projectRoot } = useProject();
   const enhancedEnabled = useConfig().config?.review?.enhanced ?? true;
   const {
-    openViews, activeView, replaySession,
-    setReplaySession, setActiveView, openAndActivate, closeView,
+    openViews,
+    activeView,
+    replaySession,
+    setReplaySession,
+    setActiveView,
+    openAndActivate,
+    closeView,
   } = useCentrePaneState(review.closeReview);
 
   useCentrePaneWiring({

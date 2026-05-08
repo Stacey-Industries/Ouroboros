@@ -239,4 +239,11 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
 
   // ── workspaceReadList (read) ─────────────────────────────────────────────────
   'workspaceReadList:get': { class: 'paired-read', timeoutClass: 'short' },
+
+  // ── config (read — safe query) ───────────────────────────────────────────────
+  'config:hasWebPassword': { class: 'paired-read', timeoutClass: 'short' },
+
+  // ── memory (read) ────────────────────────────────────────────────────────────
+  'memory:list': { class: 'paired-read', timeoutClass: 'normal' },
+  'memory:read': { class: 'paired-read', timeoutClass: 'normal' },
 };

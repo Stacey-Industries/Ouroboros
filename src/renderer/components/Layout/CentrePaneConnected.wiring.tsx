@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import {
   OPEN_EXTENSION_STORE_EVENT,
+  OPEN_FLOW_TRACER_EVENT,
   OPEN_MCP_STORE_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
   OPEN_USAGE_DASHBOARD_EVENT,
@@ -17,6 +18,7 @@ export const SPECIAL_VIEW_EVENTS: Array<[string, SpecialViewType]> = [
   [OPEN_EXTENSION_STORE_EVENT, 'extensions'],
   [OPEN_MCP_STORE_EVENT, 'mcp'],
   [OPEN_USAGE_DASHBOARD_EVENT, 'usage-dashboard'],
+  [OPEN_FLOW_TRACER_EVENT, 'flow-tracer'],
 ];
 
 export const GRAPH_PANEL_EVENT = 'agent-ide:open-graph-panel';

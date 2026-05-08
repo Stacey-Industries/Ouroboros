@@ -13,6 +13,7 @@ export * from './electron-ecosystem';
 export * from './electron-embedding';
 export * from './electron-extension-store';
 export * from './electron-extensions';
+export * from './electron-flow-tracer';
 export * from './electron-folder';
 export * from './electron-foundation';
 export * from './electron-git';

@@ -44,7 +44,8 @@ type SpecialViewType =
   | 'extensions'
   | 'mcp'
   | 'usage-dashboard'
-  | 'graph-panel';
+  | 'graph-panel'
+  | 'flow-tracer';
 
 export type { SpecialViewType };
 
@@ -66,23 +67,54 @@ const SPECIAL_VIEW_META: Record<SpecialViewType, { label: string; icon: string }
   mcp: { label: 'MCP Servers', icon: '\u2B21' },
   'usage-dashboard': { label: 'Usage Dashboard', icon: '\u25A4' },
   'graph-panel': { label: 'Graph', icon: '\u29C0' },
+  'flow-tracer': { label: 'Flow Tracer', icon: '\u27A4' },
 };
 
-function SpecialViewTab({ specialView, isActive, onClick, onClose }: { specialView: SpecialViewType; isActive: boolean; onClick: () => void; onClose?: () => void }): React.ReactElement {
+function SpecialViewCloseBtn({ label, onClose }: { label: string; onClose: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+      aria-label={`Close ${label}`}
+      style={specialViewCloseStyle}
+    >
+      ×
+    </button>
+  );
+}
+
+function SpecialViewTab({
+  specialView,
+  isActive,
+  onClick,
+  onClose,
+}: {
+  specialView: SpecialViewType;
+  isActive: boolean;
+  onClick: () => void;
+  onClose?: () => void;
+}): React.ReactElement {
   const meta = SPECIAL_VIEW_META[specialView];
   if (!meta) return <></>;
   return (
-    <div role="tab" tabIndex={0} aria-selected={isActive} title={meta.label} onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+    <div
+      role="tab"
+      tabIndex={0}
+      aria-selected={isActive}
+      title={meta.label}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onClick();
+      }}
       style={isActive ? specialViewTabActiveStyle : specialViewTabStyle}
     >
       <span style={specialViewIconStyle}>{meta.icon}</span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.label}</span>
-      {onClose && (
-        <button onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label={`Close ${meta.label}`} style={specialViewCloseStyle}>
-          ×
-        </button>
-      )}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {meta.label}
+      </span>
+      {onClose && <SpecialViewCloseBtn label={meta.label} onClose={onClose} />}
     </div>
   );
 }
@@ -145,29 +177,106 @@ function useEditorTabBarState() {
   return { fvm, mbm, actions, activeMultiBufferId };
 }
 
-interface SpecialTabsProps { views: SpecialViewType[]; activeView: SpecialViewType | null; onClick: (v: SpecialViewType) => void; onClose: (v: SpecialViewType) => void }
-function SpecialTabs({ views, activeView, onClick, onClose }: SpecialTabsProps): React.ReactElement {
-  return <>{views.map((v) => <SpecialViewTab key={v} specialView={v} isActive={v === activeView} onClick={() => onClick(v)} onClose={() => onClose(v)} />)}</>;
+interface SpecialTabsProps {
+  views: SpecialViewType[];
+  activeView: SpecialViewType | null;
+  onClick: (v: SpecialViewType) => void;
+  onClose: (v: SpecialViewType) => void;
+}
+function SpecialTabs({
+  views,
+  activeView,
+  onClick,
+  onClose,
+}: SpecialTabsProps): React.ReactElement {
+  return (
+    <>
+      {views.map((v) => (
+        <SpecialViewTab
+          key={v}
+          specialView={v}
+          isActive={v === activeView}
+          onClick={() => onClick(v)}
+          onClose={() => onClose(v)}
+        />
+      ))}
+    </>
+  );
 }
 
-export function EditorTabBar({ openSpecialViews, activeSpecialView, onSpecialViewClick, onSpecialViewClose }: EditorTabBarProps): React.ReactElement {
-  const { fvm, mbm, actions, activeMultiBufferId } = useEditorTabBarState();
+type TabBarState = ReturnType<typeof useEditorTabBarState>;
+
+function FileTabsWired({ fvm, actions }: Pick<TabBarState, 'fvm' | 'actions'>) {
   return (
-    <div style={containerStyle}>
-      <FileTabsRow openFiles={fvm.openFiles} activeIndex={fvm.activeIndex} onActivate={actions.handleActivateFile}
-        onClose={fvm.closeFile} onPin={fvm.pinTab} onUnpin={fvm.unpinTab} onTogglePin={fvm.togglePin}
-        onCloseOthers={fvm.closeOthers} onCloseToRight={fvm.closeToRight} onCloseAll={fvm.closeAll}
+    <FileTabsRow
+      openFiles={fvm.openFiles}
+      activeIndex={fvm.activeIndex}
+      onActivate={actions.handleActivateFile}
+      onClose={fvm.closeFile}
+      onPin={fvm.pinTab}
+      onUnpin={fvm.unpinTab}
+      onTogglePin={fvm.togglePin}
+      onCloseOthers={fvm.closeOthers}
+      onCloseToRight={fvm.closeToRight}
+      onCloseAll={fvm.closeAll}
+    />
+  );
+}
+
+function TabsGroup({
+  fvm,
+  mbm,
+  actions,
+  activeMultiBufferId,
+  openSpecialViews,
+  activeSpecialView,
+  onSpecialViewClick,
+  onSpecialViewClose,
+}: TabBarState & EditorTabBarProps): React.ReactElement {
+  return (
+    <>
+      <FileTabsWired fvm={fvm} actions={actions} />
+      <SpecialTabs
+        views={openSpecialViews}
+        activeView={activeSpecialView}
+        onClick={onSpecialViewClick}
+        onClose={onSpecialViewClose}
       />
-      <SpecialTabs views={openSpecialViews} activeView={activeSpecialView} onClick={onSpecialViewClick} onClose={onSpecialViewClose} />
-      <MultiBufferTabs buffers={mbm.multiBuffers} activeId={activeMultiBufferId}
-        onActivate={actions.handleActivateMultiBuffer} onClose={actions.handleCloseMultiBuffer} onRename={mbm.renameMultiBuffer}
+      <MultiBufferTabs
+        buffers={mbm.multiBuffers}
+        activeId={activeMultiBufferId}
+        onActivate={actions.handleActivateMultiBuffer}
+        onClose={actions.handleCloseMultiBuffer}
+        onRename={mbm.renameMultiBuffer}
       />
       <NewMultiBufferButton onClick={actions.handleNewMultiBuffer} />
-      {fvm.openFiles.length === 0 && mbm.multiBuffers.length === 0 && <div style={spacerStyle} aria-hidden="true" />}
+    </>
+  );
+}
+
+function TabBarContent(props: TabBarState & EditorTabBarProps): React.ReactElement {
+  const { fvm } = props;
+  return (
+    <div style={containerStyle}>
+      <TabsGroup {...props} />
+      {fvm.openFiles.length === 0 && props.mbm.multiBuffers.length === 0 && (
+        <div style={spacerStyle} aria-hidden="true" />
+      )}
       <div style={spacerStyle} />
-      {fvm.openFiles.length > 0 && <SplitEditorButton isSplit={fvm.split.isSplit} onSplit={() => fvm.splitRight()} onCloseSplit={fvm.closeSplit} />}
+      {fvm.openFiles.length > 0 && (
+        <SplitEditorButton
+          isSplit={fvm.split.isSplit}
+          onSplit={() => fvm.splitRight()}
+          onCloseSplit={fvm.closeSplit}
+        />
+      )}
     </div>
   );
+}
+
+export function EditorTabBar(props: EditorTabBarProps): React.ReactElement {
+  const state = useEditorTabBarState();
+  return <TabBarContent {...state} {...props} />;
 }
 
 // Re-export for downstream consumers
