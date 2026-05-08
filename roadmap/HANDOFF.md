@@ -6,7 +6,7 @@
 
 ## TL;DR
 
-**Wave 85 (Flow Tracer) implemented end-to-end on branch `wave-85-flow-tracer`** — 13 commits, all 8 phases + 2 orchestrator-applied integration commits. Gates run, `/review` returned **FLAG** (non-fatal). **Manual smoke deferred** at user request — running IDE chats can't be cancelled. No push, no tag yet.
+**Wave 85 (Flow Tracer) implemented end-to-end on branch `wave-85-flow-tracer`** — 17 commits now, all 8 phases + 2 orchestrator-applied integration commits + 4 post-smoke fix commits (real-browser smoke surfaced 5 bugs). Gates run, `/review` returned **FLAG** (non-fatal). **Manual smoke partially run** (the user ran a smoke pass, surfaced bugs, fix iteration applied). Three follow-ups filed for non-fix items (diagram polish, trace-engine quality, narration body via graph snippet) — see `roadmap/follow-ups/2026-05-08-flow-tracer-*.md`. No push, no tag yet.
 
 **Wave 84** (Chat Lifecycle Bug-Fix Bundle) still in DRAFT on master, untouched this session.
 
@@ -16,7 +16,7 @@
 
 Branch: `wave-85-flow-tracer` (local only, not pushed). Working tree has only post-wrap planning artifacts (follow-ups, wave-84-DRAFT) outside the wave's scope.
 
-**Commits on branch (12 total):**
+**Commits on branch (17 total):**
 ```
 5a397ef feat(wave-85): wire Phase 5/6 surfaces into FlowTracerView
 50d5d8c feat(wave-85): phase 6 — natural-language symbol resolution
@@ -32,7 +32,21 @@ ee2e89b test(wave-85): phase 1 prep — orchestrator-owned acceptance test
 d812a22 docs(wave-85): phase 0 — ADR + planning baseline
 ```
 
-(The wrap commit adding the `/review` report and minor lint cleanup will be 14th.)
+Plus four post-smoke fix commits (after `fa3e357` Phase 8 wrap):
+```
+087c5a8 fix(wave-85): hover-spasm — pin inspector + memoize SymbolRef
+cf7104b fix(wave-85): three more smoke bugs surfaced by real-browser run
+7b0d903 fix(wave-85): two real-browser smoke bugs
+fa3e357 chore(wave-85): phase 8 wrap — gates + /review report
+```
+
+Smoke fixes covered:
+- `drawSwimlane` positional-vs-destructured arg crash on first render (the latent bug I'd Tier-3-flagged at the integration commit; manifested in real browser).
+- `extractRendererEventCandidates` compound-WHERE clause unsupported by the codebase-graph compat queryGraph engine. Split into 3 single-condition queries with dedupe.
+- `listSavedFlows` reading Phase 4's `<flowId>-why.json` cache files and crashing on `.metadata` access. Filter `-why.json` from the directory listing.
+- Narration prompt missed symbol body when graph line was stale. Added `rescueBodyByName` fallback that scans the file for the symbol token.
+- Wasted 2nd CLI call when Haiku replied with valid empty `[]`. Added `isValidEmptyArrayResponse` short-circuit.
+- Hover-panel "spasm" — removing the `onMouseLeave` clear so inspector stays pinned to last hovered step + memoizing `hoverRef` so useStepNarration doesn't refetch on every render.
 
 **Phase 8 automated gates (all green or pre-existing-only failures):**
 - `tsc --noEmit` — clean
