@@ -17,6 +17,20 @@ export function shouldSuppressHookEvent(type: HookEventType, n: number): boolean
   return type !== 'instructions_loaded' && n > 0;
 }
 
+/**
+ * True when dispatchToRenderer should drop the event.
+ * `instructions_loaded` bypasses BOTH the in-flight-launch gate and the
+ * synthetic-session gate so rule payloads are never swallowed during chat startup.
+ */
+export function shouldSuppressDispatch(
+  type: HookEventType,
+  launchesInFlight: number,
+  syntheticCount: number,
+): boolean {
+  if (type === 'instructions_loaded') return false;
+  return launchesInFlight > 0 || shouldSuppressHookEvent(type, syntheticCount);
+}
+
 /** [trace:agent-record] Site 1 — log instructions_loaded as it passes through the dispatcher.
  * Captures the hook-pipe sessionId so we can compare it against the stream-json claudeSessionId. */
 export function traceInstructionsLoaded(payload: HookPayload, activeSyntheticIds: Set<string>): void {
@@ -24,7 +38,7 @@ export function traceInstructionsLoaded(payload: HookPayload, activeSyntheticIds
   log.info('[trace:agent-record] instructions_loaded reaching dispatcher', {
     hookPipeSessionId: payload.sessionId,
     syntheticSessionIds: [...activeSyntheticIds],
-    willSuppress: shouldSuppressHookEvent(payload.type, activeSyntheticIds.size),
+    willSuppressViaSynthetic: shouldSuppressHookEvent(payload.type, activeSyntheticIds.size),
   });
 }
 

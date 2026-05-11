@@ -19,7 +19,7 @@ import {
   evictOrphanedSessions as evictOrphanedSessionsLogic,
   inferSessionId as inferSessionIdLogic,
   queuePayload,
-  shouldSuppressHookEvent as shouldSuppress,
+  shouldSuppressDispatch,
   traceInstructionsLoaded,
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
@@ -254,7 +254,7 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
   traceInstructionsLoaded(rawPayload, syntheticSessionIds);
-  if (getChatLaunchesInFlight() > 0 || shouldSuppress(rawPayload.type, syntheticSessionIds.size)) {
+  if (shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), syntheticSessionIds.size)) {
     log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;

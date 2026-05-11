@@ -12,6 +12,7 @@ import {
   evictOrphanedSessions,
   inferSessionId,
   queuePayload,
+  shouldSuppressDispatch,
   trackSessionLifecycle,
   truncateField,
   truncatePayloadForDispatch,
@@ -264,6 +265,37 @@ describe('evictOrphanedSessions', () => {
     const sessions = new Map([['s1', now - 1000]]);
     const cwds = new Map<string, string>();
     expect(evictOrphanedSessions(sessions, cwds, now)).toEqual([]);
+  });
+});
+
+// ── shouldSuppressDispatch ────────────────────────────────────────────
+// Wave 84 fix: instructions_loaded must bypass BOTH the in-flight-launch
+// gate AND the synthetic-session gate so rule payloads are never swallowed
+// during chat startup.
+
+describe('shouldSuppressDispatch', () => {
+  it('does not suppress instructions_loaded even when launches are in flight', () => {
+    expect(shouldSuppressDispatch('instructions_loaded', 1, 0)).toBe(false);
+  });
+
+  it('does not suppress instructions_loaded even when synthetic sessions are active', () => {
+    expect(shouldSuppressDispatch('instructions_loaded', 0, 3)).toBe(false);
+  });
+
+  it('does not suppress instructions_loaded when both gates are active', () => {
+    expect(shouldSuppressDispatch('instructions_loaded', 2, 2)).toBe(false);
+  });
+
+  it('suppresses other events when launches are in flight', () => {
+    expect(shouldSuppressDispatch('agent_start', 1, 0)).toBe(true);
+  });
+
+  it('suppresses other events when synthetic sessions are active', () => {
+    expect(shouldSuppressDispatch('pre_tool_use', 0, 1)).toBe(true);
+  });
+
+  it('does not suppress other events when both gates are clear', () => {
+    expect(shouldSuppressDispatch('agent_start', 0, 0)).toBe(false);
   });
 });
 
