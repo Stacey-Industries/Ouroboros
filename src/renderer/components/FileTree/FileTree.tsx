@@ -2,7 +2,7 @@
  * FileTree - multi-root hierarchical tree view.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { REFRESH_FILE_TREE_EVENT } from '../../hooks/appEventNames';
