@@ -1,3 +1,4 @@
+// hello from wave-84 repro
 import type Store from 'electron-store';
 
 import { migrateChatPrimary } from './configMigrations';
