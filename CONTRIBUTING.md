@@ -1,4 +1,3 @@
-<!-- this is a test - to be removed -->
 # Contributing to Ouroboros
 
 ## Prerequisites
