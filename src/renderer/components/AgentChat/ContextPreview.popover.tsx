@@ -3,7 +3,8 @@
  * ContextPreview.tsx to keep file/function size within ESLint caps.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import log from 'electron-log/renderer';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type {
   ContextItem,
@@ -269,6 +270,19 @@ function PopoverContent(props: {
   );
 }
 
+function useContextPreviewTrace(model: ContextPreviewModel, projectRoot: string | null | undefined): void {
+  useEffect(() => {
+    const ruleItems = model.items.filter((i) => i.kind === 'rule');
+    const userRules = ruleItems.filter((i) => i.group === 'user').map((i) => i.label);
+    const projectRules = ruleItems.filter((i) => i.group === 'project').map((i) => i.label);
+    log.info('[trace:ctx-preview] model items', {
+      phase: 'open',
+      projectRoot,
+      userRules,
+      projectRules,
+    });
+  }, [model, projectRoot]);
+}
 export function ContextPreviewPopover(props: {
   model: ContextPreviewModel;
   onClose: () => void;
@@ -279,6 +293,7 @@ export function ContextPreviewPopover(props: {
   const contentCache = useRef<ContentCache>({});
   const tabs = usePopoverTabState(props.model);
   const memory = useMemoryModal(tabs.visibleItems);
+  useContextPreviewTrace(props.model, props.projectRoot);
   return (
     <div
       role="dialog"

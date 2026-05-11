@@ -16,6 +16,7 @@
  */
 
 import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
+import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
@@ -80,14 +81,34 @@ function useActiveSessionRulesAndSkills(
   const filesystemRules = useFilesystemRules(projectRoot);
   return useMemo(() => {
     if (!claudeSessionId) {
+      const userRulesCount = filesystemRules.filter((r) => r.memoryType === 'User').length;
+      const projectRulesCount = filesystemRules.filter((r) => r.memoryType !== 'User').length;
+      log.info('[trace:ctx-preview] subscription fired', {
+        claudeSessionId: null,
+        projectRoot,
+        userRulesCount,
+        projectRulesCount,
+        source: 'useMemo(no-session)',
+      });
       return { loadedRules: filesystemRules, skillExecutions: [] };
     }
     const target = agents.find((s) => s.id === claudeSessionId);
+    const rules = target?.loadedRules ?? [];
+    const userRulesCount = rules.filter((r) => r.memoryType === 'User').length;
+    const projectRulesCount = rules.filter((r) => r.memoryType !== 'User').length;
+    log.info('[trace:ctx-preview] subscription fired', {
+      claudeSessionId,
+      projectRoot,
+      userRulesCount,
+      projectRulesCount,
+      source: 'useMemo(session-found)',
+      agentFound: !!target,
+    });
     return {
-      loadedRules: target?.loadedRules ?? [],
+      loadedRules: rules,
       skillExecutions: target?.skillExecutions ?? [],
     };
-  }, [agents, claudeSessionId, filesystemRules]);
+  }, [agents, claudeSessionId, filesystemRules, projectRoot]);
 }
 
 /**
