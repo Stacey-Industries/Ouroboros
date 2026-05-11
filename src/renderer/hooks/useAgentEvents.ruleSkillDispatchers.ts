@@ -6,11 +6,13 @@
  */
 
 import type { LoadedRule } from '@shared/types/ruleActivity';
+import log from 'electron-log/renderer';
 import type { Dispatch } from 'react';
 
 import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
 import type { AgentAction } from './useAgentEvents.helpers';
 import { extractSkillInfo } from './useAgentEvents.payload';
+
 
 /**
  * Safety window before forcing a deferred parent's end. If a subagent crashes
@@ -90,6 +92,8 @@ export function dispatchRuleLoaded(payload: HookPayload, dispatch: Dispatch<Agen
   const input = payload.input ?? {};
   const filePath = typeof input.file_path === 'string' ? input.file_path : '';
   if (!filePath) return;
+  // [trace:agent-record] Site 2 — log the sessionId key rules are queued under.
+  log.info('[trace:agent-record] write-rules', { sessionIdKey: payload.sessionId, filePath, source: 'dispatchRuleLoaded' });
   ruleLoadQueue.push({
     sessionId: payload.sessionId,
     rule: buildLoadedRule(payload, filePath),

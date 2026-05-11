@@ -20,6 +20,7 @@ import {
   inferSessionId as inferSessionIdLogic,
   queuePayload,
   shouldSuppressHookEvent as shouldSuppress,
+  traceInstructionsLoaded,
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
@@ -252,6 +253,7 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
+  traceInstructionsLoaded(rawPayload, syntheticSessionIds);
   if (getChatLaunchesInFlight() > 0 || shouldSuppress(rawPayload.type, syntheticSessionIds.size)) {
     log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
@@ -271,7 +273,6 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   }
   trackSessionLifecycle(rawPayload);
   const inferred = inferSessionId(rawPayload);
-  // Wave 57 Phase B — enrich agent_start with parentSessionId from tracker when flag is on.
   const payload = enrichAgentStartPayload(inferred);
 
   const windows = getDispatchWindows();
@@ -281,9 +282,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   }
 
   flushPendingQueue(windows);
-  log.debug(
-    `dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
-  );
+  log.debug(`dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
