@@ -19,6 +19,7 @@ import {
   evictOrphanedSessions as evictOrphanedSessionsLogic,
   inferSessionId as inferSessionIdLogic,
   queuePayload,
+  shouldSuppressHookEvent as shouldSuppress,
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
@@ -119,6 +120,7 @@ const syntheticSessionIds = new Set<string>();
 
 // beginChatSessionLaunch / endChatSessionLaunch are re-exported from hooksChatLaunch.ts
 export { beginChatSessionLaunch, endChatSessionLaunch } from './hooksChatLaunch';
+export { shouldSuppressHookEvent } from './hooksDispatchLogic';
 
 function trackSessionLifecycle(payload: HookPayload): void {
   trackSessionLifecycleLogic(activeSessions, sessionCwdMap, payload);
@@ -203,6 +205,7 @@ function traceAgentStart(payload: HookPayload): void {
   });
 }
 
+const END_EVENT_TYPES = new Set(['session_stop', 'agent_stop', 'agent_end']);
 function dispatchLifecycleEvent(payload: HookPayload): void {
   if (payload.type === 'agent_start') {
     traceAgentStart(payload);
@@ -213,8 +216,7 @@ function dispatchLifecycleEvent(payload: HookPayload): void {
   }
   if (dispatchNewEventType(payload)) return;
 
-  const isEndEvent = payload.type === 'session_stop' || payload.type === 'agent_stop' || payload.type === 'agent_end';
-  if (isEndEvent) handleSessionEnd(payload);
+  if (END_EVENT_TYPES.has(payload.type)) handleSessionEnd(payload);
   if (payload.type === 'session_stop') handleSessionStop(payload, sessionCwdMap);
 }
 
@@ -250,8 +252,8 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
-  if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
-    log.info(`suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`);
+  if (getChatLaunchesInFlight() > 0 || shouldSuppress(rawPayload.type, syntheticSessionIds.size)) {
+    log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;
   }

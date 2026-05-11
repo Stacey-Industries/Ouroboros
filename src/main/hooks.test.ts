@@ -48,6 +48,7 @@ import {
   getHooksAddress,
   stopHooksServer,
 } from './hooks';
+import { shouldSuppressHookEvent } from './hooksDispatchLogic';
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,28 @@ describe('getHooksAddress', () => {
 describe('stopHooksServer', () => {
   it('resolves without throwing', async () => {
     await expect(stopHooksServer()).resolves.toBeUndefined();
+  });
+});
+
+describe('shouldSuppressHookEvent', () => {
+  it('suppresses lifecycle events when a synthetic session is active', () => {
+    expect(shouldSuppressHookEvent('agent_start', 1)).toBe(true);
+    expect(shouldSuppressHookEvent('pre_tool_use', 2)).toBe(true);
+    expect(shouldSuppressHookEvent('session_stop', 1)).toBe(true);
+  });
+
+  it('does NOT suppress when no synthetic sessions are active', () => {
+    expect(shouldSuppressHookEvent('agent_start', 0)).toBe(false);
+    expect(shouldSuppressHookEvent('pre_tool_use', 0)).toBe(false);
+  });
+
+  it('never suppresses instructions_loaded even when synthetic sessions are active', () => {
+    // Regression for wave-84 bug: rules were invisible in context preview after
+    // chat start because instructions_loaded pipe events were suppressed while
+    // the synthetic chat session was registered in syntheticSessionIds.
+    expect(shouldSuppressHookEvent('instructions_loaded', 1)).toBe(false);
+    expect(shouldSuppressHookEvent('instructions_loaded', 99)).toBe(false);
+    expect(shouldSuppressHookEvent('instructions_loaded', 0)).toBe(false);
   });
 });
 

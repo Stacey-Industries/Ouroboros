@@ -6,6 +6,14 @@
  */
 
 import type { HookPayload } from './hooks';
+import type { HookEventType } from './hooksLifecycleHandlers';
+
+/** True when a pipe event should be suppressed during an active chat session.
+ * `instructions_loaded` is exempt — it populates `loadedRules` for the context
+ * preview and never creates monitor sessions, so passing it through is safe. */
+export function shouldSuppressHookEvent(type: HookEventType, n: number): boolean {
+  return type !== 'instructions_loaded' && n > 0;
+}
 
 const MAX_PAYLOAD_FIELD_BYTES = 10_240; // 10 KB
 
