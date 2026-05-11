@@ -4,6 +4,7 @@
  * Extracted from RootSection to reduce complexity.
  */
 
+import log from 'electron-log/renderer';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
@@ -205,6 +206,17 @@ function useDiagnosticSeverity(node: TreeNode): DiagnosticSeverity | undefined {
   });
 }
 
+// [heat-map] Site 3: row lookup instrumentation helper
+function logHeatLookup(
+  lookupKey: string,
+  heatData: ReturnType<NonNullable<VirtualRowProps['getHeatLevel']>> | undefined,
+  rowCount: number,
+  heatMapEnabled: boolean,
+): void {
+  if (!heatMapEnabled) return;
+  log.info('[heat-map] row lookup', { lookupKey, found: heatData !== undefined, rowCount });
+}
+
 function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement {
   const { node } = item;
   const isPlaceholder = node.path === '__new_item_placeholder__';
@@ -214,6 +226,8 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
   const diagnosticSeverity = useDiagnosticSeverity(node);
   const isDirty = useFileTreeStore((s) => s.dirtyFiles.has(node.path));
   const bookmarkSet = useMemo(() => new Set(p.bookmarks), [p.bookmarks]);
+  const heatData = p.getHeatLevel ? p.getHeatLevel(node.path) : undefined;
+  logHeatLookup(node.path, heatData, p.displayItems.length, !!p.getHeatLevel);
 
   return (
     <FileTreeItem
@@ -225,7 +239,7 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       searchMode={false}
       gitStatus={nodeGitStatus}
       isBookmarked={bookmarkSet.has(node.path)}
-      heatData={p.getHeatLevel ? p.getHeatLevel(node.path) : undefined}
+      heatData={heatData}
       isEditing={isEditing}
       editValue={isEditing ? p.editState?.initialValue : undefined}
       onEditConfirm={isEditing ? (n: string) => void p.handleEditConfirm(n) : undefined}

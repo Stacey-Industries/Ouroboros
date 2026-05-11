@@ -7,6 +7,7 @@
  * and more frequently appear hotter.
  */
 
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -131,6 +132,11 @@ function recordEditToolCall(
   }
 
   const filePath = extractFilePath(toolCall.input);
+  // [heat-map] Site 2: path extraction result
+  log.info('[heat-map] extracted path', {
+    rawPath: toolCall.input.slice(0, 200),
+    normalized: filePath ? normalizePath(filePath) : null,
+  });
   if (!filePath) {
     return;
   }
@@ -157,6 +163,12 @@ function collectRawHeatData(currentSessions: SessionList): {
 
   for (const session of currentSessions) {
     for (const toolCall of session.toolCalls) {
+      // [heat-map] Site 1: tool event reception
+      log.info('[heat-map] tool event', {
+        toolName: toolCall.toolName,
+        toolInput: toolCall.input.slice(0, 200),
+        sessionId: session.id,
+      });
       recordEditToolCall(rawMap, processedIds, toolCall);
     }
   }
