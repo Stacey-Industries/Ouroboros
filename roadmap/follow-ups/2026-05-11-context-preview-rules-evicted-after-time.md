@@ -30,6 +30,22 @@ Relevant log excerpt:
 }
 ```
 
+## Additional clue from 2026-05-11 15:32 capture
+
+Observed in Cole's logs during Phase F smoke setup:
+
+```
+15:32:21.536 > suppressing: session_end session=d52948ac-2770-4748-b7ba-3b8f1c4e4a99
+```
+
+`d52948ac-...` was the popover's active claudeSessionId. The main process correctly suppressed the `session_end` event (it's in the suppression list). BUT — in a different repro session, the agent record DOES get removed from the renderer's `currentSessions` map. So the renderer is receiving `session_end` (or some equivalent signal) through a DIFFERENT code path than `dispatchToRenderer`. Candidates:
+
+- A second event-bridge channel (synthetic events fired by `chatOrchestrationBridge*` directly into the renderer, bypassing the main-process suppression).
+- The renderer's reducer responds to a downstream event (e.g., `task_completed` or thread-status transition) by evicting the session record.
+- Project-switch logic in the renderer clears `currentSessions` scoped to the previous project (would explain why `44364d19-...` specifically was gone after Cole switched projects between Agent IDE and Gamify).
+
+The hook-level suppression we already fixed in Wave 84 Phase A (`821435c1`) protects `instructions_loaded` from the `dispatchToRenderer` gates, but it doesn't protect the per-session agent record from later removal via a different channel.
+
 ## Hypothesis
 
 Some reducer path in `src/renderer/hooks/useAgentEvents.ts` (or wherever `currentSessions` is mutated) evicts the per-session record on a trigger we haven't identified yet. Candidates:
