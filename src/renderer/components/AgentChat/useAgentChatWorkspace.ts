@@ -325,8 +325,10 @@ export function useAgentChatWorkspace(
     () => buildActionArgs(controller, projectRoot),
     [controller, projectRoot],
   );
+  const actionArgsRef = useRef(actionArgs);
+  actionArgsRef.current = actionArgs;
   const actions = useAgentChatActions(actionArgs);
-  const hooks = useWorkspaceHooks(controller, actions);
+  const hooks = useWorkspaceHooks(controller, actions, actionArgsRef);
   useFlushPendingResend(controller, projectRoot);
   usePreferredThreadSelection(controller.threadState, preferredThreadId);
 

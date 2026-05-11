@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { EXPLAIN_TERMINAL_ERROR_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatThreadRecord, ImageAttachment } from '../../types/electron';
+import type { SendMessageArgs } from './agentChatWorkspaceActions';
+import { sendComposerMessage } from './agentChatWorkspaceSendFlows';
 import { createDraftThreadId } from './useAgentChatDraftPersistence';
 import { useAgentChatLinkedDetails } from './useAgentChatLinkedDetails';
 import type { QueuedMessage } from './useAgentChatWorkspace';
@@ -16,12 +18,19 @@ interface UseQueueAutoSendArgs {
   isSending: boolean;
   queuedMessages: QueuedMessage[];
   setQueuedMessages: React.Dispatch<React.SetStateAction<QueuedMessage[]>>;
-  setDraft: (v: string) => void;
-  sendMessage: () => Promise<void>;
+  /** Send content directly without touching the composer draft state. */
+  sendWithContent: (content: string) => Promise<void>;
 }
 
 export function useQueueAutoSend(args: UseQueueAutoSendArgs): void {
-  const { activeThreadId, threadIsBusy, isSending, queuedMessages, setQueuedMessages, setDraft, sendMessage } = args;
+  const {
+    activeThreadId,
+    threadIsBusy,
+    isSending,
+    queuedMessages,
+    setQueuedMessages,
+    sendWithContent,
+  } = args;
   const queueRef = useRef(queuedMessages);
   queueRef.current = queuedMessages;
   const prevThreadBusyRef = useRef(threadIsBusy);
@@ -36,13 +45,15 @@ export function useQueueAutoSend(args: UseQueueAutoSendArgs): void {
     if (wasBusy && !threadIsBusy && !isSending && queueRef.current.length > 0) {
       const next = queueRef.current[0];
       setQueuedMessages((prev) => prev.slice(1));
-      setDraft(next.content);
       setPendingAutoSend(next.content);
     }
-  }, [activeThreadId, threadIsBusy, isSending, setQueuedMessages, setDraft]);
+  }, [activeThreadId, threadIsBusy, isSending, setQueuedMessages]);
   useEffect(() => {
-    if (pendingAutoSend !== null) { setPendingAutoSend(null); void sendMessage(); }
-  }, [pendingAutoSend, sendMessage]);
+    if (pendingAutoSend !== null) {
+      setPendingAutoSend(null);
+      void sendWithContent(pendingAutoSend);
+    }
+  }, [pendingAutoSend, sendWithContent]);
 }
 
 export function useExplainErrorListener(setDraft: (v: string) => void): void {
@@ -78,6 +89,22 @@ export function useWrappedSendMessage(args: {
     }
     await sendMessage();
   }, [draft, attachments, isSending, addToQueue, setDraft, sendMessage, threadIsBusyRef]);
+}
+
+/**
+ * Returns a stable callback that sends `content` directly via sendComposerMessage
+ * WITHOUT touching the composer draft state. Used by auto-send and force-send
+ * queue drain paths so the composer textarea is never populated with the sent content.
+ */
+export function useSendWithContent(argsRef: React.MutableRefObject<SendMessageArgs>): (
+  content: string,
+) => Promise<void> {
+  return useCallback(
+    async (content: string) => {
+      await sendComposerMessage({ ...argsRef.current, draft: content });
+    },
+    [argsRef],
+  );
 }
 
 export function useSendQueuedNow(
@@ -126,6 +153,7 @@ function useStartNewChat(controller: WorkspaceControllerSlice): () => void {
 export function useWorkspaceHooks(
   controller: WorkspaceControllerSlice,
   actions: { sendMessage: () => Promise<void>; stopTask: () => Promise<void> },
+  sendMessageArgsRef: React.MutableRefObject<SendMessageArgs>,
 ) {
   const threadIsBusy =
     controller.activeThread?.status === 'submitting' ||
@@ -143,14 +171,15 @@ export function useWorkspaceHooks(
     sendMessage: actions.sendMessage,
   });
 
+  const sendWithContent = useSendWithContent(sendMessageArgsRef);
+
   useQueueAutoSend({
     activeThreadId: controller.threadState.activeThreadId,
     threadIsBusy,
     isSending: controller.isSending,
     queuedMessages: controller.queuedMessages,
     setQueuedMessages: controller.setQueuedMessages,
-    setDraft: controller.setDraft,
-    sendMessage,
+    sendWithContent,
   });
 
   const sendQueuedMessageNow = useSendQueuedNow(controller.setQueuedMessages, actions.stopTask);
