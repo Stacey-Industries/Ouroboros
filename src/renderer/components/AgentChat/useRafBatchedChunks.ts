@@ -16,6 +16,7 @@
  * directly.  The React hook wraps it in a ref so the identity is stable
  * across re-renders.
  */
+import log from 'electron-log/renderer';
 import { useRef } from 'react';
 
 import type { AgentChatStreamChunk } from '../../types/electron-agent-chat';
@@ -28,20 +29,25 @@ export type RafBatchedChunks = {
 
 // ─── Pure factory (testable without React) ───────────────────────────────────
 
+function logFlush(queuedCount: number, sinceLastFlushMs: number): void {
+  log.info('[trace:stream] flush', { queuedCount, sinceLastFlushMs });
+}
+
 export function makeBatcher(onFlush: (chunks: AgentChatStreamChunk[]) => void): RafBatchedChunks {
   let pending: AgentChatStreamChunk[] = [];
   let rafId: number | null = null;
-
-  function drain(): AgentChatStreamChunk[] {
-    const drained = pending;
-    pending = [];
-    return drained;
-  }
+  let lastFlushAt: number = Date.now();
 
   function flush(): void {
     rafId = null;
-    const chunks = drain();
-    if (chunks.length > 0) onFlush(chunks);
+    const chunks = pending;
+    pending = [];
+    if (chunks.length > 0) {
+      const now = Date.now();
+      logFlush(chunks.length, now - lastFlushAt);
+      lastFlushAt = now;
+      onFlush(chunks);
+    }
   }
 
   function enqueue(chunk: AgentChatStreamChunk): void {
@@ -56,7 +62,8 @@ export function makeBatcher(onFlush: (chunks: AgentChatStreamChunk[]) => void): 
       cancelAnimationFrame(rafId);
       rafId = null;
     }
-    const chunks = drain();
+    const chunks = pending;
+    pending = [];
     if (chunks.length > 0) onFlush(chunks);
   }
 

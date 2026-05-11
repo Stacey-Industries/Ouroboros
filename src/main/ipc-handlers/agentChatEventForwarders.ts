@@ -91,6 +91,16 @@ export function registerEventForwarders(
   );
   cleanupFns.push(
     svc.bridge.onStreamChunk((chunk) => {
+      const windowIds = getAllActiveWindows()
+        .filter((w) => !w.isDestroyed())
+        .map((w) => w.id);
+      log.info('[trace:stream] emit', {
+        windowIds,
+        threadId: chunk.threadId,
+        chunkId: chunk.seq,
+        type: chunk.type,
+        ts: Date.now(),
+      });
       safeSend(AGENT_CHAT_EVENT_CHANNELS.stream, chunk);
     }),
   );

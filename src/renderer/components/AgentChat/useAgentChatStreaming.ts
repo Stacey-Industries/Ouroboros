@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
 import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
@@ -139,6 +140,16 @@ function applyTerminalChunk(chunk: AgentChatStreamChunk, setStateMap: SetStateMa
   });
 }
 
+function logChunkReceived(chunk: AgentChatStreamChunk): void {
+  log.info('[trace:stream] received', {
+    threadId: chunk.threadId,
+    chunkId: chunk.seq,
+    type: chunk.type,
+    ts: Date.now(),
+    documentHidden: document.hidden,
+  });
+}
+
 function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStreamChunk) => void {
   const applyBatch = useCallback(
     (chunks: AgentChatStreamChunk[]) => {
@@ -159,6 +170,7 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
 
   return useCallback(
     (chunk: AgentChatStreamChunk) => {
+      logChunkReceived(chunk);
       if (!chunk.threadId) return;
       if (chunk.type === 'thread_snapshot') {
         if (chunk.thread) {
