@@ -89,6 +89,10 @@ export interface FileTreeState {
   /** Paths of nesting-parent files whose nested children are visible */
   nestExpandedPaths: Set<string>;
 
+  // ─── Heat map ─────────────────────────────────────────────────────────────
+  /** Whether the git-frequency heat map overlay is enabled (persisted) */
+  heatMapEnabled: boolean;
+
   // ─── Actions ─────────────────────────────────────────────────────────────
   /** Toggle a directory's expanded/collapsed state */
   toggleExpand: (path: string) => void;
@@ -140,6 +144,10 @@ export interface FileTreeState {
   toggleNesting: () => void;
   /** Toggle expansion of nested children for a file path */
   toggleNestExpansion: (path: string) => void;
+
+  // ─── Heat map actions ────────────────────────────────────────────────────
+  /** Toggle the git-frequency heat map overlay on/off */
+  toggleHeatMap: () => void;
 }
 
 // ─── Initial state ────────────────────────────────────────────────────────────
@@ -161,6 +169,7 @@ const INITIAL_STATE = {
   dirtyFiles: new Set(),
   nestingEnabled: false,
   nestExpandedPaths: new Set(),
+  heatMapEnabled: true,
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -190,6 +199,7 @@ export const useFileTreeStore = create<FileTreeState>()(
       filter: state.filter,
       bookmarks: state.bookmarks,
       nestingEnabled: state.nestingEnabled,
+      heatMapEnabled: state.heatMapEnabled,
     }),
     storage: {
       getItem: (name) => {

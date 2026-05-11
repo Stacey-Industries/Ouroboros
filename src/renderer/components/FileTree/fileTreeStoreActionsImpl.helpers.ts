@@ -113,6 +113,9 @@ function buildViewActions(set: SetFn) {
     updateGitStatus: createDraftAction(set, (s, status: Map<string, GitFileStatus>) => {
       s.gitStatus = status;
     }),
+    toggleHeatMap: createDraftAction(set, (s) => {
+      s.heatMapEnabled = !s.heatMapEnabled;
+    }),
   };
 }
 

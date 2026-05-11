@@ -30,6 +30,7 @@ function makeState(overrides: Partial<FileTreeState> = {}): FileTreeState {
     dirtyFiles: new Set(),
     nestingEnabled: false,
     nestExpandedPaths: new Set(),
+    heatMapEnabled: true,
     ...overrides,
   } as FileTreeState;
 }
@@ -68,6 +69,15 @@ describe('buildExpansionActions (via buildFileTreeActions)', () => {
     expect(s.current.nestingEnabled).toBe(true);
     actions.toggleNesting();
     expect(s.current.nestingEnabled).toBe(false);
+  });
+
+  it('toggleHeatMap flips heatMapEnabled (defaults true)', () => {
+    const s = { current: makeState({ heatMapEnabled: true }) };
+    const actions = makeActions(s);
+    actions.toggleHeatMap();
+    expect(s.current.heatMapEnabled).toBe(false);
+    actions.toggleHeatMap();
+    expect(s.current.heatMapEnabled).toBe(true);
   });
 
   it('toggleNestExpansion toggles the path in nestExpandedPaths', () => {

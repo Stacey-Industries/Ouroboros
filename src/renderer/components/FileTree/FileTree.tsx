@@ -2,7 +2,7 @@
  * FileTree - multi-root hierarchical tree view.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { REFRESH_FILE_TREE_EVENT } from '../../hooks/appEventNames';
@@ -295,7 +295,8 @@ function useFileTreeHooks(
   const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
   const { bookmarks, setBookmarks, extraIgnorePatterns } = useFileTreeConfig();
   const { query, setQuery, handleSearchSelect } = useSearchQuery(onFileSelect);
-  const [heatMapEnabled, setHeatMapEnabled] = useState(false);
+  const heatMapEnabled = useFileTreeStore((s) => s.heatMapEnabled);
+  const toggleHeatMap = useFileTreeStore((s) => s.toggleHeatMap);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToastContext();
   const { getHeatLevel, heatMap } = useFileHeatMap(heatMapEnabled);
@@ -310,7 +311,7 @@ function useFileTreeHooks(
     setQuery,
     handleSearchSelect,
     heatMapEnabled,
-    setHeatMapEnabled,
+    toggleHeatMap,
     inputRef,
     getHeatLevel,
     heatMap,
@@ -335,7 +336,7 @@ export function FileTree({
       inputRef={h.inputRef}
       heatMapEnabled={h.heatMapEnabled}
       heatMapCount={h.heatMap.size}
-      onToggleHeatMap={() => h.setHeatMapEnabled((prev) => !prev)}
+      onToggleHeatMap={h.toggleHeatMap}
       primaryRoot={h.roots[0]}
       bodyProps={{
         roots: h.roots,
