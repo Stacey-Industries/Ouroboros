@@ -102,6 +102,12 @@ export const tailSchema = {
         enum: [...AGENT_CHAT_DEFAULT_VIEWS],
         default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultView,
       },
+      chatOrchestration: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { useNewStateMachine: { type: 'boolean', default: false } },
+        default: { useNewStateMachine: false },
+      },
     },
     default: { ...AGENT_CHAT_SETTINGS_DEFAULTS },
   },
@@ -299,14 +305,6 @@ export const tailSchema = {
         default: { enabled: true },
       },
     },
-  },
-  /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */
-  sessionsData: { type: 'array', items: { type: 'object' }, default: [] },
-  /** Wave 16 — session feature flags */
-  sessions: {
-    type: 'object',
-    properties: { worktreePerSession: { type: 'boolean', default: false } },
-    default: { worktreePerSession: false },
   },
   ...tailSchemaExt,
 };

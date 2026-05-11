@@ -41,6 +41,7 @@ import {
   registerAppHandlers,
   registerAuthHandlers,
   registerBackgroundJobsHandlers,
+  registerChatStateNewPathHandlers,
   registerCheckpointHandlers,
   registerClaudeMdHandlers,
   registerCompareProvidersHandlers,
@@ -161,6 +162,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('marketplace', () => registerMarketplaceHandlers()),
     ...safeRegister('memory', () => registerMemoryHandlers()),
     ...safeRegister('flowTracer', () => registerFlowTracerIpcHandlers()),
+    ...safeRegister('chatStateNewPath', () => registerChatStateNewPathHandlers()),
   ];
 }
 

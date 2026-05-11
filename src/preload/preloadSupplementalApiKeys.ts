@@ -43,4 +43,5 @@ export type SupplementalApiKey =
   | 'ecosystem'
   | 'flowTracer'
   | 'marketplace'
-  | 'memory';
+  | 'memory'
+  | 'chatStateNewPath';

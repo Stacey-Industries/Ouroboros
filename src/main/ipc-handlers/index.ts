@@ -11,6 +11,7 @@ export { registerAiStreamHandlers } from './aiStreamHandler';
 export { registerAppHandlers } from './app';
 export { registerAuthHandlers } from './auth';
 export { ensureSchedulerInit, registerBackgroundJobsHandlers } from './backgroundJobs';
+export { registerChatStateNewPathHandlers } from './chatStateNewPath';
 export { registerCheckpointHandlers } from './checkpoint';
 export { registerClaudeMdHandlers } from './claudeMd';
 export {

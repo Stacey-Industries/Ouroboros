@@ -5,6 +5,7 @@ export * from './electron-agent-conflict';
 export * from './electron-ai-stream';
 export * from './electron-auth';
 export * from './electron-background-jobs';
+export * from './electron-chat-state-new-path';
 export * from './electron-checkpoint';
 export * from './electron-claude-md';
 export * from './electron-compare-providers';
