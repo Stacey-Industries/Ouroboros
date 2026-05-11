@@ -1,3 +1,4 @@
+<!-- this is a test - to be removed -->
 # Repository Guidelines
 
 ## Project Structure & Module Organization

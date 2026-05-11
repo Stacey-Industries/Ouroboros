@@ -39,6 +39,8 @@ Status: LOCKED (transcribed from `waveplan-84.md` Locked decisions section durin
 
 **Consequences:** Phase 0's repro pre-flight directly determines Phase E's implementer. If the fork fires, Wave 84 still ships v2.16.0 with five bugs closed and a `phase-e-diagnostic.md` artifact; Phase E's actual fix moves to a later wave once samples accumulate.
 
+**Phase 0 outcome (2026-05-10):** Bug 4 **NOT reproducible on demand** — two test dispatches both succeeded. Cole's observations narrow the hypothesis space: CLI is clean with 3-5 concurrent sessions; IDE 500s correlate with multi-project IDE load; true repro recipe is long multi-tool chains (~15+ varied calls), not bulk-batch operations. **Auto-fork TRIGGERED — Phase E is now sonnet-diagnostician.** Two new hypotheses added beyond the original three: **H4** concurrent-session server-side pushback (strongest after Phase 0); **H5** subagent-spawn architecture (does each IDE chat's headless Claude Code child spawn a sub-process per subagent dispatch, or share one?). Phase E brief includes a research step against Anthropic API docs for concurrent-request limits before instrumentation. The wave still ships with four fixes (A, B, D, F) + the diagnostic artifact; the actual fix for bug 4 defers to a follow-up wave.
+
 ---
 
 ## Decision 4: Bug 5 (queue) fix shape is determined; no diagnostic phase

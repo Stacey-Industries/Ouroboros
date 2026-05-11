@@ -1,3 +1,4 @@
+<!-- this is a test - to be removed -->
 # Ouroboros IDE
 
 A desktop IDE purpose-built for working with AI coding agents. Wraps Claude Code and Codex CLI sessions in a full development environment — file tree, Monaco editor, terminal multiplexer, real-time agent monitoring, and an orchestration layer that automatically prepares project context before the agent sees your prompt.
