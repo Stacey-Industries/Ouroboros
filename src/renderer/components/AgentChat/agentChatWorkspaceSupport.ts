@@ -25,6 +25,8 @@ interface EventSubscriptionArgs {
   projectRootRef: MutableRefObject<string | null>;
   setActiveThreadId: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
+  /** When true, skip the legacy DOM agent-chat:thread-snapshot listener. */
+  useNewStateMachine?: boolean;
 }
 
 interface ReloadThreadsArgs {
@@ -253,7 +255,7 @@ function makeSnapshotHandler(
 }
 
 export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): void {
-  const { projectRootRef, setActiveThreadId, setThreads } = args;
+  const { projectRootRef, setActiveThreadId, setThreads, useNewStateMachine } = args;
 
   useEffect(() => {
     if (!hasElectronAPI()) return undefined;
@@ -267,19 +269,24 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
       setThreads((currentThreads) => mergeThreadStatus(currentThreads, status));
     });
 
-    // Listen for thread snapshots from the streaming bridge (DOM event).
-    // This fires just before 'complete' so the persisted assistant message
-    // appears in the thread before the streaming UI clears.
+    // Legacy DOM snapshot listener — bypassed when new state machine is active
+    // (thread state arrives via chatState:diff IPC instead).
+    if (useNewStateMachine) {
+      return () => {
+        cleanupThread();
+        cleanupMessage();
+        cleanupStatus();
+      };
+    }
     const handleSnapshot = makeSnapshotHandler(setThreads);
     window.addEventListener('agent-chat:thread-snapshot', handleSnapshot);
-
     return () => {
       cleanupThread();
       cleanupMessage();
       cleanupStatus();
       window.removeEventListener('agent-chat:thread-snapshot', handleSnapshot);
     };
-  }, [args, projectRootRef, setActiveThreadId, setThreads]);
+  }, [args, projectRootRef, setActiveThreadId, setThreads, useNewStateMachine]);
 }
 
 export function useThreadSelectionActions(

@@ -6,8 +6,8 @@
  * The existing agentChat:* bridge is completely independent.
  */
 
-import { CHAT_STATE_CHANNELS, diffChannel } from '@shared/ipc/chatStateChannels';
-import type { ChatStateDiff } from '@shared/types/chatStateDiff';
+import { CHAT_STATE_CHANNELS, diffChannel, snapshotChannel } from '@shared/ipc/chatStateChannels';
+import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
 import { ipcRenderer } from 'electron';
 
 function onChannel<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -23,4 +23,6 @@ export const chatStateNewPathApi = {
     ipcRenderer.invoke(CHAT_STATE_CHANNELS.requestSnapshot, { threadId }),
   onStateDiff: (threadId: string, callback: (diff: ChatStateDiff) => void) =>
     onChannel<ChatStateDiff>(diffChannel(threadId), callback),
+  onSnapshot: (threadId: string, callback: (snap: ChatStateSnapshot) => void) =>
+    onChannel<ChatStateSnapshot>(snapshotChannel(threadId), callback),
 };

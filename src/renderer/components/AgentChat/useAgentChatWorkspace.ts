@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
+import { useConfig } from '../../hooks/useConfig';
 import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import type {
   AgentChatLinkedDetailsResult,
@@ -196,10 +197,15 @@ function useAgentChatWorkspaceController(projectRoot: string | null, readOnly: b
   );
   const queue = useQueueActions(threadState.activeThreadId, state.setDraft);
 
+  const { config } = useConfig();
+  const useNewStateMachine = Boolean(
+    config?.agentChatSettings?.chatOrchestration?.useNewStateMachine,
+  );
   useAgentChatEventSubscriptions({
     projectRootRef: threadState.projectRootRef,
     setActiveThreadId: threadState.setActiveThreadId,
     setThreads: threadState.setThreads,
+    useNewStateMachine,
   });
 
   // Always call unconditionally (rules-of-hooks). When readOnly, pass null threadId and '' draft so

@@ -31,4 +31,11 @@ export interface ChatStateNewPathAPI {
    * Returns a cleanup function.
    */
   onStateDiff: (threadId: string, callback: (diff: ChatStateDiff) => void) => () => void;
+
+  /**
+   * Subscribe to initial-snapshot pushes for a thread. The broadcaster
+   * sends the current snapshot immediately when a subscribe() call is made
+   * from main. Returns a cleanup function.
+   */
+  onSnapshot: (threadId: string, callback: (snap: ChatStateSnapshot) => void) => () => void;
 }

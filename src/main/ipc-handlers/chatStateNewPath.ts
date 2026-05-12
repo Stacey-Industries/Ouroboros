@@ -21,48 +21,24 @@
  */
 
 import crypto from 'node:crypto';
-import path from 'node:path';
 
 import { CHAT_STATE_CHANNELS } from '@shared/ipc/chatStateChannels';
 import type { ProviderSessionId, TurnId } from '@shared/types/canonicalChatEvent';
 import { ipcMain } from 'electron';
 
-import { ChatPersistenceLayer } from '../agentChat/chatPersistenceLayer';
-import { ChatStateBroadcaster } from '../agentChat/chatStateBroadcaster';
+import {
+  broadcaster,
+  getPersistence,
+  normalizer,
+  registry,
+} from '../agentChat/chatOrchestrationSingletons';
 import { ChatStateError } from '../agentChat/chatStateError';
-import { EventNormalizer } from '../agentChat/eventNormalizer';
-import { IdentityRegistry } from '../agentChat/identityRegistry';
+import { DualEmitOrchestrator } from '../agentChat/dualEmitOrchestrator';
+import { setShadowTap } from '../agentChat/shadowTap';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { spawnStreamJsonProcess } from '../orchestration/providers/claudeStreamJsonRunner';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
-import { openDatabase } from '../storage/database';
-
-// ─── Singletons for the new path ─────────────────────────────────────────────
-
-const registry = new IdentityRegistry();
-const normalizer = new EventNormalizer(registry);
-const broadcaster = new ChatStateBroadcaster();
-
-/** Lazily opened on first use — avoids touching the DB until the new path is
- *  actually exercised. The DB file is the same threads.db used by the existing
- *  ThreadStoreSqliteRuntime; WAL mode supports multiple concurrent connections. */
-let _persistence: ChatPersistenceLayer | null = null;
-
-function getPersistence(): ChatPersistenceLayer {
-  if (!_persistence) {
-    // Lazy require avoids module-level evaluation of threadStore.ts which
-    // calls app.getPath('userData') — not available until Electron is ready.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getDefaultAgentChatThreadStoreDir } = require('../agentChat/threadStore') as {
-      getDefaultAgentChatThreadStoreDir: () => string;
-    };
-    const dbPath = path.join(getDefaultAgentChatThreadStoreDir(), 'threads.db');
-    const db = openDatabase(dbPath);
-    _persistence = new ChatPersistenceLayer(db);
-  }
-  return _persistence;
-}
 
 // ─── App-start registry rebuild ───────────────────────────────────────────────
 
@@ -79,9 +55,31 @@ function rebuildRegistryFromSqlite(): void {
   }
 }
 
+/**
+ * Phase 4: construct DualEmitOrchestrator over the shared singletons and
+ * install it as the shadow tap. After this call, getShadowTap() returns the
+ * orchestrator and the three bridge taps (command/stream/hook) actually fire.
+ * Called once, after SQLite is open (rebuildRegistryFromSqlite has already run).
+ */
+function wireShadowTap(): void {
+  try {
+    const tap = new DualEmitOrchestrator({
+      broadcaster,
+      persistence: getPersistence(),
+    });
+    setShadowTap(tap);
+    log.info('[chatStateNewPath] shadow tap installed');
+  } catch (err) {
+    log.error('[chatStateNewPath] wireShadowTap failed', { err });
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isNewPathEnabled(): boolean {
+  // In development builds, default to true so Phase 4 is exercised without
+  // requiring a manual config change. Production respects the stored flag.
+  if (process.env.NODE_ENV === 'development') return true;
   const settings = getConfigValue('agentChatSettings');
   return settings?.chatOrchestration?.useNewStateMachine === true;
 }
@@ -209,6 +207,8 @@ function handleRequestSnapshot(
 export function registerChatStateNewPathHandlers(): string[] {
   // Rebuild the registry from SQLite so crash-recovery state is restored.
   rebuildRegistryFromSqlite();
+  // Phase 4: activate the shadow path so bridge taps actually fire.
+  wireShadowTap();
 
   ipcMain.removeHandler(CHAT_STATE_CHANNELS.sendMessage);
   ipcMain.handle(CHAT_STATE_CHANNELS.sendMessage, handleSendMessage);

@@ -1,6 +1,7 @@
 import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
+import { useConfig } from '../../hooks/useConfig';
 import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
 import {
   type AgentChatStreamingState,
@@ -9,6 +10,11 @@ import {
   replayBufferedChunks,
 } from './AgentChatStreamingReducers';
 import { useRafBatchedChunks } from './useRafBatchedChunks';
+
+function useIsNewStateMachineEnabled(): boolean {
+  const { config } = useConfig();
+  return Boolean(config?.agentChatSettings?.chatOrchestration?.useNewStateMachine);
+}
 
 /** @deprecated Use AgentChatContentBlock directly. Kept as alias for backward compatibility. */
 export type AssistantTurnBlock = AgentChatContentBlock;
@@ -151,6 +157,8 @@ function logChunkReceived(chunk: AgentChatStreamChunk): void {
 }
 
 function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStreamChunk) => void {
+  const newPathEnabled = useIsNewStateMachineEnabled();
+
   const applyBatch = useCallback(
     (chunks: AgentChatStreamChunk[]) => {
       setStateMap((prev) => {
@@ -173,7 +181,9 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
       logChunkReceived(chunk);
       if (!chunk.threadId) return;
       if (chunk.type === 'thread_snapshot') {
-        if (chunk.thread) {
+        // When new state machine is active, thread state comes via chatState:diff
+        // IPC — no DOM event needed. Legacy path still dispatches for old reducers.
+        if (!newPathEnabled && chunk.thread) {
           window.dispatchEvent(
             new CustomEvent('agent-chat:thread-snapshot', { detail: chunk.thread }),
           );
@@ -187,7 +197,7 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
       }
       enqueue(chunk);
     },
-    [enqueue, flushNow, setStateMap],
+    [enqueue, flushNow, newPathEnabled, setStateMap],
   );
 }
 

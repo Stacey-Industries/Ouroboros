@@ -4,7 +4,12 @@
  * Extracted from chatOrchestrationBridge.ts to keep file line counts under the ESLint limit.
  * Handles streaming, completion, cancellation, and failure progress events.
  * Block-level helpers live in chatOrchestrationBridgeProgressBlocks.ts.
+ *
+ * Phase 4: reportTerminal calls added to completed/cancelled/failed handlers so
+ * DiffComparator fires on every real chat turn.
  */
+
+import type { TurnId } from '@shared/types/canonicalChatEvent';
 
 import type { ProviderProgressEvent } from '../orchestration/types';
 import {
@@ -23,6 +28,7 @@ import { handleContentBlock } from './chatOrchestrationBridgeProgressBlocks';
 import { findContextForProgress } from './chatOrchestrationBridgeProgressHelpers';
 import { closeOpenSubagents } from './chatOrchestrationBridgeSubagent';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
+import { getShadowTap } from './shadowTap';
 import { tokenCalibrationStore } from './tokenCalibration';
 
 // ---------------------------------------------------------------------------
@@ -110,6 +116,8 @@ function handleCompletedProgress(
   }
   if (progress.costUsd != null) ctx.costUsd = progress.costUsd;
   void persistCompletedTurn(ctx, runtime, progress);
+  // Phase 4: signal shadow path that this turn reached a terminal state.
+  getShadowTap()?.reportTerminal(ctx.taskId as TurnId, 'completed');
 }
 
 function handleCancelledProgress(
@@ -137,6 +145,8 @@ function handleCancelledProgress(
     emitMonitorSessionEnd(ctx, now, 'Cancelled');
     runtime.activeSends.delete(ctx.taskId);
   }
+  // Phase 4: signal shadow path that this turn reached a terminal state.
+  getShadowTap()?.reportTerminal(ctx.taskId as TurnId, 'cancelled');
 }
 
 function handleFailedProgress(
@@ -155,6 +165,8 @@ function handleFailedProgress(
   } else {
     void persistFailedTurnNoContent(ctx, runtime, errorMessage, now);
   }
+  // Phase 4: signal shadow path that this turn reached a terminal state.
+  getShadowTap()?.reportTerminal(ctx.taskId as TurnId, 'failed');
 }
 
 // ---------------------------------------------------------------------------
