@@ -41,18 +41,26 @@ export async function sendComposerMessage(args: SendMessageArgs): Promise<void> 
   args.setError(null);
   args.setDraft('');
   args.setPendingUserMessage(displayContent);
+  // Start a no-response watchdog: if no chatState:diff arrives within 5 s of
+  // the IPC call returning, surface a recoverable error so the user isn't left
+  // staring at a pending indicator.
+  let noResponseTimer: ReturnType<typeof setTimeout> | null = null;
   try {
     await saveAllDirtyBuffers();
-    applyComposerSuccess(
-      args,
-      await sendAgentChatRequest(
-        buildComposerRequest(args, displayContent, skillExpansion),
-        'Unable to send the chat message.',
-      ),
+    const sendResult = await sendAgentChatRequest(
+      buildComposerRequest(args, displayContent, skillExpansion),
+      'Unable to send the chat message.',
     );
+    noResponseTimer = setTimeout(() => {
+      args.setError(
+        'No response arrived within 5 seconds. The agent may still be starting — check the thread or try again.',
+      );
+    }, 5000);
+    await applyComposerSuccess(args, sendResult);
   } catch (sendError) {
     applyComposerFailure(args, displayContent, sendError);
   } finally {
+    if (noResponseTimer !== null) clearTimeout(noResponseTimer);
     args.setIsSending(false);
   }
 }

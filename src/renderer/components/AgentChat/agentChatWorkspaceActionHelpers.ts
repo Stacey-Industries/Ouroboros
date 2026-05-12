@@ -17,6 +17,7 @@ import { mergeThreadCollection } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
 import { isAnthropicAutoModel } from './ChatControlsBarSupport';
 import { clearPersistedDraft, isDraftThreadId } from './useAgentChatDraftPersistence';
+import { sendChatCommandMessage } from './useAgentChatStreaming';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -173,7 +174,7 @@ export function mergeReturnedThread(
 
 // ── Send request helpers ──────────────────────────────────────────────────────
 
-type SendRequest = {
+export type SendRequest = {
   threadId?: string;
   workspaceRoot: string;
   content: string;
@@ -183,11 +184,12 @@ type SendRequest = {
   metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean };
   skillExpansion?: string;
 };
+
 export async function sendAgentChatRequest(
   request: SendRequest,
   failureMessage: string,
-): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> {
-  const result = await window.electronAPI.agentChat.sendMessage(request);
+): Promise<{ success: boolean; error?: string; threadId?: string }> {
+  const result = await sendChatCommandMessage(request);
   if (!result.success) throw new Error(result.error ?? failureMessage);
   return result;
 }
@@ -226,17 +228,25 @@ export function buildResendRequest(
     metadata: { source, usedAdvancedControls: false },
   };
 }
-export function applyComposerSuccess(
+export async function applyComposerSuccess(
   args: SendMessageArgs,
   result: Awaited<ReturnType<typeof sendAgentChatRequest>>,
-): void {
+): Promise<void> {
   args.setAttachments?.([]);
   args.setDisabledLocalIds?.(new Set());
-  mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId);
-  /* pendingUserMessage stays set until the persisted user message appears — see usePendingUserMessageClearEffect. */ clearPersistedDraft(
-    result.thread?.id ?? args.activeThreadId,
-  );
-  if (isDraftThreadId(args.activeThreadId) && result.thread)
+  // New path returns threadId (not a full thread object). Refresh thread list
+  // from main so the new thread appears in the tab bar, then activate it.
+  const returnedThreadId = result.threadId;
+  if (returnedThreadId) {
+    const listed = await window.electronAPI.agentChat.listThreads();
+    if (listed.success && listed.threads) {
+      args.setThreads(listed.threads);
+    }
+    args.setActiveThreadId(returnedThreadId);
+  }
+  /* pendingUserMessage stays set until the persisted user message appears — see usePendingUserMessageClearEffect. */
+  clearPersistedDraft(returnedThreadId ?? args.activeThreadId);
+  if (isDraftThreadId(args.activeThreadId) && returnedThreadId)
     clearPersistedDraft(args.activeThreadId);
 }
 export function applyComposerFailure(args: SendMessageArgs, content: string, error: unknown): void {
@@ -249,10 +259,12 @@ export function applyResendSuccess(
   result: Awaited<ReturnType<typeof sendAgentChatRequest>>,
   source: 'edit' | 'retry',
 ): void {
-  mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId);
+  // New path returns threadId, not a full thread object. Activate the thread
+  // directly; the thread record arrives via chatState:diff / listThreads refresh.
+  if (result.threadId) args.setActiveThreadId(result.threadId);
   if (source === 'edit') {
     args.setDraft('');
-    clearPersistedDraft(result.thread?.id ?? args.activeThreadId);
+    clearPersistedDraft(result.threadId ?? args.activeThreadId);
   }
 }
 export function applyResendFailure(args: AgentChatActionArgs, error: unknown): void {
