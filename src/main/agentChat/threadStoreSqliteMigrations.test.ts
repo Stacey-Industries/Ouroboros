@@ -9,11 +9,12 @@ import { applyColumnMigrations } from './threadStoreSqliteMigrations';
 
 // ── Minimal DB stub ────────────────────────────────────────────────────────────
 
-function makeDb(existingCols: { messages: string[]; threads: string[] }): {
+function makeDb(existingCols: { messages: string[]; threads: string[]; tables?: string[] }): {
   db: Database;
   executed: string[];
 } {
   const executed: string[] = [];
+  const existingTables = existingCols.tables ?? [];
   const db = {
     pragma(query: string) {
       if (query === 'table_info(messages)') {
@@ -21,6 +22,9 @@ function makeDb(existingCols: { messages: string[]; threads: string[] }): {
       }
       if (query === 'table_info(threads)') {
         return existingCols.threads.map((name) => ({ name }));
+      }
+      if (query === 'table_list') {
+        return existingTables.map((name) => ({ name }));
       }
       return [];
     },
@@ -89,16 +93,39 @@ describe('applyColumnMigrations', () => {
 
   it('is idempotent — no exec calls when all columns already present', () => {
     const allMsgCols = [
-      'id', 'threadId', 'role', 'content', 'createdAt',
-      'model', 'checkpointCommit', 'reactions', 'collapsedByDefault',
+      'id',
+      'threadId',
+      'role',
+      'content',
+      'createdAt',
+      'model',
+      'checkpointCommit',
+      'reactions',
+      'collapsedByDefault',
       'skillExecutions',
+      // v10 columns
+      'canonical_event_log',
     ];
     const allThdCols = [
-      'id', 'workspaceRoot', 'tags', 'pinned', 'deletedAt',
-      'branchName', 'forkOfMessageId', 'parentThreadId', 'isSideChat',
+      'id',
+      'workspaceRoot',
+      'tags',
+      'pinned',
+      'deletedAt',
+      'branchName',
+      'forkOfMessageId',
+      'parentThreadId',
+      'isSideChat',
+      // v10 columns
+      'lastProviderSessionId',
+      'lastInterruptedAt',
     ];
-    const { db, executed } = makeDb({ messages: allMsgCols, threads: allThdCols });
-    applyColumnMigrations(db, 9);
+    const { db, executed } = makeDb({
+      messages: allMsgCols,
+      threads: allThdCols,
+      tables: ['identity_aliases'], // v10 table already present
+    });
+    applyColumnMigrations(db, 10);
     expect(executed).toHaveLength(0);
   });
 

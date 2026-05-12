@@ -1,7 +1,9 @@
 /**
  * chatStateNewPath.ts — IPC handlers for the new chat orchestration state path.
  *
- * Wave 86 Phase 1: walking skeleton only.
+ * Wave 86 Phase 1: walking skeleton.
+ * Wave 86 Phase 2: adds ChatPersistenceLayer wiring (alias CRUD + thread columns).
+ *
  * Registers two channels:
  *   chatCommand:sendMessage  — renderer submits a new message on a NEW thread
  *   chatState:requestSnapshot — renderer requests a full state snapshot
@@ -11,16 +13,21 @@
  *
  * Decision 10: feature-flag gated rollout.
  * Decision 3: hard-fail on impossible states — throws propagate as IPC errors.
+ * Decision 5: SQLite is authoritative; persistence failures must NOT kill
+ *             in-flight runtime state — every persistence call is try/catch-wrapped
+ *             inside ChatPersistenceLayer itself.
  *
  * The existing agentChat:* path is completely untouched.
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
 
 import { CHAT_STATE_CHANNELS } from '@shared/ipc/chatStateChannels';
 import type { ProviderSessionId, TurnId } from '@shared/types/canonicalChatEvent';
 import { ipcMain } from 'electron';
 
+import { ChatPersistenceLayer } from '../agentChat/chatPersistenceLayer';
 import { ChatStateBroadcaster } from '../agentChat/chatStateBroadcaster';
 import { ChatStateError } from '../agentChat/chatStateError';
 import { EventNormalizer } from '../agentChat/eventNormalizer';
@@ -29,12 +36,48 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import { spawnStreamJsonProcess } from '../orchestration/providers/claudeStreamJsonRunner';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
+import { openDatabase } from '../storage/database';
 
 // ─── Singletons for the new path ─────────────────────────────────────────────
 
 const registry = new IdentityRegistry();
 const normalizer = new EventNormalizer(registry);
 const broadcaster = new ChatStateBroadcaster();
+
+/** Lazily opened on first use — avoids touching the DB until the new path is
+ *  actually exercised. The DB file is the same threads.db used by the existing
+ *  ThreadStoreSqliteRuntime; WAL mode supports multiple concurrent connections. */
+let _persistence: ChatPersistenceLayer | null = null;
+
+function getPersistence(): ChatPersistenceLayer {
+  if (!_persistence) {
+    // Lazy require avoids module-level evaluation of threadStore.ts which
+    // calls app.getPath('userData') — not available until Electron is ready.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getDefaultAgentChatThreadStoreDir } = require('../agentChat/threadStore') as {
+      getDefaultAgentChatThreadStoreDir: () => string;
+    };
+    const dbPath = path.join(getDefaultAgentChatThreadStoreDir(), 'threads.db');
+    const db = openDatabase(dbPath);
+    _persistence = new ChatPersistenceLayer(db);
+  }
+  return _persistence;
+}
+
+// ─── App-start registry rebuild ───────────────────────────────────────────────
+
+/**
+ * Called once from the IPC registration path after the DB is guaranteed open.
+ * Rebuilds the in-memory IdentityRegistry from persisted identity_aliases rows
+ * so the registry survives app restart (spec §4.3, Decision 9).
+ */
+function rebuildRegistryFromSqlite(): void {
+  try {
+    registry.rebuildFromSQLite(getPersistence());
+  } catch (err) {
+    log.error('[chatStateNewPath] rebuildRegistryFromSqlite failed', { err });
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +114,10 @@ function wireStreamToMachine(
 
       if (canonical.type === 'provider_session_assigned') {
         registry.assignProviderSession(turnId, canonical.providerSessionId);
+        // Persist: update alias + thread lastProviderSessionId.
+        getPersistence().assignProviderSessionToAlias(turnId, canonical.providerSessionId);
+        const threadId = registry.threadIdForTurn(turnId);
+        getPersistence().setLastProviderSession(threadId, canonical.providerSessionId);
       }
       broadcaster.dispatch(canonical);
     } catch (err) {
@@ -91,11 +138,13 @@ function spawnAndRetire(turnId: TurnId, content: string, cwd: string, unsub: () 
   handle.result
     .then(() => {
       registry.retireTurn(turnId);
+      getPersistence().retireAlias(turnId, Date.now());
       unsub();
     })
     .catch((err: unknown) => {
       log.error('[chatStateNewPath] subprocess failed', { err, turnId });
       registry.retireTurn(turnId);
+      getPersistence().retireAlias(turnId, Date.now());
       unsub();
     });
 }
@@ -128,6 +177,9 @@ async function handleSendMessage(
   const turnId = mintTurnId();
 
   registry.registerTurn(tid, turnId);
+  // Persist the new alias row immediately — before spawning the subprocess.
+  getPersistence().insertAlias({ threadId: tid, turnId, createdAt: Date.now() });
+
   broadcaster.ensureThread(tid);
 
   const unsub = broadcaster.subscribe(tid, event.sender);
@@ -152,6 +204,9 @@ function handleRequestSnapshot(
 // ─── Registrar ────────────────────────────────────────────────────────────────
 
 export function registerChatStateNewPathHandlers(): string[] {
+  // Rebuild the registry from SQLite so crash-recovery state is restored.
+  rebuildRegistryFromSqlite();
+
   ipcMain.removeHandler(CHAT_STATE_CHANNELS.sendMessage);
   ipcMain.handle(CHAT_STATE_CHANNELS.sendMessage, handleSendMessage);
 

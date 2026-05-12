@@ -18,9 +18,11 @@
 import { diffChannel, snapshotChannel } from '@shared/ipc/chatStateChannels';
 import type { ProviderSessionId, ThreadId, TurnId } from '@shared/types/canonicalChatEvent';
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
+import Database from 'better-sqlite3';
 import type { WebContents } from 'electron';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ChatPersistenceLayer } from './chatPersistenceLayer';
 import { ChatStateBroadcaster } from './chatStateBroadcaster';
 import { EventNormalizer } from './eventNormalizer';
 import { IdentityRegistry } from './identityRegistry';
@@ -243,7 +245,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     expect(wc.send.mock.calls.length).toBe(countBefore);
   });
 
-  it('broadcaster fans out to multiple subscribers on the same thread', () => {
+  it('broadcaster fans-out to multiple subscribers on the same thread', () => {
     const { broadcaster, normalizer, registry, seenPsids } = wireSkeleton();
     // wireSkeleton already subscribed one wc; add a second.
     const wc2 = makeMockWebContents();
@@ -268,5 +270,117 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     expect(wc2Diffs.some((d) => d.type === 'status_changed' && d.status === 'submitting')).toBe(
       true,
     );
+  });
+});
+
+// ─── Wave 86 Phase 2: persistence integration ─────────────────────────────────
+
+const PERSIST_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS threads (
+    id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL DEFAULT '',
+    createdAt INTEGER NOT NULL DEFAULT 0, updatedAt INTEGER NOT NULL DEFAULT 0,
+    title TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'idle',
+    lastProviderSessionId TEXT, lastInterruptedAt INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT NOT NULL, threadId TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user', content TEXT NOT NULL DEFAULT '',
+    createdAt INTEGER NOT NULL DEFAULT 0, canonical_event_log TEXT,
+    PRIMARY KEY (id, threadId)
+  );
+  CREATE TABLE IF NOT EXISTS identity_aliases (
+    thread_id TEXT PRIMARY KEY, turn_id TEXT,
+    provider_session_id TEXT, created_at INTEGER NOT NULL, retired_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_identity_aliases_psid
+    ON identity_aliases(provider_session_id);
+`;
+
+describe('Wave 86 Phase 2 — persistence integration across full turn lifecycle', () => {
+  const P_THREAD = 'thread-persist-integration' as ThreadId;
+  const P_TURN = 'turn-persist-integration' as TurnId;
+  const P_PSID = 'psid-persist-integration' as ProviderSessionId;
+
+  let db: InstanceType<typeof Database>;
+  let persistence: ChatPersistenceLayer;
+  let registry: IdentityRegistry;
+  let normalizer: EventNormalizer;
+  let broadcaster: ChatStateBroadcaster;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec(PERSIST_SCHEMA_SQL);
+    // Seed a thread row so UPDATE statements targeting it hit real data.
+    db.prepare(
+      `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status)
+       VALUES (?, '', 1, 1, 'Persist test', 'idle')`,
+    ).run(P_THREAD);
+
+    persistence = new ChatPersistenceLayer(db as unknown as import('../storage/database').Database);
+    registry = new IdentityRegistry();
+    normalizer = new EventNormalizer(registry);
+    broadcaster = new ChatStateBroadcaster();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('after full turn lifecycle loadAliases returns entry with PSID and retiredAt set', () => {
+    // 1. Register turn + persist alias (mirrors chatStateNewPath wiring).
+    registry.registerTurn(P_THREAD, P_TURN);
+    persistence.insertAlias({ threadId: P_THREAD, turnId: P_TURN, createdAt: 1000 });
+
+    broadcaster.ensureThread(P_THREAD);
+    const submitEvent = normalizer.fromCommand({ threadId: P_THREAD, content: 'hello' }, P_TURN);
+    broadcaster.dispatch(submitEvent);
+
+    // 2. PSID arrives via stream-json.
+    const seenPsids = new Set<ProviderSessionId>();
+    const sysInit = normalizer.fromStreamJson(
+      { type: 'system', subtype: 'init', session_id: P_PSID } as never,
+      P_TURN,
+      seenPsids,
+    );
+    if (sysInit?.type === 'provider_session_assigned') {
+      registry.assignProviderSession(P_TURN, sysInit.providerSessionId);
+      persistence.assignProviderSessionToAlias(P_TURN, sysInit.providerSessionId);
+      persistence.setLastProviderSession(P_THREAD, sysInit.providerSessionId);
+    }
+    broadcaster.dispatch(sysInit!);
+
+    // 3. Turn completes — retire alias.
+    registry.retireTurn(P_TURN);
+    const retiredAt = Date.now();
+    persistence.retireAlias(P_TURN, retiredAt);
+
+    // Assert persistence state.
+    const aliases = persistence.loadAliases();
+    expect(aliases).toHaveLength(1);
+    expect(aliases[0].threadId).toBe(P_THREAD);
+    expect(aliases[0].turnId).toBe(P_TURN);
+    expect(aliases[0].providerSessionId).toBe(P_PSID);
+    expect(aliases[0].retiredAt).toBe(retiredAt);
+
+    // Assert threads.lastProviderSessionId populated.
+    const threadRow = db
+      .prepare('SELECT lastProviderSessionId FROM threads WHERE id = ?')
+      .get(P_THREAD) as { lastProviderSessionId: string | null };
+    expect(threadRow.lastProviderSessionId).toBe(P_PSID);
+  });
+
+  it('rebuildFromSQLite restores the registry after a turn lifecycle', () => {
+    registry.registerTurn(P_THREAD, P_TURN);
+    persistence.insertAlias({ threadId: P_THREAD, turnId: P_TURN, createdAt: 1000 });
+    registry.assignProviderSession(P_TURN, P_PSID);
+    persistence.assignProviderSessionToAlias(P_TURN, P_PSID);
+
+    // Simulate restart: fresh registry rebuilt from SQLite.
+    const registry2 = new IdentityRegistry();
+    registry2.rebuildFromSQLite(persistence);
+
+    expect(registry2.getActiveTurn(P_THREAD)).toBe(P_TURN);
+    expect(registry2.getProviderSession(P_THREAD)).toBe(P_PSID);
+    expect(registry2.threadIdForProviderSession(P_PSID)).toBe(P_THREAD);
   });
 });

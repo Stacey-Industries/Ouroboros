@@ -167,8 +167,8 @@ export class EventNormalizer {
    * Convert a hook pipe payload into a canonical event.
    * Phase 1: always returns null. Phase 3+ fills in the body.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fromHookEvent(raw: HookPayload): CanonicalChatEvent | null {
+    void raw;
     return null;
   }
 }

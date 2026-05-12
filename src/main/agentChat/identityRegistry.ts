@@ -137,6 +137,62 @@ export class IdentityRegistry {
     return this.turns.get(turnId)?.providerSessionId;
   }
 
+  // ─── SQLite rebuild ─────────────────────────────────────────────────────────
+
+  /**
+   * Rebuild the in-memory registry from persisted identity_aliases rows.
+   * Called once on app start, after the SQLite DB is open, so the registry
+   * survives process restart.
+   *
+   * Design choice: reset before replay. The alternative (guard-against-duplicate)
+   * would require exposing "has this turn already been registered?" logic that
+   * callers don't otherwise need. A clean reset is simpler and idempotent —
+   * calling rebuildFromSQLite twice produces the same final state as calling it
+   * once, because the maps are cleared first.
+   *
+   * Only non-retired aliases are replayed into the active-by-thread map;
+   * all aliases (retired or not) are replayed into the turns map so that
+   * reverse lookups for late-arriving events still resolve.
+   *
+   * See spec §4.3 and wave-86-decisions.md Decision 9.
+   */
+  rebuildFromSQLite(persistence: import('./chatPersistenceLayer').ChatPersistenceLayer): void {
+    // Reset all maps — makes this call idempotent.
+    this.turns.clear();
+    this.activeByThread.clear();
+    this.threadByProvider.clear();
+
+    const aliases = persistence.loadAliases();
+    for (const alias of aliases) {
+      // Register turn record (covers retired turns too — reverse lookups must still work).
+      this.turns.set(alias.turnId, {
+        threadId: alias.threadId,
+        providerSessionId: alias.providerSessionId,
+        retired: alias.retiredAt !== null,
+      });
+
+      // Rebuild PSID → threadId reverse map.
+      if (alias.providerSessionId !== undefined) {
+        this.threadByProvider.set(alias.providerSessionId, alias.threadId);
+      }
+
+      // Only non-retired turns become the active turn for their thread.
+      // If multiple non-retired rows exist for the same threadId (shouldn't
+      // happen in practice), the last one by created_at wins because
+      // loadAliases returns rows ordered ASC.
+      if (alias.retiredAt === null) {
+        this.activeByThread.set(alias.threadId, alias.turnId);
+      }
+    }
+
+    log.info('[trace:identity]', {
+      op: 'rebuildFromSQLite',
+      aliasCount: aliases.length,
+      activeCount: this.activeByThread.size,
+      result: 'ok',
+    });
+  }
+
   // ─── Reverse lookups (throw on miss) ────────────────────────────────────────
 
   /**

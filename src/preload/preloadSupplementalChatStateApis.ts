@@ -7,9 +7,8 @@
  */
 
 import { CHAT_STATE_CHANNELS, diffChannel } from '@shared/ipc/chatStateChannels';
+import type { ChatStateDiff } from '@shared/types/chatStateDiff';
 import { ipcRenderer } from 'electron';
-
-import type { ChatStateDiff } from '../renderer/types/electron';
 
 function onChannel<T>(channel: string, callback: (payload: T) => void): () => void {
   const handler = (_event: Electron.IpcRendererEvent, payload: T) => callback(payload);

@@ -12,8 +12,9 @@
  */
 
 import type { ProviderSessionId, ThreadId, TurnId } from '@shared/types/canonicalChatEvent';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import type { AliasRow } from './chatPersistenceLayer';
 import { ChatStateError } from './chatStateError';
 import { IdentityRegistry } from './identityRegistry';
 
@@ -184,5 +185,120 @@ describe('threadIdForProviderSession', () => {
     reg.assignProviderSession(TURN1, PSID1);
     reg.retireTurn(TURN1);
     expect(reg.threadIdForProviderSession(PSID1)).toBe(T1);
+  });
+});
+
+// ─── rebuildFromSQLite ────────────────────────────────────────────────────────
+
+/** Minimal ChatPersistenceLayer mock — only loadAliases is needed here. */
+function mockPersistence(
+  aliases: AliasRow[],
+): import('./chatPersistenceLayer').ChatPersistenceLayer {
+  return {
+    loadAliases: vi.fn().mockReturnValue(aliases),
+    insertAlias: vi.fn(),
+    assignProviderSessionToAlias: vi.fn(),
+    retireAlias: vi.fn(),
+    setLastProviderSession: vi.fn(),
+    setLastInterruptedAt: vi.fn(),
+    appendCanonicalEventLog: vi.fn(),
+  } as unknown as import('./chatPersistenceLayer').ChatPersistenceLayer;
+}
+
+describe('rebuildFromSQLite', () => {
+  it('populates forward lookups from non-retired aliases', () => {
+    const reg = fresh();
+    const persistence = mockPersistence([
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: null },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+    expect(reg.getActiveTurn(T1)).toBe(TURN1);
+    expect(reg.getProviderSession(T1)).toBe(PSID1);
+  });
+
+  it('populates reverse lookup threadIdForTurn for retired aliases', () => {
+    const reg = fresh();
+    const persistence = mockPersistence([
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: 200 },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+    // Retired turn: reverse lookup must still work for late-arriving events.
+    expect(reg.threadIdForTurn(TURN1)).toBe(T1);
+    // But it must NOT be the active turn.
+    expect(reg.getActiveTurn(T1)).toBeUndefined();
+  });
+
+  it('populates reverse lookup threadIdForProviderSession for retired aliases', () => {
+    const reg = fresh();
+    const persistence = mockPersistence([
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: 200 },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+    expect(reg.threadIdForProviderSession(PSID1)).toBe(T1);
+  });
+
+  it('handles aliases without a PSID (providerSessionId undefined)', () => {
+    const reg = fresh();
+    const persistence = mockPersistence([
+      {
+        threadId: T1,
+        turnId: TURN1,
+        providerSessionId: undefined,
+        createdAt: 100,
+        retiredAt: null,
+      },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+    expect(reg.getActiveTurn(T1)).toBe(TURN1);
+    expect(reg.getProviderSession(T1)).toBeUndefined();
+  });
+
+  it('is idempotent — calling twice produces the same final state', () => {
+    const reg = fresh();
+    const aliases: AliasRow[] = [
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: null },
+    ];
+    const persistence = mockPersistence(aliases);
+    reg.rebuildFromSQLite(persistence);
+    reg.rebuildFromSQLite(persistence);
+    expect(reg.getActiveTurn(T1)).toBe(TURN1);
+  });
+
+  it('resets prior in-memory state on rebuild', () => {
+    const reg = fresh();
+    // Register a turn manually before rebuild.
+    reg.registerTurn(T2, TURN2);
+    expect(reg.getActiveTurn(T2)).toBe(TURN2);
+
+    // Rebuild with aliases that only contain T1/TURN1.
+    const persistence = mockPersistence([
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: null },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+
+    // T2/TURN2 should be gone after reset.
+    expect(reg.getActiveTurn(T2)).toBeUndefined();
+    expect(() => reg.threadIdForTurn(TURN2)).toThrow(ChatStateError);
+  });
+
+  it('handles empty alias list without error', () => {
+    const reg = fresh();
+    const persistence = mockPersistence([]);
+    expect(() => reg.rebuildFromSQLite(persistence)).not.toThrow();
+    expect(reg.getActiveTurn(T1)).toBeUndefined();
+  });
+
+  it('last non-retired alias wins when multiple non-retired rows exist for same thread', () => {
+    // loadAliases is ordered by created_at ASC — second row should win.
+    const reg = fresh();
+    const persistence = mockPersistence([
+      { threadId: T1, turnId: TURN1, providerSessionId: PSID1, createdAt: 100, retiredAt: null },
+      { threadId: T1, turnId: TURN2, providerSessionId: PSID2, createdAt: 200, retiredAt: null },
+    ]);
+    reg.rebuildFromSQLite(persistence);
+    expect(reg.getActiveTurn(T1)).toBe(TURN2);
+    // Both turns' reverse lookups must still work.
+    expect(reg.threadIdForTurn(TURN1)).toBe(T1);
+    expect(reg.threadIdForTurn(TURN2)).toBe(T1);
   });
 });
