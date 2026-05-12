@@ -76,6 +76,8 @@ function stripDeprecatedKeys(data: Record<string, unknown>): boolean {
   if (deleteNestedKey(data, 'codemode', 'routeInternalMcp')) dirty = true;
   // Wave 79 — internalMcp.transport removed.
   if (deleteNestedKey(data, 'internalMcp', 'transport')) dirty = true;
+  // Wave 86 — agentChatSettings.chatOrchestration.useNewStateMachine flag removed (feature promoted to default).
+  if (deleteNestedKey(data, 'agentChatSettings', 'chatOrchestration')) dirty = true;
   return dirty;
 }
 

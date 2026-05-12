@@ -85,7 +85,6 @@ export function stopIncrementalFlush(ctx: ActiveStreamContext): void {
 // in the Agent Monitor — the reducer's updateExistingSession path resets
 // status to 'running' while preserving accumulated tokens and tool calls.
 //
-// Claude Code hook events are suppressed during streaming (via syntheticSessionIds).
 // ---------------------------------------------------------------------------
 
 export function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: number): void {

@@ -2,7 +2,6 @@
  * preloadSupplementalChatStateApis.ts — preload bridge for the new chat
  * orchestration state path (Wave 86+).
  *
- * Gated behind agentChatSettings.chatOrchestration.useNewStateMachine.
  * The existing agentChat:* bridge is completely independent.
  */
 

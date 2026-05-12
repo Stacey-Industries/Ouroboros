@@ -1,7 +1,6 @@
 import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
-import { useConfig } from '../../hooks/useConfig';
 import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
 import {
   type AgentChatStreamingState,
@@ -15,17 +14,12 @@ import {
 } from './useChatStateDiffProjection';
 import { useRafBatchedChunks } from './useRafBatchedChunks';
 
-function useIsNewStateMachineEnabled(): boolean {
-  const { config } = useConfig();
-  return Boolean(config?.agentChatSettings?.chatOrchestration?.useNewStateMachine);
-}
-
 // ─── Projection adapter ───────────────────────────────────────────────────────
 
 /**
  * Converts a ChatStateDiffProjection (new-path state machine snapshot) into
  * the AgentChatStreamingState shape that the existing rendering pipeline
- * expects. Used when useNewStateMachine flag is on.
+ * expects.
  */
 export function projectionToStreamingState(
   projection: ChatStateDiffProjection,
@@ -188,8 +182,6 @@ function logChunkReceived(chunk: AgentChatStreamChunk): void {
 }
 
 function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStreamChunk) => void {
-  const newPathEnabled = useIsNewStateMachineEnabled();
-
   const applyBatch = useCallback(
     (chunks: AgentChatStreamChunk[]) => {
       setStateMap((prev) => {
@@ -212,13 +204,7 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
       logChunkReceived(chunk);
       if (!chunk.threadId) return;
       if (chunk.type === 'thread_snapshot') {
-        // When new state machine is active, thread state comes via chatState:diff
-        // IPC — no DOM event needed. Legacy path still dispatches for old reducers.
-        if (!newPathEnabled && chunk.thread) {
-          window.dispatchEvent(
-            new CustomEvent('agent-chat:thread-snapshot', { detail: chunk.thread }),
-          );
-        }
+        // Thread state arrives via chatState:diff IPC — no DOM event needed.
         return;
       }
       if (chunk.type === 'complete' || chunk.type === 'error') {
@@ -228,7 +214,7 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
       }
       enqueue(chunk);
     },
-    [enqueue, flushNow, newPathEnabled, setStateMap],
+    [enqueue, flushNow, setStateMap],
   );
 }
 
@@ -238,25 +224,20 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
  * single setStateMap call.  Terminal chunks (complete / error) flush the
  * pending buffer synchronously before being applied so they never lag.
  *
- * When useNewStateMachine is on, the returned state is the projection of the
- * new-path state machine (via useChatStateDiffProjection) converted into the
- * same AgentChatStreamingState shape. The legacy chunk-based accumulation still
- * runs in the background so the old path can be restored by flipping the flag.
+ * The returned state is the projection of the new-path state machine
+ * (via useChatStateDiffProjection), converted to AgentChatStreamingState
+ * for the render pipeline.
  */
 export function useAgentChatStreaming(activeThreadId: string | null): AgentChatStreamingState {
-  const newPathEnabled = useIsNewStateMachineEnabled();
   const [stateMap, setStateMap] = useState<ReadonlyMap<string, AgentChatStreamingState>>(new Map());
   const handleChunk = useBatchedChunkHandler(setStateMap);
 
-  // Always call the projection hook (hooks must not be called conditionally).
-  // When the flag is off, useChatStateDiffProjection returns INITIAL_PROJECTION
-  // and its IPC subscriptions are a no-op (threadId is passed as null).
-  const projection = useChatStateDiffProjection(newPathEnabled ? activeThreadId : null);
+  const projection = useChatStateDiffProjection(activeThreadId);
 
   useStreamChunkListener(handleChunk);
   useReplayBufferedChunks(activeThreadId, setStateMap);
   const legacyState = (activeThreadId ? stateMap.get(activeThreadId) : null) ?? INITIAL_STATE;
   useCleanupCompletedStreams(activeThreadId, legacyState, setStateMap);
 
-  return newPathEnabled ? projectionToStreamingState(projection) : legacyState;
+  return projectionToStreamingState(projection);
 }

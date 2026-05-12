@@ -90,7 +90,7 @@ describe('shouldSuppressHookEvent', () => {
   it('never suppresses instructions_loaded even when synthetic sessions are active', () => {
     // Regression for wave-84 bug: rules were invisible in context preview after
     // chat start because instructions_loaded pipe events were suppressed while
-    // the synthetic chat session was registered in syntheticSessionIds.
+    // chat launches were in flight.
     expect(shouldSuppressHookEvent('instructions_loaded', 1)).toBe(false);
     expect(shouldSuppressHookEvent('instructions_loaded', 99)).toBe(false);
     expect(shouldSuppressHookEvent('instructions_loaded', 0)).toBe(false);

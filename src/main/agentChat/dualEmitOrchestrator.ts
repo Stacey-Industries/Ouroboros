@@ -1,5 +1,5 @@
 /**
- * dualEmitOrchestrator.ts — Shadow-path façade for Wave 86 Phase 3.
+ * dualEmitOrchestrator.ts — Shadow-path façade for Wave 86 Phase 3+.
  *
  * Owns the IdentityRegistry, EventNormalizer, ChatStateBroadcaster, and
  * ChatPersistenceLayer for the NEW canonical state path. The existing bridge
@@ -11,7 +11,8 @@
  *   onHookEvent       — from hooks.ts named pipe
  *   onCommand         — from chatOrchestrationBridge.ts sendMessage / cancel / editAndResend
  *
- * Divergence reporting is delegated to DiffComparator.
+ * Phase 6: DiffComparator removed (dual-emit window closed). reportTerminal
+ * is retained as a telemetry-only hook that records terminal status.
  *
  * Decision 3: bad events are swallowed with log.warn — the shadow path MUST NOT
  * kill the user-visible path.
@@ -24,7 +25,6 @@ import log from '../logger';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
 import type { ChatPersistenceLayer } from './chatPersistenceLayer';
 import type { ChatStateBroadcaster } from './chatStateBroadcaster';
-import { DiffComparator } from './diffComparator';
 import type { ChatCommandPayload, HookPayload } from './eventNormalizer';
 import { EventNormalizer } from './eventNormalizer';
 import { IdentityRegistry } from './identityRegistry';
@@ -34,8 +34,6 @@ import { IdentityRegistry } from './identityRegistry';
 export interface DualEmitOrchestratorOptions {
   broadcaster: ChatStateBroadcaster;
   persistence: ChatPersistenceLayer;
-  /** Override isDev for DiffComparator (test injection). Default: NODE_ENV check. */
-  isDev?: boolean;
 }
 
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
@@ -45,7 +43,6 @@ export class DualEmitOrchestrator {
   private readonly normalizer: EventNormalizer;
   private readonly broadcaster: ChatStateBroadcaster;
   private readonly persistence: ChatPersistenceLayer;
-  private readonly comparator: DiffComparator;
 
   /** Per-active-turn set of seen provider session IDs. */
   private readonly seenPsids = new Map<TurnId, Set<ProviderSessionId>>();
@@ -55,7 +52,6 @@ export class DualEmitOrchestrator {
     this.normalizer = new EventNormalizer(this.registry);
     this.broadcaster = opts.broadcaster;
     this.persistence = opts.persistence;
-    this.comparator = new DiffComparator(opts.isDev);
   }
 
   // ─── Shadow tap 1: stream-json events ────────────────────────────────────────
@@ -123,27 +119,15 @@ export class DualEmitOrchestrator {
     }
   }
 
-  // ─── Divergence reporting ─────────────────────────────────────────────────────
+  // ─── Terminal telemetry ───────────────────────────────────────────────────────
 
   /**
    * Called by the existing bridge when a turn reaches a terminal state.
-   * Compares bridge outcome against shadow state machine.
+   * Phase 6: DiffComparator removed; this is now a telemetry-only log point.
    */
   reportTerminal(turnId: TurnId, bridgeStatus: 'completed' | 'failed' | 'cancelled'): void {
     try {
-      const threadId = this.registry.threadIdForTurn(turnId);
-      const snap = this.broadcaster.snapshot(threadId);
-      const shadowStatus = this.mapStatus(snap.status, bridgeStatus);
-      const aliasPresent =
-        this.registry.getActiveTurn(threadId) === turnId ||
-        this.registry.getProviderSession(threadId) !== undefined;
-
-      this.comparator.compare(turnId, {
-        bridgeStatus,
-        shadowStatus,
-        shadowEventCount: snap.seq,
-        registryAliasPresent: aliasPresent,
-      });
+      log.info('[dualEmit] reportTerminal', { turnId, bridgeStatus });
     } catch (err) {
       log.warn('[dualEmit] reportTerminal swallowed error', { turnId, err });
     }
@@ -175,12 +159,4 @@ export class DualEmitOrchestrator {
     }
   }
 
-  private mapStatus(
-    smStatus: string,
-    fallback: 'completed' | 'failed' | 'cancelled',
-  ): 'completed' | 'failed' | 'cancelled' {
-    if (smStatus === 'completing') return fallback; // completing is ambiguous pre-commit
-    if (smStatus === 'idle') return fallback; // post-commit: use bridge as source of truth
-    return fallback;
-  }
 }

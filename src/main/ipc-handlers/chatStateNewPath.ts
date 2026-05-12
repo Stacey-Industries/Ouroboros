@@ -10,10 +10,6 @@
  *   chatState:requestSnapshot  — renderer requests a full state snapshot
  *   chatCommand:restartSession — renderer resets in-memory state (Restart Chat Session)
  *
- * All channels are no-ops (return error) unless the feature flag
- * agentChatSettings.chatOrchestration.useNewStateMachine is true.
- *
- * Decision 10: feature-flag gated rollout.
  * Decision 3: hard-fail on impossible states — throws propagate as IPC errors.
  * Decision 5: SQLite is authoritative; persistence failures must NOT kill
  *             in-flight runtime state — every persistence call is try/catch-wrapped
@@ -43,7 +39,6 @@ import { ChatStateError } from '../agentChat/chatStateError';
 import { reconcileInterruptedThreads } from '../agentChat/crashRecovery';
 import { DualEmitOrchestrator } from '../agentChat/dualEmitOrchestrator';
 import { setShadowTap } from '../agentChat/shadowTap';
-import { getConfigValue } from '../config';
 import log from '../logger';
 import { spawnStreamJsonProcess } from '../orchestration/providers/claudeStreamJsonRunner';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
@@ -105,22 +100,6 @@ function runCrashRecovery(): void {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isNewPathEnabled(): boolean {
-  // Production reads the stored flag (default now true per Decision 10 Phase 5).
-  const settings = getConfigValue('agentChatSettings');
-  return settings?.chatOrchestration?.useNewStateMachine !== false;
-}
-
-function requireNewPath(): void {
-  if (!isNewPathEnabled()) {
-    throw new ChatStateError(
-      'malformed-event',
-      'chatStateNewPath: useNewStateMachine flag is false — new path disabled',
-      { reason: 'new-path-disabled' },
-    );
-  }
-}
 
 function mintTurnId(): TurnId {
   return crypto.randomUUID() as TurnId;
@@ -203,8 +182,6 @@ async function handleSendMessage(
   event: Electron.IpcMainInvokeEvent,
   payload: unknown,
 ): Promise<{ success: boolean; error?: string; turnId?: string }> {
-  requireNewPath();
-
   const { threadId, content, cwd } = payload as {
     threadId: string;
     content: string;
@@ -241,7 +218,6 @@ function handleRequestSnapshot(
   _event: Electron.IpcMainInvokeEvent,
   payload: unknown,
 ): import('@shared/types/chatStateDiff').ChatStateSnapshot {
-  requireNewPath();
   const { threadId } = payload as { threadId: string };
   return broadcaster.snapshot(threadId as ThreadId);
 }
@@ -258,7 +234,6 @@ function handleRestartSession(
   payload: unknown,
 ): { success: boolean; error?: string } {
   try {
-    requireNewPath();
     const { threadId } = payload as { threadId: string };
     broadcaster.resetThread(threadId as ThreadId);
     log.info('[chatStateNewPath] session restarted', { threadId });

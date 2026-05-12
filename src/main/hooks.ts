@@ -111,11 +111,6 @@ const pendingQueue: HookPayload[] = [];
 const activeSessions = new Map<string, number>();
 const sessionCwdMap = new Map<string, string>();
 
-// Tracks session IDs created by synthetic events (chat bridge). While any
-// synthetic session is active, lifecycle events from Claude Code hook scripts
-// are suppressed to prevent phantom sessions in the Agent Monitor.
-const syntheticSessionIds = new Set<string>();
-
 // beginChatSessionLaunch / endChatSessionLaunch are re-exported from hooksChatLaunch.ts
 export { beginChatSessionLaunch, endChatSessionLaunch } from './hooksChatLaunch';
 export { shouldSuppressHookEvent } from './hooksDispatchLogic';
@@ -250,10 +245,8 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
-  traceInstructionsLoaded(rawPayload, syntheticSessionIds);
-  if (
-    shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), syntheticSessionIds.size)
-  ) {
+  traceInstructionsLoaded(rawPayload, new Set());
+  if (shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), 0)) {
     log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;
@@ -328,13 +321,6 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
     );
   }
   trackSessionLifecycle(payload);
-
-  if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
-  if (payload.type === 'agent_end') {
-    const id = payload.sessionId;
-    // 2-second delay absorbs in-flight hook events arriving after agent_end.
-    setTimeout(() => syntheticSessionIds.delete(id), 2_000);
-  }
 
   const windows = getDispatchWindows();
   if (windows.length === 0) {

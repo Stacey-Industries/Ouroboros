@@ -2,7 +2,6 @@
  * electron-chat-state-new-path.d.ts — IPC type contract for the new chat
  * orchestration state path (Wave 86+).
  *
- * These channels are gated behind agentChatSettings.chatOrchestration.useNewStateMachine.
  * The existing agentChat:* path is completely independent.
  */
 
@@ -12,7 +11,7 @@ import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 export interface ChatStateNewPathAPI {
   /**
    * Submit a new message on a thread. Returns the minted turnId.
-   * Throws (propagated as IPC error) when the feature flag is false or fields are missing.
+   * Throws (propagated as IPC error) when required fields are missing.
    */
   sendMessage: (payload: {
     threadId: string;

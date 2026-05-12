@@ -9,7 +9,7 @@
  * - onStreamJsonEvent: provider_session_assigned also persists alias to registry+persistence
  * - onHookEvent: unrecognised hook type is a no-op (no throw)
  * - onHookEvent: pre_tool_use ask for our session dispatches tool_permission_requested
- * - reportTerminal: matching statuses do not throw (in dev DiffComparator)
+ * - reportTerminal: does not throw (telemetry-only log)
  * - Shadow errors are swallowed — existing bridge path is unaffected
  */
 

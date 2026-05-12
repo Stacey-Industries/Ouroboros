@@ -6,8 +6,7 @@
  * chatStateNewPath.ts (IPC handler) and the DualEmitOrchestrator startup wiring
  * can share the SAME instances — preventing two divergent registries.
  *
- * Decision 10: feature-flag gated rollout; singletons always exist but only
- * produce work when useNewStateMachine is true.
+ * Decision 10: feature-flag removed (Wave 86); singletons are always active.
  * Decision 5: SQLite is authoritative; persistence failures must NOT kill
  *             in-flight runtime state — every persistence call is wrapped.
  *

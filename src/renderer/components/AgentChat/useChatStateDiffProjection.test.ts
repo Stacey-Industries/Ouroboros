@@ -29,12 +29,6 @@ const mockRequestSnapshot = vi.fn(() =>
   }),
 );
 
-vi.mock('../../hooks/useConfig', () => ({
-  useConfig: vi.fn(() => ({
-    config: { agentChatSettings: { chatOrchestration: { useNewStateMachine: true } } },
-  })),
-}));
-
 Object.defineProperty(window, 'electronAPI', {
   writable: true,
   value: {

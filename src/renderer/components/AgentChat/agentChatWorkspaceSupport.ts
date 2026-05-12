@@ -25,8 +25,6 @@ interface EventSubscriptionArgs {
   projectRootRef: MutableRefObject<string | null>;
   setActiveThreadId: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
-  /** When true, skip the legacy DOM agent-chat:thread-snapshot listener. */
-  useNewStateMachine?: boolean;
 }
 
 interface ReloadThreadsArgs {
@@ -235,27 +233,9 @@ function subscribeThreadUpdates(
   });
 }
 
-function makeSnapshotHandler(
-  setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>,
-): (event: Event) => void {
-  return (event: Event) => {
-    const thread = (event as CustomEvent).detail as AgentChatThreadRecord | undefined;
-    if (!thread || !thread.id) return;
-    log.info(
-      '[trace:chat-order] snapshot received',
-      'thread:',
-      thread.id.slice(-6),
-      'msgs:',
-      thread.messages.length,
-      'ids:',
-      thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(','),
-    );
-    setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
-  };
-}
 
 export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): void {
-  const { projectRootRef, setActiveThreadId, setThreads, useNewStateMachine } = args;
+  const { projectRootRef, setActiveThreadId, setThreads } = args;
 
   useEffect(() => {
     if (!hasElectronAPI()) return undefined;
@@ -269,24 +249,12 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
       setThreads((currentThreads) => mergeThreadStatus(currentThreads, status));
     });
 
-    // Legacy DOM snapshot listener — bypassed when new state machine is active
-    // (thread state arrives via chatState:diff IPC instead).
-    if (useNewStateMachine) {
-      return () => {
-        cleanupThread();
-        cleanupMessage();
-        cleanupStatus();
-      };
-    }
-    const handleSnapshot = makeSnapshotHandler(setThreads);
-    window.addEventListener('agent-chat:thread-snapshot', handleSnapshot);
     return () => {
       cleanupThread();
       cleanupMessage();
       cleanupStatus();
-      window.removeEventListener('agent-chat:thread-snapshot', handleSnapshot);
     };
-  }, [args, projectRootRef, setActiveThreadId, setThreads, useNewStateMachine]);
+  }, [args, projectRootRef, setActiveThreadId, setThreads]);
 }
 
 export function useThreadSelectionActions(

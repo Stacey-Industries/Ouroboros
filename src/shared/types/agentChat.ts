@@ -317,12 +317,6 @@ export interface AgentChatSettings {
   showAdvancedControls: boolean;
   openDetailsOnFailure: boolean;
   defaultView: AgentChatDefaultView;
-  /**
-   * Wave 86 Phase 1 — feature flag for the new chat orchestration state machine.
-   * Default false. Flip true in dev to exercise the new path. Removed in Phase 6.
-   * Decision 10: feature-flag gated rollout.
-   */
-  chatOrchestration?: { useNewStateMachine: boolean };
 }
 
 export interface AgentChatCreateThreadRequest {

@@ -1,7 +1,7 @@
 /**
  * chatStateNewPath.test.ts — smoke tests for the new chat orchestration IPC handlers.
  *
- * Tests the feature-flag gate (requireNewPath) and the handler registrar.
+ * Phase 6: feature-flag gate removed. Tests cover handler registration only.
  * Full integration tests (subprocess wiring, broadcaster fan-out) belong in
  * the agentChat subsystem tests, not here.
  */
@@ -16,10 +16,6 @@ vi.mock('electron', () => ({
     handle: vi.fn(),
     removeHandler: vi.fn(),
   },
-}));
-
-vi.mock('../config', () => ({
-  getConfigValue: vi.fn(),
 }));
 
 vi.mock('../logger', () => ({
@@ -71,7 +67,6 @@ vi.mock('../orchestration/providers/claudeStreamJsonRunner', () => ({
 
 import { ipcMain } from 'electron';
 
-import { getConfigValue } from '../config';
 import { registerChatStateNewPathHandlers } from './chatStateNewPath';
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -104,81 +99,3 @@ describe('registerChatStateNewPathHandlers', () => {
   });
 });
 
-describe('chatCommand:sendMessage handler — feature flag gate', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('throws when useNewStateMachine is false', async () => {
-    vi.mocked(getConfigValue).mockReturnValue({
-      chatOrchestration: { useNewStateMachine: false },
-    } as never);
-
-    registerChatStateNewPathHandlers();
-
-    // Extract the handler registered for chatCommand:sendMessage.
-    const handleCall = vi
-      .mocked(ipcMain.handle)
-      .mock.calls.find(([ch]) => ch === CHAT_STATE_CHANNELS.sendMessage);
-    expect(handleCall).toBeDefined();
-    const handler = handleCall![1] as (
-      event: Electron.IpcMainInvokeEvent,
-      payload: unknown,
-    ) => Promise<unknown>;
-
-    const fakeEvent = { sender: {} } as Electron.IpcMainInvokeEvent;
-    await expect(
-      handler(fakeEvent, { threadId: 't1', content: 'hi', cwd: '/tmp' }),
-    ).rejects.toThrow('chatStateNewPath: useNewStateMachine flag is false');
-  });
-
-  it('passes the flag gate when agentChatSettings is missing (defaults to enabled)', async () => {
-    // Phase 5 decision: missing settings → useNewStateMachine defaults to true.
-    // undefined?.chatOrchestration?.useNewStateMachine !== false → true (enabled).
-    vi.mocked(getConfigValue).mockReturnValue(undefined as never);
-
-    registerChatStateNewPathHandlers();
-
-    const handleCall = vi
-      .mocked(ipcMain.handle)
-      .mock.calls.find(([ch]) => ch === CHAT_STATE_CHANNELS.sendMessage);
-    const handler = handleCall![1] as (
-      event: Electron.IpcMainInvokeEvent,
-      payload: unknown,
-    ) => Promise<unknown>;
-
-    const fakeEvent = { sender: {} } as Electron.IpcMainInvokeEvent;
-    // Handler proceeds past the flag gate — it will reject for unrelated mock
-    // reasons, but NOT with the 'flag is false' message.
-    const result = handler(fakeEvent, { threadId: 't1', content: 'hi', cwd: '/tmp' });
-    await expect(result).rejects.not.toThrow('chatStateNewPath: useNewStateMachine flag is false');
-  });
-});
-
-describe('chatState:requestSnapshot handler — feature flag gate', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('throws when useNewStateMachine is false', () => {
-    vi.mocked(getConfigValue).mockReturnValue({
-      chatOrchestration: { useNewStateMachine: false },
-    } as never);
-
-    registerChatStateNewPathHandlers();
-
-    const handleCall = vi
-      .mocked(ipcMain.handle)
-      .mock.calls.find(([ch]) => ch === CHAT_STATE_CHANNELS.requestSnapshot);
-    expect(handleCall).toBeDefined();
-    const handler = handleCall![1] as (
-      event: Electron.IpcMainInvokeEvent,
-      payload: unknown,
-    ) => unknown;
-
-    const fakeEvent = {} as Electron.IpcMainInvokeEvent;
-    expect(() => handler(fakeEvent, { threadId: 't1' })).toThrow(
-      'chatStateNewPath: useNewStateMachine flag is false',
-    );
-  });
-});

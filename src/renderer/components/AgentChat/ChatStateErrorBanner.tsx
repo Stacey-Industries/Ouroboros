@@ -5,7 +5,7 @@
  * Non-dismissable: persists until the user clicks "Restart Chat Session", which
  * resets the in-memory state machine for this thread via chatCommand:restartSession.
  *
- * Gated on useNewStateMachine flag — old-path users never see this surface.
+ * Visible to all users — new path is the sole code path (flag removed Wave 86).
  * Styled with design tokens per ~/.claude/rules/renderer.md and frontend-design.md.
  */
 
