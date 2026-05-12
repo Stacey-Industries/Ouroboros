@@ -11,6 +11,7 @@
  * One setInterval fires both; interval = SEVEN_DAYS_MS (the shorter window).
  */
 
+import { agentChatThreadStore } from '../agentChat/threadStore';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import {
@@ -28,22 +29,10 @@ import { getWorktreeManager } from './worktreeManager';
 
 let gcInterval: ReturnType<typeof setInterval> | null = null;
 
-function getThreadStore(): import('../agentChat/threadStore').AgentChatThreadStore | null {
-  try {
-    // Lazy-require avoids pulling agentChatThreadStore at module load time — it calls
-    // electron.app.getPath('userData') at the import site, unavailable in tests.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const m = require('../agentChat/threadStore') as typeof import('../agentChat/threadStore');
-    return m.agentChatThreadStore ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function runAllGc(): void {
   const now = Date.now();
   void runSessionGc(now);
-  void runSoftDeleteGc(now, getSessionStore(), getThreadStore());
+  void runSoftDeleteGc(now, getSessionStore(), agentChatThreadStore);
 }
 
 function logOrphans(
