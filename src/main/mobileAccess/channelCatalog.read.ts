@@ -246,4 +246,9 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   // ── memory (read) ────────────────────────────────────────────────────────────
   'memory:list': { class: 'paired-read', timeoutClass: 'normal' },
   'memory:read': { class: 'paired-read', timeoutClass: 'normal' },
+
+  // ── chatState (read) — Wave 86 new chat-orchestration path ───────────────────
+  // chatState:requestSnapshot is an invoke channel that returns current thread
+  // state — read-only, returns a snapshot, never mutates.
+  'chatState:requestSnapshot': { class: 'paired-read', timeoutClass: 'normal' },
 };

@@ -62,6 +62,7 @@ import {
   buildTransactionApis,
   buildWindowExtensionsApis,
 } from './webPreloadApisSupplemental';
+import { buildChatStateNewPathApi } from './webPreloadChatStateApi';
 import { showConnectionOverlay } from './webPreloadOverlay';
 import { WebSocketTransport } from './webPreloadTransport';
 
@@ -187,6 +188,8 @@ const telemetryAPI = buildTelemetryApi(transport);
 const observabilityAPI = buildObservabilityApi();
 const graphAPI = buildGraphApi();
 const specAPI = buildSpecApi();
+// ── Wave 86 new chat-orchestration path ────────────────────────────────────────
+const chatStateNewPathAPI = buildChatStateNewPathApi(transport);
 
 const electronAPI = {
   pty: ptyAPI,
@@ -249,6 +252,8 @@ const electronAPI = {
   observability: observabilityAPI,
   graph: graphAPI,
   spec: specAPI,
+  // ── Wave 86 new chat-orchestration path ──────────────────────────────────────
+  chatStateNewPath: chatStateNewPathAPI,
 };
 
 // ─── Expose Globally ─────────────────────────────────────────────────────────

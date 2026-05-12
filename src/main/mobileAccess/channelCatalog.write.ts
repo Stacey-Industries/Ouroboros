@@ -241,4 +241,10 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   // ── workspaceReadList (write) ────────────────────────────────────────────────
   'workspaceReadList:add': { class: 'paired-write', timeoutClass: 'normal' },
   'workspaceReadList:remove': { class: 'paired-write', timeoutClass: 'normal' },
+
+  // ── chatCommand (write) — Wave 86 new chat-orchestration path ────────────────
+  // sendMessage initiates a new user turn; restartSession clears and restarts.
+  // Both mutate thread state — write-class appropriate.
+  'chatCommand:sendMessage': { class: 'paired-write', timeoutClass: 'long' },
+  'chatCommand:restartSession': { class: 'paired-write', timeoutClass: 'short' },
 };

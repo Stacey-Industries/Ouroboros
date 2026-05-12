@@ -103,6 +103,12 @@ const UNCLASSIFIED_ALLOWLIST = new Set<string>([
   'pty:disconnected',
   'rulesAndSkills:changed',
   'sessionCrud:changed',
+  // chatState:diff / snapshot / error are per-thread push prefixes (main → renderer).
+  // The actual channel strings are chatState:diff:{threadId} etc. — never invokable.
+  // Wave 86 new chat-orchestration path.
+  'chatState:diff',
+  'chatState:error',
+  'chatState:snapshot',
   // sessionDispatch:status and sessionDispatch:notification are push-only events
   // broadcast from the dispatch runner — never invokable by a client.
   'sessionDispatch:status',
