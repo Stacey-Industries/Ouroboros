@@ -36,6 +36,8 @@ vi.mock('../agentChat/chatStateBroadcaster', () => ({
     this.subscribe = vi.fn(() => vi.fn());
     this.snapshot = vi.fn();
     this.ensureThread = vi.fn();
+    this.emitError = vi.fn();
+    this.resetThread = vi.fn();
   }),
 }));
 
@@ -93,11 +95,12 @@ describe('registerChatStateNewPathHandlers', () => {
     );
   });
 
-  it('returns both channel names', () => {
+  it('returns all three channel names', () => {
     const channels = registerChatStateNewPathHandlers();
     expect(channels).toContain(CHAT_STATE_CHANNELS.sendMessage);
     expect(channels).toContain(CHAT_STATE_CHANNELS.requestSnapshot);
-    expect(channels).toHaveLength(2);
+    expect(channels).toContain(CHAT_STATE_CHANNELS.restartSession);
+    expect(channels).toHaveLength(3);
   });
 });
 
@@ -129,7 +132,9 @@ describe('chatCommand:sendMessage handler — feature flag gate', () => {
     ).rejects.toThrow('chatStateNewPath: useNewStateMachine flag is false');
   });
 
-  it('throws when agentChatSettings is missing', async () => {
+  it('passes the flag gate when agentChatSettings is missing (defaults to enabled)', async () => {
+    // Phase 5 decision: missing settings → useNewStateMachine defaults to true.
+    // undefined?.chatOrchestration?.useNewStateMachine !== false → true (enabled).
     vi.mocked(getConfigValue).mockReturnValue(undefined as never);
 
     registerChatStateNewPathHandlers();
@@ -143,9 +148,10 @@ describe('chatCommand:sendMessage handler — feature flag gate', () => {
     ) => Promise<unknown>;
 
     const fakeEvent = { sender: {} } as Electron.IpcMainInvokeEvent;
-    await expect(
-      handler(fakeEvent, { threadId: 't1', content: 'hi', cwd: '/tmp' }),
-    ).rejects.toThrow();
+    // Handler proceeds past the flag gate — it will reject for unrelated mock
+    // reasons, but NOT with the 'flag is false' message.
+    const result = handler(fakeEvent, { threadId: 't1', content: 'hi', cwd: '/tmp' });
+    await expect(result).rejects.not.toThrow('chatStateNewPath: useNewStateMachine flag is false');
   });
 });
 

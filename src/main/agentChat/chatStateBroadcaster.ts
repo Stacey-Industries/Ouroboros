@@ -8,9 +8,10 @@
  * See spec §4.4 and waveplan-86.md Phase 1 scope.
  */
 
-import { diffChannel, snapshotChannel } from '@shared/ipc/chatStateChannels';
+import { diffChannel, errorChannel, snapshotChannel } from '@shared/ipc/chatStateChannels';
 import type { CanonicalChatEvent, ThreadId } from '@shared/types/canonicalChatEvent';
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
+import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 import type { WebContents } from 'electron';
 
 import log from '../logger';
@@ -89,6 +90,32 @@ export class ChatStateBroadcaster {
    */
   ensureThread(threadId: ThreadId): void {
     this.getOrCreateMachine(threadId);
+  }
+
+  /**
+   * Push a hard-fail error payload to all renderer windows subscribed to
+   * this thread (Phase 5 — Decision 3). Called by the IPC handler catch-block
+   * after a ChatStateError is caught; renderer shows a non-dismissable banner.
+   */
+  emitError(threadId: ThreadId, payload: ChatStateErrorPayload): void {
+    const subs = this.subscribers.get(threadId);
+    if (!subs || subs.size === 0) return;
+    const channel = errorChannel(threadId);
+    for (const wc of subs) {
+      this.sendSafe(wc, channel, payload);
+    }
+  }
+
+  /**
+   * Drop and re-create the state machine for a thread (Phase 5 "Restart Chat
+   * Session" action). Clears stuck in-flight state so the user can re-send.
+   * Subscribers are preserved — they will receive a fresh snapshot after the
+   * next subscribe() call or on the next broadcasted diff.
+   */
+  resetThread(threadId: ThreadId): void {
+    this.machines.delete(threadId);
+    this.getOrCreateMachine(threadId);
+    log.info('[chatStateBroadcaster] thread reset', { threadId });
   }
 
   // ─── Internals ───────────────────────────────────────────────────────────────

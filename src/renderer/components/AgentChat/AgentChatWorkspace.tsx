@@ -12,6 +12,7 @@ import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import { IdePanels, useBranchCompare } from './AgentChatWorkspace.compare';
 import { useWorkspaceStoreSync } from './AgentChatWorkspace.storeSync';
 import { cycleThread } from './AgentChatWorkspace.swipe';
+import { ChatStateErrorBanner } from './ChatStateErrorBanner';
 import { DensityProvider } from './DensityContext';
 import { PinnedContextBar } from './PinnedContextBar';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -187,15 +188,9 @@ function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   }, [model, onModelReady]);
   const slashCmd = useWorkspaceSlashCmd(model, onRemember, onOpenMemories, onSpec);
   useWorkspaceStoreSync({ store, model, context, slashCmd, readOnly: args.readOnly });
-  const { activeSessionId } = args;
   useEffect(() => {
-    store.setState({ activeSessionId: activeSessionId ?? null });
-  }, [store, activeSessionId]);
-  // Wave 82.1 — mirror this workspace's projectRoot into the store so consumers
-  // outside the AgentChatWorkspace prop chain (ComposerContextPreview popover,
-  // anyone reading via AgentChatStoreContext) get the same value the model
-  // and rail use. Decouples chat-only workbench's active project from
-  // ProjectContext.projectRoot (= multi-root[0], not rail-aware).
+    store.setState({ activeSessionId: args.activeSessionId ?? null });
+  }, [store, args.activeSessionId]);
   useEffect(() => {
     store.setState({ projectRoot: args.projectRoot ?? null });
   }, [store, args.projectRoot]);
@@ -317,6 +312,7 @@ export function AgentChatWorkspace(props: AgentChatWorkspaceProps): React.ReactE
             style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}
           >
             <PinnedContextBar activeSessionId={activeSessionId} />
+            <ChatStateErrorBanner threadId={setup.model.activeThreadId} />
             <div className="flex-1 min-h-0 overflow-hidden">
               <AgentChatConversation />
             </div>

@@ -6,8 +6,14 @@
  * The existing agentChat:* bridge is completely independent.
  */
 
-import { CHAT_STATE_CHANNELS, diffChannel, snapshotChannel } from '@shared/ipc/chatStateChannels';
+import {
+  CHAT_STATE_CHANNELS,
+  diffChannel,
+  errorChannel,
+  snapshotChannel,
+} from '@shared/ipc/chatStateChannels';
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
+import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 import { ipcRenderer } from 'electron';
 
 function onChannel<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -25,4 +31,10 @@ export const chatStateNewPathApi = {
     onChannel<ChatStateDiff>(diffChannel(threadId), callback),
   onSnapshot: (threadId: string, callback: (snap: ChatStateSnapshot) => void) =>
     onChannel<ChatStateSnapshot>(snapshotChannel(threadId), callback),
+  /** Phase 5: subscribe to hard-fail error pushes for a thread. */
+  onError: (threadId: string, callback: (err: ChatStateErrorPayload) => void) =>
+    onChannel<ChatStateErrorPayload>(errorChannel(threadId), callback),
+  /** Phase 5: reset in-memory state machine for a thread (Restart Chat Session). */
+  restartSession: (threadId: string) =>
+    ipcRenderer.invoke(CHAT_STATE_CHANNELS.restartSession, { threadId }),
 };

@@ -105,8 +105,11 @@ export const tailSchema = {
       chatOrchestration: {
         type: 'object',
         additionalProperties: false,
-        properties: { useNewStateMachine: { type: 'boolean', default: false } },
-        default: { useNewStateMachine: false },
+        // Phase 5 (Decision 10): default flipped to true for production rollout.
+        // Existing configs with useNewStateMachine explicitly false keep that value.
+        // New installs and configs missing the field get the new default of true.
+        properties: { useNewStateMachine: { type: 'boolean', default: true } },
+        default: { useNewStateMachine: true },
       },
     },
     default: { ...AGENT_CHAT_SETTINGS_DEFAULTS },

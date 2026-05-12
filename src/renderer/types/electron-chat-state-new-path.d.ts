@@ -7,6 +7,7 @@
  */
 
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
+import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 
 export interface ChatStateNewPathAPI {
   /**
@@ -38,4 +39,17 @@ export interface ChatStateNewPathAPI {
    * from main. Returns a cleanup function.
    */
   onSnapshot: (threadId: string, callback: (snap: ChatStateSnapshot) => void) => () => void;
+
+  /**
+   * Phase 5: subscribe to hard-fail error pushes for a thread.
+   * Fires when main catches a ChatStateError on the new path.
+   * Returns a cleanup function.
+   */
+  onError: (threadId: string, callback: (err: ChatStateErrorPayload) => void) => () => void;
+
+  /**
+   * Phase 5: reset the in-memory state machine for a thread (Restart Chat Session).
+   * Clears the in-flight state so the user can re-send.
+   */
+  restartSession: (threadId: string) => Promise<{ success: boolean; error?: string }>;
 }

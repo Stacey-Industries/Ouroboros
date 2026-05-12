@@ -9,11 +9,42 @@ import {
   INITIAL_STATE,
   replayBufferedChunks,
 } from './AgentChatStreamingReducers';
+import {
+  type ChatStateDiffProjection,
+  useChatStateDiffProjection,
+} from './useChatStateDiffProjection';
 import { useRafBatchedChunks } from './useRafBatchedChunks';
 
 function useIsNewStateMachineEnabled(): boolean {
   const { config } = useConfig();
   return Boolean(config?.agentChatSettings?.chatOrchestration?.useNewStateMachine);
+}
+
+// ─── Projection adapter ───────────────────────────────────────────────────────
+
+/**
+ * Converts a ChatStateDiffProjection (new-path state machine snapshot) into
+ * the AgentChatStreamingState shape that the existing rendering pipeline
+ * expects. Used when useNewStateMachine flag is on.
+ */
+export function projectionToStreamingState(
+  projection: ChatStateDiffProjection,
+): AgentChatStreamingState {
+  // Phase 3 ChatThreadStatus union: 'idle' | 'submitting' | 'streaming' | 'tool_running' | 'completing'.
+  // Any non-idle / non-null status with an active turn is considered "streaming" for the legacy
+  // rendering pipeline's binary isStreaming flag.
+  const isStreaming =
+    projection.status != null && projection.status !== 'idle' && projection.activeTurnId != null;
+  const blocks: AgentChatContentBlock[] =
+    projection.accumulatedText.length > 0
+      ? [{ kind: 'text', content: projection.accumulatedText }]
+      : [];
+  return {
+    isStreaming,
+    streamingMessageId: projection.activeTurnId ?? null,
+    blocks,
+    activeTextContent: projection.accumulatedText,
+  };
 }
 
 /** @deprecated Use AgentChatContentBlock directly. Kept as alias for backward compatibility. */
@@ -206,15 +237,26 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
  * Delta chunks are rAF-batched: up to 50 chunks per frame collapse to a
  * single setStateMap call.  Terminal chunks (complete / error) flush the
  * pending buffer synchronously before being applied so they never lag.
+ *
+ * When useNewStateMachine is on, the returned state is the projection of the
+ * new-path state machine (via useChatStateDiffProjection) converted into the
+ * same AgentChatStreamingState shape. The legacy chunk-based accumulation still
+ * runs in the background so the old path can be restored by flipping the flag.
  */
 export function useAgentChatStreaming(activeThreadId: string | null): AgentChatStreamingState {
+  const newPathEnabled = useIsNewStateMachineEnabled();
   const [stateMap, setStateMap] = useState<ReadonlyMap<string, AgentChatStreamingState>>(new Map());
   const handleChunk = useBatchedChunkHandler(setStateMap);
 
+  // Always call the projection hook (hooks must not be called conditionally).
+  // When the flag is off, useChatStateDiffProjection returns INITIAL_PROJECTION
+  // and its IPC subscriptions are a no-op (threadId is passed as null).
+  const projection = useChatStateDiffProjection(newPathEnabled ? activeThreadId : null);
+
   useStreamChunkListener(handleChunk);
   useReplayBufferedChunks(activeThreadId, setStateMap);
-  const activeState = (activeThreadId ? stateMap.get(activeThreadId) : null) ?? INITIAL_STATE;
-  useCleanupCompletedStreams(activeThreadId, activeState, setStateMap);
+  const legacyState = (activeThreadId ? stateMap.get(activeThreadId) : null) ?? INITIAL_STATE;
+  useCleanupCompletedStreams(activeThreadId, legacyState, setStateMap);
 
-  return activeState;
+  return newPathEnabled ? projectionToStreamingState(projection) : legacyState;
 }

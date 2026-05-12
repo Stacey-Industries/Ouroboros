@@ -26,6 +26,17 @@ export const CHAT_STATE_CHANNELS = {
    * full channel name.
    */
   snapshotPrefix: 'chatState:snapshot',
+  /**
+   * main → renderer (per-thread): hard-fail error push prefix (Phase 5).
+   * Use errorChannel(threadId) to build the full channel name.
+   * Never use this prefix directly as a channel.
+   */
+  errorPrefix: 'chatState:error',
+  /**
+   * renderer → main: invoke to reset in-memory state machine for a thread
+   * and clear error state (Phase 5 "Restart Chat Session" action).
+   */
+  restartSession: 'chatCommand:restartSession',
 } as const;
 
 /**
@@ -46,4 +57,14 @@ export function diffChannel(threadId: string): string {
  */
 export function snapshotChannel(threadId: string): string {
   return `${CHAT_STATE_CHANNELS.snapshotPrefix}:${threadId}`;
+}
+
+/**
+ * Build the per-thread hard-fail error push channel name.
+ * Broadcaster sends when a ChatStateError is caught; renderer shows banner.
+ *
+ * @example errorChannel('t-abc') === 'chatState:error:t-abc'
+ */
+export function errorChannel(threadId: string): string {
+  return `${CHAT_STATE_CHANNELS.errorPrefix}:${threadId}`;
 }
