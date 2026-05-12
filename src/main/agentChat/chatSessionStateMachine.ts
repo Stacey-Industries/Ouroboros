@@ -133,7 +133,13 @@ export class ChatSessionStateMachine {
     this.status = to;
     const seq = this.nextSeq();
     log.info('[trace:state]', { threadId: this.threadId, from, to, seq });
-    return { type: 'status_changed', threadId: this.threadId, status: to, seq };
+    return {
+      type: 'status_changed',
+      threadId: this.threadId,
+      status: to,
+      activeTurnId: this.activeTurnId,
+      seq,
+    };
   }
 
   nextSeq(): number {

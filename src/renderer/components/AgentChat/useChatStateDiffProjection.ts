@@ -44,16 +44,36 @@ function applySnapshot(snap: ChatStateSnapshot): ChatStateDiffProjection {
 }
 
 function applyDiff(prev: ChatStateDiffProjection, diff: ChatStateDiff): ChatStateDiffProjection {
+  // activeTurnId tracking: most non-status diffs carry a turnId. We adopt it so
+  // selectStreamingState can detect the new path owns the active turn even when
+  // the renderer subscribed AFTER the state machine activated (snapshot empty).
   switch (diff.type) {
     case 'status_changed':
-      return { ...prev, status: diff.status, seq: diff.seq };
+      return {
+        ...prev,
+        status: diff.status,
+        seq: diff.seq,
+        activeTurnId: diff.status === 'idle' ? undefined : diff.activeTurnId,
+      };
     case 'text_appended':
-      return { ...prev, accumulatedText: prev.accumulatedText + diff.delta, seq: diff.seq };
+      return {
+        ...prev,
+        accumulatedText: prev.accumulatedText + diff.delta,
+        activeTurnId: diff.turnId,
+        seq: diff.seq,
+      };
     case 'turn_completed':
-      return { ...prev, accumulatedText: diff.finalText, seq: diff.seq };
+      return {
+        ...prev,
+        accumulatedText: diff.finalText,
+        activeTurnId: diff.turnId,
+        seq: diff.seq,
+      };
     case 'turn_failed':
     case 'turn_cancelled':
-      return { ...prev, seq: diff.seq };
+      return { ...prev, activeTurnId: diff.turnId, seq: diff.seq };
+    case 'tool_call_started':
+      return { ...prev, activeTurnId: diff.turnId, seq: diff.seq };
     default:
       return { ...prev, seq: diff.seq };
   }

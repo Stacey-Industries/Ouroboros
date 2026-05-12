@@ -141,7 +141,7 @@ describe('useChatStateDiffProjection', () => {
     renderHook(() => useChatStateDiffProjection('t1'));
     act(() => {
       // seq jumps from 10 to 12 — missing 11
-      diffCb?.({ type: 'status_changed', threadId: 't1', status: 'idle', seq: 12 });
+      diffCb?.({ type: 'status_changed', threadId: 't1', status: 'idle', activeTurnId: undefined, seq: 12 });
     });
     expect(mockRequestSnapshot).toHaveBeenCalledWith('t1');
   });
