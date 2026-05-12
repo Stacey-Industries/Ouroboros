@@ -80,6 +80,20 @@ function snapshotsSentTo(wc: MockWebContents): ChatStateSnapshot[] {
     .map((call) => call[1] as ChatStateSnapshot);
 }
 
+function makeCommand(threadId: ThreadId, content: string) {
+  return {
+    threadId,
+    workspaceRoot: 'C:\\test\\workspace',
+    content,
+    metadata: { source: 'composer' as const },
+    preSnapshotHash: null,
+    resolvedProvider: 'claude-code',
+    resolvedModel: 'provider-default',
+    resolvedEffort: 'medium',
+    resolvedPermissionMode: null,
+  };
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('Wave 86 walking skeleton — full pipeline integration', () => {
@@ -98,7 +112,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     const { normalizer, broadcaster, registry, wc, seenPsids } = wireSkeleton();
 
     // 1. User submits a message.
-    const submitEvent = normalizer.fromCommand({ threadId: THREAD_ID, content: 'hello' }, TURN_ID);
+    const submitEvent = normalizer.fromCommand(makeCommand(THREAD_ID, 'hello'), TURN_ID);
     broadcaster.dispatch(submitEvent);
 
     // 2. First stream-json event carries session_id → provider_session_assigned.
@@ -148,7 +162,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
 
   it('per-thread seq is monotonic across diffs', () => {
     const { normalizer, broadcaster, registry, wc, seenPsids } = wireSkeleton();
-    broadcaster.dispatch(normalizer.fromCommand({ threadId: THREAD_ID, content: 'hi' }, TURN_ID));
+    broadcaster.dispatch(normalizer.fromCommand(makeCommand(THREAD_ID, 'hi'), TURN_ID));
     const sysInit = normalizer.fromStreamJson(
       { type: 'system', subtype: 'init', session_id: PROVIDER_SESSION_ID } as never,
       TURN_ID,
@@ -180,7 +194,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
 
   it('text_appended diff payload carries the actual delta string', () => {
     const { normalizer, broadcaster, registry, wc, seenPsids } = wireSkeleton();
-    broadcaster.dispatch(normalizer.fromCommand({ threadId: THREAD_ID, content: 'hi' }, TURN_ID));
+    broadcaster.dispatch(normalizer.fromCommand(makeCommand(THREAD_ID, 'hi'), TURN_ID));
     const sysInit = normalizer.fromStreamJson(
       { type: 'system', subtype: 'init', session_id: PROVIDER_SESSION_ID } as never,
       TURN_ID,
@@ -221,7 +235,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
 
   it('unsubscribe stops further diff fan-out to that WebContents', () => {
     const { normalizer, broadcaster, registry, wc, unsub, seenPsids } = wireSkeleton();
-    broadcaster.dispatch(normalizer.fromCommand({ threadId: THREAD_ID, content: 'hi' }, TURN_ID));
+    broadcaster.dispatch(normalizer.fromCommand(makeCommand(THREAD_ID, 'hi'), TURN_ID));
     const sysInit = normalizer.fromStreamJson(
       { type: 'system', subtype: 'init', session_id: PROVIDER_SESSION_ID } as never,
       TURN_ID,
@@ -251,9 +265,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     const TOOL_ID = 'tool-use-ws-1' as import('@shared/types/canonicalChatEvent').ToolUseId;
 
     // 1. Submit turn.
-    broadcaster.dispatch(
-      normalizer.fromCommand({ threadId: THREAD_ID, content: 'run bash' }, TURN_ID),
-    );
+    broadcaster.dispatch(normalizer.fromCommand(makeCommand(THREAD_ID, 'run bash'), TURN_ID));
 
     // 2. Provider session assigned.
     const sysInit = normalizer.fromStreamJson(
@@ -346,7 +358,7 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     const wc2 = makeMockWebContents();
     broadcaster.subscribe(THREAD_ID, wc2 as unknown as WebContents);
 
-    broadcaster.dispatch(normalizer.fromCommand({ threadId: THREAD_ID, content: 'hi' }, TURN_ID));
+    broadcaster.dispatch(normalizer.fromCommand(makeCommand(THREAD_ID, 'hi'), TURN_ID));
     const sysInit = normalizer.fromStreamJson(
       { type: 'system', subtype: 'init', session_id: PROVIDER_SESSION_ID } as never,
       TURN_ID,
@@ -427,7 +439,7 @@ describe('Wave 86 Phase 2 — persistence integration across full turn lifecycle
     persistence.insertAlias({ threadId: P_THREAD, turnId: P_TURN, createdAt: 1000 });
 
     broadcaster.ensureThread(P_THREAD);
-    const submitEvent = normalizer.fromCommand({ threadId: P_THREAD, content: 'hello' }, P_TURN);
+    const submitEvent = normalizer.fromCommand(makeCommand(P_THREAD, 'hello'), P_TURN);
     broadcaster.dispatch(submitEvent);
 
     // 2. PSID arrives via stream-json.

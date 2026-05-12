@@ -11,6 +11,7 @@ import {
   errorChannel,
   snapshotChannel,
 } from '@shared/ipc/chatStateChannels';
+import type { AgentChatSendMessageRequest } from '@shared/types/agentChat';
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
 import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 import { ipcRenderer } from 'electron';
@@ -22,8 +23,9 @@ function onChannel<T>(channel: string, callback: (payload: T) => void): () => vo
 }
 
 export const chatStateNewPathApi = {
-  sendMessage: (payload: { threadId: string; content: string; cwd: string }) =>
+  sendMessage: (payload: AgentChatSendMessageRequest) =>
     ipcRenderer.invoke(CHAT_STATE_CHANNELS.sendMessage, payload),
+  cancelTurn: (turnId: string) => ipcRenderer.invoke(CHAT_STATE_CHANNELS.cancelTurn, { turnId }),
   requestSnapshot: (threadId: string) =>
     ipcRenderer.invoke(CHAT_STATE_CHANNELS.requestSnapshot, { threadId }),
   onStateDiff: (threadId: string, callback: (diff: ChatStateDiff) => void) =>

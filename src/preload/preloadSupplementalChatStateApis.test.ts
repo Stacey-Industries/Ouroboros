@@ -22,9 +22,25 @@ describe('chatStateNewPathApi.sendMessage', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('invokes chatCommand:sendMessage with the payload', async () => {
-    const payload = { threadId: 't1', content: 'hello', cwd: '/tmp' };
+    const payload = {
+      threadId: 't1',
+      workspaceRoot: '/tmp',
+      content: 'hello',
+      metadata: { source: 'composer' as const },
+    };
     await chatStateNewPathApi.sendMessage(payload);
     expect(ipcRenderer.invoke).toHaveBeenCalledWith(CHAT_STATE_CHANNELS.sendMessage, payload);
+  });
+});
+
+describe('chatStateNewPathApi.cancelTurn', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('invokes chatCommand:cancelTurn with turnId wrapped in object', async () => {
+    await chatStateNewPathApi.cancelTurn('turn-1');
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith(CHAT_STATE_CHANNELS.cancelTurn, {
+      turnId: 'turn-1',
+    });
   });
 });
 

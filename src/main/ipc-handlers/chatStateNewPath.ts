@@ -19,11 +19,9 @@
  * threadStore.ts is lazy-initialized at the singleton level (Wave 87 Phase 1).
  */
 
-import crypto from 'node:crypto';
-
 import { CHAT_STATE_CHANNELS } from '@shared/ipc/chatStateChannels';
-import type { ProviderSessionId, ThreadId, TurnId } from '@shared/types/canonicalChatEvent';
-import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
+import type { AgentChatSendMessageRequest } from '@shared/types/agentChat';
+import type { ThreadId } from '@shared/types/canonicalChatEvent';
 import { ipcMain } from 'electron';
 
 import {
@@ -32,14 +30,13 @@ import {
   normalizer,
   registry,
 } from '../agentChat/chatOrchestrationSingletons';
+import { cancelTurn, submitSend } from '../agentChat/chatSendCoordinator';
 import { ChatStateError } from '../agentChat/chatStateError';
 import { reconcileInterruptedThreads } from '../agentChat/crashRecovery';
 import { DualEmitOrchestrator } from '../agentChat/dualEmitOrchestrator';
 import { setShadowTap } from '../agentChat/shadowTap';
 import { agentChatThreadStore } from '../agentChat/threadStore';
 import log from '../logger';
-import { spawnStreamJsonProcess } from '../orchestration/providers/claudeStreamJsonRunner';
-import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
 
 // ─── App-start registry rebuild ───────────────────────────────────────────────
 
@@ -90,117 +87,57 @@ function runCrashRecovery(): void {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function mintTurnId(): TurnId {
-  return crypto.randomUUID() as TurnId;
-}
-
-// ─── Error-emit helper (Phase 5) ─────────────────────────────────────────────
-
-/**
- * Serialize a caught error into a ChatStateErrorPayload and push it to all
- * renderer windows subscribed to the given thread. Decision 3: hard-fail must
- * be visible in the renderer, not just in main-process logs.
- */
-function emitErrorToRenderer(threadId: ThreadId, err: unknown): void {
-  const payload: ChatStateErrorPayload =
-    err instanceof ChatStateError
-      ? { kind: err.kind, message: err.message, details: err.details }
-      : { kind: 'malformed-event', message: String(err), details: {} };
-  broadcaster.emitError(threadId, payload);
-}
-
-// ─── Stream wiring ────────────────────────────────────────────────────────────
-
-function wireStreamToMachine(
-  turnId: TurnId,
-  onEvent: (event: StreamJsonEvent) => void,
-): (raw: StreamJsonEvent) => void {
-  const seenPsids = new Set<ProviderSessionId>();
-  return (raw: StreamJsonEvent) => {
-    try {
-      const canonical = normalizer.fromStreamJson(raw, turnId, seenPsids);
-      if (!canonical) return;
-      // One raw event can map to multiple canonicals (e.g. user event with
-      // several tool_result blocks). Normalize to array.
-      const events = Array.isArray(canonical) ? canonical : [canonical];
-      for (const ev of events) {
-        if (ev.type === 'provider_session_assigned') {
-          registry.assignProviderSession(turnId, ev.providerSessionId);
-          getPersistence().assignProviderSessionToAlias(turnId, ev.providerSessionId);
-          const threadId = registry.threadIdForTurn(turnId);
-          getPersistence().setLastProviderSession(threadId, ev.providerSessionId);
-        }
-        broadcaster.dispatch(ev);
-      }
-    } catch (err) {
-      log.error('[chatStateNewPath] stream event dispatch failed', { err, turnId });
-      try {
-        const threadId = registry.threadIdForTurn(turnId);
-        emitErrorToRenderer(threadId, err);
-      } catch {
-        // registry lookup may also fail; swallow to keep the stream alive
-      }
-    }
-    onEvent(raw);
-  };
-}
-
 // ─── sendMessage handler ──────────────────────────────────────────────────────
 
-function spawnAndRetire(turnId: TurnId, content: string, cwd: string, unsub: () => void): void {
-  const handle = spawnStreamJsonProcess({
-    prompt: content,
-    cwd,
-    onEvent: wireStreamToMachine(turnId, () => undefined),
+function assertValidSendRequest(request: AgentChatSendMessageRequest): void {
+  if (hasRequiredSendFields(request)) return;
+  throw new ChatStateError('malformed-event', 'chatCommand:sendMessage: missing required fields', {
+    threadId: request?.threadId,
+    hasContent: !!request?.content,
+    hasWorkspaceRoot: !!request?.workspaceRoot,
   });
-  handle.result
-    .then(() => {
-      registry.retireTurn(turnId);
-      getPersistence().retireAlias(turnId, Date.now());
-      unsub();
-    })
-    .catch((err: unknown) => {
-      log.error('[chatStateNewPath] subprocess failed', { err, turnId });
-      registry.retireTurn(turnId);
-      getPersistence().retireAlias(turnId, Date.now());
-      unsub();
-    });
+}
+
+function hasRequiredSendFields(request: AgentChatSendMessageRequest | undefined): boolean {
+  return !!request?.workspaceRoot && !!(request.content || request.attachments?.length);
+}
+
+function subscribeSender(threadId: string | undefined, sender: Electron.WebContents): void {
+  if (!threadId) return;
+  broadcaster.ensureThread(threadId as ThreadId);
+  broadcaster.subscribe(threadId as ThreadId, sender);
 }
 
 async function handleSendMessage(
   event: Electron.IpcMainInvokeEvent,
   payload: unknown,
-): Promise<{ success: boolean; error?: string; turnId?: string }> {
-  const { threadId, content, cwd } = payload as {
-    threadId: string;
-    content: string;
-    cwd: string;
-  };
+): Promise<{ success: boolean; error?: string; turnId?: string; threadId?: string }> {
+  const request = payload as AgentChatSendMessageRequest;
+  assertValidSendRequest(request);
+  const existingThreadId = request.threadId;
+  subscribeSender(existingThreadId, event.sender);
+  const result = await submitSend(request, {
+    broadcaster,
+    registry,
+    normalizer,
+    persistence: getPersistence(),
+    threadStore: agentChatThreadStore,
+  });
+  subscribeSender(existingThreadId ? undefined : result.threadId, event.sender);
+  return result;
+}
 
-  if (!threadId || !content || !cwd) {
-    throw new ChatStateError(
-      'malformed-event',
-      'chatCommand:sendMessage: missing required fields',
-      { threadId, hasContent: !!content, hasCwd: !!cwd },
-    );
+async function handleCancelTurn(
+  _event: Electron.IpcMainInvokeEvent,
+  payload: unknown,
+): Promise<{ success: boolean; error?: string }> {
+  const { turnId } = payload as { turnId?: string };
+  if (!turnId) {
+    throw new ChatStateError('malformed-event', 'chatCommand:cancelTurn: missing turnId', {
+      turnId,
+    });
   }
-
-  const tid = threadId as ThreadId;
-  const turnId = mintTurnId();
-
-  registry.registerTurn(tid, turnId);
-  getPersistence().insertAlias({ threadId: tid, turnId, createdAt: Date.now() });
-
-  broadcaster.ensureThread(tid);
-
-  const unsub = broadcaster.subscribe(tid, event.sender);
-  const submitEvent = normalizer.fromCommand({ threadId, content }, turnId);
-  broadcaster.dispatch(submitEvent);
-  spawnAndRetire(turnId, content, cwd, unsub);
-
-  return { success: true, turnId };
+  return cancelTurn(turnId);
 }
 
 // ─── requestSnapshot handler ──────────────────────────────────────────────────
@@ -248,6 +185,9 @@ export function registerChatStateNewPathHandlers(): string[] {
   ipcMain.removeHandler(CHAT_STATE_CHANNELS.sendMessage);
   ipcMain.handle(CHAT_STATE_CHANNELS.sendMessage, handleSendMessage);
 
+  ipcMain.removeHandler(CHAT_STATE_CHANNELS.cancelTurn);
+  ipcMain.handle(CHAT_STATE_CHANNELS.cancelTurn, handleCancelTurn);
+
   ipcMain.removeHandler(CHAT_STATE_CHANNELS.requestSnapshot);
   ipcMain.handle(CHAT_STATE_CHANNELS.requestSnapshot, handleRequestSnapshot);
 
@@ -257,6 +197,7 @@ export function registerChatStateNewPathHandlers(): string[] {
   log.info('[chatStateNewPath] handlers registered');
   return [
     CHAT_STATE_CHANNELS.sendMessage,
+    CHAT_STATE_CHANNELS.cancelTurn,
     CHAT_STATE_CHANNELS.requestSnapshot,
     CHAT_STATE_CHANNELS.restartSession,
   ];

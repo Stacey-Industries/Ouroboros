@@ -43,6 +43,11 @@ export interface TurnSubmittedEvent {
   threadId: ThreadId;
   turnId: TurnId;
   content: string;
+  preSnapshotHash: string | null;
+  resolvedProvider: string;
+  resolvedModel: string;
+  resolvedEffort: string | null;
+  resolvedPermissionMode: string | null;
   ts: number;
   /** Per-thread monotonic integer; assigned by ChatSessionStateMachine. */
   seq: number;

@@ -14,12 +14,18 @@
  */
 
 import type {
+  AgentChatSendMessageMetadata,
+  AgentChatSendMessageOverrides,
+  ImageAttachment,
+} from '@shared/types/agentChat';
+import type {
   CanonicalChatEvent,
   ProviderSessionId,
   ThreadId,
   ToolUseId,
   TurnId,
 } from '@shared/types/canonicalChatEvent';
+import type { TaskRequestContextSelection } from '@shared/types/orchestration';
 
 import log from '../logger';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
@@ -46,7 +52,18 @@ export interface HookPayload {
 
 export interface ChatCommandPayload {
   threadId: string;
+  workspaceRoot: string;
   content: string;
+  attachments?: ImageAttachment[];
+  contextSelection?: Partial<TaskRequestContextSelection>;
+  overrides?: AgentChatSendMessageOverrides;
+  metadata?: AgentChatSendMessageMetadata;
+  skillExpansion?: string;
+  preSnapshotHash: string | null;
+  resolvedProvider: string;
+  resolvedModel: string;
+  resolvedEffort: string | null;
+  resolvedPermissionMode: string | null;
 }
 
 // ─── Internal stream-json narrowed shapes ─────────────────────────────────────
@@ -182,6 +199,11 @@ export class EventNormalizer {
       threadId: cmd.threadId as ThreadId,
       turnId,
       content: cmd.content,
+      preSnapshotHash: cmd.preSnapshotHash,
+      resolvedProvider: cmd.resolvedProvider,
+      resolvedModel: cmd.resolvedModel,
+      resolvedEffort: cmd.resolvedEffort,
+      resolvedPermissionMode: cmd.resolvedPermissionMode,
       ts: Date.now(),
       seq: 0,
     };

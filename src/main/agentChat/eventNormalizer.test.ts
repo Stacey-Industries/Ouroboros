@@ -34,12 +34,26 @@ function makeSeenSet(...initial: ProviderSessionId[]): Set<ProviderSessionId> {
   return new Set(initial);
 }
 
+function makeCommand(content: string) {
+  return {
+    threadId: THREAD1,
+    workspaceRoot: 'C:\\test\\workspace',
+    content,
+    metadata: { source: 'composer' as const },
+    preSnapshotHash: null,
+    resolvedProvider: 'claude-code',
+    resolvedModel: 'provider-default',
+    resolvedEffort: 'medium',
+    resolvedPermissionMode: null,
+  };
+}
+
 // ─── fromCommand ──────────────────────────────────────────────────────────────
 
 describe('fromCommand', () => {
   it('produces a turn_submitted event with correct fields', () => {
     const { norm } = makeNormalizer();
-    const evt = norm.fromCommand({ threadId: THREAD1, content: 'hello' }, TURN1);
+    const evt = norm.fromCommand(makeCommand('hello'), TURN1);
     expect(evt.type).toBe('turn_submitted');
     expect(evt.threadId).toBe(THREAD1);
     expect(evt.turnId).toBe(TURN1);
@@ -49,7 +63,7 @@ describe('fromCommand', () => {
 
   it('seq is 0 (placeholder — state machine overwrites)', () => {
     const { norm } = makeNormalizer();
-    const evt = norm.fromCommand({ threadId: THREAD1, content: 'x' }, TURN1);
+    const evt = norm.fromCommand(makeCommand('x'), TURN1);
     expect(evt.seq).toBe(0);
   });
 });
