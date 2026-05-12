@@ -28,6 +28,9 @@ export default defineConfig({
       'tools/**/*.test.{ts,js}',
       'scripts/**/*.test.{ts,mjs}',
       'e2e/**/*.test.ts',
+      // Wave acceptance tests authored by the orchestrator per
+      // ~/.claude/rules/orchestrator-owned-acceptance-tests.md.
+      'roadmap/wave-*/acceptance/*.test.ts',
     ],
     setupFiles: ['./vitest.setup.ts'],
     globals: false,
