@@ -200,6 +200,23 @@ export function useThreadState({ projectRoot }: ThreadStateArgs) {
   );
 }
 
+function makeSnapshotHandler(
+  setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>,
+): (event: Event) => void {
+  return (event: Event) => {
+    const thread = (event as CustomEvent).detail as AgentChatThreadRecord | undefined;
+    if (!thread || !thread.id) return;
+    log.info(
+      '[trace:chat-order] snapshot received',
+      'thread:',
+      thread.id.slice(-6),
+      'msgs:',
+      thread.messages.length,
+    );
+    setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
+  };
+}
+
 function subscribeThreadUpdates(
   args: EventSubscriptionArgs,
 ): ReturnType<typeof window.electronAPI.agentChat.onThreadUpdate> {
@@ -249,10 +266,14 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
       setThreads((currentThreads) => mergeThreadStatus(currentThreads, status));
     });
 
+    const handleSnapshot = makeSnapshotHandler(setThreads);
+    window.addEventListener('agent-chat:thread-snapshot', handleSnapshot);
+
     return () => {
       cleanupThread();
       cleanupMessage();
       cleanupStatus();
+      window.removeEventListener('agent-chat:thread-snapshot', handleSnapshot);
     };
   }, [args, projectRootRef, setActiveThreadId, setThreads]);
 }

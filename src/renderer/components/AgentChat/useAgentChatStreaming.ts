@@ -204,7 +204,17 @@ function useBatchedChunkHandler(setStateMap: SetStateMap): (chunk: AgentChatStre
       logChunkReceived(chunk);
       if (!chunk.threadId) return;
       if (chunk.type === 'thread_snapshot') {
-        // Thread state arrives via chatState:diff IPC — no DOM event needed.
+        // chatState:diff IPC is the eventual replacement, but the shadow path
+        // isn't reliably wired yet (Vite can't bundle the lazy require in
+        // chatStateNewPath.ts → runCrashRecovery; tracked for Wave 87). The
+        // DOM CustomEvent path remains load-bearing for thread finalization
+        // — without it, completed assistant messages vanish after the 5s
+        // cleanup timer runs.
+        if (chunk.thread) {
+          window.dispatchEvent(
+            new CustomEvent('agent-chat:thread-snapshot', { detail: chunk.thread }),
+          );
+        }
         return;
       }
       if (chunk.type === 'complete' || chunk.type === 'error') {
