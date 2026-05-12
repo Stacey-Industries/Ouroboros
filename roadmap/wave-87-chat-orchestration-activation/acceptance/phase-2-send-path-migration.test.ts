@@ -37,7 +37,6 @@ const STREAMING_HOOK = resolve(
   REPO_ROOT,
   'src/renderer/components/AgentChat/useAgentChatStreaming.ts',
 );
-const COORDINATOR_SRC = resolve(REPO_ROOT, 'src/main/agentChat/chatSendCoordinator.ts');
 const CANONICAL_EVENT_SRC = resolve(REPO_ROOT, 'src/shared/types/canonicalChatEvent.ts');
 const CHAT_STATE_CHANNELS_SRC = resolve(REPO_ROOT, 'src/shared/ipc/chatStateChannels.ts');
 
@@ -82,9 +81,7 @@ describe('Wave 87 Phase 2 acceptance — send-path build-out + renderer cutover'
     // We grep against the file rather than the runtime type because types do
     // not survive to runtime. The grep is scoped to the TurnSubmittedEvent
     // interface block.
-    const ifaceMatch = src.match(
-      /export interface TurnSubmittedEvent\s*\{[\s\S]*?\n\}/,
-    );
+    const ifaceMatch = src.match(/export interface TurnSubmittedEvent\s*\{[\s\S]*?\n\}/);
     expect(ifaceMatch, 'TurnSubmittedEvent interface declaration not found').toBeTruthy();
     const iface = ifaceMatch?.[0] ?? '';
     expect(iface, '`preSnapshotHash` field missing on TurnSubmittedEvent').toMatch(
@@ -114,17 +111,37 @@ describe('Wave 87 Phase 2 acceptance — send-path build-out + renderer cutover'
     );
   });
 
-  it('(5) chatSendCoordinator.ts source references the full enriched request shape', () => {
+  it('(5) chatSendCoordinator source references the full enriched request shape', () => {
     // Phase 2A's coordinator must accept the enriched payload the renderer
-    // sends. We assert at the source level that the coordinator file references
-    // at minimum: attachments, contextSelection, overrides, skillExpansion —
-    // the four enriched fields that the legacy bridge carried and which the
-    // walking-skeleton handler dropped.
-    const src = readSrc(COORDINATOR_SRC);
-    expect(src, 'coordinator must accept attachments').toMatch(/\battachments\b/);
-    expect(src, 'coordinator must accept contextSelection').toMatch(/\bcontextSelection\b/);
-    expect(src, 'coordinator must accept overrides').toMatch(/\boverrides\b/);
-    expect(src, 'coordinator must accept skillExpansion').toMatch(/\bskillExpansion\b/);
+    // sends. We grep across the coordinator's whole module surface (main +
+    // support + dispatch split files; ESLint's 300-line limit forces multi-
+    // file shape for non-trivial coordinators). At minimum: attachments,
+    // contextSelection, overrides, skillExpansion — the four enriched fields
+    // that the legacy bridge carried and which the walking-skeleton handler
+    // dropped.
+    const candidates = [
+      'src/main/agentChat/chatSendCoordinator.ts',
+      'src/main/agentChat/chatSendCoordinatorSupport.ts',
+      'src/main/agentChat/chatSendCoordinatorDispatch.ts',
+    ]
+      .map((p) => resolve(REPO_ROOT, p))
+      .filter((p) => {
+        try {
+          readFileSync(p);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    const combined = candidates.map((p) => readSrc(p)).join('\n');
+    expect(combined, 'coordinator surface must reference attachments').toMatch(/\battachments\b/);
+    expect(combined, 'coordinator surface must reference contextSelection').toMatch(
+      /\bcontextSelection\b/,
+    );
+    expect(combined, 'coordinator surface must reference overrides').toMatch(/\boverrides\b/);
+    expect(combined, 'coordinator surface must reference skillExpansion').toMatch(
+      /\bskillExpansion\b/,
+    );
   });
 
   it('(6) main IPC handler reaches the coordinator (chatStateNewPath.ts imports it)', () => {
@@ -133,9 +150,7 @@ describe('Wave 87 Phase 2 acceptance — send-path build-out + renderer cutover'
     // boundary so a future refactor that bypasses the coordinator (e.g.,
     // re-introduces direct spawnStreamJsonProcess from the handler) breaks
     // this test.
-    const handlerSrc = readSrc(
-      resolve(REPO_ROOT, 'src/main/ipc-handlers/chatStateNewPath.ts'),
-    );
+    const handlerSrc = readSrc(resolve(REPO_ROOT, 'src/main/ipc-handlers/chatStateNewPath.ts'));
     expect(
       handlerSrc,
       'chatStateNewPath.ts must import from chatSendCoordinator (the canonical send entry point)',
@@ -240,7 +255,9 @@ describe('Wave 87 Phase 2 acceptance — send-path build-out + renderer cutover'
     const diffs = wc.send.mock.calls
       .filter((c) => c[0] === diffChannel(THREAD_ID as never))
       .map((c) => c[1] as ChatStateDiff);
-    const submittedDiff = diffs.find((d) => d.type === 'status_changed' && d.status === 'submitting');
+    const submittedDiff = diffs.find(
+      (d) => d.type === 'status_changed' && d.status === 'submitting',
+    );
     expect(
       submittedDiff,
       'submitSend must dispatch a status_changed:submitting diff via the broadcaster',

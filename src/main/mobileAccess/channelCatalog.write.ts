@@ -246,5 +246,6 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   // sendMessage initiates a new user turn; restartSession clears and restarts.
   // Both mutate thread state — write-class appropriate.
   'chatCommand:sendMessage': { class: 'paired-write', timeoutClass: 'long' },
+  'chatCommand:cancelTurn': { class: 'paired-write', timeoutClass: 'short' },
   'chatCommand:restartSession': { class: 'paired-write', timeoutClass: 'short' },
 };

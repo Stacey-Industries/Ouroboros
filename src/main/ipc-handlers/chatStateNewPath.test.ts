@@ -76,11 +76,16 @@ describe('registerChatStateNewPathHandlers', () => {
     vi.clearAllMocks();
   });
 
-  it('registers chatCommand:sendMessage and chatState:requestSnapshot', () => {
+  it('registers chatCommand send/cancel handlers and chatState requestSnapshot', () => {
     registerChatStateNewPathHandlers();
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(CHAT_STATE_CHANNELS.sendMessage);
     expect(ipcMain.handle).toHaveBeenCalledWith(
       CHAT_STATE_CHANNELS.sendMessage,
+      expect.any(Function),
+    );
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(CHAT_STATE_CHANNELS.cancelTurn);
+    expect(ipcMain.handle).toHaveBeenCalledWith(
+      CHAT_STATE_CHANNELS.cancelTurn,
       expect.any(Function),
     );
     expect(ipcMain.removeHandler).toHaveBeenCalledWith(CHAT_STATE_CHANNELS.requestSnapshot);
@@ -90,12 +95,12 @@ describe('registerChatStateNewPathHandlers', () => {
     );
   });
 
-  it('returns all three channel names', () => {
+  it('returns all four channel names', () => {
     const channels = registerChatStateNewPathHandlers();
     expect(channels).toContain(CHAT_STATE_CHANNELS.sendMessage);
+    expect(channels).toContain(CHAT_STATE_CHANNELS.cancelTurn);
     expect(channels).toContain(CHAT_STATE_CHANNELS.requestSnapshot);
     expect(channels).toContain(CHAT_STATE_CHANNELS.restartSession);
-    expect(channels).toHaveLength(3);
+    expect(channels).toHaveLength(4);
   });
 });
-

@@ -16,6 +16,10 @@ describe('CHAT_STATE_CHANNELS constants', () => {
     expect(CHAT_STATE_CHANNELS.sendMessage).toBe('chatCommand:sendMessage');
   });
 
+  it('cancelTurn is chatCommand:cancelTurn', () => {
+    expect(CHAT_STATE_CHANNELS.cancelTurn).toBe('chatCommand:cancelTurn');
+  });
+
   it('requestSnapshot is chatState:requestSnapshot', () => {
     expect(CHAT_STATE_CHANNELS.requestSnapshot).toBe('chatState:requestSnapshot');
   });

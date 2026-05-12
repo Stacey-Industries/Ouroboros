@@ -34,6 +34,11 @@ function makeTurnSubmitted(overrides: Partial<{ content: string }> = {}) {
     threadId: T1,
     turnId: TURN1,
     content: overrides.content ?? 'hello',
+    preSnapshotHash: null,
+    resolvedProvider: 'claude-code',
+    resolvedModel: 'provider-default',
+    resolvedEffort: 'medium',
+    resolvedPermissionMode: null,
     ts: Date.now(),
     seq: 0,
   };

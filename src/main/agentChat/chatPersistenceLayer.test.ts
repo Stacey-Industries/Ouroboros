@@ -260,7 +260,19 @@ describe('setLastInterruptedAt', () => {
 describe('appendCanonicalEventLog', () => {
   it('serialises the event array into canonical_event_log', () => {
     const events = [
-      { type: 'turn_submitted', threadId: TID1, turnId: TURN1, content: 'hi', ts: 1, seq: 1 },
+      {
+        type: 'turn_submitted',
+        threadId: TID1,
+        turnId: TURN1,
+        content: 'hi',
+        preSnapshotHash: null,
+        resolvedProvider: 'claude-code',
+        resolvedModel: 'provider-default',
+        resolvedEffort: 'medium',
+        resolvedPermissionMode: null,
+        ts: 1,
+        seq: 1,
+      },
     ] as import('@shared/types/canonicalChatEvent').CanonicalChatEvent[];
     layer.appendCanonicalEventLog(MSG1, events);
     const row = db.prepare('SELECT canonical_event_log FROM messages WHERE id = ?').get(MSG1) as {

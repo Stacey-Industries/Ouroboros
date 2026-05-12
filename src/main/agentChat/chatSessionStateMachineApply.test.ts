@@ -26,8 +26,24 @@ function fresh(): ChatSessionStateMachine {
   return new ChatSessionStateMachine(T);
 }
 
+function makeTurnSubmitted() {
+  return {
+    type: 'turn_submitted' as const,
+    threadId: T,
+    turnId: TURN,
+    content: 'hi',
+    preSnapshotHash: null,
+    resolvedProvider: 'claude-code',
+    resolvedModel: 'provider-default',
+    resolvedEffort: 'medium',
+    resolvedPermissionMode: null,
+    ts: 1,
+    seq: 0,
+  };
+}
+
 function driveToStreaming(sm: ChatSessionStateMachine): void {
-  sm.dispatch({ type: 'turn_submitted', threadId: T, turnId: TURN, content: 'hi', ts: 1, seq: 0 });
+  sm.dispatch(makeTurnSubmitted());
   sm.dispatch({
     type: 'provider_session_assigned',
     threadId: T,
@@ -117,14 +133,7 @@ describe('tool_call_started / tool_call_input_delta / tool_call_completed', () =
 
   it('tool_call_started throws when not in streaming', () => {
     const sm = fresh();
-    sm.dispatch({
-      type: 'turn_submitted',
-      threadId: T,
-      turnId: TURN,
-      content: 'hi',
-      ts: 1,
-      seq: 0,
-    });
+    sm.dispatch(makeTurnSubmitted());
     expect(() =>
       sm.dispatch({
         type: 'tool_call_started',
@@ -253,14 +262,7 @@ describe('instructions_loaded', () => {
 describe('turn_failed', () => {
   it('transitions from submitting to completing', () => {
     const sm = fresh();
-    sm.dispatch({
-      type: 'turn_submitted',
-      threadId: T,
-      turnId: TURN,
-      content: 'hi',
-      ts: 1,
-      seq: 0,
-    });
+    sm.dispatch(makeTurnSubmitted());
     sm.dispatch({
       type: 'turn_failed',
       threadId: T,
@@ -309,14 +311,7 @@ describe('turn_failed', () => {
 describe('turn_cancelled', () => {
   it('transitions from submitting to completing', () => {
     const sm = fresh();
-    sm.dispatch({
-      type: 'turn_submitted',
-      threadId: T,
-      turnId: TURN,
-      content: 'hi',
-      ts: 1,
-      seq: 0,
-    });
+    sm.dispatch(makeTurnSubmitted());
     sm.dispatch({ type: 'turn_cancelled', threadId: T, turnId: TURN, ts: 1, seq: 0 });
     expect(sm.snapshot().status).toBe('completing');
   });

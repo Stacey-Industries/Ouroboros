@@ -13,6 +13,8 @@
 export const CHAT_STATE_CHANNELS = {
   /** renderer → main: invoke to send a user message. */
   sendMessage: 'chatCommand:sendMessage',
+  /** renderer → main: invoke to cancel an active turn. */
+  cancelTurn: 'chatCommand:cancelTurn',
   /** renderer → main: invoke to fetch a full thread snapshot. */
   requestSnapshot: 'chatState:requestSnapshot',
   /**

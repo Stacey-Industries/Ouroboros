@@ -5,6 +5,7 @@
  * The existing agentChat:* path is completely independent.
  */
 
+import type { AgentChatSendMessageRequest } from '@shared/types/agentChat';
 import type { ChatStateDiff, ChatStateSnapshot } from '@shared/types/chatStateDiff';
 import type { ChatStateErrorPayload } from '@shared/types/chatStateError';
 
@@ -13,11 +14,12 @@ export interface ChatStateNewPathAPI {
    * Submit a new message on a thread. Returns the minted turnId.
    * Throws (propagated as IPC error) when required fields are missing.
    */
-  sendMessage: (payload: {
-    threadId: string;
-    content: string;
-    cwd: string;
-  }) => Promise<{ success: boolean; error?: string; turnId?: string }>;
+  sendMessage: (
+    payload: AgentChatSendMessageRequest,
+  ) => Promise<{ success: boolean; error?: string; turnId?: string; threadId?: string }>;
+
+  /** Cancel the active turn by canonical turnId. */
+  cancelTurn: (turnId: string) => Promise<{ success: boolean; error?: string }>;
 
   /**
    * Request a full snapshot of thread state.
