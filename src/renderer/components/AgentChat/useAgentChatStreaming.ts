@@ -239,5 +239,25 @@ export function useAgentChatStreaming(activeThreadId: string | null): AgentChatS
   const legacyState = (activeThreadId ? stateMap.get(activeThreadId) : null) ?? INITIAL_STATE;
   useCleanupCompletedStreams(activeThreadId, legacyState, setStateMap);
 
-  return projectionToStreamingState(projection);
+  return selectStreamingState(projection, legacyState);
+}
+
+/**
+ * Choose between the new-path projection and the legacy reducer state.
+ *
+ * The new path is ADDITIVE: when it has a registered turn (activeTurnId
+ * present), use its projection. When it doesn't — which is every send today
+ * because production user sends still route through the OLD chat IPC handler
+ * — fall through to the legacy state. Without this guard, the empty
+ * projection overrides legacyState and the chat UI stalls on the streaming
+ * placeholder while the actual response is silently discarded.
+ *
+ * Exported for unit testing. Wave 87+ will retire the legacy path entirely
+ * once new-path renderer migration is complete; this helper goes away then.
+ */
+export function selectStreamingState(
+  projection: ChatStateDiffProjection,
+  legacyState: AgentChatStreamingState,
+): AgentChatStreamingState {
+  return projection.activeTurnId != null ? projectionToStreamingState(projection) : legacyState;
 }
