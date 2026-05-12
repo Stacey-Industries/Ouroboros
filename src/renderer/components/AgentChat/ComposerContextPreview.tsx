@@ -16,7 +16,6 @@
  */
 
 import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
-import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
@@ -81,29 +80,14 @@ function useActiveSessionRulesAndSkills(
   const filesystemRules = useFilesystemRules(projectRoot);
   return useMemo(() => {
     if (!claudeSessionId) {
-      const userRulesCount = filesystemRules.filter((r) => r.memoryType === 'User').length;
-      const projectRulesCount = filesystemRules.filter((r) => r.memoryType !== 'User').length;
-      log.info('[trace:ctx-preview] subscription fired', {
-        claudeSessionId: null,
-        projectRoot,
-        userRulesCount,
-        projectRulesCount,
-        source: 'useMemo(no-session)',
-      });
       return { loadedRules: filesystemRules, skillExecutions: [] };
     }
     const target = agents.find((s) => s.id === claudeSessionId);
-    const rules = target?.loadedRules ?? [];
-    const userRulesCount = rules.filter((r) => r.memoryType === 'User').length;
-    const projectRulesCount = rules.filter((r) => r.memoryType !== 'User').length;
-    // [trace:agent-record] Site 3 — log store session IDs alongside the queried claudeSessionId.
-    log.info('[trace:agent-record] lookup', { queriedSessionId: claudeSessionId, foundKey: target?.id ?? null, foundUserRulesCount: userRulesCount, foundProjectRulesCount: projectRulesCount, storeSessionIds: agents.map((s) => s.id) });
-    log.info('[trace:ctx-preview] subscription fired', { claudeSessionId, projectRoot, userRulesCount, projectRulesCount, source: 'useMemo(session-found)', agentFound: !!target });
     return {
-      loadedRules: rules,
+      loadedRules: target?.loadedRules ?? [],
       skillExecutions: target?.skillExecutions ?? [],
     };
-  }, [agents, claudeSessionId, filesystemRules, projectRoot]);
+  }, [agents, claudeSessionId, filesystemRules]);
 }
 
 /**
