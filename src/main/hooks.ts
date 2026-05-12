@@ -12,7 +12,8 @@ import {
 } from './approvalManager';
 import { enrichAgentStartPayload } from './hooksAgentStartEnrich';
 import { getChatLaunchesInFlight } from './hooksChatLaunch';
-import { tapContextOutcomeObserver } from './hooksContextOutcome';
+// (tap functions live in hooksTapRunner.ts; tapSkillExecution is also called
+// inline from dispatchToRenderer so we keep that one import here)
 import { pairCorrelationId } from './hooksCorrelationPairing';
 import {
   drainQueue,
@@ -24,8 +25,6 @@ import {
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
-import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
-import { tapGraphUsage } from './hooksGraphUsageTap';
 import {
   enrichFromPermissionRequest,
   handleConfigChange,
@@ -34,8 +33,6 @@ import {
   type HookEventType,
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
-import { tapPreToolResearch } from './hooksPreToolResearchTap';
-import { tapRankerRead } from './hooksRankerReadTap';
 import {
   handleSessionEnd,
   handleSessionStart,
@@ -43,7 +40,7 @@ import {
   resolveEnforcementResponse,
 } from './hooksSessionHandlers';
 import { tapSkillExecution } from './hooksSkillExecutionTap';
-import { tapSubagentTracker } from './hooksSubagentTap';
+import { runHookTaps } from './hooksTapRunner';
 import log from './logger';
 import { shadowRouteHookEvent } from './router/routerShadow';
 import { getOutcomeObserver, getTelemetryStore } from './telemetry';
@@ -123,8 +120,8 @@ const syntheticSessionIds = new Set<string>();
 export { beginChatSessionLaunch, endChatSessionLaunch } from './hooksChatLaunch';
 export { shouldSuppressHookEvent } from './hooksDispatchLogic';
 
-function trackSessionLifecycle(payload: HookPayload): void {
-  trackSessionLifecycleLogic(activeSessions, sessionCwdMap, payload);
+function trackSessionLifecycle(p: HookPayload): void {
+  trackSessionLifecycleLogic(activeSessions, sessionCwdMap, p);
 }
 
 function inferSessionId(payload: HookPayload): HookPayload {
@@ -254,7 +251,9 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
   traceInstructionsLoaded(rawPayload, syntheticSessionIds);
-  if (shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), syntheticSessionIds.size)) {
+  if (
+    shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), syntheticSessionIds.size)
+  ) {
     log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;
@@ -282,23 +281,14 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   }
 
   flushPendingQueue(windows);
-  log.debug(`dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`);
+  log.debug(
+    `dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
+  );
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
   clearApprovalRulesForEndedSession(payload);
-  runHookTaps(payload);
-}
-
-function runHookTaps(payload: HookPayload): void {
-  tapConflictMonitor(payload, sessionCwdMap);
-  tapEditProvenance(payload);
-  tapContextOutcomeObserver(payload);
-  tapSubagentTracker(payload);
-  tapPreToolResearch(payload);
-  tapGraphUsage(payload);
-  tapRankerRead(payload);
-  tapSkillExecution(payload);
+  runHookTaps(payload, sessionCwdMap);
 }
 
 function evictOrphanedSessions(): void {
@@ -355,7 +345,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   flushPendingQueue(windows);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
-  runHookTaps(payload);
+  runHookTaps(payload, sessionCwdMap);
 }
 
 export function getHooksAddress(): string | null {

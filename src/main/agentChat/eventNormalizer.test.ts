@@ -141,7 +141,7 @@ describe('fromStreamJson — text_delta', () => {
     }
   });
 
-  it('returns null for assistant event with no text blocks', () => {
+  it('emits tool_call_started for assistant event with tool_use block', () => {
     const { norm, reg } = makeNormalizer();
     reg.registerTurn(THREAD1, TURN1);
     const seen = makeSeenSet();
@@ -151,7 +151,14 @@ describe('fromStreamJson — text_delta', () => {
       message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Read', input: {} }] },
     } as never;
     const evt = norm.fromStreamJson(raw, TURN1, seen);
-    expect(evt).toBeNull();
+    expect(evt).not.toBeNull();
+    expect(evt && !Array.isArray(evt) && evt.type).toBe('tool_call_started');
+    if (evt && !Array.isArray(evt) && evt.type === 'tool_call_started') {
+      expect(evt.toolUseId).toBe('tu1');
+      expect(evt.name).toBe('Read');
+      expect(evt.threadId).toBe(THREAD1);
+      expect(evt.turnId).toBe(TURN1);
+    }
   });
 });
 
@@ -178,14 +185,15 @@ describe('fromStreamJson — turn_completed', () => {
     }
   });
 
-  it('returns null for result/error event (not handled in Phase 1)', () => {
+  it('returns turn_failed for result/error event (Phase 3)', () => {
     const { norm, reg } = makeNormalizer();
     reg.registerTurn(THREAD1, TURN1);
     const seen = makeSeenSet();
 
-    const raw = { type: 'result', subtype: 'error', result: '', is_error: true } as never;
+    const raw = { type: 'result', subtype: 'error', result: 'bad', is_error: true } as never;
     const evt = norm.fromStreamJson(raw, TURN1, seen);
-    expect(evt).toBeNull();
+    expect(evt).not.toBeNull();
+    expect(evt && !Array.isArray(evt) && evt.type).toBe('turn_failed');
   });
 });
 

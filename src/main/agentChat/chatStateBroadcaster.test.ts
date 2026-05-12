@@ -224,7 +224,16 @@ describe('full turn cycle via broadcaster', () => {
     expect(types).toContain('text_appended');
     expect(types).toContain('turn_completed');
 
-    // Final state should be idle
+    // Phase 3: turn_completed → completing; message_committed drives to idle.
+    expect(bc.snapshot(T1).status).toBe('completing');
+    bc.dispatch({
+      type: 'message_committed' as const,
+      threadId: T1,
+      turnId: TURN1,
+      messageId: 'msg-bc-1' as never,
+      ts: Date.now(),
+      seq: 0,
+    });
     expect(bc.snapshot(T1).status).toBe('idle');
   });
 });

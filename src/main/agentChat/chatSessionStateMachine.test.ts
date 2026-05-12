@@ -111,7 +111,16 @@ describe('turn_submitted', () => {
     const sm = fresh();
     driveToStreaming(sm, 'old text');
     sm.dispatch(makeTurnCompleted('final'));
-    // Now idle again — start a new turn
+    // Phase 3: must commit before returning to idle
+    sm.dispatch({
+      type: 'message_committed',
+      threadId: T1,
+      turnId: TURN1,
+      messageId: 'msg-1' as never,
+      ts: Date.now(),
+      seq: 0,
+    });
+    // Now idle — start a new turn
     sm.dispatch(makeTurnSubmitted());
     expect(sm.snapshot().accumulatedText).toBe('');
   });
@@ -230,11 +239,12 @@ describe('text_delta', () => {
 // ─── turn_completed (streaming → completing → idle) ───────────────────────────
 
 describe('turn_completed', () => {
-  it('transitions streaming → idle (via completing)', () => {
+  it('transitions streaming → completing (Phase 3: message_committed required for idle)', () => {
     const sm = fresh();
     driveToStreaming(sm);
     sm.dispatch(makeTurnCompleted('final answer'));
-    expect(sm.snapshot().status).toBe('idle');
+    // Phase 3: turn_completed lands in COMPLETING; message_committed drives to IDLE.
+    expect(sm.snapshot().status).toBe('completing');
   });
 
   it('emits a turn_completed diff with finalText', () => {
@@ -248,14 +258,15 @@ describe('turn_completed', () => {
     }
   });
 
-  it('emits status_changed completing and status_changed idle diffs', () => {
+  it('emits status_changed completing (Phase 3: idle only after message_committed)', () => {
     const sm = fresh();
     driveToStreaming(sm);
     const diffs = sm.dispatch(makeTurnCompleted());
     const statusDiffs = diffs.filter((d) => d.type === 'status_changed');
     const statuses = statusDiffs.map((d) => (d.type === 'status_changed' ? d.status : null));
+    // Phase 3: turn_completed → completing; idle only after message_committed.
     expect(statuses).toContain('completing');
-    expect(statuses).toContain('idle');
+    expect(statuses).not.toContain('idle');
   });
 
   it('throws invalid-transition when not in streaming', () => {
@@ -314,7 +325,7 @@ describe('seq', () => {
 // ─── Full happy-path cycle ────────────────────────────────────────────────────
 
 describe('full turn cycle', () => {
-  it('idle → submitting → streaming → idle produces expected diff sequence', () => {
+  it('idle → submitting → streaming → completing → idle (via message_committed)', () => {
     const sm = fresh();
     const all = [
       ...sm.dispatch(makeTurnSubmitted()),
@@ -329,10 +340,21 @@ describe('full turn cycle', () => {
     expect(types).toContain('text_appended');
     expect(types).toContain('turn_completed');
 
-    // Machine ends in idle
+    // Phase 3: lands in completing; message_committed drives to idle
+    expect(sm.snapshot().status).toBe('completing');
+
+    // Drive to idle via message_committed
+    sm.dispatch({
+      type: 'message_committed',
+      threadId: T1,
+      turnId: TURN1,
+      messageId: 'msg-cycle-1' as never,
+      ts: Date.now(),
+      seq: 0,
+    });
     expect(sm.snapshot().status).toBe('idle');
+
     // Accumulated text was populated during streaming
-    // (cleared on next turn, not here)
     expect(sm.snapshot().accumulatedText).toBe('Hello world');
   });
 });

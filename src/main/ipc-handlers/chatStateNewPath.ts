@@ -111,15 +111,18 @@ function wireStreamToMachine(
     try {
       const canonical = normalizer.fromStreamJson(raw, turnId, seenPsids);
       if (!canonical) return;
-
-      if (canonical.type === 'provider_session_assigned') {
-        registry.assignProviderSession(turnId, canonical.providerSessionId);
-        // Persist: update alias + thread lastProviderSessionId.
-        getPersistence().assignProviderSessionToAlias(turnId, canonical.providerSessionId);
-        const threadId = registry.threadIdForTurn(turnId);
-        getPersistence().setLastProviderSession(threadId, canonical.providerSessionId);
+      // Phase 3 changed the contract: one raw event can map to multiple canonicals
+      // (e.g. a user event with several tool_result blocks). Normalize to array.
+      const events = Array.isArray(canonical) ? canonical : [canonical];
+      for (const ev of events) {
+        if (ev.type === 'provider_session_assigned') {
+          registry.assignProviderSession(turnId, ev.providerSessionId);
+          getPersistence().assignProviderSessionToAlias(turnId, ev.providerSessionId);
+          const threadId = registry.threadIdForTurn(turnId);
+          getPersistence().setLastProviderSession(threadId, ev.providerSessionId);
+        }
+        broadcaster.dispatch(ev);
       }
-      broadcaster.dispatch(canonical);
     } catch (err) {
       log.error('[chatStateNewPath] stream event dispatch failed', { err, turnId });
     }

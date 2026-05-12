@@ -1,4 +1,4 @@
-/** chatOrchestrationBridgeSend.ts — Task send flow. Low-level helpers in chatOrchestrationBridgeSendHelpers.ts. */
+/** chatOrchestrationBridgeSend.ts — Task send flow. Low-work helpers in chatOrchestrationBridgeSendHelpers.ts. */
 
 import { beginChatSessionLaunch } from '../hooks';
 import log from '../logger';
@@ -18,6 +18,7 @@ import type {
   OrchestrationClient,
 } from './chatOrchestrationBridgeTypes';
 import type { PreparedSend } from './chatOrchestrationRequestSupport';
+import { getShadowTap } from './shadowTap';
 import type { AgentChatThreadStore } from './threadStore';
 import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatOrchestrationLink, AgentChatSendResult } from './types';
@@ -255,6 +256,42 @@ async function abortCancelledTask(args: {
   return { success: false, error: 'Cancelled by user.' };
 }
 
+function fireShadowCommandTap(pending: PreparedSend, taskId: string): void {
+  const tap = getShadowTap();
+  if (!tap) return;
+  const content = pending.thread.messages.find((m) => m.role === 'user')?.content ?? '';
+  tap.onCommand(
+    { threadId: pending.thread.id, content },
+    taskId as import('@shared/types/canonicalChatEvent').TurnId,
+  );
+}
+
+function setupStreamAndShadow(
+  args: {
+    orchestration: OrchestrationClient;
+    pending: PreparedSend;
+    runtime: AgentChatBridgeRuntime;
+    threadStore: AgentChatThreadStore;
+  },
+  validCreated: ValidCreated,
+  linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] },
+  et0: number,
+): ActiveStreamContext {
+  const assistantMessageId = buildAssistantMessageId(validCreated.taskId);
+  const streamCtx = buildStreamContext({
+    pending: args.pending,
+    created: validCreated,
+    link: linked.link,
+    assistantMessageId,
+    sendStartedAt: et0,
+  });
+  args.runtime.activeSends.set(validCreated.taskId, streamCtx);
+  // Signal hooks.ts to suppress lifecycle events; register turn in shadow path.
+  beginChatSessionLaunch();
+  fireShadowCommandTap(args.pending, validCreated.taskId);
+  return streamCtx;
+}
+
 export async function executePendingSend(args: {
   orchestration: OrchestrationClient;
   pending: PreparedSend;
@@ -279,18 +316,7 @@ export async function executePendingSend(args: {
     return abortCancelledTask({ linked, pending: args.pending, threadStore: args.threadStore });
   }
 
-  const assistantMessageId = buildAssistantMessageId(validCreated.taskId);
-  const streamCtx = buildStreamContext({
-    pending: args.pending,
-    created: validCreated,
-    link: linked.link,
-    assistantMessageId,
-    sendStartedAt: et0,
-  });
-  args.runtime.activeSends.set(validCreated.taskId, streamCtx);
-
-  // Signal hooks.ts to suppress lifecycle events until synthetic agent_start fires.
-  beginChatSessionLaunch();
+  const streamCtx = setupStreamAndShadow(args, validCreated, linked, et0);
 
   return executePendingSendCore({
     orchestration: args.orchestration,

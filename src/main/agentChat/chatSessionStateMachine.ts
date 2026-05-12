@@ -2,15 +2,39 @@
  * chatSessionStateMachine.ts — Per-thread state machine for the new chat state path.
  *
  * ONE instance per thread, owned by ChatStateBroadcaster via a Map<ThreadId, …>.
- * See spec §4.5 and waveplan-86.md Phase 1 scope (4 states, 4 event types).
+ * See spec §4.5 and waveplan-86.md Phase 3 scope (5 states, 16 event types).
  *
  * Decision 3: invalid transitions throw ChatStateError — never silently ignored.
  * Decision 8: emits [trace:event] at dispatch entry and [trace:state] on every transition.
  *
+ * Transition table (Phase 3 — full vocabulary):
+ *   IDLE       ──turn_submitted──▶ SUBMITTING
+ *   SUBMITTING ──turn_started/provider_session_assigned──▶ SUBMITTING (informational)
+ *   SUBMITTING ──text_delta──▶ STREAMING
+ *   STREAMING  ──text_delta──▶ STREAMING (loop)
+ *   STREAMING  ──tool_call_started──▶ TOOL_RUNNING
+ *   STREAMING  ──tool_result_observed──▶ STREAMING
+ *   TOOL_RUNNING ──tool_call_input_delta──▶ TOOL_RUNNING (loop)
+ *   TOOL_RUNNING ──tool_permission_requested/resolved──▶ TOOL_RUNNING (sub-flags)
+ *   TOOL_RUNNING ──tool_call_completed──▶ STREAMING
+ *   {STREAMING|TOOL_RUNNING} ──turn_completed──▶ COMPLETING
+ *   {STREAMING|TOOL_RUNNING|SUBMITTING} ──turn_failed──▶ COMPLETING
+ *   {non-IDLE, non-COMPLETING} ──turn_cancelled──▶ COMPLETING
+ *   COMPLETING ──message_committed──▶ IDLE
+ *   {non-COMPLETING} ──queue_appended──▶ same state
+ *   {any} ──instructions_loaded──▶ same state
+ *
+ * Implementation is split: applyEvent dispatch in chatSessionStateMachineApply.ts.
  * seq: per-thread monotonic integer, incremented on every emitted diff.
  */
 
-import type { CanonicalChatEvent, ThreadId, TurnId } from '@shared/types/canonicalChatEvent';
+import type {
+  CanonicalChatEvent,
+  MessageId,
+  ThreadId,
+  ToolUseId,
+  TurnId,
+} from '@shared/types/canonicalChatEvent';
 import type {
   ChatStateDiff,
   ChatStateSnapshot,
@@ -18,17 +42,41 @@ import type {
 } from '@shared/types/chatStateDiff';
 
 import log from '../logger';
+import { applyEvent } from './chatSessionStateMachineApply';
 import { ChatStateError } from './chatStateError';
+
+// ─── In-flight tool call state ────────────────────────────────────────────────
+
+export interface ToolCallInFlight {
+  name: string;
+  inputJson: string;
+  startedAt: number;
+}
+
+// ─── Queue entry ──────────────────────────────────────────────────────────────
+
+export interface QueueEntry {
+  id: MessageId;
+  content: string;
+  addedAt: number;
+}
 
 // ─── State machine ────────────────────────────────────────────────────────────
 
 export class ChatSessionStateMachine {
-  private status: ChatThreadStatus = 'idle';
-  private accumulatedText = '';
-  private activeTurnId: TurnId | undefined = undefined;
+  // Core state
+  status: ChatThreadStatus = 'idle';
+  accumulatedText = '';
+  activeTurnId: TurnId | undefined = undefined;
   private seq = 0;
 
-  constructor(private readonly threadId: ThreadId) {}
+  // Phase 3 extended state
+  toolCallsInFlight = new Map<ToolUseId, ToolCallInFlight>();
+  toolResults = new Map<ToolUseId, string>();
+  queue: QueueEntry[] = [];
+  awaitingPermission = new Set<ToolUseId>();
+
+  constructor(readonly threadId: ThreadId) {}
 
   // ─── Public API ─────────────────────────────────────────────────────────────
 
@@ -38,7 +86,7 @@ export class ChatSessionStateMachine {
    */
   dispatch(event: CanonicalChatEvent): ChatStateDiff[] {
     log.info('[trace:event]', { threadId: this.threadId, type: event.type, seq: event.seq });
-    return this.applyEvent(event);
+    return applyEvent(this, event);
   }
 
   /** Snapshot for subscribe-time hydration. */
@@ -52,101 +100,27 @@ export class ChatSessionStateMachine {
     };
   }
 
-  // ─── Event application ───────────────────────────────────────────────────────
+  // ─── Queue inspection (called by DualEmitOrchestrator after message_committed) ─
 
-  private applyEvent(event: CanonicalChatEvent): ChatStateDiff[] {
-    switch (event.type) {
-      case 'turn_submitted':
-        return this.onTurnSubmitted(event.turnId);
-      case 'provider_session_assigned':
-        return this.onProviderSessionAssigned();
-      case 'text_delta':
-        return this.onTextDelta(event.delta);
-      case 'turn_completed':
-        return this.onTurnCompleted(event.finalText);
-      default: {
-        // Exhaustiveness guard — Phase 3 expands the event union.
-        const _exhaustive: never = event;
-        throw new ChatStateError(
-          'invalid-transition',
-          `ChatSessionStateMachine: unhandled event type`,
-          { type: (_exhaustive as CanonicalChatEvent).type, from: this.status },
-        );
-      }
-    }
+  /** Return and remove the head of the send queue, if any. */
+  dequeueHead(): QueueEntry | undefined {
+    return this.queue.shift();
   }
 
-  // ─── Transition handlers ─────────────────────────────────────────────────────
-
-  private onTurnSubmitted(turnId: TurnId): ChatStateDiff[] {
-    this.requireState('idle', 'turn_submitted');
-    this.activeTurnId = turnId;
-    this.accumulatedText = '';
-    return [this.transition('submitting')];
+  /** Peek at the queue head without removing it. */
+  peekQueueHead(): QueueEntry | undefined {
+    return this.queue[0];
   }
 
-  private onProviderSessionAssigned(): ChatStateDiff[] {
-    this.requireState('submitting', 'provider_session_assigned');
-    // No state change — PSID registered is informational only at state-machine level.
-    // The broadcaster calls IdentityRegistry.assignProviderSession before dispatching.
-    return [];
-  }
+  // ─── Helpers (called by applyEvent) ──────────────────────────────────────────
 
-  private onTextDelta(delta: string): ChatStateDiff[] {
-    if (this.status !== 'submitting' && this.status !== 'streaming') {
-      this.throwInvalidTransition('text_delta');
-    }
-
-    const diffs: ChatStateDiff[] = [];
-    if (this.status === 'submitting') {
-      diffs.push(this.transition('streaming'));
-    }
-    this.accumulatedText += delta;
-    diffs.push({
-      type: 'text_appended',
-      threadId: this.threadId,
-      turnId: this.activeTurnId as TurnId,
-      delta,
-      seq: this.nextSeq(),
-    });
-    return diffs;
-  }
-
-  private onTurnCompleted(finalText: string): ChatStateDiff[] {
-    // Phase 1 boundary: only 'streaming' → 'completing' is valid.
-    // A duplicate turn_completed (e.g. provider sends result twice) will throw
-    // ChatStateError('invalid-transition') via requireState — this is intentional
-    // (Decision 3: hard-fail on impossible states, never swallow silently).
-    // Phase 2 should add deduplication at the normalizer level if needed.
-    this.requireState('streaming', 'turn_completed');
-    const diffs: ChatStateDiff[] = [];
-    diffs.push(this.transition('completing'));
-    diffs.push({
-      type: 'turn_completed',
-      threadId: this.threadId,
-      turnId: this.activeTurnId as TurnId,
-      finalText,
-      seq: this.nextSeq(),
-    });
-    // completing → idle: in Phase 1 the transition is immediate (no SQLite write).
-    // Phase 2 TODO: emit a synthetic 'message_committed' event after persistence
-    // so the completing state is observable before the next turn can be submitted.
-    // Until then, the machine returns to idle atomically with the turn_completed diff,
-    // which is sufficient for the Phase 1 smoke: one message per thread.
-    this.activeTurnId = undefined;
-    diffs.push(this.transition('idle'));
-    return diffs;
-  }
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-  private requireState(expected: ChatThreadStatus, eventType: string): void {
+  requireState(expected: ChatThreadStatus, eventType: string): void {
     if (this.status !== expected) {
       this.throwInvalidTransition(eventType);
     }
   }
 
-  private throwInvalidTransition(eventType: string): never {
+  throwInvalidTransition(eventType: string): never {
     throw new ChatStateError(
       'invalid-transition',
       `ChatSessionStateMachine[${this.threadId}]: event '${eventType}' invalid in state '${this.status}'`,
@@ -154,7 +128,7 @@ export class ChatSessionStateMachine {
     );
   }
 
-  private transition(to: ChatThreadStatus): ChatStateDiff {
+  transition(to: ChatThreadStatus): ChatStateDiff {
     const from = this.status;
     this.status = to;
     const seq = this.nextSeq();
@@ -162,7 +136,7 @@ export class ChatSessionStateMachine {
     return { type: 'status_changed', threadId: this.threadId, status: to, seq };
   }
 
-  private nextSeq(): number {
+  nextSeq(): number {
     this.seq += 1;
     return this.seq;
   }

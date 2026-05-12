@@ -135,13 +135,14 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
     // Assert the diff sequence on the per-thread channel.
     const diffs = diffsSentTo(wc);
     const types = diffs.map((d) => `${d.type}${'status' in d ? `:${d.status}` : ''}`);
+    // Phase 3: turn_completed → completing; idle only after message_committed.
     expect(types).toEqual([
       'status_changed:submitting', // from turn_submitted
       'status_changed:streaming', // first text_delta promotes
       'text_appended', // the delta itself
       'status_changed:completing', // turn_completed → completing
       'turn_completed', // the completion diff
-      'status_changed:idle', // immediate return to idle (Phase 1 boundary)
+      // status_changed:idle removed — Phase 3 requires explicit message_committed
     ]);
   });
 
@@ -243,6 +244,100 @@ describe('Wave 86 walking skeleton — full pipeline integration', () => {
 
     // No new sends should have happened after unsubscribe.
     expect(wc.send.mock.calls.length).toBe(countBefore);
+  });
+
+  it('Phase 3: tool-call lifecycle — tool_call_started → input_delta → completed → result → turn_completed → message_committed → idle', () => {
+    const { normalizer, broadcaster, registry, wc, seenPsids } = wireSkeleton();
+    const TOOL_ID = 'tool-use-ws-1' as import('@shared/types/canonicalChatEvent').ToolUseId;
+
+    // 1. Submit turn.
+    broadcaster.dispatch(
+      normalizer.fromCommand({ threadId: THREAD_ID, content: 'run bash' }, TURN_ID),
+    );
+
+    // 2. Provider session assigned.
+    const sysInit = normalizer.fromStreamJson(
+      { type: 'system', subtype: 'init', session_id: PROVIDER_SESSION_ID } as never,
+      TURN_ID,
+      seenPsids,
+    );
+    if (sysInit) {
+      registry.assignProviderSession(TURN_ID, PROVIDER_SESSION_ID);
+      broadcaster.dispatch(sysInit);
+    }
+
+    // 3. Text delta — enters streaming.
+    const textBefore = normalizer.fromStreamJson(
+      { type: 'assistant', message: { content: [{ type: 'text', text: 'Running...' }] } } as never,
+      TURN_ID,
+      seenPsids,
+    );
+    if (textBefore) broadcaster.dispatch(textBefore);
+
+    // 4. Tool call started — streaming → tool_running.
+    const toolStarted = normalizer.fromStreamJson(
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', id: TOOL_ID, name: 'Bash', input: {} }] },
+      } as never,
+      TURN_ID,
+      seenPsids,
+    );
+    expect(toolStarted?.type).toBe('tool_call_started');
+    if (toolStarted) broadcaster.dispatch(toolStarted);
+    expect(broadcaster.snapshot(THREAD_ID).status).toBe('tool_running');
+
+    // 5. Tool result observed (user event with tool_result block).
+    const toolResultRaw = normalizer.fromStreamJson(
+      {
+        type: 'user',
+        message: { content: [{ type: 'tool_result', tool_use_id: TOOL_ID, content: 'exit 0' }] },
+      } as never,
+      TURN_ID,
+      seenPsids,
+    );
+    const toolResults = Array.isArray(toolResultRaw)
+      ? toolResultRaw
+      : toolResultRaw
+        ? [toolResultRaw]
+        : [];
+    expect(toolResults.length).toBeGreaterThan(0);
+    expect(toolResults[0].type).toBe('tool_result_observed');
+    for (const r of toolResults) broadcaster.dispatch(r);
+
+    // 6. Turn completed.
+    const completed = normalizer.fromStreamJson(
+      { type: 'result', subtype: 'success', result: 'Done' } as never,
+      TURN_ID,
+      seenPsids,
+    );
+    expect(completed?.type).toBe('turn_completed');
+    if (completed) broadcaster.dispatch(completed);
+    expect(broadcaster.snapshot(THREAD_ID).status).toBe('completing');
+
+    // 7. message_committed drives completing → idle.
+    broadcaster.dispatch({
+      type: 'message_committed' as const,
+      threadId: THREAD_ID,
+      turnId: TURN_ID,
+      messageId: 'msg-ws-1' as import('@shared/types/canonicalChatEvent').MessageId,
+      ts: Date.now(),
+      seq: 0,
+    });
+    expect(broadcaster.snapshot(THREAD_ID).status).toBe('idle');
+
+    // Assert status sequence visible on the wire.
+    const diffs = diffsSentTo(wc);
+    const statuses = diffs
+      .filter(
+        (d): d is Extract<typeof d, { type: 'status_changed' }> => d.type === 'status_changed',
+      )
+      .map((d) => d.status);
+    expect(statuses).toContain('submitting');
+    expect(statuses).toContain('streaming');
+    expect(statuses).toContain('tool_running');
+    expect(statuses).toContain('completing');
+    expect(statuses).toContain('idle');
   });
 
   it('broadcaster fans-out to multiple subscribers on the same thread', () => {
