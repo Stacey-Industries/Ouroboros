@@ -125,3 +125,10 @@ ios/
 # Wave 62 — ephemeral disabled-rule sibling dir (project scope).
 # Files here are restored to .claude/rules/ on next session-spawn or app boot.
 .claude/rules-disabled/
+
+# Wave 86 — dev-mode SQLite store for the new chat-state architecture.
+# Lands at repo root when threadStore falls back from app.getPath('userData').
+threads.db
+threads.db-journal
+threads.db-wal
+threads.db-shm
