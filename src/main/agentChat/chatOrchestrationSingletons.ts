@@ -10,10 +10,8 @@
  * Decision 5: SQLite is authoritative; persistence failures must NOT kill
  *             in-flight runtime state — every persistence call is wrapped.
  *
- * threadStore.ts calls app.getPath('userData') at module-eval time (via the
- * agentChatThreadStore singleton). We accept an optional dbPath override so
- * tests can inject a path without triggering Electron's app.getPath. In
- * production, the default resolves lazily at first getPersistence() call.
+ * Wave 87 Phase 1: threadStore is lazy-initialized at the singleton level, so
+ * a static import is safe everywhere (no module-eval-time Electron access).
  */
 
 import path from 'node:path';
@@ -23,6 +21,7 @@ import { ChatPersistenceLayer } from './chatPersistenceLayer';
 import { ChatStateBroadcaster } from './chatStateBroadcaster';
 import { EventNormalizer } from './eventNormalizer';
 import { IdentityRegistry } from './identityRegistry';
+import { getDefaultAgentChatThreadStoreDir } from './threadStore';
 
 // ─── Singletons ───────────────────────────────────────────────────────────────
 
@@ -37,12 +36,7 @@ let _dbPathOverride: string | null = null;
 
 function resolveDbPath(): string {
   if (_dbPathOverride) return _dbPathOverride;
-  // Dynamic import at call time — avoids module-eval of threadStore which
-  // calls app.getPath('userData') via its module-level singleton construction.
-  // We import the specific export directly to keep tree-shaking clean.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-  const ts = require('./threadStore') as { getDefaultAgentChatThreadStoreDir: () => string };
-  return path.join(ts.getDefaultAgentChatThreadStoreDir(), 'threads.db');
+  return path.join(getDefaultAgentChatThreadStoreDir(), 'threads.db');
 }
 
 export function getPersistence(): ChatPersistenceLayer {

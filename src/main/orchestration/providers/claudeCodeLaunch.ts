@@ -4,6 +4,18 @@ import type { TurnId } from '@shared/types/canonicalChatEvent';
 
 import { getShadowTap } from '../../agentChat/shadowTap';
 import { type ClaudeCliSettings, getConfigValue } from '../../config';
+
+function wrapWithShadowTap(
+  inner: (event: StreamJsonEvent) => void,
+  turnId: TurnId,
+): (event: StreamJsonEvent) => void {
+  const tap = getShadowTap();
+  if (!tap) return inner;
+  return (event: StreamJsonEvent) => {
+    inner(event);
+    tap.onStreamJsonEvent(event, turnId);
+  };
+}
 import { resolveModelEnv } from '../../providers';
 import { getSessionStore } from '../../session/sessionStore';
 import { buildEventHandler } from './claudeCodeEventHandler';
@@ -244,17 +256,8 @@ function scheduleLaunch(opts: ScheduleLaunchOpts): void {
     getNextGlobalBlockIndex: opts.getNextGlobalBlockIndex,
     getCumulativeUsage: opts.getCumulativeUsage,
   };
-  // Shadow tap: forward each stream-json event to the canonical state path in
-  // parallel. getShadowTap() returns null until the tap is initialized at
-  // startup; errors inside the orchestrator are swallowed by DualEmitOrchestrator.
   const turnId = opts.context.taskId as TurnId;
-  const shadowTap = getShadowTap();
-  const eventHandler = shadowTap
-    ? (event: import('./streamJsonTypes').StreamJsonEvent) => {
-        opts.eventHandler(event);
-        shadowTap.onStreamJsonEvent(event, turnId);
-      }
-    : opts.eventHandler;
+  const eventHandler = wrapWithShadowTap(opts.eventHandler, turnId);
   const launchArgs = buildLaunchScheduleArgs({
     context: opts.context,
     cwd: opts.cwd,

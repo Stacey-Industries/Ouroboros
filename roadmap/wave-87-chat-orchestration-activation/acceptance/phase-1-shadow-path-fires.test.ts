@@ -46,6 +46,17 @@ describe('Wave 87 Phase 1 acceptance — shadow path activation', () => {
     expect(src).not.toMatch(/require\(\s*['"][^'"]*agentChat\/threadStore['"]/);
   });
 
+  it('chatOrchestrationSingletons.ts no longer dynamically requires threadStore', () => {
+    // Third instance of the same pattern. Surfaced AFTER initial Phase 1 dispatch
+    // when runtime probes showed `Cannot find module './threadStore'` errors from
+    // `resolveDbPath` even though the two known sites had been fixed. Phase 0's
+    // grep used the relative-from-parent path pattern (`'../agentChat/threadStore'`)
+    // and missed the sibling-relative `'./threadStore'` here. Lesson recorded in
+    // phase-0-results.md §H.
+    const src = readSrc('src/main/agentChat/chatOrchestrationSingletons.ts');
+    expect(src).not.toMatch(/require\(\s*['"]\.\/threadStore['"]/);
+  });
+
   it('threadStore.ts has no module-eval-time Electron app.getPath call', () => {
     const src = readSrc('src/main/agentChat/threadStore.ts');
     // Walk the source looking for `app.getPath(` at module top level (column 0

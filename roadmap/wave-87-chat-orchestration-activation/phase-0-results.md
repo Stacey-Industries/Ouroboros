@@ -112,14 +112,15 @@ npx vitest run src/main/session/softDeleteGc.test.ts
 npx tsc --noEmit   # confirms agentChatEventForwarders.ts + mainShutdown.ts still type-check
 ```
 
-## C. Lazy `require()` instances of `threadStore.ts` (Phase 1 deletes both)
+## C. Lazy `require()` instances of `threadStore.ts` (Phase 1 deletes all three)
 
 | File | Line | Reason it's lazy |
 |---|---|---|
 | `src/main/ipc-handlers/chatStateNewPath.ts` | 93 | "threadStore.ts calls `app.getPath('userData')` at module-eval time" (per file comment at lines 20–23). |
-| `src/main/session/sessionStartup.ts` | 36 | **NEW finding — same root cause.** Comment in this file likely cites the same reason; confirm during Phase 1. |
+| `src/main/session/sessionStartup.ts` | 36 | Same root cause. Comment in this file cites the same reason. |
+| `src/main/agentChat/chatOrchestrationSingletons.ts` | 44 | **THIRD SITE — missed by initial Phase 0 grep.** Discovered post-Phase-1-dispatch via runtime probes (electron-log showed `Cannot find module './threadStore'` from `resolveDbPath`). Phase 0's grep used `'\.\./agentChat/threadStore'` and missed the sibling-relative `'./threadStore'` here. See §H for the lesson. |
 
-**Phase 1 action:** Replace both with static `import` statements once the `threadStore.ts` lazy-init refactor lands. Update the comment blocks documenting why the lazy pattern was needed (the reason is gone after refactor).
+**Phase 1 action:** Replace all three with static `import` statements once the `threadStore.ts` lazy-init refactor lands. Update the comment blocks documenting why the lazy pattern was needed (the reason is gone after refactor).
 
 ## D. `[trace:agent-record]` emit sites (Phase 4 deletes)
 
@@ -165,5 +166,5 @@ The orchestrator runs both before dispatching the respective phase and confirms 
 
 - The `webPreloadApisSupplemental.ts` migration in Phase 3 is **non-trivial** — web-mode users need the new channels wired through preload, not just the legacy ones removed. Brief Phase 3's subagent explicitly on this.
 - The `mobileAccess/channelCatalog.read.ts` entry is a **new finding not in the original wave plan**. Surface to Cole if the right disposition for `chatState:*` channels in the mobile-access catalog isn't obvious during Phase 3.
-- Two lazy requires of `threadStore.ts` (not one) — `sessionStartup.ts:36` is the second. Phase 1's acceptance test covers both. The waveplan §"In scope" implicitly assumes one site; Phase 1's brief must reference both.
+- **Three** lazy requires of `threadStore.ts`, not two. Phase 1's acceptance test now covers all three. The third (`chatOrchestrationSingletons.ts:44`) was missed by Phase 0's initial grep because the grep used `'\.\./agentChat/threadStore'` and the sibling-relative `'./threadStore'` did not match. The acceptance test passed without it because the structural contract was scoped to the two known files — runtime smoke caught the gap. **Lesson:** Phase 0 lazy-require greps for any same-directory module MUST also search the bare `'./{module}'` pattern. Recorded for future wave Phase 0 dispatchers.
 - `eventProjector.ts` may end up empty or deletable after Phase 3 (its only documented Wave-87 responsibility is `applyStickyLinkFields`). Surface to Cole during Phase 3 review.
