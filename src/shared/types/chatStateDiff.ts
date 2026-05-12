@@ -22,6 +22,13 @@ export interface StatusChangedDiff {
   type: 'status_changed';
   threadId: ThreadId;
   status: ChatThreadStatus;
+  /**
+   * The active turn at transition time, or undefined when transitioning to idle.
+   * Renderer projections use this to know the active turn from the FIRST diff,
+   * since status_changed is usually the only diff that fires between turn_submitted
+   * and the first text_delta (which can be 10+ seconds later for cold warm processes).
+   */
+  activeTurnId: TurnId | undefined;
   /** Per-thread monotonic seq from the state machine. */
   seq: number;
 }

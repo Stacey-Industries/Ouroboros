@@ -200,6 +200,7 @@ function onToolResultObserved(
       type: 'status_changed',
       threadId: sm.threadId,
       status: 'streaming',
+      activeTurnId: sm.activeTurnId,
       seq: sm.nextSeq(),
     });
   }
