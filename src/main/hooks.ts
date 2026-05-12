@@ -21,7 +21,6 @@ import {
   inferSessionId as inferSessionIdLogic,
   queuePayload,
   shouldSuppressDispatch,
-  traceInstructionsLoaded,
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
@@ -245,7 +244,6 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
   tapSkillExecution(rawPayload);
-  traceInstructionsLoaded(rawPayload, new Set());
   if (shouldSuppressDispatch(rawPayload.type, getChatLaunchesInFlight(), 0)) {
     log.info(`suppressing: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);

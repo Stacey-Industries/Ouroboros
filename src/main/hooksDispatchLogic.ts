@@ -5,7 +5,6 @@
  * functions are testable without mocks.
  */
 
-import log from 'electron-log/main';
 
 import type { HookPayload } from './hooks';
 import type { HookEventType } from './hooksLifecycleHandlers';
@@ -29,17 +28,6 @@ export function shouldSuppressDispatch(
 ): boolean {
   if (type === 'instructions_loaded') return false;
   return launchesInFlight > 0 || shouldSuppressHookEvent(type, syntheticCount);
-}
-
-/** [trace:agent-record] Site 1 — log instructions_loaded as it passes through the dispatcher.
- * Captures the hook-pipe sessionId so we can compare it against the stream-json claudeSessionId. */
-export function traceInstructionsLoaded(payload: HookPayload, activeSyntheticIds: Set<string>): void {
-  if (payload.type !== 'instructions_loaded') return;
-  log.info('[trace:agent-record] instructions_loaded reaching dispatcher', {
-    hookPipeSessionId: payload.sessionId,
-    syntheticSessionIds: [...activeSyntheticIds],
-    willSuppressViaSynthetic: shouldSuppressHookEvent(payload.type, activeSyntheticIds.size),
-  });
 }
 
 const MAX_PAYLOAD_FIELD_BYTES = 10_240; // 10 KB
