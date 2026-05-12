@@ -270,6 +270,7 @@ function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
 }
 
 let singletonRuntime: ThreadStoreSqliteRuntime | null = null;
+let singletonStore: AgentChatThreadStore | null = null;
 
 export function createAgentChatThreadStore(
   options: AgentChatThreadStoreOptions = {},
@@ -284,23 +285,32 @@ export function createAgentChatThreadStore(
   return buildThreadStoreApi({ createId, now, runtime });
 }
 
-// Only construct the singleton in the main process. Worker threads that
-// transitively import this module (via the codebase-graph indexing worker's
-// pass dependency chain) have no `electron.app` and would crash in the
-// underlying SQLite open. Export a stub in workers — worker code never calls
-// into this anyway, it just needs the module to load cleanly.
-export const agentChatThreadStore: AgentChatThreadStore = isMainThread
-  ? createAgentChatThreadStore()
-  : new Proxy({} as AgentChatThreadStore, {
-      get() {
-        throw new Error(
-          'agentChatThreadStore is main-process-only and was accessed from a worker thread',
-        );
-      },
-    });
+function getSingletonThreadStore(): AgentChatThreadStore {
+  if (singletonStore) return singletonStore;
+  if (!isMainThread) {
+    throw new Error(
+      'agentChatThreadStore is main-process-only and was accessed from a worker thread',
+    );
+  }
+  singletonStore = createAgentChatThreadStore();
+  return singletonStore;
+}
+
+function bindThreadStoreMember(member: unknown, target: AgentChatThreadStore): unknown {
+  if (typeof member !== 'function') return member;
+  return member.bind(target);
+}
+
+export const agentChatThreadStore: AgentChatThreadStore = new Proxy({} as AgentChatThreadStore, {
+  get(_target, prop) {
+    const store = getSingletonThreadStore();
+    return bindThreadStoreMember(Reflect.get(store as object, prop), store);
+  },
+});
 
 /** Close the thread store's SQLite connection. Call during app shutdown. */
 export function closeThreadStore(): void {
   singletonRuntime?.close();
   singletonRuntime = null;
+  singletonStore = null;
 }

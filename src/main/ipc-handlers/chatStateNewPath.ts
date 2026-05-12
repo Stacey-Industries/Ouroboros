@@ -16,10 +16,7 @@
  *             inside ChatPersistenceLayer itself.
  *
  * The existing agentChat:* path is completely untouched.
- *
- * Note: agentChatThreadStore is accessed lazily (via require inside runCrashRecovery)
- * because threadStore.ts calls app.getPath('userData') at module-eval time. Importing
- * it statically would crash test environments where Electron's `app` is not available.
+ * threadStore.ts is lazy-initialized at the singleton level (Wave 87 Phase 1).
  */
 
 import crypto from 'node:crypto';
@@ -39,6 +36,7 @@ import { ChatStateError } from '../agentChat/chatStateError';
 import { reconcileInterruptedThreads } from '../agentChat/crashRecovery';
 import { DualEmitOrchestrator } from '../agentChat/dualEmitOrchestrator';
 import { setShadowTap } from '../agentChat/shadowTap';
+import { agentChatThreadStore } from '../agentChat/threadStore';
 import log from '../logger';
 import { spawnStreamJsonProcess } from '../orchestration/providers/claudeStreamJsonRunner';
 import type { StreamJsonEvent } from '../orchestration/providers/streamJsonTypes';
@@ -83,16 +81,9 @@ function wireShadowTap(): void {
  * Scan threads with non-terminal status and mark them as interrupted.
  * Synthesizes [interrupted] tool_result for any dangling tool_use to prevent
  * Anthropic strict-adjacency violations on --resume (spec §4.5).
- *
- * agentChatThreadStore is loaded lazily via require to avoid module-eval of
- * threadStore.ts at import time (it calls app.getPath('userData') at module scope).
  */
 function runCrashRecovery(): void {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { agentChatThreadStore } = require('../agentChat/threadStore') as {
-      agentChatThreadStore: import('../agentChat/threadStore').AgentChatThreadStore;
-    };
     void reconcileInterruptedThreads(agentChatThreadStore, getPersistence());
   } catch (err) {
     log.error('[chatStateNewPath] crash recovery failed', { err });
