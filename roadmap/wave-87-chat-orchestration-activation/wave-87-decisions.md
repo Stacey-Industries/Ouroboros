@@ -67,7 +67,7 @@ Per `~/.claude/rules/best-practice-spectrum.md`. Decisions transcribed from `wav
 
 **Consequences:** Phase 1's acceptance test uses structural assertions (no lazy `require`, no module-eval `app.getPath`) because the production bundle issue is Vite-specific and doesn't reproduce under vitest. Phase 2's acceptance test combines structural assertions (renderer hook source contains/excludes specific patterns) with a runtime smoke (new path dispatches `status_changed:submitting`). Subagents implement against these; orchestrator re-runs each test post-dispatch and treats PASS as the gate.
 
-## Decision 6: No new IPC channels in this wave
+## Decision 6: No new IPC channels in this wave (amended by Decision 8)
 
 **Context:** Wave 86 introduced all the new channels (`chatState:snapshot`, `chatState:diff`, `chatState:error`, `chatCommand:*`). Wave 87's mandate is activate + retire, not extend. Question is whether a phase might surface the need for an additional channel.
 
@@ -76,3 +76,56 @@ Per `~/.claude/rules/best-practice-spectrum.md`. Decisions transcribed from `wav
 **Rationale:** Scope discipline. Adding a channel mid-wave is the kind of scope creep that produces "we'll come back to this" technical debt. The existing channels were designed for the full activation path; if they fall short, the surfaced design gap is itself worth user attention.
 
 **Consequences:** Phase 3's web-preload migration (`webPreloadApisSupplemental.ts`) uses the existing `chatState:diff/<threadId>` and `chatState:snapshot/<threadId>` channels — no new web-specific channel. If `mobileAccess/channelCatalog.read.ts` needs reshuffling to accommodate the new channels (Phase 0 surfaced this), Phase 3's subagent applies the existing classification scheme; no new channels are coined.
+
+**Amendment (2026-05-12):** Decision 8 grants a single same-wave exception for `chatCommand:cancelTurn`. Rationale documented there.
+
+## Decision 7: Phase 2 send-path coordinator (post-architect-pass)
+
+**Context:** Initial Phase 2 dispatch produced a clean renderer-side migration that exposed a critical gap: the new-path main handler (`src/main/ipc-handlers/chatStateNewPath.ts:172-203`) is a Wave 86 Phase 1 walking skeleton that calls `spawnStreamJsonProcess({prompt, cwd})` directly, bypassing the entire `OrchestrationAPI` pipeline. The legacy bridge owns settings resolution, context packet building, attachment materialization, git pre-snapshot capture, hooks dispatch, conversation history serialization, and provider adapter selection — none of which the new path has. Phase 2 architect blueprint (`phase-2-architecture-blueprint.md`) surfaced four integration-shape options.
+
+**Options considered:**
+- *Option A — reuse `preparePendingSend` + `OrchestrationAPI` from new handler.* Lower upfront cost; keeps `OrchestrationAPI` as send-pipeline owner. Wave 86 spec says state machine is the only mutation surface, so A defers the architectural correction.
+- *Option B — duplicate TaskRequest/settings logic in the new path.* Standalone but creates a second preparation source. Wave 86 forbids two preparation sources; divergence risk is high.
+- *Option C — lift `preparePendingSend` + provider dispatch into a shared module both paths consume.* Bridge and new path become co-equal callers. Correct extraction, but bridge remains a peer until Phase 3.
+- *Option D — new-path coordinator becomes the send-pipeline owner; legacy bridge becomes a temporary adapter that delegates to it.* Combines C's extraction with state-machine-first ownership inversion.
+
+**Pick:** Option D — `src/main/agentChat/chatSendCoordinator.ts` owns the send pipeline from Phase 2A onward. Shared preparation helpers (lifted out of bridge files into a non-bridge module) are consumed by the coordinator. Legacy bridge becomes a thin adapter that delegates to the coordinator until Phase 3 deletes the bridge entirely.
+
+**Rationale:** Wave 86's design spec (`docs/superpowers/specs/2026-05-11-chat-orchestration-state-architecture-design.md:137-164,338-342`) mandates `EventNormalizer → ChatSessionStateMachine → ChatStateBroadcaster` as the canonical event flow and the state machine as the sole mutation surface. Option D matches that target architecture from the day Phase 2A ships, not after Phase 3 cleanup. Phase 3 then deletes only the bridge adapter glue, not the send pipeline. Decision 6's "no new channels" reading still holds — enriching `chatCommand:sendMessage`'s payload type on the existing channel is type expansion, not a new channel.
+
+**Consequences:** Phase 2 splits into 2A (main-process build-out: coordinator, enriched `ChatCommandPayload`, shared preparation module, integration with new-path state machine) and 2B (renderer cutover against the now-complete handler). 2A and 2B are sequential — 2B cannot prove behavioral parity until 2A owns the real send pipeline. Estimated 5-8 files + 300-600 LOC for 2A; 3-5 files + ~80-120 LOC for 2B. The waveplan's original single-phase Phase 2 row is superseded by this split.
+
+## Decision 8: `chatCommand:cancelTurn` channel — same-wave Decision-6 exception
+
+**Context:** Phase 2's parity goal requires the composer's stop button to work. The legacy bridge uses `agentChat:cancelTask` / `cancelByThreadId` IPC routed to provider adapters' cancellation logic. The new-path channel set (`src/shared/ipc/chatStateChannels.ts:13-40`) has no cancel command, even though canonical events model `turn_cancelled` (`src/shared/types/canonicalChatEvent.ts:212-221`). Three options were considered: (a) defer stop-button parity until a later ADR, (b) keep legacy cancel IPC alive until Phase 3, (c) approve a same-wave exception for `chatCommand:cancelTurn`.
+
+**Pick:** (c) Add `chatCommand:cancelTurn` channel in Phase 2A.
+
+**Rationale:** (a) is unacceptable — the stop button is load-bearing UX; can't ship a wave that breaks it. (b) is pragmatic but produces a hybrid send-new/cancel-legacy renderer state for the Phase 2-Phase 3 interim, which is hard to reason about and means Phase 3 must coordinate cancel migration AND bridge deletion simultaneously. (c) is mechanical completion of Wave 86's design — the `turn_cancelled` canonical event already exists, the renderer's stop button already exists, the provider adapter cancel logic already exists; only the channel-name + handler glue is missing. Phase 3 then has cleaner scope: delete the bridge, nothing else.
+
+**Consequences:** Decision 6 is amended (see above) to acknowledge this single exception. Phase 2A registers `chatCommand:cancelTurn` with `{ turnId: string }` payload. The handler calls the relevant provider-adapter cancel API and dispatches `turn_cancelled` to the broadcaster. The renderer's stop button binds to `window.electronAPI.chatCommand.cancelTurn(turnId)`. The legacy `agentChat:cancelTask` / `cancelByThreadId` IPC handlers stay in place but unwired through Phase 2; Phase 3 deletes them with the bridge.
+
+## Decision 9: Canonical event metadata for resolved send options
+
+**Context:** The legacy bridge captures `preSnapshotHash` (git HEAD before the turn — load-bearing for revert) and resolves provider/model/effort/permissionMode from settings + overrides at send time. These are turn-scoped state. The new architecture's canonical events currently carry only `turn_submitted.content`. Question is where this resolved state lives in the new architecture.
+
+**Options considered:**
+- Extend `turn_submitted` canonical event metadata to carry the resolved fields (visible to state machine and all observers, survives crash recovery via persistence).
+- Keep canonical events minimal; persist resolved fields as message metadata only.
+- Use projection-time sticky merge rules to attach resolved fields to thread state.
+
+**Pick:** Extend `turn_submitted` canonical event metadata with `preSnapshotHash`, `resolvedProvider`, `resolvedModel`, `resolvedEffort`, `resolvedPermissionMode`. `routedBy` (telemetry/classifier provenance) and any other pure-telemetry fields go to persistence-only message metadata. No projection-time sticky merge rules.
+
+**Rationale:** Resolved provider/model/effort/permissionMode are decisions made at turn-submit time that determine the entire turn's behavior; they belong on `turn_submitted` so the state machine and observers see them as part of the canonical event timeline. `preSnapshotHash` is identical in shape — turn-scoped, set once at submit, never mutated. Sticky merge rules are explicitly named as architecture leaks in the Wave 86 spec (`docs/superpowers/specs/2026-05-11-chat-orchestration-state-architecture-design.md:53-58`); we don't reintroduce them. Pure telemetry (`routedBy`, classifier confidence) doesn't drive state-machine behavior and clutters the canonical event union unnecessarily — persistence-only is correct.
+
+**Consequences:** `CanonicalChatEvent.turn_submitted` type extends with five new fields. `EventNormalizer.fromCommand` populates them from the enriched `ChatCommandPayload`. State machine and broadcaster pass them through untouched. Persistence layer (`ChatPersistenceLayer.commitMessage` and friends) reads them when committing the turn's user message. Crash recovery rebuilds them from persistence on restart. No projector merge logic.
+
+## Decision 10: Rewrite Phase 2 acceptance test for behavioral parity
+
+**Context:** The original Phase 2 acceptance test at `acceptance/phase-2-send-path-migration.test.ts` asserts (1) renderer source references `chatCommand.sendMessage`, (2) renderer source no longer references `electronAPI.agentChat.send*`, (3) a synthetic `command_event` dispatched on a fresh broadcaster yields `status_changed:submitting`. Assertion (3) is too weak — it exercises the broadcaster directly, not the full send pipeline. Codex's original Phase 2 dispatch passed all three assertions while producing a regression (composer overrides silently dropped).
+
+**Pick:** Rewrite the test before Phase 2A dispatches. New contract asserts: (a) the renderer invokes `chatCommand.sendMessage` with the full enriched payload shape (`{ threadId, workspaceRoot, content, attachments?, contextSelection?, overrides?, metadata, skillExpansion? }`); (b) the main-process handler reaches `chatSendCoordinator` (or equivalent boundary symbol Phase 2A introduces); (c) `turn_submitted` carries the resolved metadata fields from Decision 9; (d) a simulated terminal event drives `message_committed` dispatch; (e) the renderer no longer references any `electronAPI.agentChat.send*` paths.
+
+**Rationale:** The orchestrator-owned acceptance test is the contract that binds the subagent's mental model to the orchestrator's. A test that grep-asserts on source strings and synthetic-broadcaster-dispatches doesn't bind enough — the subagent can satisfy it while shipping a feature-incomplete handler. The rewritten test asserts on the actual pipeline behaviour. Per `~/.claude/rules/orchestrator-owned-acceptance-tests.md`'s source authority: "two different streams of tests cause the implementer to think much more deeply about the structure of the code."
+
+**Consequences:** The acceptance test file is rewritten by the orchestrator before Phase 2A dispatches. The new test imports the coordinator module Phase 2A creates (which requires the orchestrator to specify the module path + symbol name in the test, locking that part of the API surface ahead of the implementation). The subagent must build to the contract; if they want a different module shape, they surface to the orchestrator instead of modifying the test.
