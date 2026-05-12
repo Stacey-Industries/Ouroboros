@@ -1,3 +1,4 @@
+import type { AgentChatSendMessageRequest } from '@shared/types/agentChat';
 import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -270,4 +271,59 @@ export function selectStreamingState(
   legacyState: AgentChatStreamingState,
 ): AgentChatStreamingState {
   return projection.activeTurnId != null ? projectionToStreamingState(projection) : legacyState;
+}
+
+// ─── New-path send entry point ────────────────────────────────────────────────
+
+export interface ChatCommandSendResult {
+  success: boolean;
+  error?: string;
+  turnId?: string;
+  threadId?: string;
+}
+
+type ChatCommandApi = {
+  sendMessage: (payload: AgentChatSendMessageRequest) => Promise<ChatCommandSendResult>;
+};
+
+function getChatCommandApi(): ChatCommandApi | undefined {
+  return (
+    window as Window & typeof globalThis & { electronAPI?: { chatStateNewPath?: ChatCommandApi } }
+  ).electronAPI?.chatStateNewPath;
+}
+
+/**
+ * Send a message via the new coordinator-backed IPC path (chatCommand:sendMessage).
+ *
+ * Carries the full enriched payload: attachments, contextSelection, overrides,
+ * skillExpansion. Returns the minted turnId + threadId from main; stream state
+ * arrives subsequently via chatState:diff/<threadId>.
+ *
+ * This is a pure function (no React hooks) exported so send-flow helpers can
+ * call it without importing the agentChat legacy bridge.
+ */
+export async function sendChatCommandMessage(
+  payload: AgentChatSendMessageRequest,
+): Promise<ChatCommandSendResult> {
+  const api = getChatCommandApi();
+  if (!api) {
+    return { success: false, error: 'chatStateNewPath API not available.' };
+  }
+  log.info('[trace:send] sendChatCommandMessage dispatching', {
+    threadId: payload.threadId,
+    hasAttachments: Boolean(payload.attachments?.length),
+    hasContextSelection: Boolean(payload.contextSelection),
+    hasOverrides: Boolean(payload.overrides),
+    hasSkillExpansion: Boolean(payload.skillExpansion),
+    ts: Date.now(),
+  });
+  const result = await api.sendMessage(payload);
+  log.info('[trace:send] sendChatCommandMessage result', {
+    success: result.success,
+    turnId: result.turnId,
+    threadId: result.threadId,
+    error: result.error,
+    ts: Date.now(),
+  });
+  return result;
 }
