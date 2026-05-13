@@ -46,7 +46,7 @@ This document indexes follow-ups that are NOT closed/superseded/now-useless per 
 - **Phase D historical corpus analyzer + decision report deferred** — `:194`
 - **Phase F router backfill + offline eval blocked on Phase D** — `:194`
 - **Phase G integration test `telemetryRestoration.integration.test.ts` skipped** — `:194`
-- **`docs/telemetry.md` not written** — `:194`
+- **`roadmap/docs/telemetry.md` not written** — `:194`
 - **Telemetry aggregation dashboard (Wave 53)** — `:195`
 - **Remote telemetry transmission (explicit opt-in wave)** — `:195`
 - **Cross-project corpus analysis** — `:195`

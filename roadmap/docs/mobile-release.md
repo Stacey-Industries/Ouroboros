@@ -1,6 +1,6 @@
 # Android Release Build — Signing, CI, and Distribution
 
-Cross-reference: see `docs/mobile-dev.md` for daily development workflow and emulator setup.
+Cross-reference: see `roadmap/docs/mobile-dev.md` for daily development workflow and emulator setup.
 
 ---
 

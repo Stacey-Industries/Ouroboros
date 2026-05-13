@@ -10,7 +10,7 @@
  * but may not REMOVE or change the meaning of existing fields without ADR
  * amendment.
  *
- * Reference: docs/superpowers/specs/2026-05-08-flow-tracer-design.md §5.4.
+ * Reference: roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md §5.4.
  */
 
 export type LayerKind = 'user' | 'renderer' | 'preload' | 'main' | 'cli' | 'filesystem';

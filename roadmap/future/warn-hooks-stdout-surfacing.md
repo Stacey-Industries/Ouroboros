@@ -103,7 +103,7 @@ The evaluator already exists and returns `warn` correctly. With Phases B+C compl
 
 ### Phase E — Document the pattern
 
-Brief addition to `docs/hook-migration.md` showing the warn-rule template:
+Brief addition to `roadmap/docs/hook-migration.md` showing the warn-rule template:
 
 - How to write a new warn evaluator
 - The decision shape (`{ kind: 'warn', ruleName, message }`)
@@ -136,6 +136,6 @@ This template is what unblocks future warn-class rules from being one-off implem
 - `assets/hooks/pre_tool_use.mjs` — hook script (handles reject only)
 - `assets/hooks/lib/ouroboros.mjs` — IDE↔hook protocol helpers
 - `~/.claude/rules/test-scope.md` — the user-facing rule the warn was supposed to enforce
-- `docs/hook-migration.md` — rule-to-hook migration guide (needs warn template addition)
+- `roadmap/docs/hook-migration.md` — rule-to-hook migration guide (needs warn template addition)
 - `roadmap/decisions/wave-50.md` — Wave 50 ADR (rule classification)
 - Audit: `roadmap/audit-verification-pass.md` Section D item #16

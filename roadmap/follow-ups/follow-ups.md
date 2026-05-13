@@ -191,7 +191,7 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 - **Wave 52** (`roadmap/_archived/wave-52-plan.md`): Hook auto-install automation; SQLite mirror of all queued telemetry records; drain throttling for large queues.
 - **Wave 52** (`roadmap/_archived/auto-briefs/wave-52-result.md`): Hook installation is manual — auto-install is Wave 53a+ follow-up; `main.ts` at 337 lines (grandfathered disable, needs split); fundamentally-IDE-only telemetry surfaces (#5,#8–11,#15–17) remain uncaptured.
 - **Wave 52** (`roadmap/_archived/wave-52-audit.md`): Telemetry surfaces #5,#8,#9,#10,#11,#15,#16,#17 classified fundamentally-IDE-only and left deferred.
-- **Wave 53** (`roadmap/_archived/auto-briefs/wave-53-result.md`): Phase D (historical corpus analyzer + decision report) deferred; Phase F (router backfill + offline eval) blocked on Phase D; Phase G integration test `telemetryRestoration.integration.test.ts` skipped; `docs/telemetry.md` not written.
+- **Wave 53** (`roadmap/_archived/auto-briefs/wave-53-result.md`): Phase D (historical corpus analyzer + decision report) deferred; Phase F (router backfill + offline eval) blocked on Phase D; Phase G integration test `telemetryRestoration.integration.test.ts` skipped; `roadmap/docs/telemetry.md` not written.
 - **Wave 53** (`roadmap/_archived/wave-53-plan.md`): Wave 54 semantic-ops build-out gated on Phase D report; router retrain gated on Phase F; telemetry aggregation dashboard; remote telemetry transmission (explicit opt-in wave); cross-project corpus analysis; effort signal instrumentation.
 - **Wave 53a** (`roadmap/_archived/wave-53a-plan.md`): Q3 one-sided context outcomes deferred (YAGNI); codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall not implemented.
 - **Wave 53a** (`roadmap/_archived/auto-briefs/wave-53a-result.md`): Q3 one-sided context outcomes deferred; codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall still manual; PostToolUse → file-touched-per-turn deferred to Wave 53b; harden `hookInstallerStatusLine.ts` atomic-write pattern.
@@ -235,7 +235,7 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 - **Wave 53b follow-ups**: re-run offline ranker analysis quarterly; first target 2026-07-28.
 - **Wave 53b follow-ups**: variant ranker soak — set `contextRanker.mode` to `tuned`/`experimental` and re-analyze after 100+ sessions per mode.
 - **Wave 53b follow-ups**: graduation trigger — Bayesian weight optimization when corpus reaches ≥500 IDE-orchestrated sessions with hook-side Read coverage.
-- **Wave 53a follow-ups**: auto-install of all four telemetry hooks lands in Phase E (not yet shipped); manual snippets in `docs/telemetry-parity.md`.
+- **Wave 53a follow-ups**: auto-install of all four telemetry hooks lands in Phase E (not yet shipped); manual snippets in `roadmap/docs/telemetry-parity.md`.
 - **Wave 53a follow-ups**: PostToolUse → file-touched-per-turn partial signal — Wave 53b decides whether worth the maintenance cost.
 - **Wave 53a follow-ups**: codegen hook helper from TS schemas to eliminate comment-mirror discipline — future wave.
 - **Wave 51 follow-ups**: soak `routeInternalMcp=true` for 1 week; flip default to `true` if MCP token savings confirmed and no regressions.

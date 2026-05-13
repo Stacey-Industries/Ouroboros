@@ -14,13 +14,13 @@ This is a one-way dispatch: you send instructions to the desktop, and the deskto
 
 ## Prerequisites
 
-1. **Mobile Access enabled** (Wave 33a) — the desktop must be running the Ouroboros web server with `mobileAccess.enabled = true` and your device must be paired. See `docs/mobile-access.md` for setup.
+1. **Mobile Access enabled** (Wave 33a) — the desktop must be running the Ouroboros web server with `mobileAccess.enabled = true` and your device must be paired. See `roadmap/docs/mobile-access.md` for setup.
 
 2. **Dispatch enabled** — set `sessionDispatch.enabled = true` in desktop settings (Settings → Mobile → Session Dispatch). This can also be toggled via the config API: `config.set('sessionDispatch.enabled', true)`.
 
 3. **A configured project root** — the desktop must have at least one project root configured (the project you want the agent to work in). Add roots via the desktop IDE's Project Picker or Settings.
 
-4. **Android app or web build accessible** — either the Capacitor Android build (`com.stacey.ouroboros`) or the web build served at the desktop's LAN address. See `docs/mobile-dev.md` for build instructions and `docs/mobile-access.md` for network access options (LAN, reverse proxy, Cloudflare Tunnel).
+4. **Android app or web build accessible** — either the Capacitor Android build (`com.stacey.ouroboros`) or the web build served at the desktop's LAN address. See `roadmap/docs/mobile-dev.md` for build instructions and `roadmap/docs/mobile-access.md` for network access options (LAN, reverse proxy, Cloudflare Tunnel).
 
 ---
 

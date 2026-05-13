@@ -21,7 +21,8 @@ Apply the standardized documentation framework (`~/.claude/notes/documentation-f
 | `6266eedb` | 1 | Wave history + decisions indexes |
 | `42103580` | 2 | `archive/` → `_archived/` rename + archived index + 16-file reference update |
 | `d84b791c` | 3 | Lean HANDOFF.md rewrite + retire stale `session-handoff.md` + roadmap README + smoke-gate checklist extraction |
-| _this commit_ | 4 | Wave folder promotion + result brief |
+| `13be7fef` | 4 | Wave folder promotion + result brief |
+| `577c96bd` | 5 | `docs/` → `roadmap/docs/` relocation per 2026-05-13 canon (37 doc files + 30 reference updates + `check-docs-schema.ts` refactor for lint compliance) |
 
 ### Files created
 

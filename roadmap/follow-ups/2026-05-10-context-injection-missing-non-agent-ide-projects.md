@@ -24,11 +24,11 @@ Sharper repro: ask each chat the same project-specific question (e.g., "What's t
 
 ## Suspect surface
 
-Per `docs/chat-shell.md`, `docs/codemode-internalmcp-routing.md`, and the chat-only-shell context injection wiring:
+Per `roadmap/docs/chat-shell.md`, `roadmap/docs/codemode-internalmcp-routing.md`, and the chat-only-shell context injection wiring:
 
 - `src/main/contextLayer/` — context assembly for first-message injection. Module summarizer, repo map, rules+skills aggregation all live here.
 - `src/main/agentChat/chatOrchestrationBridge.ts` — the bridge that builds the chat-session payload; context injection happens here or in something it calls.
-- Wave 51 (`docs/codemode-internalmcp-routing.md`) and Wave 53 (`project_telemetry_dark_signals.md`) both touched this surface.
+- Wave 51 (`roadmap/docs/codemode-internalmcp-routing.md`) and Wave 53 (`project_telemetry_dark_signals.md`) both touched this surface.
 - Per-window project isolation in `windowManager.ts` — each window owns its own project roots; injection may depend on per-window state that only got initialized for Agent IDE.
 - Possible cause: the per-project context index is keyed on something Agent IDE has but Contractor App + Gamify don't (e.g., a graph index, a foundation/ folder, a specific CLAUDE.md shape).
 
@@ -61,4 +61,4 @@ NOT in Wave 84. Likely candidate for the next wave after Wave 84 ships, or possi
 
 - `2026-05-07-context-preview-rules-disappear-after-chat-start.md` (Wave 84 bug 1) — different surface (popover display) but same broader theme (per-project context state).
 - `2026-05-07-subagent-dispatch-fails-inside-ide-chat.md` (Wave 84 bug 4) — also IDE-orchestration-specific, also CLI-clean. The two may share a common root cause in per-project / per-session orchestration state.
-- `docs/chat-shell.md` / `docs/codemode-internalmcp-routing.md` — design docs for the surface this bug lives in.
+- `roadmap/docs/chat-shell.md` / `roadmap/docs/codemode-internalmcp-routing.md` — design docs for the surface this bug lives in.

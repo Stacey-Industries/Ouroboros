@@ -8,7 +8,7 @@ and how to measure and interpret hit rates.
 **Cross-references:**
 - `roadmap/_archived/wave-53b/waveplan-53b-analysis.md` — Phase A offline analysis (provisional numbers)
 - `roadmap/_archived/wave-53b/wave-53b-decisions.md` — ADR for Wave 53b architectural choices
-- `docs/telemetry-parity.md` — telemetry parity infrastructure and queue lifecycle
+- `roadmap/docs/telemetry-parity.md` — telemetry parity infrastructure and queue lifecycle
 
 ---
 

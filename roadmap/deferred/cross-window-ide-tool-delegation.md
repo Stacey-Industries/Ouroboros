@@ -44,7 +44,7 @@ Wrong design here is reversible but expensive (agents that learn one shape will 
 
 **Phase A:** Mount `IdeToolBridge` in `ChatOnlyShell` with the chosen pairing/routing model. Wire window enumeration in `ideToolServer.ts` so handlers can resolve `windowId` → `webContents`.
 
-**Phase B:** Update the IDE-tool schema (in `src/main/ideToolServer*.ts` and the agent-facing tool definitions) to reflect the new contract. Document the cross-window semantics in `docs/api-contract.md`.
+**Phase B:** Update the IDE-tool schema (in `src/main/ideToolServer*.ts` and the agent-facing tool definitions) to reflect the new contract. Document the cross-window semantics in `roadmap/docs/api-contract.md`.
 
 **Phase C:** Smoke test with a real two-window setup. Confirm tool calls return the expected window's state.
 

@@ -20,7 +20,7 @@ User feedback: *"The graph looks like an elementary project. It is just like, A 
 
 ## What the design spec called for (vs what shipped)
 
-Per `docs/superpowers/specs/2026-05-08-flow-tracer-design.md` §4.2:
+Per `roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md` §4.2:
 
 | Spec item | Shipped | Gap |
 |---|---|---|

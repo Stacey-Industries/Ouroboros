@@ -134,7 +134,7 @@ The remaining audit sections were swept in a second triage pass on the same day.
 
 **Section A1 — Dead code (12 high-confidence DELETEs + DROPPED-INTENT items closed)**
 - Deleted: `src/renderer/components/primitives/` directory (12 files), `osc133Handler.ts`, 3 unused hooks + tests, 5 dead `build*Apis` exports surgically removed.
-- Deleted scripts: `analyze-graph-adherence.ts`, `analyze-ranker-hit-rate*` (4 files), `measure-mcp-token-cost.ts`, `manual-seq-test.mjs`. Synced `docs/hook-migration.md` and `docs/context-ranker.md`.
+- Deleted scripts: `analyze-graph-adherence.ts`, `analyze-ranker-hit-rate*` (4 files), `measure-mcp-token-cost.ts`, `manual-seq-test.mjs`. Synced `roadmap/docs/hook-migration.md` and `roadmap/docs/context-ranker.md`.
 - Deleted artifacts: 2 timestamped vite configs, `tmp_monitor.py`, plus untracked gitignored cruft (`.lint-report.json`, `tsconfig.web.tsbuildinfo`, `vitest-results.json`, `tools/__pycache__/`).
 - Stale TODO comments dropped: `en.ts` Wave 38 Phase G, `AgentChatTabBar.tsx` Wave 32 Phase I, `electron-mobile-access.d.ts` Wave 33a.
 - DROPPED-INTENT: removed `RouteOptions.skipLayer3` scaffolding from `orchestrator.ts`; synced `router/CLAUDE.md` to remove `llmFallback.ts` / `llmJudge.ts` file map references.
@@ -146,8 +146,8 @@ The remaining audit sections were swept in a second triage pass on the same day.
 - KEEP per audit: `multiRoots`, `autoRetrainEnabled`, `TRAINING_CUTOFF_DATE`, `ecosystem.rulesAndSkillsInstallEnabled` (latter already filed).
 
 **Section A6 — Docs drift (all 13 items fixed)**
-- HIGH severity: rewrote `docs/architecture.md` "MCP transport and CodeMode routing (Wave 51)" section to describe the current Wave 60 standalone server; replaced `docs/codemode-internalmcp-routing.md` (108 lines of pre-Wave-60 operator guide) with a tombstone pointing at the standalone module CLAUDE.md.
-- MEDIUM severity: 6 path/filename corrections across `docs/architecture.md`, `docs/context-injection.md`, `docs/context-ranker.md`.
+- HIGH severity: rewrote `roadmap/docs/architecture.md` "MCP transport and CodeMode routing (Wave 51)" section to describe the current Wave 60 standalone server; replaced `roadmap/docs/codemode-internalmcp-routing.md` (108 lines of pre-Wave-60 operator guide) with a tombstone pointing at the standalone module CLAUDE.md.
+- MEDIUM severity: 6 path/filename corrections across `roadmap/docs/architecture.md`, `roadmap/docs/context-injection.md`, `roadmap/docs/context-ranker.md`.
 - LOW severity: theme count 5→8, "Canvas renderer"→WebGL via @xterm/addon-webgl, `chatPrimary`→`immersiveChat` in data-model, `glass`→`material` in root CLAUDE.md folder map, removed broken README screenshot link.
 
 **Section A7 — Stale CLAUDE.mds (4 of 4 subsystem files refreshed)**
@@ -379,33 +379,33 @@ Safe to queue immediately:
 
 | # | Doc | Issue |
 |---|---|---|
-| 3 | `docs/architecture.md:638–661` | Wave 51 MCP section describes SSE+stdio architecture deleted by Wave 60 |
-| 5 | `docs/codemode-internalmcp-routing.md` (whole) | Same — entire doc describes the deleted stack |
+| 3 | `roadmap/docs/architecture.md:638–661` | Wave 51 MCP section describes SSE+stdio architecture deleted by Wave 60 |
+| 5 | `roadmap/docs/codemode-internalmcp-routing.md` (whole) | Same — entire doc describes the deleted stack |
 
 ### MEDIUM severity — wrong paths/filenames
 
 | # | Doc | Fix |
 |---|---|---|
-| 4 | `docs/architecture.md:660` | `roadmap/wave-51-*.md` → `roadmap/_archived/wave-51-*.md` |
-| 6 | `docs/codemode-internalmcp-routing.md:5` | Same |
-| 7 | `docs/context-injection.md:149` | Add `providers/` to `claudeCodeContextBuilder.ts` path |
-| 8 | `docs/context-ranker.md:21` | Same |
-| 9 | `docs/context-ranker.md` | `contextRankerVariant.ts` → `contextSelectorRankerVariant.ts` |
-| 10 | `docs/context-ranker.md:9` | `roadmap/wave-53b-analysis.md` → `roadmap/_archived/wave-53b-analysis.md` |
+| 4 | `roadmap/docs/architecture.md:660` | `roadmap/wave-51-*.md` → `roadmap/_archived/wave-51-*.md` |
+| 6 | `roadmap/docs/codemode-internalmcp-routing.md:5` | Same |
+| 7 | `roadmap/docs/context-injection.md:149` | Add `providers/` to `claudeCodeContextBuilder.ts` path |
+| 8 | `roadmap/docs/context-ranker.md:21` | Same |
+| 9 | `roadmap/docs/context-ranker.md` | `contextRankerVariant.ts` → `contextSelectorRankerVariant.ts` |
+| 10 | `roadmap/docs/context-ranker.md:9` | `roadmap/wave-53b-analysis.md` → `roadmap/_archived/wave-53b-analysis.md` |
 
 ### LOW severity
 
 | # | Doc | Fix |
 |---|---|---|
-| 1 | `docs/architecture.md:488` | "5 built-in themes" → "7" |
-| 2 | `docs/architecture.md:480` | "Canvas renderer" → WebGL via `@xterm/addon-webgl` |
-| 11 | `docs/data-model.md:55` | `chatPrimary: boolean` is a migration source key, not live; replace with `immersiveChat: boolean` (default `false`) |
+| 1 | `roadmap/docs/architecture.md:488` | "5 built-in themes" → "7" |
+| 2 | `roadmap/docs/architecture.md:480` | "Canvas renderer" → WebGL via `@xterm/addon-webgl` |
+| 11 | `roadmap/docs/data-model.md:55` | `chatPrimary: boolean` is a migration source key, not live; replace with `immersiveChat: boolean` (default `false`) |
 | 12 | `CLAUDE.md` (root) Folder Map | Remove `glass` from theme list (no `glass` theme exists) |
-| 13 | `README.md:9` | Broken screenshot link `docs/assets/screenshot.png` |
+| 13 | `README.md:9` | Broken screenshot link `roadmap/docs/assets/screenshot.png` |
 
 ### Open question
 
-`glassOpacity` in `docs/data-model.md:41` — if `glass` theme was never shipped, is this config key also vestigial? Not in scope for the audit, but worth following up.
+`glassOpacity` in `roadmap/docs/data-model.md:41` — if `glass` theme was never shipped, is this config key also vestigial? Not in scope for the audit, but worth following up.
 
 ---
 
@@ -568,7 +568,7 @@ The audit's summary (88 ✅ / 22 ⚠ / 0 ❌ / 1 🔴 = 111 total) shifts after 
 
 - **Wave 60 silently closed many items.** The standalone MCP server at `src/standalone/ouroborosMcp/` resolved at least 6 follow-up items from Waves 53c–53j (Flavor B, SDK adoption, SSE hand-roll removal, `internalMcp` barrel split, CodeMode user-level global) that the follow-ups list still shows as open.
 - **Wave 69's two implementation items confirmed wired** (`mainStartupContextLayerTrigger.ts` at `mainStartup.ts:233`, log spam fix in commit `d804a8e`).
-- **`startContextRetrainTrigger` is unwired in production.** Fully implemented (260 lines + tests), zero call sites in `main.ts`, `mainStartup.ts`, or any IPC handler. The retrain system cannot activate. **Confirmed in second-pass** — only the module itself, its test file, and docs/roadmap mentions reference the symbol.
+- **`startContextRetrainTrigger` is unwired in production.** Fully implemented (260 lines + tests), zero call sites in `main.ts`, `mainStartup.ts`, or any IPC handler. The retrain system cannot activate. **Confirmed in second-pass** — only the module itself, its test file, and roadmap/docs/roadmap mentions reference the symbol.
 - **Orphan `codebase-graph.db*` files** (7.7 MB) physically present in repo root. Production path is `userData/codebase-graph.db`. Repo-root copies are stale dev artifacts.
 - **Legacy parameter aliases in `mcpToolHandlers.ts`** outlived their one-wave window (Wave 66 ADR Decision 2). `name_pattern`, `qualified_name`, `function_name` should be dropped.
 - **Cypher engine unsupported features** (`OPTIONAL MATCH`, `WITH`, `UNWIND`, multi-pattern MATCH) — agents writing Cypher with these get silent failures. `get_graph_schema` doesn't warn. ~~`OR` in WHERE~~ corrected 2026-05-01: `OR` IS supported (`cypherEngineParser.ts:148-149`, `cypherEngineSqlHelpers.ts:56-58`); audit was wrong on that one.

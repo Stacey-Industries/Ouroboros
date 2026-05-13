@@ -249,14 +249,14 @@ Notable settings:
 
 ## Documentation
 
-Detailed docs live in `docs/`:
+Detailed docs live in `roadmap/docs/`:
 
-- [`architecture.md`](docs/architecture.md) — Full architecture reference: process model, component tree, state management patterns, data flow diagrams, security model
-- [`api-contract.md`](docs/api-contract.md) — Complete IPC channel reference with directions, payloads, and return types
-- [`data-model.md`](docs/data-model.md) — Config schema and persisted state types
-- [`authentication.md`](docs/authentication.md) — Auth providers (GitHub OAuth, Anthropic API key, CLI credential import), credential storage, token refresh
-- [`web-remote-access.md`](docs/web-remote-access.md) — Web server setup, auth, Tailscale/Cloudflare Tunnel access, mobile usage
-- [`guides/complete-beginners-guide.md`](docs/guides/complete-beginners-guide.md) — 26-section walkthrough of every panel and feature
+- [`architecture.md`](roadmap/docs/architecture.md) — Full architecture reference: process model, component tree, state management patterns, data flow diagrams, security model
+- [`api-contract.md`](roadmap/docs/api-contract.md) — Complete IPC channel reference with directions, payloads, and return types
+- [`data-model.md`](roadmap/docs/data-model.md) — Config schema and persisted state types
+- [`authentication.md`](roadmap/docs/authentication.md) — Auth providers (GitHub OAuth, Anthropic API key, CLI credential import), credential storage, token refresh
+- [`web-remote-access.md`](roadmap/docs/web-remote-access.md) — Web server setup, auth, Tailscale/Cloudflare Tunnel access, mobile usage
+- [`guides/complete-beginners-guide.md`](roadmap/docs/guides/complete-beginners-guide.md) — 26-section walkthrough of every panel and feature
 
 Each subsystem directory may also contain its own `CLAUDE.md` with architecture details and gotchas specific to that area.
 

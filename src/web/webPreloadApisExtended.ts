@@ -4,7 +4,7 @@
  * agentConflict, system2, router, workspace, backgroundJobs.
  *
  * Mirrors Electron preload; all calls route through the WS transport.
- * Desktop-only decisions documented in docs/mobile-scope.md.
+ * Desktop-only decisions documented in roadmap/docs/mobile-scope.md.
  */
 
 import { desktopOnlyStub } from './webPreloadApis';
@@ -109,7 +109,7 @@ export function buildRouterApi(t: WebSocketTransport) {
 
 // ─── Workspace API ────────────────────────────────────────────────────────────
 // Trust read queries are mirrored. Trust mutations (trust/untrust) are stubbed
-// — they should require physical desktop presence per docs/mobile-scope.md.
+// — they should require physical desktop presence per roadmap/docs/mobile-scope.md.
 
 export function buildWorkspaceApi(t: WebSocketTransport) {
   return {
@@ -133,7 +133,7 @@ export function buildWorkspaceApi(t: WebSocketTransport) {
 
 export function buildBackgroundJobsApi(t: WebSocketTransport) {
   return {
-    // enqueue is desktop-only per docs/mobile-scope.md.
+    // enqueue is desktop-only per roadmap/docs/mobile-scope.md.
     enqueue: desktopOnlyStub('backgroundJobs:enqueue'),
     cancel: (jobId: string) => t.invoke('backgroundJobs:cancel', jobId),
     list: (projectRoot?: string) => t.invoke('backgroundJobs:list', projectRoot),

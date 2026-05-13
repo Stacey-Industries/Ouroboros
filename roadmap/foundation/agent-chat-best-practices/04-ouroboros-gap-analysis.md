@@ -268,7 +268,7 @@ This document compares Ouroboros's chat implementation against the 64-axis cover
 - **High-water mark:** Claude Code CLI — directory-tree walk from root to cwd; subdirectory CLAUDE.md files load on-demand when files in that subdirectory are read.
 - **Ouroboros:** Inherited from Claude Code subprocess. The on-demand loading behavior is preserved. Ouroboros's own repo uses this pattern at production scale: `src/main/CLAUDE.md` (main process subsystem map), `src/main/agentChat/CLAUDE.md` (agent chat subsystem details), `src/renderer/CLAUDE.md` (renderer entry point and three-layer bootstrap), `src/renderer/components/AgentChat/CLAUDE.md` (AgentChat component reference — the most detailed, covering all 50+ AgentChat files). These files load only when Claude reads files in their respective directories, so a renderer-focused task doesn't load main-process context and vice versa. The auto-generated sections (`<!-- claude-md-auto:start -->` / `<!-- claude-md-auto:end -->`) in some CLAUDE.md files indicate the repo has a `claude-md-lifecycle` tooling layer for keeping them current.
 - **Verdict:** MATCHES
-- **Notes:** Nested-folder memory inheritance is actively exercised in Ouroboros development — 6+ nested CLAUDE.md files, on-demand loading tested daily. The pattern works as documented. The `claude-md-lifecycle` auto-generation tooling (see `docs/claude-md-lifecycle.md`) is an Ouroboros-specific extension that keeps CLAUDE.md files fresh as the codebase evolves.
+- **Notes:** Nested-folder memory inheritance is actively exercised in Ouroboros development — 6+ nested CLAUDE.md files, on-demand loading tested daily. The pattern works as documented. The `claude-md-lifecycle` auto-generation tooling (see `roadmap/docs/claude-md-lifecycle.md`) is an Ouroboros-specific extension that keeps CLAUDE.md files fresh as the codebase evolves.
 
 ### #32 — Glob-attached rules (rule fires when path matches)
 - **Industry standard:** Claude Code CLI and Cursor document glob-pattern triggered rules clearly. Claude Code CLI: `.claude/rules/` directory, each rule file has YAML frontmatter with optional `paths:` glob — rule fires when Claude reads a matching file, not on every tool use. Kiro has conditional steering loading with glob. Windsurf has workspace rules with glob patterns.
@@ -1112,7 +1112,7 @@ The `LexicalChatComposer.tsx` doesn't change — it accepts the full `MentionAut
 
 ### Why the mention gap cluster is addressable in a single wave
 
-Axes #8 (@docs/url), #9 (@web), #10 (@past-conversation), #12 (@diff/@commit), and #38 (file tree "open in chat") are all ABSENT or BEHIND, but they share a single fix surface: the `MentionAutocompleteSupport.ts` data provider system. None require changes to:
+Axes #8 (@roadmap/docs/url), #9 (@web), #10 (@past-conversation), #12 (@diff/@commit), and #38 (file tree "open in chat") are all ABSENT or BEHIND, but they share a single fix surface: the `MentionAutocompleteSupport.ts` data provider system. None require changes to:
 - The Lexical editor (`LexicalChatComposer.tsx`) 
 - The `BeautifulMentionsPlugin` configuration
 - The chip rendering (`MentionChip.tsx`)

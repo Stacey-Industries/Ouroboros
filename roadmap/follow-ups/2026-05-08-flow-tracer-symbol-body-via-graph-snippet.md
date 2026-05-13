@@ -20,7 +20,7 @@ A rescue fallback (`rescueBodyByName`) shipped in `cf7104b` that scans the file 
 
 ## What the design spec called for
 
-Per `docs/superpowers/specs/2026-05-08-flow-tracer-design.md` §5.2 (narration generation): the spec is silent on the body source. Per §10 (References), the codebase-memory graph provides `get_code_snippet`. The Phase 3 implementer chose file-slice with the comment *"// Try reading directly from source (no graph dependency for Phase 3)."* The choice was scope-discipline: don't add graph dependency in Phase 3 because the graph wasn't yet ready in the test environment.
+Per `roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md` §5.2 (narration generation): the spec is silent on the body source. Per §10 (References), the codebase-memory graph provides `get_code_snippet`. The Phase 3 implementer chose file-slice with the comment *"// Try reading directly from source (no graph dependency for Phase 3)."* The choice was scope-discipline: don't add graph dependency in Phase 3 because the graph wasn't yet ready in the test environment.
 
 ## What "fixed" looks like
 

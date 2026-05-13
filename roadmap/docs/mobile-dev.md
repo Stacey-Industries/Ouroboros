@@ -49,7 +49,7 @@ For release APK/AAB builds, **do not** set `CAPACITOR_SERVER_URL`. Capacitor bun
 ```
 npm run build:web
 npm run cap:sync
-# Then sign + build in Android Studio or via Gradle (see docs/mobile-release.md — Phase H)
+# Then sign + build in Android Studio or via Gradle (see roadmap/docs/mobile-release.md — Phase H)
 ```
 
 ## Key Reminders
@@ -107,7 +107,7 @@ auto-submitted — always requires the user to tap Pair).
   Do not attempt `npx cap add ios` on Windows.
 - Keystore files (`*.keystore`, `*.jks`) are gitignored. Back up your release
   keystore to a password manager — losing it permanently prevents Play Store updates.
-  See `docs/mobile-release.md` (created in Phase H) for the full signing workflow.
+  See `roadmap/docs/mobile-release.md` (created in Phase H) for the full signing workflow.
 
 ---
 

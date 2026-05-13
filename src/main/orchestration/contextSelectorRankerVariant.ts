@@ -55,7 +55,7 @@
  * Phase C ships regardless (per user standing direction). The default mode is
  * 'current'. Users opt in to 'tuned' or 'experimental' for testing. Future
  * analysis using Phase B's online telemetry will determine whether either variant
- * outperforms 'current'. Phase D will document findings in docs/context-ranker.md.
+ * outperforms 'current'. Phase D will document findings in roadmap/docs/context-ranker.md.
  */
 
 import type { MutableCandidate } from './contextSelectorHelpers';
@@ -112,7 +112,11 @@ function variantConfidence(
   return score >= 35 || reasons.length >= 2 ? 'medium' : 'low';
 }
 
-function effectiveWeight(kind: ContextReasonKind, storedWeight: number, overrides: VariantWeights): number {
+function effectiveWeight(
+  kind: ContextReasonKind,
+  storedWeight: number,
+  overrides: VariantWeights,
+): number {
   // Map.get() avoids security/detect-object-injection (no bracket access on user-controlled key).
   const override = overrides.get(kind);
   return override !== undefined ? override : storedWeight;

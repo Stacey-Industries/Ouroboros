@@ -6,7 +6,7 @@
  *          buildProfileCrudApi, buildLayoutApi, buildSubagentApi,
  *          buildCheckpointApi, buildWorkspaceReadListApi.
  *
- * All namespaces are "Mirror" per docs/mobile-scope.md — they route through
+ * All namespaces are "Mirror" per roadmap/docs/mobile-scope.md — they route through
  * the WS transport exactly like their Electron preload counterparts.
  */
 
@@ -128,7 +128,7 @@ export function buildSubagentApi(t: WebSocketTransport) {
 
 // ─── Checkpoint API ───────────────────────────────────────────────────────────
 // checkpoint:list, delete, onChange are mirrored; create and restore are
-// desktop-only (git worktree operations) — documented in docs/mobile-scope.md.
+// desktop-only (git worktree operations) — documented in roadmap/docs/mobile-scope.md.
 
 export function buildCheckpointApi(t: WebSocketTransport) {
   return {

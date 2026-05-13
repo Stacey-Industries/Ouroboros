@@ -37,7 +37,7 @@ The original follow-up considered (a) pointing `claude-in-chrome` at the rendere
 - **New feature defaults** — `useWarmProcess` defaults to `true`. Going forward, new feature flags in `ClaudeCliSettings` / `AgentChatSettings` / `configSchema*.ts` default to `true` unless destructive, security-risky, or experimental.
 - **`<ide_context>` gated to the first turn** per thread — eliminates redundant repo/workspace metadata injection on every turn, reducing per-turn input tokens substantially.
 - **`systemInstructions` skipped for `claude-code` provider** — Claude Code CLI already has its own system prompt and CLAUDE.md loading; Ouroboros's duplicate injection was ~3k tokens/turn of noise.
-- **Slimmer project CLAUDE.md + nested CLAUDE.md audit** — narrative moved to `docs/`, generator preambles stripped, size caps enforced. Reduces subagent and file-read context tax (multiplied by every Agent-tool spawn).
+- **Slimmer project CLAUDE.md + nested CLAUDE.md audit** — narrative moved to `roadmap/docs/`, generator preambles stripped, size caps enforced. Reduces subagent and file-read context tax (multiplied by every Agent-tool spawn).
 - **MEMORY.md dedupe + freshness audit** — removed entries duplicated in CLAUDE.md, pruned stale project state.
 - **Duplicate context7 MCP registration removed** from `.claude/settings.json`.
 

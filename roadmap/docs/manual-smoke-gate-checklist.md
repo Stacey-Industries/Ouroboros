@@ -61,4 +61,4 @@ Signature: ___________________________  (wave author or designated reviewer)
 
 ## History
 
-Established Wave 58+ (2026-05). Originally embedded in `roadmap/session-handoff.md`; extracted to its own reference doc 2026-05-13 as part of the doc-framework migration (`HANDOFF.md` is now lean orientation; reference templates live here in `docs/`).
+Established Wave 58+ (2026-05). Originally embedded in `roadmap/session-handoff.md`; extracted to its own reference doc 2026-05-13 as part of the doc-framework migration (`HANDOFF.md` is now lean orientation; reference templates live here in `roadmap/docs/`).

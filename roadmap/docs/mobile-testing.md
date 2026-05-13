@@ -1,7 +1,7 @@
 # Mobile Testing — Automated Suites & Manual Android Smoke
 
-Cross-reference: `docs/mobile-dev.md` (dev setup), `docs/mobile-release.md` (release pipeline),
-`docs/mobile-not-a-wrapper-checklist.md` (Phase G acceptance gate), `docs/mobile-overview.md` (index).
+Cross-reference: `roadmap/docs/mobile-dev.md` (dev setup), `roadmap/docs/mobile-release.md` (release pipeline),
+`roadmap/docs/mobile-not-a-wrapper-checklist.md` (Phase G acceptance gate), `roadmap/docs/mobile-overview.md` (index).
 
 ---
 

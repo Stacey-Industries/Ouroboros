@@ -10,7 +10,7 @@ For the current architecture and operator-facing details, see:
 
 - `src/standalone/ouroborosMcp/CLAUDE.md` — standalone server module map
 - `src/standalone/CLAUDE.md` — standalone binaries directory overview
-- `docs/architecture.md` "Graph MCP server (Wave 60)" — high-level integration
+- `roadmap/docs/architecture.md` "Graph MCP server (Wave 60)" — high-level integration
 
 ## Historical references
 
