@@ -4,60 +4,56 @@
  * Wave 46 Phase C: mounts the shared TerminalManager inside a resizable,
  * collapsible dock at the bottom of the workbench. Reuses the existing
  * terminal session state — no second PTY stack.
+ *
+ * Wave 88 Phase 3: replaced bespoke useDockResize (window-level pointer listeners,
+ * no pointer capture) with the shared useResizable hook, reusing the 'terminal'
+ * PanelId. Dock height now persists to electron-store alongside IDE shell's terminal
+ * panel via panelSizes.terminal. One-time migration from the old localStorage key
+ * runs on first mount.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { TerminalManager } from '../../Terminal/TerminalManager';
-import { TERMINAL_DOCK_CONSTANTS } from './useTerminalDockState';
+import { useResizable } from '../useResizable';
+
+/** localStorage key used by the pre-Wave-88 useTerminalDockState hook. */
+const LEGACY_DOCK_STORAGE_KEY = 'agent-ide:chat-workbench-terminal-dock';
+
+/**
+ * One-time forward migration: if the old localStorage dock state exists, seed
+ * the shared panelSizes.terminal via applySizes and clear the legacy key.
+ * Runs on first mount; subsequent mounts see no legacy key and are no-ops.
+ */
+function runLegacyDockHeightMigration(
+  currentSizes: ReturnType<typeof useResizable>['sizes'],
+  applySizes: ReturnType<typeof useResizable>['applySizes'],
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(LEGACY_DOCK_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { height?: unknown };
+    if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) {
+      applySizes({ ...currentSizes, terminal: parsed.height });
+    }
+    window.localStorage.removeItem(LEGACY_DOCK_STORAGE_KEY);
+  } catch {
+    // Non-critical — if migration fails, the user loses their old dock height
+    // preference but the app continues with the default.
+    try {
+      window.localStorage.removeItem(LEGACY_DOCK_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+}
 
 export interface ChatWorkbenchTerminalDockProps {
   terminal: UseTerminalSessionsReturn;
-  height: number;
-  onHeightChange: (px: number) => void;
   onClose: () => void;
-}
-
-interface DragController {
-  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
-}
-
-function useDockResize(height: number, onHeightChange: (px: number) => void): DragController {
-  const startRef = useRef<{ clientY: number; height: number } | null>(null);
-
-  const onPointerMove = useCallback(
-    (event: PointerEvent) => {
-      const start = startRef.current;
-      if (!start) return;
-      const delta = start.clientY - event.clientY;
-      onHeightChange(start.height + delta);
-    },
-    [onHeightChange],
-  );
-
-  const endDrag = useCallback(() => {
-    startRef.current = null;
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', endDrag);
-    window.removeEventListener('pointercancel', endDrag);
-  }, [onPointerMove]);
-
-  useEffect(() => endDrag, [endDrag]);
-
-  const onPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      startRef.current = { clientY: event.clientY, height };
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', endDrag);
-      window.addEventListener('pointercancel', endDrag);
-    },
-    [endDrag, height, onPointerMove],
-  );
-
-  return { onPointerDown };
 }
 
 const DOCK_BTN_BASE = 'rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors';
@@ -132,7 +128,11 @@ function DockHeader(props: {
   );
 }
 
-function DockResizeHandle({ onPointerDown }: DragController): React.ReactElement {
+function DockResizeHandle({
+  onPointerDown,
+}: {
+  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+}): React.ReactElement {
   return (
     <div
       role="separator"
@@ -172,26 +172,36 @@ function DockTerminalSurface({
 
 export function ChatWorkbenchTerminalDock({
   terminal,
-  height,
-  onHeightChange,
   onClose,
 }: ChatWorkbenchTerminalDockProps): React.ReactElement {
-  const drag = useDockResize(height, onHeightChange);
-  const clampedHeight = Math.min(
-    TERMINAL_DOCK_CONSTANTS.MAX_HEIGHT,
-    Math.max(TERMINAL_DOCK_CONSTANTS.MIN_HEIGHT, height),
-  );
+  const { sizes, startResize, applySizes } = useResizable();
+
+  // One-time migration from pre-Wave-88 localStorage dock height.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    runLegacyDockHeightMigration(sizes, applySizes);
+  }, []);
+
   const handleCloseSession = useCallback(() => {
     if (terminal.activeSessionId) terminal.handleTerminalClose(terminal.activeSessionId);
   }, [terminal]);
 
+  const handleResizePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+      startResize('terminal', 'horizontal', sizes.terminal, event.clientY);
+    },
+    [sizes.terminal, startResize],
+  );
+
   return (
     <section
       className="flex shrink-0 flex-col border-t border-border-semantic bg-surface-panel/95"
-      style={{ height: clampedHeight }}
+      style={{ height: sizes.terminal }}
       data-testid="chat-workbench-terminal-dock"
     >
-      <DockResizeHandle onPointerDown={drag.onPointerDown} />
+      <DockResizeHandle onPointerDown={handleResizePointerDown} />
       <DockHeader
         onSpawn={() => void terminal.spawnSession()}
         onCloseSession={handleCloseSession}
