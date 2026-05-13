@@ -57,6 +57,16 @@ export const test = base.extend<ElectronFixtures>({
     // Wait for the renderer to finish bootstrapping
     await window.waitForLoadState('domcontentloaded');
     await use(window);
+    // Pipeline Hardening M-4: explicit page close before electronApp teardown.
+    // Required on Windows to prevent app.close() from hanging — see e2e/CLAUDE.md
+    // "The template ends with `await page.close()` before fixture teardown."
+    // Without this, the electronApp teardown exceeds the 30s test timeout and
+    // every spec that uses the `page` fixture fails on teardown alone.
+    try {
+      await window.close();
+    } catch {
+      // Best-effort — page may already be closed by the test or by app.close()
+    }
   },
 });
 

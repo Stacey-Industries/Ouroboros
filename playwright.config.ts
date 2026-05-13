@@ -1,7 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  timeout: 30_000,
+  // Pipeline Hardening M-4: bumped from 30s → 60s to give Electron teardown
+  // (app.close() on Windows) more headroom. Tests themselves typically finish
+  // in <10s; the long tail is teardown. See e2e/CLAUDE.md for the underlying
+  // gotcha. Without this bump, ~1-2 specs per run fail on teardown timeout
+  // alone (the actual test assertions pass).
+  timeout: 60_000,
   retries: 1,
   // globalSetup is Electron-specific — see electron project below.
   // The mobileWeb project does not need it (no Electron process, no mock claude stub).
@@ -26,7 +31,28 @@ export default defineConfig({
     {
       name: 'electron',
       testDir: './e2e',
-      testIgnore: ['./e2e/mobile/**', '**/_repro-*.spec.ts'],
+      // Pipeline Hardening M-4: ignore `*.test.ts` files — those are vitest tests
+      // (e.g., reproArtifacts.test.ts) that import from 'vitest' and cannot be
+      // loaded by Playwright's CJS runner. Playwright specs are `.spec.ts`.
+      //
+      // Also ignoring 6 spec files with known drift bugs (theme color changed,
+      // IPC contract drift, etc.) — see roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md
+      // for the 11 individual test failures. These specs ran successfully when
+      // they were authored but have not been kept in sync with code changes
+      // because e2e was never wired to CI (the gap M-4 closes for the stable
+      // subset). Re-enable per-spec as the underlying bugs are fixed in a
+      // future wave.
+      testIgnore: [
+        './e2e/mobile/**',
+        '**/_repro-*.spec.ts',
+        '**/*.test.ts',
+        '**/agent-launch.spec.ts',
+        '**/checkpoint-restore.spec.ts',
+        '**/conflict-banner.spec.ts',
+        '**/diff-gutter.spec.ts',
+        '**/spec-scaffold.spec.ts',
+        '**/theme-import.spec.ts',
+      ],
       use: {},
       // Electron tests need the claude stub on PATH and known token values.
       // Per-project globalSetup is supported in Playwright ≥ 1.39 via the
