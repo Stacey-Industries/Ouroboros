@@ -30,7 +30,29 @@ jobs:
           sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2t64 xvfb || \
           sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2 xvfb
 
-      - run: npm ci
+      # --ignore-scripts skips the postinstall electron-rebuild + changelog steps.
+      # The postinstall electron-rebuild hangs at "Searching dependency tree" on
+      # all 3 platforms after the node-gyp@^11 override unblocked distutils. We
+      # run electron-rebuild explicitly below so it can fail/succeed on its own
+      # timer without taking the entire `npm ci` step with it, and so the
+      # changelog script doesn't gate everything else either.
+      - run: npm ci --ignore-scripts
+
+      - name: Generate changelog (postinstall replacement)
+        run: node tools/build-changelog.js
+
+      # Rebuild native modules against Electron's Node ABI on every platform.
+      # Replaces the postinstall electron-rebuild that was timing out at 20min.
+      # `-w better-sqlite3,node-pty` restricts to the two native deps we ship.
+      #
+      # Use --package=@electron/rebuild explicit to force resolution to the
+      # maintained scoped package (v4+). The bare `electron-rebuild` binary
+      # name on npm is also published by the deprecated unscoped package,
+      # which has a `Searching dependency tree` hang on CI. The explicit
+      # --package flag bypasses any binary-name collision in node_modules/.bin.
+      - name: Rebuild native modules for Electron (all platforms)
+        timeout-minutes: 15
+        run: npx --package=@electron/rebuild electron-rebuild -f -w better-sqlite3,node-pty
 
       - name: Rebuild native modules (Ubuntu)
         if: matrix.os == 'ubuntu-latest'

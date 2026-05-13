@@ -152,7 +152,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.1",
+    "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.2.2",
@@ -190,6 +190,9 @@
     "vite-plugin-monaco-editor": "^1.1.0",
     "vitest": "^4.0.0",
     "vitest-axe": "^0.1.0"
+  },
+  "overrides": {
+    "node-gyp": "^11.0.0"
   },
   "build": {
     "appId": "com.arcflow.ouroboros",
