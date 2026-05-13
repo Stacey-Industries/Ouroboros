@@ -44,9 +44,15 @@ jobs:
       # Rebuild native modules against Electron's Node ABI on every platform.
       # Replaces the postinstall electron-rebuild that was timing out at 20min.
       # `-w better-sqlite3,node-pty` restricts to the two native deps we ship.
+      #
+      # Use --package=@electron/rebuild explicit to force resolution to the
+      # maintained scoped package (v4+). The bare `electron-rebuild` binary
+      # name on npm is also published by the deprecated unscoped package,
+      # which has a `Searching dependency tree` hang on CI. The explicit
+      # --package flag bypasses any binary-name collision in node_modules/.bin.
       - name: Rebuild native modules for Electron (all platforms)
         timeout-minutes: 15
-        run: npx electron-rebuild -f -w better-sqlite3,node-pty
+        run: npx --package=@electron/rebuild electron-rebuild -f -w better-sqlite3,node-pty
 
       - name: Rebuild native modules (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
