@@ -6,6 +6,7 @@ Shipped date and squash commit are filled in at wave-end going forward. Historic
 
 | Wave | Topic | Shipped | Squash | Link |
 |---|---|---|---|---|
+| M5 | Documentation framework migration | 2026-05-13 | _pending_ | [wave-M5-doc-migration/](wave-M5-doc-migration/) |
 | W87 | Chat orchestration activation | in-progress | — | [wave-87-chat-orchestration-activation/](wave-87-chat-orchestration-activation/) |
 | W86 | Chat orchestration state-architecture overhaul | pending push | — | [wave-86-chat-orchestration-overhaul/](wave-86-chat-orchestration-overhaul/) |
 | W85 | Flow tracer | pending push | — | [wave-85-flow-tracer/](wave-85-flow-tracer/) |
