@@ -12,7 +12,7 @@ Checked every `.md` file under `docs/` and `README.md` against the live codebase
 
 - **docs/architecture.md** — claim: "internalMcp (the SSE-based ouroboros server with graph tools)… internalMcp gained a stdio transport that mirrors the SSE tool surface" (Wave 51 section) — issue: Wave 60 deleted the SSE server, the stdio bridge, and the 14-tool registry in `src/main/internalMcp/`. The standalone MCP server now lives at `src/standalone/ouroborosMcp/`. The `internalMcp.transport` config key is vestigial (accepted for back-compat, ignored). The entire Wave 51 MCP routing section describes an architecture that no longer exists.
 
-- **docs/architecture.md** — claim: "`roadmap/wave-51-plan.md` and `roadmap/wave-51-decision.md`" (cross-reference links) — issue: both files were moved to `roadmap/archive/`; paths no longer resolve from the repo root.
+- **docs/architecture.md** — claim: "`roadmap/wave-51-plan.md` and `roadmap/wave-51-decision.md`" (cross-reference links) — issue: both files were moved to `roadmap/_archived/`; paths no longer resolve from the repo root.
 
 ---
 
@@ -20,7 +20,7 @@ Checked every `.md` file under `docs/` and `README.md` against the live codebase
 
 - **docs/codemode-internalmcp-routing.md** — claim: entire doc describes Wave 51's stdio adapter wiring (`internalMcpStdioTransport.js`, `internalMcp.transport` flag, route-through-codemode, SSE fallback) — issue: Wave 60 deleted `internalMcpStdioTransport.ts` and the SSE server. The `internalMcp.transport` flag is now a no-op (see `src/main/internalMcp/CLAUDE.md`). This entire document describes a superseded architecture.
 
-- **docs/codemode-internalmcp-routing.md** — claim: "`roadmap/wave-51-plan.md`" and "`roadmap/wave-51-decision.md`" (links in Rollback section) — issue: both files are in `roadmap/archive/`; paths are stale.
+- **docs/codemode-internalmcp-routing.md** — claim: "`roadmap/wave-51-plan.md`" and "`roadmap/wave-51-decision.md`" (links in Rollback section) — issue: both files are in `roadmap/_archived/`; paths are stale.
 
 ---
 
@@ -36,7 +36,7 @@ Checked every `.md` file under `docs/` and `README.md` against the live codebase
 
 - **docs/context-ranker.md** — claim: "`contextRankerVariant.ts` — `TUNED_WEIGHTS`" — issue: the actual file is `src/main/orchestration/contextSelectorRankerVariant.ts`; no file named `contextRankerVariant.ts` exists.
 
-- **docs/context-ranker.md** — claim: "`roadmap/wave-53b-analysis.md`" (cross-reference) — issue: the file is at `roadmap/archive/wave-53b-analysis.md`; the path is stale.
+- **docs/context-ranker.md** — claim: "`roadmap/wave-53b-analysis.md`" (cross-reference) — issue: the file is at `roadmap/_archived/wave-53b-analysis.md`; the path is stale.
 
 ---
 

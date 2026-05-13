@@ -1,7 +1,7 @@
 # iOS mobile packaging — Capacitor build, APNs push, App Store submission
 
 **Status:** DEFERRED — blocked on Mac hardware access; reactivate when relevant
-**Source:** Waves 33a, 33b, 34 (`roadmap/archive/wave-33a-plan.md`, `wave-33b-plan.md`, `wave-34-plan.md`)
+**Source:** Waves 33a, 33b, 34 (`roadmap/_archived/wave-33a-plan.md`, `wave-33b-plan.md`, `wave-34-plan.md`)
 **Filed:** 2026-05-01 — moved out of NOW-USELESS bucket per the developer's note that "iOS will be relevant soon"
 
 ## Why this lives in `deferred/` not closed
@@ -65,9 +65,9 @@ Keep these out of the iOS-revival wave to prevent scope creep:
 
 ## References
 
-- `roadmap/archive/wave-33a-plan.md` — original iOS packaging wave
-- `roadmap/archive/wave-33b-plan.md` — APNs + App Store submission deferral
-- `roadmap/archive/wave-34-plan.md` — native push integration
+- `roadmap/_archived/wave-33a-plan.md` — original iOS packaging wave
+- `roadmap/_archived/wave-33b-plan.md` — APNs + App Store submission deferral
+- `roadmap/_archived/wave-34-plan.md` — native push integration
 - `capacitor.config.ts` — Capacitor configuration (Android-functional)
 - `src/web/capacitor/` — shared native bridge module
 - `src/main/mobileAccess/` — device registry (push token storage already present)

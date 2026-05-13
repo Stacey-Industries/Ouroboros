@@ -126,7 +126,7 @@ The original rule files at `~/.claude/rules/init-safety.md` and `~/.claude/rules
 
 Phase D analyzed 378 session JSONLs (174 sessions with at least one Grep/Read call) and measured **93.9% adherence** to graph-first routing — well above the 70% "stay log-only" threshold. The decision is to **not** ship enforcement; the `hooks.enforceGraphFirst` config flag exists (default `false`) but the corresponding decideEnforcement code is not wired.
 
-The `analyze-graph-adherence.ts` script was removed in 2026-05 (Wave 50 quarterly re-run was closed as superseded — live router signals from Wave 53 telemetry restoration replace the periodic corpus-run model). Historical analysis remains at `roadmap/archive/wave-50-graph-adherence.md`; the 70%-adherence threshold is preserved here as the original decision rationale.
+The `analyze-graph-adherence.ts` script was removed in 2026-05 (Wave 50 quarterly re-run was closed as superseded — live router signals from Wave 53 telemetry restoration replace the periodic corpus-run model). Historical analysis remains at `roadmap/_archived/wave-50-graph-adherence.md`; the 70%-adherence threshold is preserved here as the original decision rationale.
 
 ---
 

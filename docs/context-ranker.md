@@ -6,8 +6,8 @@ works, the weight modes introduced in Wave 53b, how the online telemetry is coll
 and how to measure and interpret hit rates.
 
 **Cross-references:**
-- `roadmap/archive/wave-53b/waveplan-53b-analysis.md` — Phase A offline analysis (provisional numbers)
-- `roadmap/archive/wave-53b/wave-53b-decisions.md` — ADR for Wave 53b architectural choices
+- `roadmap/_archived/wave-53b/waveplan-53b-analysis.md` — Phase A offline analysis (provisional numbers)
+- `roadmap/_archived/wave-53b/wave-53b-decisions.md` — ADR for Wave 53b architectural choices
 - `docs/telemetry-parity.md` — telemetry parity infrastructure and queue lifecycle
 
 ---
@@ -273,7 +273,7 @@ exist post-Wave-29.5 (writers became date-rotated).
 The `analyze-ranker-hit-rate.ts` script set was deleted in 2026-05. Live
 router signals (Wave 53 telemetry restoration, merged 2026-04-26) now drive
 ranker tuning decisions instead of periodic corpus runs. Historical analysis
-remains at `roadmap/archive/wave-53b-analysis.md` and `wave-53b-data.json`.
+remains at `roadmap/_archived/wave-53b-analysis.md` and `wave-53b-data.json`.
 
 The interpretation thresholds below are preserved for context — if a future
 analyzer is built, it should use the same rubric:

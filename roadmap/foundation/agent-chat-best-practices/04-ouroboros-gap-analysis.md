@@ -887,7 +887,7 @@ The following are non-obvious constraints from `src/main/CLAUDE.md` and `src/ren
 
 7. **Two-rendering-path duplication** (`AgentChatConversation.tsx` + `AgentChatStreamingMessage.tsx`) — tool grouping logic is intentionally duplicated between the streaming and persisted message paths. They share `AgentChatToolCard` leaf but each has its own grouping. This is tracked as tech debt in `AgentChat/CLAUDE.md:75`. Any change to tool grouping behavior requires updating both paths.
 
-8. **`Tailwind v4 @source not` directives in `globals.css`** — Windows paths in the repo content glob cause Tailwind to tokenize path segments as CSS variable names. `@source not` directives for `roadmap/wave-*-output/**` and `roadmap/archive/**` prevent the renderer build from dying with a `RangeError: Invalid code point` on Unicode escapes. If new `roadmap/` subdirectories are added, `globals.css` must be extended.
+8. **`Tailwind v4 @source not` directives in `globals.css`** — Windows paths in the repo content glob cause Tailwind to tokenize path segments as CSS variable names. `@source not` directives for `roadmap/wave-*-output/**` and `roadmap/_archived/**` prevent the renderer build from dying with a `RangeError: Invalid code point` on Unicode escapes. If new `roadmap/` subdirectories are added, `globals.css` must be extended.
 
 ---
 

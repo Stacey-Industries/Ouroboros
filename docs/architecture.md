@@ -650,4 +650,4 @@ Implementation references:
 | Multiplex policy | `src/main/codemode/codemodeStartup.ts`, `src/main/orchestration/providers/internalMcpRoutingPolicy.ts` |
 | Schema handshake | `src/standalone/ouroborosMcp/ouroborosMcpSchema.ts` (refuses incompatible DB versions) |
 
-Pre-Wave-60 design (SSE-based in-process server, per-spawn `routeInternalMcp` flag, `internalMcpStdioTransport.ts` adapter) is fully archived — see `roadmap/archive/wave-51-plan.md` and `roadmap/archive/wave-51-decision.md` for the historical decision matrix.
+Pre-Wave-60 design (SSE-based in-process server, per-spawn `routeInternalMcp` flag, `internalMcpStdioTransport.ts` adapter) is fully archived — see `roadmap/_archived/wave-51-plan.md` and `roadmap/_archived/wave-51-decision.md` for the historical decision matrix.

@@ -11,9 +11,9 @@
    exceeds U+10FFFF, String.fromCodePoint throws "Invalid code point" and the
    build fails. Reproduced and fixed during Wave 53c follow-up (v2.7.4); the
    archive glob below was added during the Wave 53k roadmap cleanup that
-   moved completed waves (including wave-53c-output/) under roadmap/archive/. */
+   moved completed waves (including wave-53c-output/) under roadmap/_archived/. */
 @source not "../../../roadmap/wave-*-output/**";
-@source not "../../../roadmap/archive/**";
+@source not "../../../roadmap/_archived/**";
 @source not "../../../.stryker-tmp/**";
 
 @custom-variant dark (&:is(.dark *));

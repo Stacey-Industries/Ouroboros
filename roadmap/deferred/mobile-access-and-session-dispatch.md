@@ -76,6 +76,6 @@ If/when this gets activated, the default-`false` for `mobileAccess.enabled` is p
 - `src/main/mobileAccess/` — device registry + bridge disconnect handler
 - `src/main/configSchemaTailExt.ts:107-153` — `mobileAccess` and `sessionDispatch` schemas
 - `src/web/capacitor/qrScanner.ts` — Capacitor-side QR scan (uses `@capacitor-mlkit/barcode-scanning`)
-- `roadmap/archive/wave-33a-plan.md` — original mobile pairing wave
-- `roadmap/archive/wave-41-plan.md` — defaults-deferred decision
+- `roadmap/_archived/wave-33a-plan.md` — original mobile pairing wave
+- `roadmap/_archived/wave-41-plan.md` — defaults-deferred decision
 - Audit: `roadmap/audit-verification-pass.md` Section D item #10

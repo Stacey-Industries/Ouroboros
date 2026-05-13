@@ -386,12 +386,12 @@ Safe to queue immediately:
 
 | # | Doc | Fix |
 |---|---|---|
-| 4 | `docs/architecture.md:660` | `roadmap/wave-51-*.md` → `roadmap/archive/wave-51-*.md` |
+| 4 | `docs/architecture.md:660` | `roadmap/wave-51-*.md` → `roadmap/_archived/wave-51-*.md` |
 | 6 | `docs/codemode-internalmcp-routing.md:5` | Same |
 | 7 | `docs/context-injection.md:149` | Add `providers/` to `claudeCodeContextBuilder.ts` path |
 | 8 | `docs/context-ranker.md:21` | Same |
 | 9 | `docs/context-ranker.md` | `contextRankerVariant.ts` → `contextSelectorRankerVariant.ts` |
-| 10 | `docs/context-ranker.md:9` | `roadmap/wave-53b-analysis.md` → `roadmap/archive/wave-53b-analysis.md` |
+| 10 | `docs/context-ranker.md:9` | `roadmap/wave-53b-analysis.md` → `roadmap/_archived/wave-53b-analysis.md` |
 
 ### LOW severity
 

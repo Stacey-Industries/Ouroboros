@@ -269,11 +269,11 @@ Wave-burn batch — nine waves shipped in parallel from `roadmap/future/`.
   sibling-then-parent so the registered path works regardless of bundle
   layout (electron-vite chunks the calling code into `out/main/chunks/`
   while `proxyServer.js` is at `out/main/`).
-- Tailwind `@source not` glob extended to `roadmap/archive/**` after
+- Tailwind `@source not` glob extended to `roadmap/_archived/**` after
   archiving completed waves moved `wave-53c-output/` under it; Tailwind
   v4's auto-source scan trips on Windows path encodings (`\afa0da`-shaped
   hex segments) above U+10FFFF.
-- Wave 53k ADR (`roadmap/archive/wave-53k/wave-53k-decisions.md`) documents nine architecture
+- Wave 53k ADR (`roadmap/_archived/wave-53k/wave-53k-decisions.md`) documents nine architecture
   decisions, including the Decision-2 reversal (toggle-flag → destructive
   write) and Decision 9 (SDK adoption pulled forward from a Wave 53m punt).
 
