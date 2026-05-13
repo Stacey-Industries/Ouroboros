@@ -25,8 +25,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2t64 || \
-          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
+          # xvfb added for Pipeline Hardening M-4 — Electron needs a virtual display
+          # for the chromium renderer when running headless on Linux CI.
+          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2t64 xvfb || \
+          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2 xvfb
 
       - run: npm ci
 
@@ -76,3 +78,26 @@ jobs:
       - name: Smoke-test web build (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         run: npm run build:web
+
+      # Pipeline Hardening M-4: Playwright Electron e2e (stable subset).
+      # Ubuntu-only because (a) xvfb wrap keeps the CI step simple — no Windows
+      # alternative needed since the renderer launches headlessly under xvfb,
+      # (b) the meta-spec called out the Playwright + Electron wrinkle; this
+      # closes it. Stable subset is 9 tests across 3 specs (app-launch,
+      # basic-navigation, compare-providers, agent-chat). 6 specs are excluded
+      # via testIgnore for known drift bugs (see
+      # roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md).
+      - name: Playwright e2e (Electron stable subset, Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        timeout-minutes: 10
+        run: xvfb-run --auto-servernum npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure() && matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
