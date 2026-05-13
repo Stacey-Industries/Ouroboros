@@ -20,13 +20,19 @@ Per `~/.claude/rules/best-practice-spectrum.md`. One section per locked decision
 
 ## Decision 2: Cell-dimensions API access pattern
 
-**Context:** `CommandBlockOverlayBody.tsx` reaches into `term._core._renderService.dimensions.css.cell.height` (private xterm internal) for overlay positioning. Research confirms xterm v6 exposes `terminal.dimensions.css.cell.{width,height}` as a public, documented, stable API. The property is `undefined` before `term.open()`.
+**Context:** `CommandBlockOverlayBody.tsx` reaches into `term._core._renderService.dimensions.css.cell.height` (private xterm internal) for overlay positioning. Initial research pointed at `terminal.dimensions.css.cell.{width,height}` as a public v6 API, but Phase 1 implementation found that property is NOT present in `@xterm/xterm` v6.0.0 type definitions (likely aspirational in forward-looking docs, not landed in the shipped 6.0.0 surface).
 
-**Pick:** Use `terminal.dimensions.css.cell` public API with null-guard — **industry standard**.
+**Options considered:**
 
-**Rationale:** Private API access is brittle; public API is documented and stable since xterm v5.x. Direct swap, no helper isolation needed.
+- *Industry standard:* `terminal.dimensions.css.cell` public property — turned out to be unavailable in v6.0.0.
+- *Emerging best practice:* DOM-based calculation — `element.clientHeight / rows` reads observable layout state without touching xterm internals.
+- *Experimental:* Wait for a future v6.x with the public dimensions property — kicks the can.
 
-**Consequences:** ~3-line change in `CommandBlockOverlayBody.tsx`. Stale gotcha entry about private access can be removed from CLAUDE.md. Source: xterm.js GitHub Issue #702 (character dimensions API), v6.0.0 release notes.
+**Pick:** DOM-based calculation (`element.clientHeight / rows`) — **emerging best practice**, the working v6.0.0 path.
+
+**Rationale:** Goal of eliminating private API access is achieved without depending on an API that doesn't exist yet. The DOM approach reads what xterm has already rendered, which is the authoritative measurement.
+
+**Consequences:** `getCellHeight` in `CommandBlockOverlayBody.styles.ts` now derives cell height from the rendered DOM. CLAUDE.md gotcha updated accordingly (subsystem CLAUDE.md line ~54). If a future xterm release ships a stable public dimensions API, revisit and prefer the public surface; until then, DOM calculation is correct.
 
 ## Decision 3: ChatOnlyShell terminal-tool bridge
 
