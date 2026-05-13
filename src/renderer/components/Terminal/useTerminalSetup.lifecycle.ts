@@ -8,9 +8,11 @@ import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
+import log from 'electron-log/renderer';
 
 import { INITIAL_SELECTION_TOOLTIP } from './SelectionTooltip';
 import { ShellIntegrationAddon } from './shellIntegrationAddon';
+import { TERMINAL_ADDONS } from './terminalAddonManifest';
 import { buildXtermTheme, getCssVar } from './terminalHelpers';
 import { registerFilePathLinks } from './terminalLinkProvider';
 import { registerTerminal } from './terminalRegistry';
@@ -56,95 +58,136 @@ function createTerminal(fontSize?: number, cursorStyle?: 'block' | 'underline' |
   });
 }
 
-function loadCoreAddons(
-  _context: TerminalSetupLifecycleContext,
-  term: Terminal,
-  container: HTMLDivElement,
-): { fitAddon: FitAddon; searchAddon: SearchAddon } {
-  const fitAddon = new FitAddon();
-  const searchAddon = new SearchAddon();
-  const webLinksAddon = new WebLinksAddon((_event, uri) => {
-    void window.electronAPI.app.openExternal(uri);
-  });
-  term.loadAddon(fitAddon);
-  term.loadAddon(searchAddon);
-  term.loadAddon(webLinksAddon);
-  try {
-    const webgl = new WebglAddon();
-    webgl.onContextLoss(() => {
-      console.warn('[terminal:webgl] context loss — disposing WebGL addon');
-      webgl.dispose();
-    });
-    term.loadAddon(webgl);
-    _context.refs.webglAddonRef.current = webgl;
-    console.warn('[terminal:webgl] loaded BEFORE term.open()');
-  } catch (err) {
-    console.warn('[terminal:webgl] failed to load:', err);
+// ── Pre-open addon loading ────────────────────────────────────────────────────
+
+function loadPreOpenAddons(term: Terminal): { fitAddon: FitAddon; searchAddon: SearchAddon } {
+  const preOpenEntries = TERMINAL_ADDONS.filter((e) => e.loadOrder === 'pre-open');
+  let fitAddon: FitAddon | null = null;
+  let searchAddon: SearchAddon | null = null;
+
+  for (const entry of preOpenEntries) {
+    try {
+      const instance = buildPreOpenAddon(entry.packageName);
+      if (instance) term.loadAddon(instance);
+      if (entry.packageName === '@xterm/addon-fit') fitAddon = instance as FitAddon;
+      if (entry.packageName === '@xterm/addon-search') searchAddon = instance as SearchAddon;
+    } catch (err) {
+      if (entry.required) throw err;
+      log.warn(`[terminal:addon] optional pre-open addon failed: ${entry.packageName}`, err);
+    }
   }
-  term.open(container);
-  console.warn(
-    '[terminal:webgl] term.open() complete, renderer:',
-    (term as unknown as Record<string, unknown>)._core ? 'active' : 'unknown',
-  );
+
+  if (!fitAddon) throw new Error('[terminal] FitAddon failed — terminal cannot function');
+  if (!searchAddon) throw new Error('[terminal] SearchAddon failed — terminal cannot function');
   return { fitAddon, searchAddon };
 }
 
-function loadOptionalAddons(context: TerminalSetupLifecycleContext, term: Terminal): void {
+function buildPreOpenAddon(packageName: string): FitAddon | SearchAddon | WebLinksAddon | null {
+  if (packageName === '@xterm/addon-fit') return new FitAddon();
+  if (packageName === '@xterm/addon-search') return new SearchAddon();
+  if (packageName === '@xterm/addon-web-links') {
+    return new WebLinksAddon((_event, uri) => {
+      void window.electronAPI.app.openExternal(uri);
+    });
+  }
+  return null;
+}
+
+// ── Post-open addon loading ───────────────────────────────────────────────────
+
+function loadWebGLAddon(context: TerminalSetupLifecycleContext, term: Terminal): void {
+  if (context.refs.webglFailedRef.current) return;
   try {
-    const imageAddon = new ImageAddon({
+    const webgl = new WebglAddon();
+    webgl.onContextLoss(() => {
+      log.warn('[terminal:webgl] context loss — canvas renderer takes over');
+      webgl.dispose();
+      context.refs.webglAddonRef.current = null;
+      context.refs.webglFailedRef.current = true;
+    });
+    term.loadAddon(webgl);
+    context.refs.webglAddonRef.current = webgl;
+  } catch (err) {
+    log.warn('[terminal:webgl] failed to load — canvas renderer will be used', err);
+    context.refs.webglFailedRef.current = true;
+  }
+}
+
+function buildPostOpenAddon(
+  packageName: string,
+  context: TerminalSetupLifecycleContext,
+  term: Terminal,
+): ImageAddon | ClipboardAddon | SerializeAddon | ProgressAddon | null {
+  if (packageName === '@xterm/addon-image') {
+    return new ImageAddon({
       sixelPaletteLimit: 512,
       sixelSizeLimit: 25000000,
       enableSizeReports: true,
     });
-    term.loadAddon(imageAddon);
-  } catch {
-    /* image addon not critical */
   }
-  try {
-    term.loadAddon(new ClipboardAddon());
-  } catch {
-    /* clipboard addon not critical */
+  if (packageName === '@xterm/addon-clipboard') return new ClipboardAddon();
+  if (packageName === '@xterm/addon-serialize') {
+    const s = new SerializeAddon();
+    context.refs.serializeAddonRef.current = s;
+    return s;
   }
-  try {
-    const serializeAddon = new SerializeAddon();
-    term.loadAddon(serializeAddon);
-    context.refs.serializeAddonRef.current = serializeAddon;
-  } catch {
-    /* serialize addon not critical */
-  }
-  try {
-    const unicodeAddon = new UnicodeGraphemesAddon();
-    term.loadAddon(unicodeAddon);
+  if (packageName === '@xterm/addon-unicode-graphemes') {
+    const u = new UnicodeGraphemesAddon();
+    term.loadAddon(u);
     term.unicode.activeVersion = 'graphemes';
-  } catch {
-    /* unicode graphemes addon not critical */
+    return null; // already loaded inline
   }
-  try {
-    const progressAddon = new ProgressAddon();
-    term.loadAddon(progressAddon);
-    context.refs.progressAddonRef.current = progressAddon;
-  } catch {
-    /* progress addon not critical */
+  if (packageName === '@xterm/addon-progress') {
+    const p = new ProgressAddon();
+    context.refs.progressAddonRef.current = p;
+    return p;
   }
+  return null;
+}
+
+function loadPostOpenAddons(context: TerminalSetupLifecycleContext, term: Terminal): void {
+  for (const entry of TERMINAL_ADDONS.filter((e) => e.loadOrder === 'post-open')) {
+    try {
+      if (entry.packageName === '@xterm/addon-webgl') {
+        loadWebGLAddon(context, term);
+        continue;
+      }
+      const instance = buildPostOpenAddon(entry.packageName, context, term);
+      if (instance) term.loadAddon(instance);
+    } catch (err) {
+      if (entry.required) throw err;
+      log.warn(`[terminal:addon] optional post-open addon failed: ${entry.packageName}`, err);
+    }
+  }
+
+  loadShellIntegrationAddon(context, term);
+}
+
+function loadShellIntegrationAddon(context: TerminalSetupLifecycleContext, term: Terminal): void {
   try {
     const shellIntegrationAddon = new ShellIntegrationAddon();
     term.loadAddon(shellIntegrationAddon);
     context.refs.shellIntegrationAddonRef.current = shellIntegrationAddon;
-  } catch {
-    /* shell integration addon not critical */
+  } catch (err) {
+    log.warn('[terminal:addon] shell integration addon failed', err);
   }
 }
+
+// ── Orchestrator ──────────────────────────────────────────────────────────────
 
 function loadTerminalAddons(
   context: TerminalSetupLifecycleContext,
   term: Terminal,
   container: HTMLDivElement,
 ): void {
-  const { fitAddon, searchAddon } = loadCoreAddons(context, term, container);
-  loadOptionalAddons(context, term);
+  const { fitAddon, searchAddon } = loadPreOpenAddons(term);
+  term.open(container);
+  loadPostOpenAddons(context, term);
   context.refs.fitAddonRef.current = fitAddon;
   context.refs.searchAddonRef.current = searchAddon;
 }
+
+// ── Handlers ──────────────────────────────────────────────────────────────────
 
 function attachAllHandlers(
   context: TerminalSetupLifecycleContext,
@@ -157,7 +200,6 @@ function attachAllHandlers(
     if (!term.getSelection()) context.callbacks.setSelectionTooltip(INITIAL_SELECTION_TOOLTIP);
   });
   const ro = createReadyObserver(context, container);
-
   return { ...terminalDisposables, ...containerHandlers, selD, ro };
 }
 
