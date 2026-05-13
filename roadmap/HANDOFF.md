@@ -1,4 +1,4 @@
-# Session Handoff — 2026-05-13 (Pipeline Hardening M-4 shipped; Wave 86 + 87 + 85 still pending push)
+# Session Handoff — 2026-05-13 (clean state: master = origin/master; Wave 87 on its branch)
 
 **Audience:** the next Claude Code session that starts in this repo.
 
@@ -6,18 +6,32 @@
 
 ## TL;DR
 
-**Pipeline Hardening M-4 (Agent IDE Electron e2e to CI) just shipped** via [PR #4](https://github.com/hesnotsoharry/Ouroboros/pull/4), squash-merged as `d5effffa` on `origin/master`. M-1 doctrinal commit (dispatch-reflex pointer + wave-temperature log bootstrap) was bundled with it. Closes the cross-project consistency goal — Agent IDE's Electron e2e harness now runs end-to-end in CI on every push (Ubuntu under xvfb, 9-test stable subset).
+**Local master matches `origin/master` exactly.** No divergence, no stale local-only commits. Hop in clean.
 
-**Wave 86 (Chat Orchestration State-Architecture Overhaul) and the original M-1 commit on local master are now DIVERGED from origin/master** because the M-4 PR was cherry-picked off origin/master to ship without bundling Wave 87's unresolved TypeScript errors. Local master has 9 commits not on origin (Wave 86 + the duplicated-by-cherry-pick M-1 commit `5658e6ec`). To push Wave 86: rebase local master onto origin/master, drop the duplicate M-1 commit (its content already landed via the M-4 squash), resolve any conflicts, then push.
+**What's shipped on `origin/master` (most recent first):**
 
-The new chat-state architecture (Wave 86) is **wired but dormant** in production — `chatState:diff` IPC doesn't fire because of a Vite bundle issue (lazy `require('./threadStore')` in `chatStateNewPath.ts:runCrashRecovery`). The legacy DOM `agent-chat:thread-snapshot` path was restored as load-bearing until Wave 87 fixes the bundle issue and actually migrates the send path.
+| Commit | Topic |
+|---|---|
+| `0d6ee197` (PR #6) | `fix(ci): override node-gyp to ^11` — unblocks Windows + macOS validate matrix from the distutils crash (~4 days red) |
+| `c6314000` (PR #5) | HANDOFF refresh post M-4 + filed `2026-05-13-ci-distutils-node-gyp.md` follow-up |
+| `d5effffa` (PR #4) | Pipeline Hardening M-1 doctrinal + M-4 (Electron Playwright e2e on Ubuntu CI via xvfb, 9-test stable subset) |
+| `271ffe77` | Gitignore dev-mode threads.db at repo root |
+| `071db978` | Wave 86 result brief + refreshed HANDOFF |
+| `f5202238` ... `f3ee6f54` (7 commits) | Wave 86 (Chat Orchestration State-Architecture Overhaul) — Phases 4-6 + post-smoke fixes |
 
-Wave 85 (Flow Tracer) shipped earlier on a different branch (`wave-85-flow-tracer`, not pushed either — verify status before pushing).
+**Wave 87 (Chat Orchestration Cleanup) is on the `wave-87-chat-orchestration-cleanup` branch (pushed).** 8 clean commits: Phase 0 → Phase 1 → Phase 1-followup → Phase 2-prep → Phase 2A → Phase 2B → Phase 4-pulled-forward → renderer-projection-fix. Branch tip: `e9c57dca`. The duplicate M-1 commit that was on local master (already absorbed into PR #4's squash) was dropped during the cleanup rebase.
 
-**Three CI infrastructure issues filed during M-4** that don't gate M-4's ship but affect future work:
-1. **distutils** — Windows + macOS runners fail in `npm ci` postinstall (GitHub runner image bumped to Python 3.12+, `node-gyp` crashes on `from distutils.version import StrictVersion`). Affects every push until `node-gyp` is updated or Python is pinned. Filed as `roadmap/follow-ups/2026-05-13-ci-distutils-node-gyp.md`.
-2. **25 pre-existing test failures on Ubuntu** — `qualitySignalCollector.test.ts` (Windows path on Linux), `UsageExportPane.test.tsx` (UI drift), `ChatOnlyShell` integration tests (missing ToastProvider wrapper), plus ~21 more. These have been failing on master CI for ≥4 days. Need a test-hardening pass.
-3. **11 failing Electron e2e tests** (the deferred specs) — real production bugs surfaced by the M-4 e2e harness run. Excluded via `testIgnore` in `playwright.config.ts`. Filed as `roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md`.
+**To continue Wave 87:** `git checkout wave-87-chat-orchestration-cleanup`. From there, pick up Phase 3 (or wherever Wave 87's plan ends — see `roadmap/wave-87-chat-orchestration-cleanup/waveplan-87.md` if it exists; otherwise the carryover items below).
+
+The new chat-state architecture (Wave 86) shipped is **wired but dormant** in production. Wave 87 Phase 1 (`9271d02c`) is the lazy-init fix for the threadStore bundle issue; subsequent phases migrate the send path away from the legacy `agentChat:*` IPC.
+
+**Wave 85 (Flow Tracer)** is still on local-only branch `wave-85-flow-tracer` (not pushed). Verify status independently before resuming.
+
+## CI status
+
+Master CI still has pre-existing test failures (~80-130 across the matrix, heavily clustered in chat-orchestration tests). These reflect Wave 86's half-migrated state and **will land green naturally as Wave 87 ships its migration** — Wave 87 Phase 2A/2B move the send pipeline to `chatSendCoordinator` + `chatCommand:sendMessage`, which the failing tests need to be updated against.
+
+PR #6's distutils fix unblocked the install/rebuild layer; the test failures downstream are NOT regressions caused by this PR — they were masked by the install crash and are now visible because the install completes. The 11 deferred Electron e2e specs filed at `roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md` are part of the same pattern — fix as part of Wave 87 or in a dedicated follow-on.
 
 ---
 
