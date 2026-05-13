@@ -191,6 +191,9 @@
     "vitest": "^4.0.0",
     "vitest-axe": "^0.1.0"
   },
+  "overrides": {
+    "node-gyp": "^11.0.0"
+  },
   "build": {
     "appId": "com.arcflow.ouroboros",
     "productName": "Ouroboros",
