@@ -130,3 +130,5 @@ Context-specific rules are in `.claude/rules/` (injected automatically by glob m
 **UI-bearing changes require a signed manual smoke entry** — any wave touching `src/renderer/components/Layout/**` must include a completed smoke checklist in its result brief before push. See `~/.claude/rules/manual-smoke-gate.md` for the rule and `roadmap/session-handoff.md` for the checklist template.
 
 **Global pipeline rule:** `~/.claude/rules/development-pipeline.md` — three-lane (Build/Fix/Orient) pipeline. This repo's `roadmap/` aligns with its taxonomy (`follow-ups/`, `deferred/`, `bugs/`, `decisions/`).
+
+**Dispatch reflex** (added 2026-05-12): before 3+ exploration calls (Read/Grep/Glob) on the same question or continuing debug past one failed fix, DISPATCH from the catalog (`haiku-explorer`, `sonnet-explorer`, `sonnet-diagnostician`, `haiku-implementer`, etc. — see `~/.claude/rules/agent-catalog.md`). Hooks `~/.claude/hooks/dispatch_reflex_nudge.mjs` and `~/.claude/hooks/fresh_session_reminder.mjs` provide nudges. Fresh-session suggestions below 60% context utilization are usually wrong — hard work below threshold = dispatch a subagent, not session reset.
