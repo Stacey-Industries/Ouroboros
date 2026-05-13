@@ -227,7 +227,7 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 
 ## From roadmap/ (other)
 
-### `roadmap/session-handoff.md`
+### `roadmap/HANDOFF.md`
 - **Wave 47 soak**: flip `layout.chatWorkbench` default to `true` when soak confirms no regressions.
 - **Wave 47 soak**: widen `useWorkbenchCompare.canCompare` eligibility if users can't enter compare mode due to missing `linkedThreadId`.
 - **Wave 47 soak**: HTML preview local assets — `allow-same-origin` blocks relative URLs; consider controlled asset-proxy endpoint.

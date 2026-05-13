@@ -127,7 +127,9 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 
 Context-specific rules are in `.claude/rules/` (injected automatically by glob match). Hooks enforce constraints deterministically via `.claude/settings.json`. Slash commands are in `.claude/commands/` (project) and `~/.claude/commands/` (global).
 
-**UI-bearing changes require a signed manual smoke entry** — any wave touching `src/renderer/components/Layout/**` must include a completed smoke checklist in its result brief before push. See `~/.claude/rules/manual-smoke-gate.md` for the rule and `roadmap/session-handoff.md` for the checklist template.
+**UI-bearing changes require a signed manual smoke entry** — any wave touching `src/renderer/components/Layout/**` must include a completed smoke checklist in its result brief before push. See `~/.claude/rules-deferred/manual-smoke-gate.md` for the rule and `docs/manual-smoke-gate-checklist.md` for the checklist template.
+
+**Session pickup:** start at `roadmap/HANDOFF.md` (evergreen orientation — next action / in-flight / blockers / critical context). Wave history index at `roadmap/_index-history.md`; archived waves at `roadmap/_archived/index.md`; decisions at `roadmap/decisions/index.md`.
 
 **Global pipeline rule:** `~/.claude/rules/development-pipeline.md` — three-lane (Build/Fix/Orient) pipeline. This repo's `roadmap/` aligns with its taxonomy (`follow-ups/`, `deferred/`, `bugs/`, `decisions/`).
 

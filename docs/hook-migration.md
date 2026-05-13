@@ -56,7 +56,7 @@ Each hook is gated on the `hooks.enforcedRules` array in the user's electron-sto
 }
 ```
 
-To disable a single hook, remove its rule name from the array. The config schema lives in `src/main/configSchemaTailExt.ts`; the renderer-facing path is `Settings → Hooks` once the UI surfaces this (today it's config-only — see Wave 50 follow-ups in `roadmap/session-handoff.md`).
+To disable a single hook, remove its rule name from the array. The config schema lives in `src/main/configSchemaTailExt.ts`; the renderer-facing path is `Settings → Hooks` once the UI surfaces this (today it's config-only — see Wave 50 follow-ups in `roadmap/HANDOFF.md`).
 
 ### Recovery if a hook blocks legitimate work
 
@@ -118,7 +118,7 @@ Wave 50 created two slash commands at `~/.claude/commands/`:
 - `/init-safety` — pre-flight checks before generating a project's `CLAUDE.md` (directory-type detection, existing-file backup, stale-artifact check)
 - `/claudemd` — canonical structure and style guide for authoring a project-level `CLAUDE.md`
 
-The original rule files at `~/.claude/rules/init-safety.md` and `~/.claude/rules/project-claude-md-template.md` are intentionally kept in place for one wave of soak. Deletion is a follow-up after Wave 51 confirms `/init-safety` and `/claudemd` invocations are clean. See `roadmap/session-handoff.md` for the follow-up note.
+The original rule files at `~/.claude/rules/init-safety.md` and `~/.claude/rules/project-claude-md-template.md` are intentionally kept in place for one wave of soak. Deletion is a follow-up after Wave 51 confirms `/init-safety` and `/claudemd` invocations are clean. See `roadmap/HANDOFF.md` for the follow-up note.
 
 ---
 
