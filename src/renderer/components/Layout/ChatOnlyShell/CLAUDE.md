@@ -70,9 +70,19 @@ When `isImmersive` is false, `InnerAppLayout` mounts instead (existing IDE shell
 | `MultiBufferManager` | `ChatOnlyShellWrapper` (Phase B) | AgentChatWorkspace internals |
 | `ToastProvider` | `ConfiguredApp` | Toast notifications |
 
-## IdeToolBridge Exclusion
+## IdeToolBridge and Terminal Tool Bridge
 
-`IdeToolBridge` is **intentionally not mounted** in `ChatOnlyShell`. IDE-context tool queries (`getOpenFiles`, `getActiveFile`, `getSelection`, `getUnsavedContent`, `getTerminalOutput`) return empty. This matches Claude desktop's behaviour — the chat-only shell has no open editor state to report. Cross-window IDE-tool delegation is a Wave 43+ candidate.
+`IdeToolBridge` (the full IDE bridge) is **intentionally not mounted** in `ChatOnlyShell`. It depends on `useFileViewerManager()` which is not available in the ChatOnly scope (Wave 42 design intent).
+
+Instead, **Wave 88 Phase 4** adds a scoped `ChatOnlyTerminalToolBridge` mounted directly in `ChatWorkbenchShell`. It handles:
+
+- `getTerminalOutput` — routes to the dock's **currently-active** session (`terminal.activeSessionId`), not the first-registered terminal fallback that `getTerminalLines(undefined)` would return. Returns `[]` when no dock session is active.
+- `getOpenFiles`, `getActiveFile`, `getUnsavedContent`, `getSelection` — respond with `(null, 'unavailable in chat-only mode')` so the chat agent can distinguish this from a transport error.
+- Unknown methods — respond with a structured `'Unknown method in chat-only mode: <method>'` envelope.
+
+The bridge has no DOM output (`returns null`) and does not call `useFileViewerManager()` or `useProject()`. See Wave 88 Decision 3 (`roadmap/wave-88-terminal-foundation/wave-88-decisions.md`) for the architectural rationale.
+
+Cross-window IDE-tool delegation remains deferred (see `roadmap/follow-ups/` for the `cross-window-ide-tool-delegation` ticket).
 
 ## DOM Events
 

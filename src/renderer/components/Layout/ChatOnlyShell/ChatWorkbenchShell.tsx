@@ -11,6 +11,7 @@ import { MultiSessionLauncher } from '../../MultiSession';
 import { ChatOnlyDiffOverlay } from './ChatOnlyDiffOverlay';
 import { ChatOnlySettingsOverlay } from './ChatOnlySettingsOverlay';
 import { ChatOnlyStatusBar } from './ChatOnlyStatusBar';
+import { ChatOnlyTerminalToolBridge } from './ChatOnlyTerminalToolBridge';
 import { ChatOnlyTitleBar } from './ChatOnlyTitleBar';
 import { ChatSearchOverlay } from './ChatSearchOverlay';
 import { ChatWorkbenchBody } from './ChatWorkbenchBody';
@@ -241,6 +242,7 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
       style={{ backgroundImage: SHELL_BG }}
       data-testid="chat-workbench-shell"
     >
+      <ChatOnlyTerminalToolBridge activeDockSessionId={terminal?.activeSessionId ?? null} />
       <ShellChrome
         cycleMode={cycleMode}
         dock={dock}
