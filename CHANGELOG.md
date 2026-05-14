@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ChatOnlyShell` mounts a scoped `ChatOnlyTerminalToolBridge` rather than the full `IdeToolBridge` (which depends on `useFileViewerManager()`, unavailable in chat-only scope).
 
 ### Known issues
-- master CI is partially red (Ubuntu / Windows jobs) from pre-existing, platform-specific test failures unrelated to Wave 88 — tracked in `roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`. The macOS job is green as of this release.
+- master CI is red from pre-existing failures unrelated to Wave 88 (red since `0d6ee197`, before the wave) — tracked in `roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`. The Wave 88 CI fix (`install.js` step) eliminated the macOS Electron-binary collection failure (146 failed test files → 9). What remains: macOS + Ubuntu share a ~9-file platform-specific failure set, and the Windows Test step times out at 10 minutes. No platform is fully green yet.
 
 ## [2.15.0] - 2026-05-08
 

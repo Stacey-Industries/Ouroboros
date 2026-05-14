@@ -4,46 +4,54 @@ created: 2026-05-14
 updated: 2026-05-14
 ---
 
-# master CI — Ubuntu (21 tests) + Windows job failures
+# master CI — non-Windows platform-specific test failures + Windows Test-step timeout
 
 ## Summary
 
-master CI has been red since `0d6ee197` / `6b2cacd8` (2026-05-13) — **pre-existing, not a Wave 88 regression** (Wave 88 touched zero CI/lockfile/`src/main` test files; its mechanical review passed). The breakage is multi-platform, multi-cause. The **macOS** cause (Electron binary missing under `npm ci --ignore-scripts`) was fixed in `d77b3a00`. This bug tracks the remaining two platforms.
+master CI has been red since `0d6ee197` / `6b2cacd8` (2026-05-13) — **pre-existing, not a Wave 88 regression** (Wave 88 touched zero CI/lockfile/`src/main` test files; its mechanical review passed; its full local suite was 1065/1065).
 
 The handoff doc's claim that "Master's CI was green at the cut point (6b2cacd8)" was incorrect — the run for `6b2cacd8` (25782557688) was a failure.
 
-## Ubuntu — 8 test files / 21 tests failing
+**Fixed already (Wave 88 ship):** `d77b3a00` added a `node node_modules/electron/install.js` step to `ci.yml`. This eliminated the macOS Electron-binary collection failure — `npm ci --ignore-scripts` had skipped electron's postinstall, so 146 macOS test files failed to load. After the fix, macOS went **146 failed files → 9**. The fix worked.
 
-From CI run `25887181094` (commit `cf0c40bc`), `validate (ubuntu-latest)`:
-`Test Files 8 failed | 1057 passed (1065)`, `Tests 21 failed | 10977 passed`.
+**What this bug now tracks** (verified against run `25888841620`, commit `d77b3a00`):
+1. A shared **non-Windows platform-specific test failure set** — macOS (9 files / 22 tests) and Ubuntu (7 files / 20 tests) fail nearly the same files. Pass on Windows-local.
+2. The **Windows Test step times out** at 10 minutes — a CI performance issue, not assertion failures.
 
-Failing files identified:
+## (1) Shared platform-specific failures — macOS + Ubuntu
+
+From run `25888841620`:
+- `validate (macos-latest)`: `Test Files 9 failed | 1056 passed`, `Tests 22 failed | 10976 passed`
+- `validate (ubuntu-latest)`: `Test Files 7 failed | 1058 passed`, `Tests 20 failed | 10978 passed`
+
+Failing files (union across the two platforms):
 - `src/main/codebaseGraph/indexingPipelineSupport.test.ts`
 - `src/main/codebaseGraph/systemTwoRegistry.test.ts`
+- `src/main/ipc-handlers/sessionDispatchHandlers.validatePath.test.ts`
 - `src/main/ipc-handlers/subagent.test.ts`
 - `src/main/router/qualitySignalCollector.test.ts`
 - `src/main/watchers/nativeWatcher.test.ts`
 - `src/main/workspaceTrust.test.ts`
 - `src/web/webPreloadTransport.resume.test.ts`
-- (one more — 8 reported, 7 enumerated; re-pull the log to confirm the 8th)
 
-**Key signal:** the full suite passes 1065/1065 on a Windows local machine at the same commit. These 21 are **Linux-environment-specific** — likely path normalization (`workspaceTrust`), file-watcher semantics (`nativeWatcher`), or timing (`webPreloadTransport.resume`). The diagnostician that investigated the macOS issue flagged these as "pre-existing assertion bugs" but did not root-cause them.
+**Key signal:** the full suite passes 1065/1065 on a Windows local machine at the same commit. These are **Linux/macOS-environment-specific** — likely path normalization (`workspaceTrust`, `sessionDispatchHandlers.validatePath`), file-watcher semantics (`nativeWatcher`), or timing (`webPreloadTransport.resume`). Not yet root-caused per file.
 
-## Windows — job conclusion `failure`, cause unclear
+## (2) Windows — Test step times out at 10 minutes
 
-`validate (windows-latest)` reported `conclusion: failure`, failing step `Test`, but the `--log-failed` output had no clean `Tests N failed` summary line for the Windows job — the test runner may have died before printing a summary, or the failure is in a different sub-step. **Needs a direct look at the full (not `--log-failed`) Windows job log.**
+`validate (windows-latest)` ends with `##[error]The action 'Test' has timed out after 10 minutes.` Tests run and pass up to the cutoff — this is not an assertion failure. Either the Windows runner is slower than the 10-min budget for the full vitest suite, or something hangs partway. Options: raise the step timeout, shard the suite, or find/fix a hang. Needs its own look.
 
 ## Investigation starting points
 
-1. Pull the full CI log for the latest master run: `gh run view <id> --log` (not `--log-failed`), strip ANSI, examine each platform's Test step separately.
-2. For Ubuntu's 21: run the 8 failing files on a Linux container locally — `docker run --rm -v "${PWD}:/repo" -w /repo node:20 bash -lc "npm ci --ignore-scripts && node node_modules/electron/install.js && npx electron-rebuild -f -w better-sqlite3,node-pty && npx vitest run <the 8 files>"` — reproduce, then diagnose per file.
-3. For Windows: determine whether it's the same class as Ubuntu's 21, a distinct failure, or a runner/setup issue.
+1. **Shared platform set:** reproduce on a Linux container —
+   `docker run --rm -v "${PWD}:/repo" -w /repo node:20 bash -lc "npm ci --ignore-scripts && node node_modules/electron/install.js && npx electron-rebuild -f -w better-sqlite3,node-pty && npx vitest run <the 8 files>"` — then diagnose per file. Group by likely cause (path-normalization / watcher / timing).
+2. **Windows timeout:** check the Windows job's per-file timing in the CI log — is one file hanging, or is the whole suite just slow? Compare wall-clock to the Ubuntu/macOS Test-step duration.
 
 ## Scope / promotion note
 
-This is plausibly a small fix-sweep wave (Lane A fix-sweep) once the per-file causes are known — 8 Ubuntu files + however many Windows surfaces, mixed platform-specific assertion bugs. Could also stay a Lane B bug if the 21 turn out to share one or two root causes. Triage after step 2 reproduces them.
+Plausibly a small fix-sweep wave once the per-file causes are known: ~8 platform-specific test files + the Windows timeout. Could stay a Lane B bug if the 8 share one or two root causes. Triage after step 1 reproduces them.
 
 ## Related
 
-- Fixed already: `d77b3a00 fix(ci): download Electron binary after npm ci --ignore-scripts` (macOS).
+- Fixed already: `d77b3a00 fix(ci): download Electron binary after npm ci --ignore-scripts` — macOS Electron-binary collection failure (146 → 9 failed files). Worked.
 - Lockfile-divergence hypothesis (Windows/Linux optional-subtree, the Gamify/Contractor-App vendor-gotcha pattern) was **investigated and refuted** — `npm ci` exits 0 with no "Missing X from lock file" errors. Not that pattern.
+- `electron`'s `npm ci --ignore-scripts` postinstall gotcha is captured in `.claude/vendor-gotchas/electron.md`.
