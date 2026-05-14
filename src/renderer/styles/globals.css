@@ -14,6 +14,7 @@
    moved completed waves (including wave-53c-output/) under roadmap/archive/. */
 @source not "../../../roadmap/wave-*-output/**";
 @source not "../../../roadmap/archive/**";
+@source not "../../../.stryker-tmp/**";
 
 @custom-variant dark (&:is(.dark *));
 
