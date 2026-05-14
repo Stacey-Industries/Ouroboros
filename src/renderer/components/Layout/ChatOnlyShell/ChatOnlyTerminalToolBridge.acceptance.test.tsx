@@ -92,7 +92,7 @@ function fireQuery(method: string, params?: unknown): string {
 
 function makeFakeTerminal(content: string[]): Terminal {
   const lines = content.map((text) => ({
-    translateToString: (_trim?: boolean) => text,
+    translateToString: () => text,
   }));
   return {
     buffer: {
