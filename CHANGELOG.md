@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0] - 2026-05-14
+
+### Added
+- **Wave 88 — Terminal Foundation.** First wave of the chat-substrate migration (88→91): bug-sweeps the terminal subsystem, brings the ChatOnly shell's terminal dock to parity with the IDE shell, and migrates dock resize onto the shared `useResizable` hook — laying the foundation for Wave 89's stacked-terminal layout and Wave 90's interactive-Claude substrate.
+  - **xterm v6 lifecycle correctness** (`useTerminalSetup.lifecycle.ts`): WebGL addon loads after `term.open()` per v6 guidance; `onContextLoss` disposes the addon and falls back to the canvas renderer without remount; the WebGL canvas is hidden before `dispose()` to eliminate a context-loss white flash; `_core` private-API access removed (cell height now derived from the DOM as `element.clientHeight / rows`, since xterm v6.0.0 exposes no public cell-size property).
+  - **Addon manifest** (`terminalAddonManifest.ts`): declares all 9 `@xterm/*` addons with load-order (`pre-open` / `post-open`) and criticality.
+  - **Dock resize unification** (`ChatWorkbenchTerminalDock.tsx`): the bespoke `useDockResize` hook is replaced by the shared `useResizable` hook, reusing the `terminal` PanelId; dock height persists via `panelSizes.terminal` (localStorage + electron-store) with a non-destructive one-time migration from the legacy `agent-ide:chat-workbench-terminal-dock` key.
+  - **`ChatOnlyTerminalToolBridge`** (`ChatOnlyShell/ChatOnlyTerminalToolBridge.tsx`): scoped tool bridge mounted in `ChatWorkbenchShell` — routes `getTerminalOutput` to the dock's active session, returns a structured "unavailable in chat-only mode" envelope for file-viewer / file-tree tool calls. Backed by a 10-case orchestrator-owned acceptance test.
+  - **Dock header parity + keybind** (`ChatWorkbenchTerminalDock.handlers.ts`, `useWorkbenchMenuEvents.ts`): New Claude / New Codex buttons + a recording toggle in the dock header; `Ctrl+J` toggles dock collapse, mirroring the IDE shell.
+
+### Fixed
+- **xterm `UnicodeGraphemesAddon` version string** — `term.unicode.activeVersion` was set to `'graphemes'`; the addon registers `'15-graphemes'`, so the grapheme-aware width provider never activated and threw on every terminal bootstrap.
+- **Dock-height migration was destructive** — the legacy-key migration overwrote any user-set dock height with the stale legacy value; now guarded to apply only when the current height is still the default.
+- **CI: Electron binary missing on cold-cache runners** — `npm ci --ignore-scripts` skipped electron's postinstall; CI now runs `node node_modules/electron/install.js` explicitly so test files importing `electron` / `electron-log` / `electron-store` can load. (Pre-existing failure, not a Wave 88 regression.)
+- **Tailwind v4 CSS build crash** — an orphaned `.stryker-tmp/` sandbox was scanned by tailwind's auto-source walker; Windows paths inside it parsed as out-of-range Unicode escapes. Added a `@source not` exclusion + `.gitignore` entry.
+
+### Architecture decisions (per `roadmap/wave-88-terminal-foundation/wave-88-decisions.md`)
+- WebGL addon loads after `term.open()` (xterm v6 upstream guidance — the v5-era double-cursor issue was retired when v6 integrated cursor rendering into the WebGL canvas).
+- Dock resize reuses the existing `terminal` PanelId rather than introducing a new persistence key — IDE shell and ChatOnly dock share `panelSizes.terminal` so both shells feel like the same product.
+- `ChatOnlyShell` mounts a scoped `ChatOnlyTerminalToolBridge` rather than the full `IdeToolBridge` (which depends on `useFileViewerManager()`, unavailable in chat-only scope).
+
+### Known issues
+- master CI is partially red (Ubuntu / Windows jobs) from pre-existing, platform-specific test failures unrelated to Wave 88 — tracked in `roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`. The macOS job is green as of this release.
+
 ## [2.15.0] - 2026-05-08
 
 ### Added
