@@ -116,17 +116,9 @@ export function readTerminalLines(
 }
 
 export function getCellHeight(term: import('@xterm/xterm').Terminal): number {
-  try {
-    const core = (term as unknown as Record<string, unknown>)._core as
-      | Record<string, unknown>
-      | undefined;
-    const renderService = core?._renderService as Record<string, unknown> | undefined;
-    const dimensions = renderService?.dimensions as
-      | { css?: { cell?: { height?: number } } }
-      | undefined;
-    if (dimensions?.css?.cell?.height) return dimensions.css.cell.height;
-  } catch {
-    /* ignore */
-  }
+  // xterm v6.0.0 does not expose a public cell-size property.
+  // Use the DOM calculation: container height divided by visible row count.
+  // Falls back to 17px (a typical 13px font at 1.2 line-height) when the
+  // terminal is not yet mounted (element is null before term.open()).
   return term.element ? term.element.clientHeight / term.rows : 17;
 }

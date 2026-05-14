@@ -22,6 +22,7 @@ export interface TerminalRefs {
   serializeAddonRef: MutableRefObject<SerializeAddon | null>;
   isReadyRef: MutableRefObject<boolean>;
   webglAddonRef: MutableRefObject<WebglAddon | null>;
+  webglFailedRef: MutableRefObject<boolean>;
 }
 
 export interface SetupCallbacks {

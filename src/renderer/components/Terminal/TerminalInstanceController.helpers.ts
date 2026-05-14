@@ -91,6 +91,7 @@ function useTerminalCoreRefs() {
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const isReadyRef = useRef(false);
   const webglAddonRef = useRef<WebglAddon | null>(null);
+  const webglFailedRef = useRef(false);
   return {
     containerRef,
     terminalRef,
@@ -101,6 +102,7 @@ function useTerminalCoreRefs() {
     serializeAddonRef,
     isReadyRef,
     webglAddonRef,
+    webglFailedRef,
   };
 }
 
@@ -201,6 +203,7 @@ function createSetupRefs(
     serializeAddonRef: foundation.serializeAddonRef ?? { current: null },
     isReadyRef: foundation.isReadyRef as MutableRefObject<boolean>,
     webglAddonRef: foundation.webglAddonRef,
+    webglFailedRef: foundation.webglFailedRef,
   };
 }
 

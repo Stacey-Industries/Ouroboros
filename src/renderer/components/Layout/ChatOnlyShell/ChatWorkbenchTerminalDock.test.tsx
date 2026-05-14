@@ -7,7 +7,7 @@
  *  - Renders TerminalManager with passed session data.
  *  - Close button invokes onClose.
  *  - Spawn button invokes terminal.spawnSession.
- *  - Height prop is applied to the dock element.
+ *  - Dock height comes from useResizable's sizes.terminal (Wave 88 Phase 3).
  *  - Resize handle is present for pointer interactions.
  */
 
@@ -32,6 +32,19 @@ vi.mock('../../Terminal/TerminalManager', () => ({
 
 vi.mock('../../shared/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock useResizable so tests control the reported terminal height without
+// running pointer-drag logic or touching localStorage/electron-store.
+const mockApplySizes = vi.fn();
+const mockStartResize = vi.fn();
+vi.mock('../useResizable', () => ({
+  useResizable: () => ({
+    sizes: { leftSidebar: 220, rightSidebar: 300, terminal: 350 },
+    startResize: mockStartResize,
+    resetSize: vi.fn(),
+    applySizes: mockApplySizes,
+  }),
 }));
 
 function makeTerminal(
@@ -64,14 +77,7 @@ describe('ChatWorkbenchTerminalDock', () => {
       sessions: [{ id: 's1', title: 'one', status: 'running' }],
       activeSessionId: 's1',
     });
-    render(
-      <ChatWorkbenchTerminalDock
-        terminal={terminal}
-        height={240}
-        onHeightChange={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    render(<ChatWorkbenchTerminalDock terminal={terminal} onClose={vi.fn()} />);
     const mock = screen.getByTestId('terminal-manager-mock');
     expect(mock.getAttribute('data-session-count')).toBe('1');
     expect(mock.getAttribute('data-active-id')).toBe('s1');
@@ -79,14 +85,7 @@ describe('ChatWorkbenchTerminalDock', () => {
 
   it('invokes onClose when close button is clicked', () => {
     const onClose = vi.fn();
-    render(
-      <ChatWorkbenchTerminalDock
-        terminal={makeTerminal()}
-        height={240}
-        onHeightChange={vi.fn()}
-        onClose={onClose}
-      />,
-    );
+    render(<ChatWorkbenchTerminalDock terminal={makeTerminal()} onClose={onClose} />);
     fireEvent.click(screen.getByTestId('chat-workbench-dock-close'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -94,41 +93,20 @@ describe('ChatWorkbenchTerminalDock', () => {
   it('invokes spawnSession when spawn button is clicked', () => {
     const spawnSession = vi.fn().mockResolvedValue(undefined);
     const terminal = makeTerminal({ spawnSession });
-    render(
-      <ChatWorkbenchTerminalDock
-        terminal={terminal}
-        height={240}
-        onHeightChange={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    render(<ChatWorkbenchTerminalDock terminal={terminal} onClose={vi.fn()} />);
     fireEvent.click(screen.getByTestId('chat-workbench-dock-spawn'));
     expect(spawnSession).toHaveBeenCalled();
   });
 
-  it('applies clamped height to the dock element', () => {
-    render(
-      <ChatWorkbenchTerminalDock
-        terminal={makeTerminal()}
-        height={9999}
-        onHeightChange={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+  it('applies sizes.terminal from useResizable as the dock height', () => {
+    render(<ChatWorkbenchTerminalDock terminal={makeTerminal()} onClose={vi.fn()} />);
     const dock = screen.getByTestId('chat-workbench-terminal-dock');
-    // Max clamp is 600.
-    expect((dock as HTMLElement).style.height).toBe('600px');
+    // useResizable mock reports terminal: 350 — dock renders at that height.
+    expect((dock as HTMLElement).style.height).toBe('350px');
   });
 
   it('renders the resize handle', () => {
-    render(
-      <ChatWorkbenchTerminalDock
-        terminal={makeTerminal()}
-        height={240}
-        onHeightChange={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    render(<ChatWorkbenchTerminalDock terminal={makeTerminal()} onClose={vi.fn()} />);
     expect(screen.getByTestId('chat-workbench-dock-resize')).toBeDefined();
   });
 });

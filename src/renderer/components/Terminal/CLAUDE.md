@@ -46,9 +46,9 @@ Other modules (e.g. `useIdeToolResponder`) call `getTerminalLines(sessionId)` to
 
 - **Package**: `@xterm/xterm` only — never `xterm`. All addons must be `@xterm/*` at the same version. Mixing causes duplicate class instance crashes.
 - **Fit timing**: call `fit()` only after a **double-rAF** following `term.open()`. Use `isReadyRef` guard in ResizeObserver to prevent premature calls.
-- **WebGL renderer**: `@xterm/addon-webgl` is loaded synchronously BEFORE `term.open()` in `loadCoreAddons()`. Loading it after `open()` causes a double cursor (DOM + WebGL overlap). This is the VS Code pattern.
+- **WebGL renderer**: `@xterm/addon-webgl` is loaded AFTER `term.open()` per `@xterm/xterm` v6 upstream guidance. The v5-era "double cursor" issue (DOM + WebGL overlap) was retired when v6 integrated cursor rendering into the WebGL canvas. On WebGL context loss, the addon is disposed and xterm's built-in canvas renderer takes over without remount (`webglFailedRef` prevents retry). Addon load order is centralised in `terminalAddonManifest.ts` (`loadOrder: 'pre-open' | 'post-open'`).
 - **OSC 10/11/12 blocked**: registered via `term.parser.registerOscHandler` to prevent programs from overriding theme colors.
 - **Session key for `useTerminalSetup`**: the `useEffect` depends only on `sessionId`. Changing any other prop does not re-bootstrap — update the effect deps deliberately.
 - **Command block limits**: hard cap at 500 blocks, 1000 lines per block (`MAX_BLOCKS`, `MAX_BLOCK_LINES` in `useCommandBlocksController.ts`) to prevent memory growth in long-lived sessions.
 - **RichInput** uses CodeMirror 6 with a custom `StreamLanguage` shell tokenizer — not Monaco. Keep shell keyword lists in `RichInputBody.tsx`.
-- **getCellHeight**: `CommandBlockOverlayBody` reaches into `term._core._renderService.dimensions` via type-cast to position overlays. This is an xterm internal — test after xterm version bumps.
+- **getCellHeight**: derives cell height from `element.clientHeight / rows` (DOM calculation). xterm v6.0.0 has no public cell-size property; the former `_core._renderService.dimensions` private access was removed in Wave 88 Phase 1.

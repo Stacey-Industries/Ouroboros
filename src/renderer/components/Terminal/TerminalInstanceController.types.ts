@@ -91,6 +91,7 @@ export interface TerminalFoundation {
   serializeAddonRef: RefObject<SerializeAddon | null>;
   isReadyRef: RefObject<boolean | null>;
   webglAddonRef: MutableRefObject<WebglAddon | null>;
+  webglFailedRef: MutableRefObject<boolean>;
   projectRootRef: MutableRefObject<string | null>;
   syncInputRef: MutableRefObject<boolean>;
   allSessionIdsRef: MutableRefObject<string[]>;

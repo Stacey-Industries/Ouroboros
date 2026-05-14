@@ -61,6 +61,11 @@ desktop.ini
 # Testing
 coverage/
 
+# Stryker mutation testing — sandbox copies (multi-GB, contains Windows paths
+# that explode tailwind v4's auto-source scanner; @source not directive in
+# globals.css mirrors this).
+.stryker-tmp/
+
 # TypeScript
 *.js.map
 .claude/worktrees/

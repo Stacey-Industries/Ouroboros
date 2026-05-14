@@ -137,12 +137,7 @@ function WorkbenchTerminalSurface({
   if (!terminal) return <UnavailableTerminalDock />;
   return (
     <Suspense fallback={null}>
-      <ChatWorkbenchTerminalDock
-        terminal={terminal}
-        height={dock.height}
-        onHeightChange={dock.setHeight}
-        onClose={() => dock.setVisible(false)}
-      />
+      <ChatWorkbenchTerminalDock terminal={terminal} onClose={() => dock.setVisible(false)} />
     </Suspense>
   );
 }
