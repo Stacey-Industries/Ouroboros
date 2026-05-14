@@ -38,6 +38,15 @@ jobs:
       # changelog script doesn't gate everything else either.
       - run: npm ci --ignore-scripts
 
+      # --ignore-scripts above skips electron's postinstall (node install.js),
+      # which downloads the Electron binary and writes node_modules/electron/path.txt.
+      # Without path.txt, any test file that imports electron-log, electron-store,
+      # or the electron package itself throws "Electron failed to install correctly".
+      # Run the install script explicitly here, mirroring the pattern used for
+      # electron-rebuild below.
+      - name: Download Electron binary (postinstall replacement)
+        run: node node_modules/electron/install.js
+
       - name: Generate changelog (postinstall replacement)
         run: node tools/build-changelog.js
 
