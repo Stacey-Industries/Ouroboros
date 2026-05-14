@@ -101,6 +101,15 @@ function loadWebGLAddon(context: TerminalSetupLifecycleContext, term: Terminal):
     const webgl = new WebglAddon();
     webgl.onContextLoss(() => {
       log.warn('[terminal:webgl] context loss — canvas renderer takes over');
+      // Hide the WebGL canvas immediately so the DOM renderer's elements show through
+      // without a white flash. The browser blanks the GL canvas synchronously on
+      // context loss before any JS handler fires; hiding it here prevents that blank
+      // canvas from being visible during the dispose() → setRenderer() round-trip.
+      // querySelector('canvas') is unambiguous here: only WebglRenderer appends a
+      // <canvas> to screenElement; DomRenderer uses divs; OverviewRuler and
+      // addon-image canvases are inserted elsewhere in the DOM.
+      const webglCanvas = term.element?.querySelector('canvas');
+      if (webglCanvas) (webglCanvas as HTMLElement).style.display = 'none';
       webgl.dispose();
       context.refs.webglAddonRef.current = null;
       context.refs.webglFailedRef.current = true;
