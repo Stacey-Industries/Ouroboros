@@ -23,8 +23,26 @@ import { useResizable } from '../useResizable';
 const LEGACY_DOCK_STORAGE_KEY = 'agent-ide:chat-workbench-terminal-dock';
 
 /**
- * One-time forward migration: if the old localStorage dock state exists, seed
- * the shared panelSizes.terminal via applySizes and clear the legacy key.
+ * Must match DEFAULT_SIZES.terminal / MIN_SIZES.terminal / MAX_SIZES.terminal
+ * in useResizable.ts. Duplicated here to avoid a cross-module import just for
+ * three constants, but must be kept in sync if those values ever change.
+ */
+const TERMINAL_DEFAULT_SIZE = 280;
+const TERMINAL_MIN_SIZE = 120;
+const TERMINAL_MAX_SIZE = 600;
+
+/**
+ * One-time forward migration: if the old localStorage dock state exists AND the
+ * user has not already set a custom terminal size, seed the shared
+ * panelSizes.terminal via applySizes and clear the legacy key.
+ *
+ * The non-destructive guard (`currentSizes.terminal === TERMINAL_DEFAULT_SIZE`) is
+ * the critical addition in Wave 88's smoke-bug fix. Without it, the migration
+ * fires unconditionally on the first post-Wave-88 boot and overwrites any terminal
+ * height the user had already persisted — producing a silent reset that looks like
+ * "dock opened at default size." The legacy key is consumed on first mount
+ * regardless, so this can only run once per machine.
+ *
  * Runs on first mount; subsequent mounts see no legacy key and are no-ops.
  */
 function runLegacyDockHeightMigration(
@@ -35,11 +53,25 @@ function runLegacyDockHeightMigration(
   try {
     const raw = window.localStorage.getItem(LEGACY_DOCK_STORAGE_KEY);
     if (!raw) return;
-    const parsed = JSON.parse(raw) as { height?: unknown };
-    if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) {
-      applySizes({ ...currentSizes, terminal: parsed.height });
-    }
+    // Consume the legacy key unconditionally — prevents a retry on the next mount
+    // even if we decide not to apply the value below.
     window.localStorage.removeItem(LEGACY_DOCK_STORAGE_KEY);
+    const parsed = JSON.parse(raw) as { height?: unknown };
+    const legacyHeight = parsed.height;
+    // Apply the legacy value only when:
+    //   (a) it is a finite number within the valid range, AND
+    //   (b) the user has not already set a custom terminal height.
+    // Guard (b) is what makes this non-destructive: if panelSizes.terminal is
+    // anything other than the default, treat that as authoritative and skip.
+    if (
+      typeof legacyHeight === 'number' &&
+      Number.isFinite(legacyHeight) &&
+      legacyHeight >= TERMINAL_MIN_SIZE &&
+      legacyHeight <= TERMINAL_MAX_SIZE &&
+      currentSizes.terminal === TERMINAL_DEFAULT_SIZE
+    ) {
+      applySizes({ ...currentSizes, terminal: legacyHeight });
+    }
   } catch {
     // Non-critical — if migration fails, the user loses their old dock height
     // preference but the app continues with the default.
