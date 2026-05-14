@@ -66,6 +66,26 @@ function useViewToggleEvents(layout: Layout, dock: Dock): void {
   }, [layout, dock]);
 }
 
+/**
+ * Ctrl+J — toggle terminal dock collapse, mirroring the IDE shell's keybind
+ * for `view:toggle-terminal` (`usePanelCollapse` in AppLayout).
+ *
+ * Wave 88 Phase 5: binding is free in ChatOnly shell (audited: not in
+ * chatOnlyCommandFilter.ts, not in ChatWorkbenchShell keyboard handlers).
+ */
+function useTerminalDockKeybind(dock: Dock): void {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent): void => {
+      if (e.key === 'j' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        dock.toggleVisible();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [dock]);
+}
+
 function useFileMenuEvents(layout: Layout): void {
   const { addProjectRoot } = useProject();
   useEffect(() => {
@@ -97,4 +117,5 @@ function useFileMenuEvents(layout: Layout): void {
 export function useWorkbenchMenuEvents({ layout, dock }: MenuEventDeps): void {
   useViewToggleEvents(layout, dock);
   useFileMenuEvents(layout);
+  useTerminalDockKeybind(dock);
 }

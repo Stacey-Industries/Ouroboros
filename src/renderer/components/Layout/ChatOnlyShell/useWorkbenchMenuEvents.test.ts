@@ -133,4 +133,27 @@ describe('useWorkbenchMenuEvents', () => {
     });
     expect(layout.toggleRail).not.toHaveBeenCalled();
   });
+
+  // Wave 88 Phase 5: Ctrl+J toggles dock collapse, mirroring IDE shell.
+  it('toggles dock visibility on Ctrl+J keydown', () => {
+    renderHook(() => useWorkbenchMenuEvents({ layout: layout as never, dock: dock as never }), {
+      wrapper: wrap,
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true }));
+    });
+    expect(dock.toggleVisible).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toggle dock on Ctrl+J when Shift is also held', () => {
+    renderHook(() => useWorkbenchMenuEvents({ layout: layout as never, dock: dock as never }), {
+      wrapper: wrap,
+    });
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, shiftKey: true }),
+      );
+    });
+    expect(dock.toggleVisible).not.toHaveBeenCalled();
+  });
 });

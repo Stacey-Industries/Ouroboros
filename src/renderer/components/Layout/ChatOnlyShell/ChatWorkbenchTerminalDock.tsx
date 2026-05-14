@@ -12,12 +12,13 @@
  * runs on first mount.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { TerminalManager } from '../../Terminal/TerminalManager';
 import { useResizable } from '../useResizable';
+import { useDockHandlers } from './ChatWorkbenchTerminalDock.handlers';
 
 /** localStorage key used by the pre-Wave-88 useTerminalDockState hook. */
 const LEGACY_DOCK_STORAGE_KEY = 'agent-ide:chat-workbench-terminal-dock';
@@ -88,6 +89,7 @@ export interface ChatWorkbenchTerminalDockProps {
   onClose: () => void;
 }
 
+
 const DOCK_BTN_BASE = 'rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors';
 const DOCK_BTN_HOVER = 'hover:bg-surface-hover hover:text-text-semantic-primary';
 const DOCK_BTN_DANGER =
@@ -107,19 +109,25 @@ function DockCloseButton({ onClose }: { onClose: () => void }): React.ReactEleme
   );
 }
 
-function DockHeaderActions({
-  onSpawn,
-  onCloseSession,
-  canCloseSession,
-  onClose,
-}: {
+interface DockHeaderActionsProps {
   onSpawn: () => void;
+  onNewClaude: () => void;
+  onNewCodex: () => void;
   onCloseSession: () => void;
   canCloseSession: boolean;
+  activeSessionId: string | null;
+  isRecording: boolean;
+  onToggleRecording: () => void;
   onClose: () => void;
-}): React.ReactElement {
+}
+
+function DockSpawnButtons({
+  onSpawn,
+  onNewClaude,
+  onNewCodex,
+}: Pick<DockHeaderActionsProps, 'onSpawn' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement {
   return (
-    <div className="flex items-center gap-1">
+    <>
       <button
         type="button"
         className={`${DOCK_BTN_BASE} ${DOCK_BTN_HOVER}`}
@@ -128,6 +136,71 @@ function DockHeaderActions({
       >
         + New
       </button>
+      <button
+        type="button"
+        className={`${DOCK_BTN_BASE} ${DOCK_BTN_HOVER}`}
+        onClick={onNewClaude}
+        data-testid="chat-workbench-dock-new-claude"
+        title="New Claude session"
+      >
+        + Claude
+      </button>
+      <button
+        type="button"
+        className={`${DOCK_BTN_BASE} ${DOCK_BTN_HOVER}`}
+        onClick={onNewCodex}
+        data-testid="chat-workbench-dock-new-codex"
+        title="New Codex session"
+      >
+        + Codex
+      </button>
+    </>
+  );
+}
+
+function RecordingButton({
+  activeSessionId,
+  isRecording,
+  onToggleRecording,
+}: Pick<DockHeaderActionsProps, 'activeSessionId' | 'isRecording' | 'onToggleRecording'>): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className={`${DOCK_BTN_BASE} flex items-center gap-1 ${DOCK_BTN_HOVER}`}
+      onClick={onToggleRecording}
+      disabled={!activeSessionId}
+      data-testid="chat-workbench-dock-recording-toggle"
+      aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+      aria-pressed={isRecording}
+      title={isRecording ? 'Stop recording' : 'Start recording'}
+    >
+      <span
+        className={`inline-block h-1.5 w-1.5 rounded-full ${isRecording ? 'bg-status-error' : 'bg-text-semantic-muted'}`}
+        aria-hidden="true"
+      />
+      Rec
+    </button>
+  );
+}
+
+function DockSessionControls({
+  activeSessionId,
+  isRecording,
+  onToggleRecording,
+  canCloseSession,
+  onCloseSession,
+  onClose,
+}: Pick<
+  DockHeaderActionsProps,
+  'activeSessionId' | 'isRecording' | 'onToggleRecording' | 'canCloseSession' | 'onCloseSession' | 'onClose'
+>): React.ReactElement {
+  return (
+    <>
+      <RecordingButton
+        activeSessionId={activeSessionId}
+        isRecording={isRecording}
+        onToggleRecording={onToggleRecording}
+      />
       <button
         type="button"
         disabled={!canCloseSession}
@@ -140,16 +213,31 @@ function DockHeaderActions({
         Close session
       </button>
       <DockCloseButton onClose={onClose} />
+    </>
+  );
+}
+
+function DockHeaderActions(props: DockHeaderActionsProps): React.ReactElement {
+  return (
+    <div className="flex items-center gap-1">
+      <DockSpawnButtons
+        onSpawn={props.onSpawn}
+        onNewClaude={props.onNewClaude}
+        onNewCodex={props.onNewCodex}
+      />
+      <DockSessionControls
+        activeSessionId={props.activeSessionId}
+        isRecording={props.isRecording}
+        onToggleRecording={props.onToggleRecording}
+        canCloseSession={props.canCloseSession}
+        onCloseSession={props.onCloseSession}
+        onClose={props.onClose}
+      />
     </div>
   );
 }
 
-function DockHeader(props: {
-  onSpawn: () => void;
-  onCloseSession: () => void;
-  canCloseSession: boolean;
-  onClose: () => void;
-}): React.ReactElement {
+function DockHeader(props: DockHeaderActionsProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between border-b border-border-semantic px-3 py-1.5">
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
@@ -208,24 +296,17 @@ export function ChatWorkbenchTerminalDock({
 }: ChatWorkbenchTerminalDockProps): React.ReactElement {
   const { sizes, startResize, applySizes } = useResizable();
 
-  // One-time migration from pre-Wave-88 localStorage dock height.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // One-time migration from pre-Wave-88 localStorage dock height. Snapshot the
+  // initial sizes/applySizes in a ref so the empty dep array is genuinely
+  // correct (the migration must run exactly once on mount) — this replaces a
+  // misplaced eslint-disable from the Phase 3 commit that did not actually
+  // suppress the exhaustive-deps warning.
+  const migrationRef = useRef({ sizes, applySizes });
   useEffect(() => {
-    runLegacyDockHeightMigration(sizes, applySizes);
+    runLegacyDockHeightMigration(migrationRef.current.sizes, migrationRef.current.applySizes);
   }, []);
 
-  const handleCloseSession = useCallback(() => {
-    if (terminal.activeSessionId) terminal.handleTerminalClose(terminal.activeSessionId);
-  }, [terminal]);
-
-  const handleResizePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-      startResize('terminal', 'horizontal', sizes.terminal, event.clientY);
-    },
-    [sizes.terminal, startResize],
-  );
+  const handlers = useDockHandlers(terminal, sizes, startResize);
 
   return (
     <section
@@ -233,11 +314,16 @@ export function ChatWorkbenchTerminalDock({
       style={{ height: sizes.terminal }}
       data-testid="chat-workbench-terminal-dock"
     >
-      <DockResizeHandle onPointerDown={handleResizePointerDown} />
+      <DockResizeHandle onPointerDown={handlers.handleResizePointerDown} />
       <DockHeader
         onSpawn={() => void terminal.spawnSession()}
-        onCloseSession={handleCloseSession}
+        onNewClaude={handlers.handleNewClaude}
+        onNewCodex={handlers.handleNewCodex}
+        onCloseSession={handlers.handleCloseSession}
         canCloseSession={Boolean(terminal.activeSessionId)}
+        activeSessionId={terminal.activeSessionId}
+        isRecording={handlers.isRecording}
+        onToggleRecording={handlers.handleToggleRecording}
         onClose={onClose}
       />
       <DockTerminalSurface terminal={terminal} />
