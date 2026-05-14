@@ -105,6 +105,7 @@ export function buildConfigApi(t: WebSocketTransport) {
     get: (key: string) => t.invoke('config:get', key),
     set: (key: string, value: unknown) => t.invoke('config:set', key, value),
     export: () => configExport(t),
+    hasWebPassword: () => t.invoke('config:hasWebPassword'),
     import: () => configImport(t),
     openSettingsFile: desktopOnlyStub('config:openSettingsFile'),
     onExternalChange: (cb: (config: unknown) => void) => t.on('config:externalChange', cb),

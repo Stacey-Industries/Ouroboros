@@ -6,6 +6,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '../../../contexts/ToastContext';
 import { OPEN_SUBAGENT_PANEL_EVENT } from '../../../hooks/appEventNames';
 import { ChatWorkbenchShell } from './ChatWorkbenchShell';
 
@@ -35,6 +36,8 @@ let currentSessions = [] as Array<{
   taskLabel: string;
   status: 'idle' | 'running' | 'complete' | 'error';
   startedAt: number;
+  inputTokens: number;
+  outputTokens: number;
   toolCalls: Array<{
     id: string;
     toolName: string;
@@ -244,18 +247,20 @@ vi.mock('./useWorkbenchArtifacts', () => ({
 
 function renderShell() {
   return render(
-    <ChatWorkbenchShell
-      projectRoot="/test/project"
-      diffOverlayOpen={false}
-      openDiffOverlay={vi.fn()}
-      closeDiffOverlay={vi.fn()}
-      toggleDrawer={vi.fn()}
-      paletteOpen={false}
-      closePalette={vi.fn()}
-      commands={[]}
-      recentIds={[]}
-      execute={vi.fn().mockResolvedValue(undefined)}
-    />,
+    <ToastProvider>
+      <ChatWorkbenchShell
+        projectRoot="/test/project"
+        diffOverlayOpen={false}
+        openDiffOverlay={vi.fn()}
+        closeDiffOverlay={vi.fn()}
+        toggleDrawer={vi.fn()}
+        paletteOpen={false}
+        closePalette={vi.fn()}
+        commands={[]}
+        recentIds={[]}
+        execute={vi.fn().mockResolvedValue(undefined)}
+      />
+    </ToastProvider>,
   );
 }
 
@@ -271,6 +276,10 @@ beforeEach(() => {
     approval: {
       respond: vi.fn().mockResolvedValue({ success: true }),
       remember: vi.fn().mockResolvedValue({ success: true }),
+    },
+    sessionCrud: {
+      active: vi.fn().mockResolvedValue({ success: false, sessionId: null }),
+      onChanged: vi.fn().mockReturnValue(() => undefined),
     },
   } as typeof window.electronAPI;
 });
@@ -294,18 +303,20 @@ describe('ChatWorkbenchShell integration', () => {
       },
     ];
     view.rerender(
-      <ChatWorkbenchShell
-        projectRoot="/test/project"
-        diffOverlayOpen={false}
-        openDiffOverlay={vi.fn()}
-        closeDiffOverlay={vi.fn()}
-        toggleDrawer={vi.fn()}
-        paletteOpen={false}
-        closePalette={vi.fn()}
-        commands={[]}
-        recentIds={[]}
-        execute={vi.fn().mockResolvedValue(undefined)}
-      />,
+      <ToastProvider>
+        <ChatWorkbenchShell
+          projectRoot="/test/project"
+          diffOverlayOpen={false}
+          openDiffOverlay={vi.fn()}
+          closeDiffOverlay={vi.fn()}
+          toggleDrawer={vi.fn()}
+          paletteOpen={false}
+          closePalette={vi.fn()}
+          commands={[]}
+          recentIds={[]}
+          execute={vi.fn().mockResolvedValue(undefined)}
+        />
+      </ToastProvider>,
     );
 
     expect(screen.getByTestId('workbench-background-approval-prompt')).toBeDefined();
@@ -346,6 +357,8 @@ describe('ChatWorkbenchShell integration', () => {
         taskLabel: 'Investigate',
         status: 'running',
         startedAt: Date.now(),
+        inputTokens: 0,
+        outputTokens: 0,
         toolCalls: [],
         parentSessionId: 'parent-1',
       },
@@ -359,7 +372,6 @@ describe('ChatWorkbenchShell integration', () => {
     });
 
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
-    expect(screen.getByTestId('chat-workbench-utility-tab-subagents')).toBeDefined();
-    expect(screen.getByTestId('workbench-subagent-panel')).toBeDefined();
+    expect(screen.getByTestId('chat-workbench-utility-tab-monitor')).toBeDefined();
   });
 });

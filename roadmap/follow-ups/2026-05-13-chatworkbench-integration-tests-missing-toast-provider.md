@@ -1,7 +1,7 @@
 ---
-status: OPEN
+status: RESOLVED
 created: 2026-05-13
-updated: 2026-05-13
+updated: 2026-05-14
 ---
 
 # Pre-existing: ChatWorkbench integration tests lack `<ToastProvider>` wrap

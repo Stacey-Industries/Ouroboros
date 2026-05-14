@@ -32,6 +32,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '../../../contexts/ToastContext';
 import { OPEN_SUBAGENT_PANEL_EVENT } from '../../../hooks/appEventNames';
 
 // ── Platform / external boundary mocks ─────────────────────────────────────
@@ -182,12 +183,24 @@ function buildShellProps(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function renderShell(overrides: Record<string, unknown> = {}) {
+  return render(
+    <ToastProvider>
+      <ChatWorkbenchShell {...(buildShellProps(overrides) as Parameters<typeof ChatWorkbenchShell>[0])} />
+    </ToastProvider>,
+  );
+}
+
 beforeEach(() => {
   mockSessions = [];
   window.electronAPI = {
     approval: {
       respond: vi.fn().mockResolvedValue({ success: true }),
       remember: vi.fn().mockResolvedValue({ success: true }),
+    },
+    sessionCrud: {
+      active: vi.fn().mockResolvedValue({ success: false, sessionId: null }),
+      onChanged: vi.fn().mockReturnValue(() => undefined),
     },
     rulesAndSkills: {
       listRuleFiles: vi.fn().mockResolvedValue({ success: true, ruleFiles: [] }),
@@ -208,7 +221,7 @@ afterEach(() => {
 // as a rail button; it lives behind the OPEN_MULTI_SESSION_EVENT bus.
 describe('Rail IA (Wave 59 two-tier rail)', () => {
   it('renders the outer project rail and inner sidebar by default', () => {
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('outer-project-rail')).toBeDefined();
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
@@ -225,7 +238,7 @@ describe('Rail IA (Wave 59 two-tier rail)', () => {
         projectStates: {},
       }),
     );
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     const innerSidebar = screen.getByTestId('inner-sidebar');
     const labels = within(innerSidebar)
       .queryAllByRole('button')
@@ -245,7 +258,7 @@ describe('Rail IA (Wave 59 two-tier rail)', () => {
         outputTokens: 0,
       },
     ];
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 });
@@ -265,7 +278,7 @@ describe('Utility drawer — real surface policy join', () => {
         parentSessionId: 'parent-1',
       },
     ];
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
 
     act(() => {
       window.dispatchEvent(
@@ -275,8 +288,8 @@ describe('Utility drawer — real surface policy join', () => {
 
     // Real ChatWorkbenchUtilityDrawer should be visible
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
-    // Real tab button rendered by real ChatWorkbenchUtilityDrawer
-    expect(screen.getByTestId('chat-workbench-utility-tab-subagents')).toBeDefined();
+    // OPEN_SUBAGENT_PANEL_EVENT routes to the monitor tab (useWorkbenchSurfacePolicy)
+    expect(screen.getByTestId('chat-workbench-utility-tab-monitor')).toBeDefined();
   });
 
   it('shows rules tab in real drawer tab bar', () => {
@@ -290,7 +303,7 @@ describe('Utility drawer — real surface policy join', () => {
         activeUtilityTab: 'rules',
       }),
     );
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
     expect(screen.getByTestId('chat-workbench-utility-tab-rules')).toBeDefined();
   });
@@ -305,7 +318,7 @@ describe('Utility drawer — real surface policy join', () => {
         activeUtilityTab: 'activity',
       }),
     );
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('chat-workbench-utility-drawer')).toBeDefined();
 
     // Click the real close button rendered by real DrawerHeader
@@ -321,7 +334,7 @@ describe('Utility drawer — real surface policy join', () => {
 // ── Compare mode — real useWorkbenchCompare join ─────────────────────────────
 describe('Compare mode (real useWorkbenchCompare)', () => {
   it('does not show compare pane when compare is inactive', () => {
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     // With empty sessions, compare pane should not be visible
     expect(screen.queryByTestId('chat-workbench-compare-pane')).toBeNull();
   });
@@ -330,14 +343,14 @@ describe('Compare mode (real useWorkbenchCompare)', () => {
 // ── Shell structure ───────────────────────────────────────────────────────────
 describe('Shell structure', () => {
   it('renders title bar, workbench body, and status bar', () => {
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('chat-only-title-bar')).toBeDefined();
     expect(screen.getByTestId('chat-workbench-body')).toBeDefined();
     expect(screen.getByTestId('chat-only-status-bar')).toBeDefined();
   });
 
   it('keeps the primary conversation workspace mounted', () => {
-    render(<ChatWorkbenchShell {...buildShellProps()} />);
+    renderShell();
     expect(screen.getByTestId('agent-chat-workspace')).toBeDefined();
   });
 });
