@@ -134,7 +134,8 @@ function buildPostOpenAddon(
   if (packageName === '@xterm/addon-unicode-graphemes') {
     const u = new UnicodeGraphemesAddon();
     term.loadAddon(u);
-    term.unicode.activeVersion = 'graphemes';
+    // UnicodeGraphemesAddon registers version '15-graphemes' (not 'graphemes').
+    term.unicode.activeVersion = '15-graphemes';
     return null; // already loaded inline
   }
   if (packageName === '@xterm/addon-progress') {
