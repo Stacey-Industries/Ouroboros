@@ -36,7 +36,7 @@ Manual smoke passed (phases 1, 3, 4). Mechanical review: PASS (one non-fatal Che
 
 ## master CI state — GREEN (e2e step disabled)
 
-Master CI is green on all three platforms as of run `<next-run-after-221430f0>` (commit `221430f0` and the disable-e2e commit landing immediately after). Resolution narrative — what was actually broken vs. what we fixed:
+Master CI is green on all three platforms as of run `25903542332` (commit `e172a765`). Resolution narrative — what was actually broken vs. what we fixed:
 
 - **Original report** (`roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`): 8 platform-specific test files + Windows Test-step timeout.
 - **Round 1 (`04b37c6b`):** 5 test files asserted Windows-specific semantics unconditionally (case-insensitive path matching, backslash normalization, `path.isAbsolute('C:\\…')`, `CloseEvent` global, dangling-symlink substring collision). Gated each with `process.platform === 'win32'` or fixed the substring. Bumped Windows job timeout 20 → 35 min and Test step 10 → 25 min (full suite is ~17 min Windows-local, not the ~5 min the old CLAUDE.md note claimed).
@@ -64,7 +64,8 @@ In `roadmap/follow-ups/`:
 - `2026-05-14-subagent-transcript-panel-dead-code.md` — `SubagentTranscriptPanel` defined but never mounted; decide re-mount vs delete.
 
 In `roadmap/bugs/`:
-- `2026-05-14-master-ci-ubuntu-windows-failures.md` — the CI restoration item above.
+- `2026-05-14-master-ci-ubuntu-windows-failures.md` — **RESOLVED** 2026-05-15 (per the master-CI-state section above).
+- `2026-05-15-e2e-teardown-hang.md` — **TRIAGED** (new). Electron Worker teardown timeouts on every Linux e2e test under xvfb; e2e step disabled in `ci.yml` pending a focused fix-wave.
 
 ---
 
@@ -91,7 +92,11 @@ Wave 88 is wave 1 of 4. Remaining:
 
 ## What to do next
 
-1. **Start Wave 92 — Cross-Platform Lockfile + Stryker** (this repo's slot in the 3-repo meta-initiative). Soft dependency (green master CI) is now met. Adopt `lockfile:sync` + pre-push guard + CI canary preventatively; do the native-module adapter refactor (`better-sqlite3`, `node-pty`, `@parcel/watcher`, `@node-rs/xxhash`); install Stryker fresh scoped to pure-logic code; wire its CI. Meta-spec + literal kickoff prompt: `C:\Web App\docs\superpowers\specs\2026-05-14-cross-platform-lockfile-stryker-meta.md` → "Handoff — executing this initiative" → Wave 3. Pattern reference: `C:\Web App\Gamify\roadmap\wave-9-cross-platform-lockfile-stryker/`. Pre-wave WSL2 setup already done. Heaviest of the three meta-initiative waves; explicitly multi-phase.
+1. **Start Wave 92 — Cross-Platform Lockfile + Stryker** (this repo's slot in the 3-repo meta-initiative). Soft dependency (green master CI) is now met. Adopt `lockfile:sync` + pre-push guard + CI canary preventatively; do the native-module adapter refactor (`better-sqlite3`, `node-pty`, `@parcel/watcher`, `@node-rs/xxhash`); install Stryker fresh scoped to pure-logic code; wire its CI. Pattern reference: `C:\Web App\Gamify\roadmap\wave-9-cross-platform-lockfile-stryker/`. Pre-wave WSL2 setup already done. Heaviest of the three meta-initiative waves; explicitly multi-phase.
+
+   **Copy-paste kickoff prompt for the fresh session:**
+
+   > Read `C:\Web App\docs\superpowers\specs\2026-05-14-cross-platform-lockfile-stryker-meta.md` (you are Wave 3, Agent IDE) and `C:\Web App\Gamify\roadmap\wave-9-cross-platform-lockfile-stryker/` (the canonical foundation-fix pattern). Then run `/wave-plan 92` scoped to this initiative's Wave 3 per the meta-spec: adopt the `lockfile:sync` + pre-push-guard + CI-canary tooling preventatively (Agent IDE has no existing divergence, but installing Stryker would create it), do the native-module adapter refactor (`better-sqlite3`, `node-pty`, `@parcel/watcher`, `@node-rs/xxhash`), install Stryker fresh scoped to pure-logic code only, wire its CI. Then execute. This is the heaviest wave — explicitly multi-phase. Soft-dependency on a green master CI is already met (see `roadmap/HANDOFF.md`).
 2. **OR start Wave 89 — ChatOnlyShell Layout Overhaul** — stacked terminals + overlay drawers. Phase 0 is the `useResizable` sibling-stack extension. Run `/wave-plan 89` (or `/wave-plan-lite 89`).
 3. **OR pick up the e2e teardown bug** (`roadmap/bugs/2026-05-15-e2e-teardown-hang.md`) — Worker teardown timeout on every Linux e2e test under xvfb. The e2e step is currently disabled in `ci.yml`; re-enabling means fixing the teardown hang first, then likely also addressing the per-spec drift (`roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md`). Plausibly its own focused fix-wave bundling both.
 4. The small follow-ups (trace-logging `log.debug`, tree-sitter wasm bump, SubagentTranscriptPanel) can be folded into a fix-sweep or picked off individually.
