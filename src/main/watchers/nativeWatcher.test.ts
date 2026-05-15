@@ -59,10 +59,15 @@ describe('watchRecursive', () => {
       const deepDir = path.join(testDir, 'a', 'b', 'c');
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture path derived from beforeEach tmpdir
       await fs.mkdir(deepDir, { recursive: true });
+      // Linux inotify isn't truly recursive — parcel walks new subtrees and
+      // adds per-dir watches as it sees them. There's a race between the
+      // mkdir completing and parcel's watches on the new subdirs being live;
+      // give it a moment so the subsequent writeFile event isn't dropped.
+      await new Promise((r) => setTimeout(r, 500));
       const target = path.join(deepDir, 'deep.txt');
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture path derived from beforeEach tmpdir
       await fs.writeFile(target, 'deep');
-      await waitFor(() => events.some((e) => e.path === target), 3000);
+      await waitFor(() => events.some((e) => e.path === target), 5000);
       expect(events.some((e) => e.path === target)).toBe(true);
     } finally {
       await sub.close();
