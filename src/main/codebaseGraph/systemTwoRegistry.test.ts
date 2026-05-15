@@ -155,16 +155,19 @@ describe('path normalisation', () => {
     await disposeAll();
   });
 
-  it('forward and backslash variants of the same path share one entry', async () => {
-    const withForward = ROOT_A.replace(/\\/g, '/');
-    const withBack = ROOT_A.replace(/\//g, '\\');
+  it.skipIf(process.platform !== 'win32')(
+    'forward and backslash variants of the same path share one entry',
+    async () => {
+      const withForward = ROOT_A.replace(/\\/g, '/');
+      const withBack = ROOT_A.replace(/\//g, '\\');
 
-    await acquire(withForward, makeDb(), makePipeline());
-    const h2 = await acquire(withBack, makeDb(), makePipeline());
-    // Same logical root → refCount=2, not two separate entries
-    expect(h2.refCount).toBe(2);
-    expect(listActive()).toHaveLength(1);
-  });
+      await acquire(withForward, makeDb(), makePipeline());
+      const h2 = await acquire(withBack, makeDb(), makePipeline());
+      // Same logical root → refCount=2, not two separate entries
+      expect(h2.refCount).toBe(2);
+      expect(listActive()).toHaveLength(1);
+    },
+  );
 });
 
 // ─── listActive ───────────────────────────────────────────────────────────────

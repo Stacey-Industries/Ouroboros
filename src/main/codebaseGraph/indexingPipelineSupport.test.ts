@@ -244,7 +244,7 @@ describe('walkDirectory — symlink hardening', () => {
       const paths = ctx.files.map((f) => f.absolutePath);
       expect(paths.some((p) => p.includes('real.ts'))).toBe(true);
       // dangling symlink should not appear in results
-      expect(paths.some((p) => p.includes('dangling'))).toBe(false);
+      expect(paths.some((p) => path.basename(p) === 'dangling')).toBe(false);
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true });
     }

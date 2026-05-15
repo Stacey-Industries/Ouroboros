@@ -23,12 +23,12 @@ If the discovery doesn't fit any existing CLAUDE.md, add it to the most directly
 - `npm run dev` — start dev server + Electron (hot-reload renderer)
 - `npm run build` — production build (electron-vite)
 - `npm run dist` — build + package with electron-builder
-- `npm test` — run the full vitest suite (~5 min, agent-unfriendly — prefer scoped scripts below)
+- `npm test` — run the full vitest suite (~17 min Windows-local, agent-unfriendly — prefer scoped scripts below)
 - `npm run test:watch` — vitest in watch mode
 
 ### Scoped vitest scripts — agents should prefer these
 
-The full suite consistently exceeds agent timeouts (~280-400s). After touching files in a subsystem, run the matching scoped script — each finishes in 30-120s. Composition: scoped runs are NOT mutually exhaustive (e.g. `test:agentchat` is a subset of `test:renderer`), pick the smallest one that covers your change.
+The full suite consistently exceeds agent timeouts (~1000s / ~17 min on Windows-local; CI Windows is ~25–30 min). After touching files in a subsystem, run the matching scoped script — each finishes in 30-120s. Composition: scoped runs are NOT mutually exhaustive (e.g. `test:agentchat` is a subset of `test:renderer`), pick the smallest one that covers your change.
 
 | Script | Path scope | Use when you touched |
 |---|---|---|

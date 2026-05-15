@@ -45,7 +45,7 @@ class FakeWebSocket {
 
   triggerClose(): void {
     this.readyState = FakeWebSocket.CLOSED;
-    this.onclose?.(new CloseEvent('close'));
+    this.onclose?.(new Event('close') as CloseEvent);
   }
 
   close(): void {

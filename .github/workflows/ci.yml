@@ -12,7 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # 35-min job budget: the test suite alone is ~17 min Windows-local and
+    # CI runners are ~1.5–2× slower (~25–30 min). The previous 20-min cap
+    # made the Test step's own timeout-minutes moot. Bumped 20 → 35.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -100,7 +103,12 @@ jobs:
         run: npm run lint
 
       - name: Test
-        timeout-minutes: 10
+        # 25-min budget: full local Windows suite is ~17 min (measured
+        # 2026-05-14, 1065 files / 10993 tests); CI Windows runners are
+        # ~1.5–2× slower (~25–30 min). The previous 10-min cap was too
+        # tight (tests stream through normally and hit the cap before
+        # completing — no hang). Bumped 10 → 25.
+        timeout-minutes: 25
         run: npm run test -- --reporter=verbose
 
       - name: Build (Electron)

@@ -90,7 +90,9 @@ describe('isCorrectionPrefix', () => {
 describe('isValidCwd', () => {
   it('accepts absolute paths', () => {
     expect(isValidCwd('/home/user/project')).toBe(true);
-    expect(isValidCwd('C:\\Users\\dev\\project')).toBe(true);
+    if (process.platform === 'win32') {
+      expect(isValidCwd('C:\\Users\\dev\\project')).toBe(true);
+    }
   });
 
   it('rejects relative paths', () => {

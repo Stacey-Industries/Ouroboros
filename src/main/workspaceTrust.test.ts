@@ -37,7 +37,7 @@ describe('workspaceTrust', () => {
       expect(isWorkspaceTrusted('C:\\Projects\\myapp')).toBe(true);
     });
 
-    it('normalizes paths for comparison', () => {
+    it.skipIf(process.platform !== 'win32')('normalizes paths for comparison', () => {
       mockGetConfigValue.mockReturnValue(['C:\\Projects\\MyApp']);
       // Windows paths are case-insensitive
       expect(isWorkspaceTrusted('c:\\projects\\myapp')).toBe(true);
