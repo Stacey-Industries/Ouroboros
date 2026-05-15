@@ -136,6 +136,19 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npx playwright install chromium chromium-headless-shell
 
+      # Electron's chrome-sandbox binary requires setuid-root to enable the
+      # SUID sandbox. The unpacked binary from npm has the wrong ownership
+      # on GH Actions runners; Electron refuses to launch with FATAL:
+      # sandbox/linux/suid/client/setuid_sandbox_host.cc:166. Standard CI
+      # fix: chown root and chmod 4755. (We do NOT use --no-sandbox because
+      # the production app relies on the sandbox; this matches the
+      # production launch path.)
+      - name: Configure Electron chrome-sandbox setuid (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
       - name: Playwright e2e (Electron stable subset, Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         timeout-minutes: 10
