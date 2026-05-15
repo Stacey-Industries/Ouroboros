@@ -97,10 +97,12 @@ describe('watchRecursive', () => {
     const events: WatchEvent[] = [];
     const sub = await watchRecursive(testDir, {}, (e) => events.push(e));
     try {
-      // parcel needs a moment to establish the watch before the delete.
-      await new Promise((r) => setTimeout(r, 100));
+      // 1000ms (was 100ms) — macOS fsevents on CI runners under load can
+      // need longer than 100ms to register the recursive watch before
+      // delete events route through to the subscriber callback.
+      await new Promise((r) => setTimeout(r, 1000));
       await fs.rm(target);
-      await waitFor(() => events.some((e) => e.path === target && e.type === 'delete'), 3000);
+      await waitFor(() => events.some((e) => e.path === target && e.type === 'delete'), 5000);
       expect(events.some((e) => e.path === target && e.type === 'delete')).toBe(true);
     } finally {
       await sub.close();

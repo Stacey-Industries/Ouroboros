@@ -217,9 +217,11 @@ describe('boundaryRegistry — lifecycle', () => {
   });
 
   it('getBoundaryRegistry returns a registry with builtAt set', async () => {
-    const before = Date.now();
     const reg = await getBoundaryRegistry();
-    expect(reg.builtAt).toBeGreaterThanOrEqual(before);
+    // builtAt was set during beforeEach's rebuildBoundaryRegistry() — assert
+    // order-independent invariants: it's a positive number, not in the future.
+    expect(reg.builtAt).toBeGreaterThan(0);
+    expect(reg.builtAt).toBeLessThanOrEqual(Date.now());
     expect(reg.ipcMainHandlers).toBeInstanceOf(Map);
     expect(reg.preloadBridge).toBeInstanceOf(Map);
   });

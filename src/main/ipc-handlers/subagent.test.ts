@@ -8,12 +8,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock electron before importing anything that touches it
-vi.mock('electron', () => ({
-  ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
-  BrowserWindow: { fromWebContents: vi.fn() },
-  // app.getPath needed by subagentLinkTrace → config → configPreflight
-  app: { getPath: vi.fn(() => '/fake/userData'), isPackaged: false },
-}));
+vi.mock('electron', () => {
+  // Use a real writable temp path — on Linux CI runners (non-root), the
+  // previous '/fake/userData' produced EACCES when downstream code tried
+  // to mkdir it. Require'd inside the factory because vi.mock is hoisted.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nodeOs = require('node:os');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nodePath = require('node:path');
+  const fakeUserData = nodePath.join(nodeOs.tmpdir(), 'subagent-test-userdata');
+  return {
+    ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
+    BrowserWindow: { fromWebContents: vi.fn() },
+    app: { getPath: vi.fn(() => fakeUserData), isPackaged: false },
+  };
+});
 
 // Mock windowManager so broadcastSubagentUpdated doesn't blow up
 vi.mock('../windowManager', () => ({

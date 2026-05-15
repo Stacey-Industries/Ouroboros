@@ -61,7 +61,12 @@ let tmpDir: string;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'phase-l-symlink-'));
+  // Resolve through any symlinks in the tmpdir path (macOS /var → /private/var
+  // in particular) — the product's validateProjectPath uses realpathSync on
+  // the requested path, so the configured root must be the canonical path
+  // for the relative-path check to compare apples-to-apples.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- test-only: path comes from os.tmpdir() fixture
+  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'phase-l-symlink-')));
 });
 
 afterEach(() => {
