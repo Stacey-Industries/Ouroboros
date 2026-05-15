@@ -126,6 +126,16 @@ jobs:
       # basic-navigation, compare-providers, agent-chat). 6 specs are excluded
       # via testIgnore for known drift bugs (see
       # roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md).
+      # Install Playwright browser binaries before the e2e step.
+      # The compare-providers spec launches a chromium context, which needs
+      # both the full chromium browser and the chrome-headless-shell variant
+      # Playwright ships separately in v1.40+. apt deps are already installed
+      # in the "Install native build prerequisites (Ubuntu)" step above so
+      # --with-deps would mostly no-op; keep it explicit but skip the apt run.
+      - name: Install Playwright browsers (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: npx playwright install chromium chromium-headless-shell
+
       - name: Playwright e2e (Electron stable subset, Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         timeout-minutes: 10
