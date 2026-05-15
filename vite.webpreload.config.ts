@@ -12,6 +12,13 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Mirrors vite.web.config.ts. Required because src/web/* files import
+      // shared types (e.g. webPreloadChatStateApi.ts → @shared/ipc/chatStateChannels).
+      '@shared': resolve(__dirname, 'src/shared'),
+    },
+  },
   build: {
     outDir: resolve(__dirname, 'out/web'),
     emptyOutDir: false, // Don't wipe the renderer build
