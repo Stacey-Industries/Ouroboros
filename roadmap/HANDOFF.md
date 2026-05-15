@@ -85,9 +85,10 @@ Wave 88 is wave 1 of 4. Remaining:
 
 ## What to do next
 
-1. **Pick up the CI bug** (`roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`) — reproduce the Ubuntu 21 + Windows failures in a Linux container, diagnose per-file, fix-sweep. This unblocks a fully-green master.
+1. **Pick up the CI bug** (`roadmap/bugs/2026-05-14-master-ci-ubuntu-windows-failures.md`) — reproduce the Ubuntu + Windows failures in a Linux container, diagnose per-file, fix-sweep. This unblocks a fully-green master — and is the **soft prerequisite** for item 3 below.
 2. **OR start Wave 89** — if green-master isn't blocking, Wave 89 Phase 0 is the `useResizable` sibling-stack extension. Run `/wave-plan 89` (or `/wave-plan-lite 89`).
-3. The small follow-ups (trace-logging `log.debug`, tree-sitter wasm bump, SubagentTranscriptPanel) can be folded into a fix-sweep or picked off individually.
+3. **OR run the cross-platform-lockfile + Stryker wave** — this repo's slot in a 3-repo parallel meta-initiative (Gamify + Contractor App running the same in their repos, concurrently). For Agent IDE specifically: adopt the lockfile tooling *preventatively* (no existing divergence here — the lockfile-divergence hypothesis for the CI bug was investigated and refuted — but installing Stryker would create it), do the native-module adapter refactor (`better-sqlite3`, `node-pty`, `@parcel/watcher`, `@node-rs/xxhash`), install Stryker scoped to pure-logic code, wire its CI. Meta-spec + literal kickoff prompt: `C:\Web App\docs\superpowers\specs\2026-05-14-cross-platform-lockfile-stryker-meta.md` → "Handoff — executing this initiative" → Wave 3. Pattern reference: `C:\Web App\Gamify\roadmap\wave-9-cross-platform-lockfile-stryker/`. Pre-wave WSL2 setup is already done. **Soft dependency:** do item 1 (the CI bug) first — the adapter refactor shouldn't build on a red baseline. The heaviest of the three meta-initiative waves; explicitly multi-phase.
+4. The small follow-ups (trace-logging `log.debug`, tree-sitter wasm bump, SubagentTranscriptPanel) can be folded into a fix-sweep or picked off individually.
 
 ## Vendor knowledge
 
