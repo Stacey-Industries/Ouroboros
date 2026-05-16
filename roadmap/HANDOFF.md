@@ -54,17 +54,11 @@
 
 ---
 
-## Known issue — lockfile shipped as master+Stryker, NOT a sync-regenerated lockfile
+## Lockfile foundation — current state (Wave 93)
 
-**The wave's foundation tooling is in place, BUT the actual `package-lock.json` shipped in v2.17.0 was NOT produced by `lockfile:sync`.** It's master's pre-Wave-92 lockfile + `npm install --package-lock-only` adding only the Stryker tree.
+The `package-lock.json` in master was bootstrapped via `npm install --package-lock-only` during Wave 92 (minimal delta approach). Lockfile changes flow through `npm run lockfile:sync` only. The drift checker (Wave 93 Phase A) now catches unintended transitive drift before marker-write — see `scripts/lockfile-drift-check.mjs`. To accept intentional drift (e.g., a deliberate dep bump that changes transitives), run with `LOCKFILE_SYNC_ACCEPT_DRIFT=1`.
 
-**Why:** Phase 5's "from-scratch regen via WSL2" produced a complete cross-platform lockfile but with drifted transitives (vite 7.3.1 → 7.3.3 + multiple Babel transforms), causing 1077 renderer test failures on all 3 CI OS (`ReferenceError: React is not defined` — vite's React plugin transform regression). Pinning vite alone wasn't sufficient; too many other transitives also shifted.
-
-**Resolution:** reverted lockfile to master + `npm install --package-lock-only @stryker-mutator/core@^9.6.1 @stryker-mutator/vitest-runner@^9.6.1` for minimal delta. Marker regenerated with `generatedBy: 'wave-92-phase-9-revert-and-add'` (honest provenance, not a `lockfile:sync` lie).
-
-**Follow-up filed:** `roadmap/follow-ups/2026-05-16-pin-toplevel-transitive-gap.md` — captures the structural lesson. ADR Decision 3 ("preserve currently-resolved versions") protects top-level deps only via `pin-toplevel.mjs`; transitives can still drift on a from-scratch regen. Recommended fix: add `scripts/lockfile-drift-check.mjs` (compare old vs new lockfile, warn/fail on unexpected version changes) before `lockfile:sync` is trusted for the next regen.
-
-**Practical implication:** the next time someone needs to regenerate the lockfile (add/remove a dep), running `npm run lockfile:sync` may produce another drifted state. Until the drift-check tooling lands, the safe pattern is `git checkout HEAD -- package-lock.json` + `npm install --package-lock-only @new-dep` for additions, or hand-craft via overrides for transitive pins.
+The follow-up at `roadmap/follow-ups/2026-05-16-pin-toplevel-transitive-gap.md` is RESOLVED by Phase A's drift-check integration.
 
 ---
 
@@ -87,19 +81,15 @@ In `roadmap/bugs/`:
 
 ### To regenerate the lockfile (after adding/removing deps)
 
-⚠️ **WARNING:** `lockfile:sync` currently produces drift on transitives (vite, Babel transforms, etc.) that can break CI. Until the drift-check tooling lands (`2026-05-16-pin-toplevel-transitive-gap.md`), the safer pattern is:
-
 ```powershell
-# 1. Add the new dep without scripts (skips electron-rebuild)
-npm install --package-lock-only --ignore-scripts <new-pkg>
-
-# 2. Verify nothing else drifted
-git diff package-lock.json | grep '"version"' | head -50
-
-# 3. If only the new dep's tree changed: commit. Otherwise: revert + override the drifters.
+npm run lockfile:sync
 ```
 
-The full `lockfile:sync` flow IS shipped and works mechanically (`npm run lockfile:sync` runs cleanly, produces a complete cross-platform lockfile, writes the marker). The issue is purely the transitive-drift consequence.
+The drift checker (`scripts/lockfile-drift-check.mjs`, Wave 93) runs automatically post-regen and gates marker-write. If it exits non-zero (minor/major transitive drift), the marker is NOT written and a recovery message is printed. Options:
+
+- **Accept the drift:** `$env:LOCKFILE_SYNC_ACCEPT_DRIFT=1; npm run lockfile:sync`
+- **Fix the drift:** inspect `git diff package-lock.json`, add `overrides` pins for the drifting transitives, then re-run.
+- **Standalone check:** `npm run lockfile:check:drift -- <old-lockfile> <new-lockfile>`
 
 ### To install the pre-push guard locally
 

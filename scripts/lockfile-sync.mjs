@@ -152,6 +152,23 @@ for (const { outPath, wsl_rel } of pinnedManifests) {
 
 log('  manifests copied.');
 
+// ---- Pre-regen snapshot (for drift detection after regen) --------------------
+
+// Snapshot the current lockfile so the drift checker can compare before vs after.
+// Skip gracefully if the lockfile doesn't exist yet (first-ever run).
+const DRIFT_CHECK_SCRIPT = join(SCRIPT_DIR, 'lockfile-drift-check.mjs');
+const snapshotPath = join(tmpdir(), `lockfile-pre-regen-${Date.now()}.json`);
+let snapshotExists = false;
+if (existsSync(LOCK_WIN)) {
+  try {
+    writeFileSync(snapshotPath, readFileSync(LOCK_WIN));
+    snapshotExists = true;
+    log(`  pre-regen lockfile snapshot saved to ${snapshotPath}`);
+  } catch (err) {
+    log(`  (snapshot failed — drift check will be skipped): ${err.message}`);
+  }
+}
+
 // ---- Step 3: WSL2-native npm install -----------------------------------------
 
 log('Step 3/5 — Running npm install in WSL2 (this takes ~1–2 min on first run)...');
@@ -181,6 +198,26 @@ const wslLockDst = winToWslPath(LOCK_WIN);
 wsl(`cp "${wslLockSrc}" "${wslLockDst}"`, { label: 'copy package-lock.json back' });
 
 log('  package-lock.json written.');
+
+// ---- Drift check (post-regen, pre-marker-write) ------------------------------
+
+if (snapshotExists) {
+  log('Drift check — comparing pre-regen snapshot to new lockfile...');
+  const acceptDrift = process.env.LOCKFILE_SYNC_ACCEPT_DRIFT === '1';
+  const driftArgs = [DRIFT_CHECK_SCRIPT, snapshotPath, LOCK_WIN];
+  if (acceptDrift) driftArgs.push('--accept-drift');
+
+  const driftResult = spawnSync(process.execPath, driftArgs, { stdio: 'inherit', shell: false });
+
+  if (driftResult.status !== 0) {
+    console.error(
+      '\n[lockfile:sync] Drift detected — re-run with LOCKFILE_SYNC_ACCEPT_DRIFT=1 to accept, ' +
+      'or fix the source of drift. Marker NOT written; pre-push guard will block any push of this lockfile.',
+    );
+    process.exit(2);
+  }
+  log('  drift check passed.');
+}
 
 // ---- Step 5: Write provenance marker -----------------------------------------
 

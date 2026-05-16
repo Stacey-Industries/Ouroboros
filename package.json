@@ -52,6 +52,7 @@
     "audit:prod": "npm audit --omit=dev",
     "lockfile:sync": "node scripts/lockfile-sync.mjs",
     "lockfile:check": "node scripts/lockfile-check.mjs",
+    "lockfile:check:drift": "node scripts/lockfile-drift-check.mjs",
     "mutation:test": "stryker run --incremental",
     "mutation:test:full": "stryker run --force",
     "analyze:corpus": "npx tsx scripts/analyze-claude-corpus.ts",
