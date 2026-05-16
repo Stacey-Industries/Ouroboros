@@ -1,4 +1,4 @@
-# Session Handoff — 2026-05-16 (Wave 93 SHIPPED, master CI GREEN)
+# Session Handoff — 2026-05-16 (Wave 93 SHIPPED, CI gate bypassed)
 
 **Audience:** the next Claude Code session.
 
@@ -14,7 +14,21 @@ Closed:
 - `web-tree-sitter` ABI 15 incompatibility (Phase C — bump `0.22.6` → `^0.26.8`; codebase-graph now uses `@vscode/tree-sitter-wasm@0.3.1` grammars cleanly instead of silently falling back).
 - Dead `SubagentTranscriptPanel` component (Phase D — deleted; monitor-tab consolidation honored).
 
-**Master CI is GREEN on all 3 platforms** (macOS, Ubuntu, Windows) — last verified 2026-05-16 post-Wave-92.
+**⚠️ CI bypassed for v2.17.1.** GitHub Actions minutes exhausted (~16-day cooldown, refresh expected ~2026-06-01). Wave 93 shipped on local gates only:
+- typecheck: clean
+- lint: 0 errors, 4 pre-existing warnings (unchanged)
+- `test:main`: 6345/6345
+- `test:renderer`: 4104/4104
+- `test:codebasegraph`: 672/672 (includes the new tree-sitter integration test)
+- `test:agentchat`: 945/945
+
+All Windows-local. Linux + macOS surfaces unverified for the v2.17.1 commits until CI minutes refresh. Risk surface is small: Phase A/B/D are pure-logic / log-level / deletion (no OS-specific behavior); Phase C is a vendor SDK bump where the cross-OS risk is `web-tree-sitter`'s wasm-loading path — which is the same `Parser.init({ locateFile })` call on every OS, and was verified Windows-local.
+
+One CI run did execute (the wave's last action minutes) on the post-wave follow-up commit (`16e8c7f0`): **CI failure 1/11009** (flaky perf test on `threadStoreSearch.test.ts` — pre-existing, Wave-41-era code, not touched by Wave 93). **Mutation Testing (Stryker) passed cleanly** (1m17s, `break: 21` still holds). The flaky perf test is filed at `roadmap/follow-ups/2026-05-16-threadstoresearch-perf-test-flaky-windows-ci.md` with three fix options; option 1 (timeout bump under CI) is the recommended start.
+
+When Actions minutes return, push any tiny change (or `gh run rerun`) to validate the v2.17.1 commits on Linux + macOS. The Wave 92 CI baseline was ~20min full suite + ~1.5min Stryker.
+
+**Master CI was GREEN on all 3 platforms** (macOS, Ubuntu, Windows) as of Wave 92 ship (2026-05-16, commit `4f129140`).
 
 **Next wave options** (Cole's call):
 1. **Wave 89 — ChatOnlyShell Layout Overhaul** (stacked terminals + overlay drawers). Phase 0 = extend `useResizable` for sibling-stack resize (the Wave 88 prerequisite).
