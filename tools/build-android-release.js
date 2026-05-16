@@ -25,7 +25,7 @@ function validateEnv() {
   missing.forEach((v) => console.error(`  - ${v}`));
   console.error('');
   console.error('Set all four variables before running this script.');
-  console.error('See docs/mobile-release.md for setup instructions.');
+  console.error('See roadmap/docs/mobile-release.md for setup instructions.');
   process.exit(1);
 }
 

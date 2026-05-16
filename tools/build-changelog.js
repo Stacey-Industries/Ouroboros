@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * build-changelog.js — Parses docs/CHANGELOG.md into a typed TS module.
+ * build-changelog.js — Parses roadmap/docs/CHANGELOG.md into a typed TS module.
  *
  * Output: src/renderer/generated/changelog.ts
  * Format: Keep a Changelog (https://keepachangelog.com/)
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const INPUT = path.join(ROOT, 'docs', 'CHANGELOG.md');
+const INPUT = path.join(ROOT, 'roadmap', 'docs', 'CHANGELOG.md');
 const OUT_DIR = path.join(ROOT, 'src', 'renderer', 'generated');
 const OUTPUT = path.join(OUT_DIR, 'changelog.ts');
 
