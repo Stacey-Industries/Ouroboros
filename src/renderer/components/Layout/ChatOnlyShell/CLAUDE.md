@@ -1,14 +1,15 @@
-# ChatOnlyShell — Immersive chat shell + workbench variant (Wave 42–46)
+# ChatOnlyShell — Immersive chat shell + workbench variant (Wave 42–89)
 
 ## Architecture Summary
 
 A dedicated renderer shell that replaces `InnerAppLayout` when immersive chat mode is active. The backend is unchanged — same session store, same threads, same PTY, same hooks pipe. All chat features carry over automatically because they live inside `AgentChatWorkspace`.
 
-**Wave 46 chat-workbench variant:**
+**Wave 46 chat-workbench variant (as evolved through Wave 89):**
 - `layout.chatWorkbench` gates a workstation-style chat shell without mounting the full IDE shell.
-- `ChatWorkbenchShell` keeps the conversation central and adds three docked secondary surfaces: `WorkbenchRail`, `ChatWorkbenchArtifactPane`, and `ChatWorkbenchUtilityDrawer`.
-- `ChatWorkbenchTerminalDock` reuses `TerminalManager` in a lazy-loaded bottom dock so chat-only cold boot and jsdom tests do not pay the xterm cost unless the dock opens.
-- The utility drawer auto-opens on new approvals, new diff-review sessions, and `agent-ide:open-subagent-panel` events.
+- `ChatWorkbenchShell` keeps the conversation central with one persistent docked surface (`WorkbenchRail`) and a bottom terminal dock. Secondary surfaces (`ChatWorkbenchArtifactPane`, `ChatWorkbenchUtilityDrawer`) render as non-modal **overlays** anchored to the chat area (Wave 89 — see `OverlayDrawer.tsx`), not as fixed-flex body siblings.
+- `ChatWorkbenchTerminalDock` (Wave 89) hosts **two stacked terminal slots** — `primary` (Wave 90 home for interactive Claude; generic terminal in 89) and `secondary` (dev shell) — separated by a sibling-resizable divider via `useResizable.startSiblingResize`. Each slot owns an independent `useTerminalSessions` instance.
+- The utility drawer auto-opens on new approvals, new diff-review sessions, and `agent-ide:open-subagent-panel` events (unchanged from Wave 47). Artifact pane auto-opens on diff events (unchanged).
+- Both overlays support concurrent open. Tile layout: artifact pane anchored to the chat-area right edge; utility drawer anchored to the left of the artifact pane when both open.
 
 **Wave 44 parity pass (Claude desktop / Piebald targets):**
 - Shell root uses `h-screen w-screen` (not `h-full w-full`) so it fills the viewport — `#root` / `body` have no explicit height, so `h-full` would resolve to content-height.
@@ -91,23 +92,29 @@ Cross-window IDE-tool delegation remains deferred (see `roadmap/follow-ups/` for
 | `agent-ide:toggle-session-drawer` | inbound | Toggles `drawerOpen` state |
 | `agent-ide:toggle-immersive-chat` | outbound | Dispatched by Exit button; handled by `useImmersiveChatFlag` (Phase C) |
 
-## Wave 46 composition
+## Wave 89 composition (current)
 
 ```
 ChatWorkbenchShell
   ├─ ChatOnlyTitleBar
-  ├─ ChatWorkbenchBody
-  │    ├─ WorkbenchRail (grouped: active / background / recent-chat; open by default)
-  │    ├─ AgentChatWorkspace (primary, variant="chat-only")
-  │    ├─ ChatWorkbenchComparePane (inspect-only secondary pane, optional)
-  │    ├─ ChatWorkbenchArtifactPane (with ArtifactHistoryList)
-  │    ├─ ChatWorkbenchUtilityDrawer
-  │    │    ├─ WorkbenchApprovalPanel
-  │    │    ├─ DiffReviewPanel
-  │    │    └─ WorkbenchTimelinePanel (activity timeline)
-  │    └─ ChatWorkbenchTerminalDock
+  ├─ ChatWorkbenchBody                 — flex row: rail | chat-area | (terminal-dock below)
+  │    ├─ WorkbenchRail                — grouped: active / background / recent-chat; open by default
+  │    └─ chat-area (position: relative — overlay anchor)
+  │         ├─ AgentChatWorkspace      — primary, variant="chat-only"
+  │         ├─ ChatWorkbenchComparePane — inspect-only secondary pane, optional
+  │         └─ ChatWorkbenchOverlays   — two OverlayDrawer instances anchored here
+  │              ├─ ChatWorkbenchArtifactPane (overlay, default width 480)
+  │              └─ ChatWorkbenchUtilityDrawer (overlay, default width 380, tiles LEFT of artifact when both open)
+  │                   ├─ WorkbenchApprovalPanel
+  │                   ├─ DiffReviewPanel
+  │                   └─ WorkbenchTimelinePanel
+  ├─ ChatWorkbenchTerminalDock         — two stacked slots, sibling-resizable
+  │    ├─ DockSlot (slot='primary')    — Wave 90 interactive-claude home
+  │    └─ DockSlot (slot='secondary')  — dev shell
   └─ existing shell overlays (settings, shortcuts, command palette, diff overlay)
 ```
+
+Pre-Wave-89 composition: `ChatWorkbenchArtifactPane` and `ChatWorkbenchUtilityDrawer` were fixed-flex siblings inside `ChatWorkbenchBody` (occupied permanent width). Mobile path (`MobileOverlays` in `ChatWorkbenchBody.tsx`) still renders both inside `MobileOverlay` modal wrappers — unchanged.
 
 The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`, `CentrePaneConnected`, or arbitrary split-pane editor chrome. Reuse stays selective: `FileViewer`, `DiffReview`, `TerminalManager`, and approval/session contexts are mounted through the existing providers in `ChatOnlyShellWrapper`.
 
@@ -132,3 +139,7 @@ The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`
 - **Wave 47 Phase D**: side-by-side compare — `ChatWorkbenchComparePane` with scoped isolated store (`useScopedWorkbenchWorkspace`), `useWorkbenchCompare` for eligibility and target state, compare affordance in `WorkbenchRail`.
 - **Wave 47 Phase E**: sandboxed HTML preview — `HtmlPreview.tsx` using strict `<iframe srcDoc sandbox="">`, `ContentRouter` routing, `useFileViewerState` `isHtml` derivation.
 - **Wave 47 Phase F**: integration coverage (`ChatWorkbenchFollowThrough.integration.test.tsx`), rail default open, docs updates.
+- **Wave 89 Phase 0**: `useResizable.sibling.ts` adds sibling-stack drag math via `startSiblingResize`; `dockPersistenceSchema.ts` adds `terminalDockSlots`, `overlayDrawerWidth`, `artifactOverlayWidth` with legacy-`dockHeight` forward migration. Defaults `{ primary: 160, secondary: 100 }` (tuned in Phase 1 revision to fit under `TERMINAL_DEFAULT_SIZE` 280 with header chrome).
+- **Wave 89 Phase 1**: Two-slot stacked terminal dock — `DockSlot.tsx` per-slot component with its own `useTerminalSessions`, `useDockSlotHeights` persistence orchestration, `SPLIT_TERMINAL_EVENT` payload extended with `{ slot, sessionId }` (legacy dispatch sites default to `'primary'` via `?? 'primary'` fallback in `TerminalManager`). Phase 1 revision (commit `7ceca999`): routed `useDockSlotHeights` drag through `startSiblingResize` via an additive `onCommit` callback on `SiblingResizeOpts` — single resize source of truth restored per ADR Decision 1.
+- **Wave 89 Phase 2**: `OverlayDrawer.tsx` — non-modal slide-in primitive, anchored to nearest positioned ancestor (NOT viewport), z-index 200, `rgba(0,0,0,0.35)` backdrop (mica/vibrancy-safe override of ADR Decision 4's token tint), window-scoped Escape with `stopPropagation` (jsdom div-scoped handlers don't propagate reliably).
+- **Wave 89 Phase 3**: Utility drawer + artifact pane migrated from fixed-flex slots to `OverlayDrawer` instances. `ChatWorkbenchOverlays.tsx` is the mount point. `useOverlayDrawerWidths` hook persists widths per surface. `ChatWorkbenchBody`'s desktop flex tree simplified to `rail | chat-area | terminal-dock`. `useChatWorkbenchLayout` mutual-exclusion removed (both overlays can be concurrently open). `useWorkbenchSurfacePolicy` unchanged (state-only, no overlay-specific rewiring needed).
