@@ -30,8 +30,8 @@ import {
 // ---------------------------------------------------------------------------
 
 describe('default constants', () => {
-  it('terminalDockSlots defaults are { primary: 200, secondary: 140 }', () => {
-    expect(DEFAULT_TERMINAL_DOCK_SLOTS).toEqual({ primary: 200, secondary: 140 });
+  it('terminalDockSlots defaults are { primary: 160, secondary: 100 } (sum fits within 280px outer dock)', () => {
+    expect(DEFAULT_TERMINAL_DOCK_SLOTS).toEqual({ primary: 160, secondary: 100 });
   });
 
   it('overlayDrawerWidth default is 380', () => {

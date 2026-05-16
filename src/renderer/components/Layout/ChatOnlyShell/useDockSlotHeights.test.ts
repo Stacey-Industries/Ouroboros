@@ -1,60 +1,24 @@
 /**
  * @vitest-environment jsdom
  *
- * useDockSlotHeights.test.ts — Wave 89 Phase 1
+ * useDockSlotHeights.test.ts — Wave 89 Phase 1 (revised per Phase 1 review)
  *
- * Unit tests for the pure helpers exported from useDockSlotHeights.
- * Hook integration (drag commit, state update) is covered by
- * ChatWorkbenchTerminalDock.stacked.test.tsx.
+ * Unit tests for the persistence helpers exported from useDockSlotHeights.
+ * Bespoke clamp / preview-line tests removed — that logic was deleted and is
+ * now covered by useResizable.sibling.test.ts (clampSiblingDelta) and
+ * useResizable.test.ts (sibling-stack mode end-to-end).
+ *
+ * Tests retained:
+ *  - loadSlotHeights / saveSlotHeights localStorage round-trip
+ *  - migrateDockPersistence integration (legacy dockHeight forward-migration)
+ *  - buildSiblingOpts delegates to startSiblingResize with correct args
  */
 
+import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_TERMINAL_DOCK_SLOTS } from '../../../../shared/config/dockPersistenceSchema';
-import {
-  clampSlotDelta,
-  loadSlotHeights,
-  saveSlotHeights,
-  SLOT_MIN_HEIGHT,
-} from './useDockSlotHeights';
-
-// ---------------------------------------------------------------------------
-// clampSlotDelta
-// ---------------------------------------------------------------------------
-
-describe('clampSlotDelta', () => {
-  it('returns the raw delta when within bounds', () => {
-    // startPrimary=200, startSecondary=140 — dragging down 20px is fine
-    expect(clampSlotDelta(20, 200, 140)).toBe(20);
-  });
-
-  it('clamps upward drag so primary never goes below SLOT_MIN_HEIGHT', () => {
-    // startPrimary=200, dragging up 200 would shrink primary to 0 — must clamp
-    const maxAllowedUp = -(200 - SLOT_MIN_HEIGHT); // -140
-    expect(clampSlotDelta(-200, 200, 140)).toBe(maxAllowedUp);
-  });
-
-  it('clamps downward drag so secondary never goes below SLOT_MIN_HEIGHT', () => {
-    // startSecondary=140, dragging down 140 would shrink secondary to 0 — must clamp
-    const maxAllowedDown = 140 - SLOT_MIN_HEIGHT; // 80
-    expect(clampSlotDelta(200, 200, 140)).toBe(maxAllowedDown);
-  });
-
-  it('returns 0 when delta is 0', () => {
-    expect(clampSlotDelta(0, 200, 140)).toBe(0);
-  });
-
-  it('preserves sum: primary + secondary stays equal to parentExtent after clamp', () => {
-    const parentExtent = 340; // 200 + 140
-    const startPrimary = 200;
-    const startSecondary = 140;
-    const delta = 30;
-    const clamped = clampSlotDelta(delta, startPrimary, startSecondary);
-    const newPrimary = startPrimary + clamped;
-    const newSecondary = parentExtent - newPrimary;
-    expect(newPrimary + newSecondary).toBe(parentExtent);
-  });
-});
+import { loadSlotHeights, saveSlotHeights, useDockSlotHeights } from './useDockSlotHeights';
 
 // ---------------------------------------------------------------------------
 // loadSlotHeights / saveSlotHeights — localStorage round-trip
@@ -106,5 +70,43 @@ describe('loadSlotHeights', () => {
     const result = loadSlotHeights();
     // primary = round(300 * 0.6) = 180, secondary = 300 - 180 = 120
     expect(result).toEqual({ primary: 180, secondary: 120 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildSiblingOpts — delegates to startSiblingResize (ADR Decision 1)
+// ---------------------------------------------------------------------------
+
+describe('useDockSlotHeights — buildSiblingOpts delegates to startSiblingResize', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('buildSiblingOpts returns opts with correct parentExtent, startSizes, and direction', () => {
+    const { result } = renderHook(() => useDockSlotHeights());
+    const opts = result.current.buildSiblingOpts(300, 250);
+    expect(opts.parentExtent).toBe(300);
+    expect(opts.startPos).toBe(250);
+    expect(opts.startSizes).toEqual([
+      DEFAULT_TERMINAL_DOCK_SLOTS.primary,
+      DEFAULT_TERMINAL_DOCK_SLOTS.secondary,
+    ]);
+    expect(opts.direction).toBe('vertical');
+  });
+
+  it('buildSiblingOpts provides an onCommit callback that persists slot heights', () => {
+    const { result } = renderHook(() => useDockSlotHeights());
+    const opts = result.current.buildSiblingOpts(300, 250);
+    expect(typeof opts.onCommit).toBe('function');
+    // Invoke onCommit directly — simulates what startSiblingResize does on pointerup.
+    opts.onCommit?.([170, 130]);
+    const stored = JSON.parse(
+      localStorage.getItem('agent-ide:dock-persistence') ?? '{}',
+    ) as Record<string, unknown>;
+    expect(stored.terminalDockSlots).toEqual({ primary: 170, secondary: 130 });
   });
 });

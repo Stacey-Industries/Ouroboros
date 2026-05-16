@@ -46,9 +46,12 @@ export interface RawDockPersistence extends Partial<DockPersistenceData> {
 // Defaults
 // ---------------------------------------------------------------------------
 
+// Sum (260px) fits within useResizable's TERMINAL_DEFAULT_SIZE (280px) with
+// ~20px of chrome buffer for the dock header + slot divider. Previously 200+140
+// = 340px which overflowed the 280px default outer dock on fresh install.
 export const DEFAULT_TERMINAL_DOCK_SLOTS: TerminalDockSlots = {
-  primary: 200,
-  secondary: 140,
+  primary: 160,
+  secondary: 100,
 };
 
 export const DEFAULT_OVERLAY_DRAWER_WIDTH = 380;

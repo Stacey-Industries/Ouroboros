@@ -175,8 +175,8 @@ interface DockState {
 }
 
 function useDockState(onActiveSessionChange?: (id: string | null) => void): DockState {
-  const { sizes, startResize, applySizes } = useResizable();
-  const { slotHeights, startSlotDividerDrag } = useDockSlotHeights();
+  const { sizes, startResize, startSiblingResize, applySizes } = useResizable();
+  const { slotHeights, buildSiblingOpts } = useDockSlotHeights();
   const { primarySessionId, secondarySessionId, onPrimarySessionChange, onSecondarySessionChange } =
     useActiveSlotSession();
 
@@ -196,9 +196,11 @@ function useDockState(onActiveSessionChange?: (id: string | null) => void): Dock
 
   const handleDividerPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      startSlotDividerDrag(event, sizes.terminal);
+      event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+      startSiblingResize(buildSiblingOpts(sizes.terminal, event.clientY));
     },
-    [sizes.terminal, startSlotDividerDrag],
+    [sizes.terminal, startSiblingResize, buildSiblingOpts],
   );
 
   return {

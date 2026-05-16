@@ -24,6 +24,14 @@ export interface SiblingResizeOpts {
   startPos: number;
   /** 'vertical' = horizontal divider (clientY delta). Default. */
   direction?: 'horizontal' | 'vertical';
+  /**
+   * Optional commit callback. When provided, called instead of (not in addition
+   * to) writing the committed sizes into the `PanelSizes` React state. Callers
+   * that manage their own persistence (e.g. `useDockSlotHeights`) use this to
+   * redirect the commit to their own store. Additive surface — existing callers
+   * without this option behave exactly as before.
+   */
+  onCommit?: (sizes: [number, number]) => void;
 }
 
 export interface SiblingDragState {
@@ -35,6 +43,8 @@ export interface SiblingDragState {
   startPos: number;
   /** Current sizes updated on every pointermove before commit. */
   currentSizes: [number, number];
+  /** Forwarded from SiblingResizeOpts — see that interface for semantics. */
+  onCommit?: (sizes: [number, number]) => void;
 }
 
 /**
@@ -76,6 +86,10 @@ export function commitSiblingDrag(
   saveSizes: (sizes: PanelSizes) => void,
 ): void {
   if (!dragState) return;
+  if (dragState.onCommit) {
+    dragState.onCommit(dragState.currentSizes);
+    return;
+  }
   const [topSize, bottomSize] = dragState.currentSizes;
   setSizes((prev) => {
     const committed = {
@@ -98,5 +112,6 @@ export function buildSiblingDragState(opts: SiblingResizeOpts): SiblingDragState
     startTopSize: opts.startSizes[0],
     startPos: opts.startPos,
     currentSizes: [opts.startSizes[0], opts.startSizes[1]],
+    onCommit: opts.onCommit,
   };
 }

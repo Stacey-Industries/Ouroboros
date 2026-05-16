@@ -1,15 +1,21 @@
 /**
- * useDockSlotHeights — Wave 89 Phase 1
+ * useDockSlotHeights — Wave 89 Phase 1 (revised per Phase 1 review)
  *
- * Manages persisted heights for the two stacked terminal slots (primary / secondary)
- * in ChatWorkbenchTerminalDock. Heights are stored via dockPersistenceSchema's
- * terminalDockSlots key, separate from the IDE-panel PanelSizes.
+ * Thin persistence orchestration for the two stacked terminal slots in
+ * ChatWorkbenchTerminalDock. Heights are stored via dockPersistenceSchema's
+ * `terminalDockSlots` key, separate from the IDE-panel PanelSizes.
  *
- * Sibling-resize drag uses direct pointermove/pointerup listeners (same pattern as
- * useResizable's fixed-edge mode). Sum of heights is held constant at parentExtent.
+ * ADR Decision 1 compliance: sibling-resize drag is fully delegated to
+ * `useResizable.startSiblingResize`. This hook contains NO bespoke drag math,
+ * preview-line DOM manipulation, or pointer listeners — those live exclusively
+ * in useResizable / useResizable.sibling.ts.
+ *
+ * The `onCommit` extension added to SiblingResizeOpts (additive, non-breaking)
+ * routes the committed sizes here instead of into PanelSizes, so persistence
+ * writes go to the correct `terminalDockSlots` electron-store key.
  */
 
-import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import type {
   DockPersistenceData,
@@ -20,8 +26,8 @@ import {
   DEFAULT_TERMINAL_DOCK_SLOTS,
   migrateDockPersistence,
 } from '../../../../shared/config/dockPersistenceSchema';
+import type { SiblingResizeOpts } from '../useResizable.sibling';
 
-export const SLOT_MIN_HEIGHT = 60;
 const PERSIST_KEY = 'agent-ide:dock-persistence';
 
 // ---------------------------------------------------------------------------
@@ -65,179 +71,47 @@ export function saveSlotHeights(slots: TerminalDockSlots): void {
 }
 
 // ---------------------------------------------------------------------------
-// Preview line (singleton, same pattern as useResizable)
-// ---------------------------------------------------------------------------
-
-const PREVIEW_LINE_ID = 'dock-slot-preview-line';
-
-export function showSlotPreviewLine(clientY: number): void {
-  let el = document.getElementById(PREVIEW_LINE_ID) as HTMLDivElement | null;
-  if (!el) {
-    el = document.createElement('div');
-    el.id = PREVIEW_LINE_ID;
-    el.style.cssText =
-      'position:fixed;z-index:9999;pointer-events:none;display:none;' +
-      'background:var(--interactive-accent,#58a6ff);opacity:0.6;' +
-      'left:0;right:0;height:2px;transition:none;';
-    document.body.appendChild(el);
-  }
-  el.style.top = `${clientY}px`;
-  el.style.display = 'block';
-}
-
-export function hideSlotPreviewLine(): void {
-  const el = document.getElementById(PREVIEW_LINE_ID);
-  if (el) el.style.display = 'none';
-}
-
-// ---------------------------------------------------------------------------
-// Clamp helper (exported for unit tests)
-// ---------------------------------------------------------------------------
-
-export function clampSlotDelta(
-  delta: number,
-  startPrimary: number,
-  startSecondary: number,
-): number {
-  const maxUp = -(startPrimary - SLOT_MIN_HEIGHT);
-  const maxDown = startSecondary - SLOT_MIN_HEIGHT;
-  return Math.max(maxUp, Math.min(maxDown, delta));
-}
-
-// ---------------------------------------------------------------------------
-// Drag state
-// ---------------------------------------------------------------------------
-
-interface LiveDragState {
-  startY: number;
-  startPrimary: number;
-  startSecondary: number;
-  parentExtent: number;
-  livePrimary: number;
-  liveSecondary: number;
-}
-
-// ---------------------------------------------------------------------------
-// Shared drag utilities (non-hook helpers)
-// ---------------------------------------------------------------------------
-
-function attachDragListeners(onMove: (e: PointerEvent) => void, onUp: () => void): void {
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
-  document.addEventListener('pointercancel', onUp);
-}
-
-function detachDragListeners(onMove: (e: PointerEvent) => void, onUp: () => void): void {
-  document.removeEventListener('pointermove', onMove);
-  document.removeEventListener('pointerup', onUp);
-  document.removeEventListener('pointercancel', onUp);
-}
-
-function resetDragCursor(): void {
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-}
-
-// ---------------------------------------------------------------------------
-// Move / up handlers as refs (avoids useCallback-on-factory ESLint warnings)
-// ---------------------------------------------------------------------------
-
-function useDragHandlers(
-  dragRef: MutableRefObject<LiveDragState | null>,
-  onCommit: (p: number, s: number) => void,
-): { onMove: (e: PointerEvent) => void; onUp: () => void } {
-  const onMoveRef = useRef<(e: PointerEvent) => void>(null!);
-  const onUpRef = useRef<() => void>(null!);
-
-  onMoveRef.current = (event: PointerEvent): void => {
-    const state = dragRef.current;
-    if (!state) return;
-    const clamped = clampSlotDelta(
-      event.clientY - state.startY,
-      state.startPrimary,
-      state.startSecondary,
-    );
-    state.livePrimary = state.startPrimary + clamped;
-    state.liveSecondary = state.parentExtent - state.livePrimary;
-    showSlotPreviewLine(event.clientY);
-  };
-
-  onUpRef.current = (): void => {
-    hideSlotPreviewLine();
-    const state = dragRef.current;
-    if (state) onCommit(state.livePrimary, state.liveSecondary);
-    dragRef.current = null;
-    resetDragCursor();
-    detachDragListeners(onMoveRef.current, onUpRef.current);
-  };
-
-  // Stable wrapper refs so addEventListener/removeEventListener always target the same identity
-  const stableMove = useRef((e: PointerEvent) => onMoveRef.current(e)).current;
-  const stableUp = useRef(() => onUpRef.current()).current;
-
-  return { onMove: stableMove, onUp: stableUp };
-}
-
-// ---------------------------------------------------------------------------
-// Drag sub-hook (kept ≤40 lines by extracting useDragHandlers above)
-// ---------------------------------------------------------------------------
-
-type StartDrag = (event: React.PointerEvent<HTMLDivElement>, parentExtent: number) => void;
-
-function useDividerDrag(
-  slotHeights: TerminalDockSlots,
-  onCommit: (p: number, s: number) => void,
-): StartDrag {
-  const dragRef = useRef<LiveDragState | null>(null);
-  const { onMove, onUp } = useDragHandlers(dragRef, onCommit);
-
-  useEffect(() => {
-    return () => {
-      dragRef.current = null;
-      hideSlotPreviewLine();
-      resetDragCursor();
-      detachDragListeners(onMove, onUp);
-    };
-  }, [onMove, onUp]);
-
-  return useCallback(
-    (event: React.PointerEvent<HTMLDivElement>, parentExtent: number) => {
-      event.preventDefault();
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-      dragRef.current = {
-        startY: event.clientY,
-        startPrimary: slotHeights.primary,
-        startSecondary: slotHeights.secondary,
-        parentExtent,
-        livePrimary: slotHeights.primary,
-        liveSecondary: slotHeights.secondary,
-      };
-      document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
-      attachDragListeners(onMove, onUp);
-    },
-    [slotHeights, onMove, onUp],
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Public hook
 // ---------------------------------------------------------------------------
 
 export interface UseDockSlotHeightsReturn {
   slotHeights: TerminalDockSlots;
-  startSlotDividerDrag: (event: React.PointerEvent<HTMLDivElement>, parentExtent: number) => void;
+  /**
+   * Returns SiblingResizeOpts for the current slot state. The caller passes
+   * these directly to `startSiblingResize` from `useResizable`. The `onCommit`
+   * callback routes committed sizes to `saveSlotHeights` instead of PanelSizes.
+   *
+   * @param parentExtent - total interior height available to both slots (px).
+   * @param startPos     - clientY at the moment the pointer went down.
+   */
+  buildSiblingOpts: (parentExtent: number, startPos: number) => SiblingResizeOpts;
 }
 
 export function useDockSlotHeights(): UseDockSlotHeightsReturn {
   const [slotHeights, setSlotHeights] = useState<TerminalDockSlots>(loadSlotHeights);
 
-  const onCommit = useCallback((primary: number, secondary: number) => {
+  const onCommit = useCallback(([primary, secondary]: [number, number]) => {
     const committed: TerminalDockSlots = { primary, secondary };
     setSlotHeights(committed);
     saveSlotHeights(committed);
   }, []);
 
-  const startSlotDividerDrag = useDividerDrag(slotHeights, onCommit);
-  return { slotHeights, startSlotDividerDrag };
+  const buildSiblingOpts = useCallback(
+    (parentExtent: number, startPos: number): SiblingResizeOpts => ({
+      // topPanel/bottomPanel are required by SiblingResizeOpts but are only
+      // used by the default PanelSizes commit path. Because onCommit is
+      // provided, commitSiblingDrag returns early before reading these fields.
+      // We supply valid PanelId values to satisfy the type contract.
+      topPanel: 'leftSidebar',
+      bottomPanel: 'rightSidebar',
+      parentExtent,
+      startSizes: [slotHeights.primary, slotHeights.secondary],
+      startPos,
+      direction: 'vertical',
+      onCommit,
+    }),
+    [slotHeights, onCommit],
+  );
+
+  return { slotHeights, buildSiblingOpts };
 }
