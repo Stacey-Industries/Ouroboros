@@ -83,7 +83,7 @@ function useActiveSessionRulesAndSkills(
     if (!claudeSessionId) {
       const userRulesCount = filesystemRules.filter((r) => r.memoryType === 'User').length;
       const projectRulesCount = filesystemRules.filter((r) => r.memoryType !== 'User').length;
-      log.info('[trace:ctx-preview] subscription fired', {
+      log.debug('[trace:ctx-preview] subscription fired', {
         claudeSessionId: null,
         projectRoot,
         userRulesCount,
@@ -97,8 +97,8 @@ function useActiveSessionRulesAndSkills(
     const userRulesCount = rules.filter((r) => r.memoryType === 'User').length;
     const projectRulesCount = rules.filter((r) => r.memoryType !== 'User').length;
     // [trace:agent-record] Site 3 — log store session IDs alongside the queried claudeSessionId.
-    log.info('[trace:agent-record] lookup', { queriedSessionId: claudeSessionId, foundKey: target?.id ?? null, foundUserRulesCount: userRulesCount, foundProjectRulesCount: projectRulesCount, storeSessionIds: agents.map((s) => s.id) });
-    log.info('[trace:ctx-preview] subscription fired', { claudeSessionId, projectRoot, userRulesCount, projectRulesCount, source: 'useMemo(session-found)', agentFound: !!target });
+    log.debug('[trace:agent-record] lookup', { queriedSessionId: claudeSessionId, foundKey: target?.id ?? null, foundUserRulesCount: userRulesCount, foundProjectRulesCount: projectRulesCount, storeSessionIds: agents.map((s) => s.id) });
+    log.debug('[trace:ctx-preview] subscription fired', { claudeSessionId, projectRoot, userRulesCount, projectRulesCount, source: 'useMemo(session-found)', agentFound: !!target });
     return {
       loadedRules: rules,
       skillExecutions: target?.skillExecutions ?? [],

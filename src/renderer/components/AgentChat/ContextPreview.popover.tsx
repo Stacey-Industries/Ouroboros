@@ -275,7 +275,7 @@ function useContextPreviewTrace(model: ContextPreviewModel, projectRoot: string 
     const ruleItems = model.items.filter((i) => i.kind === 'rule');
     const userRules = ruleItems.filter((i) => i.group === 'user').map((i) => i.label);
     const projectRules = ruleItems.filter((i) => i.group === 'project').map((i) => i.label);
-    log.info('[trace:ctx-preview] model items', {
+    log.debug('[trace:ctx-preview] model items', {
       phase: 'open',
       projectRoot,
       userRules,

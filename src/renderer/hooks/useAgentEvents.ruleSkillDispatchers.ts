@@ -93,7 +93,7 @@ export function dispatchRuleLoaded(payload: HookPayload, dispatch: Dispatch<Agen
   const filePath = typeof input.file_path === 'string' ? input.file_path : '';
   if (!filePath) return;
   // [trace:agent-record] Site 2 — log the sessionId key rules are queued under.
-  log.info('[trace:agent-record] write-rules', { sessionIdKey: payload.sessionId, filePath, source: 'dispatchRuleLoaded' });
+  log.debug('[trace:agent-record] write-rules', { sessionIdKey: payload.sessionId, filePath, source: 'dispatchRuleLoaded' });
   ruleLoadQueue.push({
     sessionId: payload.sessionId,
     rule: buildLoadedRule(payload, filePath),

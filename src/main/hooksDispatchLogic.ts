@@ -35,7 +35,7 @@ export function shouldSuppressDispatch(
  * Captures the hook-pipe sessionId so we can compare it against the stream-json claudeSessionId. */
 export function traceInstructionsLoaded(payload: HookPayload, activeSyntheticIds: Set<string>): void {
   if (payload.type !== 'instructions_loaded') return;
-  log.info('[trace:agent-record] instructions_loaded reaching dispatcher', {
+  log.debug('[trace:agent-record] instructions_loaded reaching dispatcher', {
     hookPipeSessionId: payload.sessionId,
     syntheticSessionIds: [...activeSyntheticIds],
     willSuppressViaSynthetic: shouldSuppressHookEvent(payload.type, activeSyntheticIds.size),
