@@ -51,6 +51,7 @@
     "licenses": "generate-license-file --input package.json --output THIRD_PARTY_LICENSES --overwrite",
     "audit:prod": "npm audit --omit=dev",
     "lockfile:sync": "node scripts/lockfile-sync.mjs",
+    "lockfile:check": "node scripts/lockfile-check.mjs",
     "analyze:corpus": "npx tsx scripts/analyze-claude-corpus.ts",
     "analyze:corpus:json": "npx tsx scripts/analyze-claude-corpus.ts --json-only",
     "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
