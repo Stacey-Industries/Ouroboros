@@ -15,6 +15,10 @@ import {
   WorkbenchMainColumn,
 } from './ChatWorkbenchBody.parts';
 import type { ChatWorkbenchLayoutApi } from './useChatWorkbenchLayout';
+import {
+  useOverlayDrawerWidths,
+  type UseOverlayDrawerWidthsReturn,
+} from './useOverlayDrawerWidths';
 import type { TerminalDockApi } from './useTerminalDockState';
 import { WorkbenchRightPane } from './WorkbenchRightPane';
 
@@ -100,6 +104,7 @@ interface BodyContentProps {
   terminal?: UseTerminalSessionsReturn;
   projectRoot: string | null;
   activeApprovalSessionIds: Array<string | null | undefined>;
+  overlayWidths: UseOverlayDrawerWidthsReturn;
   onActiveSessionChange?: (sessionId: string | null) => void;
 }
 
@@ -126,6 +131,7 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
   const state = useWorkbenchContextState(props.layout, props.dock);
   const handlers = useWorkbenchHandlers(state.activation, selectThread, reloadThreads);
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
+  const overlayWidths = useOverlayDrawerWidths();
   useNewSessionMenuListener(handlers.handleCreateSession, props.layout.activeProject);
   // Wave 82 (post-smoke): workbench's rail-active project wins over the global
   // ProjectContext root. Without this override, switching projects in the rail
@@ -138,6 +144,7 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
     terminal: props.terminal,
     projectRoot: effectiveProjectRoot,
     activeApprovalSessionIds,
+    overlayWidths,
     onActiveSessionChange: props.onActiveSessionChange,
   };
 }
@@ -155,6 +162,7 @@ function DesktopBody({
   terminal,
   projectRoot,
   activeApprovalSessionIds,
+  overlayWidths,
   onActiveSessionChange,
 }: BodyContentProps): React.ReactElement {
   return (
@@ -173,6 +181,7 @@ function DesktopBody({
         layout={state.layout}
         projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
+        overlayWidths={overlayWidths}
         onActiveSessionChange={onActiveSessionChange}
       />
     </div>
@@ -185,6 +194,7 @@ function MobileBody({
   terminal,
   projectRoot,
   activeApprovalSessionIds,
+  overlayWidths,
   onActiveSessionChange,
 }: BodyContentProps): React.ReactElement {
   return (
@@ -206,6 +216,7 @@ function MobileBody({
         layout={state.layout}
         projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
+        overlayWidths={overlayWidths}
         onActiveSessionChange={onActiveSessionChange}
       />
       <MobileOverlays state={state} handlers={handlers} terminal={terminal} />

@@ -64,9 +64,11 @@ describe('useChatWorkbenchLayout', () => {
 
     act(() => {
       result.current.toggleRail();
-      // utility and artifact are mutually exclusive — opening utility after artifact closes artifact
+      // Wave 89 Phase 3: overlays are no longer mutually exclusive — both can be
+      // open simultaneously (tile layout). Opening utility after artifact leaves
+      // artifact open too.
       result.current.setArtifactOpen(true);
-      result.current.toggleUtility();
+      result.current.setUtilityOpen(true);
       result.current.setActiveUtilityTab('monitor');
     });
 
@@ -76,7 +78,7 @@ describe('useChatWorkbenchLayout', () => {
 
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}')).toMatchObject({
       railOpen: false,
-      artifactOpen: false,
+      artifactOpen: true,
       utilityOpen: true,
       activeUtilityTab: 'monitor',
       lastRightPaneView: 'utility',
@@ -92,16 +94,22 @@ describe('useChatWorkbenchLayout', () => {
     expect(result.current.rightPaneOpen).toBe(true);
     expect(result.current.rightPaneView).toBe('utility');
 
+    // Wave 89 Phase 3: setRightPaneView no longer closes the other pane.
+    // It opens the requested pane and updates lastRightPaneView.
     act(() => result.current.setRightPaneView('artifact'));
-    expect(result.current.utilityOpen).toBe(false);
     expect(result.current.artifactOpen).toBe(true);
-    expect(result.current.rightPaneView).toBe('artifact');
+    expect(result.current.rightPaneOpen).toBe(true);
+    expect(result.current.rightPaneView).toBe('utility'); // utility still open, so still 'utility'
 
-    act(() => result.current.toggleRightPane());
+    // Close both explicitly, then toggle should re-open last view ('artifact').
+    act(() => {
+      result.current.setArtifactOpen(false);
+      result.current.setUtilityOpen(false);
+    });
     expect(result.current.rightPaneOpen).toBe(false);
 
     act(() => result.current.toggleRightPane());
-    // lastRightPaneView is now 'artifact', so toggle re-opens artifact
+    // lastRightPaneView is 'artifact', so toggle re-opens artifact
     expect(result.current.artifactOpen).toBe(true);
     expect(result.current.rightPaneView).toBe('artifact');
   });

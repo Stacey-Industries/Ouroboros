@@ -134,13 +134,16 @@ function persist(state: ChatWorkbenchLayoutState): void {
 type Setter = React.Dispatch<React.SetStateAction<ChatWorkbenchLayoutState>>;
 
 function applyArtifactOpen(p: ChatWorkbenchLayoutState, open: boolean): ChatWorkbenchLayoutState {
+  // Wave 89 Phase 3: overlays tile — no longer mutually exclusive.
+  // artifact and utility CAN both be open simultaneously (tile layout).
   if (!open) return { ...p, artifactOpen: false };
-  return { ...p, artifactOpen: true, utilityOpen: false, lastRightPaneView: 'artifact' };
+  return { ...p, artifactOpen: true, lastRightPaneView: 'artifact' };
 }
 
 function applyUtilityOpen(p: ChatWorkbenchLayoutState, open: boolean): ChatWorkbenchLayoutState {
+  // Wave 89 Phase 3: overlays tile — no longer mutually exclusive.
   if (!open) return { ...p, utilityOpen: false };
-  return { ...p, utilityOpen: true, artifactOpen: false, lastRightPaneView: 'utility' };
+  return { ...p, utilityOpen: true, lastRightPaneView: 'utility' };
 }
 
 function applyToggleRightPane(p: ChatWorkbenchLayoutState): ChatWorkbenchLayoutState {

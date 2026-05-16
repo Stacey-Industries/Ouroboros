@@ -291,7 +291,8 @@ afterEach(() => {
 describe('ChatWorkbenchShell integration', () => {
   it('shows a compact background approval prompt when a new approval arrives', () => {
     const view = renderShell();
-    expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
+    // Wave 89 Phase 3: OverlayDrawer keeps children mounted; hidden via translate-x-full.
+    expect(screen.getByTestId('utility-overlay-drawer').className).toContain('translate-x-full');
 
     approvalRequests = [
       {

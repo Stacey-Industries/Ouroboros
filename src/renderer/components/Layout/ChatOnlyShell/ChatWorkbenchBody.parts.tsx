@@ -11,8 +11,9 @@ import type {
   WorkbenchHandlers,
 } from './ChatWorkbenchBody.model';
 import { ChatWorkbenchComparePane } from './ChatWorkbenchComparePane';
+import { ChatWorkbenchOverlays } from './ChatWorkbenchOverlays';
+import type { UseOverlayDrawerWidthsReturn } from './useOverlayDrawerWidths';
 import { WorkbenchApprovalPrompt } from './WorkbenchApprovalPrompt';
-import { WorkbenchRightPane } from './WorkbenchRightPane';
 
 const ChatWorkbenchTerminalDock = React.lazy(() =>
   import('./ChatWorkbenchTerminalDock').then((m) => ({ default: m.ChatWorkbenchTerminalDock })),
@@ -81,32 +82,6 @@ function WorkbenchCenterPane({
   );
 }
 
-// ── Side panels ────────────────────────────────────────────────────────────────
-
-function WorkbenchSidePanels({
-  layout,
-  surfacePolicy,
-}: {
-  layout: LayoutState;
-  surfacePolicy: SurfacePolicyState;
-}): React.ReactElement | null {
-  if (!layout.rightPaneOpen || !layout.rightPaneView) return null;
-  const handleClose = (): void => {
-    if (layout.rightPaneView === 'artifact') surfacePolicy.closeArtifact();
-    else surfacePolicy.closeUtility();
-  };
-  return (
-    <WorkbenchRightPane
-      view={layout.rightPaneView}
-      activeUtilityTab={layout.activeUtilityTab}
-      onSelectUtilityTab={layout.setActiveUtilityTab}
-      onSelectView={layout.setRightPaneView}
-      onClose={handleClose}
-      activeProject={layout.activeProject}
-    />
-  );
-}
-
 // ── Terminal surface ───────────────────────────────────────────────────────────
 
 function WorkbenchTerminalSurface({
@@ -128,6 +103,21 @@ function WorkbenchTerminalSurface({
 }
 
 // ── Main column ────────────────────────────────────────────────────────────────
+//
+// Wave 89 Phase 3: the chat-area row (`flex flex-1 min-h-0 min-w-0 relative`)
+// is the positioned ancestor that OverlayDrawer instances anchor to.
+// Both utility and artifact overlays tile horizontally over this area —
+// no longer occupying fixed flex slots.
+
+export interface WorkbenchMainColumnProps {
+  compare: CompareState;
+  dock: DockState;
+  layout: LayoutState;
+  projectRoot: string | null;
+  surfacePolicy: SurfacePolicyState;
+  overlayWidths: UseOverlayDrawerWidthsReturn;
+  onActiveSessionChange?: (sessionId: string | null) => void;
+}
 
 export function WorkbenchMainColumn({
   compare,
@@ -135,20 +125,24 @@ export function WorkbenchMainColumn({
   layout,
   projectRoot,
   surfacePolicy,
+  overlayWidths,
   onActiveSessionChange,
-}: {
-  compare: CompareState;
-  dock: DockState;
-  layout: LayoutState;
-  projectRoot: string | null;
-  surfacePolicy: SurfacePolicyState;
-  onActiveSessionChange?: (sessionId: string | null) => void;
-}): React.ReactElement {
+}: WorkbenchMainColumnProps): React.ReactElement {
   return (
     <div className="flex flex-1 min-w-0 flex-col min-h-0">
-      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+      {/* `relative` provides the positioned ancestor for OverlayDrawer (Phase 3). */}
+      <div className="relative flex flex-1 min-h-0 min-w-0 overflow-hidden">
         <WorkbenchCenterPane compare={compare} projectRoot={projectRoot} />
-        <WorkbenchSidePanels layout={layout} surfacePolicy={surfacePolicy} />
+        <ChatWorkbenchOverlays
+          utilityOpen={layout.utilityOpen}
+          artifactOpen={layout.artifactOpen}
+          activeUtilityTab={layout.activeUtilityTab}
+          onSelectUtilityTab={layout.setActiveUtilityTab}
+          onCloseUtility={surfacePolicy.closeUtility}
+          onCloseArtifact={surfacePolicy.closeArtifact}
+          activeProject={layout.activeProject}
+          overlayWidths={overlayWidths}
+        />
       </div>
       <WorkbenchTerminalSurface dock={dock} onActiveSessionChange={onActiveSessionChange} />
     </div>

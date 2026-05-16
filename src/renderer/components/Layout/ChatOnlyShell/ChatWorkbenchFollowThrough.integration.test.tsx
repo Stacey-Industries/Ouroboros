@@ -186,7 +186,9 @@ function buildShellProps(overrides: Record<string, unknown> = {}) {
 function renderShell(overrides: Record<string, unknown> = {}) {
   return render(
     <ToastProvider>
-      <ChatWorkbenchShell {...(buildShellProps(overrides) as Parameters<typeof ChatWorkbenchShell>[0])} />
+      <ChatWorkbenchShell
+        {...(buildShellProps(overrides) as Parameters<typeof ChatWorkbenchShell>[0])}
+      />
     </ToastProvider>,
   );
 }
@@ -327,7 +329,8 @@ describe('Utility drawer — real surface policy join', () => {
       closeBtn.click();
     });
 
-    expect(screen.queryByTestId('chat-workbench-utility-drawer')).toBeNull();
+    // Wave 89 Phase 3: OverlayDrawer keeps children mounted; hidden via translate-x-full.
+    expect(screen.getByTestId('utility-overlay-drawer').className).toContain('translate-x-full');
   });
 });
 
