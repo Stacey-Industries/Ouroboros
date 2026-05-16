@@ -10,12 +10,12 @@ For the current architecture and operator-facing details, see:
 
 - `src/standalone/ouroborosMcp/CLAUDE.md` — standalone server module map
 - `src/standalone/CLAUDE.md` — standalone binaries directory overview
-- `docs/architecture.md` "Graph MCP server (Wave 60)" — high-level integration
+- `roadmap/docs/architecture.md` "Graph MCP server (Wave 60)" — high-level integration
 
 ## Historical references
 
 The original Wave 51 design (option matrix, paper-spike, transport selection rationale) is preserved at:
 
-- `roadmap/archive/wave-51-plan.md` — original plan with the SSE-vs-stdio decision matrix
-- `roadmap/archive/wave-51-decision.md` — Phase A architectural decision
-- `roadmap/archive/wave-60-standalone-ouroboros.md` — the wave that retired this stack
+- `roadmap/_archived/wave-51-plan.md` — original plan with the SSE-vs-stdio decision matrix
+- `roadmap/_archived/wave-51-decision.md` — Phase A architectural decision
+- `roadmap/_archived/wave-60-standalone-ouroboros.md` — the wave that retired this stack

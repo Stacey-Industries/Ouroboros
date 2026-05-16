@@ -44,7 +44,7 @@ Wrong design here is reversible but expensive (agents that learn one shape will 
 
 **Phase A:** Mount `IdeToolBridge` in `ChatOnlyShell` with the chosen pairing/routing model. Wire window enumeration in `ideToolServer.ts` so handlers can resolve `windowId` → `webContents`.
 
-**Phase B:** Update the IDE-tool schema (in `src/main/ideToolServer*.ts` and the agent-facing tool definitions) to reflect the new contract. Document the cross-window semantics in `docs/api-contract.md`.
+**Phase B:** Update the IDE-tool schema (in `src/main/ideToolServer*.ts` and the agent-facing tool definitions) to reflect the new contract. Document the cross-window semantics in `roadmap/docs/api-contract.md`.
 
 **Phase C:** Smoke test with a real two-window setup. Confirm tool calls return the expected window's state.
 
@@ -79,7 +79,7 @@ Move this from `deferred/` to `future/` (or commit to a wave directly) if any of
 - `src/main/ideToolServer.ts` — current IDE-tool server (single-window)
 - `src/renderer/components/Layout/ChatOnlyShell/` — where `IdeToolBridge` is *not* currently mounted
 - `src/main/windowManager.ts` — per-window project root + state isolation
-- `roadmap/archive/wave-42-plan.md:35,318` — original deferral
-- `roadmap/archive/wave-43-plan.md:457` — re-deferred
-- `roadmap/archive/wave-44-plan.md:55,343` — re-deferred again
+- `roadmap/_archived/wave-42-plan.md:35,318` — original deferral
+- `roadmap/_archived/wave-43-plan.md:457` — re-deferred
+- `roadmap/_archived/wave-44-plan.md:55,343` — re-deferred again
 - Audit: `roadmap/audit-verification-pass.md` Section D item #9

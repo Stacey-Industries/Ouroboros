@@ -94,7 +94,7 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 
 ## From wave auto-briefs
 
-### Wave 53k (`roadmap/archive/wave-53k/wave-53k-auto-brief.md`)
+### Wave 53k (`roadmap/_archived/wave-53k/wave-53k-auto-brief.md`)
 - **Wave 53k**: `codebase-memory-mcp.exe` stalls on `tools/list`; add `codemode.excludeFromMultiplex` config option.
 - **Wave 53k**: Triple-keyed `~/.claude.json projects` map (forward-slash/backslash/worktree variants) still unresolved.
 - **Wave 53k**: Auto-sync graph staleness — `files=0` despite file edits; change-detection not catching git-uncommitted writes.
@@ -160,74 +160,74 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 
 ---
 
-## From roadmap/archive/
+## From roadmap/_archived/
 
-- **Wave 15** (`roadmap/archive/wave-15-plan.md`): UUID v7 vs v4 — follow-up ticket if v7 needed for external tool integrations.
-- **Wave 29.5** (`roadmap/archive/wave-29.5-plan.md`): `ResearchOutcomeRecord` missing `toolKind`, `outcomeSignal`, `followupTestExit` fields — not implemented per data-foundation audit.
-- **Wave 30** (`roadmap/archive/wave-30-plan.md`): Legacy `TRAINING_CUTOFF_DATE` constant in `stalenessMatrixData.ts` — deprecated but not removed.
-- **Wave 33a** (`roadmap/archive/wave-33a-plan.md`): iOS native packaging (Capacitor/Tauri) deferred to Wave 33c; iOS builds blocked until Mac access.
-- **Wave 33b** (`roadmap/archive/wave-33b-plan.md`): Push notifications APNs (iOS) deferred; Android-only until Mac access. App-store submission deferred.
-- **Wave 34** (`roadmap/archive/wave-34-plan.md`): Native push notifications (Phase F) require Wave 33b push plugin; degrade to in-app banner if push is absent.
-- **Wave 41** (`roadmap/archive/wave-41-plan.md`): `mobileAccess.enabled` and `sessionDispatch.enabled` default flips deferred to follow-up patch release after dogfood soak.
-- **Wave 41** (`roadmap/archive/wave-41-plan.md`): `ecosystem.rulesAndSkillsInstallEnabled` defaults false — install path not wired end-to-end.
-- **Wave 42** (`roadmap/archive/wave-42-plan.md`): Cross-window IDE-tool delegation (Option 2) deferred.
-- **Wave 43** (`roadmap/archive/wave-43-plan.md`): Cross-window IDE-tool delegation still open as Wave 44+ candidate.
-- **Wave 43** (`roadmap/archive/wave-43-plan.md`): `detectLocalIp()` exclusion-list fix (user-pick interface) deferred to Wave 44.
-- **Wave 44** (`roadmap/archive/wave-44-plan.md`): Cross-window IDE-tool delegation deferred from Wave 42/43; mobile responsive layout for chat-only deferred.
-- **Wave 45** (`roadmap/archive/wave-45-plan.md`): App-server process pooling across sessions; Codex exec-transport removal after <1% fallback rate; Codex subscription auth polish; tool-use parity audit Claude vs Codex.
-- **Wave 45** (`roadmap/archive/wave-45-plan.md`): Session warm-up (pre-spawn app-server) — profile before committing.
-- **Wave 46** (`roadmap/archive/wave-46-plan.md`): `layout.chatWorkbench` default flip deferred pending soak; adaptive auto-open, multi-session compare, artifact history, per-session branch/worktree controls all out-of-wave.
-- **Wave 46** (`roadmap/archive/auto-briefs/wave-46-blocked.md`): Phase F chat-only command filter artifacts preserved but never committed due to Wave 53 tsc-blocking WIP.
-- **Wave 47** (`roadmap/archive/wave-47-plan.md`): `layout.chatWorkbench` default flip, cross-window workbench attention sync, export/share timeline snippets, per-session notification preferences.
-- **Wave 47** (`roadmap/archive/auto-briefs/wave-47-result.md`): `layout.chatWorkbench` default flip still deferred; cross-window workbench attention sync deferred; timeline entry window tuning needs production data; export/share timeline snippets deferred.
-- **Wave 48** (`roadmap/archive/wave-48-plan.md`): Wave 50 enforcement — decide whether logging hook becomes enforcing hook; goal classifier refinement if false-negative >5%; telemetry backfill for pre-48 sessions.
-- **Wave 48** (`roadmap/archive/auto-briefs/wave-48-result.md`): Phase F integration spawn-token-budget test deferred; telemetry rollup script `scripts/summarize-graph-usage.ts` deferred; Settings UI for `internalMcpScope` and `packetMode:'auto'` out of scope.
-- **Wave 49** (`roadmap/archive/wave-49-plan.md`): Gotcha extraction from git history (backfill from bug-fix commits); lint rule for derivable-content EXCLUDE list; telemetry-driven prompt tuning.
-- **Wave 49** (`roadmap/archive/auto-briefs/wave-49-result.md`): Pre-existing ESLint warnings in `FileViewerChrome` and `HtmlPreview` — sweep in next renderer-touching wave; gotcha extraction from git history.
-- **Wave 50** (`roadmap/archive/wave-50-plan.md`): Original rule file deletion (`~/.claude/rules/init-safety.md`, `project-claude-md-template.md`) deferred one wave for soak; project-level `.claude/rules/` migration (9 files) deferred.
-- **Wave 50** (`roadmap/archive/auto-briefs/wave-50-result.md`): `warnFullTestSuite` warnings not agent-visible (IDE-log only); `hooks.enforcedRules` has no Settings UI toggle; Phase D classifier can't distinguish find-callers vs find-mentions; original rule file deletion still pending; hook misfire telemetry not measured; user-facing hook toggle UI not wired.
-- **Wave 51** (`roadmap/archive/wave-51-plan.md`): CodeMode soak + `routeInternalMcp` flag flip; CodeMode for user-global MCP servers (`sentry`, `github`, `stripe`, `codebase-memory`, `context7`) deferred; user-facing CodeMode toggle UI; dynamic tool unloading; `main.ts` split (at 337 lines, over cap).
-- **Wave 51** (`roadmap/archive/auto-briefs/wave-51-result.md`): CodeMode soak/flag-flip follow-up; CodeMode for user-global MCP servers; leaf-module extraction from `internalMcp/index.ts`; `main.ts` cleanup (4 prettier-ignore directives).
-- **Wave 52** (`roadmap/archive/wave-52-plan.md`): Hook auto-install automation; SQLite mirror of all queued telemetry records; drain throttling for large queues.
-- **Wave 52** (`roadmap/archive/auto-briefs/wave-52-result.md`): Hook installation is manual — auto-install is Wave 53a+ follow-up; `main.ts` at 337 lines (grandfathered disable, needs split); fundamentally-IDE-only telemetry surfaces (#5,#8–11,#15–17) remain uncaptured.
-- **Wave 52** (`roadmap/archive/wave-52-audit.md`): Telemetry surfaces #5,#8,#9,#10,#11,#15,#16,#17 classified fundamentally-IDE-only and left deferred.
-- **Wave 53** (`roadmap/archive/auto-briefs/wave-53-result.md`): Phase D (historical corpus analyzer + decision report) deferred; Phase F (router backfill + offline eval) blocked on Phase D; Phase G integration test `telemetryRestoration.integration.test.ts` skipped; `docs/telemetry.md` not written.
-- **Wave 53** (`roadmap/archive/wave-53-plan.md`): Wave 54 semantic-ops build-out gated on Phase D report; router retrain gated on Phase F; telemetry aggregation dashboard; remote telemetry transmission (explicit opt-in wave); cross-project corpus analysis; effort signal instrumentation.
-- **Wave 53a** (`roadmap/archive/wave-53a-plan.md`): Q3 one-sided context outcomes deferred (YAGNI); codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall not implemented.
-- **Wave 53a** (`roadmap/archive/auto-briefs/wave-53a-result.md`): Q3 one-sided context outcomes deferred; codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall still manual; PostToolUse → file-touched-per-turn deferred to Wave 53b; harden `hookInstallerStatusLine.ts` atomic-write pattern.
-- **Wave 53b** (`roadmap/archive/wave-53b-plan.md`): Bayesian weight optimization (needs N≥200 corpus); learning-to-rank with embedding signals; PostToolUse → file-touched-per-turn deferred; per-user ranker tuning; cache-hit rate analysis for 60s packet cache.
-- **Wave 53b** (`roadmap/archive/auto-briefs/wave-53b-result.md`): Quarterly re-run of `analyze-ranker-hit-rate.ts`; Bayesian weight optimization; LTR with embedding signals; PostToolUse file-touched-per-turn deferred; metric-comparison dashboard; per-user ranker tuning; cache-hit rate analysis.
-- **Wave 53c** (`roadmap/archive/wave-53c-plan.md`): Wave 54 TS semantic ops gated on Phase C outcome (now PAUSED on 53d); router retrain wave gated on Phase D evaluation.
-- **Wave 53c** (`roadmap/archive/auto-briefs/wave-53c-result.md`): Per-turn grep-loop measurement (currently session-max only); standalone MCP server extraction ("Flavor B") deferred; live-telemetry router calibration needs ~1K turns; version-drift cleanup (briefs vs git tags for waves 58, 59, 53b) unaddressed.
-- **Wave 53c** (`roadmap/archive/wave-53c-corpus-analysis.md`): Quarterly corpus re-run; per-turn grep-loop measurement; live-telemetry router calibration post–Wave 53.
-- **Wave 53d** (`roadmap/archive/wave-53d-plan.md`): Standalone MCP server Flavor B (IDE-off terminal); adoption-rate telemetry per session; tool description quality/discoverability work if tools wired but agent ignores them; version-drift cleanup.
-- **Wave 53d** (`roadmap/archive/auto-briefs/wave-53d-result.md`): Wave 54 verdict not finalized; second-injection-system mystery unresolved; adoption-rate telemetry not shipped; version-drift cleanup pending.
-- **Wave 53e** (`roadmap/archive/wave-53e-plan.md`): Wave 54 adoption smoke (manual, user-driven) needed to finalize Decision 9; per-spawn `--mcp-config` path verification deferred; standalone MCP server Flavor B still out-of-wave.
-- **Wave 53e** (`roadmap/archive/auto-briefs/wave-53e-result.md`): `list_projects` stale-stat refresh (shows 0 nodes/edges despite live data); per-spawn `--mcp-config` path verification; standalone MCP server Flavor B; version-drift cleanup.
-- **Wave 53f** (`roadmap/archive/wave-53f-plan.md`): Streamable HTTP transport migration — only if 2024-11-05 SSE insufficient; `list_projects` stale-stat refresh; version-drift cleanup.
-- **Wave 53f** (`roadmap/archive/auto-briefs/wave-53f-result.md`): CLAUDE.md claims "SSE client tracking / broadcasts tool-result events" but handler doesn't implement it — stale doc or removed feature; `list_projects` stale-stat refresh still pending; version-drift cleanup still pending.
-- **Wave 53g** (`roadmap/archive/wave-53g-plan.md`): External `codebase-memory-mcp` deduplication (user-driven); per-spawn `--mcp-config` path confirmation; Wave 53c corpus re-analysis with prefix-aware tool names (`mcp__<server>__<tool>`).
-- **Wave 53g** (`roadmap/archive/auto-briefs/wave-53g-result.md`): Wave 53c corpus re-analysis with prefix-aware tool names still pending; per-spawn chat-panel path confirmation; external `codebase-memory-mcp` deduplication UI out of scope.
-- **Wave 53h** (`roadmap/archive/auto-briefs/wave-53h-result.md`): SDK replacement (`@modelcontextprotocol/sdk SSEServerTransport`) to stop hand-rolled drift; Streamable HTTP migration if SDK drops SSE fallback; Wave 53c corpus re-analysis with prefix-aware names still pending.
-- **Wave 53i** (`roadmap/archive/wave-53i-plan.md`): Streamable HTTP transport migration if SDK drops SSE; bundle externalization confirmation for electron-builder; Wave 53c corpus re-analysis still pending.
-- **Wave 53i** (`roadmap/archive/auto-briefs/wave-53i-result.md`): Streamable HTTP migration; Zod-based tool registration via `McpServer.registerTool`; `@modelcontextprotocol/sdk` has 32 transitive vulnerabilities — security audit needed before next major release.
-- **Wave 53j** (`roadmap/archive/wave-53j-plan.md`): CodeMode soak then flip schema defaults globally; Streamable HTTP if SDK drops SSE; hook-based graph-tool enforcement if passive measurement shows continued Grep defaults; graph adoption corpus re-analysis with prefix-aware names.
-- **Wave 50** (`roadmap/archive/wave-50-graph-adherence.md`): Quarterly re-run of `analyze-graph-adherence.ts`; worst-session investigation (`439565f2`); classifier refinement for short symbol false-positives.
-- **Wave 58** (`roadmap/archive/wave-58-plan.md`): `layout.chatWorkbench` default flip explicitly out of scope — still gated; rules-panel extraction may need deferral if it balloons.
-- **Wave 58** (`roadmap/archive/auto-briefs/wave-58-result.md`): Audit #13 (rail prop wiring NIT) intentionally left open; `layout.chatWorkbench` default still false — flip is a separate soak decision; Wave 47 stash@{0} and stash@{1} not dropped.
-- **Wave 59** (`roadmap/archive/auto-briefs/wave-59-result.md`): Memory tab in context preview — no IPC bridge to read MEMORY.md from renderer; disabled-IDs in context preview toggle visual-only (send path does not honour it); terminal-row project filter needs `cwd` field on `TerminalSession`; `config.layout.workbenchProjects` dedicated array deferred.
-- **data-foundation-audit** (`roadmap/archive/data-foundation-audit.md`): `startContextRetrainTrigger` implemented but never called in production; `contextWorker.ts` + `contextWorkerTypes.ts` implemented but not wired; H3 self-correction capture not implemented in `ResearchOutcomeRecord`.
-- **waves-15-40-review** (`roadmap/archive/waves-15-40-review.md`): `startContextRetrainTrigger` and `contextWorker.ts` not wired — should be in root CLAUDE.md Known Issues; Codex single-turn `send` no-op not enforced at renderer UI layer; Waves 15–29 systems (agentChat, checkpoint, graph, LSP) not deeply audited.
-- **waves-15-29-review-addendum** (`roadmap/archive/waves-15-29-review-addendum.md`): SQLite compaction not wired (explicitly promised in plan); Wave 27 "30-second temporal window heuristic" in docstring not implemented; thread parentage dual-system (CRIT-C: `branchInfo` vs `parentThreadId`) structural debt — side chat drawer is a stub (HIGH-G).
-- **review-handoff-waves-15-40** (`roadmap/archive/review-handoff-waves-15-40.md`): Wave 36 Codex single-turn `send` no-op not enforced at renderer UI layer; Wave 40 knip sweep left some exports flagged but not deleted.
-- **pnpm-spike** (`roadmap/archive/pnpm-spike.md`): pnpm migration deferred — worktree `node_modules` symlinking (`worktreeManager.linkNodeModules`) also deferred; revisit when a user requests it.
-- **telemetry-recovery-and-corpus-analysis** (`roadmap/archive/telemetry-recovery-and-corpus-analysis.md`): Whether to surface telemetry status in IDE UI (indicator showing "recording") deferred to Phase 3/A.6.
+- **Wave 15** (`roadmap/_archived/wave-15-plan.md`): UUID v7 vs v4 — follow-up ticket if v7 needed for external tool integrations.
+- **Wave 29.5** (`roadmap/_archived/wave-29.5-plan.md`): `ResearchOutcomeRecord` missing `toolKind`, `outcomeSignal`, `followupTestExit` fields — not implemented per data-foundation audit.
+- **Wave 30** (`roadmap/_archived/wave-30-plan.md`): Legacy `TRAINING_CUTOFF_DATE` constant in `stalenessMatrixData.ts` — deprecated but not removed.
+- **Wave 33a** (`roadmap/_archived/wave-33a-plan.md`): iOS native packaging (Capacitor/Tauri) deferred to Wave 33c; iOS builds blocked until Mac access.
+- **Wave 33b** (`roadmap/_archived/wave-33b-plan.md`): Push notifications APNs (iOS) deferred; Android-only until Mac access. App-store submission deferred.
+- **Wave 34** (`roadmap/_archived/wave-34-plan.md`): Native push notifications (Phase F) require Wave 33b push plugin; degrade to in-app banner if push is absent.
+- **Wave 41** (`roadmap/_archived/wave-41-plan.md`): `mobileAccess.enabled` and `sessionDispatch.enabled` default flips deferred to follow-up patch release after dogfood soak.
+- **Wave 41** (`roadmap/_archived/wave-41-plan.md`): `ecosystem.rulesAndSkillsInstallEnabled` defaults false — install path not wired end-to-end.
+- **Wave 42** (`roadmap/_archived/wave-42-plan.md`): Cross-window IDE-tool delegation (Option 2) deferred.
+- **Wave 43** (`roadmap/_archived/wave-43-plan.md`): Cross-window IDE-tool delegation still open as Wave 44+ candidate.
+- **Wave 43** (`roadmap/_archived/wave-43-plan.md`): `detectLocalIp()` exclusion-list fix (user-pick interface) deferred to Wave 44.
+- **Wave 44** (`roadmap/_archived/wave-44-plan.md`): Cross-window IDE-tool delegation deferred from Wave 42/43; mobile responsive layout for chat-only deferred.
+- **Wave 45** (`roadmap/_archived/wave-45-plan.md`): App-server process pooling across sessions; Codex exec-transport removal after <1% fallback rate; Codex subscription auth polish; tool-use parity audit Claude vs Codex.
+- **Wave 45** (`roadmap/_archived/wave-45-plan.md`): Session warm-up (pre-spawn app-server) — profile before committing.
+- **Wave 46** (`roadmap/_archived/wave-46-plan.md`): `layout.chatWorkbench` default flip deferred pending soak; adaptive auto-open, multi-session compare, artifact history, per-session branch/worktree controls all out-of-wave.
+- **Wave 46** (`roadmap/_archived/auto-briefs/wave-46-blocked.md`): Phase F chat-only command filter artifacts preserved but never committed due to Wave 53 tsc-blocking WIP.
+- **Wave 47** (`roadmap/_archived/wave-47-plan.md`): `layout.chatWorkbench` default flip, cross-window workbench attention sync, export/share timeline snippets, per-session notification preferences.
+- **Wave 47** (`roadmap/_archived/auto-briefs/wave-47-result.md`): `layout.chatWorkbench` default flip still deferred; cross-window workbench attention sync deferred; timeline entry window tuning needs production data; export/share timeline snippets deferred.
+- **Wave 48** (`roadmap/_archived/wave-48-plan.md`): Wave 50 enforcement — decide whether logging hook becomes enforcing hook; goal classifier refinement if false-negative >5%; telemetry backfill for pre-48 sessions.
+- **Wave 48** (`roadmap/_archived/auto-briefs/wave-48-result.md`): Phase F integration spawn-token-budget test deferred; telemetry rollup script `scripts/summarize-graph-usage.ts` deferred; Settings UI for `internalMcpScope` and `packetMode:'auto'` out of scope.
+- **Wave 49** (`roadmap/_archived/wave-49-plan.md`): Gotcha extraction from git history (backfill from bug-fix commits); lint rule for derivable-content EXCLUDE list; telemetry-driven prompt tuning.
+- **Wave 49** (`roadmap/_archived/auto-briefs/wave-49-result.md`): Pre-existing ESLint warnings in `FileViewerChrome` and `HtmlPreview` — sweep in next renderer-touching wave; gotcha extraction from git history.
+- **Wave 50** (`roadmap/_archived/wave-50-plan.md`): Original rule file deletion (`~/.claude/rules/init-safety.md`, `project-claude-md-template.md`) deferred one wave for soak; project-level `.claude/rules/` migration (9 files) deferred.
+- **Wave 50** (`roadmap/_archived/auto-briefs/wave-50-result.md`): `warnFullTestSuite` warnings not agent-visible (IDE-log only); `hooks.enforcedRules` has no Settings UI toggle; Phase D classifier can't distinguish find-callers vs find-mentions; original rule file deletion still pending; hook misfire telemetry not measured; user-facing hook toggle UI not wired.
+- **Wave 51** (`roadmap/_archived/wave-51-plan.md`): CodeMode soak + `routeInternalMcp` flag flip; CodeMode for user-global MCP servers (`sentry`, `github`, `stripe`, `codebase-memory`, `context7`) deferred; user-facing CodeMode toggle UI; dynamic tool unloading; `main.ts` split (at 337 lines, over cap).
+- **Wave 51** (`roadmap/_archived/auto-briefs/wave-51-result.md`): CodeMode soak/flag-flip follow-up; CodeMode for user-global MCP servers; leaf-module extraction from `internalMcp/index.ts`; `main.ts` cleanup (4 prettier-ignore directives).
+- **Wave 52** (`roadmap/_archived/wave-52-plan.md`): Hook auto-install automation; SQLite mirror of all queued telemetry records; drain throttling for large queues.
+- **Wave 52** (`roadmap/_archived/auto-briefs/wave-52-result.md`): Hook installation is manual — auto-install is Wave 53a+ follow-up; `main.ts` at 337 lines (grandfathered disable, needs split); fundamentally-IDE-only telemetry surfaces (#5,#8–11,#15–17) remain uncaptured.
+- **Wave 52** (`roadmap/_archived/wave-52-audit.md`): Telemetry surfaces #5,#8,#9,#10,#11,#15,#16,#17 classified fundamentally-IDE-only and left deferred.
+- **Wave 53** (`roadmap/_archived/auto-briefs/wave-53-result.md`): Phase D (historical corpus analyzer + decision report) deferred; Phase F (router backfill + offline eval) blocked on Phase D; Phase G integration test `telemetryRestoration.integration.test.ts` skipped; `roadmap/docs/telemetry.md` not written.
+- **Wave 53** (`roadmap/_archived/wave-53-plan.md`): Wave 54 semantic-ops build-out gated on Phase D report; router retrain gated on Phase F; telemetry aggregation dashboard; remote telemetry transmission (explicit opt-in wave); cross-project corpus analysis; effort signal instrumentation.
+- **Wave 53a** (`roadmap/_archived/wave-53a-plan.md`): Q3 one-sided context outcomes deferred (YAGNI); codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall not implemented.
+- **Wave 53a** (`roadmap/_archived/auto-briefs/wave-53a-result.md`): Q3 one-sided context outcomes deferred; codegen hook helper from TS schema; lint check for schema mirror drift; hook auto-uninstall still manual; PostToolUse → file-touched-per-turn deferred to Wave 53b; harden `hookInstallerStatusLine.ts` atomic-write pattern.
+- **Wave 53b** (`roadmap/_archived/wave-53b-plan.md`): Bayesian weight optimization (needs N≥200 corpus); learning-to-rank with embedding signals; PostToolUse → file-touched-per-turn deferred; per-user ranker tuning; cache-hit rate analysis for 60s packet cache.
+- **Wave 53b** (`roadmap/_archived/auto-briefs/wave-53b-result.md`): Quarterly re-run of `analyze-ranker-hit-rate.ts`; Bayesian weight optimization; LTR with embedding signals; PostToolUse file-touched-per-turn deferred; metric-comparison dashboard; per-user ranker tuning; cache-hit rate analysis.
+- **Wave 53c** (`roadmap/_archived/wave-53c-plan.md`): Wave 54 TS semantic ops gated on Phase C outcome (now PAUSED on 53d); router retrain wave gated on Phase D evaluation.
+- **Wave 53c** (`roadmap/_archived/auto-briefs/wave-53c-result.md`): Per-turn grep-loop measurement (currently session-max only); standalone MCP server extraction ("Flavor B") deferred; live-telemetry router calibration needs ~1K turns; version-drift cleanup (briefs vs git tags for waves 58, 59, 53b) unaddressed.
+- **Wave 53c** (`roadmap/_archived/wave-53c-corpus-analysis.md`): Quarterly corpus re-run; per-turn grep-loop measurement; live-telemetry router calibration post–Wave 53.
+- **Wave 53d** (`roadmap/_archived/wave-53d-plan.md`): Standalone MCP server Flavor B (IDE-off terminal); adoption-rate telemetry per session; tool description quality/discoverability work if tools wired but agent ignores them; version-drift cleanup.
+- **Wave 53d** (`roadmap/_archived/auto-briefs/wave-53d-result.md`): Wave 54 verdict not finalized; second-injection-system mystery unresolved; adoption-rate telemetry not shipped; version-drift cleanup pending.
+- **Wave 53e** (`roadmap/_archived/wave-53e-plan.md`): Wave 54 adoption smoke (manual, user-driven) needed to finalize Decision 9; per-spawn `--mcp-config` path verification deferred; standalone MCP server Flavor B still out-of-wave.
+- **Wave 53e** (`roadmap/_archived/auto-briefs/wave-53e-result.md`): `list_projects` stale-stat refresh (shows 0 nodes/edges despite live data); per-spawn `--mcp-config` path verification; standalone MCP server Flavor B; version-drift cleanup.
+- **Wave 53f** (`roadmap/_archived/wave-53f-plan.md`): Streamable HTTP transport migration — only if 2024-11-05 SSE insufficient; `list_projects` stale-stat refresh; version-drift cleanup.
+- **Wave 53f** (`roadmap/_archived/auto-briefs/wave-53f-result.md`): CLAUDE.md claims "SSE client tracking / broadcasts tool-result events" but handler doesn't implement it — stale doc or removed feature; `list_projects` stale-stat refresh still pending; version-drift cleanup still pending.
+- **Wave 53g** (`roadmap/_archived/wave-53g-plan.md`): External `codebase-memory-mcp` deduplication (user-driven); per-spawn `--mcp-config` path confirmation; Wave 53c corpus re-analysis with prefix-aware tool names (`mcp__<server>__<tool>`).
+- **Wave 53g** (`roadmap/_archived/auto-briefs/wave-53g-result.md`): Wave 53c corpus re-analysis with prefix-aware tool names still pending; per-spawn chat-panel path confirmation; external `codebase-memory-mcp` deduplication UI out of scope.
+- **Wave 53h** (`roadmap/_archived/auto-briefs/wave-53h-result.md`): SDK replacement (`@modelcontextprotocol/sdk SSEServerTransport`) to stop hand-rolled drift; Streamable HTTP migration if SDK drops SSE fallback; Wave 53c corpus re-analysis with prefix-aware names still pending.
+- **Wave 53i** (`roadmap/_archived/wave-53i-plan.md`): Streamable HTTP transport migration if SDK drops SSE; bundle externalization confirmation for electron-builder; Wave 53c corpus re-analysis still pending.
+- **Wave 53i** (`roadmap/_archived/auto-briefs/wave-53i-result.md`): Streamable HTTP migration; Zod-based tool registration via `McpServer.registerTool`; `@modelcontextprotocol/sdk` has 32 transitive vulnerabilities — security audit needed before next major release.
+- **Wave 53j** (`roadmap/_archived/wave-53j-plan.md`): CodeMode soak then flip schema defaults globally; Streamable HTTP if SDK drops SSE; hook-based graph-tool enforcement if passive measurement shows continued Grep defaults; graph adoption corpus re-analysis with prefix-aware names.
+- **Wave 50** (`roadmap/_archived/wave-50-graph-adherence.md`): Quarterly re-run of `analyze-graph-adherence.ts`; worst-session investigation (`439565f2`); classifier refinement for short symbol false-positives.
+- **Wave 58** (`roadmap/_archived/wave-58-plan.md`): `layout.chatWorkbench` default flip explicitly out of scope — still gated; rules-panel extraction may need deferral if it balloons.
+- **Wave 58** (`roadmap/_archived/auto-briefs/wave-58-result.md`): Audit #13 (rail prop wiring NIT) intentionally left open; `layout.chatWorkbench` default still false — flip is a separate soak decision; Wave 47 stash@{0} and stash@{1} not dropped.
+- **Wave 59** (`roadmap/_archived/auto-briefs/wave-59-result.md`): Memory tab in context preview — no IPC bridge to read MEMORY.md from renderer; disabled-IDs in context preview toggle visual-only (send path does not honour it); terminal-row project filter needs `cwd` field on `TerminalSession`; `config.layout.workbenchProjects` dedicated array deferred.
+- **data-foundation-audit** (`roadmap/_archived/data-foundation-audit.md`): `startContextRetrainTrigger` implemented but never called in production; `contextWorker.ts` + `contextWorkerTypes.ts` implemented but not wired; H3 self-correction capture not implemented in `ResearchOutcomeRecord`.
+- **waves-15-40-review** (`roadmap/_archived/waves-15-40-review.md`): `startContextRetrainTrigger` and `contextWorker.ts` not wired — should be in root CLAUDE.md Known Issues; Codex single-turn `send` no-op not enforced at renderer UI layer; Waves 15–29 systems (agentChat, checkpoint, graph, LSP) not deeply audited.
+- **waves-15-29-review-addendum** (`roadmap/_archived/waves-15-29-review-addendum.md`): SQLite compaction not wired (explicitly promised in plan); Wave 27 "30-second temporal window heuristic" in docstring not implemented; thread parentage dual-system (CRIT-C: `branchInfo` vs `parentThreadId`) structural debt — side chat drawer is a stub (HIGH-G).
+- **review-handoff-waves-15-40** (`roadmap/_archived/review-handoff-waves-15-40.md`): Wave 36 Codex single-turn `send` no-op not enforced at renderer UI layer; Wave 40 knip sweep left some exports flagged but not deleted.
+- **pnpm-spike** (`roadmap/_archived/pnpm-spike.md`): pnpm migration deferred — worktree `node_modules` symlinking (`worktreeManager.linkNodeModules`) also deferred; revisit when a user requests it.
+- **telemetry-recovery-and-corpus-analysis** (`roadmap/_archived/telemetry-recovery-and-corpus-analysis.md`): Whether to surface telemetry status in IDE UI (indicator showing "recording") deferred to Phase 3/A.6.
 
 ---
 
 ## From roadmap/ (other)
 
-### `roadmap/session-handoff.md`
+### `roadmap/HANDOFF.md`
 - **Wave 47 soak**: flip `layout.chatWorkbench` default to `true` when soak confirms no regressions.
 - **Wave 47 soak**: widen `useWorkbenchCompare.canCompare` eligibility if users can't enter compare mode due to missing `linkedThreadId`.
 - **Wave 47 soak**: HTML preview local assets — `allow-same-origin` blocks relative URLs; consider controlled asset-proxy endpoint.
@@ -235,7 +235,7 @@ The 71 NOT-DONE items (genuine outstanding follow-ups not yet filed or closed) p
 - **Wave 53b follow-ups**: re-run offline ranker analysis quarterly; first target 2026-07-28.
 - **Wave 53b follow-ups**: variant ranker soak — set `contextRanker.mode` to `tuned`/`experimental` and re-analyze after 100+ sessions per mode.
 - **Wave 53b follow-ups**: graduation trigger — Bayesian weight optimization when corpus reaches ≥500 IDE-orchestrated sessions with hook-side Read coverage.
-- **Wave 53a follow-ups**: auto-install of all four telemetry hooks lands in Phase E (not yet shipped); manual snippets in `docs/telemetry-parity.md`.
+- **Wave 53a follow-ups**: auto-install of all four telemetry hooks lands in Phase E (not yet shipped); manual snippets in `roadmap/docs/telemetry-parity.md`.
 - **Wave 53a follow-ups**: PostToolUse → file-touched-per-turn partial signal — Wave 53b decides whether worth the maintenance cost.
 - **Wave 53a follow-ups**: codegen hook helper from TS schemas to eliminate comment-mirror discipline — future wave.
 - **Wave 51 follow-ups**: soak `routeInternalMcp=true` for 1 week; flip default to `true` if MCP token savings confirmed and no regressions.

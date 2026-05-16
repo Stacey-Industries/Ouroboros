@@ -186,7 +186,7 @@ ouroboros/
 ├── assets/                       # Non-code files
 │   └── hooks/                    # Scripts that connect Claude Code to the IDE
 │
-├── docs/                         # Documentation
+├── roadmap/docs/                         # Documentation
 │   ├── architecture.md           # Technical architecture details
 │   ├── api-contract.md           # Full list of all IPC messages
 │   ├── data-model.md             # Data structures and types

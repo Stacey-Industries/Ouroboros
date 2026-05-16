@@ -61,4 +61,4 @@ Do not update this file for individual feature additions or polish work. It is a
 
 ---
 
-*Established 2026-05-08 from the brainstorming session captured at `docs/superpowers/specs/2026-05-08-flow-tracer-design.md`. Wave 85 ships the first mode (Flow Tracer).*
+*Established 2026-05-08 from the brainstorming session captured at `roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md`. Wave 85 ships the first mode (Flow Tracer).*

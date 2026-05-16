@@ -105,9 +105,9 @@ the user's last-seen version.
 
 ### How it works
 
-1. `docs/CHANGELOG.md` is maintained in [Keep a Changelog](https://keepachangelog.com/)
+1. `roadmap/docs/CHANGELOG.md` is maintained in [Keep a Changelog](https://keepachangelog.com/)
    format.
-2. At build time, `tools/build-changelog.js` parses `docs/CHANGELOG.md` into a version-
+2. At build time, `tools/build-changelog.js` parses `roadmap/docs/CHANGELOG.md` into a version-
    keyed map and writes `src/renderer/generated/changelog.ts`. This generated module is
    listed in `.gitignore` and must not be committed.
 3. At runtime, the `ChangelogDrawer` component reads `config.platform.lastSeenVersion`.
@@ -117,7 +117,7 @@ the user's last-seen version.
 
 ### Contributing changelog entries
 
-Edit `docs/CHANGELOG.md` under the `[Unreleased]` heading. On release, rename the block
+Edit `roadmap/docs/CHANGELOG.md` under the `[Unreleased]` heading. On release, rename the block
 to `[x.y.z] - YYYY-MM-DD` and run:
 
 ```sh
@@ -240,7 +240,7 @@ in development for each missing key — useful when authoring new locale files.
 ## Linux support (Phase H)
 
 CI now runs on Ubuntu alongside Windows and macOS. See
-**[`docs/platform-linux.md`](platform-linux.md)** for:
+**[`roadmap/docs/platform-linux.md`](platform-linux.md)** for:
 
 - Prerequisites (Ubuntu 22.04+ / Fedora 39+)
 - Install, build, and dev-server instructions

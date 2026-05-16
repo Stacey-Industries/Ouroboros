@@ -2,7 +2,7 @@
  * check-docs-schema.ts — CI check for doc/schema drift.
  *
  * Parses configSchemaTail.ts to extract all top-level config-flag paths,
- * then verifies each appears in at least one docs/*.md file.
+ * then verifies each appears in at least one roadmap/docs/*.md file.
  * Exits 1 if any flag is undocumented; exits 0 otherwise.
  *
  * Run:  npx tsx scripts/check-docs-schema.ts
@@ -16,7 +16,7 @@ import path from 'path';
 
 const ROOT = path.resolve(path.join(path.dirname(process.argv[1] ?? ''), '..'));
 const SCHEMA_FILE = path.join(ROOT, 'src', 'main', 'configSchemaTail.ts');
-const DOCS_DIR = path.join(ROOT, 'docs');
+const DOCS_DIR = path.join(ROOT, 'roadmap', 'docs');
 
 // ── 1. Extract flag keys from configSchemaTail.ts ─────────────────────────
 
@@ -24,7 +24,7 @@ function extractFlagKeys(src: string): string[] {
   const keys: string[] = [];
   // Match top-level object keys of the tailSchema export:
   //   /^  <key>:/ lines (2-space indent, no deeper nesting needed for top-level)
-  const topLevelRe = /^  (\w+):/gm;
+  const topLevelRe = /^ {2}(\w+):/gm;
   let m: RegExpExecArray | null;
   while ((m = topLevelRe.exec(src)) !== null) {
     keys.push(m[1]);
@@ -41,7 +41,7 @@ function extractFlagKeys(src: string): string[] {
   return [...new Set(keys)];
 }
 
-// ── 2. Read all docs/*.md files ───────────────────────────────────────────
+// ── 2. Read all roadmap/docs/*.md files ───────────────────────────────────────────
 
 function readDocs(): string {
   const files = fs.readdirSync(DOCS_DIR).filter((f) => f.endsWith('.md'));
@@ -49,6 +49,35 @@ function readDocs(): string {
 }
 
 // ── 3. Check coverage ─────────────────────────────────────────────────────
+
+const SKIP_LIST = new Set([
+  // Deprecated / internal keys unlikely to appear in feature docs
+  'windowSessions',
+  'webAccessToken',
+  'routerLastRetrainCount',
+  // Dot-path false positives — constant references in source, not schema keys
+  'AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider',
+  'AGENT_CHAT_SETTINGS_DEFAULTS.defaultVerificationProfile',
+  'AGENT_CHAT_SETTINGS_DEFAULTS.contextBehavior',
+  'AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls',
+  'AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure',
+  'AGENT_CHAT_SETTINGS_DEFAULTS.defaultView',
+  // Generated constants imported from settingsResolver — not schema keys themselves
+  'AGENT_CHAT_CONTEXT_BEHAVIORS',
+  'AGENT_CHAT_DEFAULT_VIEWS',
+  'AGENT_CHAT_PROVIDERS',
+  'AGENT_CHAT_SETTINGS_DEFAULTS',
+  'AGENT_CHAT_VERIFICATION_PROFILES',
+]);
+
+function findMissing(allFlags: string[], docText: string): string[] {
+  const missing: string[] = [];
+  for (const flag of allFlags) {
+    if (SKIP_LIST.has(flag)) continue;
+    if (!docText.includes(flag)) missing.push(flag);
+  }
+  return missing;
+}
 
 function main(): void {
   if (!fs.existsSync(SCHEMA_FILE)) {
@@ -63,50 +92,22 @@ function main(): void {
   const schemaSrc = fs.readFileSync(SCHEMA_FILE, 'utf8');
   const allFlags = extractFlagKeys(schemaSrc);
   const docText = readDocs();
-
-  // Flags we explicitly skip because they are implementation details,
-  // deprecated keys, or intentionally undocumented internal counters.
-  const skipList = new Set([
-    // Deprecated / internal keys unlikely to appear in feature docs
-    'windowSessions',         // deprecated Wave 40 Phase D
-    'webAccessToken',         // internal token, not a feature flag
-    'routerLastRetrainCount', // internal counter
-    // Dot-path false positives — these come from constant references in the source,
-    // not from config schema property paths.
-    'AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider',
-    'AGENT_CHAT_SETTINGS_DEFAULTS.defaultVerificationProfile',
-    'AGENT_CHAT_SETTINGS_DEFAULTS.contextBehavior',
-    'AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls',
-    'AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure',
-    'AGENT_CHAT_SETTINGS_DEFAULTS.defaultView',
-    // Generated constants imported from settingsResolver — not schema keys themselves
-    'AGENT_CHAT_CONTEXT_BEHAVIORS',
-    'AGENT_CHAT_DEFAULT_VIEWS',
-    'AGENT_CHAT_PROVIDERS',
-    'AGENT_CHAT_SETTINGS_DEFAULTS',
-    'AGENT_CHAT_VERIFICATION_PROFILES',
-  ]);
-
-  const missing: string[] = [];
-  for (const flag of allFlags) {
-    if (skipList.has(flag)) continue;
-    // Check that the flag name (or its dotted path) appears somewhere in the docs
-    if (!docText.includes(flag)) {
-      missing.push(flag);
-    }
-  }
+  const missing = findMissing(allFlags, docText);
 
   if (missing.length === 0) {
     process.stdout.write('[check-docs-schema] All schema flags are documented.\n');
     process.exit(0);
-  } else {
-    process.stderr.write('[check-docs-schema] The following schema flags are not documented in any docs/*.md file:\n');
-    for (const f of missing) {
-      process.stderr.write(`  - ${f}\n`);
-    }
-    process.stderr.write(`\nTotal undocumented: ${missing.length}. Add them to the relevant docs/*.md file.\n`);
-    process.exit(1);
   }
+  process.stderr.write(
+    '[check-docs-schema] The following schema flags are not documented in any roadmap/docs/*.md file:\n',
+  );
+  for (const f of missing) {
+    process.stderr.write(`  - ${f}\n`);
+  }
+  process.stderr.write(
+    `\nTotal undocumented: ${missing.length}. Add them to the relevant roadmap/docs/*.md file.\n`,
+  );
+  process.exit(1);
 }
 
 main();

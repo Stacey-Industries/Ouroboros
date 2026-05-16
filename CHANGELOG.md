@@ -70,7 +70,7 @@ Three follow-ups filed for Wave 86 polish:
 - Wave 85 plan (`roadmap/wave-85-flow-tracer/waveplan-85.md` — 14 sections, validated against Sites 1/2/3 from `wave-process.md`).
 - Wave 85 ADR (`roadmap/wave-85-flow-tracer/wave-85-decisions.md` — 11 decisions, all locked).
 - Wave 85 mechanical review (`roadmap/wave-85-flow-tracer/wave-85-mechanical-review.md` — `/review` FLAG verdict, 6 findings, all non-fatal; the 4 dead-export findings now carry `DEFERRED-CONSUMER: wave-86` markers, the 2 universal-quantifier findings live in the trace-engine-quality follow-up).
-- Design spec (`docs/superpowers/specs/2026-05-08-flow-tracer-design.md`).
+- Design spec (`roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md`).
 - Initiative framing (`ai/vision.md` — "An IDE That Teaches You" three-mode roadmap: Flow Tracer (this), inline captions (Wave 86), galaxy map (Wave 87)).
 
 ## [2.14.0] - 2026-05-06
@@ -104,7 +104,7 @@ Three follow-ups filed for Wave 86 polish:
 ## [2.13.0] - 2026-05-05
 
 ### Added
-- **Wave 83 — Playwright-electron repro harness.** `npm run repro -- <slug>` driver runs `e2e/_repro-<slug>.spec.ts` against the built Electron app and writes artifacts (screenshot, console + network logs, optional video) under `artifacts/repro-<slug>-<timestamp>/`. Template at `e2e/_repro-template.spec.ts` includes a `reproArtifacts` helper for consistent artifact emission. Onboarding doc at `docs/repro-harness.md`. Path A (consumer MCP exposure) and Path B (preload bridge) deferred — single npm-run path is the v1 surface.
+- **Wave 83 — Playwright-electron repro harness.** `npm run repro -- <slug>` driver runs `e2e/_repro-<slug>.spec.ts` against the built Electron app and writes artifacts (screenshot, console + network logs, optional video) under `artifacts/repro-<slug>-<timestamp>/`. Template at `e2e/_repro-template.spec.ts` includes a `reproArtifacts` helper for consistent artifact emission. Onboarding doc at `roadmap/docs/repro-harness.md`. Path A (consumer MCP exposure) and Path B (preload bridge) deferred — single npm-run path is the v1 surface.
 
 ## [2.12.0] - 2026-05-03
 
@@ -154,7 +154,7 @@ Wave-burn batch — nine waves shipped in parallel from `roadmap/future/`.
 - **Wave 72 — chat thread swipe navigation.** `useSwipeNavigation` mounted on `AgentChatWorkspace` root with wrap-around thread cycling; closes the Wave 32 Phase I deferral.
 - **Wave 73 — skill executions persisted on chat messages.** `SkillExecutionRecord[]` now lands in SQLite via the assistant message record, so reopened historical threads show their skill executions in the details drawer (renderer falls back to persisted state when the live `AgentEventsContext` doesn't have the session).
 - **Wave 75 — memory curation completion.** Inline drill-down preview for memory entries (Phase A) plus `memory:write` / `memory:delete` IPC handlers and edit/delete UI with atomic write-then-rename, idempotent delete, and confirmation modals (Phase B).
-- **Wave 76 — warn-class hook decisions surface to agent.** `pre_tool_use.mjs` now emits structured JSON stdout (`hookSpecificOutput.permissionDecision: 'allow'` + `systemMessage`) for `warn` decisions; `warnFullTestSuite` actually nudges the agent. Pattern documented in `docs/hook-migration.md`.
+- **Wave 76 — warn-class hook decisions surface to agent.** `pre_tool_use.mjs` now emits structured JSON stdout (`hookSpecificOutput.permissionDecision: 'allow'` + `systemMessage`) for `warn` decisions; `warnFullTestSuite` actually nudges the agent. Pattern documented in `roadmap/docs/hook-migration.md`.
 - **Wave 77 — Cypher engine Wave A.** `OPTIONAL MATCH` (LEFT JOIN), `UNWIND` (VALUES CTE), multi-pattern `MATCH`, and `indexed_at` ISO→epoch coercion added to the mini-engine. `get_graph_schema` advertises `supportedCypherFeatures`. `STARTS WITH` / `ENDS WITH` no longer false-positive the unsupported-clause check.
 - **Wave 78 — settings panel partial-wiring fixes.** webAccessPassword "✓ Password set" badge via `config:hasWebPassword`; useMcpHost main-process gating in `injectStandaloneMcpEntry`; `modelSlots.claudeMdGeneration` slot threaded into `buildProviderEnv`; `usageExport.defaultWindow` and `usageExport.lastDir` persisted across export sessions.
 - **Wave 80 — graph edge confidence on CALLS.** Per-resolution-path confidence (import-resolved 0.95, same-file 0.85, name-unique 0.80, new-expression class 0.65) emitted at indexing time; `min_confidence` filter param on `trace_call_path` and `detect_changes` (default 0); `confidence` field disclosed in `get_graph_schema`.
@@ -269,11 +269,11 @@ Wave-burn batch — nine waves shipped in parallel from `roadmap/future/`.
   sibling-then-parent so the registered path works regardless of bundle
   layout (electron-vite chunks the calling code into `out/main/chunks/`
   while `proxyServer.js` is at `out/main/`).
-- Tailwind `@source not` glob extended to `roadmap/archive/**` after
+- Tailwind `@source not` glob extended to `roadmap/_archived/**` after
   archiving completed waves moved `wave-53c-output/` under it; Tailwind
   v4's auto-source scan trips on Windows path encodings (`\afa0da`-shaped
   hex segments) above U+10FFFF.
-- Wave 53k ADR (`roadmap/archive/wave-53k/wave-53k-decisions.md`) documents nine architecture
+- Wave 53k ADR (`roadmap/_archived/wave-53k/wave-53k-decisions.md`) documents nine architecture
   decisions, including the Decision-2 reversal (toggle-flag → destructive
   write) and Decision 9 (SDK adoption pulled forward from a Wave 53m punt).
 

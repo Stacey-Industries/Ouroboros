@@ -8,7 +8,7 @@ window is created.
 Wave 52 added a queue+drain pipe so external Claude Code sessions (terminal
 runs while the IDE is offline) can contribute telemetry. Hook scripts append
 JSONL records to `~/.ouroboros/telemetry/queue/`; the IDE imports them on next
-launch via `runParityQueueDrain()`. See `docs/telemetry-parity.md` for the full
+launch via `runParityQueueDrain()`. See `roadmap/docs/telemetry-parity.md` for the full
 architecture, hook contract, and migration recipe.
 
 ## Files
@@ -46,5 +46,5 @@ architecture, hook contract, and migration recipe.
   mirrors the record shape in a comment block at the top. When the TS schema
   changes, the hook's comment block MUST update too, and `SCHEMA_VERSION` must
   be bumped. Drain handlers validate `schemaVersion` and skip unknown versions —
-  they don't crash, but data is silently lost. See `docs/telemetry-parity.md`
+  they don't crash, but data is silently lost. See `roadmap/docs/telemetry-parity.md`
   "Per-surface schema discipline".

@@ -110,16 +110,16 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 
 ## Further Reading
 
-- `docs/architecture.md` — Full architecture, component tree, state management, ownership rules, security model
-- `docs/api-contract.md` — Complete IPC channel reference, file operations, PTY API
-- `docs/data-model.md` — Config schema, state types, event types
-- `docs/build.md` — Build tooling, Vite config, Monaco workers, path aliases, bundle analysis
-- `docs/chat-shell.md` — Chat-only shell (Wave 42+), workbench variant (Wave 46), material theming (Wave 45)
-- `docs/codemode-internalmcp-routing.md` — CodeMode routing for internalMcp, configuration, telemetry, rollback (Wave 51)
-- `docs/claude-md-lifecycle.md` — CLAUDE.md generation, grooming, and organic growth
-- `docs/hook-migration.md` — rule-to-hook conversion, rollback, and escalation
-- `docs/telemetry-parity.md` — telemetry parity architecture and migration recipe
-- `docs/context-ranker.md` — context ranker, weight modes, hit-rate telemetry
+- `roadmap/docs/architecture.md` — Full architecture, component tree, state management, ownership rules, security model
+- `roadmap/docs/api-contract.md` — Complete IPC channel reference, file operations, PTY API
+- `roadmap/docs/data-model.md` — Config schema, state types, event types
+- `roadmap/docs/build.md` — Build tooling, Vite config, Monaco workers, path aliases, bundle analysis
+- `roadmap/docs/chat-shell.md` — Chat-only shell (Wave 42+), workbench variant (Wave 46), material theming (Wave 45)
+- `roadmap/docs/codemode-internalmcp-routing.md` — CodeMode routing for internalMcp, configuration, telemetry, rollback (Wave 51)
+- `roadmap/docs/claude-md-lifecycle.md` — CLAUDE.md generation, grooming, and organic growth
+- `roadmap/docs/hook-migration.md` — rule-to-hook conversion, rollback, and escalation
+- `roadmap/docs/telemetry-parity.md` — telemetry parity architecture and migration recipe
+- `roadmap/docs/context-ranker.md` — context ranker, weight modes, hit-rate telemetry
 - `ai/vision.md` — Product vision, design north stars
 - `ai/deferred.md` — Remaining unimplemented features, prioritized by area
 
@@ -127,7 +127,9 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 
 Context-specific rules are in `.claude/rules/` (injected automatically by glob match). Hooks enforce constraints deterministically via `.claude/settings.json`. Slash commands are in `.claude/commands/` (project) and `~/.claude/commands/` (global).
 
-**UI-bearing changes require a signed manual smoke entry** — any wave touching `src/renderer/components/Layout/**` must include a completed smoke checklist in its result brief before push. See `~/.claude/rules/manual-smoke-gate.md` for the rule and `roadmap/session-handoff.md` for the checklist template.
+**UI-bearing changes require a signed manual smoke entry** — any wave touching `src/renderer/components/Layout/**` must include a completed smoke checklist in its result brief before push. See `~/.claude/rules-deferred/manual-smoke-gate.md` for the rule and `roadmap/docs/manual-smoke-gate-checklist.md` for the checklist template.
+
+**Session pickup:** start at `roadmap/HANDOFF.md` (evergreen orientation — next action / in-flight / blockers / critical context). Wave history index at `roadmap/_index-history.md`; archived waves at `roadmap/_archived/index.md`; decisions at `roadmap/decisions/index.md`.
 
 **Global pipeline rule:** `~/.claude/rules/development-pipeline.md` — three-lane (Build/Fix/Orient) pipeline. This repo's `roadmap/` aligns with its taxonomy (`follow-ups/`, `deferred/`, `bugs/`, `decisions/`).
 

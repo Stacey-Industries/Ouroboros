@@ -16,7 +16,7 @@ The session goal: go through every item one-by-one with a layman explanation, a 
 
 2. **`graph-mcp-polish.md`** — bundles items #2 + #3 + #4. Drops legacy `mcpToolHandlers.ts` parameter aliases (`name_pattern`, `qualified_name`, `function_name`), migrates `McpToolDefinition` envelope to `{isError, content}`, fixes `parseAnomalies` absent-when-zero behavior. Three-phase wave with soft-deprecation period.
 
-3. **`telemetry-archival-completion.md`** — bundles audit item #7 with HIGH-A (`traceBatcher` never initialized) and HIGH-B (`telemetryJsonlMirror` never instantiated) from `roadmap/archive/waves-15-29-review-addendum.md`. **Reframed per Cole's "archive don't purge" requirement** — JSONL mirror becomes permanent archive layer; SQLite purge becomes pure cache eviction. Historical telemetry preserved indefinitely in compressed JSONL (~50 MB/year compressed).
+3. **`telemetry-archival-completion.md`** — bundles audit item #7 with HIGH-A (`traceBatcher` never initialized) and HIGH-B (`telemetryJsonlMirror` never instantiated) from `roadmap/_archived/waves-15-29-review-addendum.md`. **Reframed per Cole's "archive don't purge" requirement** — JSONL mirror becomes permanent archive layer; SQLite purge becomes pure cache eviction. Historical telemetry preserved indefinitely in compressed JSONL (~50 MB/year compressed).
 
 4. **`agent-chat-swipe-navigation.md`** — item #8a. `useSwipeNavigation` mount on `AgentChatWorkspace`. Low priority — flagged "before Capacitor mobile reaches users." Blocked on small refactor (workspace needs stable ref).
 
@@ -161,7 +161,7 @@ grep -B 1 -A 30 "SUPERSEDED" roadmap/audit-verification-pass.md
 
 - `roadmap/audit-verification-pass.md` — the source-of-truth audit doc; partially annotated
 - `roadmap/follow-ups/follow-ups.md` — original follow-ups inventory (155 items)
-- `roadmap/archive/waves-15-29-review-addendum.md` — source of HIGH-A/B/D bundled into telemetry-archival wave
+- `roadmap/_archived/waves-15-29-review-addendum.md` — source of HIGH-A/B/D bundled into telemetry-archival wave
 - `roadmap/wave-67-indexer-coverage-repair.md` — sibling to graph-edge-confidence-scoring, cross-referenced
 - `roadmap/wave-63-popover-tab-coverage.md` — parent of memory-curation-completion
 - `roadmap/wave-68-cypher-engine-quality.md` — adjacent to cypher-engine-feature-additions

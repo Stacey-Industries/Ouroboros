@@ -232,7 +232,7 @@ Renderer: `src/renderer/components/Orchestration/ContextRankerCard.tsx`.
 
 ## Current Limitations
 
-- **Syntax-highlighting theme import** (`docs/theming.md`) is not context-aware — it processes VS Code `colors` fields into Ouroboros tokens independently of the context pipeline.
+- **Syntax-highlighting theme import** (`roadmap/docs/theming.md`) is not context-aware — it processes VS Code `colors` fields into Ouroboros tokens independently of the context pipeline.
 - **Haiku reranker has no local fallback.** When the Claude CLI is unavailable (offline, rate-limited, auth error), the reranker silently passes through the original order. There is no embedded alternative.
 - **Feature extraction is approximation-based.** `prevUsedCount` uses `reasons.length` as a proxy for prior usage frequency rather than tracking actual historical inclusion counts across sessions.
 - **Shadow-mode overlap logging is one-way.** The classifier compares its top-N against the additive top-N at selection time, but the outcome writer does not attribute which ranking path caused which outcome. AUC validation is offline-only.

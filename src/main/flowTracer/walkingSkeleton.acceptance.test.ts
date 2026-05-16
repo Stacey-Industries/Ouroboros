@@ -9,7 +9,7 @@
  * defeats the rule's purpose — the test exists so the implementer's mental
  * model has to bend to the protocol's actual contract, not the reverse.
  *
- * Reference: docs/superpowers/specs/2026-05-08-flow-tracer-design.md §5.4
+ * Reference: roadmap/docs/superpowers/specs/2026-05-08-flow-tracer-design.md §5.4
  *            roadmap/wave-85-flow-tracer/waveplan-85.md (Phase 1 row)
  */
 

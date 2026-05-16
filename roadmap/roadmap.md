@@ -739,7 +739,7 @@ User-visible payoff for Arc A. Dual-mode is the single most-requested UX evoluti
 #### Exit criteria
 - 2-week author dogfood with chat-primary as daily driver, documented pros/cons.
 - Feature-flag default flipped to on after dogfood if no regressions.
-- `docs/` update describing both layouts.
+- `roadmap/docs/` update describing both layouts.
 
 ---
 
@@ -1892,8 +1892,8 @@ Each wave accumulates cleanup debt (legacy fallback keys, removed features' flag
 - Remove `panelSizes` localStorage fallback after Wave 17 default-on for 1 release.
 - Remove `streamingInlineEdit` flag (long-standing tech debt per CLAUDE.md).
 - Remove `internalMcp` if still unwired after Wave 29, or wire it if it found a use.
-- Add `docs/context-injection.md` covering the full context pipeline (v3: learned ranker).
-- Update `docs/architecture.md` to reflect Session primitive and layout presets.
+- Add `roadmap/docs/context-injection.md` covering the full context pipeline (v3: learned ranker).
+- Update `roadmap/docs/architecture.md` to reflect Session primitive and layout presets.
 - Update `CLAUDE.md` known-issues section — remove closed items.
 - Knip audit — zero dead exports in `orchestration/`, `research/`, `session/`.
 

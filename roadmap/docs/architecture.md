@@ -376,7 +376,7 @@ Claude Code Hook Script
 
 #### Deterministic enforcement hooks (Wave 50)
 
-A subset of PreToolUse events runs through `runPreToolEnforcement` in `src/main/hooksSessionHandlers.ts` before reaching the renderer. The orchestrator runs four evaluators in order (`blockSecretWrites`, `blockLockfileEdits`, `blockMinifiedOperations`, `warnFullTestSuite`); the first non-pass decision wins. Deny decisions short-circuit the tool call at the harness layer with a prescriptive message; warn decisions are logged. Each evaluator gates on the `hooks.enforcedRules` config array. See `docs/hook-migration.md` for the rule-to-hook map, rollback path, and how to escalate a warning to a block.
+A subset of PreToolUse events runs through `runPreToolEnforcement` in `src/main/hooksSessionHandlers.ts` before reaching the renderer. The orchestrator runs four evaluators in order (`blockSecretWrites`, `blockLockfileEdits`, `blockMinifiedOperations`, `warnFullTestSuite`); the first non-pass decision wins. Deny decisions short-circuit the tool call at the harness layer with a prescriptive message; warn decisions are logged. Each evaluator gates on the `hooks.enforcedRules` config array. See `roadmap/docs/hook-migration.md` for the rule-to-hook map, rollback path, and how to escalate a warning to a block.
 
 ### Background Job Queue (#103)
 
@@ -631,7 +631,7 @@ The `src/main/hooks/gotchaUpdateNudge.ts` Stop-hook passively nudges agents to d
 
 `npm run lint:claude-md` (via `scripts/claude-md-size-check.ts`) fails on any CLAUDE.md over 200 lines without the `<!-- claude-md-grandfathered -->` marker. Pre-commit hook enforces this.
 
-See `docs/claude-md-lifecycle.md` for the full lifecycle: when to generate, when to trim, how the lean prompt is constructed, and the organic growth workflow.
+See `roadmap/docs/claude-md-lifecycle.md` for the full lifecycle: when to generate, when to trim, how the lean prompt is constructed, and the organic growth workflow.
 
 ---
 
@@ -650,4 +650,4 @@ Implementation references:
 | Multiplex policy | `src/main/codemode/codemodeStartup.ts`, `src/main/orchestration/providers/internalMcpRoutingPolicy.ts` |
 | Schema handshake | `src/standalone/ouroborosMcp/ouroborosMcpSchema.ts` (refuses incompatible DB versions) |
 
-Pre-Wave-60 design (SSE-based in-process server, per-spawn `routeInternalMcp` flag, `internalMcpStdioTransport.ts` adapter) is fully archived — see `roadmap/archive/wave-51-plan.md` and `roadmap/archive/wave-51-decision.md` for the historical decision matrix.
+Pre-Wave-60 design (SSE-based in-process server, per-spawn `routeInternalMcp` flag, `internalMcpStdioTransport.ts` adapter) is fully archived — see `roadmap/_archived/wave-51-plan.md` and `roadmap/_archived/wave-51-decision.md` for the historical decision matrix.

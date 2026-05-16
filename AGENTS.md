@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 
 Ouroboros is an Electron/Vite TypeScript app. Core source lives in `src/`:
-`src/main/` contains the Electron main process, IPC, config, hooks, PTY, and AI orchestration; `src/preload/` exposes the typed `window.electronAPI` bridge; `src/renderer/` contains React UI, state, styles, and components; `src/shared/` holds cross-process types; `src/web/` supports web/mobile builds. End-to-end tests live in `e2e/`; unit and component tests are colocated as `*.test.ts` or `*.test.tsx`. Static assets are in `assets/`, `public/`, and `build-resources/`. Longer design notes are in `docs/`, with subsystem guidance in local `CLAUDE.md` files.
+`src/main/` contains the Electron main process, IPC, config, hooks, PTY, and AI orchestration; `src/preload/` exposes the typed `window.electronAPI` bridge; `src/renderer/` contains React UI, state, styles, and components; `src/shared/` holds cross-process types; `src/web/` supports web/mobile builds. End-to-end tests live in `e2e/`; unit and component tests are colocated as `*.test.ts` or `*.test.tsx`. Static assets are in `assets/`, `public/`, and `build-resources/`. Longer design notes are in `roadmap/docs/`, with subsystem guidance in local `CLAUDE.md` files.
 
 ## Build, Test, and Development Commands
 

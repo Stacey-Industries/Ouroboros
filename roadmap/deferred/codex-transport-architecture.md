@@ -1,7 +1,7 @@
 # Codex transport architecture — exec-transport removal + app-server pooling/warm-up
 
 **Status:** DEFERRED — preserved for future review; assumption check needed before closing
-**Source:** Wave 45 follow-ups (`roadmap/archive/wave-45-plan.md`)
+**Source:** Wave 45 follow-ups (`roadmap/_archived/wave-45-plan.md`)
 **Filed:** 2026-05-01 — moved out of NOW-USELESS bucket so the developer can verify what changed before this is permanently dropped
 
 ## Why this lives in `deferred/` not closed
@@ -62,7 +62,7 @@ Move from `deferred/` to `future/` (or close as NOW-USELESS) once verification a
 
 ## References
 
-- `roadmap/archive/wave-45-plan.md` — original Wave 45 plan with these out-of-scope items
+- `roadmap/_archived/wave-45-plan.md` — original Wave 45 plan with these out-of-scope items
 - `src/main/orchestration/providers/CLAUDE.md` — provider subsystem map (may describe current Codex transport model)
 - `roadmap/follow-ups/follow-ups.md:92-93` — original follow-up list entries
 - Memory: `project_codex_sandbox_bypass.md` — Codex CLI v0.124 sandbox context
