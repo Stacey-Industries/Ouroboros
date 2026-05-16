@@ -96,6 +96,9 @@ jobs:
           npm init -y
           npm install better-sqlite3
 
+      - name: Lockfile cross-platform completeness check
+        run: node scripts/lockfile-smoke.mjs
+
       - name: Typecheck
         run: npm run typecheck
 

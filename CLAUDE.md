@@ -49,6 +49,10 @@ The full suite consistently exceeds agent timeouts (~1000s / ~17 min on Windows-
 
 Full suite + lint + typecheck still runs at commit/wave-end. Scoped runs are for the implementation loop.
 
+### Lockfile
+
+`package-lock.json` is regenerated **only** via `npm run lockfile:sync` — never hand-edited, never Windows-regenerated. The wrapper runs a from-scratch install in WSL2 (`~/lockgen/agent-ide/` on ext4) to produce a complete cross-platform lockfile (win32+linux+darwin optional deps). The pre-push hook (`scripts/hooks/pre-push`, install once: `git config core.hooksPath scripts/hooks`) blocks any lockfile change lacking a valid `.lockfile-sync.marker`. Advisory bypass: `LOCKFILE_SYNC_GUARD_BYPASS=1 git push`. Background: `roadmap/wave-92-cross-platform-lockfile-stryker/`.
+
 ## Key Files
 
 | File                               | Role                                       |

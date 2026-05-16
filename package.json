@@ -1,6 +1,6 @@
 {
   "name": "ouroboros",
-  "version": "2.16.0",
+  "version": "2.17.0",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "author": "Ouroboros",
   "main": "out/main/index.js",
@@ -50,6 +50,10 @@
     "knip": "knip",
     "licenses": "generate-license-file --input package.json --output THIRD_PARTY_LICENSES --overwrite",
     "audit:prod": "npm audit --omit=dev",
+    "lockfile:sync": "node scripts/lockfile-sync.mjs",
+    "lockfile:check": "node scripts/lockfile-check.mjs",
+    "mutation:test": "stryker run --incremental",
+    "mutation:test:full": "stryker run --force",
     "analyze:corpus": "npx tsx scripts/analyze-claude-corpus.ts",
     "analyze:corpus:json": "npx tsx scripts/analyze-claude-corpus.ts --json-only",
     "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
@@ -155,6 +159,8 @@
     "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.8",
@@ -192,7 +198,8 @@
     "vitest-axe": "^0.1.0"
   },
   "overrides": {
-    "node-gyp": "^11.0.0"
+    "node-gyp": "^11.0.0",
+    "vite": "7.3.1"
   },
   "build": {
     "appId": "com.arcflow.ouroboros",

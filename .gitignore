@@ -65,6 +65,8 @@ coverage/
 # that explode tailwind v4's auto-source scanner; @source not directive in
 # globals.css mirrors this).
 .stryker-tmp/
+reports/stryker-incremental.json
+reports/mutation/
 
 # TypeScript
 *.js.map
