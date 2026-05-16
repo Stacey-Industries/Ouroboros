@@ -84,11 +84,21 @@ Single-pass; no explicit `--os`/`--cpu` flags needed.
 
 **Context:** `break:` is an anti-backslide gate. Setting it above current score = perpetually failing builds. Setting it equal to current = first PR with any noise fails.
 
-**Pick:** PINNED IN PHASE 6. Run `npx stryker run --force` to establish baseline; if score is X%, set `break: floor(X) - 1`.
+**Pick (PINNED 2026-05-16 by Phase 6 baseline):** `break: 21`.
 
-**Rationale:** Inherits Gamify Decision 6. Gives a 1-percentage-point cushion for measurement noise while still detecting genuine regression. Raising the floor is a future coverage-wave decision.
+**Empirical baseline:** `npx stryker run --force` against `src/shared/**` (174 mutants, 31 source files, 42 tests across 2 test files, 15 parallel workers). Runtime: 2m14s. Results: 39 killed, 0 timeout, 106 survived, 29 no-coverage. **Total mutation score: 22.41%** (covered: 26.90%).
 
-**Consequences:** Phase 6 fills this with the empirical integer. Phase 7's CI workflow enforces it.
+Per-file breakdown:
+- `ipc/chatStateChannels.ts` — 66.67%
+- `FileRefResolver.ts` — 24.31% (largest survivor source: 106 of 145 untouched mutants)
+- `pricing.ts` — 0.00% (no coverage at all; 23 no-cov mutants)
+- `types/auth.ts` — 0.00% (no coverage; 1 no-cov mutant)
+
+floor(22.41) - 1 = 21. Set in `stryker.config.mjs:23`.
+
+**Rationale:** Anti-backslide only. The 22.41% score is low because `src/shared` has minimal test coverage (only 2 test files cover 31 source files; `pricing.ts` and `types/auth.ts` are entirely uncovered). Raising the floor is a deliberate coverage-investment decision in a future wave, NOT a side effect of any PR. The mutate-scope expansion follow-up (`roadmap/follow-ups/2026-05-16-stryker-mutate-scope-expansion.md`) is the natural pairing — first widen the surface, then invest in coverage.
+
+**Consequences:** Phase 7's `ci-stryker.yml` enforces `break: 21`. Any PR that drops the score below 21 fails CI. Survivors are surfaced in `reports/mutation.html` for visibility but the HTML report itself isn't gated.
 
 ---
 
