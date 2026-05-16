@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
 
-import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import { AgentChatWorkspace } from '../../AgentChat/AgentChatWorkspace';
 import type {
@@ -110,34 +109,20 @@ function WorkbenchSidePanels({
 
 // ── Terminal surface ───────────────────────────────────────────────────────────
 
-function UnavailableTerminalDock(): React.ReactElement {
-  return (
-    <section
-      className="h-40 shrink-0 border-t border-border-semantic bg-surface-panel/90 px-3 py-3"
-      data-testid="chat-workbench-terminal-dock-unavailable"
-    >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
-        Terminal
-      </div>
-      <p className="mt-2 text-sm text-text-semantic-secondary">
-        Terminal sessions are not available in this window.
-      </p>
-    </section>
-  );
-}
-
 function WorkbenchTerminalSurface({
   dock,
-  terminal,
+  onActiveSessionChange,
 }: {
   dock: DockState;
-  terminal?: UseTerminalSessionsReturn;
+  onActiveSessionChange?: (sessionId: string | null) => void;
 }): React.ReactElement | null {
   if (!dock.visible) return null;
-  if (!terminal) return <UnavailableTerminalDock />;
   return (
     <Suspense fallback={null}>
-      <ChatWorkbenchTerminalDock terminal={terminal} onClose={() => dock.setVisible(false)} />
+      <ChatWorkbenchTerminalDock
+        onClose={() => dock.setVisible(false)}
+        onActiveSessionChange={onActiveSessionChange}
+      />
     </Suspense>
   );
 }
@@ -150,14 +135,14 @@ export function WorkbenchMainColumn({
   layout,
   projectRoot,
   surfacePolicy,
-  terminal,
+  onActiveSessionChange,
 }: {
   compare: CompareState;
   dock: DockState;
   layout: LayoutState;
   projectRoot: string | null;
   surfacePolicy: SurfacePolicyState;
-  terminal?: UseTerminalSessionsReturn;
+  onActiveSessionChange?: (sessionId: string | null) => void;
 }): React.ReactElement {
   return (
     <div className="flex flex-1 min-w-0 flex-col min-h-0">
@@ -165,7 +150,7 @@ export function WorkbenchMainColumn({
         <WorkbenchCenterPane compare={compare} projectRoot={projectRoot} />
         <WorkbenchSidePanels layout={layout} surfacePolicy={surfacePolicy} />
       </div>
-      <WorkbenchTerminalSurface dock={dock} terminal={terminal} />
+      <WorkbenchTerminalSurface dock={dock} onActiveSessionChange={onActiveSessionChange} />
     </div>
   );
 }

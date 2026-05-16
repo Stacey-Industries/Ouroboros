@@ -17,6 +17,12 @@ export interface TerminalManagerProps {
   onToggleRecording?: (sessionId: string) => void;
   onSplit?: (sessionId: string) => void;
   onCloseSplit?: (sessionId: string) => void;
+  /**
+   * Wave 89: slot identity for SPLIT_TERMINAL_EVENT scoping.
+   * 'primary' | 'secondary' — if omitted, this instance responds to all splits
+   * (legacy IDE shell behaviour outside the stacked dock).
+   */
+  slot?: 'primary' | 'secondary';
 }
 
 const NOOP = (): void => {};
@@ -78,15 +84,21 @@ function buildActiveContent(
 
 export function TerminalManager(props: TerminalManagerProps): React.ReactElement {
   const state = useTerminalManagerState(props.sessions, props.activeSessionId);
-  const { activeSessionId, onSplit } = props;
+  const { activeSessionId, onSplit, slot } = props;
 
   useEffect(() => {
-    const handler = (): void => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent<{ slot?: string }>).detail;
+      // Slot-scoped filter (Wave 89): if the event carries a slot, only act on
+      // matching instances. If no slot in detail (legacy dispatch path from
+      // TitleBar menus), default-route to 'primary' to preserve pre-Wave-89 behavior.
+      const targetSlot = detail?.slot ?? 'primary';
+      if (slot !== undefined && slot !== targetSlot) return;
       if (activeSessionId && onSplit) onSplit(activeSessionId);
     };
     window.addEventListener(SPLIT_TERMINAL_EVENT, handler);
     return () => window.removeEventListener(SPLIT_TERMINAL_EVENT, handler);
-  }, [activeSessionId, onSplit]);
+  }, [activeSessionId, onSplit, slot]);
 
   return (
     <TerminalManagerShell

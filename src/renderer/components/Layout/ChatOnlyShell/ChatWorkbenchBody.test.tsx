@@ -196,7 +196,9 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
   });
 
-  it('renders unavailable terminal notice when dock visible but no terminal provided', () => {
+  it('renders terminal dock (not unavailable placeholder) when dock is visible', async () => {
+    // Wave 89: dock no longer requires a terminal prop — each slot owns its own sessions.
+    // The unavailable-dock placeholder was removed; the dock always renders when visible.
     render(
       <ChatWorkbenchBody
         layout={makeLayout()}
@@ -204,7 +206,9 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
-    expect(screen.getByTestId('chat-workbench-terminal-dock-unavailable')).toBeDefined();
+    expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
+    // The dock is lazy-loaded; the Suspense fallback renders (null) in tests.
+    // Verify no error is thrown — the unavailable path is gone.
   });
 });
 

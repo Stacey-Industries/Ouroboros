@@ -166,6 +166,7 @@ interface ShellChromeProps {
   dock: ShellDock;
   layout: ShellLayout;
   mode: ReturnType<typeof useChatSidebarMode>['mode'];
+  onActiveSessionChange?: (sessionId: string | null) => void;
   openDiffOverlay: () => void;
   projectRoot: string | null;
   terminal?: UseTerminalSessionsReturn;
@@ -177,6 +178,7 @@ function ShellChrome({
   dock,
   layout,
   mode,
+  onActiveSessionChange,
   openDiffOverlay,
   projectRoot,
   terminal,
@@ -198,6 +200,7 @@ function ShellChrome({
       <ChatWorkbenchBody
         dock={dock}
         layout={layout}
+        onActiveSessionChange={onActiveSessionChange}
         projectRoot={projectRoot}
         terminal={terminal}
       />
@@ -219,22 +222,61 @@ function useShellState(props: ChatWorkbenchShellProps): {
   closeLauncher: () => void;
   searchOpen: boolean;
   closeSearch: () => void;
+  activeDockSessionId: string | null;
+  setActiveDockSessionId: (id: string | null) => void;
 } {
   const { mode, cycleMode } = useChatSidebarMode();
   const layout = useChatWorkbenchLayout();
   const dock = useTerminalDockState();
   const { launcherOpen, closeLauncher } = useMultiSessionLauncherState();
   const { searchOpen, closeSearch } = useChatSearchState(props.projectRoot);
+  // Wave 89: active dock session tracked here for tool-bridge routing.
+  const [activeDockSessionId, setActiveDockSessionId] = useState<string | null>(null);
   // Wave 82 — wire workbench title-bar menu DOM events to existing handlers.
   useWorkbenchMenuEvents({ layout, dock });
-  return { cycleMode, mode, layout, dock, launcherOpen, closeLauncher, searchOpen, closeSearch };
+  return {
+    cycleMode,
+    mode,
+    layout,
+    dock,
+    launcherOpen,
+    closeLauncher,
+    searchOpen,
+    closeSearch,
+    activeDockSessionId,
+    setActiveDockSessionId,
+  };
+}
+
+function buildOverlaysProps(
+  props: ChatWorkbenchShellProps,
+  shell: {
+    launcherOpen: boolean;
+    closeLauncher: () => void;
+    searchOpen: boolean;
+    closeSearch: () => void;
+  },
+): ShellOverlaysProps {
+  return {
+    diffOverlayOpen: props.diffOverlayOpen,
+    closeDiffOverlay: props.closeDiffOverlay,
+    launcherOpen: shell.launcherOpen,
+    closeLauncher: shell.closeLauncher,
+    paletteOpen: props.paletteOpen,
+    closePalette: props.closePalette,
+    commands: props.commands,
+    recentIds: props.recentIds,
+    execute: props.execute,
+    searchOpen: shell.searchOpen,
+    closeSearch: shell.closeSearch,
+    projectRoot: props.projectRoot,
+  };
 }
 
 export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactElement {
-  const { cycleMode, mode, layout, dock, launcherOpen, closeLauncher, searchOpen, closeSearch } =
-    useShellState(props);
-  const { closeDiffOverlay, closePalette, commands, diffOverlayOpen, execute } = props;
-  const { openDiffOverlay, paletteOpen, projectRoot, recentIds, terminal, toggleDrawer } = props;
+  const shell = useShellState(props);
+  const { cycleMode, mode, layout, dock, activeDockSessionId, setActiveDockSessionId } = shell;
+  const { openDiffOverlay, projectRoot, terminal, toggleDrawer } = props;
   return (
     <div
       data-layout="app"
@@ -242,31 +284,19 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
       style={{ backgroundImage: SHELL_BG }}
       data-testid="chat-workbench-shell"
     >
-      <ChatOnlyTerminalToolBridge activeDockSessionId={terminal?.activeSessionId ?? null} />
+      <ChatOnlyTerminalToolBridge activeDockSessionId={activeDockSessionId} />
       <ShellChrome
         cycleMode={cycleMode}
         dock={dock}
         layout={layout}
         mode={mode}
+        onActiveSessionChange={setActiveDockSessionId}
         openDiffOverlay={openDiffOverlay}
         projectRoot={projectRoot}
         terminal={terminal}
         toggleDrawer={toggleDrawer}
       />
-      <ShellOverlays
-        diffOverlayOpen={diffOverlayOpen}
-        closeDiffOverlay={closeDiffOverlay}
-        launcherOpen={launcherOpen}
-        closeLauncher={closeLauncher}
-        paletteOpen={paletteOpen}
-        closePalette={closePalette}
-        commands={commands}
-        recentIds={recentIds}
-        execute={execute}
-        searchOpen={searchOpen}
-        closeSearch={closeSearch}
-        projectRoot={projectRoot}
-      />
+      <ShellOverlays {...buildOverlaysProps(props, shell)} />
     </div>
   );
 }

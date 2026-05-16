@@ -413,11 +413,14 @@ describe('ChatWorkbenchShell', () => {
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
   });
 
-  it('shows unavailable placeholder when dock is visible but terminal is missing', () => {
+  it('renders the terminal dock (not unavailable placeholder) when dock is visible without terminal prop', async () => {
+    // Wave 89: dock no longer requires a terminal prop — each slot owns its sessions.
+    // The unavailable-dock placeholder was removed. The dock renders whenever visible.
     mockDockVisible = true;
     renderShell(undefined);
-    expect(screen.queryByTestId('chat-workbench-terminal-dock')).toBeNull();
-    expect(screen.getByTestId('chat-workbench-terminal-dock-unavailable')).toBeDefined();
+    // Dock renders (lazy-loaded); unavailable placeholder is gone.
+    expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
+    expect(await screen.findByTestId('chat-workbench-terminal-dock')).toBeDefined();
   });
 
   it('mounts the artifact pane when artifactOpen is enabled', async () => {

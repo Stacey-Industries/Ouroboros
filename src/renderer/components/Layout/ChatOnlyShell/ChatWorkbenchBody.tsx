@@ -23,6 +23,8 @@ interface ChatWorkbenchBodyProps {
   layout: ChatWorkbenchLayoutApi;
   projectRoot: string | null;
   terminal?: UseTerminalSessionsReturn;
+  /** Wave 89: receives the active session ID from the stacked dock for tool-bridge routing. */
+  onActiveSessionChange?: (sessionId: string | null) => void;
 }
 
 type WorkbenchState = ReturnType<typeof useWorkbenchContextState>;
@@ -98,6 +100,7 @@ interface BodyContentProps {
   terminal?: UseTerminalSessionsReturn;
   projectRoot: string | null;
   activeApprovalSessionIds: Array<string | null | undefined>;
+  onActiveSessionChange?: (sessionId: string | null) => void;
 }
 
 // Wave 82 (post-smoke): wire File > New Session menu event to the canonical
@@ -135,6 +138,7 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
     terminal: props.terminal,
     projectRoot: effectiveProjectRoot,
     activeApprovalSessionIds,
+    onActiveSessionChange: props.onActiveSessionChange,
   };
 }
 
@@ -151,6 +155,7 @@ function DesktopBody({
   terminal,
   projectRoot,
   activeApprovalSessionIds,
+  onActiveSessionChange,
 }: BodyContentProps): React.ReactElement {
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden" data-testid="chat-workbench-body">
@@ -168,7 +173,7 @@ function DesktopBody({
         layout={state.layout}
         projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
-        terminal={terminal}
+        onActiveSessionChange={onActiveSessionChange}
       />
     </div>
   );
@@ -180,6 +185,7 @@ function MobileBody({
   terminal,
   projectRoot,
   activeApprovalSessionIds,
+  onActiveSessionChange,
 }: BodyContentProps): React.ReactElement {
   return (
     <div
@@ -200,7 +206,7 @@ function MobileBody({
         layout={state.layout}
         projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
-        terminal={terminal}
+        onActiveSessionChange={onActiveSessionChange}
       />
       <MobileOverlays state={state} handlers={handlers} terminal={terminal} />
     </div>
