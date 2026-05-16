@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.0] - 2026-05-16
+
+### Added
+- **Wave 92 — Cross-Platform Lockfile Foundation + Stryker Activation.** Adopted Gamify Wave 9's lockfile-foundation pattern preventatively, then installed Stryker on top. Agent IDE had no existing lockfile divergence; installing Stryker would have been the trigger (its `vitest-runner` historically pulled the optional-subtree shape that Windows npm skips), so the foundation lands first. 9 phases, 9 commits.
+  - **`scripts/lockfile-sync.mjs`** + `npm run lockfile:sync` — drives a WSL2-native from-scratch `npm install` against `~/lockgen/agent-ide/` (ext4) at Node 20.20.2, copies only `package-lock.json` back to the Windows repo. Never touches the Windows `node_modules/`. Writes `.lockfile-sync.marker` as provenance. 68s on warm cache.
+  - **`scripts/lockfile-check.mjs`** + `npm run lockfile:check` — validates marker sha256 matches lockfile sha256. Advisory bypass via `LOCKFILE_SYNC_GUARD_BYPASS=1`.
+  - **`scripts/hooks/pre-push`** (POSIX shell) — blocks any push whose `package-lock.json` change lacks a valid marker. Install once per clone: `git config core.hooksPath scripts/hooks`. Background in `scripts/hooks/README.md`.
+  - **CI canary** — `ci.yml` step "Lockfile cross-platform completeness check" runs `node scripts/lockfile-smoke.mjs` on all 3 OS after `npm ci --ignore-scripts`. Catches incomplete lockfiles on every PR.
+  - **`scripts/lockfile-smoke.mjs`** + **`scripts/pin-toplevel.mjs`** (verbatim from Gamify) — completeness check + version-preservation helpers.
+  - **`stryker.config.mjs`** — `@stryker-mutator/core@^9.6.1` + `@stryker-mutator/vitest-runner@^9.6.1`. Mutate scope tight at `src/shared/**` (174 mutants, 31 source files). `vitest.configFile` wired to project's config; `testFiles` restricted to shared-layer tests. `break: 21` (anti-backslide floor at floor(22.41) - 1).
+  - **`.github/workflows/ci-stryker.yml`** — dual-frequency: `mutation-incremental` on PR + push to master, `mutation-full` on weekly Monday cron. Enforces `break: 21`.
+  - **`npm run mutation:test`** + **`mutation:test:full`** scripts.
+  - **`.nvmrc`** (`20`) at repo root.
+  - **Three vendor-gotcha files** at `.claude/vendor-gotchas/`: `wsl2-lockgen.md` + `stryker.md` (ported from Gamify Wave 9, inherited lessons) + NEW `stryker-electron.md` (Agent-IDE-native: 4-module no-touch list, subsystem-boundary expansion pattern, two load-bearing config options found at Phase 6).
+  - **`CLAUDE.md` "Lockfile" subsection** documenting the regen-only-via-lockfile-sync rule + pre-push hook install.
+
+### Fixed
+- Acceptance-test test-theater incident in Phase 7: subagent's first attempt at `ci-stryker.yml` added inline YAML comments matching the acceptance-test regex (which had a bug — extraction stopped at the first indented `\w+:` line). Orchestrator fixed the regex (`(?![\s\S])` for end-of-input — JS has no `\Z` anchor) AND removed the comments. Final test validates real workflow structure.
+- Dead-code guard removed from `scripts/lockfile-check.mjs` `readMarker()` catch block (`process.exit()` is terminal; `ERR_PROCESS_EXIT_CODE` guard unreachable). Surfaced by phase-reviewer.
+
+### Architecture decisions (per `roadmap/wave-92-cross-platform-lockfile-stryker/wave-92-decisions.md`)
+- Inherit Gamify Wave 9 pattern wholesale; Agent IDE deltas applied (Node 20, master branch, single-manifest, 3-OS CI matrix).
+- Lockfile generation: WSL2-native ext4, single-pass `npm install --ignore-scripts --no-audit --no-fund` (no `--os` flags needed at Node 20.20.2 / npm 10.8.2). Empirically pinned by Phase 1 walking skeleton.
+- Stryker mutate scope tightly bound to `src/shared/**` v1; expansion to subsystem-boundary glob exclusion deferred to a coverage-investment wave (follow-up filed).
+- `@node-rs/xxhash` retained — 3 live imports in `src/main/codebaseGraph/` (named-import shape missed by initial bare-package grep; named-import-aware regex now the audit standard).
+- `overrides.node-gyp: ^11.0.0` retained — load-bearing (commit `cf2bf63d`, distutils-removal-in-Python-3.12 fix). Phase 5 test confirmed removal re-introduces `app-builder-lib/node_modules/node-gyp@9.4.1` (the problematic version).
+- `break: 21` is anti-backslide only; raising the floor is a deliberate decision in a future coverage-investment wave.
+
+### Known issues
+- Pre-existing 4 ESLint warnings (unused `eslint-disable` directives) in non-Wave-92 files — inherited from master, not touched in this wave.
+- Pre-existing 515 prettier format inconsistencies — inherited from master, not in Wave 92's touched surface.
+- `node-abi@4.31.0` EBADENGINE warning at Node 20 (transitive via `electron-builder`'s `app-builder-lib` — declares `>=22.12.0`). Cosmetic only; install + resolution succeed. Documented in `stryker-electron.md`.
+
 ## [2.16.0] - 2026-05-14
 
 ### Added
