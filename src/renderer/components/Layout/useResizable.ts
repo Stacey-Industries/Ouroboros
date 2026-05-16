@@ -1,3 +1,19 @@
+/**
+ * useResizable — pointer-drag resize hook with two modes:
+ *
+ * 1. **fixed-edge** (original): a single panel resizes against its container edge.
+ *    API: `startResize(panel, direction, startValue, startPos)`.
+ *    Consumers: leftSidebar, rightSidebar, terminal-dock-as-whole.
+ *
+ * 2. **sibling-stack** (Wave 89 Phase 0): two adjacent panels drag against each
+ *    other within a fixed parent envelope. Sum of sizes is preserved.
+ *    API: `startSiblingResize({ topPanel, bottomPanel, parentExtent, startSizes, startPos })`.
+ *    First consumer: the stacked-terminal-dock divider (Phase 1).
+ *
+ * Existing fixed-edge callers use the 4-positional-arg `startResize` unchanged.
+ * The sibling-stack entry point is a separate named function to keep call sites
+ * unambiguous. Pure sibling math lives in useResizable.sibling.ts.
+ */
 import {
   type Dispatch,
   type MutableRefObject,
@@ -8,6 +24,13 @@ import {
   useState,
 } from 'react';
 
+export type { SiblingResizeOpts } from './useResizable.sibling';
+import {
+  buildSiblingDragState,
+  commitSiblingDrag,
+  computeSiblingSizes,
+  type SiblingDragState,
+} from './useResizable.sibling';
 export type PanelId = 'leftSidebar' | 'rightSidebar' | 'terminal';
 type ResizeDirection = 'horizontal' | 'vertical';
 
@@ -82,14 +105,12 @@ function getPreviewLine(): HTMLDivElement {
 function showPreviewLine(direction: ResizeDirection, pos: number): void {
   const el = getPreviewLine();
   if (direction === 'vertical') {
-    // Vertical divider tracks clientX.
     el.style.top = '0';
     el.style.bottom = '0';
     el.style.left = `${pos}px`;
     el.style.width = '2px';
     el.style.height = '';
   } else {
-    // Horizontal divider tracks clientY.
     el.style.left = '0';
     el.style.right = '0';
     el.style.top = `${pos}px`;
@@ -103,18 +124,32 @@ function hidePreviewLine(): void {
   if (previewLine) previewLine.style.display = 'none';
 }
 
-export interface UseResizableReturn {
-  sizes: PanelSizes;
-  startResize: (
-    panel: PanelId,
-    direction: ResizeDirection,
-    startValue: number,
-    startPos: number,
-  ) => void;
-  resetSize: (panel: PanelId) => void;
-  /** Apply a complete set of panel sizes (used by workspace layout switching) */
-  applySizes: (newSizes: PanelSizes) => void;
+function updatePreviewLine(direction: ResizeDirection, event: PointerEvent): void {
+  showPreviewLine(direction, direction === 'vertical' ? event.clientX : event.clientY);
 }
+
+function resetDocumentDragState(): void {
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+}
+
+function removeDragListeners(
+  handlePointerMove: (event: PointerEvent) => void,
+  handlePointerUp: () => void,
+): void {
+  document.removeEventListener('pointermove', handlePointerMove);
+  document.removeEventListener('pointerup', handlePointerUp);
+  document.removeEventListener('pointercancel', handlePointerUp);
+}
+
+function beginResizeDrag(direction: ResizeDirection): void {
+  document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
+  document.body.style.userSelect = 'none';
+}
+
+// ---------------------------------------------------------------------------
+// Fixed-edge mode
+// ---------------------------------------------------------------------------
 
 interface DragState {
   panel: PanelId;
@@ -136,40 +171,16 @@ function getResizeSign(panel: PanelId): number {
   return panel === 'rightSidebar' || panel === 'terminal' ? -1 : 1;
 }
 
-function updatePreviewLine(direction: ResizeDirection, event: PointerEvent): void {
-  showPreviewLine(direction, direction === 'vertical' ? event.clientX : event.clientY);
-}
-
 function commitDragSize(
   dragState: DragState | null,
   setSizes: Dispatch<SetStateAction<PanelSizes>>,
 ): void {
   if (!dragState) return;
-
   setSizes((prev) => {
     const committed = { ...prev, [dragState.panel]: dragState.currentSize };
     saveSizes(committed);
     return committed;
   });
-}
-
-function resetDocumentDragState(): void {
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-}
-
-function removeDragListeners(
-  handlePointerMove: (event: PointerEvent) => void,
-  handlePointerUp: () => void,
-): void {
-  document.removeEventListener('pointermove', handlePointerMove);
-  document.removeEventListener('pointerup', handlePointerUp);
-  document.removeEventListener('pointercancel', handlePointerUp);
-}
-
-function beginResizeDrag(direction: ResizeDirection): void {
-  document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
-  document.body.style.userSelect = 'none';
 }
 
 function finishResizeDrag(
@@ -239,10 +250,85 @@ function useResizeDrag(
   return startResize;
 }
 
+// ---------------------------------------------------------------------------
+// Sibling-stack mode
+// ---------------------------------------------------------------------------
+
+function useSiblingDragPointerMove(siblingDragRef: MutableRefObject<SiblingDragState | null>) {
+  return useCallback(
+    (event: PointerEvent) => {
+      const state = siblingDragRef.current;
+      if (!state) return;
+      state.currentSizes = computeSiblingSizes(state, event);
+      updatePreviewLine(state.direction, event);
+    },
+    [siblingDragRef],
+  );
+}
+
+function useSiblingResizeDrag(
+  setSizes: Dispatch<SetStateAction<PanelSizes>>,
+  siblingDragRef: MutableRefObject<SiblingDragState | null>,
+): UseResizableReturn['startSiblingResize'] {
+  const handlePointerMove = useSiblingDragPointerMove(siblingDragRef);
+
+  const handlePointerUp = useCallback(() => {
+    hidePreviewLine();
+    commitSiblingDrag(siblingDragRef.current, setSizes, saveSizes);
+    siblingDragRef.current = null;
+    resetDocumentDragState();
+    removeDragListeners(handlePointerMove, handlePointerUp);
+  }, [siblingDragRef, handlePointerMove, setSizes]);
+
+  useEffect(() => {
+    return () => {
+      siblingDragRef.current = null;
+      hidePreviewLine();
+      resetDocumentDragState();
+      removeDragListeners(handlePointerMove, handlePointerUp);
+    };
+  }, [siblingDragRef, handlePointerMove, handlePointerUp]);
+
+  return useCallback(
+    (opts) => {
+      siblingDragRef.current = buildSiblingDragState(opts);
+      beginResizeDrag(siblingDragRef.current.direction);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
+    },
+    [siblingDragRef, handlePointerMove, handlePointerUp],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public hook
+// ---------------------------------------------------------------------------
+
+export interface UseResizableReturn {
+  sizes: PanelSizes;
+  startResize: (
+    panel: PanelId,
+    direction: ResizeDirection,
+    startValue: number,
+    startPos: number,
+  ) => void;
+  resetSize: (panel: PanelId) => void;
+  /** Apply a complete set of panel sizes (used by workspace layout switching). */
+  applySizes: (newSizes: PanelSizes) => void;
+  /**
+   * Begin a sibling-stack drag. Both panels move in opposition so their sum
+   * stays equal to `parentExtent`. Pure math lives in useResizable.sibling.ts.
+   */
+  startSiblingResize: (opts: import('./useResizable.sibling').SiblingResizeOpts) => void;
+}
+
 export function useResizable(): UseResizableReturn {
   const [sizes, setSizes] = useState<PanelSizes>(loadSizes);
   const dragStateRef = useRef<DragState | null>(null);
+  const siblingDragRef = useRef<SiblingDragState | null>(null);
   const startResize = useResizeDrag(setSizes, dragStateRef);
+  const startSiblingResize = useSiblingResizeDrag(setSizes, siblingDragRef);
 
   const resetSize = useCallback((panel: PanelId) => {
     setSizes((prev) => {
@@ -257,5 +343,5 @@ export function useResizable(): UseResizableReturn {
     saveSizes(newSizes);
   }, []);
 
-  return { sizes, startResize, resetSize, applySizes };
+  return { sizes, startResize, resetSize, applySizes, startSiblingResize };
 }
