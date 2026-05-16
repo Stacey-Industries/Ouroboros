@@ -1,12 +1,16 @@
 ---
-status: OPEN
+status: PARTIAL
 created: 2026-05-13
-updated: 2026-05-13
+updated: 2026-05-16
+partialResolution: tree-sitter half resolved by wave-93 Phase C (web-tree-sitter 0.22.6 → ^0.26.8, ABI 15)
+remainingOpen: tailwind v4 codepoint error (section 1)
 ---
 
 # Dev-server runtime errors: tailwind codepoint + tree-sitter wasm version drift
 
 Two unrelated environmental issues surfaced in the running dev session on 2026-05-13. Both pre-exist Wave 88; both are real bugs worth fixing.
+
+**UPDATE 2026-05-16**: Tailwind half (section 1) was actually fixed during Wave 88 ship tail (per the HANDOFF context — tailwind `@source not` directive added for `roadmap/wave-*-output/**` paths). Tree-sitter half (section 2) resolved by Wave 93 Phase C — `web-tree-sitter` bumped to ^0.26.8 with ABI 15 support; `@vscode/tree-sitter-wasm@0.3.1` grammars now load cleanly. Both halves effectively closed; this file remains for historical record.
 
 ## 1. Tailwind v4 — `Invalid code point 11509978` in `globals.css`
 

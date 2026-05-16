@@ -1,7 +1,9 @@
 ---
-status: OPEN
+status: RESOLVED
 created: 2026-05-14
-updated: 2026-05-14
+updated: 2026-05-16
+resolved: 2026-05-16
+resolvedBy: wave-93 Phase D (deleted; monitor-tab consolidation honored)
 ---
 
 # `SubagentTranscriptPanel` is defined but never mounted in production

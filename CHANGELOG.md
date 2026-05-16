@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.1] - 2026-05-16
+
+### Added
+- **Wave 93 — Fix Sweep: Lockfile Drift Check + Cleanups.** Four small follow-ups bundled into a single patch wave; ~3 hours wall-clock.
+  - **`scripts/lockfile-drift-check.mjs`** + `npm run lockfile:check:drift` — diffs old vs new `package-lock.json`, classifies version changes by severity (patch/minor/major/prerelease/added/removed), exits 2 on minor+ unless `--accept-drift` is passed. Wired into `scripts/lockfile-sync.mjs` post-regen so any drift gates marker-write. Defense in depth with the Wave 92 pre-push guard: drift-check is the warning, pre-push guard is the gate. Closes the Wave 92 transitive-drift gap (`roadmap/follow-ups/2026-05-16-pin-toplevel-transitive-gap.md`). 176 lines, 6 vitest cases, no external deps.
+  - **`src/main/codebaseGraph/treeSitterParser.integration.test.ts`** — orchestrator-authored boundary acceptance test for the tree-sitter ABI 15 contract.
+  - **`.claude/vendor-gotchas/tree-sitter.md`** — captures the 0.22→0.26 migration lessons (named-export rewrite, wasm export-key resolution, `Parser.SyntaxNode → Node` rename).
+
+### Changed
+- **`web-tree-sitter`** bumped `0.22.6` → `^0.26.8` (ABI 15 support; landed in 0.25.0). Code adapted to the 0.25+ named-export API: `Parser`/`Language`/`Node` are top-level exports (`Parser.SyntaxNode` → `Node` across 5 files); `require.resolve('web-tree-sitter/web-tree-sitter.wasm')` for the `locateFile` callback (the wasm asset is now an explicit export key, not co-located with the JS entry). Codebase-graph indexing of javascript/python now loads `@vscode/tree-sitter-wasm@0.3.1` ABI 15 grammars cleanly instead of silently falling back to `tree-sitter-wasms@0.1.13`. Closes the tree-sitter half of `roadmap/follow-ups/2026-05-13-tailwind-codepoint-and-treesitter-wasm-versions.md`.
+- **Trace-logging silenced**: 5 `log.info` → `log.debug` edits across 4 files (`src/main/hooksDispatchLogic.ts`, `src/renderer/components/AgentChat/ComposerContextPreview.tsx`, `src/renderer/components/AgentChat/ContextPreview.popover.tsx`, `src/renderer/hooks/useAgentEvents.ruleSkillDispatchers.ts`) for the `[trace:agent-record]` and `[trace:ctx-preview]` diagnostic tags. Traces preserved for the still-open eviction-bug investigations; `electron-log`'s renderer console transport defaults to `info` so debug lines are silently dropped unless a developer enables them. Closes `roadmap/follow-ups/2026-05-14-trace-logging-floods-console.md`.
+- **`roadmap/HANDOFF.md`** lockfile section: removed the `--package-lock-only` workaround note; replaced with current drift-check guidance.
+
+### Removed
+- **`src/renderer/components/Layout/ChatOnlyShell/SubagentTranscriptPanel.tsx`** — defined and exported but never mounted in production (`OPEN_SUBAGENT_PANEL_EVENT` routes to the `monitor` tab via `useWorkbenchSurfacePolicy`'s `openUtility({ tab: 'monitor' })`, a deliberate Wave-47-era consolidation). Cleaned up the ChatOnlyShell `CLAUDE.md` composition tree and removed a stale `SubagentTranscriptPanel` mention from `ChatWorkbenchFollowThrough.integration.test.tsx`. Closes `roadmap/follow-ups/2026-05-14-subagent-transcript-panel-dead-code.md`.
+
+### Architecture decisions (per `roadmap/wave-93-fix-sweep-drift-and-cleanups/wave-93-decisions.md`)
+- D1: drift-check via diff-and-warn script (not bulk `overrides`, not pnpm migration).
+- D2: fail on minor+, warn on patch. `--accept-drift` (or `LOCKFILE_SYNC_ACCEPT_DRIFT=1`) is the human-override path.
+- D3: drift-check runs post-regen, gates marker-write. Defense in depth with the Wave 92 pre-push guard.
+- D4: `web-tree-sitter` target 0.26.8 (current stable; forward-pin not hold-back).
+- D5: trace-logging lower to `log.debug` (not delete; not new debug-flag mechanism).
+- D6: `SubagentTranscriptPanel` deleted (not re-mounted) — honors the `monitor`-tab consolidation.
+
+---
+
 ## [2.17.0] - 2026-05-16
 
 ### Added

@@ -1,7 +1,9 @@
 ---
-status: OPEN
+status: RESOLVED
 created: 2026-05-14
-updated: 2026-05-14
+updated: 2026-05-16
+resolved: 2026-05-16
+resolvedBy: wave-93 Phase B (5 log.info → log.debug across 4 files)
 ---
 
 # `[trace:agent-record]` / `[trace:ctx-preview]` logging floods the dev console

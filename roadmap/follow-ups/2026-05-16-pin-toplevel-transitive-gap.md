@@ -1,7 +1,9 @@
 ---
-status: OPEN
+status: RESOLVED
 created: 2026-05-16
 updated: 2026-05-16
+resolved: 2026-05-16
+resolvedBy: wave-93 Phase A (scripts/lockfile-drift-check.mjs + lockfile-sync.mjs integration)
 source: wave-92 Phase 9 (post-push CI failure on macOS)
 ---
 
