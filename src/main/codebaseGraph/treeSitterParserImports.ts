@@ -6,7 +6,7 @@
  * Extracted from treeSitterParserSupport.ts to keep that file under 300 lines.
  */
 
-import type Parser from 'web-tree-sitter';
+import type { Node } from 'web-tree-sitter';
 
 import { extractPythonFromStatement, extractPythonPlainImport } from './treeSitterParserSupport';
 import type { ExtractedImport, ImportSpecifier, LanguageConfig } from './treeSitterTypes';
@@ -32,7 +32,7 @@ function makeImport(
 
 // ─── Go ───────────────────────────────────────────────────────────────────────
 
-export function extractGoImport(node: Parser.SyntaxNode): ExtractedImport[] | null {
+export function extractGoImport(node: Node): ExtractedImport[] | null {
   if (node.type !== 'import_declaration') return null;
 
   const results: ExtractedImport[] = [];
@@ -54,7 +54,7 @@ export function extractGoImport(node: Parser.SyntaxNode): ExtractedImport[] | nu
 
 // ─── Rust ─────────────────────────────────────────────────────────────────────
 
-export function extractRustImport(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractRustImport(node: Node): ExtractedImport | null {
   if (node.type !== 'use_declaration') return null;
   const pathNode = node.namedChildren[0];
   if (!pathNode) return null;
@@ -70,7 +70,7 @@ export function extractRustImport(node: Parser.SyntaxNode): ExtractedImport | nu
 
 // ─── Java / C# ────────────────────────────────────────────────────────────────
 
-export function extractJavaLikeImport(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractJavaLikeImport(node: Node): ExtractedImport | null {
   const scopedIdent = node.descendantsOfType('scoped_identifier');
   const ident =
     scopedIdent.length > 0 ? scopedIdent[scopedIdent.length - 1] : node.namedChildren[0];
@@ -87,7 +87,7 @@ export function extractJavaLikeImport(node: Parser.SyntaxNode): ExtractedImport 
 
 // ─── C / C++ ──────────────────────────────────────────────────────────────────
 
-export function extractCInclude(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractCInclude(node: Node): ExtractedImport | null {
   if (node.type !== 'preproc_include') return null;
   const pathNode = node.namedChildren.find(
     (c) => c.type === 'string_literal' || c.type === 'system_lib_string',
@@ -109,7 +109,7 @@ export function extractCInclude(node: Parser.SyntaxNode): ExtractedImport | null
 
 // ─── Ruby ─────────────────────────────────────────────────────────────────────
 
-export function extractRubyImport(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractRubyImport(node: Node): ExtractedImport | null {
   if (node.type !== 'call') return null;
   const methodNode = node.childForFieldName('method');
   if (!methodNode) return null;
@@ -129,7 +129,7 @@ export function extractRubyImport(node: Parser.SyntaxNode): ExtractedImport | nu
 
 // ─── PHP ──────────────────────────────────────────────────────────────────────
 
-export function extractPhpImport(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractPhpImport(node: Node): ExtractedImport | null {
   if (node.type !== 'namespace_use_declaration') return null;
   const nameNode = node.descendantsOfType('qualified_name')[0] ?? node.descendantsOfType('name')[0];
   if (!nameNode) return null;
@@ -147,7 +147,7 @@ export function extractPhpImport(node: Parser.SyntaxNode): ExtractedImport | nul
 
 type NonTsImportResult = ExtractedImport | ExtractedImport[] | null;
 
-type NonTsExtractor = (node: Parser.SyntaxNode) => NonTsImportResult;
+type NonTsExtractor = (node: Node) => NonTsImportResult;
 
 const NON_TS_EXTRACTORS: Record<string, NonTsExtractor> = {
   go: extractGoImport,
@@ -162,7 +162,7 @@ const NON_TS_EXTRACTORS: Record<string, NonTsExtractor> = {
 
 /** Dispatch import extraction for non-TS/JS languages. */
 export function dispatchNonTsImport(
-  node: Parser.SyntaxNode,
+  node: Node,
   config: LanguageConfig,
 ): NonTsImportResult {
   if (config.id === 'python') {

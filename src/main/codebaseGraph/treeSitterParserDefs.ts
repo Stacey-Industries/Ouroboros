@@ -8,7 +8,7 @@
  * isNodeExported, isDefaultExport, collectExportedIdentifiers.
  */
 
-import type Parser from 'web-tree-sitter';
+import type { Node } from 'web-tree-sitter';
 
 import {
   collectDecorators,
@@ -33,7 +33,7 @@ export function buildNodeTypeToLabelMap(config: LanguageConfig): Map<string, str
   return map;
 }
 
-export function hasModifier(node: Parser.SyntaxNode, modifier: string): boolean {
+export function hasModifier(node: Node, modifier: string): boolean {
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
     if (child && child.type === modifier) return true;
@@ -49,9 +49,9 @@ export function hasModifier(node: Parser.SyntaxNode, modifier: string): boolean 
 }
 
 export function findAncestorOfType(
-  node: Parser.SyntaxNode,
+  node: Node,
   types: string[],
-): Parser.SyntaxNode | null {
+): Node | null {
   if (types.length === 0) return null;
   let current = node.parent;
   while (current) {
@@ -61,7 +61,7 @@ export function findAncestorOfType(
   return null;
 }
 
-export function extractReturnType(node: Parser.SyntaxNode): string | null {
+export function extractReturnType(node: Node): string | null {
   const returnTypeNode = node.childForFieldName('return_type');
   if (returnTypeNode) return returnTypeNode.text.replace(/^:\s*/, '').trim();
 
@@ -77,7 +77,7 @@ export function extractReturnType(node: Parser.SyntaxNode): string | null {
   return null;
 }
 
-export function extractReturnTypeFromAnnotation(declarator: Parser.SyntaxNode): string | null {
+export function extractReturnTypeFromAnnotation(declarator: Node): string | null {
   const typeAnnotation =
     declarator.childForFieldName('type') ??
     declarator.namedChildren.find((c) => c.type === 'type_annotation');
@@ -85,7 +85,7 @@ export function extractReturnTypeFromAnnotation(declarator: Parser.SyntaxNode): 
   return typeAnnotation.text.replace(/^:\s*/, '').trim();
 }
 
-export function extractNodeSignature(node: Parser.SyntaxNode): string | null {
+export function extractNodeSignature(node: Node): string | null {
   const paramsNode =
     node.childForFieldName('parameters') ??
     node.namedChildren.find((c) => c.type === 'formal_parameters' || c.type === 'parameter_list');
@@ -101,7 +101,7 @@ export function extractNodeSignature(node: Parser.SyntaxNode): string | null {
 }
 
 export function extractTopLevelNames(
-  rootNode: Parser.SyntaxNode,
+  rootNode: Node,
   config: LanguageConfig,
 ): string[] {
   const names: string[] = [];
@@ -125,12 +125,12 @@ export function extractTopLevelNames(
 
 // ─── Definition building helpers ──────────────────────────────────────────────
 
-export function isNodeExported(node: Parser.SyntaxNode, config: LanguageConfig): boolean {
+export function isNodeExported(node: Node, config: LanguageConfig): boolean {
   if (config.exportKeyword) return node.parent?.type === config.exportKeyword;
   return resolveExportStatus(node, config);
 }
 
-export function isDefaultExport(node: Parser.SyntaxNode): boolean {
+export function isDefaultExport(node: Node): boolean {
   const parent = node.parent;
   if (!parent || parent.type !== 'export_statement') return false;
   return parent.children.some((c) => c.type === 'default');
@@ -141,7 +141,7 @@ export function isDefaultExport(node: Parser.SyntaxNode): boolean {
 // with label='Method' for ALL functions. Demote to Function when there is no
 // enclosing class/impl block.
 function resolveMethodContext(
-  node: Parser.SyntaxNode,
+  node: Node,
   label: string,
   config: LanguageConfig,
 ): { effectiveLabel: string; receiver: string | null } {
@@ -152,7 +152,7 @@ function resolveMethodContext(
 }
 
 export function extractSingleDefinition(
-  node: Parser.SyntaxNode,
+  node: Node,
   label: string,
   config: LanguageConfig,
 ): ExtractedDefinition | null {
@@ -193,9 +193,9 @@ export function extractSingleDefinition(
 }
 
 interface ArrowDefNodes {
-  statementNode: Parser.SyntaxNode; // export_statement or lexical_declaration
-  declarator: Parser.SyntaxNode;
-  valueNode: Parser.SyntaxNode;
+  statementNode: Node; // export_statement or lexical_declaration
+  declarator: Node;
+  valueNode: Node;
 }
 
 function buildArrowDef(
@@ -229,8 +229,8 @@ export interface ArrowDeclaratorContext {
 }
 
 export function extractArrowDeclarator(
-  statementNode: Parser.SyntaxNode,
-  declarator: Parser.SyntaxNode,
+  statementNode: Node,
+  declarator: Node,
   ctx: ArrowDeclaratorContext,
 ): void {
   if (declarator.type !== 'variable_declarator') return;
@@ -249,8 +249,8 @@ export function extractArrowDeclarator(
 
 /** Collect exported identifier names from an export_statement node via walkFn. */
 export function collectExportedIdentifiers(
-  exportNode: Parser.SyntaxNode,
-  walkFn: (node: Parser.SyntaxNode, cb: (n: Parser.SyntaxNode) => void) => void,
+  exportNode: Node,
+  walkFn: (node: Node, cb: (n: Node) => void) => void,
   names: Set<string>,
 ): void {
   walkFn(exportNode, (child) => {

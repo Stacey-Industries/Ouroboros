@@ -5,14 +5,14 @@
  * Language-specific import extractors live in treeSitterParserImports.ts.
  */
 
-import type Parser from 'web-tree-sitter';
+import type { Node } from 'web-tree-sitter';
 
 import type { ExtractedImport, ImportSpecifier, LanguageConfig } from './treeSitterTypes';
 
 // ─── Type detection helpers ───────────────────────────────────────────────────
 
 /** Detect `import type { ... }` by checking sibling tokens. */
-export function detectTypeOnlyImport(node: Parser.SyntaxNode): boolean {
+export function detectTypeOnlyImport(node: Node): boolean {
   const children = node.children;
   for (let i = 0; i < children.length - 1; i++) {
     // eslint-disable-next-line security/detect-object-injection -- i is a bounded loop index
@@ -24,7 +24,7 @@ export function detectTypeOnlyImport(node: Parser.SyntaxNode): boolean {
 }
 
 /** Collect named import specifiers (import { a, b as c }). */
-export function collectNamedImports(node: Parser.SyntaxNode, specifiers: ImportSpecifier[]): void {
+export function collectNamedImports(node: Node, specifiers: ImportSpecifier[]): void {
   const namedImports = node.descendantsOfType('import_specifier');
   for (const spec of namedImports) {
     const nameNode = spec.childForFieldName('name') ?? spec.firstNamedChild;
@@ -42,7 +42,7 @@ export function collectNamedImports(node: Parser.SyntaxNode, specifiers: ImportS
 
 /** Collect default import from import_clause node. */
 function collectDefaultImportFromClause(
-  importClause: Parser.SyntaxNode,
+  importClause: Node,
   specifiers: ImportSpecifier[],
 ): void {
   for (const child of importClause.namedChildren) {
@@ -60,7 +60,7 @@ function collectDefaultImportFromClause(
 
 /** Collect default import when import_clause is absent (fallback path). */
 function collectDefaultImportFallback(
-  node: Parser.SyntaxNode,
+  node: Node,
   specifiers: ImportSpecifier[],
 ): void {
   const defaultIdent = node
@@ -84,7 +84,7 @@ function collectDefaultImportFallback(
 
 /** Collect namespace imports (import * as ns). */
 export function collectNamespaceImports(
-  node: Parser.SyntaxNode,
+  node: Node,
   specifiers: ImportSpecifier[],
 ): void {
   const nsImports = node.descendantsOfType('namespace_import');
@@ -102,7 +102,7 @@ export function collectNamespaceImports(
 }
 
 /** Collect the default import (from import_clause or fallback). */
-export function collectDefaultImport(node: Parser.SyntaxNode, specifiers: ImportSpecifier[]): void {
+export function collectDefaultImport(node: Node, specifiers: ImportSpecifier[]): void {
   const importClause = node.namedChildren.find((c) => c.type === 'import_clause');
   if (importClause) {
     collectDefaultImportFromClause(importClause, specifiers);
@@ -114,8 +114,8 @@ export function collectDefaultImport(node: Parser.SyntaxNode, specifiers: Import
 // ─── Python import helpers ────────────────────────────────────────────────────
 
 function makeAliasedSpecifier(
-  nameNode: Parser.SyntaxNode,
-  aliasNode: Parser.SyntaxNode | null | undefined,
+  nameNode: Node,
+  aliasNode: Node | null | undefined,
   isNamespace: boolean,
 ): ImportSpecifier {
   const hasAlias = aliasNode && aliasNode !== nameNode;
@@ -127,7 +127,7 @@ function makeAliasedSpecifier(
   };
 }
 
-export function extractPythonFromStatement(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractPythonFromStatement(node: Node): ExtractedImport | null {
   const moduleNode = node.childForFieldName('module_name');
   if (!moduleNode) return null;
 
@@ -158,7 +158,7 @@ export function extractPythonFromStatement(node: Parser.SyntaxNode): ExtractedIm
   };
 }
 
-export function extractPythonPlainImport(node: Parser.SyntaxNode): ExtractedImport | null {
+export function extractPythonPlainImport(node: Node): ExtractedImport | null {
   const names = node.descendantsOfType('dotted_name');
   if (names.length === 0) return null;
 
@@ -201,16 +201,16 @@ export {
 
 // ─── isNodeExported helpers ───────────────────────────────────────────────────
 
-function isExportedGo(node: Parser.SyntaxNode): boolean {
+function isExportedGo(node: Node): boolean {
   const nameNode = node.childForFieldName('name');
   return nameNode ? /^[A-Z]/.test(nameNode.text) : false;
 }
 
-function isExportedRust(node: Parser.SyntaxNode): boolean {
+function isExportedRust(node: Node): boolean {
   return node.children.some((c) => c.type === 'visibility_modifier');
 }
 
-function isExportedJavaLike(node: Parser.SyntaxNode): boolean {
+function isExportedJavaLike(node: Node): boolean {
   const modifiers =
     node.childForFieldName('modifiers') ??
     node.namedChildren.find((c) => c.type === 'modifiers' || c.type === 'modifier');
@@ -218,7 +218,7 @@ function isExportedJavaLike(node: Parser.SyntaxNode): boolean {
 }
 
 /** Determine export status for non-TS/JS languages. */
-export function resolveExportStatus(node: Parser.SyntaxNode, config: LanguageConfig): boolean {
+export function resolveExportStatus(node: Node, config: LanguageConfig): boolean {
   if (config.id === 'go') return isExportedGo(node);
   if (config.id === 'rust') return isExportedRust(node);
   if (config.id === 'java' || config.id === 'c_sharp') return isExportedJavaLike(node);
@@ -227,7 +227,7 @@ export function resolveExportStatus(node: Parser.SyntaxNode, config: LanguageCon
 
 // ─── extractDecorators helpers ────────────────────────────────────────────────
 
-function collectTsDecorators(node: Parser.SyntaxNode, decorators: string[]): void {
+function collectTsDecorators(node: Node, decorators: string[]): void {
   let sibling = node.previousNamedSibling;
   while (sibling && sibling.type === 'decorator') {
     const name = sibling.firstNamedChild?.text ?? sibling.text;
@@ -236,7 +236,7 @@ function collectTsDecorators(node: Parser.SyntaxNode, decorators: string[]): voi
   }
 }
 
-function collectJavaAnnotations(node: Parser.SyntaxNode, decorators: string[]): void {
+function collectJavaAnnotations(node: Node, decorators: string[]): void {
   let sibling = node.previousNamedSibling;
   while (sibling && (sibling.type === 'marker_annotation' || sibling.type === 'annotation')) {
     const name = sibling.childForFieldName('name')?.text ?? sibling.text.replace(/^@/, '');
@@ -246,7 +246,7 @@ function collectJavaAnnotations(node: Parser.SyntaxNode, decorators: string[]): 
 }
 
 /** Walk backwards collecting TypeScript/Python/Java decorator nodes. */
-export function collectDecorators(node: Parser.SyntaxNode): string[] {
+export function collectDecorators(node: Node): string[] {
   const decorators: string[] = [];
   collectTsDecorators(node, decorators);
   collectJavaAnnotations(node, decorators);
@@ -256,7 +256,7 @@ export function collectDecorators(node: Parser.SyntaxNode): string[] {
 // ─── extractSingleDefinition helpers ─────────────────────────────────────────
 
 /** Extract the name node from a definition node. */
-export function extractDefinitionNameNode(node: Parser.SyntaxNode): Parser.SyntaxNode | null {
+export function extractDefinitionNameNode(node: Node): Node | null {
   return (
     node.childForFieldName('name') ??
     node.namedChildren.find(
@@ -270,7 +270,7 @@ export function extractDefinitionNameNode(node: Parser.SyntaxNode): Parser.Synta
 // ─── extractArrowFunctionExports helpers ──────────────────────────────────────
 
 /** Check if a variable_declarator's value is an arrow/function expression. */
-export function isArrowOrFunctionValue(valueNode: Parser.SyntaxNode): boolean {
+export function isArrowOrFunctionValue(valueNode: Node): boolean {
   return valueNode.type === 'arrow_function' || valueNode.type === 'function';
 }
 

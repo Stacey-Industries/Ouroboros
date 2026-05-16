@@ -6,7 +6,7 @@
  * extractHandlerName, and all inner helpers.
  */
 
-import type Parser from 'web-tree-sitter';
+import type { Node } from 'web-tree-sitter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ type CallNames = Pick<CallNodeResult, 'calleeName' | 'receiverName'>;
 
 // ─── Inner helpers ────────────────────────────────────────────────────────────
 
-function extractMemberOrFieldCall(fnNode: Parser.SyntaxNode): CallNames {
+function extractMemberOrFieldCall(fnNode: Node): CallNames {
   return {
     receiverName: fnNode.childForFieldName('object')?.text ?? null,
     calleeName:
@@ -33,14 +33,14 @@ function extractMemberOrFieldCall(fnNode: Parser.SyntaxNode): CallNames {
   };
 }
 
-function extractAttributeCall(fnNode: Parser.SyntaxNode): CallNames {
+function extractAttributeCall(fnNode: Node): CallNames {
   return {
     receiverName: fnNode.childForFieldName('object')?.text ?? null,
     calleeName: fnNode.childForFieldName('attribute')?.text ?? null,
   };
 }
 
-function extractCallExpression(node: Parser.SyntaxNode): CallNames | null {
+function extractCallExpression(node: Node): CallNames | null {
   const fnNode =
     node.childForFieldName('function') ?? node.childForFieldName('method') ?? node.firstNamedChild;
   if (!fnNode) return null;
@@ -54,7 +54,7 @@ function extractCallExpression(node: Parser.SyntaxNode): CallNames | null {
   return null;
 }
 
-function extractInvocationExpression(node: Parser.SyntaxNode): CallNames | null {
+function extractInvocationExpression(node: Node): CallNames | null {
   const fnNode = node.childForFieldName('function') ?? node.firstNamedChild;
   if (!fnNode) return null;
 
@@ -67,7 +67,7 @@ function extractInvocationExpression(node: Parser.SyntaxNode): CallNames | null 
   return { calleeName: fnNode.text, receiverName: null };
 }
 
-function detectAsyncCall(node: Parser.SyntaxNode): boolean {
+function detectAsyncCall(node: Node): boolean {
   const parent = node.parent;
   if (!parent) return false;
   if (parent.type === 'await_expression') return true;
@@ -78,7 +78,7 @@ function detectAsyncCall(node: Parser.SyntaxNode): boolean {
   );
 }
 
-type CallNameExtractor = (n: Parser.SyntaxNode) => CallNames | null;
+type CallNameExtractor = (n: Node) => CallNames | null;
 
 const CALL_NODE_EXTRACTORS: Record<string, CallNameExtractor> = {
   call_expression: extractCallExpression,
@@ -114,7 +114,7 @@ const CALL_NODE_EXTRACTORS: Record<string, CallNameExtractor> = {
 
 /** Extract caller/receiver/async info from any supported call node type. */
 export function extractCallNodeInfo(
-  node: Parser.SyntaxNode,
+  node: Node,
   maxSigLen: number,
 ): CallNodeResult | null {
   const extractor = CALL_NODE_EXTRACTORS[node.type];
@@ -134,7 +134,7 @@ export function extractCallNodeInfo(
   return { calleeName, receiverName, isAsync: detectAsyncCall(node) };
 }
 
-function extractMemberRouteCandidate(fnNode: Parser.SyntaxNode): RouteCandidateInfo {
+function extractMemberRouteCandidate(fnNode: Node): RouteCandidateInfo {
   return {
     objectText: fnNode.childForFieldName('object')?.text ?? null,
     methodText:
@@ -142,14 +142,14 @@ function extractMemberRouteCandidate(fnNode: Parser.SyntaxNode): RouteCandidateI
   };
 }
 
-function extractAttributeRouteCandidate(fnNode: Parser.SyntaxNode): RouteCandidateInfo {
+function extractAttributeRouteCandidate(fnNode: Node): RouteCandidateInfo {
   return {
     objectText: fnNode.childForFieldName('object')?.text ?? null,
     methodText: fnNode.childForFieldName('attribute')?.text ?? null,
   };
 }
 
-function extractRouteCandidateFromFn(fnNode: Parser.SyntaxNode): RouteCandidateInfo {
+function extractRouteCandidateFromFn(fnNode: Node): RouteCandidateInfo {
   const { type } = fnNode;
   if (type === 'member_expression' || type === 'field_expression')
     return extractMemberRouteCandidate(fnNode);
@@ -158,7 +158,7 @@ function extractRouteCandidateFromFn(fnNode: Parser.SyntaxNode): RouteCandidateI
 }
 
 /** Extract object+method text from a call node for route pattern matching. */
-export function extractRouteCandidate(node: Parser.SyntaxNode): RouteCandidateInfo {
+export function extractRouteCandidate(node: Node): RouteCandidateInfo {
   const fnNode =
     node.childForFieldName('function') ?? node.childForFieldName('method') ?? node.firstNamedChild;
   if (!fnNode) return { objectText: null, methodText: null };
@@ -167,7 +167,7 @@ export function extractRouteCandidate(node: Parser.SyntaxNode): RouteCandidateIn
 
 /** Extract handler name from the argument after the path. */
 export function extractHandlerName(
-  argsNode: Parser.SyntaxNode,
+  argsNode: Node,
   pathArgIndex: number,
 ): string | null {
   const handlerArg = argsNode.namedChildren[pathArgIndex + 1];
