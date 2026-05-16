@@ -104,8 +104,7 @@ ChatWorkbenchShell
   │    ├─ ChatWorkbenchUtilityDrawer
   │    │    ├─ WorkbenchApprovalPanel
   │    │    ├─ DiffReviewPanel
-  │    │    ├─ WorkbenchTimelinePanel (activity timeline)
-  │    │    └─ SubagentTranscriptPanel (subagent transcript drill-in)
+  │    │    └─ WorkbenchTimelinePanel (activity timeline)
   │    └─ ChatWorkbenchTerminalDock
   └─ existing shell overlays (settings, shortcuts, command palette, diff overlay)
 ```
@@ -129,7 +128,7 @@ The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`
 - **Wave 46 Phase F**: integration coverage for drawer auto-open flows and docs updates.
 - **Wave 47 Phase A**: `WorkbenchRail` session-first IA — grouped active/background/recent-chat sections, distinct "New session" and "Launch agent" buttons, `useWorkbenchAttention` for derived attention state, `useWorkbenchSessionActivation` for real activation bridge.
 - **Wave 47 Phase B**: adaptive surface policy (`useWorkbenchSurfacePolicy`), artifact history stack (`useArtifactHistoryStack`), `ArtifactHistoryList`, layout persistence via `useChatWorkbenchLayout`.
-- **Wave 47 Phase C**: timeline inspector (`useWorkbenchTimeline` decomposed into `.entries.ts` + `.helpers.ts`), `WorkbenchTimelinePanel`, subagent transcript drill-in (`SubagentTranscriptPanel` with reset/clear), deferred agent-end model.
+- **Wave 47 Phase C**: timeline inspector (`useWorkbenchTimeline` decomposed into `.entries.ts` + `.helpers.ts`), `WorkbenchTimelinePanel`, subagent transcript drill-in (later consolidated into the `monitor` tab via `useWorkbenchSurfacePolicy`; Wave 93 removed the dead component), deferred agent-end model.
 - **Wave 47 Phase D**: side-by-side compare — `ChatWorkbenchComparePane` with scoped isolated store (`useScopedWorkbenchWorkspace`), `useWorkbenchCompare` for eligibility and target state, compare affordance in `WorkbenchRail`.
 - **Wave 47 Phase E**: sandboxed HTML preview — `HtmlPreview.tsx` using strict `<iframe srcDoc sandbox="">`, `ContentRouter` routing, `useFileViewerState` `isHtml` derivation.
 - **Wave 47 Phase F**: integration coverage (`ChatWorkbenchFollowThrough.integration.test.tsx`), rail default open, docs updates.

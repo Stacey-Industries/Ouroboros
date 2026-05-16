@@ -26,7 +26,7 @@
  * - ChatWorkbenchBody, ChatWorkbenchBody.model, ChatWorkbenchBody.parts
  * - useWorkbenchSurfacePolicy, useWorkbenchArtifacts, useWorkbenchCompare
  * - useChatWorkbenchLayout, useWorkbenchSessions, useWorkbenchAttention
- * - SubagentTranscriptPanel, WorkbenchTimelinePanel, WorkbenchApprovalPanel
+ * - WorkbenchTimelinePanel, WorkbenchApprovalPanel
  */
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import React from 'react';
