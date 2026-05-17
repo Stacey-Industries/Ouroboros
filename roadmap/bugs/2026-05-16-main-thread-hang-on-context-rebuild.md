@@ -1,7 +1,7 @@
 ---
-status: TRIAGED
+status: RESOLVED
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-17
 severity: high
 ---
 
@@ -106,6 +106,30 @@ Lane B fix wave should:
 
 User-visible severity: 2.5 minutes of UI freeze masquerades as a crash. The user has assumed the app died and restarted; data may be lost. Doesn't gate Wave 89 ship (predates the wave) but should be a near-term Lane B fix wave.
 
-## Promotion criteria
+## Resolution (B3a — 2026-05-17)
+
+Diagnostician's top-1 hypothesis (synchronous SQLite fan-out) was **refuted** by the per-phase instrumentation re-added in this wave. The actual culprit was three accidental O(N²) loops in pure-JS module detection over the 46,302-file repoIndex snapshot:
+
+| Detector | Before | After (algorithmic fix) |
+|---|---:|---:|
+| featureFolders | 7,024ms | 244ms |
+| flatGroups | 27,959ms | 188ms |
+| singleFiles | 51,293ms | 44ms |
+| **detectModules total** | **86,690ms** | **1,059ms** (82× faster) |
+| generateRepoMap total | 89,556ms | 4,892ms (18× faster) |
+
+Root cause: each detector iterated the full unfiltered 46k file list per candidate. Fix: build a `Map<dir, files[]>` index once at the top of `detectModules`; reuse in `detectFeatureFolders.claimFeatureFolder`, `detectSingleFileModules.assignCompanionTestFile`, and `detectFlatGroups.assignFlatGroupFiles`. Additionally rewrote `findPrefixGroups` / `hasAnyPrefixGroup` to use sorted+adjacent LCP (O(N log N) instead of O(N²)).
+
+Files touched: `repoMapGenerator.ts`, `repoMapGeneratorSizeCap.ts` (new), `moduleDetector.ts`, `moduleDetectorSingleFile.ts` (new), `moduleDetectorUtils.ts` + colocated tests.
+
+Trace logging preserved as baseline observability: `[trace:generateRepoMap] phase=…` and `[trace:detectModules] phase=…` fire on every rebuild (~8 log lines total). This will surface any future regression in the same hotspot immediately.
+
+## Residual + B3b follow-up
+
+The 4.9s remaining `generateRepoMap` wall time is now distributed across pure-JS work (~1.7s) and synchronous Cypher queries against the codebase graph (~2.7s in `crossModuleDeps` + `hotspotScores` + `enrichSummaries`). User-perceived freeze dropped from 2.5 minutes to ~1-2 seconds.
+
+B3b — wholesale move of `generateRepoMap` to a worker thread — tracked at `roadmap/follow-ups/2026-05-17-move-generateRepoMap-to-worker.md`.
+
+## Promotion criteria (historical)
 
 Lane B fix wave at next sweep — Wave 89.x or its own bug-wave. May naturally cluster with the related deferred items: e2e teardown hang (`roadmap/bugs/2026-05-15-e2e-teardown-hang.md`), the doubled-log-lines observation (which may share a root cause), and the `claude-usage-poller` cascade if it turns out to be its own contributor.

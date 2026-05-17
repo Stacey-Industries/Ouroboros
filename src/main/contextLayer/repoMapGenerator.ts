@@ -19,19 +19,12 @@ import {
   buildModuleStructuralSummaries,
   detectModules,
 } from './moduleDetector';
-import { getRepoMapBudget } from './repoMapBudgets';
 import { buildCrossModuleDependenciesFromGraph } from './repoMapGeneratorDeps';
 import { detectFrameworks } from './repoMapGeneratorFrameworks';
 import { queryModuleExports } from './repoMapGeneratorGraph';
-import {
-  compareByHotspotThenFileCount,
-  computeAllModuleHotspotScores,
-} from './repoMapGeneratorRanking';
+import { computeAllModuleHotspotScores } from './repoMapGeneratorRanking';
+import { enforceSizeCap } from './repoMapGeneratorSizeCap';
 
-// Raw byte cap is now model-aware; see repoMapBudgets.getRepoMapBudget.
-const TRUNCATED_EXPORTS_LIMIT = 5;
-const MAX_MODULES_AFTER_TRUNCATION = 30;
-const MIN_DEPENDENCY_WEIGHT_AFTER_TRUNCATION = 2;
 const COMPRESSED_EXPORTS_LIMIT = 5;
 
 export interface GenerateRepoMapOptions {
@@ -118,35 +111,55 @@ async function resolveCrossModuleDeps(options: {
   });
 }
 
+async function tracedPhase<T>(
+  name: string,
+  fn: () => Promise<T> | T,
+  meta?: (value: T) => string,
+): Promise<T> {
+  const t0 = Date.now();
+  const value = await fn();
+  const tail = meta ? ` ${meta(value)}` : '';
+  log.info(`[trace:generateRepoMap] phase=${name} ms=${Date.now() - t0}${tail}`);
+  return value;
+}
+
 export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<RepoMap> {
   const { repoFacts, repoIndex, workspaceRoot } = options;
-
   const allFiles = collectAllFiles(repoIndex);
   if (allFiles.length === 0) return buildEmptyRepoMap(workspaceRoot);
 
-  const isMultiRoot = repoIndex.roots.length > 1;
-  const modules = detectModulesFromRoots(repoIndex, isMultiRoot);
-  const gitDiffFiles = new Set(repoFacts.gitDiff.changedFiles.map((entry) => entry.filePath));
-  const structuralSummaries = buildModuleStructuralSummaries({
-    modules,
-    files: allFiles,
-    workspaceRoot,
-    gitDiffFiles,
-  });
-  const crossModuleDeps = await resolveCrossModuleDeps({
-    modules,
-    structuralSummaries,
-    allFiles,
-    workspaceRoot,
-  });
-  const enrichedSummaries = await enrichSummariesWithGraphSignatures(structuralSummaries);
-  const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((summary) => ({
-    structural: summary,
-  }));
-  // Phase B2: hotspot scores feed enforceSizeCap Step 3.
-  const hotspotScores = await computeAllModuleHotspotScores(modules);
+  const tOverall = Date.now();
+  log.info(
+    `[trace:generateRepoMap] start files=${allFiles.length} roots=${repoIndex.roots.length}`,
+  );
 
-  return enforceSizeCap(
+  const modules = await tracedPhase(
+    'detectModules',
+    () => detectModulesFromRoots(repoIndex, repoIndex.roots.length > 1),
+    (v) => `modules=${v.length}`,
+  );
+  const gitDiffFiles = new Set(repoFacts.gitDiff.changedFiles.map((entry) => entry.filePath));
+  const structuralSummaries = await tracedPhase('structuralSummaries', () =>
+    buildModuleStructuralSummaries({ modules, files: allFiles, workspaceRoot, gitDiffFiles }),
+  );
+  const crossModuleDeps = await tracedPhase(
+    'crossModuleDeps',
+    () => resolveCrossModuleDeps({ modules, structuralSummaries, allFiles, workspaceRoot }),
+    (v) => `edges=${v.length}`,
+  );
+  const enrichedSummaries = await tracedPhase(
+    'enrichSummaries',
+    () => enrichSummariesWithGraphSignatures(structuralSummaries),
+    (v) => `summaries=${v.length}`,
+  );
+  const hotspotScores = await tracedPhase(
+    'hotspotScores',
+    () => computeAllModuleHotspotScores(modules),
+    (v) => `scored=${v.size}`,
+  );
+
+  const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((s) => ({ structural: s }));
+  const result = enforceSizeCap(
     buildRepoMapFromSummaries({
       workspaceRoot,
       repoIndex,
@@ -157,6 +170,8 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
     hotspotScores,
     options.model,
   );
+  log.info(`[trace:generateRepoMap] done totalMs=${Date.now() - tOverall}`);
+  return result;
 }
 
 export function compressRepoMap(repoMap: RepoMap): RepoMapSummary {
@@ -281,67 +296,6 @@ function buildEmptyRepoMap(workspaceRoot: string): RepoMap {
   };
 }
 
-function enforceSizeCap(
-  repoMap: RepoMap,
-  hotspotScores: Map<string, number>,
-  model?: string,
-): RepoMap {
-  const { rawCapBytes } = getRepoMapBudget(model);
-  let serialized = JSON.stringify(repoMap);
-  if (serialized.length <= rawCapBytes) return repoMap;
-
-  // Step 1: truncate exports per module + drop imports.
-  const trimmedModules = repoMap.modules.map((entry) => ({
-    structural: {
-      ...entry.structural,
-      exports: entry.structural.exports.slice(0, TRUNCATED_EXPORTS_LIMIT),
-      imports: [],
-    },
-    ai: entry.ai,
-  }));
-  // Step 2: drop low-weight cross-module dependencies.
-  const trimmedDeps = repoMap.crossModuleDependencies.filter(
-    (dep) => dep.weight >= MIN_DEPENDENCY_WEIGHT_AFTER_TRUNCATION,
-  );
-
-  const trimmed: RepoMap = {
-    ...repoMap,
-    modules: trimmedModules,
-    crossModuleDependencies: trimmedDeps,
-  };
-  serialized = JSON.stringify(trimmed);
-  if (serialized.length <= rawCapBytes) return trimmed;
-
-  // Step 3: hotspot-ranked top-N truncation (Wave 69 Decision 3).
-  return applyHotspotRankedTruncation(trimmed, trimmedModules, trimmedDeps, hotspotScores);
-}
-
-function applyHotspotRankedTruncation(
-  trimmed: RepoMap,
-  trimmedModules: ModuleContextEntry[],
-  trimmedDeps: Array<{ from: string; to: string; weight: number }>,
-  hotspotScores: Map<string, number>,
-): RepoMap {
-  const sortedModules = [...trimmedModules]
-    .sort((left, right) =>
-      compareByHotspotThenFileCount(
-        hotspotScores,
-        { id: left.structural.module.id, fileCount: left.structural.fileCount },
-        { id: right.structural.module.id, fileCount: right.structural.fileCount },
-      ),
-    )
-    .slice(0, MAX_MODULES_AFTER_TRUNCATION);
-
-  const remainingModuleIds = new Set(sortedModules.map((entry) => entry.structural.module.id));
-  const filteredDeps = trimmedDeps.filter(
-    (dep) => remainingModuleIds.has(dep.from) && remainingModuleIds.has(dep.to),
-  );
-  return {
-    ...trimmed,
-    modules: sortedModules,
-    moduleCount: sortedModules.length,
-    crossModuleDependencies: filteredDeps,
-  };
-}
-
+// enforceSizeCap + applyHotspotRankedTruncation moved to repoMapGeneratorSizeCap.ts
+// (Lane B 2026-05-16, hang investigation).
 // matchesAnyPattern / matchesAnyGlob moved to repoMapGeneratorFrameworks.ts.

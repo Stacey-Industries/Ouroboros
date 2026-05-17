@@ -7,14 +7,18 @@
 
 import path from 'path';
 
+import log from '../logger';
 import type { IndexedRepoFile } from '../orchestration/repoIndexer';
 import type { ModuleIdentity } from './contextLayerTypes';
 import {
   buildCrossModuleDependencies,
   buildModuleStructuralSummaries,
 } from './moduleDetectorHelpers';
+import { detectSingleFileModules } from './moduleDetectorSingleFile';
+import type { DirIndex } from './moduleDetectorUtils';
 import {
   basenameWithoutExtension,
+  buildDirIndex,
   deduplicateModuleIds,
   enforceModuleCap,
   hasAnyPrefixGroup,
@@ -26,7 +30,6 @@ import {
   MIN_FILES_FOR_FLAT_GROUP,
   MIN_FILES_FOR_FOLDER_MODULE,
   MIN_FLAT_GROUP_PREFIX_LENGTH,
-  MIN_SIGNIFICANT_FILE_SIZE,
   normalizedDirname,
   normalizeSeparators,
   toKebabCase,
@@ -39,52 +42,60 @@ export { buildCrossModuleDependencies, buildModuleStructuralSummaries };
 // Public API
 // ---------------------------------------------------------------------------
 
+function timed<T>(name: string, fn: () => T, meta?: (v: T) => string): T {
+  const t0 = Date.now();
+  const v = fn();
+  log.info(`[trace:detectModules] phase=${name} ms=${Date.now() - t0}${meta ? ' ' + meta(v) : ''}`);
+  return v;
+}
+
 export function detectModules(
   rawFiles: IndexedRepoFile[],
   workspaceRoot: string,
 ): ModuleIdentity[] {
+  const tOverall = Date.now();
   const files = rawFiles.map((f) => ({ ...f, relativePath: normalizeSeparators(f.relativePath) }));
+  log.info(`[trace:detectModules] start files=${files.length}`);
   const assigned = new Set<string>();
   const modules: ModuleIdentity[] = [];
+  const lenMeta = (v: ModuleIdentity[]): string => `added=${v.length}`;
 
-  modules.push(...detectFeatureFolders(files, workspaceRoot, assigned));
+  const dirIndex = buildDirIndex(files);
 
-  const configModule = detectConfigGroup(files, workspaceRoot, assigned);
-  if (configModule) modules.push(configModule);
-
-  modules.push(...detectFlatGroups(files, workspaceRoot, assigned));
-  modules.push(...detectSingleFileModules(files, workspaceRoot, assigned));
+  modules.push(
+    ...timed(
+      'featureFolders',
+      () => detectFeatureFolders(files, workspaceRoot, assigned, dirIndex),
+      lenMeta,
+    ),
+  );
+  const cfg = timed('configGroup', () => detectConfigGroup(files, workspaceRoot, assigned));
+  if (cfg) modules.push(cfg);
+  modules.push(
+    ...timed(
+      'flatGroups',
+      () => detectFlatGroups(files, workspaceRoot, assigned, dirIndex),
+      lenMeta,
+    ),
+  );
+  modules.push(
+    ...timed(
+      'singleFiles',
+      () => detectSingleFileModules(files, workspaceRoot, assigned, dirIndex),
+      lenMeta,
+    ),
+  );
 
   deduplicateModuleIds(modules);
   enforceModuleCap(modules);
   modules.sort((left, right) => left.id.localeCompare(right.id));
-
+  log.info(`[trace:detectModules] done totalMs=${Date.now() - tOverall} modules=${modules.length}`);
   return modules;
 }
 
 // ---------------------------------------------------------------------------
 // Feature-folder detection
 // ---------------------------------------------------------------------------
-
-function buildDirMap(files: IndexedRepoFile[]): {
-  dirMap: Map<string, IndexedRepoFile[]>;
-  allDirs: Set<string>;
-} {
-  const dirMap = new Map<string, IndexedRepoFile[]>();
-  const allDirs = new Set<string>();
-
-  for (const file of files) {
-    const relDir = normalizedDirname(file.relativePath);
-    if (relDir && relDir !== '.') allDirs.add(relDir);
-    if (isTestFile(file.relativePath) || !isSourceFile(file.extension) || !relDir || relDir === '.')
-      continue;
-    const existing = dirMap.get(relDir) ?? [];
-    existing.push(file);
-    dirMap.set(relDir, existing);
-  }
-
-  return { dirMap, allDirs };
-}
 
 function buildContainerDirs(allDirs: Set<string>): Set<string> {
   const containerDirs = new Set<string>();
@@ -110,14 +121,14 @@ function isCandidateDir(
 
 interface FeatureFolderClaimCtx {
   candidate: { dirPath: string; files: IndexedRepoFile[] };
-  files: IndexedRepoFile[];
+  allByDir: Map<string, IndexedRepoFile[]>;
   assigned: Set<string>;
   claimedDirs: Set<string>;
   modules: ModuleIdentity[];
 }
 
 function claimFeatureFolder(ctx: FeatureFolderClaimCtx): void {
-  const { candidate, files, assigned, claimedDirs, modules } = ctx;
+  const { candidate, allByDir, assigned, claimedDirs, modules } = ctx;
   const unassignedFiles = candidate.files.filter((f) => !assigned.has(f.relativePath));
   if (unassignedFiles.length < MIN_FILES_FOR_FOLDER_MODULE) return;
 
@@ -130,23 +141,24 @@ function claimFeatureFolder(ctx: FeatureFolderClaimCtx): void {
   });
   claimedDirs.add(candidate.dirPath);
 
-  for (const file of files) {
-    const fileRelDir = normalizedDirname(file.relativePath);
-    if (fileRelDir === candidate.dirPath || fileRelDir.startsWith(candidate.dirPath + '/')) {
-      assigned.add(file.relativePath);
+  const prefix = candidate.dirPath + '/';
+  for (const [dirKey, dirFiles] of allByDir) {
+    if (dirKey === candidate.dirPath || dirKey.startsWith(prefix)) {
+      for (const file of dirFiles) assigned.add(file.relativePath);
     }
   }
 }
 
 function detectFeatureFolders(
-  files: IndexedRepoFile[],
+  _files: IndexedRepoFile[],
   _workspaceRoot: string,
   assigned: Set<string>,
+  dirIndex: DirIndex,
 ): ModuleIdentity[] {
-  const { dirMap, allDirs } = buildDirMap(files);
+  const { sourceByDir, allByDir, allDirs } = dirIndex;
   const containerDirs = buildContainerDirs(allDirs);
 
-  const candidates = [...dirMap.entries()]
+  const candidates = [...sourceByDir.entries()]
     .filter(([dirPath, dirFiles]) => isCandidateDir(dirPath, dirFiles, containerDirs))
     .map(([dirPath, dirFiles]) => ({ dirPath, files: dirFiles }))
     .sort((left, right) => right.dirPath.split('/').length - left.dirPath.split('/').length);
@@ -157,7 +169,7 @@ function detectFeatureFolders(
   for (const candidate of candidates) {
     const dp = candidate.dirPath;
     const isNested = [...claimedDirs].some((c) => dp.startsWith(c + '/') || c.startsWith(dp + '/'));
-    if (!isNested) claimFeatureFolder({ candidate, files, assigned, claimedDirs, modules });
+    if (!isNested) claimFeatureFolder({ candidate, allByDir, assigned, claimedDirs, modules });
   }
 
   return modules;
@@ -191,21 +203,36 @@ function detectConfigGroup(
 // Flat-group detection
 // ---------------------------------------------------------------------------
 
-function assignFlatGroupFiles(groupFiles: IndexedRepoFile[], dirPath: string, files: IndexedRepoFile[], assigned: Set<string>): void {
+function assignFlatGroupFiles(
+  groupFiles: IndexedRepoFile[],
+  dirAllFiles: IndexedRepoFile[],
+  assigned: Set<string>,
+): void {
   const groupBasenames = new Set(groupFiles.map((f) => basenameWithoutExtension(f.relativePath)));
-  for (const file of files) {
-    if (assigned.has(file.relativePath) || normalizedDirname(file.relativePath) !== dirPath) continue;
+  for (const file of dirAllFiles) {
+    if (assigned.has(file.relativePath)) continue;
     const fileBase = basenameWithoutExtension(file.relativePath);
-    if (groupBasenames.has(fileBase) || groupBasenames.has(fileBase.replace(/\.(test|spec)$/, ''))) {
+    if (
+      groupBasenames.has(fileBase) ||
+      groupBasenames.has(fileBase.replace(/\.(test|spec)$/, ''))
+    ) {
       assigned.add(file.relativePath);
     }
   }
 }
 
-function groupUnassignedByDir(files: IndexedRepoFile[], assigned: Set<string>): Map<string, IndexedRepoFile[]> {
+function groupUnassignedByDir(
+  files: IndexedRepoFile[],
+  assigned: Set<string>,
+): Map<string, IndexedRepoFile[]> {
   const dirGroups = new Map<string, IndexedRepoFile[]>();
   for (const file of files) {
-    if (assigned.has(file.relativePath) || isTestFile(file.relativePath) || !isSourceFile(file.extension)) continue;
+    if (
+      assigned.has(file.relativePath) ||
+      isTestFile(file.relativePath) ||
+      !isSourceFile(file.extension)
+    )
+      continue;
     const relDir = normalizedDirname(file.relativePath);
     const existing = dirGroups.get(relDir) ?? [];
     existing.push(file);
@@ -218,13 +245,13 @@ interface PrefixGroupCtx {
   prefix: string;
   groupFiles: IndexedRepoFile[];
   dirPath: string;
-  files: IndexedRepoFile[];
+  dirAllFiles: IndexedRepoFile[];
   assigned: Set<string>;
   modules: ModuleIdentity[];
 }
 
 function processPrefixGroup(ctx: PrefixGroupCtx): void {
-  const { prefix, groupFiles, dirPath, files, assigned, modules } = ctx;
+  const { prefix, groupFiles, dirPath, dirAllFiles, assigned, modules } = ctx;
   if (groupFiles.length < MIN_FILES_FOR_FLAT_GROUP) return;
   modules.push({
     id: toKebabCase(prefix),
@@ -232,21 +259,23 @@ function processPrefixGroup(ctx: PrefixGroupCtx): void {
     rootPath: dirPath === '.' || dirPath === '' ? '.' : dirPath,
     pattern: 'flat-group',
   });
-  assignFlatGroupFiles(groupFiles, dirPath, files, assigned);
+  assignFlatGroupFiles(groupFiles, dirAllFiles, assigned);
 }
 
 function detectFlatGroups(
   files: IndexedRepoFile[],
   _workspaceRoot: string,
   assigned: Set<string>,
+  dirIndex: DirIndex,
 ): ModuleIdentity[] {
   const dirGroups = groupUnassignedByDir(files, assigned);
   const modules: ModuleIdentity[] = [];
 
   for (const [dirPath, dirFiles] of dirGroups) {
     if (dirFiles.length < 2) continue;
+    const dirAllFiles = dirIndex.allByDir.get(dirPath) ?? dirFiles;
     for (const [prefix, groupFiles] of findPrefixGroups(dirFiles)) {
-      processPrefixGroup({ prefix, groupFiles, dirPath, files, assigned, modules });
+      processPrefixGroup({ prefix, groupFiles, dirPath, dirAllFiles, assigned, modules });
     }
   }
 
@@ -298,15 +327,23 @@ function addToGroup(
   groups.set(normalizedPrefix, existing);
 }
 
-function findBestPrefix(base: string, basenames: Array<{ base: string }>): string {
-  let bestPrefix = '';
-  for (const other of basenames) {
-    if (other.base === base) continue;
-    const prefix = longestCommonPrefix(base, other.base);
-    if (prefix.length >= MIN_FLAT_GROUP_PREFIX_LENGTH && prefix.length > bestPrefix.length)
-      bestPrefix = prefix;
+/** Returns the best (longest) prefix a basename shares with its sorted neighbors. */
+function bestPrefixFromNeighbors(
+  sortedBases: Array<{ file: IndexedRepoFile; base: string }>,
+  idx: number,
+): string {
+  let best = '';
+  if (idx > 0) {
+    // eslint-disable-next-line security/detect-object-injection -- idx is a bounded numeric index
+    const p = longestCommonPrefix(sortedBases[idx].base, sortedBases[idx - 1].base);
+    if (p.length > best.length) best = p;
   }
-  return bestPrefix;
+  if (idx < sortedBases.length - 1) {
+    // eslint-disable-next-line security/detect-object-injection -- idx is a bounded numeric index
+    const p = longestCommonPrefix(sortedBases[idx].base, sortedBases[idx + 1].base);
+    if (p.length > best.length) best = p;
+  }
+  return best;
 }
 
 function findPrefixGroups(files: IndexedRepoFile[]): Map<string, IndexedRepoFile[]> {
@@ -315,8 +352,10 @@ function findPrefixGroups(files: IndexedRepoFile[]): Map<string, IndexedRepoFile
 
   const groups = new Map<string, IndexedRepoFile[]>();
 
-  for (const current of basenames) {
-    const bestPrefix = findBestPrefix(current.base, basenames);
+  for (let i = 0; i < basenames.length; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a bounded numeric index
+    const current = basenames[i];
+    const bestPrefix = bestPrefixFromNeighbors(basenames, i);
     if (bestPrefix.length >= MIN_FLAT_GROUP_PREFIX_LENGTH) {
       const normalizedPrefix = bestPrefix.replace(/[^a-zA-Z]+$/, '');
       if (normalizedPrefix.length >= MIN_FLAT_GROUP_PREFIX_LENGTH) {
@@ -328,41 +367,5 @@ function findPrefixGroups(files: IndexedRepoFile[]): Map<string, IndexedRepoFile
   return mergePrefixGroups(groups);
 }
 
-// ---------------------------------------------------------------------------
-// Single-file module detection
-// ---------------------------------------------------------------------------
-
-function assignCompanionTestFile(files: IndexedRepoFile[], basename: string, relDir: string, assigned: Set<string>): void {
-  for (const f of files) {
-    if (assigned.has(f.relativePath)) continue;
-    const base = basenameWithoutExtension(f.relativePath).replace(/\.(test|spec)$/, '');
-    if (normalizedDirname(f.relativePath) === relDir && base === basename) assigned.add(f.relativePath);
-  }
-}
-
-function detectSingleFileModules(
-  files: IndexedRepoFile[],
-  _workspaceRoot: string,
-  assigned: Set<string>,
-): ModuleIdentity[] {
-  const modules: ModuleIdentity[] = [];
-
-  for (const file of files) {
-    if (assigned.has(file.relativePath) || isTestFile(file.relativePath)) continue;
-    if (file.extension === '.d.ts' || !isSourceFile(file.extension)) continue;
-    if (file.size < MIN_SIGNIFICANT_FILE_SIZE) continue;
-
-    const basename = basenameWithoutExtension(file.relativePath);
-    const relDir = normalizedDirname(file.relativePath);
-    modules.push({
-      id: toKebabCase(basename),
-      label: toLabel(basename),
-      rootPath: relDir === '.' || relDir === '' ? file.relativePath : relDir,
-      pattern: 'single-file',
-    });
-    assigned.add(file.relativePath);
-    assignCompanionTestFile(files, basename, relDir, assigned);
-  }
-
-  return modules;
-}
+// Single-file detection moved to moduleDetectorSingleFile.ts
+// (Lane B 2026-05-16, hang investigation — made room for sub-phase trace logging).

@@ -5,6 +5,9 @@
 
 import path from 'path';
 
+import type { IndexedRepoFile } from '../orchestration/repoIndexer';
+import type { ModuleIdentity } from './contextLayerTypes';
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -172,8 +175,6 @@ export function getParentDirName(rootPath: string): string | null {
 // Module ID deduplication and cap enforcement
 // ---------------------------------------------------------------------------
 
-import type { ModuleIdentity } from './contextLayerTypes';
-
 const MAX_MODULES = 50;
 const PATTERN_PRIORITY: Record<string, number> = {
   'feature-folder': 3,
@@ -222,13 +223,48 @@ export function enforceModuleCap(modules: ModuleIdentity[]): void {
 
 export function hasAnyPrefixGroup(files: { relativePath: string }[]): boolean {
   if (files.length < 2) return false;
-  const basenames = files.map((f) => basenameWithoutExtension(f.relativePath));
-  for (const a of basenames) {
-    for (const b of basenames) {
-      if (a === b) continue;
-      const prefix = longestCommonPrefix(a, b);
-      if (prefix.length >= MIN_FLAT_GROUP_PREFIX_LENGTH) return true;
-    }
+  const basenames = files
+    .map((f) => basenameWithoutExtension(f.relativePath))
+    .sort((a, b) => a.localeCompare(b));
+  for (let i = 0; i < basenames.length - 1; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a bounded numeric index
+    const prefix = longestCommonPrefix(basenames[i], basenames[i + 1]);
+    if (prefix.length >= MIN_FLAT_GROUP_PREFIX_LENGTH) return true;
   }
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// Directory index — built once per detectModules call, passed to sub-detectors
+// ---------------------------------------------------------------------------
+
+export interface DirIndex {
+  /** All files (all extensions) keyed by parent dir. Used for assigning. */
+  allByDir: Map<string, IndexedRepoFile[]>;
+  /** Source-only, non-test files keyed by parent dir. Used for candidate detection. */
+  sourceByDir: Map<string, IndexedRepoFile[]>;
+  /** Set of every directory that contains at least one file. */
+  allDirs: Set<string>;
+}
+
+export function buildDirIndex(files: IndexedRepoFile[]): DirIndex {
+  const allByDir = new Map<string, IndexedRepoFile[]>();
+  const sourceByDir = new Map<string, IndexedRepoFile[]>();
+  const allDirs = new Set<string>();
+
+  for (const file of files) {
+    const relDir = normalizedDirname(file.relativePath);
+    if (relDir && relDir !== '.') allDirs.add(relDir);
+
+    const bucket = allByDir.get(relDir) ?? [];
+    bucket.push(file);
+    allByDir.set(relDir, bucket);
+
+    if (isTestFile(file.relativePath) || !isSourceFile(file.extension)) continue;
+    const srcBucket = sourceByDir.get(relDir) ?? [];
+    srcBucket.push(file);
+    sourceByDir.set(relDir, srcBucket);
+  }
+
+  return { allByDir, sourceByDir, allDirs };
 }
