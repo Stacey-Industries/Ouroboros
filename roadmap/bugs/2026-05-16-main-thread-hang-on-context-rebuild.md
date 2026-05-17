@@ -51,6 +51,57 @@ Dispatch `sonnet-diagnostician` (background task) with:
 - Search for any `for (...)` over `graph.nodes`, `graph.edges`, or `forEachSync`-style traversal called on the main thread post-rebuild
 - Cross-check `claude-usage-poller` for interval bookkeeping (does it dedupe in-flight polls?)
 
+## Diagnostician findings (2026-05-16)
+
+**Root cause hypothesis (top-1):** `triggerContextLayerRebuildAfterGraphReady` → `forceRebuild` → `generateRepoMap` runs ~200 synchronous SQLite Cypher queries on the main thread with NO yield points — across three phases:
+- `enrichSummariesWithGraphSignatures` (~50 calls)
+- `buildCrossModuleDependenciesFromGraph` (~100 calls, 2 per module)
+- `computeAllModuleHotspotScores` (~50 calls)
+
+Each `queryGraph(cypher)` is synchronous against the fully-populated ~23.4K-node graph. At ~0.75s avg, 200 × 0.75s ≈ 150s — matches the 152s observation.
+
+**Co-present block (top-2):** `computeHotspots` inside `buildGraphSummary` runs a synchronous `.map()` calling `db.getNodeDegree` per node (~7K Function/Method nodes). Produced the 465ms jank #7. Independent from the 152s jank #8, but illustrates the same pattern.
+
+**Doubled log lines:** independent from the hang. Likely two jank events firing in quick succession during recovery drain. No shared root cause.
+
+**Wave 89 implication:** none. Phase 1's dual-`useTerminalSessions` operates entirely in the renderer; no path to the main-thread SQLite fan-out.
+
+## Instrumentation landed (partial — 3 of 5 files)
+
+Diagnostician's instrumentation merged into commit `6b52c908` (Phase 4c commit 2's sweep):
+
+| File | What it captures |
+|------|------------------|
+| `src/main/ipc-handlers/agentChatContext.ts` (`attachGraphSummary`) | Start ts, snapshot file count, packet presence, heap at handoff; `buildGraphSummary` resolution time; total settle time |
+| `src/main/mainStartupContextLayerTrigger.ts` (`triggerContextLayerRebuildAfterGraphReady`) | Triggered ts + heap, total elapsed for `forceRebuild` |
+| `src/main/contextLayer/repoMapGeneratorRanking.ts` (`computeAllModuleHotspotScores`) | Start/done with module count and total ms; per-module slow-query warning (>500ms) |
+
+**Deferred** (lost to ESLint max-lines:300 cap; needs helper extraction before re-instrumenting):
+- `src/main/contextLayer/repoMapGenerator.ts` — per-phase timing inside `buildRepoMapPhases` (detectModules / structuralSummaries / crossModuleDeps / enrichSummaries / hotspotScores). **This is the highest-value lost instrumentation** — it would prove which of the 3 fan-out phases dominates.
+- `src/main/codebaseGraph/queryEngine.ts` — `computeHotspots` node-fetch timing. Lower priority (hypothesis 2, not hypothesis 1).
+
+## Reproduction steps for Cole
+
+1. Start the app fresh (cold graph cache — delete `userData/codebase-memory.sqlite` if needed to force a full graph index).
+2. Open the Agent IDE project as the workspace.
+3. Wait for the graph index to complete (watch for `[system2] initial index complete` in logs).
+4. Wait for the context worker to complete (watch for `Context cache built via worker`).
+5. **Watch for `[trace:post-graph-forceRebuild] triggered`** — the freeze should start within seconds of that.
+6. Capture the full main-process log from that line through the next `[jank] event loop blocked` entry.
+
+**What to look for in the captured log:**
+- The total `forceRebuild` elapsed time from `mainStartupContextLayerTrigger.ts`.
+- `computeAllModuleHotspotScores` total ms — if dominant (>50s), hypothesis 2 confirmed. If small (<10s), the lost instrumentation on `buildRepoMapPhases` is needed to find the dominant phase among the other two.
+- Any `slow-query` per-module warnings (>500ms) — these isolate which specific Cypher patterns are pathological.
+
+## Next actions
+
+Lane B fix wave should:
+1. Re-add per-phase trace logging to `repoMapGenerator.ts` after extracting `buildRepoMapPhases` into helper functions (needed to bring the file under the 300-line cap).
+2. From the captured log, identify the dominant phase.
+3. Pick a fix from: (a) yield-between-queries via `await new Promise(setImmediate)` or microtask scheduling, (b) move the entire fan-out to a worker thread, (c) batch all Cypher queries into a single multi-statement query with proper SQLite indexing.
+4. Cleanup investigation logs at B5 (the `[trace:...]` tags are greppable).
+
 ## Why this is a bug, not a follow-up
 
 User-visible severity: 2.5 minutes of UI freeze masquerades as a crash. The user has assumed the app died and restarted; data may be lost. Doesn't gate Wave 89 ship (predates the wave) but should be a near-term Lane B fix wave.
