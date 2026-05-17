@@ -6,6 +6,8 @@
  * paths remain unchanged.
  */
 
+import type { DockPersistenceData } from '@shared/config/dockPersistenceSchema';
+
 import type { AgentChatSettings } from './agentChat/types';
 import type {
   AgentTemplate,
@@ -56,6 +58,8 @@ export interface AppConfig {
   autoInstallHooks: boolean;
   shell: string;
   panelSizes: PanelSizes;
+  /** Wave 89 — chat-only-shell terminal-dock slot heights + collapsed state + overlay widths */
+  dockPersistence?: DockPersistenceData;
   windowBounds: WindowBounds;
   fontUI: string;
   fontMono: string;

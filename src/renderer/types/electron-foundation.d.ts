@@ -160,6 +160,7 @@ export interface AppConfig {
   autoInstallHooks: boolean;
   shell: string;
   panelSizes: PanelSizes;
+  dockPersistence?: import('@shared/config/dockPersistenceSchema').DockPersistenceData;
   windowBounds: WindowBounds;
   fontUI: string;
   fontMono: string;
@@ -287,15 +288,8 @@ export interface AppConfig {
   /** Wave 33a Phase A — mobile client pairing + device registry. */
   mobileAccess?: {
     enabled: boolean;
-    pairedDevices: Array<{
-      id: string;
-      label: string;
-      refreshTokenHash: string;
-      fingerprint: string;
-      capabilities: string[];
-      issuedAt: string;
-      lastSeenAt: string;
-    }>;
+    // prettier-ignore
+    pairedDevices: Array<{ id: string; label: string; refreshTokenHash: string; fingerprint: string; capabilities: string[]; issuedAt: string; lastSeenAt: string }>;
   };
   /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
   sessionDispatch?: {

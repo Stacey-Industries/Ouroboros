@@ -62,7 +62,11 @@ function buildOverlayWidthsPayload(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { dockHeight: _legacy, ...rest } = existing; // drop legacy key (ADR #5)
   return {
-    terminalDockSlots: rest.terminalDockSlots ?? { primary: 160, secondary: 100 },
+    terminalDockSlots: rest.terminalDockSlots ?? { primary: 280, secondary: 180 },
+    terminalDockSlotsCollapsed: rest.terminalDockSlotsCollapsed ?? {
+      primary: false,
+      secondary: false,
+    },
     overlayDrawerWidth:
       widths.overlayDrawerWidth ?? rest.overlayDrawerWidth ?? DEFAULT_OVERLAY_DRAWER_WIDTH,
     artifactOverlayWidth:
