@@ -17,7 +17,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useResizable } from '../useResizable';
-import { useDockHandlers } from './ChatWorkbenchTerminalDock.handlers';
 import { DockSlot } from './DockSlot';
 import { useDockSlotHeights } from './useDockSlotHeights';
 
@@ -167,7 +166,7 @@ export interface ChatWorkbenchTerminalDockProps {
 
 interface DockState {
   sizes: ReturnType<typeof useResizable>['sizes'];
-  handlers: ReturnType<typeof useDockHandlers>;
+  handleDockResizePointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   slotHeights: ReturnType<typeof useDockSlotHeights>['slotHeights'];
   handleDividerPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPrimarySessionChange: (id: string | null) => void;
@@ -189,10 +188,14 @@ function useDockState(onActiveSessionChange?: (id: string | null) => void): Dock
     runLegacyDockHeightMigration(migrationRef.current.sizes, migrationRef.current.applySizes);
   }, []);
 
-  const terminalStub = { activeSessionId: primarySessionId ?? secondarySessionId } as Parameters<
-    typeof useDockHandlers
-  >[0];
-  const handlers = useDockHandlers(terminalStub, sizes, startResize);
+  const handleDockResizePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+      startResize('terminal', 'horizontal', sizes.terminal, event.clientY);
+    },
+    [sizes.terminal, startResize],
+  );
 
   const handleDividerPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -205,7 +208,7 @@ function useDockState(onActiveSessionChange?: (id: string | null) => void): Dock
 
   return {
     sizes,
-    handlers,
+    handleDockResizePointerDown,
     slotHeights,
     handleDividerPointerDown,
     onPrimarySessionChange,
@@ -223,7 +226,7 @@ export function ChatWorkbenchTerminalDock({
 }: ChatWorkbenchTerminalDockProps): React.ReactElement {
   const {
     sizes,
-    handlers,
+    handleDockResizePointerDown,
     slotHeights,
     handleDividerPointerDown,
     onPrimarySessionChange,
@@ -236,7 +239,7 @@ export function ChatWorkbenchTerminalDock({
       style={{ height: sizes.terminal }}
       data-testid="chat-workbench-terminal-dock"
     >
-      <DockResizeHandle onPointerDown={handlers.handleResizePointerDown} />
+      <DockResizeHandle onPointerDown={handleDockResizePointerDown} />
       <DockHeader onClose={onClose} />
       <DockSlot
         slot="primary"
