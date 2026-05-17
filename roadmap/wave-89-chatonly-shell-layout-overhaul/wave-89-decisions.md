@@ -81,6 +81,28 @@ updated: 2026-05-16
 
 **Consequences:** If a user downgrades to a pre-Wave-89 build after upgrading, their dock heights reset to the Wave 88 default (the legacy key is gone). Acceptable — downgrade is not a supported flow. Commits us to: the same migration pattern for future schema extensions.
 
+## Decision 7: Mid-wave pivot — terminal-first ChatOnlyShell
+
+**Context (added 2026-05-16, mid-Phase-4):** Surfaced during manual smoke gate. Cole's framing: *"Why would we still have chat if it is useless soon? ... terminal first is the only way I can drive it properly moving forward with subscription claude."* Subscription Claude (OAuth, CLI-managed tokens, no API key per [[user_auth_subscription]]) means the `spawnClaude` CLI pattern is the only authorized substrate. The current chat composer (one-shot `claude -p` per turn) is more limited than interactive `claude` for tool-use streaming, multi-turn context, and hooks. Wave 90 was scoped to swap the substrate; this wave catches that the *surface* (chat-bubble UI) should also pivot in the same direction.
+
+**Options considered:**
+- *Halt Wave 89, reset, re-plan as "Terminal-First Shell" from scratch.* Architecturally cleanest. Cost: re-planning overhead; commits get cherry-picked.
+- *Land Wave 89 as a transitional intermediate (chat + dock), then pivot in Wave 90.* Preserves the locked plan. Cost: ships a layout shape known to be wrong for one wave-cycle.
+- *Rescope Wave 89 in-flight.* Add Phase 4b: deactivate chat surface in the ChatOnlyShell, restructure body to be dock-first, move chat affordances (model + permission chips) to the title bar. Cost: wave grows; planning artifact gets a Decision 7 addendum; doc commits get rewritten.
+
+**Pick:** Rescope in-flight (Cole's call, 2026-05-16). **Tier:** pragmatic mid-wave correction.
+
+**Rationale:** The Phase 0/1/2 commits already shipped (`useResizable.sibling-stack`, two-slot dock, `OverlayDrawer` primitive) keep their value under terminal-first — they ARE the terminal-first substrate. Phase 3's overlay migration also keeps value (approvals + diff + artifact still need a UI home; terminal can't render them). Only the chat-area-as-positioned-ancestor wrapper and the `AgentChatWorkspace` mount are obsolete. The actual delta is contained: remove ~6 mounts from the shell, restructure the body, move chip-row to title bar, archive-move deferred. Halting + re-planning would discard zero code and burn ~30 min on ceremony.
+
+**Consequences:**
+- **`AgentChat/` code stays in place** (no archive-move this wave). The IDE shell (`InnerAppLayout` / `RightSidebarTabs`) still consumes it. Future work could relocate to `src/renderer/components/_archive-chat-api/` if/when API-based chat becomes a target — preserves optionality.
+- **ChatOnlyShell body becomes `rail | dock-main-area`** (no chat sibling). Two-slot dock fills the entire main area, not just the bottom. The dock-vs-body resize handle (`DockResizeHandle`) becomes unreachable in this shell — slot divider stays.
+- **Deactivated in chat-only shell:** `AgentChatWorkspace`, `FloatingComposerContainer`, `ChatStatusChipRow`, `WorkbenchApprovalSurface`-inside-chat, `ChatWorkbenchComparePane`, `ChatHistorySidebar` (replaced by `WorkbenchRail`'s session-list groups from Wave 47).
+- **Model + permission chips relocate to title bar** (Cole's call, Option 2). Two compact chips between project label and exit button. Cleanest non-Piebald layout that preserves discoverability.
+- **Phase 3's chat-area `position: relative` wrapper migrates** from the chat-area row to the dock-main-area wrapper. Overlays now anchor to the dock-main-area's right edge.
+- **Wave 89 scope grows** — adds Phase 4b. Phase 4 doc commit (`e20cd8a3`) gets rewritten in Phase 4b. Phase 5 still ships as v2.18.0.
+- Commits us to: terminal-first as the ChatOnlyShell's default. Wave 90 wires interactive `claude` into the primary slot; Wave 91 cleans up the dead `claude -p` substrate. The chat composer (per-turn `-p`) is now a Wave-91-removal target, not a Wave-90-coexistence question.
+
 ## Decision 6: Migration UX (auto-switch vs opt-in toggle)
 
 **Context:** Wave 89 changes the visible layout (stacked terminals, overlay drawer). Do users see the new layout on first launch post-upgrade, or do they opt in via a toggle?
