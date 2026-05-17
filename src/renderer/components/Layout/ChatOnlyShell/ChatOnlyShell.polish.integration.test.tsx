@@ -98,7 +98,6 @@ vi.mock('./ChatOnlyDiffOverlay', () => ({
 
 afterEach(() => {
   cleanup();
-  capturedVariant = undefined;
 });
 
 describe('ChatOnlyShell — Wave 43 polish integration', () => {
