@@ -1,5 +1,6 @@
 /**
  * DockSlot.tsx — Wave 89 Phase 1
+ * Wave 89 Phase 4c: per-slot minimize/expand affordance in SlotHeader.
  *
  * A single slot in the two-slot stacked terminal dock. Each slot owns its own
  * useTerminalSessions instance (independent session lifecycle). The parent
@@ -7,6 +8,12 @@
  *
  * slot: 'primary' — top slot; Wave 90 home for interactive claude.
  * slot: 'secondary' — bottom slot; dev shell.
+ *
+ * Phase 4c collapse behavior:
+ *  - When collapsed=true the slot renders only its SlotHeader (28px strip).
+ *  - The ▾ button collapses, ▴ expands.
+ *  - + New button stays visible when collapsed (user can spawn while collapsed).
+ *  - Rec and ✕ buttons hide when collapsed (need visible terminal surface).
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -33,11 +40,30 @@ const BTN_DANGER =
 
 interface SlotHeaderProps {
   label: string;
+  collapsed: boolean;
   activeSessionId: string | null;
   isRecording: boolean;
   onSpawn: () => void;
   onCloseSession: () => void;
   onToggleRecording: () => void;
+  onToggleCollapse: () => void;
+}
+
+function SlotCollapseButton({
+  collapsed,
+  onToggleCollapse,
+}: Pick<SlotHeaderProps, 'collapsed' | 'onToggleCollapse'>): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className={`${BTN_BASE} ${BTN_HOVER}`}
+      onClick={onToggleCollapse}
+      aria-label={collapsed ? 'Expand slot' : 'Collapse slot'}
+      aria-expanded={!collapsed}
+    >
+      {collapsed ? '▴' : '▾'}
+    </button>
+  );
 }
 
 function SlotRecordingButton({
@@ -85,37 +111,71 @@ function SlotSpawnButton({
   );
 }
 
+function SlotExpandedButtons({
+  testId,
+  activeSessionId,
+  isRecording,
+  onCloseSession,
+  onToggleRecording,
+}: {
+  testId: string;
+  activeSessionId: string | null;
+  isRecording: boolean;
+  onCloseSession: () => void;
+  onToggleRecording: () => void;
+}): React.ReactElement {
+  return (
+    <>
+      <SlotRecordingButton
+        activeSessionId={activeSessionId}
+        isRecording={isRecording}
+        onToggleRecording={onToggleRecording}
+      />
+      <button
+        type="button"
+        disabled={!activeSessionId}
+        className={`${BTN_BASE} ${BTN_DANGER}`}
+        onClick={onCloseSession}
+        data-testid={`dock-slot-${testId}-close-session`}
+        aria-label="Close session"
+      >
+        ✕
+      </button>
+    </>
+  );
+}
+
 function SlotHeader({
   label,
+  collapsed,
   activeSessionId,
   isRecording,
   onSpawn,
   onCloseSession,
   onToggleRecording,
+  onToggleCollapse,
 }: SlotHeaderProps): React.ReactElement {
   const testId = label.toLowerCase();
   return (
-    <div className="flex items-center justify-between border-b border-border-semantic px-2 py-0.5">
+    <div
+      className="flex shrink-0 items-center justify-between border-b border-border-semantic px-2 py-0.5"
+      style={{ height: 28 }}
+    >
       <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
         {label}
       </span>
       <div className="flex items-center gap-1">
         <SlotSpawnButton onSpawn={onSpawn} testId={testId} />
-        <SlotRecordingButton
-          activeSessionId={activeSessionId}
-          isRecording={isRecording}
-          onToggleRecording={onToggleRecording}
-        />
-        <button
-          type="button"
-          disabled={!activeSessionId}
-          className={`${BTN_BASE} ${BTN_DANGER}`}
-          onClick={onCloseSession}
-          data-testid={`dock-slot-${testId}-close-session`}
-          aria-label="Close session"
-        >
-          ✕
-        </button>
+        {!collapsed && (
+          <SlotExpandedButtons
+            testId={testId}
+            activeSessionId={activeSessionId}
+            isRecording={isRecording}
+            onCloseSession={onCloseSession}
+            onToggleRecording={onToggleRecording}
+          />
+        )}
+        <SlotCollapseButton collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
       </div>
     </div>
   );
@@ -189,12 +249,16 @@ function SlotTerminalSurface({
 export interface DockSlotProps {
   slot: SlotId;
   height: number;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   onActiveSessionChange?: (sessionId: string | null) => void;
 }
 
 export function DockSlot({
   slot,
   height,
+  collapsed,
+  onToggleCollapse,
   onActiveSessionChange,
 }: DockSlotProps): React.ReactElement {
   const terminal = useTerminalSessions();
@@ -211,16 +275,21 @@ export function DockSlot({
       className="flex flex-col overflow-hidden border-b border-border-semantic"
       style={{ height }}
       data-testid={`dock-slot-${slot}`}
+      data-collapsed={collapsed}
     >
       <SlotHeader
         label={label}
+        collapsed={collapsed}
         activeSessionId={terminal.activeSessionId}
         isRecording={isRecording}
         onSpawn={handleSpawn}
         onCloseSession={handleCloseSession}
         onToggleRecording={handleToggleRecording}
+        onToggleCollapse={onToggleCollapse}
       />
-      <SlotTerminalSurface slot={slot} terminal={terminal} handleSpawn={handleSpawn} />
+      {!collapsed && (
+        <SlotTerminalSurface slot={slot} terminal={terminal} handleSpawn={handleSpawn} />
+      )}
     </div>
   );
 }

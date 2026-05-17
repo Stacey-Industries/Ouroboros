@@ -14,13 +14,22 @@
 import log from './logger';
 
 export async function triggerContextLayerRebuildAfterGraphReady(): Promise<void> {
+  const t0 = Date.now();
+  log.info(
+    `[trace:post-graph-forceRebuild] triggered — heapMB=${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}`,
+  );
   try {
     const { getContextLayerController } = await import('./contextLayer/contextLayerController');
     const ctrl = getContextLayerController();
-    if (!ctrl) return;
+    if (!ctrl) {
+      log.info('[trace:post-graph-forceRebuild] no controller — skipping');
+      return;
+    }
     log.info('[context-layer] graph index ready — triggering forceRebuild');
     await ctrl.forceRebuild();
-    log.info('[context-layer] forceRebuild after graph-ready complete');
+    log.info(
+      `[context-layer] forceRebuild after graph-ready complete — elapsed=${Date.now() - t0}ms`,
+    );
   } catch (err) {
     log.warn('[context-layer] post-graph-ready rebuild failed:', err);
   }

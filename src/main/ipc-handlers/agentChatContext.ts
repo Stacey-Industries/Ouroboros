@@ -156,16 +156,28 @@ function handleContextWorkerMessage(msg: WorkerMessage): void {
 }
 
 function attachGraphSummary(entry: CachedContext, key: string): void {
+  const snapshotFileCount = entry.snapshot.roots.reduce((n, r) => n + r.files.length, 0);
+  log.info(
+    `[trace:worker-handoff] attachGraphSummary start — key=${key}` +
+      ` snapshotFiles=${snapshotFileCount}` +
+      ` packetPresent=${!!entry.cachedPacket}` +
+      ` heapMB=${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}`,
+  );
+  const t0 = Date.now();
   void buildGraphSummary()
     .catch(() => ({ hotspots: [], blastRadius: [], builtAt: 0 }) as GraphSummary)
     .then((gs) => {
+      log.info(`[trace:worker-handoff] buildGraphSummary resolved in ${Date.now() - t0}ms`);
+      const tPatch = Date.now();
       entry.graphSummary = gs;
       if (entry.cachedPacket) {
         const section = formatGraphSummary(gs);
         if (section) entry.cachedPacket.graphSummary = section;
       }
+      log.info(`[trace:worker-handoff] patch-entry done in ${Date.now() - tPatch}ms`);
     })
     .finally(() => {
+      log.info(`[trace:worker-handoff] attachGraphSummary fully settled in ${Date.now() - t0}ms`);
       contextBuildInFlight.delete(key);
     });
 }

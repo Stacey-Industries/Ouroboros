@@ -38,14 +38,20 @@ export async function computeAllModuleHotspotScores(
     return scores;
   }
 
+  const t0 = Date.now();
+  log.info(`[trace:hotspotScores] start — modules=${modules.length}`);
   for (const mod of modules) {
     try {
+      const tMod = Date.now();
       const score = await queryModuleHotspotScore(mod.rootPath);
       scores.set(mod.id, score);
+      const modMs = Date.now() - tMod;
+      if (modMs > 500) log.warn(`[trace:hotspotScores] slow query mod=${mod.id} ms=${modMs}`);
     } catch (err) {
       log.warn('[context-layer] hotspot query failed for', mod.id, err);
     }
   }
+  log.info(`[trace:hotspotScores] done — modules=${modules.length} totalMs=${Date.now() - t0}`);
   return scores;
 }
 
