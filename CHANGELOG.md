@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.0] - 2026-05-16
+
+### Added
+- **Wave 89 — ChatOnlyShell Terminal-First Pivot.** Started as a chat-shell layout overhaul (two-slot stacked terminals + overlay drawers); mid-wave the strategic direction shifted to terminal-first (subscription Claude → CLI-only substrate → chat-bubble UI becomes vestigial post-Wave-90). Full story in `roadmap/wave-89-chatonly-shell-layout-overhaul/wave-89-result.md`.
+  - **Two-slot stacked terminal dock.** `DockSlot.tsx` per-slot component with independent `useTerminalSessions`; `useDockSlotHeights` orchestrates per-slot height persistence + drag math; sibling-resizable divider via `useResizable.startSiblingResize` (Phase 0). `SPLIT_TERMINAL_EVENT` payload extended with `{ slot, sessionId }` discriminator + `'primary'` fallback for legacy dispatch sites.
+  - **Per-slot collapse affordance** (Phase 4c). `▾`/`▴` per slot — collapses to 28px header strip, sibling grows to fill. Both slots can collapse simultaneously. Collapsed state persists across restart via `terminalDockSlotsCollapsed` schema field. `+New` stays visible when collapsed (so spawning re-opens); `Rec`/`✕` hide.
+  - **`OverlayDrawer` primitive** (Phase 2). Non-modal slide-in drawer anchored to nearest positioned ancestor (not viewport). Z-index 200. Mica/vibrancy-safe `rgba(0,0,0,0.35)` backdrop. Window-scoped Escape with `stopPropagation` (jsdom div-handlers don't propagate reliably; non-modal contract honored — composer Escape works when drawer closed). Width-handle drag on the left edge; primitive renders the handle, consumer persists width.
+  - **`useResizable.startSiblingResize`** (Phase 0). New function alongside existing positional `startResize`; pure math extracted to `useResizable.sibling.ts`. Additive `onCommit` callback added to `SiblingResizeOpts` (Phase 1 revision) so consumers can route commits to non-`panelSizes` persistence schemas (`terminalDockSlots`) while still using the unified drag mechanic. Honors ADR Decision 1 (single resize source of truth).
+  - **`dockPersistenceSchema.ts`** declares `terminalDockSlots: { primary, secondary }`, `terminalDockSlotsCollapsed: { primary, secondary }`, `overlayDrawerWidth`, `artifactOverlayWidth`. One-time forward-migration from legacy `dockHeight` via 60/40 split.
+  - **`WorkbenchModelChips`** in `ChatOnlyTitleBar` (Phase 4b, Cole's call). Model + permission chips relocated from `ChatStatusChipRow` (below composer) to the title bar — between project label and exit button. Compact chip styling.
+
+### Changed
+- **ChatOnlyShell desktop composition is now `rail | dock-main-area`** — no chat surface, no fixed-flex right-side surfaces. Utility drawer + artifact pane render as `OverlayDrawer` instances anchored to the dock-main-area; both can be concurrently open (tile layout: artifact right, utility left of artifact). Mobile path (`MobileOverlay`-wrapped surfaces) unchanged. `useChatWorkbenchLayout` mutual-exclusion between utility and artifact removed. `useWorkbenchSurfacePolicy` unchanged (state-only; the existing dismissal-tracking carries forward to overlays).
+- **`ChatWorkbenchTerminalDock`** refactored from single-pane with bottom-edge resize to two-slot stack filling the full main area. `DockResizeHandle` removed (no chat sibling to resize against). `DockHeader` + `DockCloseButton` removed (per-slot collapse replaces the whole-dock toggle).
+
+### Removed (from ChatOnlyShell mount tree only — code preserved for IDE shell)
+- **`AgentChatWorkspace`** mount, **`FloatingComposerContainer`**, **`ChatStatusChipRow`** (chips relocated to title bar), **`WorkbenchApprovalSurface`**-inside-chat, **`ChatWorkbenchComparePane`**, **`ChatHistorySidebar`** (replaced by `WorkbenchRail`'s Wave-47 session-list groups for session listing).
+- **`dock.visible` / `onToggleTerminal`** state + handler from the workbench shell (per-slot collapse replaces it). `useTerminalDockState.visible` still serves the IDE-shell `TerminalPane` — untouched.
+- **`useDockHandlers`** (dead Wave-88 single-dock helper, deleted in `e11ef53c` after a runtime crash). The only consumed handler (`handleResizePointerDown`) was inlined into `useDockState`.
+
+### Architecture decisions (per `roadmap/wave-89-chatonly-shell-layout-overhaul/wave-89-decisions.md`)
+- D1: Sibling-stack resize via `useResizable` extension, not a separate hook. Emerging best practice (Allotment / react-resizable-panels pattern).
+- D2: Two distinct slots each with own `TerminalManager` session (not tabbed multiplexing).
+- D3: BOTH utility drawer AND artifact pane migrate to `OverlayDrawer` (Cole's call, Option A).
+- D4: Overlays non-modal, anchored to a positioned ancestor (not viewport).
+- D5: Persistence schema extension via one-time forward migration from legacy `dockHeight`.
+- D6: Migration UX: auto-switch silently (no opt-in toggle).
+- D7 (mid-wave pivot, 2026-05-16): Terminal-first ChatOnlyShell. `AgentChat` code stays in place; only the chat-only shell mount tree changes. Archive-move deferred.
+
+### Known issues at ship
+- **Manual smoke gate DEFERRED** — `roadmap/follow-ups/2026-05-16-wave-89-deferred-smoke-gate.md`. Cole's call: walk after the hang fix lands (the hang interrupts smoke).
+- **Main-thread hang (pre-existing)** — `roadmap/bugs/2026-05-16-main-thread-hang-on-context-rebuild.md`. 2.5-minute UI freeze when `generateRepoMap` runs ~200 synchronous SQLite Cypher queries post-graph-rebuild. Diagnostician identified root cause; partial instrumentation landed. Next Lane B fix wave.
+- Three Wave-89 deferred items in `roadmap/follow-ups/`: tool-bridge runtime smoke, stacked-dock integration test, dead `useWorkbenchCompare` hook cleanup.
+
+### Risk acceptance
+Shipped on local Windows gates only — CI minutes still exhausted from Wave 92/93 burst (refresh ~2026-06-01). No manual smoke gate. Risk bounded: surfaces are tightly scoped; visual regressions surface immediately in regular use.
+
+---
+
 ## [2.17.1] - 2026-05-16
 
 ### Added

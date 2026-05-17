@@ -1,4 +1,4 @@
-# Session Handoff — 2026-05-16 (Wave 93 SHIPPED, CI gate bypassed)
+# Session Handoff — 2026-05-16 (Wave 89 SHIPPED, hang-fix next)
 
 **Audience:** the next Claude Code session.
 
@@ -6,159 +6,119 @@
 
 ## TL;DR
 
-**Wave 93 (Fix Sweep: Lockfile Drift Check + Cleanups) is shipped** — released as **v2.17.1**, tagged. Four small follow-ups bundled into one patch wave; ~3 hours wall-clock; A/B/D dispatched in parallel, C blocked on A.
+**Wave 89 (ChatOnlyShell Terminal-First Pivot) is shipped** — released as **v2.18.0**, tagged. Started as a chat-shell layout overhaul; mid-wave the strategic direction shifted to terminal-first (subscription Claude → CLI-only substrate → chat-bubble UI becomes vestigial post-Wave-90). The dock infrastructure (Phase 0/1) and overlay infrastructure (Phase 2/3) stayed; the AgentChat surface was removed from the ChatOnlyShell mount tree (code preserved for the IDE shell + future API-chat re-introduction). 8 commits + 4 hotfixes + 1 pivot ADR.
 
-Closed:
-- Wave 92's transitive-drift gap (Phase A — `scripts/lockfile-drift-check.mjs` + `lockfile-sync.mjs` integration).
-- Console-flood from `[trace:agent-record]` / `[trace:ctx-preview]` (Phase B — `log.info` → `log.debug` at 5 sites).
-- `web-tree-sitter` ABI 15 incompatibility (Phase C — bump `0.22.6` → `^0.26.8`; codebase-graph now uses `@vscode/tree-sitter-wasm@0.3.1` grammars cleanly instead of silently falling back).
-- Dead `SubagentTranscriptPanel` component (Phase D — deleted; monitor-tab consolidation honored).
+Full story in `roadmap/wave-89-chatonly-shell-layout-overhaul/wave-89-result.md`.
 
-**⚠️ CI bypassed for v2.17.1.** GitHub Actions minutes exhausted (~16-day cooldown, refresh expected ~2026-06-01). Wave 93 shipped on local gates only:
-- typecheck: clean
-- lint: 0 errors, 4 pre-existing warnings (unchanged)
-- `test:main`: 6345/6345
-- `test:renderer`: 4104/4104
-- `test:codebasegraph`: 672/672 (includes the new tree-sitter integration test)
-- `test:agentchat`: 945/945
+**⚠️ Two open obligations before next user-visible work:**
+1. **Manual smoke gate DEFERRED** at ship time (Cole's call — the hang interrupts smoke walks). Filed at `roadmap/follow-ups/2026-05-16-wave-89-deferred-smoke-gate.md`. Walk after the hang fix lands.
+2. **CI bypassed for v2.18.0.** GitHub Actions minutes still exhausted from the Wave 92/93 burst (~refresh expected 2026-06-01). Local gates only:
+   - typecheck: clean
+   - lint: 0 errors, 4 pre-existing warnings (unchanged)
+   - `test:layout`: 1041/1044 (3 pre-existing skips)
+   - `test:agentchat`: 945/945
+   - `test:shared`: 52/52
 
-All Windows-local. Linux + macOS surfaces unverified for the v2.17.1 commits until CI minutes refresh. Risk surface is small: Phase A/B/D are pure-logic / log-level / deletion (no OS-specific behavior); Phase C is a vendor SDK bump where the cross-OS risk is `web-tree-sitter`'s wasm-loading path — which is the same `Parser.init({ locateFile })` call on every OS, and was verified Windows-local.
+Risk surface is bounded: Wave 89's surfaces (`OverlayDrawer`, `DockSlot`, `useDockSlotHeights`, `ChatWorkbenchOverlays`, `WorkbenchModelChips`) are tightly scoped; visual issues should surface immediately in regular use and can be hotfixed.
 
-One CI run did execute (the wave's last action minutes) on the post-wave follow-up commit (`16e8c7f0`): **CI failure 1/11009** (flaky perf test on `threadStoreSearch.test.ts` — pre-existing, Wave-41-era code, not touched by Wave 93). **Mutation Testing (Stryker) passed cleanly** (1m17s, `break: 21` still holds). The flaky perf test is filed at `roadmap/follow-ups/2026-05-16-threadstoresearch-perf-test-flaky-windows-ci.md` with three fix options; option 1 (timeout bump under CI) is the recommended start.
-
-When Actions minutes return, push any tiny change (or `gh run rerun`) to validate the v2.17.1 commits on Linux + macOS. The Wave 92 CI baseline was ~20min full suite + ~1.5min Stryker.
-
-**Master CI was GREEN on all 3 platforms** (macOS, Ubuntu, Windows) as of Wave 92 ship (2026-05-16, commit `4f129140`).
-
-**Next wave options** (Cole's call):
-1. **Wave 89 — ChatOnlyShell Layout Overhaul** (stacked terminals + overlay drawers). Phase 0 = extend `useResizable` for sibling-stack resize (the Wave 88 prerequisite).
-2. **e2e teardown bug-wave** (`roadmap/bugs/2026-05-15-e2e-teardown-hang.md`) — Electron Worker teardown timeouts on Linux CI under xvfb. Re-enabling e2e blocked on this.
-3. **Stryker mutate-scope expansion** (`roadmap/follow-ups/2026-05-16-stryker-mutate-scope-expansion.md`) — widen Stryker's `mutate` globs beyond `src/shared/**` per the Phase-2 subsystem-boundary plan. Pairs naturally with a coverage investment to raise the `break: 21` floor.
+**Next wave: Lane B fix — `roadmap/bugs/2026-05-16-main-thread-hang-on-context-rebuild.md`** (Cole's explicit next priority).
 
 ---
 
-## Wave 93 — what shipped (v2.17.1)
+## What's the hang in 30 seconds
 
-### Phase A — Lockfile drift checker
+**2.5-minute UI freeze** during cold-graph-rebuild startup. Looks like a crash from outside; process is actually fine, just unresponsive. Diagnostician (Sonnet) identified the root cause precisely:
 
-- **`scripts/lockfile-drift-check.mjs`** (176 lines, pure node, no deps) + `npm run lockfile:check:drift`. Diffs two `package-lock.json` files via JSON walk, classifies version changes by severity (patch / minor / major / prerelease / added / removed), prints structured ANSI report, exits 2 on minor+ unless `--accept-drift` is passed.
-- **Wrapper integration**: `scripts/lockfile-sync.mjs` snapshots the lockfile pre-regen to `tmpdir()`, runs drift-check post-regen, and skips marker-write on non-zero exit. Recovery message names the `LOCKFILE_SYNC_ACCEPT_DRIFT=1` override. Defense in depth: drift-check is the warning layer; the Wave 92 pre-push guard is the gate.
-- **6-case vitest test suite** at `scripts/lockfile-drift-check.test.mjs` (no-drift / patch-only / minor / major / added+removed / accept-drift override).
+`triggerContextLayerRebuildAfterGraphReady` → `forceRebuild` → `generateRepoMap` fires ~200 synchronous SQLite Cypher queries on the main thread with NO yield points across three phases:
+- `enrichSummariesWithGraphSignatures` (~50 calls)
+- `buildCrossModuleDependenciesFromGraph` (~100 calls, 2 per module)
+- `computeAllModuleHotspotScores` (~50 calls)
 
-### Phase B — Trace silencing
+At ~0.75s per query against the 23.4K-node graph = ~150s = the observed 152s block.
 
-5 `log.info` → `log.debug` edits across 4 files:
-- `src/main/hooksDispatchLogic.ts:38` (`[trace:agent-record]` instructions-loaded)
-- `src/renderer/components/AgentChat/ComposerContextPreview.tsx:86,100,101` (3 `[trace:agent-record]` + `[trace:ctx-preview]` calls)
-- `src/renderer/components/AgentChat/ContextPreview.popover.tsx:278` (orchestrator-added; brief listed only ComposerContextPreview)
-- `src/renderer/hooks/useAgentEvents.ruleSkillDispatchers.ts:96` (`[trace:agent-record]` write-rules)
+Wave 89 confirmed NOT a contributor — Phase 1's dual `useTerminalSessions` operates entirely in the renderer; no path to the main-thread SQLite fan-out.
 
-Traces preserved for the still-open eviction-bug investigations (`2026-05-11-context-preview-rules-evicted-after-time.md`, `2026-05-07-context-preview-rules-disappear-after-chat-start.md`); `electron-log`'s renderer console transport defaults to `info` so debug lines are dropped unless someone enables them via `log.transports.console.level = 'debug'`.
+**Suggested fix paths** (Lane B wave's call):
+1. Yield-between-queries via `await new Promise(setImmediate)` or microtask scheduling.
+2. Move the entire fan-out to a worker thread.
+3. Batch all Cypher queries into a single multi-statement query with proper SQLite indexing.
 
-### Phase C — web-tree-sitter 0.22.6 → ^0.26.8 (ABI 15)
-
-- `package.json` bumped. `package-lock.json` regenerated via `npm install --package-lock-only --ignore-scripts` (minimal delta — only the web-tree-sitter entry changed; mirrors Wave 92's safe pattern, avoids unrelated transitive drift). `.lockfile-sync.marker` written with honest provenance `generatedBy: 'wave-93-phase-c-package-lock-only'`.
-- Code adaptations across 5 files for the 0.25+ named-export rewrite: `import Parser from 'web-tree-sitter'` → `import { Language, type Node, Parser } from 'web-tree-sitter'`; `Parser.SyntaxNode` → `Node` (65 references mechanically renamed); `Parser.Language` → `Language`; `require.resolve('web-tree-sitter')` → `require.resolve('web-tree-sitter/web-tree-sitter.wasm')` (the wasm asset moved to an explicit export key in 0.26+).
-- **Orchestrator-authored acceptance test** at `src/main/codebaseGraph/treeSitterParser.integration.test.ts` (per `~/.claude/rules/orchestrator-owned-acceptance-tests.md`): probes `Parser.setLanguage` with `@vscode/tree-sitter-wasm@0.3.1`'s ABI 15 javascript + python grammars; both load and parse without error. 2/2 pass post-bump (fails pre-bump with `Incompatible language version 15`).
-- All 672 codebase-graph tests still pass.
-
-### Phase D — SubagentTranscriptPanel deleted
-
-- `src/renderer/components/Layout/ChatOnlyShell/SubagentTranscriptPanel.tsx` deleted (was exported but never mounted).
-- ChatOnlyShell `CLAUDE.md` composition tree cleaned + Wave 47 Phase C entry softened to note the consolidation.
-- `ChatWorkbenchFollowThrough.integration.test.tsx`'s "WHAT IS NOT MOCKED" comment scrubbed.
-
-### Vendor knowledge
-
-- **NEW**: `.claude/vendor-gotchas/tree-sitter.md` — captures the 0.22→0.26 migration lessons (ABI compatibility table, named-export rewrite, wasm export-key resolution, `Parser.SyntaxNode → Node` rename, lockfile-bump pattern). Auto-loaded by future waves touching `src/main/codebaseGraph/treeSitter*`.
-- Other Wave-92 vendor-gotchas unchanged (`wsl2-lockgen.md`, `stryker.md`, `stryker-electron.md`).
-
-### Locked decisions (per `roadmap/wave-93-fix-sweep-drift-and-cleanups/wave-93-decisions.md`, 6 decisions)
-
-- D1: drift-check via diff-and-warn script (option 3 of follow-up's 4).
-- D2: fail on minor+, warn on patch. `--accept-drift` is human-override.
-- D3: drift-check runs post-regen, gates marker-write.
-- D4: `web-tree-sitter` target ^0.26.8 (current stable; forward-pin not hold-back).
-- D5: trace-logging lowered to `log.debug` (not deleted; not flag-gated).
-- D6: `SubagentTranscriptPanel` deleted (not re-mounted) — honors the monitor-tab consolidation.
+Instrumentation partially landed (3/5 files via Phase 4c's commit sweep at `6b52c908`). 2 files (`queryEngine.ts`, `repoMapGenerator.ts`) hit max-lines:300 — re-add per-phase timing after extracting `buildRepoMapPhases` helpers. Reproduction steps + diagnostician findings in the bug file.
 
 ---
 
-## Lockfile foundation — current state (post-Wave-93)
+## Wave 89 — what shipped (v2.18.0)
 
-The `package-lock.json` in master was bootstrapped via `npm install --package-lock-only` during Wave 92 + extended by Wave 93 Phase C via the same minimal-delta pattern. Going forward, **lockfile regenerations flow through `npm run lockfile:sync`** — the Wave 93 drift checker now catches unintended transitive drift before marker-write.
+### Phase 0 — `useResizable` sibling-stack + dock persistence schema (`dfa3acf9` + `7ceca999`)
+- `startSiblingResize` function alongside existing `startResize`. Pure math in `useResizable.sibling.ts`.
+- `dockPersistenceSchema.ts` declares `terminalDockSlots`, `overlayDrawerWidth`, `artifactOverlayWidth`. Forward-migrate legacy `dockHeight` via 60/40.
+- Phase 1 revision (`7ceca999`) routes `useDockSlotHeights` drag through `startSiblingResize` via additive `onCommit` callback — honors ADR Decision 1.
 
-### To regenerate the lockfile (after adding/removing deps)
+### Phase 1 — Two-slot stacked terminal dock (`861343b4` + `7ceca999` + `e11ef53c`)
+- `DockSlot.tsx` per-slot component, each with own `useTerminalSessions` instance.
+- `SPLIT_TERMINAL_EVENT` payload extended with `{ slot, sessionId }`; legacy sites default to `'primary'`.
+- Hotfix `e11ef53c`: removed dead `useDockHandlers` helper that crashed on dock open via a type-cast stub missing `recordingSessions`.
 
-```powershell
-npm run lockfile:sync
-```
+### Phase 2 — `OverlayDrawer` primitive (`2412b029`)
+- Non-modal slide-in, anchored to nearest positioned ancestor (not viewport). Z-index 200. Mica-safe `rgba(0,0,0,0.35)` backdrop. Window-scoped Escape with `stopPropagation`.
+- 16/16 tests pass.
 
-The drift checker (`scripts/lockfile-drift-check.mjs`) runs automatically post-regen and gates marker-write. If it exits non-zero (minor/major transitive drift), the marker is NOT written and a recovery message is printed. Options:
+### Phase 3 — Utility drawer + artifact pane overlay migration (`5e1697b7`)
+- Both surfaces migrated to `OverlayDrawer` instances (ADR Decision 3 → Option A).
+- `useOverlayDrawerWidths` for per-surface width persistence.
+- `ChatWorkbenchOverlays.tsx` mount point. Tile layout: artifact right-anchored, utility left of artifact.
 
-- **Accept the drift:** `$env:LOCKFILE_SYNC_ACCEPT_DRIFT=1; npm run lockfile:sync`
-- **Fix the drift:** inspect `git diff package-lock.json`, add `overrides` pins for the drifting transitives, then re-run.
-- **Standalone check:** `npm run lockfile:check:drift -- <old-lockfile> <new-lockfile>`
-- **Single-dep surgical bump** (avoids the full WSL2 regen): `npm install --package-lock-only --ignore-scripts <pkg>@<version>`, then manually write `.lockfile-sync.marker` with `generatedBy: '<descriptive-name>'` (see `.claude/vendor-gotchas/tree-sitter.md` for an example recovery). This bypasses `lockfile-sync` entirely.
+### Phase 4 + 4b — The pivot (`e20cd8a3` + `a5fccc64` + `1dd718d0` + `df70495d` + `5fc033b1`)
+- ADR Decision 7 (`a5fccc64`): subscription Claude → terminal-first is the only authorized driving path.
+- Phase 4b (3 commits): removed `AgentChatWorkspace`, `FloatingComposerContainer`, `ChatStatusChipRow`, `WorkbenchApprovalSurface`-in-chat, `ChatWorkbenchComparePane`, `ChatHistorySidebar` from the chat-only shell. Restructured body to `rail | dock-main-area`. Dock fills full height via `flex-1`. Model + permission chips relocated to title bar as `WorkbenchModelChips`.
+- AgentChat code stays in place (IDE shell still consumes it).
 
-### To install the pre-push guard locally
+### Phase 4c — Per-slot open/close (`18fbfa03` + `6b52c908` + `208a1168`)
+- `▾`/`▴` button per slot in header. Collapses to 28px header strip; sibling grows to fill.
+- Both slots collapsible simultaneously. Collapsed state persists.
+- Removed dead `dock.visible` / `onToggleTerminal` / `DockCloseButton` / `DockHeader` from workbench shell.
+- 27 net-new tests.
 
-```powershell
-git config core.hooksPath scripts/hooks
-```
-
-One-time per clone. Pushes that touch `package-lock.json` without a valid `.lockfile-sync.marker` are blocked. Override per-push: `$env:LOCKFILE_SYNC_GUARD_BYPASS=1; git push`.
-
-### To run mutation testing locally
-
-```powershell
-npm run mutation:test       # incremental against the saved baseline
-npm run mutation:test:full  # full --force re-baseline (~2-3 min)
-```
-
-HTML report at `reports/mutation/mutation.html`. The baseline file at `reports/stryker-incremental.json` is gitignored — fresh clones pay a one-time full-run cost.
+### Wave-wrap (this commit)
+- `wave-89-result.md` written; `CHANGELOG.md [2.18.0]` entry; this HANDOFF.
 
 ---
 
-## Open follow-ups (post-Wave-93)
+## Open follow-ups (post-Wave-89)
 
 In `roadmap/follow-ups/`:
-- **`2026-05-16-stryker-mutate-scope-expansion.md`** — widening Stryker's mutate scope beyond `src/shared/**` to subsystem-boundary exclusion. Wave 92's Phase 2 audit captured the exclusion list. Pair with coverage investment to raise the `break: 21` floor.
-- `2026-05-13-tailwind-codepoint-and-treesitter-wasm-versions.md` — status PARTIAL. Tree-sitter half closed by Wave 93 Phase C; tailwind half effectively closed by Wave 88 (`@source not` directive). File kept as historical record.
-- Other older follow-ups remain — see `roadmap/follow-ups/` listing for the long-tail (mostly chat-orchestration / context-preview investigations).
-
-In `roadmap/deferred/`: 6 deferred initiatives unchanged from Wave 92.
+- **`2026-05-16-wave-89-deferred-smoke-gate.md`** — manual smoke gate deferred at ship time. **Highest-priority follow-up** — walk after the hang fix.
+- `2026-05-16-wave-89-tool-bridge-runtime-smoke.md` — tool-bridge routing runtime confirmation deferred.
+- `2026-05-16-wave-89-stacked-dock-integration-test.md` — divider-drag component-level pointer integration test deferred.
+- `2026-05-16-wave-89-dead-useWorkbenchCompare-hook.md` — dead hook call in `ChatWorkbenchBody.model.ts` post-pivot. Mechanical cleanup.
+- `2026-05-16-wave-89-phase-4b-dock-visible-semantic-drift.md` — **RESOLVED** by Phase 4c (kept for history).
+- (Pre-existing follow-ups in folder; see listing for the long-tail.)
 
 In `roadmap/bugs/`:
-- **`2026-05-15-e2e-teardown-hang.md`** — TRIAGED. Electron Worker teardown timeouts under xvfb on Linux CI; e2e step still disabled in `ci.yml`. Re-enabling is the prerequisite for restoring Playwright coverage. Promotion candidate to a Lane B fix-wave.
-- `2026-05-14-master-ci-ubuntu-windows-failures.md` — RESOLVED (Wave 88 ship tail).
+- **`2026-05-16-main-thread-hang-on-context-rebuild.md`** — TRIAGED + diagnosed. **Next Lane B fix wave.**
+- `2026-05-15-e2e-teardown-hang.md` — still open (Wave 93 carry-over). Re-enabling e2e blocked on this.
 
-Resolved this wave (status RESOLVED in their frontmatter, kept for history):
-- `2026-05-16-pin-toplevel-transitive-gap.md` (Phase A)
-- `2026-05-14-trace-logging-floods-console.md` (Phase B)
-- `2026-05-14-subagent-transcript-panel-dead-code.md` (Phase D)
-
----
-
-## Stashed work (preserved)
-
-- `stash@{0}` — "pre-pivot WIP: wave-87 chat-orchestration + wave-m5 docs" (original pre-pivot state, untouched).
-- `wave-87-chat-orchestration-cleanup` branch — 16 local-only commits, untouched. The 88→91 pivot supersedes Wave 87's substrate goals; user's call whether to resurrect or abandon.
+In `roadmap/deferred/`: unchanged from Wave 93.
 
 ---
 
 ## What to do next
 
-1. **Wave 89 — ChatOnlyShell Layout Overhaul** — stacked terminals (interactive Claude on top, dev shell below) + overlay drawers floating full-height over the right portion. Phase 0 prerequisite: extend `useResizable` for sibling-stack resize (Wave 88 only proved fixed-edge consumer pattern). Run `/wave-plan 89` (or `/wave-plan-lite 89`).
+1. **Lane B fix wave: main-thread hang.** Top priority per Cole. Start with `roadmap/bugs/2026-05-16-main-thread-hang-on-context-rebuild.md`. Likely shape: `/define` the contract → extract helpers in `repoMapGenerator.ts` + `queryEngine.ts` to bring them under max-lines:300 → re-add per-phase trace logging (the deferred 2/5 files of instrumentation) → reproduce with the new traces → pick a fix path (yield / worker / batch) → B3 → smoke gate that proves the 152s freeze is gone.
 
-2. **e2e teardown bug-wave** — `roadmap/bugs/2026-05-15-e2e-teardown-hang.md`. Probably its own focused Lane B bundling teardown-hang + per-spec drift (`roadmap/follow-ups/2026-05-13-electron-e2e-spec-drift.md`).
+2. **Walk Wave 89's deferred smoke** — after the hang fix. Full checklist preserved in `roadmap/follow-ups/2026-05-16-wave-89-deferred-smoke-gate.md`.
 
-3. **Stryker mutate-scope expansion + coverage investment** — separate initiative; not next-up but worth tracking as the natural pairing for raising the `break: 21` floor. The Wave 92 Phase 2 audit captured the exclusion list; that's the starting point.
+3. **Wave 90 — interactive `claude` substrate.** Wire `primary` slot to a long-running interactive `claude` session. Wave 89's Phase 1 + 4b ship the layout home; Wave 90 fills it with the substrate.
+
+4. **Wave 91 — `-p` substrate cleanup.** Remove the dead per-turn `claude -p` substrate code (ADR Decision 7 turns this from a coexistence question into a removal).
+
+5. **CI minutes restoration.** GitHub Actions refresh expected ~2026-06-01. When minutes return, push any tiny change (or `gh run rerun`) to validate the v2.18.0 commits on Linux + macOS.
+
+## Stashed work (preserved)
+
+- `stash@{0}` — "pre-pivot WIP: wave-87 chat-orchestration + wave-m5 docs" (untouched).
+- `wave-87-chat-orchestration-cleanup` branch — 16 local-only commits, untouched. Wave 88→89 supersedes substrate goals; resurrect or abandon — Cole's call.
 
 ## Vendor knowledge
 
-`/promote-vendor-lessons 93` should:
-- Update `.claude/vendor-gotchas/wsl2-lockgen.md` with the drift-check addendum (the wrapper now gates marker-write on drift).
-- Confirm `.claude/vendor-gotchas/tree-sitter.md` was written at Phase C (yes — it was; this just documents that lessons are captured).
-
-Future waves touching `web-tree-sitter`, WSL2 lockgen, or Stryker auto-load these files via the nested-CLAUDE.md `@import` mechanism.
+`/promote-vendor-lessons 89` — likely no-op. No new vendor SDK touched in this wave.
