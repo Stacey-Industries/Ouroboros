@@ -30,8 +30,9 @@ import {
 // ---------------------------------------------------------------------------
 
 describe('default constants', () => {
-  it('terminalDockSlots defaults are { primary: 160, secondary: 100 } (sum fits within 280px outer dock)', () => {
-    expect(DEFAULT_TERMINAL_DOCK_SLOTS).toEqual({ primary: 160, secondary: 100 });
+  it('terminalDockSlots defaults are { primary: 280, secondary: 180 } (60/40 split for full-height dock)', () => {
+    // Wave 89 Phase 4b: dock fills the full shell height (flex-1), not a 280px strip.
+    expect(DEFAULT_TERMINAL_DOCK_SLOTS).toEqual({ primary: 280, secondary: 180 });
   });
 
   it('overlayDrawerWidth default is 380', () => {

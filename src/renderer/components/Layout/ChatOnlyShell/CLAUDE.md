@@ -92,29 +92,40 @@ Cross-window IDE-tool delegation remains deferred (see `roadmap/follow-ups/` for
 | `agent-ide:toggle-session-drawer` | inbound | Toggles `drawerOpen` state |
 | `agent-ide:toggle-immersive-chat` | outbound | Dispatched by Exit button; handled by `useImmersiveChatFlag` (Phase C) |
 
-## Wave 89 composition (current)
+## Wave 89 Phase 4b composition (current — terminal-first)
+
+**Decision 7 (2026-05-16):** Pivot to terminal-first. `AgentChatWorkspace` is no longer mounted in this shell. The two-slot terminal dock fills the full main area. Model + permission chips relocated to the title bar (between project label and exit button). `ChatHistorySidebar` replaced by the existing `WorkbenchRail` (Wave 47) for session listing.
 
 ```
 ChatWorkbenchShell
   ├─ ChatOnlyTitleBar
-  ├─ ChatWorkbenchBody                 — flex row: rail | chat-area | (terminal-dock below)
-  │    ├─ WorkbenchRail                — grouped: active / background / recent-chat; open by default
-  │    └─ chat-area (position: relative — overlay anchor)
-  │         ├─ AgentChatWorkspace      — primary, variant="chat-only"
-  │         ├─ ChatWorkbenchComparePane — inspect-only secondary pane, optional
-  │         └─ ChatWorkbenchOverlays   — two OverlayDrawer instances anchored here
+  │    └─ WorkbenchModelChips          — model + permission chips (workbench mode only)
+  ├─ ChatWorkbenchBody                 — flex row: rail | dock-main-area
+  │    ├─ WorkbenchRail                — grouped: active / background / recent-sessions; open by default
+  │    └─ dock-main-area (position: relative — overlay anchor, flex-1)
+  │         ├─ ChatWorkbenchTerminalDock — two stacked slots, fills full height (flex-1)
+  │         │    ├─ DockSlot (slot='primary')    — Wave 90 interactive-claude home
+  │         │    └─ DockSlot (slot='secondary')  — dev shell
+  │         └─ ChatWorkbenchOverlays   — two OverlayDrawer instances anchored to dock-main-area
   │              ├─ ChatWorkbenchArtifactPane (overlay, default width 480)
   │              └─ ChatWorkbenchUtilityDrawer (overlay, default width 380, tiles LEFT of artifact when both open)
   │                   ├─ WorkbenchApprovalPanel
   │                   ├─ DiffReviewPanel
   │                   └─ WorkbenchTimelinePanel
-  ├─ ChatWorkbenchTerminalDock         — two stacked slots, sibling-resizable
-  │    ├─ DockSlot (slot='primary')    — Wave 90 interactive-claude home
-  │    └─ DockSlot (slot='secondary')  — dev shell
   └─ existing shell overlays (settings, shortcuts, command palette, diff overlay)
 ```
 
-Pre-Wave-89 composition: `ChatWorkbenchArtifactPane` and `ChatWorkbenchUtilityDrawer` were fixed-flex siblings inside `ChatWorkbenchBody` (occupied permanent width). Mobile path (`MobileOverlays` in `ChatWorkbenchBody.tsx`) still renders both inside `MobileOverlay` modal wrappers — unchanged.
+**Removed from this shell (code stays in place — IDE shell still uses it):**
+- `AgentChatWorkspace` — IDE shell (`RightSidebarTabs`) only
+- `FloatingComposerContainer` — was inside AgentChatWorkspace
+- `ChatStatusChipRow` — chips relocated to title bar as `WorkbenchModelChips`
+- `ChatHistorySidebar` — replaced by `WorkbenchRail`'s session groups
+- `ChatWorkbenchComparePane` — was inside `WorkbenchCenterPane` (IDE-shell feature)
+- `DockResizeHandle` — resized dock against chat sibling that no longer exists
+
+**Slot height defaults:** `{ primary: 280, secondary: 180 }` — tuned for full-height dock (~600–800px), 60/40 split. Legacy values (`{ primary: 160, secondary: 100 }`) were tuned for the old 280px bottom strip.
+
+Pre-Wave-89-Phase-4b composition: `ChatWorkbenchArtifactPane` and `ChatWorkbenchUtilityDrawer` were fixed-flex siblings inside `ChatWorkbenchBody` (occupied permanent width). Mobile path (`MobileOverlays` in `ChatWorkbenchBody.tsx`) still renders both inside `MobileOverlay` modal wrappers — unchanged.
 
 The workbench shell still does **not** mount `IdeToolBridge`, `RightSidebarTabs`, `CentrePaneConnected`, or arbitrary split-pane editor chrome. Reuse stays selective: `FileViewer`, `DiffReview`, `TerminalManager`, and approval/session contexts are mounted through the existing providers in `ChatOnlyShellWrapper`.
 

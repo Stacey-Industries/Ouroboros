@@ -352,8 +352,10 @@ describe('Shell structure', () => {
     expect(screen.getByTestId('chat-only-status-bar')).toBeDefined();
   });
 
-  it('keeps the primary conversation workspace mounted', () => {
+  it('does not mount the chat workspace (terminal-first shell, Phase 4b)', () => {
+    // Wave 89 Phase 4b: AgentChatWorkspace is removed from the chat-only shell.
+    // The dock-main-area (two-slot terminal dock) is the primary content area.
     renderShell();
-    expect(screen.getByTestId('agent-chat-workspace')).toBeDefined();
+    expect(screen.queryByTestId('agent-chat-workspace')).toBeNull();
   });
 });

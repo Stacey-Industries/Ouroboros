@@ -102,14 +102,20 @@ describe('ChatWorkbenchTerminalDock — dock-level chrome', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('applies sizes.terminal from useResizable as the dock height', () => {
+  it('dock fills available height via flex-1 (no fixed px height — Phase 4b terminal-first)', () => {
+    // Wave 89 Phase 4b: the dock-as-whole resize handle is removed and the
+    // fixed `style={{ height: sizes.terminal }}` is gone. The dock uses
+    // flex-1 so it fills the dock-main-area container.
     render(<ChatWorkbenchTerminalDock onClose={vi.fn()} />);
     const dock = screen.getByTestId('chat-workbench-terminal-dock') as HTMLElement;
-    expect(dock.style.height).toBe('350px');
+    expect(dock.style.height).toBe('');
+    expect(dock.className).toContain('flex-1');
   });
 
-  it('renders the dock-as-whole resize handle', () => {
+  it('does not render the dock-as-whole resize handle (removed in Phase 4b)', () => {
+    // The DockResizeHandle resized the dock against a chat sibling that no
+    // longer exists in the terminal-first layout.
     render(<ChatWorkbenchTerminalDock onClose={vi.fn()} />);
-    expect(screen.getByTestId('chat-workbench-dock-resize')).toBeTruthy();
+    expect(screen.queryByTestId('chat-workbench-dock-resize')).toBeNull();
   });
 });

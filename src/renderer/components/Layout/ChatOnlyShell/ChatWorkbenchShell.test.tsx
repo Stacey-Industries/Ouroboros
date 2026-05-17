@@ -388,37 +388,30 @@ afterEach(() => {
 });
 
 describe('ChatWorkbenchShell', () => {
-  it('renders shell chrome and body', () => {
+  it('renders shell chrome and body without chat surface (terminal-first, Phase 4b)', () => {
+    // Wave 89 Phase 4b: AgentChatWorkspace is no longer mounted in the shell.
+    // The dock-main-area is the primary content; chat workspace is IDE-shell-only.
     renderShell();
     expect(screen.getByTestId('chat-workbench-shell')).toBeDefined();
     expect(screen.getByTestId('chat-workbench-body')).toBeDefined();
     expect(screen.getByTestId('chat-only-title-bar')).toBeDefined();
     expect(screen.getByTestId('chat-only-status-bar')).toBeDefined();
-    expect(screen.getByTestId('agent-chat-workspace')).toBeDefined();
+    expect(screen.queryByTestId('agent-chat-workspace')).toBeNull();
   });
 
-  it('does not mount the terminal dock when dock.visible is false', () => {
+  it('always mounts the terminal dock regardless of dock.visible (terminal-first, Phase 4b)', async () => {
+    // Wave 89 Phase 4b: the dock is the main content area and always renders.
+    // dock.visible now only controls visibility via the DockCloseButton,
+    // not whether the dock is mounted at all.
     mockDockVisible = false;
     renderShell(makeTerminal());
-    expect(screen.queryByTestId('chat-workbench-terminal-dock')).toBeNull();
+    expect(await screen.findByTestId('chat-workbench-terminal-dock')).toBeDefined();
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
   });
 
-  it('mounts the terminal dock when dock.visible and terminal is provided', async () => {
-    mockDockVisible = true;
-    renderShell(makeTerminal());
-    // The dock is lazy-loaded — wait for Suspense to resolve.
-    const dock = await screen.findByTestId('chat-workbench-terminal-dock');
-    expect(dock).toBeDefined();
-    expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
-  });
-
-  it('renders the terminal dock (not unavailable placeholder) when dock is visible without terminal prop', async () => {
-    // Wave 89: dock no longer requires a terminal prop — each slot owns its sessions.
-    // The unavailable-dock placeholder was removed. The dock renders whenever visible.
+  it('dock renders without a terminal prop (each slot owns its own sessions)', async () => {
     mockDockVisible = true;
     renderShell(undefined);
-    // Dock renders (lazy-loaded); unavailable placeholder is gone.
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
     expect(await screen.findByTestId('chat-workbench-terminal-dock')).toBeDefined();
   });
@@ -471,7 +464,9 @@ describe('ChatWorkbenchShell', () => {
     expect(mockSelectThread).toHaveBeenCalledWith('thread-1');
   });
 
-  it('renders a compare pane when a secondary compare target is active', () => {
+  it('does not render a compare pane (removed from terminal-first shell, Phase 4b)', () => {
+    // Wave 89 Phase 4b: WorkbenchCenterPane (and ChatWorkbenchComparePane inside it)
+    // is no longer mounted in the chat-only shell. Compare is an IDE-shell feature.
     mockCompareTarget = {
       sessionId: 'session-2',
       projectRoot: '/test/project-2',
@@ -479,19 +474,7 @@ describe('ChatWorkbenchShell', () => {
       projectLabel: 'project-2',
     };
     renderShell();
-    expect(screen.getByTestId('chat-workbench-compare-pane')).toBeDefined();
-  });
-
-  it('closes compare mode through the secondary pane control', () => {
-    mockCompareTarget = {
-      sessionId: 'session-2',
-      projectRoot: '/test/project-2',
-      threadId: 'thread-2',
-      projectLabel: 'project-2',
-    };
-    renderShell();
-    fireEvent.click(screen.getByTestId('chat-workbench-compare-close'));
-    expect(mockCloseCompare).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('chat-workbench-compare-pane')).toBeNull();
   });
 
   it('does not auto-open the approvals utility tab', () => {

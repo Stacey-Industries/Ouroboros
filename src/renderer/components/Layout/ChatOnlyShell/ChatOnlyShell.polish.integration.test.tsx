@@ -58,18 +58,12 @@ vi.mock('../../FileViewer/FileViewerManager', () => ({
   useFileViewerManager: () => ({ openFile: vi.fn(), activeFile: null, openFiles: [] }),
 }));
 
-// Capture which props AgentChatWorkspace receives.
-let capturedVariant: string | undefined;
+// Wave 89 Phase 4b: AgentChatWorkspace is no longer mounted in the shell.
+// The mock is retained as a no-op stub so deep imports don't fail.
 vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
-  AgentChatWorkspace: ({ variant }: { projectRoot: string | null; variant?: string }) => {
-    capturedVariant = variant;
+  AgentChatWorkspace: () => {
     return (
-      <div data-testid="agent-chat-workspace" data-variant={variant ?? 'ide'}>
-        {/* FloatingComposerContainer is mounted by AgentChatConversation
-            which is mocked out here.  The data-layout attribute is placed
-            by FloatingComposerContainer itself.  We verify it below via a
-            dedicated stub that mimics the real structure. */}
-        <div data-layout="floating-composer" data-testid="floating-composer-stub" />
+      <div data-testid="agent-chat-workspace">
       </div>
     );
   },
@@ -143,24 +137,28 @@ describe('ChatOnlyShell — Wave 43 polish integration', () => {
     expect(screen.queryByTestId('chat-only-status-bar')).toBeNull();
   });
 
-  it('AgentChatWorkspace receives variant="chat-only"', () => {
+  it('AgentChatWorkspace is not mounted in the terminal-first shell (Phase 4b)', () => {
+    // Wave 89 Phase 4b: chat surface removed from ChatOnlyShell.
+    // AgentChatWorkspace lives in the IDE shell (InnerAppLayout) only.
     render(<ChatOnlyShell />);
-    expect(capturedVariant).toBe('chat-only');
-    const workspace = screen.getByTestId('agent-chat-workspace');
-    expect(workspace.getAttribute('data-variant')).toBe('chat-only');
+    expect(screen.queryByTestId('agent-chat-workspace')).toBeNull();
   });
 
-  it('composer is wrapped in FloatingComposerContainer (data-layout attribute)', () => {
+  it('FloatingComposerContainer is not mounted in the terminal-first shell (Phase 4b)', () => {
+    // Wave 89 Phase 4b: composer removed alongside AgentChatWorkspace.
     render(<ChatOnlyShell />);
-    const floatingComposer = screen.getByTestId('floating-composer-stub');
-    expect(floatingComposer.getAttribute('data-layout')).toBe('floating-composer');
+    expect(screen.queryByTestId('floating-composer-stub')).toBeNull();
   });
 
-  it('ChatOnlyHeaderControls no longer rendered in the title bar (Wave 44 Phase D)', () => {
+  it('ChatOnlyHeaderControls chips are now in the title bar (Wave 89 Phase 4b workbench chips)', () => {
+    // Wave 89 Phase 4b reverses Wave 44 Phase D: chips move back to the title bar
+    // because the composer (their prior home) is removed from the shell.
+    // In workbench mode (onToggleRail provided), WorkbenchModelChips mounts chips
+    // inside the title bar header element.
     render(<ChatOnlyShell />);
     const titleBar = screen.getByTestId('chat-only-title-bar');
-    const controls = titleBar.querySelector('[data-testid="header-controls"]');
-    expect(controls).toBeNull();
+    const chips = titleBar.querySelector('[data-testid="workbench-model-chips"]');
+    expect(chips).toBeDefined();
   });
 
   it('SideChatDrawer is not in the tree (excluded by variant="chat-only")', () => {

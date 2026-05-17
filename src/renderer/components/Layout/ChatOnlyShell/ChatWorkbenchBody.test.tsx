@@ -41,9 +41,6 @@ vi.mock('../../DiffReview/DiffReviewManager', () => ({
 vi.mock('../../DiffReview/DiffReviewPanel', () => ({
   DiffReviewPanel: () => <div data-testid="diff-review-panel" />,
 }));
-vi.mock('../../AgentChat/AgentChatWorkspace', () => ({
-  AgentChatWorkspace: () => <div data-testid="agent-chat-workspace" />,
-}));
 vi.mock('../../AgentChat/agentChatStore', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../AgentChat/agentChatStore')>();
   return {
@@ -173,7 +170,9 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
     expect(screen.queryByTestId('inner-sidebar')).toBeNull();
   });
 
-  it('renders the main workspace area regardless of rail state', () => {
+  it('renders the dock-main-area regardless of rail state (terminal-first, Phase 4b)', () => {
+    // Wave 89 Phase 4b: AgentChatWorkspace is no longer mounted in the shell body.
+    // The dock-main-area wrapper is the primary content area.
     render(
       <ChatWorkbenchBody
         layout={makeLayout({ railOpen: false })}
@@ -181,10 +180,14 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
-    expect(screen.getByTestId('agent-chat-workspace')).toBeDefined();
+    expect(screen.queryByTestId('agent-chat-workspace')).toBeNull();
+    expect(screen.getByTestId('workbench-dock-main-area')).toBeDefined();
   });
 
-  it('does not render terminal dock when dock.visible is false', () => {
+  it('dock-main-area is always rendered (dock fills the shell, no conditional mounting)', () => {
+    // Phase 4b: the dock is the main content area and always renders.
+    // The old dock.visible conditional is gone; visibility is now a toggle
+    // on the DockCloseButton rather than hiding the entire area.
     render(
       <ChatWorkbenchBody
         layout={makeLayout()}
@@ -192,13 +195,11 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
-    expect(screen.queryByTestId('chat-workbench-terminal-dock')).toBeNull();
+    expect(screen.getByTestId('workbench-dock-main-area')).toBeDefined();
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
   });
 
-  it('renders terminal dock (not unavailable placeholder) when dock is visible', async () => {
-    // Wave 89: dock no longer requires a terminal prop — each slot owns its own sessions.
-    // The unavailable-dock placeholder was removed; the dock always renders when visible.
+  it('dock-main-area is present when dock is visible', () => {
     render(
       <ChatWorkbenchBody
         layout={makeLayout()}
@@ -206,9 +207,8 @@ describe('ChatWorkbenchBody — layout prop contract', () => {
         projectRoot="/test"
       />,
     );
+    expect(screen.getByTestId('workbench-dock-main-area')).toBeDefined();
     expect(screen.queryByTestId('chat-workbench-terminal-dock-unavailable')).toBeNull();
-    // The dock is lazy-loaded; the Suspense fallback renders (null) in tests.
-    // Verify no error is thrown — the unavailable path is gone.
   });
 });
 

@@ -175,9 +175,10 @@ afterEach(() => cleanup());
 
 describe('ChatOnlyShell integration — mode-switch branch', () => {
   it('mounts ChatOnlyShell when immersiveChat is true', () => {
+    // Wave 89 Phase 4b: terminal-first shell — AgentChatWorkspace is not mounted here.
     render(<BranchHarness initial={true} />);
     expect(screen.getByTestId('chat-only-title-bar')).toBeDefined();
-    expect(screen.getByTestId('agent-chat-workspace')).toBeDefined();
+    expect(screen.queryByTestId('agent-chat-workspace')).toBeNull();
     expect(screen.queryByTestId('inner-app-layout')).toBeNull();
   });
 
