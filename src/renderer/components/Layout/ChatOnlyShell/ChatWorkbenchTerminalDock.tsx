@@ -88,27 +88,6 @@ function DockHeader({ onClose }: { onClose: () => void }): React.ReactElement {
 }
 
 // ---------------------------------------------------------------------------
-// Dock-as-whole resize handle (top edge, fixed-edge mode — unchanged Wave 88)
-// ---------------------------------------------------------------------------
-
-function DockResizeHandle({
-  onPointerDown,
-}: {
-  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
-}): React.ReactElement {
-  return (
-    <div
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize terminal dock"
-      className="h-1 cursor-ns-resize bg-transparent transition-colors hover:bg-interactive-accent"
-      onPointerDown={onPointerDown}
-      data-testid="chat-workbench-dock-resize"
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Slot divider (sibling resize between primary and secondary)
 // ---------------------------------------------------------------------------
 
@@ -164,9 +143,15 @@ export interface ChatWorkbenchTerminalDockProps {
 // useDockState — all hook wiring extracted so ChatWorkbenchTerminalDock ≤40 lines
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// useDockState — all hook wiring extracted so ChatWorkbenchTerminalDock ≤40 lines
+//
+// Wave 89 Phase 4b: DockResizeHandle removed (no chat sibling to resize against;
+// the dock now fills the full main area via flex-1). sizes / startResize /
+// handleDockResizePointerDown are no longer needed here.
+// ---------------------------------------------------------------------------
+
 interface DockState {
-  sizes: ReturnType<typeof useResizable>['sizes'];
-  handleDockResizePointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   slotHeights: ReturnType<typeof useDockSlotHeights>['slotHeights'];
   handleDividerPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPrimarySessionChange: (id: string | null) => void;
@@ -174,7 +159,7 @@ interface DockState {
 }
 
 function useDockState(onActiveSessionChange?: (id: string | null) => void): DockState {
-  const { sizes, startResize, startSiblingResize, applySizes } = useResizable();
+  const { sizes, startSiblingResize, applySizes } = useResizable();
   const { slotHeights, buildSiblingOpts } = useDockSlotHeights();
   const { primarySessionId, secondarySessionId, onPrimarySessionChange, onSecondarySessionChange } =
     useActiveSlotSession();
@@ -188,15 +173,6 @@ function useDockState(onActiveSessionChange?: (id: string | null) => void): Dock
     runLegacyDockHeightMigration(migrationRef.current.sizes, migrationRef.current.applySizes);
   }, []);
 
-  const handleDockResizePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-      startResize('terminal', 'horizontal', sizes.terminal, event.clientY);
-    },
-    [sizes.terminal, startResize],
-  );
-
   const handleDividerPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -207,8 +183,6 @@ function useDockState(onActiveSessionChange?: (id: string | null) => void): Dock
   );
 
   return {
-    sizes,
-    handleDockResizePointerDown,
     slotHeights,
     handleDividerPointerDown,
     onPrimarySessionChange,
@@ -224,22 +198,16 @@ export function ChatWorkbenchTerminalDock({
   onClose,
   onActiveSessionChange,
 }: ChatWorkbenchTerminalDockProps): React.ReactElement {
-  const {
-    sizes,
-    handleDockResizePointerDown,
-    slotHeights,
-    handleDividerPointerDown,
-    onPrimarySessionChange,
-    onSecondarySessionChange,
-  } = useDockState(onActiveSessionChange);
+  const { slotHeights, handleDividerPointerDown, onPrimarySessionChange, onSecondarySessionChange } =
+    useDockState(onActiveSessionChange);
 
   return (
+    // flex-1: dock fills the full dock-main-area height (Phase 4b terminal-first pivot).
+    // The dock-as-whole resize handle is removed — no chat sibling exists to resize against.
     <section
-      className="flex shrink-0 flex-col border-t border-border-semantic bg-surface-panel/95"
-      style={{ height: sizes.terminal }}
+      className="flex flex-1 flex-col border-t border-border-semantic bg-surface-panel/95"
       data-testid="chat-workbench-terminal-dock"
     >
-      <DockResizeHandle onPointerDown={handleDockResizePointerDown} />
       <DockHeader onClose={onClose} />
       <DockSlot
         slot="primary"

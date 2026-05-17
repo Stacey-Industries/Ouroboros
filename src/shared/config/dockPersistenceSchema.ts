@@ -46,12 +46,13 @@ export interface RawDockPersistence extends Partial<DockPersistenceData> {
 // Defaults
 // ---------------------------------------------------------------------------
 
-// Sum (260px) fits within useResizable's TERMINAL_DEFAULT_SIZE (280px) with
-// ~20px of chrome buffer for the dock header + slot divider. Previously 200+140
-// = 340px which overflowed the 280px default outer dock on fresh install.
+// Wave 89 Phase 4b: dock now fills the full shell height (flex-1) rather than
+// a fixed 280px bottom strip. Defaults are tuned for a full-height dock
+// (~600–800px typical). 60/40 split: primary gets the larger share as the
+// Wave 90 interactive-claude home.
 export const DEFAULT_TERMINAL_DOCK_SLOTS: TerminalDockSlots = {
-  primary: 160,
-  secondary: 100,
+  primary: 280,
+  secondary: 180,
 };
 
 export const DEFAULT_OVERLAY_DRAWER_WIDTH = 380;

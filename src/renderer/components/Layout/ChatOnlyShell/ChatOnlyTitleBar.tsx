@@ -17,6 +17,7 @@ import React, { useEffect, useState } from 'react';
 import ouroborosLogo from '../../../../../public/OUROBOROS.png';
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
+import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 import { WorkbenchMenuBar } from './WorkbenchMenuBar';
 import { RightPaneToggleButton, TerminalToggleButton } from './WorkbenchPanelToggleStrip';
@@ -216,10 +217,36 @@ function TitleBarLeft({
 
 // ── TitleBarRight ─────────────────────────────────────────────────────────────
 
-function TitleBarRight(): React.ReactElement {
+/**
+ * WorkbenchModelChips — compact model + permission chips for the title bar.
+ *
+ * Mounted only in workbench mode (terminal-first shell, Wave 89 Phase 4b).
+ * Previously these lived in ChatStatusChipRow below the composer; the composer
+ * is now removed from the shell, so they relocate here between the project
+ * label and the exit button. Uses ChatOnlyHeaderControls which owns all the
+ * relevant state hooks (useAgentChatModel / useAgentChatActions).
+ */
+function WorkbenchModelChips(): React.ReactElement {
+  return (
+    <div
+      className="flex items-center gap-1 shrink-0 overflow-x-auto"
+      style={{ WebkitAppRegion: 'no-drag', scrollbarWidth: 'none' } as React.CSSProperties}
+      data-testid="workbench-model-chips"
+    >
+      <ChatOnlyHeaderControls />
+    </div>
+  );
+}
+
+interface TitleBarRightProps {
+  isWorkbench: boolean;
+}
+
+function TitleBarRight({ isWorkbench }: TitleBarRightProps): React.ReactElement {
   const { pendingCount } = useApprovalContext();
   return (
     <>
+      {isWorkbench && <WorkbenchModelChips />}
       {pendingCount > 0 && (
         <div
           className="rounded-full border border-status-warning bg-status-warning-subtle px-2 py-0.5 text-[11px] font-medium text-status-warning"
@@ -317,7 +344,7 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
         {isWorkbench && <WorkbenchMenuBar />}
         <div className="flex-1" />
         <WorkbenchControls {...props} />
-        <TitleBarRight />
+        <TitleBarRight isWorkbench={isWorkbench} />
       </div>
     </header>
   );

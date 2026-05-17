@@ -102,7 +102,6 @@ interface BodyContentProps {
   state: WorkbenchState;
   handlers: WorkbenchHandlersResult;
   terminal?: UseTerminalSessionsReturn;
-  projectRoot: string | null;
   activeApprovalSessionIds: Array<string | null | undefined>;
   overlayWidths: UseOverlayDrawerWidthsReturn;
   onActiveSessionChange?: (sessionId: string | null) => void;
@@ -133,16 +132,10 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
   const activeApprovalSessionIds = useActiveApprovalSessionIds(state.sessionsState.activeSessionId);
   const overlayWidths = useOverlayDrawerWidths();
   useNewSessionMenuListener(handlers.handleCreateSession, props.layout.activeProject);
-  // Wave 82 (post-smoke): workbench's rail-active project wins over the global
-  // ProjectContext root. Without this override, switching projects in the rail
-  // didn't refresh the AgentChatWorkspace — it stayed bound to the IDE's main
-  // project root and the chat list didn't update.
-  const effectiveProjectRoot = props.layout.activeProject ?? props.projectRoot;
   return {
     state,
     handlers,
     terminal: props.terminal,
-    projectRoot: effectiveProjectRoot,
     activeApprovalSessionIds,
     overlayWidths,
     onActiveSessionChange: props.onActiveSessionChange,
@@ -160,7 +153,6 @@ function DesktopBody({
   state,
   handlers,
   terminal,
-  projectRoot,
   activeApprovalSessionIds,
   overlayWidths,
   onActiveSessionChange,
@@ -176,10 +168,8 @@ function DesktopBody({
       />
       <RailSlot state={state} handlers={handlers} terminal={terminal} />
       <WorkbenchMainColumn
-        compare={state.compare}
         dock={state.dock}
         layout={state.layout}
-        projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
         overlayWidths={overlayWidths}
         onActiveSessionChange={onActiveSessionChange}
@@ -192,7 +182,6 @@ function MobileBody({
   state,
   handlers,
   terminal,
-  projectRoot,
   activeApprovalSessionIds,
   overlayWidths,
   onActiveSessionChange,
@@ -211,10 +200,8 @@ function MobileBody({
         threads={state.threads}
       />
       <WorkbenchMainColumn
-        compare={state.compare}
         dock={state.dock}
         layout={state.layout}
-        projectRoot={state.layout.activeProject ?? projectRoot}
         surfacePolicy={state.surfacePolicy}
         overlayWidths={overlayWidths}
         onActiveSessionChange={onActiveSessionChange}
