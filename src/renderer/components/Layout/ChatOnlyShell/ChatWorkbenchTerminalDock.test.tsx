@@ -82,11 +82,7 @@ vi.mock('./useDockSlotHeights', () => ({
       onCommit: vi.fn(),
     }),
   }),
-  computeSlotDisplayHeights: (
-    heights: { primary: number; secondary: number },
-    _collapsed: unknown,
-    _extent: number,
-  ) => heights,
+  computeSlotDisplayHeights: (heights: { primary: number; secondary: number }) => heights,
   COLLAPSED_HEADER_HEIGHT: 28,
 }));
 

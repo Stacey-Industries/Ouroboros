@@ -192,8 +192,6 @@ function ShellChrome({
         sidebarMode={mode}
         onToggleRail={layout.toggleRail}
         railOpen={layout.railOpen}
-        onToggleTerminal={dock.toggleVisible}
-        terminalOpen={dock.visible}
         onToggleRightPane={layout.toggleRightPane}
         rightPaneOpen={layout.rightPaneOpen}
       />

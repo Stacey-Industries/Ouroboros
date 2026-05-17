@@ -2,7 +2,6 @@ import React, { Suspense } from 'react';
 
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import type {
-  DockState,
   LayoutState,
   SessionsState,
   SurfacePolicyState,
@@ -63,7 +62,6 @@ export function WorkbenchApprovalSurface({
 //     - ChatWorkbenchOverlays (absolute-positioned over the dock)
 
 export interface WorkbenchMainColumnProps {
-  dock: DockState;
   layout: LayoutState;
   surfacePolicy: SurfacePolicyState;
   overlayWidths: UseOverlayDrawerWidthsReturn;
@@ -71,7 +69,6 @@ export interface WorkbenchMainColumnProps {
 }
 
 export function WorkbenchMainColumn({
-  dock,
   layout,
   surfacePolicy,
   overlayWidths,
@@ -86,7 +83,6 @@ export function WorkbenchMainColumn({
     >
       <Suspense fallback={null}>
         <ChatWorkbenchTerminalDock
-          onClose={() => dock.setVisible(false)}
           onActiveSessionChange={onActiveSessionChange}
         />
       </Suspense>

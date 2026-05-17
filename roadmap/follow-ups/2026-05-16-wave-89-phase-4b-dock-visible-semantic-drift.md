@@ -1,7 +1,12 @@
 ---
-status: OPEN
+status: RESOLVED
 created: 2026-05-16
 updated: 2026-05-16
+resolved: 2026-05-16
+resolution: Wave 89 Phase 4c commit 3 — per-slot collapse (▾/▴) replaces the
+  whole-dock toggle. dock.visible / onToggleTerminal removed from ChatWorkbenchShell;
+  DockCloseButton / DockHeader removed from ChatWorkbenchTerminalDock; onClose prop
+  dropped. dock field removed from WorkbenchMainColumnProps (ChatWorkbenchBody.parts.tsx).
 ---
 
 # Wave 89 Phase 4b — `dock.visible` semantic drift after terminal-first pivot

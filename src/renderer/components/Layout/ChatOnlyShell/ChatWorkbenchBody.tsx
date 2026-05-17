@@ -168,7 +168,6 @@ function DesktopBody({
       />
       <RailSlot state={state} handlers={handlers} terminal={terminal} />
       <WorkbenchMainColumn
-        dock={state.dock}
         layout={state.layout}
         surfacePolicy={state.surfacePolicy}
         overlayWidths={overlayWidths}
@@ -200,7 +199,6 @@ function MobileBody({
         threads={state.threads}
       />
       <WorkbenchMainColumn
-        dock={state.dock}
         layout={state.layout}
         surfacePolicy={state.surfacePolicy}
         overlayWidths={overlayWidths}
