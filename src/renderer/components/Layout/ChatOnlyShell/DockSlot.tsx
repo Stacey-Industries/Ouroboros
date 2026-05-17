@@ -272,7 +272,7 @@ export function DockSlot({
 
   return (
     <div
-      className="flex flex-col overflow-hidden border-b border-border-semantic"
+      className="flex flex-col overflow-hidden"
       style={{ height }}
       data-testid={`dock-slot-${slot}`}
       data-collapsed={collapsed}

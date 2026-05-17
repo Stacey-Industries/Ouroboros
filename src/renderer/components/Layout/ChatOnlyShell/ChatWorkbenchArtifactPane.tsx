@@ -105,7 +105,7 @@ export function ChatWorkbenchArtifactPane({
   // EmptyArtifactState shows its own close affordance when the pane is empty.
   return (
     <aside
-      className="flex min-h-0 flex-1 flex-col overflow-hidden border-l border-border-semantic bg-surface-panel/95"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden border-l border-border-semantic bg-surface-overlay"
       data-testid="chat-workbench-artifact-pane"
     >
       {artifact.kind === 'diff' && <DiffArtifactContent />}

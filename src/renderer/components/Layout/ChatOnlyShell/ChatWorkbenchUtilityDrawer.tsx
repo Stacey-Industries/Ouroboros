@@ -218,7 +218,7 @@ export function ChatWorkbenchUtilityDrawer({
       // behaviour (`flex: 0 1 auto`) sized the aside to its content height,
       // which made the inner `TimelineGroupList`'s `overflow-y-auto` ineffective
       // (no bounded parent → no overflow → outer session list didn't scroll).
-      className="flex min-h-0 w-[360px] flex-1 shrink-0 flex-col overflow-hidden border-l border-border-semantic bg-surface-panel/95"
+      className="flex min-h-0 w-[360px] flex-1 shrink-0 flex-col overflow-hidden border-l border-border-semantic bg-surface-overlay"
       data-testid="chat-workbench-utility-drawer"
     >
       <DrawerHeader onClose={onClose} />

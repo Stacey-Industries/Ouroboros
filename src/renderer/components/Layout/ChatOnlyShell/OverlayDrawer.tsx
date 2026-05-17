@@ -151,13 +151,11 @@ export function OverlayDrawer({
       {open && <Backdrop onClick={onClose} drawerWidth={width} />}
       <div
         ref={containerRef}
-        className={`absolute inset-y-0 right-0 flex flex-col bg-surface-base shadow-xl transition-transform duration-200 ease-in-out pointer-events-auto ${translate}`}
+        className={`absolute inset-y-0 right-0 flex flex-col bg-surface-overlay shadow-xl transition-transform duration-200 ease-in-out pointer-events-auto ${translate}`}
         style={{ width }}
         data-testid={dataTestId ?? 'overlay-drawer'}
       >
-        {onWidthChange && (
-          <WidthHandle onDrag={onWidthChange} containerRef={containerRef} />
-        )}
+        {onWidthChange && <WidthHandle onDrag={onWidthChange} containerRef={containerRef} />}
         {children}
       </div>
     </div>

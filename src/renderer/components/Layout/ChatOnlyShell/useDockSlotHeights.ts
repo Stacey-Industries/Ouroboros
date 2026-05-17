@@ -100,8 +100,9 @@ export function saveSlotHeights(slots: TerminalDockSlots): void {
   try {
     const raw = localStorage.getItem(PERSIST_KEY);
     const existing: RawDockPersistence = raw ? (JSON.parse(raw) as RawDockPersistence) : {};
-    const collapsed =
-      existing.terminalDockSlotsCollapsed ?? { ...DEFAULT_TERMINAL_DOCK_SLOTS_COLLAPSED };
+    const collapsed = existing.terminalDockSlotsCollapsed ?? {
+      ...DEFAULT_TERMINAL_DOCK_SLOTS_COLLAPSED,
+    };
     writeToStorage(buildPersistencePayload(slots, collapsed, existing));
   } catch {
     // ignore storage errors
@@ -149,7 +150,11 @@ export function computeSlotDisplayHeights(
       secondary: COLLAPSED_HEADER_HEIGHT,
     };
   }
-  return slotHeights;
+  const total = slotHeights.primary + slotHeights.secondary;
+  if (total <= 0 || parentExtent <= 0) return slotHeights;
+  const ratio = slotHeights.primary / total;
+  const primary = Math.round(parentExtent * ratio);
+  return { primary, secondary: parentExtent - primary };
 }
 
 // ---------------------------------------------------------------------------
@@ -182,16 +187,13 @@ export function useDockSlotHeights(): UseDockSlotHeightsReturn {
     saveSlotHeights(committed);
   }, []);
 
-  const toggleSlotCollapsed = useCallback(
-    (slot: keyof TerminalDockSlotsCollapsed) => {
-      setSlotsCollapsed((prev) => {
-        const next = { ...prev, [slot]: !prev[slot] };
-        saveSlotsCollapsed(next);
-        return next;
-      });
-    },
-    [],
-  );
+  const toggleSlotCollapsed = useCallback((slot: keyof TerminalDockSlotsCollapsed) => {
+    setSlotsCollapsed((prev) => {
+      const next = { ...prev, [slot]: !prev[slot] };
+      saveSlotsCollapsed(next);
+      return next;
+    });
+  }, []);
 
   const buildSiblingOpts = useCallback(
     (parentExtent: number, startPos: number): SiblingResizeOpts => ({

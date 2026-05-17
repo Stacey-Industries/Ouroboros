@@ -218,14 +218,12 @@ function TitleBarLeft({
 // ── TitleBarRight ─────────────────────────────────────────────────────────────
 
 /**
- * WorkbenchModelChips — compact model + permission chips for the title bar.
- *
- * Mounted only in workbench mode (terminal-first shell, Wave 89 Phase 4b).
- * Previously these lived in ChatStatusChipRow below the composer; the composer
- * is now removed from the shell, so they relocate here between the project
- * label and the exit button. Uses ChatOnlyHeaderControls which owns all the
- * relevant state hooks (useAgentChatModel / useAgentChatActions).
+ * WorkbenchModelChips — kept but unmounted. Chips were inert (write side wired
+ * but no consumer in the slot sessions); removed from render pending a real
+ * target-slot wiring decision. Restore the `{<WorkbenchModelChips />}` in
+ * TitleBarRight when wiring lands.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function WorkbenchModelChips(): React.ReactElement {
   return (
     <div
@@ -238,15 +236,10 @@ function WorkbenchModelChips(): React.ReactElement {
   );
 }
 
-interface TitleBarRightProps {
-  isWorkbench: boolean;
-}
-
-function TitleBarRight({ isWorkbench }: TitleBarRightProps): React.ReactElement {
+function TitleBarRight(): React.ReactElement {
   const { pendingCount } = useApprovalContext();
   return (
     <>
-      {isWorkbench && <WorkbenchModelChips />}
       {pendingCount > 0 && (
         <div
           className="rounded-full border border-status-warning bg-status-warning-subtle px-2 py-0.5 text-[11px] font-medium text-status-warning"
@@ -344,7 +337,7 @@ export function ChatOnlyTitleBar(props: ChatOnlyTitleBarProps): React.ReactEleme
         {isWorkbench && <WorkbenchMenuBar />}
         <div className="flex-1" />
         <WorkbenchControls {...props} />
-        <TitleBarRight isWorkbench={isWorkbench} />
+        <TitleBarRight />
       </div>
     </header>
   );

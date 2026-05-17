@@ -7,7 +7,7 @@
  *   - + New chat triggers handleCreateSession with the active project root
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -119,7 +119,7 @@ describe('TwoTierRailSurface', () => {
     expect(screen.queryByTestId('outer-session-rail')).toBeNull();
   });
 
-  it('+ New chat in the inner sidebar triggers handleCreateSession with the active project root', () => {
+  it('hides the chats tab (post-Wave-89 terminal-first pivot) — no + New chat affordance', () => {
     const handleCreateSession = vi.fn().mockResolvedValue(undefined);
     const layout = makeLayout({ activeProject: '/proj/alpha' });
     render(
@@ -135,7 +135,8 @@ describe('TwoTierRailSurface', () => {
         })}
       />,
     );
-    fireEvent.click(screen.getByTestId('inner-chats-new-chat'));
-    expect(handleCreateSession).toHaveBeenCalledWith('/proj/alpha');
+    expect(screen.queryByTestId('inner-sidebar-tab-chats')).toBeNull();
+    expect(screen.queryByTestId('inner-chats-new-chat')).toBeNull();
+    expect(handleCreateSession).not.toHaveBeenCalled();
   });
 });

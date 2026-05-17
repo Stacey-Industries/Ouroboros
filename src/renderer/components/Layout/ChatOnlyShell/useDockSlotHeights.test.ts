@@ -159,25 +159,48 @@ describe('computeSlotDisplayHeights', () => {
   const heights = { primary: 300, secondary: 200 };
   const parentExtent = 600;
 
-  it('returns stored heights unchanged when neither slot is collapsed', () => {
-    const result = computeSlotDisplayHeights(heights, { primary: false, secondary: false }, parentExtent);
+  it('distributes parentExtent proportionally when neither slot is collapsed', () => {
+    // ratio = 300/500 = 0.6 → primary = round(600*0.6) = 360, secondary = 600 - 360 = 240
+    const result = computeSlotDisplayHeights(
+      heights,
+      { primary: false, secondary: false },
+      parentExtent,
+    );
+    expect(result).toEqual({ primary: 360, secondary: 240 });
+    expect(result.primary + result.secondary).toBe(parentExtent);
+  });
+
+  it('returns stored heights unchanged when parentExtent is non-positive (pre-measurement)', () => {
+    const result = computeSlotDisplayHeights(heights, { primary: false, secondary: false }, 0);
     expect(result).toEqual({ primary: 300, secondary: 200 });
   });
 
   it('primary collapsed: primary gets COLLAPSED_HEADER_HEIGHT, secondary fills remainder', () => {
-    const result = computeSlotDisplayHeights(heights, { primary: true, secondary: false }, parentExtent);
+    const result = computeSlotDisplayHeights(
+      heights,
+      { primary: true, secondary: false },
+      parentExtent,
+    );
     expect(result.primary).toBe(COLLAPSED_HEADER_HEIGHT);
     expect(result.secondary).toBe(parentExtent - COLLAPSED_HEADER_HEIGHT);
   });
 
   it('secondary collapsed: secondary gets COLLAPSED_HEADER_HEIGHT, primary fills remainder', () => {
-    const result = computeSlotDisplayHeights(heights, { primary: false, secondary: true }, parentExtent);
+    const result = computeSlotDisplayHeights(
+      heights,
+      { primary: false, secondary: true },
+      parentExtent,
+    );
     expect(result.secondary).toBe(COLLAPSED_HEADER_HEIGHT);
     expect(result.primary).toBe(parentExtent - COLLAPSED_HEADER_HEIGHT);
   });
 
   it('both collapsed: each slot gets exactly COLLAPSED_HEADER_HEIGHT (28px strips)', () => {
-    const result = computeSlotDisplayHeights(heights, { primary: true, secondary: true }, parentExtent);
+    const result = computeSlotDisplayHeights(
+      heights,
+      { primary: true, secondary: true },
+      parentExtent,
+    );
     expect(result.primary).toBe(COLLAPSED_HEADER_HEIGHT);
     expect(result.secondary).toBe(COLLAPSED_HEADER_HEIGHT);
   });
@@ -218,9 +241,10 @@ describe('useDockSlotHeights — buildSiblingOpts delegates to startSiblingResiz
     expect(typeof opts.onCommit).toBe('function');
     // Invoke onCommit directly — simulates what startSiblingResize does on pointerup.
     opts.onCommit?.([170, 130]);
-    const stored = JSON.parse(
-      localStorage.getItem('agent-ide:dock-persistence') ?? '{}',
-    ) as Record<string, unknown>;
+    const stored = JSON.parse(localStorage.getItem('agent-ide:dock-persistence') ?? '{}') as Record<
+      string,
+      unknown
+    >;
     expect(stored.terminalDockSlots).toEqual({ primary: 170, secondary: 130 });
   });
 });
@@ -250,9 +274,10 @@ describe('useDockSlotHeights — toggleSlotCollapsed', () => {
     });
     expect(result.current.slotsCollapsed.primary).toBe(true);
     expect(result.current.slotsCollapsed.secondary).toBe(false);
-    const stored = JSON.parse(
-      localStorage.getItem('agent-ide:dock-persistence') ?? '{}',
-    ) as Record<string, unknown>;
+    const stored = JSON.parse(localStorage.getItem('agent-ide:dock-persistence') ?? '{}') as Record<
+      string,
+      unknown
+    >;
     expect((stored.terminalDockSlotsCollapsed as Record<string, boolean>).primary).toBe(true);
   });
 

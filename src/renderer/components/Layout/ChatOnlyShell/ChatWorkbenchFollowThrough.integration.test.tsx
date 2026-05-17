@@ -228,7 +228,7 @@ describe('Rail IA (Wave 59 two-tier rail)', () => {
     expect(screen.getByTestId('inner-sidebar')).toBeDefined();
   });
 
-  it('exposes a + New chat affordance in the inner sidebar when a project is active', () => {
+  it('hides the chats tab (post-Wave-89 terminal-first pivot) — no + New chat affordance', () => {
     window.localStorage.setItem(
       'agent-ide:chat-workbench-layout',
       JSON.stringify({
@@ -245,7 +245,7 @@ describe('Rail IA (Wave 59 two-tier rail)', () => {
     const labels = within(innerSidebar)
       .queryAllByRole('button')
       .map((b) => b.textContent ?? '');
-    expect(labels.some((l) => /new chat/i.test(l))).toBe(true);
+    expect(labels.some((l) => /new chat/i.test(l))).toBe(false);
   });
 
   it('renders without crashing when sessions are present', () => {

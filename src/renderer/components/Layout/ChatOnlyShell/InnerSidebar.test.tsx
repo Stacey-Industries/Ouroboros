@@ -51,9 +51,9 @@ describe('InnerSidebar', () => {
     expect(screen.getByTestId('inner-sidebar-header').textContent).toContain('No project');
   });
 
-  it('renders all three tab buttons', () => {
+  it('renders only terminals and code tabs (chats hidden post-Wave-89 pivot)', () => {
     render(<InnerSidebar {...makeProps()} />);
-    expect(screen.getByTestId('inner-sidebar-tab-chats')).toBeDefined();
+    expect(screen.queryByTestId('inner-sidebar-tab-chats')).toBeNull();
     expect(screen.getByTestId('inner-sidebar-tab-terminals')).toBeDefined();
     expect(screen.getByTestId('inner-sidebar-tab-code')).toBeDefined();
   });
@@ -65,10 +65,10 @@ describe('InnerSidebar', () => {
     );
   });
 
-  it('marks inactive tabs with aria-selected=false', () => {
+  it('persisted activeTab="chats" coerces to terminals (chats tab hidden)', () => {
     render(<InnerSidebar {...makeProps({ activeTab: 'chats' })} />);
     expect(screen.getByTestId('inner-sidebar-tab-terminals').getAttribute('aria-selected')).toBe(
-      'false',
+      'true',
     );
     expect(screen.getByTestId('inner-sidebar-tab-code').getAttribute('aria-selected')).toBe(
       'false',
@@ -83,21 +83,25 @@ describe('InnerSidebar', () => {
   });
 
   it('active panel is not hidden', () => {
-    render(<InnerSidebar {...makeProps({ activeTab: 'chats' })} />);
-    const panel = screen.getByTestId('inner-sidebar-panel-chats');
+    render(<InnerSidebar {...makeProps({ activeTab: 'terminals' })} />);
+    const panel = screen.getByTestId('inner-sidebar-panel-terminals');
     expect(panel.hasAttribute('hidden')).toBe(false);
   });
 
   it('inactive panels are hidden', () => {
-    render(<InnerSidebar {...makeProps({ activeTab: 'chats' })} />);
-    expect(screen.getByTestId('inner-sidebar-panel-terminals').hasAttribute('hidden')).toBe(true);
+    render(<InnerSidebar {...makeProps({ activeTab: 'terminals' })} />);
     expect(screen.getByTestId('inner-sidebar-panel-code').hasAttribute('hidden')).toBe(true);
   });
 
-  it('renders custom chatsContent in the chats panel', () => {
+  it('chats panel is never rendered (chats tab hidden)', () => {
+    render(<InnerSidebar {...makeProps({ activeTab: 'chats' })} />);
+    expect(screen.queryByTestId('inner-sidebar-panel-chats')).toBeNull();
+  });
+
+  it('does not render chatsContent even when provided (chats tab hidden)', () => {
     const content = <div data-testid="custom-chats">Custom Chats</div>;
     render(<InnerSidebar {...makeProps({ chatsContent: content, activeTab: 'chats' })} />);
-    expect(screen.getByTestId('custom-chats')).toBeDefined();
+    expect(screen.queryByTestId('custom-chats')).toBeNull();
   });
 
   it('renders custom terminalsContent in the terminals panel', () => {

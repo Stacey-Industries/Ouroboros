@@ -36,8 +36,10 @@ function projectDisplayName(path: string | null): string {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
+// Chats tab hidden post-Wave-89 terminal-first pivot — surface is redundant
+// (no chat workspace mounted in this shell). InnerSidebarChats kept for
+// reference; restore the 'chats' entries here + in PANEL_DEFS to bring back.
 const TABS: { id: InnerSidebarTab; label: string }[] = [
-  { id: 'chats', label: 'Chats' },
   { id: 'terminals', label: 'Terminals' },
   { id: 'code', label: 'Code' },
 ];
@@ -100,7 +102,6 @@ function TabStrip({
 }
 
 const PANEL_DEFS: { id: InnerSidebarTab; label: string }[] = [
-  { id: 'chats', label: 'Chats' },
   { id: 'terminals', label: 'Terminals' },
   { id: 'code', label: 'Code' },
 ];
@@ -162,13 +163,13 @@ function EmptyTabBody({ label }: { label: string }): React.ReactElement {
 export function InnerSidebar({
   activeProject,
   activeTab,
-  chatsContent,
   codeContent,
   onSelectTab,
   terminalsContent,
 }: InnerSidebarProps): React.ReactElement {
+  // Coerce persisted 'chats' activeTab to 'terminals' since the chats tab is hidden.
+  const effectiveActiveTab: InnerSidebarTab = activeTab === 'chats' ? 'terminals' : activeTab;
   const contentMap: PanelContentMap = {
-    chats: chatsContent,
     terminals: terminalsContent,
     code: codeContent,
   };
@@ -179,8 +180,8 @@ export function InnerSidebar({
       data-testid="inner-sidebar"
     >
       <SidebarHeader activeProject={activeProject} />
-      <TabStrip activeTab={activeTab} onSelectTab={onSelectTab} />
-      <TabBody activeTab={activeTab} contentMap={contentMap} />
+      <TabStrip activeTab={effectiveActiveTab} onSelectTab={onSelectTab} />
+      <TabBody activeTab={effectiveActiveTab} contentMap={contentMap} />
     </aside>
   );
 }
