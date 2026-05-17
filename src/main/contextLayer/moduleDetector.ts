@@ -98,12 +98,10 @@ export function detectModules(
 // ---------------------------------------------------------------------------
 
 function buildContainerDirs(allDirs: Set<string>): Set<string> {
-  const containerDirs = new Set<string>();
-  for (const dir of allDirs) {
-    const parent = normalizeSeparators(path.dirname(dir));
-    if (parent && parent !== '.') containerDirs.add(parent);
-  }
-  return containerDirs;
+  const parents = [...allDirs]
+    .map((d) => normalizeSeparators(path.dirname(d)))
+    .filter((p) => p && p !== '.');
+  return new Set(parents);
 }
 
 function isCandidateDir(
@@ -366,6 +364,3 @@ function findPrefixGroups(files: IndexedRepoFile[]): Map<string, IndexedRepoFile
 
   return mergePrefixGroups(groups);
 }
-
-// Single-file detection moved to moduleDetectorSingleFile.ts
-// (Lane B 2026-05-16, hang investigation — made room for sub-phase trace logging).

@@ -123,22 +123,49 @@ async function tracedPhase<T>(
   return value;
 }
 
-export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<RepoMap> {
-  const { repoFacts, repoIndex, workspaceRoot } = options;
-  const allFiles = collectAllFiles(repoIndex);
-  if (allFiles.length === 0) return buildEmptyRepoMap(workspaceRoot);
-
-  const tOverall = Date.now();
-  log.info(
-    `[trace:generateRepoMap] start files=${allFiles.length} roots=${repoIndex.roots.length}`,
+function finalizeRepoMap(args: {
+  workspaceRoot: string;
+  repoIndex: RepoIndexSnapshot;
+  allFiles: IndexedRepoFile[];
+  enrichedSummaries: ModuleStructuralSummary[];
+  crossModuleDeps: Array<{ from: string; to: string; weight: number }>;
+  hotspotScores: Map<string, number>;
+  model?: string;
+}): RepoMap {
+  const moduleEntries: ModuleContextEntry[] = args.enrichedSummaries.map((s) => ({
+    structural: s,
+  }));
+  return enforceSizeCap(
+    buildRepoMapFromSummaries({
+      workspaceRoot: args.workspaceRoot,
+      repoIndex: args.repoIndex,
+      allFiles: args.allFiles,
+      moduleEntries,
+      crossModuleDeps: args.crossModuleDeps,
+    }),
+    args.hotspotScores,
+    args.model,
   );
+}
 
+async function runRepoMapPhases(
+  repoFacts: RepoFacts,
+  repoIndex: RepoIndexSnapshot,
+  allFiles: IndexedRepoFile[],
+  workspaceRoot: string,
+): Promise<{
+  modules: ModuleIdentity[];
+  structuralSummaries: ModuleStructuralSummary[];
+  crossModuleDeps: Array<{ from: string; to: string; weight: number }>;
+  enrichedSummaries: ModuleStructuralSummary[];
+  hotspotScores: Map<string, number>;
+}> {
   const modules = await tracedPhase(
     'detectModules',
     () => detectModulesFromRoots(repoIndex, repoIndex.roots.length > 1),
     (v) => `modules=${v.length}`,
   );
-  const gitDiffFiles = new Set(repoFacts.gitDiff.changedFiles.map((entry) => entry.filePath));
+  const gitDiffFiles = new Set(repoFacts.gitDiff.changedFiles.map((e) => e.filePath));
   const structuralSummaries = await tracedPhase('structuralSummaries', () =>
     buildModuleStructuralSummaries({ modules, files: allFiles, workspaceRoot, gitDiffFiles }),
   );
@@ -157,19 +184,28 @@ export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<
     () => computeAllModuleHotspotScores(modules),
     (v) => `scored=${v.size}`,
   );
+  return { modules, structuralSummaries, crossModuleDeps, enrichedSummaries, hotspotScores };
+}
 
-  const moduleEntries: ModuleContextEntry[] = enrichedSummaries.map((s) => ({ structural: s }));
-  const result = enforceSizeCap(
-    buildRepoMapFromSummaries({
-      workspaceRoot,
-      repoIndex,
-      allFiles,
-      moduleEntries,
-      crossModuleDeps,
-    }),
-    hotspotScores,
-    options.model,
+export async function generateRepoMap(options: GenerateRepoMapOptions): Promise<RepoMap> {
+  const { repoFacts, repoIndex, workspaceRoot } = options;
+  const allFiles = collectAllFiles(repoIndex);
+  if (allFiles.length === 0) return buildEmptyRepoMap(workspaceRoot);
+
+  const tOverall = Date.now();
+  log.info(
+    `[trace:generateRepoMap] start files=${allFiles.length} roots=${repoIndex.roots.length}`,
   );
+  const phases = await runRepoMapPhases(repoFacts, repoIndex, allFiles, workspaceRoot);
+  const result = finalizeRepoMap({
+    workspaceRoot,
+    repoIndex,
+    allFiles,
+    enrichedSummaries: phases.enrichedSummaries,
+    crossModuleDeps: phases.crossModuleDeps,
+    hotspotScores: phases.hotspotScores,
+    model: options.model,
+  });
   log.info(`[trace:generateRepoMap] done totalMs=${Date.now() - tOverall}`);
   return result;
 }
