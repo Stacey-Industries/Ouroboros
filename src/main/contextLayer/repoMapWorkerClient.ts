@@ -65,6 +65,7 @@ export class RepoMapWorkerClient {
     const id = String(this.nextId++);
     this.pending.set(id, { resolve: storedResolve, reject: storedReject, promise });
     const msg = this.buildRequest(id, opts);
+    log.info(`[trace:repoMap-worker] request id=${id}`);
     if (this.ready) {
       this.ensureWorker().postMessage(msg);
     } else {
@@ -110,7 +111,25 @@ export class RepoMapWorkerClient {
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
 
-    const worker = new Worker(resolveWorkerPath(), { workerData: buildWorkerData() });
+    log.info('[trace:repoMap-worker] spawning worker');
+    const worker = new Worker(resolveWorkerPath(), {
+      workerData: buildWorkerData(),
+      stdout: true,
+      stderr: true,
+    });
+
+    // Pipe worker stdout/stderr into the main-process log so [trace:generateRepoMap]
+    // lines emitted inside the worker are visible in the Electron dev console.
+    // Optional chaining defensively no-ops in test environments where the mock
+    // Worker (an EventEmitter) does not expose stdout/stderr streams.
+    worker.stdout?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString().trimEnd();
+      if (text) log.info(`[worker:repoMap] ${text}`);
+    });
+    worker.stderr?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString().trimEnd();
+      if (text) log.warn(`[worker:repoMap] ${text}`);
+    });
 
     worker.on('message', (msg: RepoMapWorkerResponse) => {
       this.handleMessage(msg);
@@ -123,6 +142,7 @@ export class RepoMapWorkerClient {
 
     worker.on('exit', (code) => {
       if (code !== 0) {
+        log.warn('[trace:repoMap-worker] worker exited unexpectedly');
         log.warn(`[repoMapWorker] exited with code ${code}`);
         this.rejectAll(new Error(`Worker exited with code ${code}`));
       }
@@ -139,13 +159,16 @@ export class RepoMapWorkerClient {
   private handleMessage(msg: RepoMapWorkerResponse): void {
     switch (msg.type) {
       case 'ready':
+        log.info('[trace:repoMap-worker] ready');
         this.ready = true;
         this.flushQueue();
         break;
       case 'repoMapReady':
+        log.info(`[trace:repoMap-worker] response id=${msg.id} workerMs=${msg.durationMs}`);
         this.settle(msg.id, (p) => p.resolve(msg.repoMap));
         break;
       case 'error':
+        log.warn(`[trace:repoMap-worker] worker error id=${msg.id} message=${msg.message}`);
         this.settle(msg.id, (p) => p.reject(new Error(msg.message)));
         break;
     }
