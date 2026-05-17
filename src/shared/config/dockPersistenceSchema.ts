@@ -29,9 +29,17 @@ export interface TerminalDockSlots {
   secondary: number;
 }
 
+/** Per-slot collapsed state. When collapsed, a slot shrinks to its 28px header strip. */
+export interface TerminalDockSlotsCollapsed {
+  primary: boolean;
+  secondary: boolean;
+}
+
 /** All persisted dock/overlay layout values added in Wave 89. */
 export interface DockPersistenceData {
   terminalDockSlots: TerminalDockSlots;
+  /** Per-slot collapsed state (Wave 89 Phase 4c). Default: both expanded. */
+  terminalDockSlotsCollapsed: TerminalDockSlotsCollapsed;
   overlayDrawerWidth: number;
   artifactOverlayWidth: number;
 }
@@ -41,6 +49,15 @@ export interface RawDockPersistence extends Partial<DockPersistenceData> {
   /** Legacy Wave 88 key. Absent after first Wave-89 write. */
   dockHeight?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Collapsed state defaults
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_TERMINAL_DOCK_SLOTS_COLLAPSED: TerminalDockSlotsCollapsed = {
+  primary: false,
+  secondary: false,
+};
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -60,6 +77,7 @@ export const DEFAULT_ARTIFACT_OVERLAY_WIDTH = 480;
 
 export const DOCK_PERSISTENCE_DEFAULTS: DockPersistenceData = {
   terminalDockSlots: DEFAULT_TERMINAL_DOCK_SLOTS,
+  terminalDockSlotsCollapsed: DEFAULT_TERMINAL_DOCK_SLOTS_COLLAPSED,
   overlayDrawerWidth: DEFAULT_OVERLAY_DRAWER_WIDTH,
   artifactOverlayWidth: DEFAULT_ARTIFACT_OVERLAY_WIDTH,
 };
@@ -112,6 +130,8 @@ export function migrateDockPersistence(raw: RawDockPersistence): {
 
   const data: DockPersistenceData = {
     terminalDockSlots,
+    terminalDockSlotsCollapsed:
+      raw.terminalDockSlotsCollapsed ?? { ...DEFAULT_TERMINAL_DOCK_SLOTS_COLLAPSED },
     overlayDrawerWidth: raw.overlayDrawerWidth ?? DEFAULT_OVERLAY_DRAWER_WIDTH,
     artifactOverlayWidth: raw.artifactOverlayWidth ?? DEFAULT_ARTIFACT_OVERLAY_WIDTH,
   };
