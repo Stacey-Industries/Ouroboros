@@ -32,6 +32,11 @@ vi.mock('./repoMapGenerator', () => ({
   generateRepoMap: mockGenerateRepoMap,
 }));
 
+vi.mock('./repoMapWorkerQueryClient', () => ({
+  initWorkerQueryClient: vi.fn(),
+  disposeWorkerQueryClient: vi.fn(),
+}));
+
 describe('repoMapWorker module', () => {
   beforeEach(() => {
     vi.resetModules();

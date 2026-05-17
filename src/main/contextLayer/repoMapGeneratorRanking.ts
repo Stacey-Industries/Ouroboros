@@ -11,9 +11,9 @@
  * Bounded; results cached in the score map for the duration of the call.
  */
 
-import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import log from '../logger';
 import type { ModuleIdentity } from './contextLayerTypes';
+import { getQuerySource } from './repoMapGeneratorQuerySource';
 
 interface HotspotEntry {
   id: string;
@@ -32,7 +32,7 @@ export async function computeAllModuleHotspotScores(
   modules: ModuleIdentity[],
 ): Promise<Map<string, number>> {
   const scores = new Map<string, number>();
-  const ctrl = getGraphController();
+  const ctrl = getQuerySource();
   if (!ctrl) {
     // Graph not ready: empty map signals soft-fallback (Decision 7).
     return scores;
@@ -56,7 +56,7 @@ export async function computeAllModuleHotspotScores(
 }
 
 async function queryModuleHotspotScore(modulePath: string): Promise<number> {
-  const ctrl = getGraphController();
+  const ctrl = getQuerySource();
   if (!ctrl) return 0;
   const escapedPath = modulePath.replace(/'/g, "''");
   const cypher =

@@ -5,9 +5,9 @@
  * entries that include signatures and kinds.
  */
 
-import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import log from '../logger';
 import type { ModuleExport } from './contextLayerTypes';
+import { getQuerySource } from './repoMapGeneratorQuerySource';
 
 const EXPORTS_LIMIT = 50;
 
@@ -58,7 +58,7 @@ function rowToModuleExport(row: Record<string, unknown>): ModuleExport | null {
  * The caller is responsible for using the file-walk fallback exports when this returns [].
  */
 export async function queryModuleExports(moduleRootPath: string): Promise<ModuleExport[]> {
-  const ctrl = getGraphController();
+  const ctrl = getQuerySource();
   if (!ctrl) {
     // Soft-fallback path. Caller (generateRepoMap) emits a single summary log
     // covering all skipped modules; per-module logs would spam the terminal.

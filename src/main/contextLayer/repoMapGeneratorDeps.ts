@@ -15,9 +15,9 @@
  * to the file-walk function when the graph is not ready (Decision 7).
  */
 
-import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import log from '../logger';
 import type { ModuleIdentity } from './contextLayerTypes';
+import { getQuerySource } from './repoMapGeneratorQuerySource';
 
 const PER_QUERY_LIMIT = 200;
 
@@ -34,7 +34,7 @@ interface EdgeRow {
 export async function buildCrossModuleDependenciesFromGraph(
   modules: ModuleIdentity[],
 ): Promise<Array<{ from: string; to: string; weight: number }>> {
-  const ctrl = getGraphController();
+  const ctrl = getQuerySource();
   if (!ctrl) return [];
 
   const sortedByPathDescending = sortByPathLengthDescending(modules);
@@ -70,7 +70,7 @@ async function fetchEdgeRows(
   edgeType: 'CALLS' | 'IMPORTS',
   sourcePath: string,
 ): Promise<EdgeRow[]> {
-  const ctrl = getGraphController();
+  const ctrl = getQuerySource();
   if (!ctrl) return [];
   const escapedPath = sourcePath.replace(/'/g, "''");
   const cypher =

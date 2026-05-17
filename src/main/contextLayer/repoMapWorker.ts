@@ -13,6 +13,10 @@ import { parentPort, workerData } from 'worker_threads';
 
 import log from '../logger';
 import { generateRepoMap } from './repoMapGenerator';
+import {
+  disposeWorkerQueryClient,
+  initWorkerQueryClient,
+} from './repoMapWorkerQueryClient';
 import type {
   GenerateRepoMapRequest,
   RepoMapWorkerRequest,
@@ -61,13 +65,26 @@ async function handleMessage(msg: RepoMapWorkerRequest): Promise<void> {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 // dbPath is passed via workerData so the worker can open its own read-only
-// SQLite connection in Phase 2 without calling getDbPath() (which requires
-// the Electron app module — unavailable in worker threads).
-const _dbPath = (workerData as { dbPath?: string } | null)?.dbPath;
-log.info(`[repoMapWorker] starting dbPath=${_dbPath ?? '(none)'}`);
+// SQLite connection without calling getDbPath() (which requires the Electron
+// app module — unavailable in worker threads). Same pattern as indexingWorker.ts.
+const dbPath = (workerData as { dbPath?: string } | null)?.dbPath;
+log.info(`[repoMapWorker] starting dbPath=${dbPath ?? '(none)'}`);
+
+if (dbPath) {
+  initWorkerQueryClient(dbPath);
+} else {
+  log.warn('[repoMapWorker] no dbPath in workerData — graph queries will soft-fallback');
+}
 
 parentPort?.on('message', (msg: RepoMapWorkerRequest) => {
   void handleMessage(msg);
+});
+
+// Clean up the read-only DB connection when the worker process exits.
+// parentPort 'close' is not used because it fires on port detachment,
+// not reliably on worker termination in all Electron/Node versions.
+process.once('exit', () => {
+  disposeWorkerQueryClient();
 });
 
 post({ type: 'ready' });
