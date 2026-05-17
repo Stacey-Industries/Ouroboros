@@ -2,9 +2,22 @@
  * contextLayerTypes.ts — Type definitions for the context layer subsystem.
  */
 
-import type { ModuleExport } from '../orchestration/types';
+import type { RepoIndexSnapshot } from '../orchestration/repoIndexer';
+import type { ModuleExport, RepoFacts } from '../orchestration/types';
 
 export type { ModuleExport };
+
+/**
+ * Function signature for building a RepoMap. Matches `generateRepoMap` from
+ * repoMapGenerator.ts. Defined here so ContextLayerConfig can reference it
+ * without a circular import.
+ */
+export type GenerateRepoMapFn = (options: {
+  repoFacts: RepoFacts;
+  repoIndex: RepoIndexSnapshot;
+  workspaceRoot: string;
+  model?: string;
+}) => Promise<RepoMap>;
 
 export interface ContextLayerConfig {
   enabled: boolean;
@@ -14,6 +27,12 @@ export interface ContextLayerConfig {
   autoSummarize: boolean;
   /** Max directory depth to descend before absorbing remaining files into one module. Default: 6. */
   moduleDepthLimit?: number;
+  /**
+   * Optional override for the function that builds the RepoMap. Defaults to
+   * the in-process implementation. When provided, callers can route the
+   * expensive rebuild off the main thread — see B3b worker offload.
+   */
+  generateRepoMapFn?: GenerateRepoMapFn;
 }
 
 // ---------------------------------------------------------------------------

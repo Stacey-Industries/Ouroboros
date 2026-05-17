@@ -91,6 +91,9 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.config = options.config;
     this.workspaceRoot = options.workspaceRoot;
     this.buildRepoIndex = options.buildRepoIndex;
+    if (options.config.generateRepoMapFn) {
+      log.info('[context-layer] generateRepoMap routed via worker');
+    }
   }
 
   async initialize(): Promise<void> {
@@ -141,11 +144,26 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.snapshot = snapshot;
     const repoFacts = snapshot.repoFacts;
 
-    const newRepoMap = await generateRepoMap({
-      repoFacts,
-      repoIndex: snapshot,
-      workspaceRoot: this.workspaceRoot,
-    });
+    const mapFn = this.config.generateRepoMapFn ?? generateRepoMap;
+    let newRepoMap: RepoMap;
+    try {
+      newRepoMap = await mapFn({
+        repoFacts,
+        repoIndex: snapshot,
+        workspaceRoot: this.workspaceRoot,
+      });
+    } catch (err) {
+      if (this.config.generateRepoMapFn) {
+        log.warn('[context-layer] worker generateRepoMap failed — falling back to in-process', err);
+        newRepoMap = await generateRepoMap({
+          repoFacts,
+          repoIndex: snapshot,
+          workspaceRoot: this.workspaceRoot,
+        });
+      } else {
+        throw err;
+      }
+    }
 
     await writeRepoMap(this.workspaceRoot, newRepoMap);
 

@@ -890,4 +890,65 @@ describe('contextLayerController', () => {
     // New controller should exist
     expect(getContextLayerController()).not.toBeNull();
   });
+
+  // -----------------------------------------------------------------------
+  // generateRepoMapFn injection — default, override, soft-fallback
+  // -----------------------------------------------------------------------
+
+  it('runFullRebuild uses default generateRepoMap when generateRepoMapFn is omitted', async () => {
+    mockedReadManifest.mockResolvedValue(null);
+
+    await initContextLayer({
+      workspaceRoot: '/workspace',
+      buildRepoIndex: mockBuildRepoIndex,
+      config: createMockConfig(), // no generateRepoMapFn
+    });
+
+    expect(mockedGenerateRepoMap).toHaveBeenCalledTimes(1);
+    expect(mockedGenerateRepoMap).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceRoot: '/workspace' }),
+    );
+  });
+
+  it('runFullRebuild calls override generateRepoMapFn instead of default when provided', async () => {
+    mockedReadManifest.mockResolvedValue(null);
+    const overrideMap = createMockRepoMap({ projectName: 'from-worker' });
+    const overrideFn = vi.fn<Parameters<typeof generateRepoMap>, ReturnType<typeof generateRepoMap>>()
+      .mockResolvedValue(overrideMap);
+
+    await initContextLayer({
+      workspaceRoot: '/workspace',
+      buildRepoIndex: mockBuildRepoIndex,
+      config: createMockConfig({ generateRepoMapFn: overrideFn }),
+    });
+
+    expect(overrideFn).toHaveBeenCalledTimes(1);
+    expect(overrideFn).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceRoot: '/workspace' }),
+    );
+    // The in-process default must NOT have been called
+    expect(mockedGenerateRepoMap).not.toHaveBeenCalled();
+    // The repo map stored is the one returned by the override
+    expect(getContextLayerController()!.getRepoMap()?.projectName).toBe('from-worker');
+  });
+
+  it('runFullRebuild soft-falls-back to in-process generateRepoMap when override rejects', async () => {
+    mockedReadManifest.mockResolvedValue(null);
+    const workerError = new Error('worker crashed');
+    const failingOverride = vi.fn<Parameters<typeof generateRepoMap>, ReturnType<typeof generateRepoMap>>()
+      .mockRejectedValue(workerError);
+
+    await initContextLayer({
+      workspaceRoot: '/workspace',
+      buildRepoIndex: mockBuildRepoIndex,
+      config: createMockConfig({ generateRepoMapFn: failingOverride }),
+    });
+
+    // Override was attempted
+    expect(failingOverride).toHaveBeenCalledTimes(1);
+    // In-process fallback fired
+    expect(mockedGenerateRepoMap).toHaveBeenCalledTimes(1);
+    // Controller is still healthy — soft-fallback succeeded
+    expect(getContextLayerController()!.getStatus().health).toBe('healthy');
+  });
 });

@@ -10,6 +10,7 @@ import { startClaudeUsagePoller } from './claudeUsagePoller';
 import { enableCodeModeUserLevel } from './codemode/codemodeStartup';
 import { getConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
+import { getRepoMapWorkerClient } from './contextLayer/repoMapWorkerClient';
 import { initialiseCrashReporter } from './crashReporter';
 import { initExtensions } from './extensionsApi';
 import { installHooks } from './hookInstaller';
@@ -184,7 +185,10 @@ function startContextLayerAsync(defaultRoot: string | undefined): void {
     workspaceRoot: getConfigValue('defaultProjectRoot'),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     buildRepoIndex: buildRepoIndexSnapshot as any,
-    config: contextLayerConfig,
+    config: {
+      ...contextLayerConfig,
+      generateRepoMapFn: (opts) => getRepoMapWorkerClient().generateRepoMap(opts),
+    },
   })
     .then(() => {
       log.info('Initialization complete');
