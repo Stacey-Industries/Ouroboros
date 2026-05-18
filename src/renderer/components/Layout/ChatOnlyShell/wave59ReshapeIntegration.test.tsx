@@ -168,12 +168,12 @@ describe('Wave 59 — IA reshape integration', () => {
     );
   });
 
-  it('Terminals tab renders the unavailable message when no terminal API is provided', () => {
+  it('Terminals tab renders the empty state (+ New terminal) when no sessions exist (Wave 94 Phase D — terminal? prop replaced by useProjectTerminalsContext fallback)', () => {
     const layout = makeLayout({
       getProjectState: vi.fn(() => ({ activeInnerTab: 'terminals' as const })),
     });
     render(<TwoTierRailSurface {...makeRailProps({ layout })} />);
-    expect(screen.getByText(/terminals are not available/i)).toBeDefined();
+    expect(screen.getByTestId('inner-terminals-new')).toBeDefined();
   });
 
   it('outer rail click switches the active project via setActiveProject', () => {
