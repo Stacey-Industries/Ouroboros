@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { ProjectTerminalsProvider } from '../../../contexts/ProjectTerminalsContext';
 import {
   OPEN_MULTI_SESSION_EVENT,
   WORKBENCH_OPEN_CHAT_SEARCH_EVENT,
@@ -280,25 +281,27 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
   const { cycleMode, mode, layout, dock, activeDockSessionId, setActiveDockSessionId } = shell;
   const { openDiffOverlay, projectRoot, terminal, toggleDrawer } = props;
   return (
-    <div
-      data-layout="app"
-      className="flex h-screen w-screen flex-col overflow-hidden bg-surface-base"
-      style={{ backgroundImage: SHELL_BG }}
-      data-testid="chat-workbench-shell"
-    >
-      <ChatOnlyTerminalToolBridge activeDockSessionId={activeDockSessionId} />
-      <ShellChrome
-        cycleMode={cycleMode}
-        dock={dock}
-        layout={layout}
-        mode={mode}
-        onActiveSessionChange={setActiveDockSessionId}
-        openDiffOverlay={openDiffOverlay}
-        projectRoot={projectRoot}
-        terminal={terminal}
-        toggleDrawer={toggleDrawer}
-      />
-      <ShellOverlays {...buildOverlaysProps(props, shell)} />
-    </div>
+    <ProjectTerminalsProvider activeProjectPath={projectRoot}>
+      <div
+        data-layout="app"
+        className="flex h-screen w-screen flex-col overflow-hidden bg-surface-base"
+        style={{ backgroundImage: SHELL_BG }}
+        data-testid="chat-workbench-shell"
+      >
+        <ChatOnlyTerminalToolBridge activeDockSessionId={activeDockSessionId} />
+        <ShellChrome
+          cycleMode={cycleMode}
+          dock={dock}
+          layout={layout}
+          mode={mode}
+          onActiveSessionChange={setActiveDockSessionId}
+          openDiffOverlay={openDiffOverlay}
+          projectRoot={projectRoot}
+          terminal={terminal}
+          toggleDrawer={toggleDrawer}
+        />
+        <ShellOverlays {...buildOverlaysProps(props, shell)} />
+      </div>
+    </ProjectTerminalsProvider>
   );
 }

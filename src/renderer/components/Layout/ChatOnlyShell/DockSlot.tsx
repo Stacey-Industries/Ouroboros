@@ -18,7 +18,8 @@
 
 import React, { useCallback, useEffect } from 'react';
 
-import { useTerminalSessions } from '../../../hooks/useTerminalSessions';
+import type { SlotHandle } from '../../../contexts/ProjectTerminalsContext';
+import { useProjectTerminalsContext } from '../../../contexts/ProjectTerminalsContext';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { TerminalManager } from '../../Terminal/TerminalManager';
 
@@ -192,7 +193,7 @@ interface SlotHandlers {
   isRecording: boolean;
 }
 
-function useSlotHandlers(terminal: ReturnType<typeof useTerminalSessions>): SlotHandlers {
+function useSlotHandlers(terminal: SlotHandle): SlotHandlers {
   const handleSpawn = useCallback(() => {
     void terminal.spawnSession();
   }, [terminal]);
@@ -218,7 +219,7 @@ function SlotTerminalSurface({
   handleSpawn,
 }: {
   slot: SlotId;
-  terminal: ReturnType<typeof useTerminalSessions>;
+  terminal: SlotHandle;
   handleSpawn: () => void;
 }): React.ReactElement {
   return (
@@ -261,7 +262,8 @@ export function DockSlot({
   onToggleCollapse,
   onActiveSessionChange,
 }: DockSlotProps): React.ReactElement {
-  const terminal = useTerminalSessions();
+  const terminals = useProjectTerminalsContext();
+  const terminal = slot === 'primary' ? terminals.primary : terminals.secondary;
   const label = slot === 'primary' ? 'Primary' : 'Shell';
   const { handleSpawn, handleCloseSession, handleToggleRecording, isRecording } =
     useSlotHandlers(terminal);

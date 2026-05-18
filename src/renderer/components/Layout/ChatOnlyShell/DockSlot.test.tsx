@@ -27,24 +27,27 @@ import { DockSlot } from './DockSlot';
 // Mocks
 // ---------------------------------------------------------------------------
 
-// useTerminalSessions — stub with minimal shape so DockSlot renders without PTY
-vi.mock('../../../hooks/useTerminalSessions', () => ({
-  useTerminalSessions: () => ({
-    sessions: [],
-    activeSessionId: null,
-    recordingSessions: new Set<string>(),
-    spawnSession: vi.fn().mockResolvedValue(undefined),
-    spawnClaudeSession: vi.fn().mockResolvedValue(undefined),
-    spawnCodexSession: vi.fn().mockResolvedValue(undefined),
-    handleTerminalClose: vi.fn(),
-    handleTerminalRestart: vi.fn().mockResolvedValue(undefined),
-    handleTerminalTitleChange: vi.fn(),
-    handleToggleRecording: vi.fn().mockResolvedValue(undefined),
-    handleSplit: vi.fn().mockResolvedValue(undefined),
-    handleCloseSplit: vi.fn(),
-    handleTerminalReorder: vi.fn(),
-    setActiveSessionId: vi.fn(),
-    focusOrCreateSession: vi.fn(),
+// useProjectTerminalsContext — stub with minimal SlotHandle shape so DockSlot
+// renders without PTY. Both primary and secondary return the same empty handle.
+const stubSlotHandle = {
+  sessions: [],
+  activeSessionId: null,
+  recordingSessions: new Set<string>(),
+  spawnSession: vi.fn().mockResolvedValue(undefined),
+  handleTerminalClose: vi.fn(),
+  handleTerminalRestart: vi.fn().mockResolvedValue(undefined),
+  handleTerminalTitleChange: vi.fn(),
+  handleToggleRecording: vi.fn().mockResolvedValue(undefined),
+  handleSplit: vi.fn().mockResolvedValue(undefined),
+  handleCloseSplit: vi.fn(),
+  handleTerminalReorder: vi.fn(),
+  setActiveSessionId: vi.fn(),
+};
+
+vi.mock('../../../contexts/ProjectTerminalsContext', () => ({
+  useProjectTerminalsContext: () => ({
+    primary: stubSlotHandle,
+    secondary: stubSlotHandle,
   }),
 }));
 
@@ -219,9 +222,7 @@ describe('DockSlot — collapse affordance (Phase 4c)', () => {
   it('always shows + New button regardless of collapsed state', () => {
     const { rerender } = renderPrimary({ collapsed: false });
     expect(screen.getByTestId('dock-slot-primary-spawn')).toBeTruthy();
-    rerender(
-      <DockSlot slot="primary" height={200} collapsed={true} onToggleCollapse={vi.fn()} />,
-    );
+    rerender(<DockSlot slot="primary" height={200} collapsed={true} onToggleCollapse={vi.fn()} />);
     expect(screen.getByTestId('dock-slot-primary-spawn')).toBeTruthy();
   });
 

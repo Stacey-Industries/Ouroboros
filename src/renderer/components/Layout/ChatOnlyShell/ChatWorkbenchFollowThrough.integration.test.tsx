@@ -164,6 +164,42 @@ vi.mock('../../../hooks/useRulesAndSkills', () => ({
   }),
 }));
 
+// ProjectTerminalsContext — prevents useProjectTerminals → useTerminalSessions
+// from running in the integration test tree (no PTY in jsdom).
+vi.mock('../../../contexts/ProjectTerminalsContext', () => ({
+  ProjectTerminalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useProjectTerminalsContext: () => ({
+    primary: {
+      sessions: [],
+      activeSessionId: null,
+      setActiveSessionId: vi.fn(),
+      recordingSessions: new Set(),
+      spawnSession: vi.fn().mockResolvedValue(undefined),
+      handleTerminalClose: vi.fn(),
+      handleTerminalRestart: vi.fn().mockResolvedValue(undefined),
+      handleTerminalTitleChange: vi.fn(),
+      handleToggleRecording: vi.fn().mockResolvedValue(undefined),
+      handleSplit: vi.fn().mockResolvedValue(undefined),
+      handleCloseSplit: vi.fn(),
+      handleTerminalReorder: vi.fn(),
+    },
+    secondary: {
+      sessions: [],
+      activeSessionId: null,
+      setActiveSessionId: vi.fn(),
+      recordingSessions: new Set(),
+      spawnSession: vi.fn().mockResolvedValue(undefined),
+      handleTerminalClose: vi.fn(),
+      handleTerminalRestart: vi.fn().mockResolvedValue(undefined),
+      handleTerminalTitleChange: vi.fn(),
+      handleToggleRecording: vi.fn().mockResolvedValue(undefined),
+      handleSplit: vi.fn().mockResolvedValue(undefined),
+      handleCloseSplit: vi.fn(),
+      handleTerminalReorder: vi.fn(),
+    },
+  }),
+}));
+
 // ── Late import of shell (after all mocks are registered) ───────────────────
 const { ChatWorkbenchShell } = await import('./ChatWorkbenchShell');
 

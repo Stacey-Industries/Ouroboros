@@ -43,6 +43,15 @@ export const tailSchemaExt2 = {
     },
     default: { defaultWindow: '24h', lastDir: '' },
   },
+  /** Wave 94 Phase B — per-project terminal session ownership.
+   *  Shape: Record<projectPath, ProjectTerminalState> (JSON-serializable map).
+   *  Default: {} (empty — no migration; sessions are runtime, not durable content).
+   */
+  terminalSessionsPerProject: {
+    type: 'object',
+    additionalProperties: true,
+    default: {},
+  },
   /** Wave 57 — agent monitor feature flags (subagent display + diagnostics). */
   agentMonitor: {
     type: 'object',
