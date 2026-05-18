@@ -1,10 +1,23 @@
-# Session Handoff — 2026-05-17 (Lane B B3a + B3b SHIPPED locally, 9 commits ahead of origin/master)
+# Session Handoff — 2026-05-17 (Wave 94 ADR locked, ready for Phase A dispatch; 9 commits ahead of origin/master)
 
 **Audience:** the next Claude Code session.
 
 ---
 
 ## TL;DR
+
+**Wave 94 (Chat-Workbench Completion) staged.** `waveplan-94.md` flipped DRAFT→PLANNED. ADR locked at `roadmap/wave-94-chat-workbench-completion/wave-94-decisions.md` — all 5 decisions pinned (Decision 1 pre-locked from 2026-05-17 diagnostic; Decisions 2–5 confirmed in session):
+
+- **2 → 2a:** new `useProjectTerminals` hook, atomic project switch.
+- **3 → 3b:** opt-in `enableTerminalDiffReview` setting, default `true`.
+- **4 → 4a:** rail single-click promotes to focused-or-primary slot, right-click for explicit.
+- **5 → 5a:** tab strip replaces slot label once sessions exist; empty-state keeps label.
+
+**Tag target `v2.19.0`** (minor — feature wave). Next action: dispatch **Phase A (Title-bar surface split)** — independent of B/C/D, sonnet-implementer, scope is `ChatOnlyTitleBar.tsx` + `WorkbenchPanelToggleStrip.tsx` + `useChatWorkbenchLayout.ts`. Phase B is the architectural risk (load-bearing for C+D); A is the safe warm-up.
+
+---
+
+## Prior wave (still unpushed)
 
 **Lane B fix wave for `roadmap/bugs/2026-05-16-main-thread-hang-on-context-rebuild.md` complete.** The user-visible 2.5-minute UI freeze on context rebuild is **gone**. Two distinct fixes shipped:
 
@@ -74,17 +87,23 @@ In `roadmap/follow-ups/`:
 
 ## What to do next
 
-1. **Push the 9 wave commits.** Gated on GitHub Actions minutes refresh (~2026-06-01). Pre-push the marker IS still required (per Wave 92 lockfile guard); no lockfile changes in this wave so push will pass cleanly.
+1. **Dispatch Wave 94 Phase A — Title-bar surface split.** Sonnet-implementer; scope is `ChatOnlyTitleBar.tsx`, `WorkbenchPanelToggleStrip.tsx` (new `UtilityPaneToggleButton` + `ArtifactPaneToggleButton` as siblings), `useChatWorkbenchLayout.ts` (expose `toggleUtility()` + `toggleArtifact()` directly; keep legacy `toggleRightPane` + `lastRightPaneView` cycling for keyboard-shortcut consumers). Independent of B/C/D/E — safe warm-up phase. Per ADR Decision 1.
 
-2. **Walk Wave 89's deferred smoke gate.** The hang that blocked it is now fixed. Highest-priority follow-up. Full checklist preserved in `roadmap/follow-ups/2026-05-16-wave-89-deferred-smoke-gate.md`.
+2. **Then Wave 94 Phase B — Per-project terminal isolation.** Architectural risk phase. Per ADR Decision 2a: new `useProjectTerminals(activeProject)` hook returning `{ primary, secondary }` for the active project, electron-store key `terminalSessionsPerProject` (existing per-window-roots persistence migrated/discarded as runtime state). Phase B is load-bearing — C and D consume the hook. Consider a quick prototype-by-grep in Phase 0-style prep to confirm both `DockSlot` and `InnerSidebarTerminals` can consume the hook without circular state ownership (called out as a Risk in waveplan-94).
 
-3. **Lane B fix wave for `2026-05-17-chatstatenewpath-dynamic-require-threadstore.md`** (recommended next bug). Path C in the bug doc is grounded — refactor `threadStore.ts` so `agentChatThreadStore` isn't initialized at module load. ~half-day scope. Tests broke on the first-attempt fix because the lazy-require pattern was load-bearing; the post-mortem in the bug doc explains why.
+3. **Phases C + D can parallelize once B lands.** C = tabs in dock slots (sonnet-implementer); D = inner-rail Terminals integration (haiku-implementer, tight spec).
 
-4. **Lane B fix wave for `2026-05-17-silent-buildrepoindex-hang-post-graph-ready.md`.** Diagnostic plan: add `[trace:buildRepoIndex]` + `[trace:contextWorker]` lines, reproduce, identify the deadlock. Existing B3a/B3b trace plumbing will catch the unhang side-effect cleanly.
+4. **Phase E — Diff-review producer wiring.** Independent of A/B/C/D. **Boundary phase** — orchestrator authors failing acceptance test BEFORE dispatch (per `~/.claude/rules/orchestrator-owned-acceptance-tests.md`). Five touch points per feasibility diagnostic `agent: a8791eac0e128dec8`. Per ADR Decision 3b: gate behind new `ClaudeCliSettings.enableTerminalDiffReview` (default `true`).
 
-5. **Wave 90 — interactive `claude` substrate** (unchanged from prior handoff; wire `primary` dock slot to a long-running `claude` session).
+5. **Phase F — Wave wrap.** Scoped + full gates, `/review`, `wave-94-result.md`, `CHANGELOG.md [2.19.0]`, `git tag v2.19.0` post-CI, HANDOFF flip, manual smoke walk re-run, `/promote-vendor-lessons 94`.
 
-6. **Wave 91 — `-p` substrate cleanup** (unchanged from prior handoff).
+### Side priorities (not blocking Wave 94)
+
+- **Push the 9 prior-wave commits.** Gated on GitHub Actions minutes refresh (~2026-06-01). Pre-push marker still required (Wave 92 lockfile guard); no lockfile changes pending so push will pass cleanly. Can batch with Wave 94 commits when both are ready.
+- **Lane B for `2026-05-17-chatstatenewpath-dynamic-require-threadstore.md`** — medium severity, ~half-day. Path C (refactor `threadStore.ts` to lazy-init `agentChatThreadStore`). First-attempt fix broke 33 tests because lazy-require was load-bearing; post-mortem in bug doc.
+- **Lane B for `2026-05-17-silent-buildrepoindex-hang-post-graph-ready.md`** — medium severity. Diagnostic plan in bug doc: instrument `buildRepoIndex` + `contextWorker.ts`, identify which trace line is last to fire.
+- **Wave 90 — interactive `claude` substrate** — depends on Wave 94 Phase E shipping; wires `primary` dock slot to long-running `claude` session.
+- **Wave 91 — `-p` substrate cleanup** — pre-existing planned wave.
 
 ---
 

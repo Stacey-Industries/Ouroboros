@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: PLANNED
 created: 2026-05-17
 updated: 2026-05-17
 wave: 94
@@ -11,7 +11,7 @@ tag: v2.19.0
 
 ## Status
 
-DRAFT · target `v2.19.0` (minor — feature wave) · drafted 2026-05-17 during Wave 89 deferred smoke walk.
+PLANNED · target `v2.19.0` (minor — feature wave) · drafted 2026-05-17 during Wave 89 deferred smoke walk · ADR locked 2026-05-17 (`wave-94-decisions.md`).
 
 ## Context
 
