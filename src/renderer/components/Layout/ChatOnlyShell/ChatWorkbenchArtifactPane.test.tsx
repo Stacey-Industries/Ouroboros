@@ -111,18 +111,19 @@ describe('ChatWorkbenchArtifactPane', () => {
   it('renders an empty state when no artifact is active', () => {
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
     expect(screen.getByTestId('chat-workbench-artifact-pane')).toBeDefined();
-    // Wave 82 — verbose ArtifactPaneHeader removed; thin close strip remains.
+    // Wave 94 — uniform header restored across all artifact kinds.
     expect(screen.getByText(/Open a file reference or diff from chat/i)).toBeDefined();
+    expect(screen.getByText('Artifacts')).toBeDefined();
     expect(screen.getByTestId('chat-workbench-artifact-close')).toBeDefined();
   });
 
   it('renders the file viewer content for file artifacts', () => {
     mockArtifactKind = 'file';
     render(<ChatWorkbenchArtifactPane onClose={mockOnClose} />);
-    // Wave 82 (post-smoke): top close strip + Recent section both removed.
-    // FileViewerTabs row is the sole chrome above the editor.
+    // Wave 94 — uniform header present; FileViewerTabs row sits below it.
     expect(screen.queryByTestId('artifact-history-list')).toBeNull();
-    expect(screen.queryByTestId('chat-workbench-artifact-close')).toBeNull();
+    expect(screen.getByText('File Viewer')).toBeDefined();
+    expect(screen.getByTestId('chat-workbench-artifact-close')).toBeDefined();
     expect(screen.getByTestId('file-viewer-tabs')).toBeDefined();
     expect(screen.getByTestId('editor-content')).toBeDefined();
   });
