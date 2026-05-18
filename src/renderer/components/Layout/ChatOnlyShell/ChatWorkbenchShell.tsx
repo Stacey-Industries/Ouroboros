@@ -284,7 +284,7 @@ export function ChatWorkbenchShell(props: ChatWorkbenchShellProps): React.ReactE
   const { cycleMode, mode, layout, dock, activeDockSessionId, setActiveDockSessionId } = shell;
   const { openDiffOverlay, projectRoot, terminal, toggleDrawer } = props;
   return (
-    <ProjectTerminalsProvider activeProjectPath={projectRoot}>
+    <ProjectTerminalsProvider activeProjectPath={layout.activeProject ?? projectRoot}>
       <div
         data-layout="app"
         className="flex h-screen w-screen flex-col overflow-hidden bg-surface-base"
