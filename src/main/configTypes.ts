@@ -121,6 +121,8 @@ export interface ClaudeCliSettings {
   dangerouslySkipPermissions: boolean;
   /** Use long-lived warm process for multi-turn cache reuse (default: true) */
   useWarmProcess: boolean;
+  /** Wave 94 Phase E — enable diff-review capture on terminal write-class tool calls (default: true) */
+  enableTerminalDiffReview: boolean;
 }
 
 export interface CodexCliSettings {

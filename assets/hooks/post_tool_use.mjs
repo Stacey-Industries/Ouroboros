@@ -20,7 +20,11 @@ const stdinData = await readStdin();
 if (!stdinData.trim()) process.exit(0);
 
 let toolData;
-try { toolData = JSON.parse(stdinData); } catch { process.exit(0); }
+try {
+  toolData = JSON.parse(stdinData);
+} catch {
+  process.exit(0);
+}
 
 const sessionId = inferSessionId(toolData);
 const toolName = toolData.tool_name || toolData.toolName || 'unknown';
@@ -54,6 +58,16 @@ if (outcome.errorClass) payload.errorClass = outcome.errorClass;
 const toolInput = toolData.tool_input ?? toolData.input;
 if (detectSensitivePaths(toolName, toolInput, output)) {
   payload.touchedSensitivePath = true;
+}
+
+// Forward file path(s) for write-class tools so the main-process diff-review
+// tap can correlate pre/post snapshots without re-parsing tool input there.
+if (toolName === 'Write' || toolName === 'Edit') {
+  if (toolInput?.file_path) payload.filePath = toolInput.file_path;
+} else if (toolName === 'MultiEdit') {
+  if (Array.isArray(toolInput?.edits)) {
+    payload.filePaths = toolInput.edits.map((e) => e.file_path).filter(Boolean);
+  }
 }
 
 await sendEvent(payload, hooksToken);

@@ -164,6 +164,8 @@ vi.mock('../../../hooks/useRulesAndSkills', () => ({
   }),
 }));
 
+vi.mock('../../../hooks/useDiffReviewTrigger', () => ({ useDiffReviewTrigger: vi.fn() }));
+
 // ProjectTerminalsContext — prevents useProjectTerminals → useTerminalSessions
 // from running in the integration test tree (no PTY in jsdom).
 vi.mock('../../../contexts/ProjectTerminalsContext', () => ({

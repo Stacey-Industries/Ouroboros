@@ -16,9 +16,11 @@ vi.mock('./hooksRankerReadTap', () => ({ tapRankerRead: vi.fn() }));
 vi.mock('./hooksShadowTap', () => ({ tapShadowPath: vi.fn() }));
 vi.mock('./hooksSkillExecutionTap', () => ({ tapSkillExecution: vi.fn() }));
 vi.mock('./hooksSubagentTap', () => ({ tapSubagentTracker: vi.fn() }));
+vi.mock('./hooksDiffReview', () => ({ tapDiffReview: vi.fn() }));
 
 import type { HookPayload } from './hooks';
 import { tapContextOutcomeObserver } from './hooksContextOutcome';
+import { tapDiffReview } from './hooksDiffReview';
 import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
 import { tapGraphUsage } from './hooksGraphUsageTap';
 import { tapPreToolResearch } from './hooksPreToolResearchTap';
@@ -48,5 +50,6 @@ describe('runHookTaps', () => {
     expect(tapRankerRead).toHaveBeenCalledWith(payload);
     expect(tapSkillExecution).toHaveBeenCalledWith(payload);
     expect(tapShadowPath).toHaveBeenCalledWith(payload);
+    expect(tapDiffReview).toHaveBeenCalledWith(payload, cwdMap);
   });
 });

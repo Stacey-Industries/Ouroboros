@@ -5,6 +5,7 @@ import {
   OPEN_MULTI_SESSION_EVENT,
   WORKBENCH_OPEN_CHAT_SEARCH_EVENT,
 } from '../../../hooks/appEventNames';
+import { useDiffReviewTrigger } from '../../../hooks/useDiffReviewTrigger';
 import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import { CommandPalette } from '../../CommandPalette/CommandPalette';
 import type { Command } from '../../CommandPalette/types';
@@ -237,6 +238,8 @@ function useShellState(props: ChatWorkbenchShellProps): {
   const [activeDockSessionId, setActiveDockSessionId] = useState<string | null>(null);
   // Wave 82 — wire workbench title-bar menu DOM events to existing handlers.
   useWorkbenchMenuEvents({ layout, dock });
+  // Wave 94 Phase E — subscribe to diff_review_ready agent events for terminal sessions.
+  useDiffReviewTrigger();
   return {
     cycleMode,
     mode,

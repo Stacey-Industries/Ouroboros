@@ -26,7 +26,8 @@ export type AgentEventType =
   | 'post_compact'
   | 'instructions_loaded'
   | 'permission_request'
-  | 'permission_denied';
+  | 'permission_denied'
+  | 'diff_review_ready';
 
 export interface AgentEvent {
   type: AgentEventType;
@@ -41,6 +42,15 @@ export interface RawApiTokenUsage {
   output_tokens?: number;
   cache_read_input_tokens?: number;
   cache_creation_input_tokens?: number;
+}
+
+/** Synthetic event emitted by the main-process diff-review tap when a write-class tool completes. */
+export interface DiffReviewReadyEvent {
+  type: 'diff_review_ready';
+  sessionId: string;
+  snapshotHash: string;
+  projectRoot: string;
+  filePaths: string[];
 }
 
 export interface HookPayload {

@@ -7,6 +7,7 @@
 
 import type { HookPayload } from './hooks';
 import { tapContextOutcomeObserver } from './hooksContextOutcome';
+import { tapDiffReview } from './hooksDiffReview';
 import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
 import { tapGraphUsage } from './hooksGraphUsageTap';
 import { tapPreToolResearch } from './hooksPreToolResearchTap';
@@ -25,4 +26,5 @@ export function runHookTaps(payload: HookPayload, sessionCwdMap: Map<string, str
   tapRankerRead(payload);
   tapSkillExecution(payload);
   tapShadowPath(payload);
+  tapDiffReview(payload, sessionCwdMap);
 }

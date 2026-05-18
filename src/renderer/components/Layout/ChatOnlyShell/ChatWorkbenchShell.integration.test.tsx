@@ -247,6 +247,8 @@ vi.mock('./useWorkbenchArtifacts', () => ({
 
 // ProjectTerminalsContext — prevents useProjectTerminals → useTerminalSessions
 // from running in the integration test tree (no PTY in jsdom).
+vi.mock('../../../hooks/useDiffReviewTrigger', () => ({ useDiffReviewTrigger: vi.fn() }));
+
 vi.mock('../../../contexts/ProjectTerminalsContext', () => ({
   ProjectTerminalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useProjectTerminalsContext: () => ({

@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * Wave 94 Phase E — orchestrator-owned acceptance test for the diff-review
  * producer wiring.
  *
@@ -113,7 +115,7 @@ function fireAgentEvent(event: unknown): void {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe.skip('Wave 94 Phase E — diff-review producer acceptance', () => {
+describe('Wave 94 Phase E — diff-review producer acceptance', () => {
   beforeEach(() => {
     openReviewSpy.mockReset();
     unsubscribeSpy.mockReset();
@@ -140,12 +142,10 @@ describe.skip('Wave 94 Phase E — diff-review producer acceptance', () => {
     });
 
     expect(openReviewSpy).toHaveBeenCalledTimes(1);
-    expect(openReviewSpy).toHaveBeenCalledWith(
-      'session-A',
-      'abc123',
-      'C:/Web App/Agent IDE',
-      ['src/foo.ts', 'src/bar.ts'],
-    );
+    expect(openReviewSpy).toHaveBeenCalledWith('session-A', 'abc123', 'C:/Web App/Agent IDE', [
+      'src/foo.ts',
+      'src/bar.ts',
+    ]);
   });
 
   it('Criterion 2 — settings gate (enableTerminalDiffReview = false) blocks openReview', async () => {

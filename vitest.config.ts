@@ -23,6 +23,14 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // acceptance.test.tsx files use @testing-library/react (renderHook) and need jsdom.
+    // Wave 94 Phase E: acceptance tests authored without @vitest-environment docblock;
+    // glob-based override avoids modifying orchestrator-owned test files.
+    // Note: vitest resolves globs with forward slashes even on Windows.
+    environmentMatchGlobs: [
+      ['src/**/*.acceptance.test.tsx', 'jsdom'],
+      ['src/**/*.acceptance.test.ts', 'jsdom'],
+    ],
     include: [
       'src/**/*.test.{ts,tsx}',
       'tools/**/*.test.{ts,js}',

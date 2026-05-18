@@ -179,6 +179,7 @@ export const schema: Record<string, unknown> = {
       worktree: { type: 'boolean', default: false },
       dangerouslySkipPermissions: { type: 'boolean', default: false },
       useWarmProcess: { type: 'boolean', default: true },
+      enableTerminalDiffReview: { type: 'boolean', default: true },
     },
     default: {
       permissionMode: 'default',
@@ -194,6 +195,7 @@ export const schema: Record<string, unknown> = {
       worktree: false,
       dangerouslySkipPermissions: false,
       useWarmProcess: true,
+      enableTerminalDiffReview: true,
     },
   },
   codexCliSettings: {
