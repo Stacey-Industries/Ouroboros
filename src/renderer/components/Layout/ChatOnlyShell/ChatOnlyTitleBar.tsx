@@ -12,111 +12,22 @@
  * reflects current mode. onToggleDrawer kept for hidden-mode overlay compat.
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 import ouroborosLogo from '../../../../../public/OUROBOROS.png';
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { ChatOnlyHeaderControls } from './ChatOnlyHeaderControls';
+import { WindowControls } from './TitleBarWindowControls';
 import type { ChatSidebarMode } from './useChatSidebarMode';
 import { WorkbenchMenuBar } from './WorkbenchMenuBar';
-import { RightPaneToggleButton, TerminalToggleButton } from './WorkbenchPanelToggleStrip';
+import {
+  ArtifactPaneToggleButton,
+  RightPaneToggleButton,
+  TerminalToggleButton,
+  UtilityPaneToggleButton,
+} from './WorkbenchPanelToggleStrip';
 import { WorkbenchRailToggleButton } from './WorkbenchRailToggle';
-
-// ── Window controls (win32 only) ──────────────────────────────────────────────
-
-const WIN_BTN =
-  'flex items-center justify-center w-[46px] h-full bg-transparent transition-colors duration-100';
-
-// hardcoded: win32 hover tint — non-themeable platform chrome
-const WIN_HOVER_NEUTRAL = 'hover:bg-[rgba(255,255,255,0.08)]';
-// hardcoded: Windows close-button canonical red — non-themeable platform color
-const WIN_HOVER_CLOSE = 'hover:bg-[#e81123] hover:text-white';
-
-interface WinBtnProps {
-  onClick: () => void;
-  title: string;
-  hoverClass?: string;
-  children: React.ReactNode;
-}
-
-function WinBtn({
-  onClick,
-  title,
-  hoverClass = WIN_HOVER_NEUTRAL,
-  children,
-}: WinBtnProps): React.ReactElement {
-  return (
-    <button
-      className={`${WIN_BTN} text-text-semantic-muted ${hoverClass}`}
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-    >
-      {children}
-    </button>
-  );
-}
-
-function MinimizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
-  return (
-    <WinBtn onClick={() => api?.minimizeWindow()} title="Minimize">
-      <svg width="10" height="1" viewBox="0 0 10 1">
-        <rect width="10" height="1" fill="currentColor" />
-      </svg>
-    </WinBtn>
-  );
-}
-
-function MaximizeBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
-  return (
-    <WinBtn onClick={() => api?.toggleMaximizeWindow()} title="Maximize">
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-      >
-        <rect x="0.5" y="0.5" width="9" height="9" />
-      </svg>
-    </WinBtn>
-  );
-}
-
-function CloseBtn({ api }: { api: typeof window.electronAPI.app }): React.ReactElement {
-  return (
-    <WinBtn onClick={() => api?.closeWindow()} title="Close" hoverClass={WIN_HOVER_CLOSE}>
-      <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
-        <line x1="1" y1="1" x2="9" y2="9" />
-        <line x1="9" y1="1" x2="1" y2="9" />
-      </svg>
-    </WinBtn>
-  );
-}
-
-function WindowControls(): React.ReactElement | null {
-  const [platform, setPlatform] = useState('');
-  useEffect(() => {
-    window.electronAPI?.app
-      ?.getPlatform?.()
-      .then(setPlatform)
-      .catch(() => {});
-  }, []);
-  if (platform !== 'win32') return null;
-  const api = window.electronAPI?.app;
-  return (
-    <div
-      className="flex items-stretch h-full ml-auto bg-transparent"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-    >
-      <MinimizeBtn api={api} />
-      <MaximizeBtn api={api} />
-      <CloseBtn api={api} />
-    </div>
-  );
-}
 
 // ── SidebarToggleIcon ─────────────────────────────────────────────────────────
 
@@ -272,23 +183,69 @@ export interface ChatOnlyTitleBarProps {
   /** Workbench panel toggles — shown only in workbench mode (when onToggleRail is set). */
   onToggleTerminal?: () => void;
   terminalOpen?: boolean;
+  /** Phase A (Wave 94): individual surface toggles replace the single right-pane toggle. */
+  onToggleUtility?: () => void;
+  utilityOpen?: boolean;
+  onToggleArtifact?: () => void;
+  artifactOpen?: boolean;
+  /** @deprecated Use onToggleUtility + onToggleArtifact. Kept for keyboard-shortcut consumers. */
   onToggleRightPane?: () => void;
   rightPaneOpen?: boolean;
 }
 
 // ── WorkbenchControls — rail + panel strip, workbench-mode only ───────────────
 
+type WorkbenchControlsProps = Omit<
+  ChatOnlyTitleBarProps,
+  'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'
+>;
+
+function RightPaneButtons({
+  onToggleUtility,
+  utilityOpen,
+  onToggleArtifact,
+  artifactOpen,
+  onToggleRightPane,
+  rightPaneOpen,
+}: Pick<
+  WorkbenchControlsProps,
+  | 'onToggleUtility'
+  | 'utilityOpen'
+  | 'onToggleArtifact'
+  | 'artifactOpen'
+  | 'onToggleRightPane'
+  | 'rightPaneOpen'
+>): React.ReactElement {
+  if (onToggleUtility ?? onToggleArtifact) {
+    return (
+      <>
+        {onToggleUtility && (
+          <UtilityPaneToggleButton open={utilityOpen ?? false} onToggle={onToggleUtility} />
+        )}
+        {onToggleArtifact && (
+          <ArtifactPaneToggleButton open={artifactOpen ?? false} onToggle={onToggleArtifact} />
+        )}
+      </>
+    );
+  }
+  if (onToggleRightPane) {
+    return <RightPaneToggleButton open={rightPaneOpen ?? false} onToggle={onToggleRightPane} />;
+  }
+  return <></>;
+}
+
 function WorkbenchControls({
   onToggleRail,
   railOpen,
   onToggleTerminal,
   terminalOpen,
+  onToggleUtility,
+  utilityOpen,
+  onToggleArtifact,
+  artifactOpen,
   onToggleRightPane,
   rightPaneOpen,
-}: Omit<
-  ChatOnlyTitleBarProps,
-  'onToggleDrawer' | 'onCycleSidebarMode' | 'sidebarMode'
->): React.ReactElement | null {
+}: WorkbenchControlsProps): React.ReactElement | null {
   if (onToggleRail === undefined) return null;
   return (
     <div
@@ -299,9 +256,14 @@ function WorkbenchControls({
       {onToggleTerminal && (
         <TerminalToggleButton open={terminalOpen ?? false} onToggle={onToggleTerminal} />
       )}
-      {onToggleRightPane && (
-        <RightPaneToggleButton open={rightPaneOpen ?? false} onToggle={onToggleRightPane} />
-      )}
+      <RightPaneButtons
+        onToggleUtility={onToggleUtility}
+        utilityOpen={utilityOpen}
+        onToggleArtifact={onToggleArtifact}
+        artifactOpen={artifactOpen}
+        onToggleRightPane={onToggleRightPane}
+        rightPaneOpen={rightPaneOpen}
+      />
     </div>
   );
 }

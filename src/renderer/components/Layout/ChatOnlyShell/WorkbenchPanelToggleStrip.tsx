@@ -1,9 +1,10 @@
 /**
- * Workbench panel toggle buttons — terminal (bottom dock) and right-pane.
+ * Workbench panel toggle buttons — terminal (bottom dock) and right-pane surfaces.
  *
- * The right pane consolidates the utility drawer + artifact pane (mutually
- * exclusive) under a single toggle. The internal view is switched via a
- * dropdown header inside the pane itself.
+ * Phase A (Wave 94): two distinct right-pane buttons replace the single
+ * RightPaneToggleButton. UtilityPaneToggleButton controls Activity / Approvals /
+ * Monitor / Rules; ArtifactPaneToggleButton controls diffs / previews / file viewer.
+ * RightPaneToggleButton is kept for backward-compat (keyboard shortcut consumers).
  */
 
 import React from 'react';
@@ -113,6 +114,88 @@ export function RightPaneToggleButton({
       testId="workbench-toggle-right-pane"
     >
       <RightPaneIcon />
+    </PanelToggleBtn>
+  );
+}
+
+// ── Utility pane icon (panel with activity/approvals indicator) ───────────────
+
+function UtilityPaneIcon(): React.ReactElement {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
+      <line x1="12" y1="6" x2="14" y2="6" />
+      <line x1="12" y1="8.5" x2="14" y2="8.5" />
+      <line x1="12" y1="11" x2="14" y2="11" />
+    </svg>
+  );
+}
+
+// ── Artifact pane icon (panel with diff/content lines) ────────────────────────
+
+function ArtifactPaneIcon(): React.ReactElement {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    >
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
+      <line x1="7.5" y1="6" x2="13" y2="6" />
+      <line x1="7.5" y1="8.5" x2="11" y2="8.5" />
+      <line x1="7.5" y1="11" x2="13" y2="11" />
+    </svg>
+  );
+}
+
+export function UtilityPaneToggleButton({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <PanelToggleBtn
+      active={open}
+      label={open ? 'Hide utility panel' : 'Show utility panel'}
+      onToggle={onToggle}
+      testId="workbench-toggle-utility-pane"
+    >
+      <UtilityPaneIcon />
+    </PanelToggleBtn>
+  );
+}
+
+export function ArtifactPaneToggleButton({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <PanelToggleBtn
+      active={open}
+      label={open ? 'Hide artifact panel' : 'Show artifact panel'}
+      onToggle={onToggle}
+      testId="workbench-toggle-artifact-pane"
+    >
+      <ArtifactPaneIcon />
     </PanelToggleBtn>
   );
 }

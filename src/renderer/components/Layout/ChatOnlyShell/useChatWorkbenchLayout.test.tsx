@@ -85,6 +85,46 @@ describe('useChatWorkbenchLayout', () => {
     });
   });
 
+  it('toggleUtility opens utility without touching artifact state', () => {
+    const { result } = renderHook(() => useChatWorkbenchLayout());
+    act(() => result.current.setArtifactOpen(true));
+    expect(result.current.isArtifactOpen).toBe(true);
+
+    act(() => result.current.toggleUtility());
+    expect(result.current.isUtilityOpen).toBe(true);
+    // artifact unchanged — tiling model, not mutually exclusive
+    expect(result.current.isArtifactOpen).toBe(true);
+
+    act(() => result.current.toggleUtility());
+    expect(result.current.isUtilityOpen).toBe(false);
+    expect(result.current.isArtifactOpen).toBe(true);
+  });
+
+  it('toggleArtifact opens artifact without touching utility state', () => {
+    const { result } = renderHook(() => useChatWorkbenchLayout());
+    act(() => result.current.setUtilityOpen(true));
+    expect(result.current.isUtilityOpen).toBe(true);
+
+    act(() => result.current.toggleArtifact());
+    expect(result.current.isArtifactOpen).toBe(true);
+    // utility unchanged — tiling model
+    expect(result.current.isUtilityOpen).toBe(true);
+
+    act(() => result.current.toggleArtifact());
+    expect(result.current.isArtifactOpen).toBe(false);
+    expect(result.current.isUtilityOpen).toBe(true);
+  });
+
+  it('isUtilityOpen and isArtifactOpen are aliases for utilityOpen and artifactOpen', () => {
+    const { result } = renderHook(() => useChatWorkbenchLayout());
+    act(() => {
+      result.current.setUtilityOpen(true);
+      result.current.setArtifactOpen(true);
+    });
+    expect(result.current.isUtilityOpen).toBe(result.current.utilityOpen);
+    expect(result.current.isArtifactOpen).toBe(result.current.artifactOpen);
+  });
+
   it('opens the last-used right pane view via toggleRightPane', () => {
     const { result } = renderHook(() => useChatWorkbenchLayout());
     // Default lastRightPaneView is 'utility'

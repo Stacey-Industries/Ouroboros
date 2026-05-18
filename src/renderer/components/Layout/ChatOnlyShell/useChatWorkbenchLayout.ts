@@ -55,7 +55,10 @@ export interface ChatWorkbenchLayoutApi extends ChatWorkbenchLayoutState {
   setActiveProject: (projectPath: string | null) => void;
   setActiveInnerTab: (projectPath: string, tab: InnerSidebarTab) => void;
   getProjectState: (projectPath: string) => ProjectRailState;
-  // Right pane (utility ⇄ artifact, mutually exclusive)
+  // Phase A (Wave 94): named aliases for direct button binding
+  isUtilityOpen: boolean;
+  isArtifactOpen: boolean;
+  // Right pane (utility ⇄ artifact, tiling — both can be open simultaneously)
   rightPaneOpen: boolean;
   rightPaneView: RightPaneView | null;
   toggleRightPane: () => void;
@@ -209,6 +212,8 @@ function useStableCallbacks(setState: Setter): ReturnType<typeof buildCallbacks>
 }
 
 function deriveRightPane(state: ChatWorkbenchLayoutState): {
+  isUtilityOpen: boolean;
+  isArtifactOpen: boolean;
   rightPaneOpen: boolean;
   rightPaneView: RightPaneView | null;
 } {
@@ -218,7 +223,12 @@ function deriveRightPane(state: ChatWorkbenchLayoutState): {
     : state.artifactOpen
       ? 'artifact'
       : null;
-  return { rightPaneOpen, rightPaneView };
+  return {
+    isUtilityOpen: state.utilityOpen,
+    isArtifactOpen: state.artifactOpen,
+    rightPaneOpen,
+    rightPaneView,
+  };
 }
 
 export function useChatWorkbenchLayout(): ChatWorkbenchLayoutApi {
