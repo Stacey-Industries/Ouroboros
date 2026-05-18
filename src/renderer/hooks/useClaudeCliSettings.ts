@@ -1,4 +1,4 @@
-import type { ClaudeCliSettings } from '../../main/configTypes';
+import type { ClaudeCliSettings } from '../types/electron';
 import { useConfig } from './useConfig';
 
 /**

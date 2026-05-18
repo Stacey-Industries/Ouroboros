@@ -51,6 +51,8 @@ export const DEFAULT_CLAUDE_SETTINGS: ClaudeCliSettings = {
   chrome: false,
   worktree: false,
   dangerouslySkipPermissions: false,
+  useWarmProcess: true,
+  enableTerminalDiffReview: true,
 };
 
 export const PERMISSION_MODES: ClaudeOption[] = [

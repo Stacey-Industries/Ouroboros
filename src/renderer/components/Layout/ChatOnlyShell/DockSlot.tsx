@@ -19,8 +19,8 @@
 
 import React, { useCallback, useEffect } from 'react';
 
-import type { SlotHandle } from '../../../contexts/ProjectTerminalsContext';
 import { useProjectTerminalsContext } from '../../../contexts/ProjectTerminalsContext';
+import type { SlotHandle } from '../../../hooks/useProjectTerminals';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { TerminalManager } from '../../Terminal/TerminalManager';
 import { SlotTabsHeader } from './DockSlotTabs';

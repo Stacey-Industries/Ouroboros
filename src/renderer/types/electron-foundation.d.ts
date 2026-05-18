@@ -28,6 +28,8 @@ export interface ClaudeCliSettings {
   chrome: boolean;
   worktree: boolean;
   dangerouslySkipPermissions: boolean;
+  useWarmProcess: boolean;
+  enableTerminalDiffReview: boolean;
 }
 
 export interface CodexCliSettings {
@@ -317,6 +319,8 @@ export interface AppConfig {
   platform?: PlatformConfig;
   /** Wave 78 — persisted Export Usage preferences. */
   usageExport?: { defaultWindow?: '24h' | '7d' | '30d' | 'all'; lastDir?: string };
+  /** Wave 94 Phase B — per-project terminal session ownership map. */
+  terminalSessionsPerProject?: import('@shared/config/projectTerminalsSchema').TerminalSessionsPerProject;
 }
 
 export type {

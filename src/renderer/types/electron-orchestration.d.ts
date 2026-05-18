@@ -74,4 +74,4 @@ export type {
   OrchestrationEventChannel,
   OrchestrationEventType,
   OrchestrationInvokeChannel,
-} from '../../main/orchestration/events';
+} from '@shared/ipc/orchestrationChannels';

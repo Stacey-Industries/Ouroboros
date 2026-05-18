@@ -12,7 +12,6 @@ import React, { useCallback, useMemo } from 'react';
 import { useProject } from '../../../contexts/ProjectContext';
 import { OPEN_SETTINGS_EVENT } from '../../../hooks/appEventNames';
 import { useConfig } from '../../../hooks/useConfig';
-import type { UseTerminalSessionsReturn } from '../../../hooks/useTerminalSessions';
 import type { AgentChatThreadRecord, ApprovalRequest } from '../../../types/electron';
 import type {
   CompareState,
@@ -157,7 +156,6 @@ interface InnerTabContentsArgs {
   dock: DockState;
   handlers: WorkbenchHandlers;
   sessionsState: SessionsState;
-  terminal?: UseTerminalSessionsReturn;
   threads: AgentChatThreadRecord[];
 }
 
@@ -168,8 +166,7 @@ interface InnerTabContents {
 }
 
 function buildInnerTabContents(args: InnerTabContentsArgs): InnerTabContents {
-  const { activeProject, approvalRequests, dock, handlers, sessionsState, terminal, threads } =
-    args;
+  const { activeProject, approvalRequests, dock, handlers, sessionsState, threads } = args;
   const openDock = (): void => {
     dock.setVisible(true);
   };
@@ -187,7 +184,7 @@ function buildInnerTabContents(args: InnerTabContentsArgs): InnerTabContents {
         threads={threads}
       />
     ),
-    terminals: <InnerSidebarTerminals terminal={terminal} onActivateInDock={openDock} />,
+    terminals: <InnerSidebarTerminals onActivateInDock={openDock} />,
     code: <InnerSidebarCode activeProject={activeProject} />,
   };
 }
@@ -234,12 +231,11 @@ export interface TwoTierRailSurfaceProps {
   approvalRequests: ApprovalRequest[];
   compare: CompareState;
   handlers: WorkbenchHandlers;
-  terminal?: UseTerminalSessionsReturn;
   dock: DockState;
 }
 
 export function TwoTierRailSurface(props: TwoTierRailSurfaceProps): React.ReactElement {
-  const { layout, sessionsState, threads, approvalRequests, dock, handlers, terminal } = props;
+  const { layout, sessionsState, threads, approvalRequests, dock, handlers } = props;
   const activeProject = layout.activeProject;
   const projectState = layout.getProjectState(activeProject ?? '');
   const projects = useWorkbenchProjects();
@@ -257,7 +253,6 @@ export function TwoTierRailSurface(props: TwoTierRailSurfaceProps): React.ReactE
         dock,
         handlers,
         sessionsState,
-        terminal,
         threads,
       })}
     />

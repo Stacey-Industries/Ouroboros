@@ -135,7 +135,7 @@ function TitleBarLeft({
  * TitleBarRight when wiring lands.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function WorkbenchModelChips(): React.ReactElement {
+export function WorkbenchModelChips(): React.ReactElement {
   return (
     <div
       className="flex items-center gap-1 shrink-0 overflow-x-auto"

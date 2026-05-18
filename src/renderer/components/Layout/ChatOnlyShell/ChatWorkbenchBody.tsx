@@ -26,6 +26,8 @@ interface ChatWorkbenchBodyProps {
   dock: TerminalDockApi;
   layout: ChatWorkbenchLayoutApi;
   projectRoot: string | null;
+  /** Kept for API compatibility — terminal sessions are now read via
+   *  useProjectTerminalsContext() inside InnerSidebarTerminals. */
   terminal?: UseTerminalSessionsReturn;
   /** Wave 89: receives the active session ID from the stacked dock for tool-bridge routing. */
   onActiveSessionChange?: (sessionId: string | null) => void;
@@ -37,10 +39,9 @@ type WorkbenchHandlersResult = ReturnType<typeof useWorkbenchHandlers>;
 interface RailSlotProps {
   state: WorkbenchState;
   handlers: WorkbenchHandlersResult;
-  terminal?: UseTerminalSessionsReturn;
 }
 
-function RailSlot({ state, handlers, terminal }: RailSlotProps): React.ReactElement | null {
+function RailSlot({ state, handlers }: RailSlotProps): React.ReactElement | null {
   if (!state.layout.railOpen) return null;
   return (
     <TwoTierRailSurface
@@ -50,7 +51,6 @@ function RailSlot({ state, handlers, terminal }: RailSlotProps): React.ReactElem
       approvalRequests={state.approvalRequests}
       compare={state.compare}
       handlers={handlers}
-      terminal={terminal}
       dock={state.dock}
     />
   );
@@ -101,7 +101,6 @@ function MobileOverlay({
 interface BodyContentProps {
   state: WorkbenchState;
   handlers: WorkbenchHandlersResult;
-  terminal?: UseTerminalSessionsReturn;
   activeApprovalSessionIds: Array<string | null | undefined>;
   overlayWidths: UseOverlayDrawerWidthsReturn;
   onActiveSessionChange?: (sessionId: string | null) => void;
@@ -135,7 +134,6 @@ function useBodyContent(props: ChatWorkbenchBodyProps): BodyContentProps {
   return {
     state,
     handlers,
-    terminal: props.terminal,
     activeApprovalSessionIds,
     overlayWidths,
     onActiveSessionChange: props.onActiveSessionChange,
@@ -152,7 +150,6 @@ export function ChatWorkbenchBody(props: ChatWorkbenchBodyProps): React.ReactEle
 function DesktopBody({
   state,
   handlers,
-  terminal,
   activeApprovalSessionIds,
   overlayWidths,
   onActiveSessionChange,
@@ -166,7 +163,7 @@ function DesktopBody({
         sessionsState={state.sessionsState}
         threads={state.threads}
       />
-      <RailSlot state={state} handlers={handlers} terminal={terminal} />
+      <RailSlot state={state} handlers={handlers} />
       <WorkbenchMainColumn
         layout={state.layout}
         surfacePolicy={state.surfacePolicy}
@@ -180,7 +177,6 @@ function DesktopBody({
 function MobileBody({
   state,
   handlers,
-  terminal,
   activeApprovalSessionIds,
   overlayWidths,
   onActiveSessionChange,
@@ -204,7 +200,7 @@ function MobileBody({
         overlayWidths={overlayWidths}
         onActiveSessionChange={onActiveSessionChange}
       />
-      <MobileOverlays state={state} handlers={handlers} terminal={terminal} />
+      <MobileOverlays state={state} handlers={handlers} />
     </div>
   );
 }
@@ -212,11 +208,9 @@ function MobileBody({
 function MobileOverlays({
   state,
   handlers,
-  terminal,
 }: {
   state: WorkbenchState;
   handlers: WorkbenchHandlersResult;
-  terminal?: UseTerminalSessionsReturn;
 }): React.ReactElement {
   const closeRail = (): void => state.layout.setRailOpen(false);
   const closeRightPane = (): void => {
@@ -232,7 +226,7 @@ function MobileOverlays({
         label="Workbench rail"
       >
         <div className="flex h-full w-full">
-          <RailSlot state={state} handlers={handlers} terminal={terminal} />
+          <RailSlot state={state} handlers={handlers} />
         </div>
       </MobileOverlay>
       <MobileOverlay
