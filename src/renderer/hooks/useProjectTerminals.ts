@@ -112,15 +112,86 @@ function buildReorderHandler(
 }
 
 // ---------------------------------------------------------------------------
+// PendingSpawn — tracks which slot is awaiting attribution
+// ---------------------------------------------------------------------------
+
+interface PendingSpawn {
+  slot: 'primary' | 'secondary';
+  existingIds: Set<string>;
+}
+
+// ---------------------------------------------------------------------------
+// buildCloseWrapper — removes the closed session ref from slot state
+// ---------------------------------------------------------------------------
+
+function buildCloseWrapper(
+  slotKey: 'primary' | 'secondary',
+  projectState: ProjectTerminalState,
+  setProjectState: (patch: Partial<ProjectTerminalState>) => void,
+  terminalClose: (sessionId: string) => void,
+): (sessionId: string) => void {
+  return (sessionId: string): void => {
+    terminalClose(sessionId);
+    const updated = projectState[slotKey].filter((r) => r.id !== sessionId);
+    const active = projectState.activeSessionPerSlot[slotKey];
+    const patch: Partial<ProjectTerminalState> = { [slotKey]: updated };
+    if (active === sessionId) {
+      patch.activeSessionPerSlot = { ...projectState.activeSessionPerSlot, [slotKey]: null };
+    }
+    setProjectState(patch);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// buildSpawnWrapper — delegates to terminal.spawnSession, sets pending ref
+// ---------------------------------------------------------------------------
+
+function buildSpawnWrapper(
+  slotKey: 'primary' | 'secondary',
+  terminal: UseTerminalSessionsReturn,
+  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>,
+): (cwd?: string) => Promise<void> {
+  return async (cwd?: string): Promise<void> => {
+    const existingIds = new Set(terminal.sessions.map((s) => s.id));
+    pendingSpawnRef.current = { slot: slotKey, existingIds };
+    await terminal.spawnSession(cwd);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// buildSplitWrapper — same attribution pattern as spawn
+// ---------------------------------------------------------------------------
+
+function buildSplitWrapper(
+  slotKey: 'primary' | 'secondary',
+  terminal: UseTerminalSessionsReturn,
+  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>,
+): (primarySessionId: string) => Promise<void> {
+  return async (primarySessionId: string): Promise<void> => {
+    const existingIds = new Set(terminal.sessions.map((s) => s.id));
+    pendingSpawnRef.current = { slot: slotKey, existingIds };
+    await terminal.handleSplit(primarySessionId);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SlotHandleOptions — options object to stay within max-params: 4
+// ---------------------------------------------------------------------------
+
+interface SlotHandleOptions {
+  slotKey: 'primary' | 'secondary';
+  terminal: UseTerminalSessionsReturn;
+  projectState: ProjectTerminalState;
+  setProjectState: (patch: Partial<ProjectTerminalState>) => void;
+  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>;
+}
+
+// ---------------------------------------------------------------------------
 // buildSlotHandle — assemble the public SlotHandle for one slot
 // ---------------------------------------------------------------------------
 
-function buildSlotHandle(
-  slotKey: 'primary' | 'secondary',
-  terminal: UseTerminalSessionsReturn,
-  projectState: ProjectTerminalState,
-  setProjectState: (patch: Partial<ProjectTerminalState>) => void,
-): SlotHandle {
+function buildSlotHandle(opts: SlotHandleOptions): SlotHandle {
+  const { slotKey, terminal, projectState, setProjectState, pendingSpawnRef } = opts;
   const sessions = buildSlotSessionList(terminal.sessions, projectState[slotKey]);
   const slotIds = new Set(projectState[slotKey].map((s) => s.id));
   const rawActive = projectState.activeSessionPerSlot[slotKey];
@@ -138,12 +209,17 @@ function buildSlotHandle(
     activeSessionId,
     setActiveSessionId,
     recordingSessions: terminal.recordingSessions,
-    spawnSession: terminal.spawnSession,
-    handleTerminalClose: terminal.handleTerminalClose,
+    spawnSession: buildSpawnWrapper(slotKey, terminal, pendingSpawnRef),
+    handleTerminalClose: buildCloseWrapper(
+      slotKey,
+      projectState,
+      setProjectState,
+      terminal.handleTerminalClose,
+    ),
     handleTerminalRestart: terminal.handleTerminalRestart,
     handleTerminalTitleChange: terminal.handleTerminalTitleChange,
     handleToggleRecording: terminal.handleToggleRecording,
-    handleSplit: terminal.handleSplit,
+    handleSplit: buildSplitWrapper(slotKey, terminal, pendingSpawnRef),
     handleCloseSplit: terminal.handleCloseSplit,
     handleTerminalReorder: buildReorderHandler(
       slotKey,
@@ -155,19 +231,58 @@ function buildSlotHandle(
 }
 
 // ---------------------------------------------------------------------------
+// SpawnAttributionOptions — keeps useSpawnAttribution within max-params: 4
+// ---------------------------------------------------------------------------
+
+interface SpawnAttributionOptions {
+  map: TerminalSessionsPerProject;
+  setProjectState: (projectPath: string, patch: Partial<ProjectTerminalState>) => void;
+  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>;
+}
+
+// ---------------------------------------------------------------------------
+// useSpawnAttribution — effect-driven: attributes newly spawned sessions to
+// the pending slot recorded in pendingSpawnRef.
+// ---------------------------------------------------------------------------
+
+function useSpawnAttribution(
+  terminal: UseTerminalSessionsReturn,
+  activeProjectPath: string | null,
+  opts: SpawnAttributionOptions,
+): void {
+  const { map, setProjectState, pendingSpawnRef } = opts;
+  useEffect(() => {
+    const pending = pendingSpawnRef.current;
+    if (!pending || !activeProjectPath) return;
+    const newSessions = terminal.sessions.filter((s) => !pending.existingIds.has(s.id));
+    if (newSessions.length === 0) return;
+    pendingSpawnRef.current = null;
+    const { slot } = pending;
+    const currentState = readProjectState(map, activeProjectPath);
+    const existingRefs = new Set(currentState[slot].map((r) => r.id));
+    const addedRefs = newSessions
+      .filter((s) => !existingRefs.has(s.id))
+      .map((s) => ({ id: s.id, title: s.title, isClaude: s.isClaude ?? false }));
+    if (addedRefs.length === 0) return;
+    const latestId = newSessions[newSessions.length - 1].id;
+    setProjectState(activeProjectPath, {
+      [slot]: [...currentState[slot], ...addedRefs],
+      activeSessionPerSlot: { ...currentState.activeSessionPerSlot, [slot]: latestId },
+    });
+  }, [terminal.sessions, activeProjectPath, map, setProjectState, pendingSpawnRef]);
+}
+
+// ---------------------------------------------------------------------------
 // useProjectTerminals — public hook
 // ---------------------------------------------------------------------------
 
 export function useProjectTerminals(activeProjectPath: string | null): UseProjectTerminalsReturn {
   const terminal = useTerminalSessions();
   const { map, setProjectState } = useProjectTerminalsMap(activeProjectPath);
-  const prevProjectRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    prevProjectRef.current = activeProjectPath;
-  }, [activeProjectPath]);
+  const pendingSpawnRef = useRef<PendingSpawn | null>(null);
 
   useProjectTerminalsPersist(map);
+  useSpawnAttribution(terminal, activeProjectPath, { map, setProjectState, pendingSpawnRef });
 
   const patchState = useCallback(
     (patch: Partial<ProjectTerminalState>): void => {
@@ -181,9 +296,10 @@ export function useProjectTerminals(activeProjectPath: string | null): UseProjec
   }
 
   const projectState = readProjectState(map, activeProjectPath);
+  const slotOpts = { terminal, projectState, setProjectState: patchState, pendingSpawnRef };
 
   return {
-    primary: buildSlotHandle('primary', terminal, projectState, patchState),
-    secondary: buildSlotHandle('secondary', terminal, projectState, patchState),
+    primary: buildSlotHandle({ slotKey: 'primary', ...slotOpts }),
+    secondary: buildSlotHandle({ slotKey: 'secondary', ...slotOpts }),
   };
 }

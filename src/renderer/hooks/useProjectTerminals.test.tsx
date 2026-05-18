@@ -175,6 +175,86 @@ describe('useProjectTerminals', () => {
     expect(mockTerminal.setActiveSessionId).toHaveBeenCalledWith('x2');
   });
 
+  it('(f) spawn → new session appears in slot.sessions and becomes active', async () => {
+    mockTerminal.sessions = [];
+    mockGet.mockResolvedValue({});
+
+    const { result, rerender } = renderHook(() => useProjectTerminals('/proj/spawn'));
+    await waitFor(() => expect(result.current.primary).toBeDefined());
+
+    // Simulate spawnSession: mutate sessions then rerender so the attribution effect fires
+    mockTerminal.spawnSession.mockImplementationOnce(async () => {
+      mockTerminal.sessions = [{ id: 'new1', title: 'bash', isClaude: false, status: 'running' }];
+    });
+
+    await act(async () => {
+      await result.current.primary.spawnSession('/some/cwd');
+      rerender();
+    });
+
+    await waitFor(() => {
+      expect(result.current.primary.sessions).toHaveLength(1);
+    });
+    expect(result.current.primary.sessions[0].id).toBe('new1');
+    expect(result.current.primary.activeSessionId).toBe('new1');
+  });
+
+  it('(g) close removes session from slot.sessions and clears active', async () => {
+    mockTerminal.sessions = [{ id: 'c1', title: 'bash', isClaude: false, status: 'running' }];
+    mockGet.mockResolvedValue({
+      '/proj/close': {
+        primary: [{ id: 'c1', title: 'bash', isClaude: false }],
+        secondary: [],
+        activeSessionPerSlot: { primary: 'c1', secondary: null },
+      },
+    });
+
+    const { result } = renderHook(() => useProjectTerminals('/proj/close'));
+    await waitFor(() => expect(result.current.primary.sessions).toHaveLength(1));
+
+    act(() => {
+      result.current.primary.handleTerminalClose('c1');
+    });
+
+    expect(result.current.primary.sessions).toHaveLength(0);
+    expect(result.current.primary.activeSessionId).toBeNull();
+    expect(mockTerminal.handleTerminalClose).toHaveBeenCalledWith('c1');
+  });
+
+  it('(h) spawn in primary lands in primary, spawn in secondary lands in secondary', async () => {
+    mockTerminal.sessions = [];
+    mockGet.mockResolvedValue({});
+
+    const { result, rerender } = renderHook(() => useProjectTerminals('/proj/slots'));
+    await waitFor(() => expect(result.current.primary).toBeDefined());
+
+    // Spawn in primary: mutate sessions then rerender so the attribution effect sees the change
+    mockTerminal.spawnSession.mockImplementationOnce(async () => {
+      mockTerminal.sessions = [{ id: 'p1', title: 'bash', isClaude: false, status: 'running' }];
+    });
+    await act(async () => {
+      await result.current.primary.spawnSession();
+      rerender();
+    });
+    await waitFor(() => expect(result.current.primary.sessions).toHaveLength(1));
+
+    // Spawn in secondary: add s1 alongside p1 then rerender
+    mockTerminal.spawnSession.mockImplementationOnce(async () => {
+      mockTerminal.sessions = [
+        { id: 'p1', title: 'bash', isClaude: false, status: 'running' },
+        { id: 's1', title: 'zsh', isClaude: false, status: 'running' },
+      ];
+    });
+    await act(async () => {
+      await result.current.secondary.spawnSession();
+      rerender();
+    });
+    await waitFor(() => expect(result.current.secondary.sessions).toHaveLength(1));
+
+    expect(result.current.primary.sessions.map((s) => s.id)).toEqual(['p1']);
+    expect(result.current.secondary.sessions.map((s) => s.id)).toEqual(['s1']);
+  });
+
   it('activeSessionId is null when stored active ID is not in slot membership', async () => {
     mockTerminal.sessions = [{ id: 'y1', title: 'bash', isClaude: false, status: 'running' }];
     mockGet.mockResolvedValue({
