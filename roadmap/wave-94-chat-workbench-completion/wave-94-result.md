@@ -161,6 +161,58 @@ None block wave ship.
 No new vendor SDK touched this wave. `/promote-vendor-lessons 94` will
 be a no-op.
 
+## Post-smoke fix bundle (2026-05-18)
+
+Wave-wrap manual smoke surfaced 6 issues. Five were Wave-94-attributable
+and fixed in this wave; four were pre-existing limitations made visible
+by the terminal-first pivot and deferred to Wave 95.
+
+### Fixed in Wave 94 (post-wrap commits)
+
+| # | Commit | What |
+|---|--------|------|
+| 1 | `5d34b9c4` | Phase B spawn-into-slot — `useProjectTerminals.buildSpawnWrapper` + effect-driven slot attribution. Sessions spawned via slot.spawnSession now appear in the slot AND become active. Symmetric fix for close (`buildCloseWrapper`) + split (`buildSplitWrapper`). 3 new regression tests. |
+| 2 | `767149e0` | Phase B project-switch swap — `ProjectTerminalsProvider activeProjectPath={layout.activeProject ?? projectRoot}`. The shell's stable `projectRoot` prop was being used instead of the rail-selectable `layout.activeProject`, so switching projects never reached the provider. One-line fix. |
+| 3 | `c8adbfee` | Phase B spawn cwd defaults to active project — `buildSpawnWrapper` threads `defaultCwd: activeProjectPath`. Terminals now spawn into the project's path instead of the app's startup cwd. |
+| 4 | `dfb8ed58` | Phase A artifact pane uniform header — `ArtifactHeader` (title + Close) mirrors `ChatWorkbenchUtilityDrawer.DrawerHeader` chrome across all three artifact kinds (empty / file / diff). Wave 89 pivot moved artifact into an overlay; the Wave-82 "tabs row is the only chrome" call no longer held. |
+| 5 | `1ae44fda` | Wave-wrap polish bundle — (a) empty-slot header drops the "Primary"/"Shell" label text and moves `+ New` to the left where the label was, (b) removes strip-level close-session ✕ (per-tab × is the surviving close), (c) close-neighbour bug — `buildCloseWrapper` was wiping the just-set neighbour activation via stale closure; removed the active-reset, (d) cleaned up 2 pre-existing `max-lines-per-function` violations in `InnerSidebarTerminals.tsx` via helper extraction. |
+| 6 | `3970d6be` | Phase E terminal-launched claude end-to-end — TWO compound bugs. Producer: `hooksDiffReview.handlePreToolUse` now prefers `payload.cwd` over `sessionCwdMap.get(payload.sessionId)` (Claude UUID vs IDE PTY ID namespace mismatch). Consumer: `useClaudeSessionCapture` now falls back to binding new Claude UUIDs to the active terminal session when no IDE-spawn pending ref exists. Cole confirmed in-terminal Edit didn't auto-fire pre-fix; acceptance test 5/5 unchanged (bugs were below mock surface). 6 new useClaudeSessionCapture tests. |
+
+### Deferred to Wave 95 (filed as follow-ups)
+
+| Item | Severity | Follow-up |
+|---|---|---|
+| Terminal scrollback truncated during long Claude runs | medium | `roadmap/follow-ups/2026-05-18-terminal-scrollback-truncated.md` |
+| Ghost cursor (xterm WebGL/DOM overlap pattern resurfaced) | medium | `roadmap/follow-ups/2026-05-18-terminal-ghost-cursor-resurfaced.md` |
+| Claude CLI color / theme rendering off in in-app terminal | low | `roadmap/follow-ups/2026-05-18-claude-cli-color-rendering-in-terminal.md` |
+| Secondary slot collapsed-empty chrome clarification | low | `roadmap/follow-ups/2026-05-18-secondary-slot-collapsed-chrome.md` |
+| Tab rename affordance | new UX | `roadmap/follow-ups/2026-05-18-terminal-tab-rename.md` |
+
+All five bundled into **Wave 95 — Chat-Workbench Terminal QoL** skeleton
+at `roadmap/wave-95-chat-workbench-terminal-qol/waveplan-95.md`.
+
+### Out-of-scope orchestrator help
+
+Cole's `~/.claude.json` had invalid JSON (extra trailing brace) which
+prevented `claude` CLI from launching from in-app terminals. Repaired
+by orchestrator with backup at `~/.claude.json.bak-<timestamp>`. Not
+Wave 94 — Cole's system state.
+
+## Push status
+
+**Local-only as of session-end 2026-05-18.** 14 commits ahead of
+`origin/master`. Manual smoke walk passed on Phases A / B / C / D plus
+post-fix re-tests; Phase E end-to-end re-test (items 25–30) **pending**
+Cole's verification in the next session after the `3970d6be` fix.
+
+Once Phase E re-test confirms, next-session steps:
+1. `git push`.
+2. Wait for CI green.
+3. `git tag v2.19.0`.
+4. `/promote-vendor-lessons 94` (likely no-op).
+5. Flip `roadmap/HANDOFF.md` to Wave 95.
+6. Append to `roadmap/wave-temperature-log.md`.
+
 ## Acknowledgements
 
 - Phase B: agent's discovery that the toggles already existed (Wave 89
