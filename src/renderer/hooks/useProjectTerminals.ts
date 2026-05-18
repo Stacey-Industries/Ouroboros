@@ -133,12 +133,13 @@ function buildCloseWrapper(
   return (sessionId: string): void => {
     terminalClose(sessionId);
     const updated = projectState[slotKey].filter((r) => r.id !== sessionId);
-    const active = projectState.activeSessionPerSlot[slotKey];
-    const patch: Partial<ProjectTerminalState> = { [slotKey]: updated };
-    if (active === sessionId) {
-      patch.activeSessionPerSlot = { ...projectState.activeSessionPerSlot, [slotKey]: null };
-    }
-    setProjectState(patch);
+    // Persist the ref removal; active-tab policy is the caller's (DockSlotTabs'
+    // activateNeighbour). Don't reset active here — the captured projectState
+    // is stale by the time the caller's neighbour-activation has run, so a
+    // reset based on captured `active === sessionId` would wipe the just-set
+    // neighbour. buildSlotHandle (line 197–198) already filters a dangling
+    // activeSessionId at render via slotIds.has() guard.
+    setProjectState({ [slotKey]: updated });
   };
 }
 

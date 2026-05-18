@@ -105,9 +105,9 @@ describe('DockSlot — primary slot', () => {
     expect(screen.getByTestId('dock-slot-primary')).toBeTruthy();
   });
 
-  it('renders the Primary label in the header', () => {
+  it('renders the + New spawn button in the empty-state header', () => {
     renderPrimary();
-    expect(screen.getByText('Primary')).toBeTruthy();
+    expect(screen.getByTestId('dock-slot-primary-spawn')).toBeTruthy();
   });
 
   it('passes slot="primary" to TerminalManager for SPLIT_TERMINAL_EVENT scoping', () => {
@@ -128,9 +128,9 @@ describe('DockSlot — secondary slot', () => {
     expect(screen.getByTestId('dock-slot-secondary')).toBeTruthy();
   });
 
-  it('renders the Shell label in the header', () => {
+  it('renders the + New spawn button in the empty-state header', () => {
     renderSecondary();
-    expect(screen.getByText('Shell')).toBeTruthy();
+    expect(screen.getByTestId('dock-slot-secondary-spawn')).toBeTruthy();
   });
 
   it('passes slot="secondary" to TerminalManager', () => {
@@ -226,16 +226,14 @@ describe('DockSlot — collapse affordance (Phase 4c)', () => {
     expect(screen.getByTestId('dock-slot-primary-spawn')).toBeTruthy();
   });
 
-  it('hides Rec and ✕ buttons when collapsed', () => {
+  it('hides Rec button when collapsed', () => {
     renderPrimary({ collapsed: true });
     expect(screen.queryByLabelText('Start recording')).toBeNull();
-    expect(screen.queryByLabelText('Close session')).toBeNull();
   });
 
-  it('shows Rec and ✕ buttons when expanded', () => {
+  it('shows Rec button when expanded', () => {
     renderPrimary({ collapsed: false });
     expect(screen.getByLabelText('Start recording')).toBeTruthy();
-    expect(screen.getByLabelText('Close session')).toBeTruthy();
   });
 });
 
@@ -243,16 +241,16 @@ describe('DockSlot — collapse affordance (Phase 4c)', () => {
 // Phase C — Decision 5: tab strip vs label header (session-conditional)
 // ---------------------------------------------------------------------------
 
-describe('DockSlot — Phase C: empty state renders legacy SlotHeader label', () => {
-  it('renders the Primary label when sessions array is empty', () => {
+describe('DockSlot — Phase C: empty state renders SlotHeader with spawn button', () => {
+  it('renders spawn button and no tab strip when sessions array is empty (primary)', () => {
     renderPrimary();
-    expect(screen.getByText('Primary')).toBeTruthy();
+    expect(screen.getByTestId('dock-slot-primary-spawn')).toBeTruthy();
     expect(screen.queryByTestId('dock-slot-tabs-primary')).toBeNull();
   });
 
-  it('renders the Shell label for secondary when sessions array is empty', () => {
+  it('renders spawn button and no tab strip when sessions array is empty (secondary)', () => {
     renderSecondary();
-    expect(screen.getByText('Shell')).toBeTruthy();
+    expect(screen.getByTestId('dock-slot-secondary-spawn')).toBeTruthy();
     expect(screen.queryByTestId('dock-slot-tabs-secondary')).toBeNull();
   });
 });

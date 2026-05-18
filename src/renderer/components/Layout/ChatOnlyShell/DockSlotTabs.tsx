@@ -177,7 +177,6 @@ export interface SlotTabsHeaderProps {
   collapsed: boolean;
   isRecording: boolean;
   onSpawn: () => void;
-  onCloseSession: () => void;
   onToggleRecording: () => void;
   onToggleCollapse: () => void;
 }
@@ -207,22 +206,18 @@ interface RightControlsOpts {
   collapsed: boolean;
   terminal: SlotHandle;
   isRecording: boolean;
-  onCloseSession: () => void;
   onToggleRecording: () => void;
   onToggleCollapse: () => void;
 }
 
 function buildRightControls(opts: RightControlsOpts): React.ReactNode {
-  const { collapsed, terminal, isRecording, onCloseSession, onToggleRecording, onToggleCollapse } =
-    opts;
+  const { collapsed, terminal, isRecording, onToggleRecording, onToggleCollapse } = opts;
   return (
     <>
       {!collapsed && (
         <SlotExpandedButtons
-          testId="tabs"
           activeSessionId={terminal.activeSessionId}
           isRecording={isRecording}
-          onCloseSession={onCloseSession}
           onToggleRecording={onToggleRecording}
         />
       )}
@@ -237,7 +232,6 @@ export function SlotTabsHeader({
   collapsed,
   isRecording,
   onSpawn,
-  onCloseSession,
   onToggleRecording,
   onToggleCollapse,
 }: SlotTabsHeaderProps): React.ReactElement {
@@ -246,7 +240,6 @@ export function SlotTabsHeader({
     collapsed,
     terminal,
     isRecording,
-    onCloseSession,
     onToggleRecording,
     onToggleCollapse,
   });

@@ -109,36 +109,20 @@ function SlotSpawnButton({
 }
 
 export function SlotExpandedButtons({
-  testId,
   activeSessionId,
   isRecording,
-  onCloseSession,
   onToggleRecording,
 }: {
-  testId: string;
   activeSessionId: string | null;
   isRecording: boolean;
-  onCloseSession: () => void;
   onToggleRecording: () => void;
 }): React.ReactElement {
   return (
-    <>
-      <SlotRecordingButton
-        activeSessionId={activeSessionId}
-        isRecording={isRecording}
-        onToggleRecording={onToggleRecording}
-      />
-      <button
-        type="button"
-        disabled={!activeSessionId}
-        className={`${BTN_BASE} ${BTN_DANGER}`}
-        onClick={onCloseSession}
-        data-testid={`dock-slot-${testId}-close-session`}
-        aria-label="Close session"
-      >
-        ✕
-      </button>
-    </>
+    <SlotRecordingButton
+      activeSessionId={activeSessionId}
+      isRecording={isRecording}
+      onToggleRecording={onToggleRecording}
+    />
   );
 }
 
@@ -147,43 +131,35 @@ export function SlotExpandedButtons({
 // ---------------------------------------------------------------------------
 
 interface SlotHeaderProps {
-  label: string;
+  slot: SlotId;
   collapsed: boolean;
   activeSessionId: string | null;
   isRecording: boolean;
   onSpawn: () => void;
-  onCloseSession: () => void;
   onToggleRecording: () => void;
   onToggleCollapse: () => void;
 }
 
 function SlotHeader({
-  label,
+  slot,
   collapsed,
   activeSessionId,
   isRecording,
   onSpawn,
-  onCloseSession,
   onToggleRecording,
   onToggleCollapse,
 }: SlotHeaderProps): React.ReactElement {
-  const testId = label.toLowerCase();
   return (
     <div
       className="flex shrink-0 items-center justify-between border-b border-border-semantic px-2 py-0.5"
       style={{ height: 28 }}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-semantic-tertiary">
-        {label}
-      </span>
+      <SlotSpawnButton onSpawn={onSpawn} testId={slot} />
       <div className="flex items-center gap-1">
-        <SlotSpawnButton onSpawn={onSpawn} testId={testId} />
         {!collapsed && (
           <SlotExpandedButtons
-            testId={testId}
             activeSessionId={activeSessionId}
             isRecording={isRecording}
-            onCloseSession={onCloseSession}
             onToggleRecording={onToggleRecording}
           />
         )}
@@ -199,7 +175,6 @@ function SlotHeader({
 
 interface SlotHandlers {
   handleSpawn: () => void;
-  handleCloseSession: () => void;
   handleToggleRecording: () => void;
   isRecording: boolean;
 }
@@ -208,16 +183,13 @@ function useSlotHandlers(terminal: SlotHandle): SlotHandlers {
   const handleSpawn = useCallback(() => {
     void terminal.spawnSession();
   }, [terminal]);
-  const handleCloseSession = useCallback(() => {
-    if (terminal.activeSessionId) terminal.handleTerminalClose(terminal.activeSessionId);
-  }, [terminal]);
   const handleToggleRecording = useCallback(() => {
     if (terminal.activeSessionId) void terminal.handleToggleRecording(terminal.activeSessionId);
   }, [terminal]);
   const isRecording = Boolean(
     terminal.activeSessionId && terminal.recordingSessions.has(terminal.activeSessionId),
   );
-  return { handleSpawn, handleCloseSession, handleToggleRecording, isRecording };
+  return { handleSpawn, handleToggleRecording, isRecording };
 }
 
 // ---------------------------------------------------------------------------
@@ -260,21 +232,19 @@ function SlotTerminalSurface({
 
 interface SlotHeaderRowProps {
   slot: SlotId;
-  label: string;
   terminal: SlotHandle;
   collapsed: boolean;
   isRecording: boolean;
   onSpawn: () => void;
-  onCloseSession: () => void;
   onToggleRecording: () => void;
   onToggleCollapse: () => void;
 }
 
-function SlotHeaderRow({ label, terminal, ...rest }: SlotHeaderRowProps): React.ReactElement {
+function SlotHeaderRow({ terminal, ...rest }: SlotHeaderRowProps): React.ReactElement {
   if (terminal.sessions.length > 0) {
     return <SlotTabsHeader terminal={terminal} {...rest} />;
   }
-  return <SlotHeader label={label} activeSessionId={terminal.activeSessionId} {...rest} />;
+  return <SlotHeader activeSessionId={terminal.activeSessionId} {...rest} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,9 +268,7 @@ export function DockSlot({
 }: DockSlotProps): React.ReactElement {
   const terminals = useProjectTerminalsContext();
   const terminal = slot === 'primary' ? terminals.primary : terminals.secondary;
-  const label = slot === 'primary' ? 'Primary' : 'Shell';
-  const { handleSpawn, handleCloseSession, handleToggleRecording, isRecording } =
-    useSlotHandlers(terminal);
+  const { handleSpawn, handleToggleRecording, isRecording } = useSlotHandlers(terminal);
 
   useEffect(() => {
     onActiveSessionChange?.(terminal.activeSessionId);
@@ -315,12 +283,10 @@ export function DockSlot({
     >
       <SlotHeaderRow
         slot={slot}
-        label={label}
         terminal={terminal}
         collapsed={collapsed}
         isRecording={isRecording}
         onSpawn={handleSpawn}
-        onCloseSession={handleCloseSession}
         onToggleRecording={handleToggleRecording}
         onToggleCollapse={onToggleCollapse}
       />

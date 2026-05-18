@@ -47,6 +47,37 @@ function MenuButton({
   );
 }
 
+function SpawnMenuItems({
+  onCreatePrimary,
+  onCreateSecondary,
+  onClose,
+}: {
+  onCreatePrimary?: () => void;
+  onCreateSecondary?: () => void;
+  onClose: () => void;
+}): React.ReactElement {
+  return (
+    <>
+      <MenuButton
+        label="New in Primary"
+        testId="inner-terminals-new-primary"
+        onClick={() => {
+          onClose();
+          onCreatePrimary?.();
+        }}
+      />
+      <MenuButton
+        label="New in Shell"
+        testId="inner-terminals-new-secondary"
+        onClick={() => {
+          onClose();
+          onCreateSecondary?.();
+        }}
+      />
+    </>
+  );
+}
+
 function ContextMenuContent({
   state,
   onCreatePrimary,
@@ -71,21 +102,10 @@ function ContextMenuContent({
         style={{ top: `${state.y}px`, left: `${state.x}px` }}
         data-testid="inner-terminals-context-menu"
       >
-        <MenuButton
-          label="New in Primary"
-          testId="inner-terminals-new-primary"
-          onClick={() => {
-            onClose();
-            onCreatePrimary?.();
-          }}
-        />
-        <MenuButton
-          label="New in Shell"
-          testId="inner-terminals-new-secondary"
-          onClick={() => {
-            onClose();
-            onCreateSecondary?.();
-          }}
+        <SpawnMenuItems
+          onCreatePrimary={onCreatePrimary}
+          onCreateSecondary={onCreateSecondary}
+          onClose={onClose}
         />
       </div>
     </>
@@ -231,6 +251,49 @@ function useTerminalHandlers(
   return { selectPrimary, selectSecondary, createPrimary, createSecondary };
 }
 
+// ── SessionListArea ──────────────────────────────────────────────────────────
+
+function SessionListArea({
+  primary,
+  secondary,
+  selectPrimary,
+  selectSecondary,
+  onActivateInDock,
+}: {
+  primary: SlotHandle;
+  secondary: SlotHandle;
+  selectPrimary: (id: string) => void;
+  selectSecondary: (id: string) => void;
+  onActivateInDock?: () => void;
+}): React.ReactElement {
+  const hasAny = primary.sessions.length > 0 || secondary.sessions.length > 0;
+  if (!hasAny) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4 text-center">
+        <p className="text-xs text-text-semantic-faint">No terminals open.</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <SlotGroup
+        slotName="Primary"
+        slotHandle={primary}
+        onSelect={selectPrimary}
+        onClose={primary.handleTerminalClose}
+        onActivateInDock={onActivateInDock}
+      />
+      <SlotGroup
+        slotName="Shell"
+        slotHandle={secondary}
+        onSelect={selectSecondary}
+        onClose={secondary.handleTerminalClose}
+        onActivateInDock={onActivateInDock}
+      />
+    </>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function InnerSidebarTerminals({
@@ -242,8 +305,6 @@ export function InnerSidebarTerminals({
     secondary,
     onActivateInDock,
   );
-  const hasAny = primary.sessions.length > 0 || secondary.sessions.length > 0;
-
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -251,28 +312,13 @@ export function InnerSidebarTerminals({
     >
       <NewTerminalRow onCreatePrimary={createPrimary} onCreateSecondary={createSecondary} />
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {!hasAny ? (
-          <div className="flex flex-1 items-center justify-center p-4 text-center">
-            <p className="text-xs text-text-semantic-faint">No terminals open.</p>
-          </div>
-        ) : (
-          <>
-            <SlotGroup
-              slotName="Primary"
-              slotHandle={primary}
-              onSelect={selectPrimary}
-              onClose={primary.handleTerminalClose}
-              onActivateInDock={onActivateInDock}
-            />
-            <SlotGroup
-              slotName="Shell"
-              slotHandle={secondary}
-              onSelect={selectSecondary}
-              onClose={secondary.handleTerminalClose}
-              onActivateInDock={onActivateInDock}
-            />
-          </>
-        )}
+        <SessionListArea
+          primary={primary}
+          secondary={secondary}
+          selectPrimary={selectPrimary}
+          selectSecondary={selectSecondary}
+          onActivateInDock={onActivateInDock}
+        />
       </div>
     </div>
   );
