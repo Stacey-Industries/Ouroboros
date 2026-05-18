@@ -38,14 +38,32 @@ const requestId = randomBytes(8).toString('hex');
 const sessionId = inferSessionId(toolInput);
 const toolName = toolInput.tool_name || toolInput.toolName || 'unknown';
 
+// tool_use_id is the stable per-call identifier Claude Code includes in both
+// PreToolUse and PostToolUse stdin. Use it as toolCallId so the main-process
+// correlation pairing (hooksCorrelationPairing.ts) can match pre↔post.
+// Fall back to requestId (random) when absent so older Claude Code versions
+// still work; pairing will degrade gracefully in that case.
+const toolUseId = toolInput.tool_use_id || null;
+
 const payload = {
   type: 'pre_tool_use',
   sessionId,
   toolName,
   input: toolInput,
   requestId,
+  cwd: process.cwd(),
   timestamp: Date.now(),
 };
+if (toolUseId) {
+  payload.toolCallId = toolUseId;
+} else {
+  // Degraded mode: no tool_use_id from Claude Code — pairing will use requestId
+  // which won't match post_tool_use (different event). Warn so the log is clear.
+  payload.toolCallId = requestId;
+  if (process.env.OUROBOROS_DEBUG === '1') {
+    process.stderr.write('[ouroboros] pre_tool_use: tool_use_id absent — diff-review pairing degraded\n');
+  }
+}
 if (process.env.OUROBOROS_INTERNAL === '1') payload.internal = true;
 
 // Path sensitivity flag: defensive marker for downstream redaction policy
@@ -82,26 +100,35 @@ if (toolToken) {
 }
 
 if (decision === null) {
-  // Fallback: poll for approval response file. Used when the tool pipe is
-  // unreachable (older IDE, pipe not started, no toolToken). Matches pre-pipe
-  // behavior exactly.
-  const responsePath = join(APPROVALS_DIR, requestId + '.response');
-  const deadline = Date.now() + MAX_POLL_MS;
+  ({ decision, reason, message } = await pollResponseFile({
+    responsePath: join(APPROVALS_DIR, requestId + '.response'),
+    maxMs: MAX_POLL_MS,
+    intervalMs: POLL_INTERVAL_MS,
+    decision, reason, message,
+  }));
+}
+
+async function pollResponseFile({ responsePath, maxMs, intervalMs, decision, reason, message }) {
+  const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
     if (existsSync(responsePath)) {
-      try {
-        const text = readFileSync(responsePath, 'utf8');
-        const resp = JSON.parse(text);
-        try { unlinkSync(responsePath); } catch { /* best-effort cleanup */ }
-        decision = resp.decision;
-        reason = resp.reason || null;
-        message = resp.message || null;
-        break;
-      } catch {
-        // partial write — wait and retry
-      }
+      const parsed = tryReadResponse(responsePath);
+      if (parsed) return { decision: parsed.decision, reason: parsed.reason || null, message: parsed.message || null };
     }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return { decision, reason, message };
+}
+
+function tryReadResponse(responsePath) {
+  try {
+    const text = readFileSync(responsePath, 'utf8');
+    const resp = JSON.parse(text);
+    try { unlinkSync(responsePath); } catch { /* best-effort cleanup */ }
+    return resp;
+  } catch {
+    // partial write — wait and retry
+    return null;
   }
 }
 

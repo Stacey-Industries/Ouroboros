@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import type { PendingCodexCapture } from './useTerminalSessions.sync.helpers';
 import {
+  applyTerminalFallbackBind,
   attemptCodexCapture,
   createSessionSnapshot,
   readSessionSnapshot,
@@ -20,6 +21,86 @@ function makeSession(overrides: Partial<TerminalSession> = {}): TerminalSession 
     ...overrides,
   } as TerminalSession;
 }
+
+describe('applyTerminalFallbackBind', () => {
+  it('binds an unbound terminal to the incoming UUID', () => {
+    const sessions: TerminalSession[] = [makeSession({ id: 'pty-a', claudeSessionId: undefined })];
+    let captured: TerminalSession[] = sessions;
+    const setSessions = vi.fn((updater: (prev: TerminalSession[]) => TerminalSession[]) => {
+      captured = updater(sessions);
+    });
+
+    applyTerminalFallbackBind('pty-a', 'uuid-1', setSessions);
+
+    expect(setSessions).toHaveBeenCalledOnce();
+    expect(captured[0].claudeSessionId).toBe('uuid-1');
+  });
+
+  it('rebinds an already-bound terminal when a different UUID arrives', () => {
+    const sessions: TerminalSession[] = [makeSession({ id: 'pty-a', claudeSessionId: 'uuid-old' })];
+    let captured: TerminalSession[] = sessions;
+    const setSessions = vi.fn((updater: (prev: TerminalSession[]) => TerminalSession[]) => {
+      captured = updater(sessions);
+    });
+
+    applyTerminalFallbackBind('pty-a', 'uuid-new', setSessions);
+
+    expect(setSessions).toHaveBeenCalledOnce();
+    expect(captured[0].claudeSessionId).toBe('uuid-new');
+  });
+
+  it('skips state update when the same UUID is already bound (idempotent)', () => {
+    const sessions: TerminalSession[] = [makeSession({ id: 'pty-a', claudeSessionId: 'uuid-1' })];
+    let callCount = 0;
+    const setSessions = vi.fn((updater: (prev: TerminalSession[]) => TerminalSession[]) => {
+      const result = updater(sessions);
+      // Referential equality: same array reference means no state change
+      if (result === sessions) callCount += 1;
+    });
+
+    applyTerminalFallbackBind('pty-a', 'uuid-1', setSessions);
+
+    // setSessions is always called (React batches this), but the returned
+    // array should be the same reference (no actual update)
+    expect(setSessions).toHaveBeenCalledOnce();
+    expect(callCount).toBe(1);
+  });
+
+  it('two terminals each bind to their own UUID — both end up in ownedSet', () => {
+    const sessions: TerminalSession[] = [
+      makeSession({ id: 'pty-a', claudeSessionId: undefined }),
+      makeSession({ id: 'pty-b', claudeSessionId: undefined }),
+    ];
+
+    // Simulate terminal A binding uuid-1
+    let state = sessions;
+    applyTerminalFallbackBind('pty-a', 'uuid-1', (updater) => {
+      state = (updater as (prev: TerminalSession[]) => TerminalSession[])(state);
+    });
+
+    // Simulate terminal B binding uuid-2
+    applyTerminalFallbackBind('pty-b', 'uuid-2', (updater) => {
+      state = (updater as (prev: TerminalSession[]) => TerminalSession[])(state);
+    });
+
+    const ids = new Set(state.map((s) => s.claudeSessionId).filter(Boolean));
+    expect(ids).toContain('uuid-1');
+    expect(ids).toContain('uuid-2');
+  });
+
+  it('skips when the terminal ID is not found in sessions', () => {
+    const sessions: TerminalSession[] = [makeSession({ id: 'pty-a' })];
+    let captured: TerminalSession[] = sessions;
+    const setSessions = vi.fn((updater: (prev: TerminalSession[]) => TerminalSession[]) => {
+      captured = updater(sessions);
+    });
+
+    applyTerminalFallbackBind('pty-nonexistent', 'uuid-1', setSessions);
+
+    // No change — unknown terminal ID
+    expect(captured).toBe(sessions);
+  });
+});
 
 describe('createSessionSnapshot', () => {
   it('maps basic session fields to snapshot', () => {

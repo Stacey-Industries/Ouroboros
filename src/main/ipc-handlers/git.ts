@@ -79,11 +79,29 @@ function registerCheckpointChannel(rs: SecureRegister): string {
   });
 }
 
+/**
+ * git:diffReview is intentionally NOT behind assertPathAllowed.
+ *
+ * Terminal-launched Claude can run in any project directory (outside the IDE's
+ * registered workspace roots). The snapshot was captured at pre_tool_use time
+ * against the Claude process's actual cwd — that cwd is the correct root for
+ * reading the diff. Blocking it with pathSecurity would reject every cross-project
+ * diff review. This is a read-only git operation (rev-parse + diff) against a
+ * project root the user already explicitly opened a terminal in.
+ */
+function registerDiffReviewChannel(): string {
+  ipcMain.handle(
+    'git:diffReview',
+    (_event: IpcMainInvokeEvent, projectRoot: string, snapshotHash: string) =>
+      gitDiffReview(projectRoot, snapshotHash),
+  );
+  return 'git:diffReview';
+}
+
 function registerSnapshotGitChannels(rs: SecureRegister): string[] {
   return [
     rs('git:discardFile', discardFile),
     rs('git:snapshot', gitSnapshot),
-    rs('git:diffReview', gitDiffReview),
     rs('git:diffCached', gitDiffCached),
     rs('git:fileAtCommit', gitFileAtCommit),
     rs('git:applyHunk', (root: string, patchContent: string) =>
@@ -113,5 +131,6 @@ export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
     ...registerCoreGitChannels(rs),
     ...registerSnapshotGitChannels(rs),
     registerCheckpointChannel(rs),
+    registerDiffReviewChannel(),
   ];
 }

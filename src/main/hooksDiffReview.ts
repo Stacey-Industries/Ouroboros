@@ -17,6 +17,7 @@ import log from './logger';
 
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit']);
 const STASH_TTL_MS = 60_000;
+const STASH_MAX_ENTRIES = 100;
 
 interface StashEntry {
   snapshotHash: string;
@@ -35,6 +36,18 @@ function evictStaleEntries(): void {
   const cutoff = Date.now() - STASH_TTL_MS;
   for (const [key, entry] of preSnapshotStash) {
     if (entry.timestamp < cutoff) preSnapshotStash.delete(key);
+  }
+  // Size cap: evict oldest entries when stash exceeds STASH_MAX_ENTRIES.
+  // Prevents unbounded growth when post-hooks are lost.
+  if (preSnapshotStash.size > STASH_MAX_ENTRIES) {
+    const overflow = preSnapshotStash.size - STASH_MAX_ENTRIES;
+    let evicted = 0;
+    for (const key of preSnapshotStash.keys()) {
+      preSnapshotStash.delete(key);
+      evicted += 1;
+      if (evicted >= overflow) break;
+    }
+    log.warn('[diffReview] stash size cap reached — evicted oldest entries', { evicted });
   }
 }
 
@@ -65,27 +78,48 @@ function getFilePathsFromPayload(payload: HookPayload): string[] {
   return [];
 }
 
-function handlePreToolUse(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
-  if (!payload.correlationId || !payload.sessionId) return;
+function resolvePreToolUseCwd(
+  payload: HookPayload,
+  sessionCwdMap: Map<string, string>,
+): string | null {
+  if (!payload.correlationId || !payload.sessionId) {
+    return null;
+  }
   const cwd = payload.cwd ?? sessionCwdMap.get(payload.sessionId);
+  if (!cwd) {
+    return null;
+  }
+  return cwd;
+}
+
+function handlePreToolUse(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
+  const cwd = resolvePreToolUseCwd(payload, sessionCwdMap);
   if (!cwd) return;
   evictStaleEntries();
-  const key = correlationKey(payload.sessionId, payload.correlationId);
-  if (preSnapshotStash.has(key)) return; // idempotent — already stashed
+  const key = correlationKey(payload.sessionId, payload.correlationId!);
+  if (preSnapshotStash.has(key)) {
+    return; // idempotent — already stashed
+  }
   setImmediate(() => {
     void captureSnapshot(cwd).then((hash) => {
-      if (!hash) return;
+      if (!hash) {
+        return;
+      }
       preSnapshotStash.set(key, { snapshotHash: hash, projectRoot: cwd, timestamp: Date.now() });
     });
   });
 }
 
 function handlePostToolUse(payload: HookPayload): void {
-  if (!payload.correlationId || !payload.sessionId) return;
+  if (!payload.correlationId || !payload.sessionId) {
+    return;
+  }
   const key = correlationKey(payload.sessionId, payload.correlationId);
   const entry = preSnapshotStash.get(key);
   preSnapshotStash.delete(key); // always clean up
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   const filePaths = getFilePathsFromPayload(payload);
   const event = {
@@ -96,9 +130,6 @@ function handlePostToolUse(payload: HookPayload): void {
     filePaths,
     timestamp: Date.now(),
   };
-  log.info(
-    `[diffReview] emitting diff_review_ready session=${payload.sessionId} hash=${entry.snapshotHash} files=${filePaths.length}`,
-  );
   dispatchSyntheticHookEvent(event as unknown as HookPayload);
 }
 

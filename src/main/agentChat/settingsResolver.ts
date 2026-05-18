@@ -44,6 +44,7 @@ export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   worktree: false,
   dangerouslySkipPermissions: false,
   useWarmProcess: true,
+  enableTerminalDiffReview: true,
 };
 
 export const CODEX_CLI_SETTINGS_FALLBACK: CodexCliSettings = {
@@ -75,7 +76,12 @@ type ClaudeCliStringSettings = Pick<
 >;
 type ClaudeCliBooleanSettings = Pick<
   ClaudeCliSettings,
-  'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions' | 'useWarmProcess'
+  | 'verbose'
+  | 'chrome'
+  | 'worktree'
+  | 'dangerouslySkipPermissions'
+  | 'useWarmProcess'
+  | 'enableTerminalDiffReview'
 >;
 type CodexCliStringSettings = Pick<CodexCliSettings, 'model' | 'reasoningEffort' | 'profile'>;
 type CodexCliBooleanSettings = Pick<
@@ -146,6 +152,10 @@ function resolveClaudeCliBooleanSettings(
     useWarmProcess: resolveBoolean(
       settings?.useWarmProcess,
       CLAUDE_CLI_SETTINGS_FALLBACK.useWarmProcess,
+    ),
+    enableTerminalDiffReview: resolveBoolean(
+      settings?.enableTerminalDiffReview,
+      CLAUDE_CLI_SETTINGS_FALLBACK.enableTerminalDiffReview,
     ),
   };
 }

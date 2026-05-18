@@ -27,9 +27,12 @@ export function useDiffReviewTrigger(): void {
     return window.electronAPI.hooks.onAgentEvent((raw: unknown) => {
       const event = raw as Partial<DiffReviewReadyEvent>;
       if (event.type !== 'diff_review_ready') return;
-      if (!enableTerminalDiffReview) return;
-      if (!event.sessionId || !ownedIds.has(event.sessionId)) return;
-
+      if (!enableTerminalDiffReview) {
+        return;
+      }
+      if (!event.sessionId || !ownedIds.has(event.sessionId)) {
+        return;
+      }
       openReview(
         event.sessionId,
         event.snapshotHash ?? '',

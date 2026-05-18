@@ -31,6 +31,7 @@ const sessionId = parsed?.session_id || process.env.CLAUDE_SESSION_ID || 'unknow
 const payload = {
   type: 'session_start',
   sessionId,
+  cwd: process.cwd(),
   timestamp: Date.now(),
 };
 if (process.env.OUROBOROS_INTERNAL === '1') payload.internal = true;
@@ -40,23 +41,28 @@ await sendEvent(payload, hooksToken);
 rotateLogs();
 process.exit(0);
 
+function rotateLogFile(full, maxBytes) {
+  try {
+    if (statSync(full).size < maxBytes) return;
+    const old = full + '.old';
+    try { unlinkSync(old); } catch { /* may not exist */ }
+    renameSync(full, old);
+  } catch { /* per-file failure non-fatal */ }
+}
+
+function rotateLogsInDir(dir, maxBytes) {
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isFile() || !e.name.endsWith('.log')) continue;
+      rotateLogFile(join(dir, e.name), maxBytes);
+    }
+  } catch { /* dir missing or unreadable */ }
+}
+
 function rotateLogs() {
   const MAX_BYTES = 5 * 1024 * 1024;
   const claudeDir = join(homedir(), '.claude');
-  const hooksDir = join(claudeDir, 'hooks');
-  for (const dir of [claudeDir, hooksDir]) {
-    try {
-      const entries = readdirSync(dir, { withFileTypes: true });
-      for (const e of entries) {
-        if (!e.isFile() || !e.name.endsWith('.log')) continue;
-        const full = join(dir, e.name);
-        try {
-          if (statSync(full).size < MAX_BYTES) continue;
-          const old = full + '.old';
-          try { unlinkSync(old); } catch { /* may not exist */ }
-          renameSync(full, old);
-        } catch { /* per-file failure non-fatal */ }
-      }
-    } catch { /* dir missing or unreadable */ }
-  }
+  rotateLogsInDir(claudeDir, MAX_BYTES);
+  rotateLogsInDir(join(claudeDir, 'hooks'), MAX_BYTES);
 }

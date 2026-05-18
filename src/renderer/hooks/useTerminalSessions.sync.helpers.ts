@@ -22,6 +22,48 @@ export interface PendingCodexCapture {
 
 const CODEX_CAPTURE_MAX_RETRIES = 3;
 
+// ── Claude session capture helpers ────────────────────────────────────────────
+
+// Events that indicate a Claude session is active in a terminal and should
+// trigger the terminal-launched fallback bind. session_start is included but
+// pre_tool_use / post_tool_use are the primary triggers when session_start is
+// unreliable for terminal-launched claude.
+export const TERMINAL_BIND_TRIGGER_TYPES = new Set([
+  'session_start',
+  'pre_tool_use',
+  'post_tool_use',
+  'user_prompt_submit',
+  'session_stop',
+]);
+
+export function applyPendingBind(
+  ptyId: string,
+  claudeSessionId: string,
+  setSessions: SessionSetter,
+): void {
+  setSessions((prev) =>
+    prev.map((session) => (session.id === ptyId ? { ...session, claudeSessionId } : session)),
+  );
+}
+
+export function applyTerminalFallbackBind(
+  activeSessionId: string,
+  claudeSessionId: string,
+  setSessions: SessionSetter,
+): void {
+  setSessions((prev) => {
+    const active = prev.find((s) => s.id === activeSessionId);
+    const existingId = active?.claudeSessionId;
+    // Same UUID already bound — idempotent, no state change.
+    const alreadySameId = existingId === claudeSessionId;
+    // Different UUID bound — rebind: the running Claude is whoever last sent a hook
+    // event from this terminal context. The binding must follow reality.
+    const decision = !active ? 'SKIP_NO_TERMINAL' : alreadySameId ? 'SKIP_SAME_ID' : 'BIND';
+    if (decision !== 'BIND') return prev;
+    return prev.map((s) => (s.id === activeSessionId ? { ...s, claudeSessionId } : s));
+  });
+}
+
 export function createSessionSnapshot(session: TerminalSession, cwd: string): SavedSessionSnapshot {
   return {
     cwd,

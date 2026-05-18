@@ -160,6 +160,30 @@ describe('tapDiffReview', () => {
     expect(emitted.sessionId).toBe('external-uuid');
   });
 
+  it('matching tool_use_id on pre and post correctly produces diff_review_ready', async () => {
+    const toolUseId = 'tool-abc-123';
+    tapDiffReview(makePrePayload({ correlationId: toolUseId }), cwdMap);
+    await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
+
+    tapDiffReview(makePostPayload({ correlationId: toolUseId }), cwdMap);
+    expect(dispatchSyntheticMock).toHaveBeenCalledTimes(1);
+    const emitted = dispatchSyntheticMock.mock.calls[0][0];
+    expect(emitted.type).toBe('diff_review_ready');
+    expect(emitted.snapshotHash).toBe('abc123');
+  });
+
+  it('mismatched correlationId on pre vs post does NOT emit (regression for Bug C)', async () => {
+    const preCorrelationId = 'pre-uuid-aaaa';
+    const postCorrelationId = 'post-uuid-bbbb';
+    tapDiffReview(makePrePayload({ correlationId: preCorrelationId }), cwdMap);
+    await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
+
+    tapDiffReview(makePostPayload({ correlationId: postCorrelationId }), cwdMap);
+    expect(dispatchSyntheticMock).not.toHaveBeenCalled();
+  });
+
   it('handles MultiEdit filePaths forwarded from hook script', async () => {
     tapDiffReview(
       makePrePayload({

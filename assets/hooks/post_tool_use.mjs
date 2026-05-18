@@ -29,6 +29,13 @@ try {
 const sessionId = inferSessionId(toolData);
 const toolName = toolData.tool_name || toolData.toolName || 'unknown';
 
+// tool_use_id is the stable per-call identifier Claude Code includes in both
+// PreToolUse and PostToolUse stdin. Forward it as toolCallId so the main-process
+// correlation pairing (hooksCorrelationPairing.ts) can match this post event to
+// its corresponding pre_tool_use snapshot. Without this the diff-review stash
+// key never matches and the review panel never opens.
+const toolUseId = toolData.tool_use_id || null;
+
 let durationMs = null;
 if (process.env.CLAUDE_TOOL_DURATION_MS) {
   const parsed = parseInt(process.env.CLAUDE_TOOL_DURATION_MS, 10);
@@ -44,10 +51,16 @@ const payload = {
   sessionId,
   toolName,
   output,
+  cwd: process.cwd(),
   timestamp: Date.now(),
 };
 if (durationMs !== null) payload.durationMs = durationMs;
 if (process.env.OUROBOROS_INTERNAL === '1') payload.internal = true;
+if (toolUseId) {
+  payload.toolCallId = toolUseId;
+} else if (process.env.OUROBOROS_DEBUG === '1') {
+  process.stderr.write('[ouroboros] post_tool_use: tool_use_id absent — diff-review pairing degraded\n');
+}
 
 // Outcome normalization: success flag + errorClass derived from output content
 const outcome = normalizeOutcome(toolName, output);

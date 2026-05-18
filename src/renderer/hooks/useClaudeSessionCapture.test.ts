@@ -118,8 +118,13 @@ describe('useClaudeSessionCapture', () => {
     expect(result.current[0].claudeSessionId).toBeUndefined();
   });
 
-  it('does not overwrite an already-bound claudeSessionId in the terminal-launched path', () => {
-    const initialSessions = [makeSession({ id: 'pty-1', claudeSessionId: 'already-bound' })];
+  it('rebinds the active terminal when a different claudeSessionId arrives (Bug D)', () => {
+    // Bug D fix: when a NEW Claude UUID arrives in an already-bound active
+    // terminal (because the previous Claude session ended and a new one was
+    // launched), the binding must follow reality and replace the stale UUID.
+    // Bind-once-per-UUID is preserved (see SKIP_SAME_ID test below); the
+    // rebind path opens only when the incoming UUID differs.
+    const initialSessions = [makeSession({ id: 'pty-1', claudeSessionId: 'stale-uuid' })];
     const { result } = renderHook(() => {
       const [sessions, setSessions] = useState<TerminalSession[]>(initialSessions);
       const pendingRef = useRef<string[]>([]);
@@ -131,7 +136,7 @@ describe('useClaudeSessionCapture', () => {
       emitSessionStart('new-uuid');
     });
 
-    expect(result.current[0].claudeSessionId).toBe('already-bound');
+    expect(result.current[0].claudeSessionId).toBe('new-uuid');
   });
 
   it('prefers pending association over active-terminal fallback when both are present', () => {
@@ -153,7 +158,7 @@ describe('useClaudeSessionCapture', () => {
     expect(active?.claudeSessionId).toBeUndefined();
   });
 
-  it('ignores non-session_start events', () => {
+  it('ignores events not in the bind-trigger set (e.g. tool_use)', () => {
     const initialSessions = [makeSession({ id: 'pty-1' })];
     const { result } = renderHook(() => {
       const [sessions, setSessions] = useState<TerminalSession[]>(initialSessions);
@@ -167,5 +172,47 @@ describe('useClaudeSessionCapture', () => {
     });
 
     expect(result.current[0].claudeSessionId).toBeUndefined();
+  });
+
+  it('binds on pre_tool_use when no session_start arrived first (terminal-launched fallback)', () => {
+    // Bug B regression: terminal-launched claude may emit pre_tool_use before
+    // session_start, or session_start may not fire at all. The heuristic must
+    // bind on the first recognised trigger event, not only session_start.
+    const initialSessions = [makeSession({ id: 'pty-active' })];
+    const { result } = renderHook(() => {
+      const [sessions, setSessions] = useState<TerminalSession[]>(initialSessions);
+      const pendingRef = useRef<string[]>([]);
+      useClaudeSessionCapture(pendingRef, setSessions, 'pty-active');
+      return sessions;
+    });
+
+    act(() => {
+      capturedCallback?.({ type: 'pre_tool_use', sessionId: 'claude-uuid-terminal-edit' });
+    });
+
+    expect(result.current[0].claudeSessionId).toBe('claude-uuid-terminal-edit');
+  });
+
+  it('does not re-bind when multiple events arrive for the SAME claudeSessionId', () => {
+    // Bug D contract: bind-once-per-UUID. Same-UUID events are idempotent
+    // (SKIP_SAME_ID) and do not re-fire setState. Replacement only happens
+    // when the incoming UUID differs from the existing binding.
+    const initialSessions = [makeSession({ id: 'pty-active' })];
+    const { result } = renderHook(() => {
+      const [sessions, setSessions] = useState<TerminalSession[]>(initialSessions);
+      const pendingRef = useRef<string[]>([]);
+      useClaudeSessionCapture(pendingRef, setSessions, 'pty-active');
+      return sessions;
+    });
+
+    act(() => {
+      capturedCallback?.({ type: 'pre_tool_use', sessionId: 'uuid-stable' });
+    });
+    expect(result.current[0].claudeSessionId).toBe('uuid-stable');
+
+    act(() => {
+      capturedCallback?.({ type: 'post_tool_use', sessionId: 'uuid-stable' });
+    });
+    expect(result.current[0].claudeSessionId).toBe('uuid-stable');
   });
 });

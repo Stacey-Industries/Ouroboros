@@ -4,7 +4,13 @@ import { useEffect, useRef } from 'react';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import { hasElectronAPI, serializeSavedSessionSnapshots } from './useTerminalSessions.effects';
 import type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
-import { attemptCodexCapture, readSessionSnapshot } from './useTerminalSessions.sync.helpers';
+import {
+  applyPendingBind,
+  applyTerminalFallbackBind,
+  attemptCodexCapture,
+  readSessionSnapshot,
+  TERMINAL_BIND_TRIGGER_TYPES,
+} from './useTerminalSessions.sync.helpers';
 export type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
@@ -206,28 +212,28 @@ export function useClaudeSessionCapture(
 
     return window.electronAPI.hooks.onAgentEvent((event) => {
       const payload = event as { type?: string; sessionId?: string };
-      if (payload.type !== 'session_start' || typeof payload.sessionId !== 'string') return;
+      if (typeof payload.sessionId !== 'string') return;
 
-      const ptyId = pendingClaudeAssocRef.current.shift();
-      if (ptyId) {
-        setSessions((prev) =>
-          prev.map((session) =>
-            session.id === ptyId ? { ...session, claudeSessionId: payload.sessionId } : session,
-          ),
-        );
-        return;
+      // Prefer pending-ref binding (IDE-spawned sessions) on session_start only.
+      if (payload.type === 'session_start') {
+        const ptyId = pendingClaudeAssocRef.current.shift();
+        if (ptyId) {
+          applyPendingBind(ptyId, payload.sessionId, setSessions);
+          return;
+        }
       }
 
       // Wave 94 Phase E — terminal-launched fallback: bind to the active terminal
-      // when no pending association exists (user typed `claude` directly in PTY).
-      if (!activeSessionId) return;
-      setSessions((prev) => {
-        const active = prev.find((s) => s.id === activeSessionId);
-        if (!active || active.claudeSessionId) return prev; // skip if already bound
-        return prev.map((s) =>
-          s.id === activeSessionId ? { ...s, claudeSessionId: payload.sessionId } : s,
-        );
-      });
+      // on ANY first event from an unknown sessionId (session_start is unreliable
+      // for terminal-launched claude — pre_tool_use may arrive first or instead).
+      // Guard: only bind-once (applyTerminalFallbackBind skips already-bound terminals).
+      if (!activeSessionId) {
+        return;
+      }
+      // Only bind write-class or session lifecycle events — skip noise events that
+      // aren't meaningful indicators a new claude session is active in the terminal.
+      if (!TERMINAL_BIND_TRIGGER_TYPES.has(payload.type ?? '')) return;
+      applyTerminalFallbackBind(activeSessionId, payload.sessionId, setSessions);
     });
   }, [pendingClaudeAssocRef, setSessions, activeSessionId]);
 }
