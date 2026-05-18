@@ -38,6 +38,12 @@ After Wave 95, the chat-workbench terminal experience is polished:
 - Secondary dock slot's collapsed-empty chrome is intentional (either
   matches Cole's mental model after clarification, or restructured per
   Option B/C in the follow-up).
+- Diff-review panel layout is usable: code dominates (not file list),
+  draggable splitter, sensible defaults.
+- Diff-review panel groups changed files by project (collapsible
+  sections with badges) so multi-project Claude workflows are reviewable.
+- Diff-review "wrong edit shown" investigation diagnosed and resolved
+  (Lane B) — users trust the surface for production review workflows.
 
 ## Bundled follow-ups (1 phase each)
 
@@ -48,17 +54,27 @@ After Wave 95, the chat-workbench terminal experience is polished:
 | C | Ghost-cursor fix (xterm WebGL/DOM overlap audit) | `roadmap/follow-ups/2026-05-18-terminal-ghost-cursor-resurfaced.md` |
 | D | Claude CLI color rendering in terminal | `roadmap/follow-ups/2026-05-18-claude-cli-color-rendering-in-terminal.md` |
 | E | Secondary slot collapsed-chrome clarification | `roadmap/follow-ups/2026-05-18-secondary-slot-collapsed-chrome.md` |
-| F | Wave wrap | scoped + full gates, `/review`, `wave-95-result.md`, CHANGELOG [2.19.1], smoke re-run on terminal-only checklist, tag, push |
+| F | Diff-review panel layout (80/20 inverted) | `roadmap/follow-ups/2026-05-18-diff-review-panel-layout-inverted.md` |
+| G | Diff-review cross-project grouping + attribution | `roadmap/follow-ups/2026-05-18-diff-review-cross-project-grouping.md` |
+| H | Diff-review wrong-edit-shown investigation (Lane B) | `roadmap/follow-ups/2026-05-18-diff-review-wrong-edit-shown.md` |
+| I | Wave wrap | scoped + full gates, `/review`, `wave-95-result.md`, CHANGELOG [2.19.1], smoke re-run on terminal-only checklist, tag, push |
 
 ## Phase ordering
 
-All five A–E phases are independent — no cross-file dependencies between
-them. Can parallelize freely.
+Phases A–E (terminal QoL) are independent — no cross-file dependencies
+between them. Can parallelize freely.
+
+Phases F–H (diff-review UX) added 2026-05-18 after Wave 94's Phase E
+producer/consumer pipeline shipped end-to-end. F (layout) and G
+(grouping) likely touch the same diff-review panel component — sequence
+F → G to avoid merge churn. H (wrong-edit diagnosis) is Lane B work
+that should land before F/G so any contract-level issues surface before
+layout polish.
 
 Phase E (secondary slot chrome) is the lowest-priority — it might
 collapse to "no change needed, just clarification" depending on the
 investigation outcome. If E resolves to "no change," drop it from the
-wave and ship A–D.
+wave and ship A–D + F–H.
 
 ## Scope (in)
 
