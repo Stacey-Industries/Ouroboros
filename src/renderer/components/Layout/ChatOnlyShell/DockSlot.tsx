@@ -1,19 +1,20 @@
 /**
  * DockSlot.tsx — Wave 89 Phase 1
  * Wave 89 Phase 4c: per-slot minimize/expand affordance in SlotHeader.
- *
- * A single slot in the two-slot stacked terminal dock. Each slot owns its own
- * useTerminalSessions instance (independent session lifecycle). The parent
- * ChatWorkbenchTerminalDock allocates vertical space and owns the divider drag.
+ * Wave 94 Phase C: tab strip replaces label row when sessions exist (ADR Decision 5).
  *
  * slot: 'primary' — top slot; Wave 90 home for interactive claude.
  * slot: 'secondary' — bottom slot; dev shell.
  *
  * Phase 4c collapse behavior:
- *  - When collapsed=true the slot renders only its SlotHeader (28px strip).
+ *  - When collapsed=true the slot renders only its header strip (28px).
  *  - The ▾ button collapses, ▴ expands.
  *  - + New button stays visible when collapsed (user can spawn while collapsed).
  *  - Rec and ✕ buttons hide when collapsed (need visible terminal surface).
+ *
+ * Phase C tab strip:
+ *  - sessions.length === 0 → SlotHeader with label (legacy empty state).
+ *  - sessions.length > 0  → SlotTabsHeader (tab strip; label suppressed).
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -22,38 +23,32 @@ import type { SlotHandle } from '../../../contexts/ProjectTerminalsContext';
 import { useProjectTerminalsContext } from '../../../contexts/ProjectTerminalsContext';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { TerminalManager } from '../../Terminal/TerminalManager';
+import { SlotTabsHeader } from './DockSlotTabs';
 
 export type SlotId = 'primary' | 'secondary';
 
 // ---------------------------------------------------------------------------
-// Styles
+// Styles (exported so DockSlotTabs can import them)
 // ---------------------------------------------------------------------------
 
-const BTN_BASE = 'rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors';
-const BTN_HOVER = 'hover:bg-surface-hover hover:text-text-semantic-primary';
-const BTN_DANGER =
+export const BTN_BASE =
+  'rounded px-2 py-0.5 text-xs text-text-semantic-secondary transition-colors';
+export const BTN_HOVER = 'hover:bg-surface-hover hover:text-text-semantic-primary';
+export const BTN_DANGER =
   'hover:bg-surface-hover hover:text-status-error disabled:opacity-40 ' +
   'disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-semantic-secondary';
 
 // ---------------------------------------------------------------------------
-// Slot header sub-components (extracted to stay under 40-line limit)
+// Slot header sub-components (exported for use in DockSlotTabs)
 // ---------------------------------------------------------------------------
 
-interface SlotHeaderProps {
-  label: string;
-  collapsed: boolean;
-  activeSessionId: string | null;
-  isRecording: boolean;
-  onSpawn: () => void;
-  onCloseSession: () => void;
-  onToggleRecording: () => void;
-  onToggleCollapse: () => void;
-}
-
-function SlotCollapseButton({
+export function SlotCollapseButton({
   collapsed,
   onToggleCollapse,
-}: Pick<SlotHeaderProps, 'collapsed' | 'onToggleCollapse'>): React.ReactElement {
+}: {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -71,10 +66,11 @@ function SlotRecordingButton({
   activeSessionId,
   isRecording,
   onToggleRecording,
-}: Pick<
-  SlotHeaderProps,
-  'activeSessionId' | 'isRecording' | 'onToggleRecording'
->): React.ReactElement {
+}: {
+  activeSessionId: string | null;
+  isRecording: boolean;
+  onToggleRecording: () => void;
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -112,7 +108,7 @@ function SlotSpawnButton({
   );
 }
 
-function SlotExpandedButtons({
+export function SlotExpandedButtons({
   testId,
   activeSessionId,
   isRecording,
@@ -144,6 +140,21 @@ function SlotExpandedButtons({
       </button>
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// SlotHeader — empty-state label row (sessions.length === 0)
+// ---------------------------------------------------------------------------
+
+interface SlotHeaderProps {
+  label: string;
+  collapsed: boolean;
+  activeSessionId: string | null;
+  isRecording: boolean;
+  onSpawn: () => void;
+  onCloseSession: () => void;
+  onToggleRecording: () => void;
+  onToggleCollapse: () => void;
 }
 
 function SlotHeader({
@@ -183,7 +194,7 @@ function SlotHeader({
 }
 
 // ---------------------------------------------------------------------------
-// DockSlot hook (extracted to keep DockSlot component under 40 lines)
+// useSlotHandlers — callbacks for the active session
 // ---------------------------------------------------------------------------
 
 interface SlotHandlers {
@@ -210,7 +221,7 @@ function useSlotHandlers(terminal: SlotHandle): SlotHandlers {
 }
 
 // ---------------------------------------------------------------------------
-// SlotTerminalSurface (extracted to keep DockSlot under 40 lines)
+// SlotTerminalSurface
 // ---------------------------------------------------------------------------
 
 function SlotTerminalSurface({
@@ -241,6 +252,29 @@ function SlotTerminalSurface({
       </ErrorBoundary>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// SlotHeaderRow — picks tab strip vs label header based on session count
+// ---------------------------------------------------------------------------
+
+interface SlotHeaderRowProps {
+  slot: SlotId;
+  label: string;
+  terminal: SlotHandle;
+  collapsed: boolean;
+  isRecording: boolean;
+  onSpawn: () => void;
+  onCloseSession: () => void;
+  onToggleRecording: () => void;
+  onToggleCollapse: () => void;
+}
+
+function SlotHeaderRow({ label, terminal, ...rest }: SlotHeaderRowProps): React.ReactElement {
+  if (terminal.sessions.length > 0) {
+    return <SlotTabsHeader terminal={terminal} {...rest} />;
+  }
+  return <SlotHeader label={label} activeSessionId={terminal.activeSessionId} {...rest} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,10 +313,11 @@ export function DockSlot({
       data-testid={`dock-slot-${slot}`}
       data-collapsed={collapsed}
     >
-      <SlotHeader
+      <SlotHeaderRow
+        slot={slot}
         label={label}
+        terminal={terminal}
         collapsed={collapsed}
-        activeSessionId={terminal.activeSessionId}
         isRecording={isRecording}
         onSpawn={handleSpawn}
         onCloseSession={handleCloseSession}

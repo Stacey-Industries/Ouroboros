@@ -240,6 +240,45 @@ describe('DockSlot — collapse affordance (Phase 4c)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Phase C — Decision 5: tab strip vs label header (session-conditional)
+// ---------------------------------------------------------------------------
+
+describe('DockSlot — Phase C: empty state renders legacy SlotHeader label', () => {
+  it('renders the Primary label when sessions array is empty', () => {
+    renderPrimary();
+    expect(screen.getByText('Primary')).toBeTruthy();
+    expect(screen.queryByTestId('dock-slot-tabs-primary')).toBeNull();
+  });
+
+  it('renders the Shell label for secondary when sessions array is empty', () => {
+    renderSecondary();
+    expect(screen.getByText('Shell')).toBeTruthy();
+    expect(screen.queryByTestId('dock-slot-tabs-secondary')).toBeNull();
+  });
+});
+
+describe('DockSlot — Phase C: has-sessions state renders DockSlotTabs strip', () => {
+  it('renders tab strip (dock-slot-tabs-primary) and no legacy label when sessions exist', async () => {
+    // Override the module mock for this test via vi.mocked setter
+    const ctx = await import('../../../contexts/ProjectTerminalsContext');
+    const original = (ctx as unknown as { useProjectTerminalsContext: () => unknown })
+      .useProjectTerminalsContext;
+    vi.spyOn(ctx, 'useProjectTerminalsContext').mockReturnValue({
+      primary: {
+        ...stubSlotHandle,
+        sessions: [{ id: 'ses-1', title: 'bash', status: 'running' }],
+        activeSessionId: 'ses-1',
+      },
+      secondary: stubSlotHandle,
+    });
+    renderPrimary();
+    expect(screen.getByTestId('dock-slot-tabs-primary')).toBeTruthy();
+    expect(screen.queryByText('Primary')).toBeNull();
+    vi.spyOn(ctx, 'useProjectTerminalsContext').mockImplementation(original);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 4c — integration: two slots, collapse primary, secondary grows
 // ---------------------------------------------------------------------------
 
