@@ -146,15 +146,19 @@ function buildCloseWrapper(
 // buildSpawnWrapper — delegates to terminal.spawnSession, sets pending ref
 // ---------------------------------------------------------------------------
 
-function buildSpawnWrapper(
-  slotKey: 'primary' | 'secondary',
-  terminal: UseTerminalSessionsReturn,
-  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>,
-): (cwd?: string) => Promise<void> {
+interface SpawnWrapperOptions {
+  slotKey: 'primary' | 'secondary';
+  terminal: UseTerminalSessionsReturn;
+  pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>;
+  defaultCwd: string | null;
+}
+
+function buildSpawnWrapper(opts: SpawnWrapperOptions): (cwd?: string) => Promise<void> {
+  const { slotKey, terminal, pendingSpawnRef, defaultCwd } = opts;
   return async (cwd?: string): Promise<void> => {
     const existingIds = new Set(terminal.sessions.map((s) => s.id));
     pendingSpawnRef.current = { slot: slotKey, existingIds };
-    await terminal.spawnSession(cwd);
+    await terminal.spawnSession(cwd ?? defaultCwd ?? undefined);
   };
 }
 
@@ -184,6 +188,7 @@ interface SlotHandleOptions {
   projectState: ProjectTerminalState;
   setProjectState: (patch: Partial<ProjectTerminalState>) => void;
   pendingSpawnRef: React.MutableRefObject<PendingSpawn | null>;
+  defaultCwd: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +196,7 @@ interface SlotHandleOptions {
 // ---------------------------------------------------------------------------
 
 function buildSlotHandle(opts: SlotHandleOptions): SlotHandle {
-  const { slotKey, terminal, projectState, setProjectState, pendingSpawnRef } = opts;
+  const { slotKey, terminal, projectState, setProjectState, pendingSpawnRef, defaultCwd } = opts;
   const sessions = buildSlotSessionList(terminal.sessions, projectState[slotKey]);
   const slotIds = new Set(projectState[slotKey].map((s) => s.id));
   const rawActive = projectState.activeSessionPerSlot[slotKey];
@@ -209,7 +214,7 @@ function buildSlotHandle(opts: SlotHandleOptions): SlotHandle {
     activeSessionId,
     setActiveSessionId,
     recordingSessions: terminal.recordingSessions,
-    spawnSession: buildSpawnWrapper(slotKey, terminal, pendingSpawnRef),
+    spawnSession: buildSpawnWrapper({ slotKey, terminal, pendingSpawnRef, defaultCwd }),
     handleTerminalClose: buildCloseWrapper(
       slotKey,
       projectState,
@@ -296,7 +301,13 @@ export function useProjectTerminals(activeProjectPath: string | null): UseProjec
   }
 
   const projectState = readProjectState(map, activeProjectPath);
-  const slotOpts = { terminal, projectState, setProjectState: patchState, pendingSpawnRef };
+  const slotOpts = {
+    terminal,
+    projectState,
+    setProjectState: patchState,
+    pendingSpawnRef,
+    defaultCwd: activeProjectPath,
+  };
 
   return {
     primary: buildSlotHandle({ slotKey: 'primary', ...slotOpts }),
