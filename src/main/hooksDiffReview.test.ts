@@ -143,6 +143,23 @@ describe('tapDiffReview', () => {
     expect(log.warn).toHaveBeenCalled();
   });
 
+  it('uses payload.cwd when sessionId is not in sessionCwdMap (terminal-launched claude)', async () => {
+    const emptyCwdMap = new Map<string, string>();
+    tapDiffReview(
+      makePrePayload({ sessionId: 'external-uuid', cwd: '/external/proj' }),
+      emptyCwdMap,
+    );
+    await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
+    expect(gitTrimmedMock).toHaveBeenCalledWith('/external/proj', ['rev-parse', 'HEAD']);
+
+    tapDiffReview(makePostPayload({ sessionId: 'external-uuid' }), emptyCwdMap);
+    expect(dispatchSyntheticMock).toHaveBeenCalledTimes(1);
+    const emitted = dispatchSyntheticMock.mock.calls[0][0];
+    expect(emitted.projectRoot).toBe('/external/proj');
+    expect(emitted.sessionId).toBe('external-uuid');
+  });
+
   it('handles MultiEdit filePaths forwarded from hook script', async () => {
     tapDiffReview(
       makePrePayload({

@@ -4,10 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import { hasElectronAPI, serializeSavedSessionSnapshots } from './useTerminalSessions.effects';
 import type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
-import {
-  attemptCodexCapture,
-  readSessionSnapshot,
-} from './useTerminalSessions.sync.helpers';
+import { attemptCodexCapture, readSessionSnapshot } from './useTerminalSessions.sync.helpers';
 export type { PendingCodexCapture, SavedSessionSnapshot } from './useTerminalSessions.sync.helpers';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
@@ -111,9 +108,7 @@ interface UsePersistSessionsDebounceEffectOptions {
   hasPendingPersistRef: MutableRefObject<boolean>;
 }
 
-function usePersistSessionsDebounceEffect(
-  options: UsePersistSessionsDebounceEffectOptions,
-): void {
+function usePersistSessionsDebounceEffect(options: UsePersistSessionsDebounceEffectOptions): void {
   const {
     enabled,
     runningTopologySignature,
@@ -151,9 +146,7 @@ interface UsePersistSessionsSafetyEffectOptions {
   hasPendingPersistRef: MutableRefObject<boolean>;
 }
 
-function usePersistSessionsSafetyEffect(
-  options: UsePersistSessionsSafetyEffectOptions,
-): void {
+function usePersistSessionsSafetyEffect(options: UsePersistSessionsSafetyEffectOptions): void {
   const {
     enabled,
     sessionsRef,
@@ -206,6 +199,7 @@ export function usePersistSessions(
 export function useClaudeSessionCapture(
   pendingClaudeAssocRef: MutableRefObject<string[]>,
   setSessions: SessionSetter,
+  activeSessionId: string | null,
 ): void {
   useEffect(() => {
     if (!hasElectronAPI()) return;
@@ -215,14 +209,27 @@ export function useClaudeSessionCapture(
       if (payload.type !== 'session_start' || typeof payload.sessionId !== 'string') return;
 
       const ptyId = pendingClaudeAssocRef.current.shift();
-      if (!ptyId) return;
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === ptyId ? { ...session, claudeSessionId: payload.sessionId } : session,
-        ),
-      );
+      if (ptyId) {
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === ptyId ? { ...session, claudeSessionId: payload.sessionId } : session,
+          ),
+        );
+        return;
+      }
+
+      // Wave 94 Phase E — terminal-launched fallback: bind to the active terminal
+      // when no pending association exists (user typed `claude` directly in PTY).
+      if (!activeSessionId) return;
+      setSessions((prev) => {
+        const active = prev.find((s) => s.id === activeSessionId);
+        if (!active || active.claudeSessionId) return prev; // skip if already bound
+        return prev.map((s) =>
+          s.id === activeSessionId ? { ...s, claudeSessionId: payload.sessionId } : s,
+        );
+      });
     });
-  }, [pendingClaudeAssocRef, setSessions]);
+  }, [pendingClaudeAssocRef, setSessions, activeSessionId]);
 }
 
 const CODEX_CAPTURE_INTERVAL_MS = 3000;

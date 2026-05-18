@@ -67,7 +67,7 @@ function getFilePathsFromPayload(payload: HookPayload): string[] {
 
 function handlePreToolUse(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
   if (!payload.correlationId || !payload.sessionId) return;
-  const cwd = sessionCwdMap.get(payload.sessionId);
+  const cwd = payload.cwd ?? sessionCwdMap.get(payload.sessionId);
   if (!cwd) return;
   evictStaleEntries();
   const key = correlationKey(payload.sessionId, payload.correlationId);

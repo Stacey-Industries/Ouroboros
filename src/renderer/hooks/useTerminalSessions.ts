@@ -89,7 +89,7 @@ function useSideEffects(
     restore.hasCompletedRestore,
     typeof restore.persistedSessionsSeed === 'string' ? restore.persistedSessionsSeed : null,
   );
-  useClaudeSessionCapture(pendingClaudeRef, s.setSessions);
+  useClaudeSessionCapture(pendingClaudeRef, s.setSessions, s.activeSessionId);
   useCodexSessionCapture(pendingCodexRef, s.setSessions);
   useRecordingSync(s.sessions, s.setRecordingSessions);
 }
