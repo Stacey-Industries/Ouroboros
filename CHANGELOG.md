@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.19.0] - 2026-05-18
+
+### Added
+- **Wave 94 — Chat-Workbench Completion.** Closes the five contract gaps surfaced by the Wave 89 deferred smoke walk — surfaces left half-wired by Wave 89's mid-flight terminal-first pivot. Full story in `roadmap/wave-94-chat-workbench-completion/wave-94-result.md`.
+  - **Title-bar surface split** (Phase A). Two distinct toggle buttons (`UtilityPaneToggleButton` + `ArtifactPaneToggleButton`) replace the cycling single right-pane button. Each surface is independently discoverable — Activity / Approvals / Monitor / Rules no longer reachable only via implicit auto-open events. `useChatWorkbenchLayout` exposes `isUtilityOpen` / `isArtifactOpen` aliases. Backward-compat `toggleRightPane` + `lastRightPaneView` cycling preserved for keyboard-shortcut consumers. `TitleBarWindowControls` extracted from `ChatOnlyTitleBar` to stay under the 300-line cap.
+  - **Per-project terminal isolation** (Phase B). New `useProjectTerminals(activeProjectPath)` hook + `ProjectTerminalsProvider` mounted once in `ChatWorkbenchShell`. Switching the active project on the outer rail atomically swaps both dock slots' session sets; sessions persist per-project across switches and restarts. New electron-store key `terminalSessionsPerProject` (Record<projectPath, ProjectTerminalState>) with no migration — sessions are runtime state, not durable user content. New shared Zod schema in `src/shared/config/projectTerminalsSchema.ts`. Both `DockSlot` and `InnerSidebarTerminals` consume via `useProjectTerminalsContext()`.
+  - **Terminal tabs in dock slots** (Phase C). New `DockSlotTabs` pure tab strip component. Each slot's `+ New` appends rather than replaces — previous sessions stay selectable. Tab strip replaces the slot label (`Primary` / `Shell`) when sessions exist; empty-slot retains the legacy label. Active-tab activate-neighbour-before-close ordering preserves index validity. Tab persistence per slot per project via Phase B's `activeSessionPerSlot` schema field.
+  - **Inner-rail Terminals integration** (Phase D). `InnerSidebarTerminals` rendered as per-slot session groups (Primary / Shell, empty groups skipped). Single-click activates session in its current slot. `+ New` spawns into the primary slot by default; right-click on the button opens a context menu for explicit slot pick. No more orphaned sessions from rail spawn.
+  - **Diff-review producer wiring** (Phase E). Terminal Claude sessions' write-class tool calls (`Write` / `Edit` / `MultiEdit`) trigger automatic diff-review open. Producer: `assets/hooks/post_tool_use.mjs` forwards file paths; new `src/main/hooksDiffReview.ts` tap (registered via existing `hooksTapRunner`) captures pre-snapshot via `git rev-parse HEAD`, dispatches synthetic `diff_review_ready` agent event on matching `post_tool_use`. Consumer: new `useDiffReviewTrigger` hook in `ChatWorkbenchShell` subscribes via `window.electronAPI.hooks.onAgentEvent`, filters by event type / settings gate / per-window owned-session set. New `ClaudeCliSettings.enableTerminalDiffReview` setting (default `true`); off-switch exists if `git rev-parse` latency bites. Stash TTL of 60s prevents unbounded growth if `post_tool_use` never arrives.
+  - **`useClaudeCliSettings` + `useOwnedSessionIds` hooks** (Phase E). Thin readers over existing config + terminal-sessions surfaces; reusable for future settings/session-ownership consumers.
+
+### Changed
+- **`InnerSidebarTerminals` source-of-truth** switched from `terminal?: UseTerminalSessionsReturn` prop to `useProjectTerminalsContext()`. The "Terminals are not available" empty-state branch is replaced by per-slot empty-state rendering (the `+ New terminal` button always present via the context FALLBACK).
+- **`DockSlot.tsx`** no longer mounts its own `useTerminalSessions()` per slot. Reads from `useProjectTerminalsContext()` instead — single global PTY pool, per-project session segmentation in renderer-side state only.
+- **`ChatWorkbenchShell.tsx`** wraps its tree in `ProjectTerminalsProvider activeProjectPath={projectRoot}` and mounts `useDiffReviewTrigger()` inside `useShellState` (chat-workbench scope only, not IDE shell).
+- **`eslint.config.mjs`** Node-globals override expanded from `scripts/**/*.mjs` to also cover `assets/hooks/*.mjs` (pre-existing lint gap exposed by Phase E's hook script edit).
+
+### Architecture decisions (per `roadmap/wave-94-chat-workbench-completion/wave-94-decisions.md`)
+- D1: Title-bar surface split — Option A (two distinct buttons). B/C leave utility partially hidden behind extra interaction.
+- D2: Per-project terminal state — 2a (`useProjectTerminals` hook, Map shape, atomic swap). 2b leaves dock slots sharing a global pool; 2c overloads `ProjectContext` with PTY runtime state.
+- D3: Diff-review snapshot — 3b (opt-in setting, default `true`). Matches `feedback_defaults_true` convention; race-condition complexity of 3c (background async) avoided pre-launch.
+- D4: Rail promote semantics — 4a (single-click activate + right-click slot-choice). VS Code parity.
+- D5: Tab strip placement — 5a (replace label when sessions exist). Sessions ARE the slot's identity once spawned.
+
+### Boundary phase discipline
+Phase E was authored as a boundary phase per `~/.claude/rules/orchestrator-owned-acceptance-tests.md` — orchestrator-owned acceptance test (`src/renderer/hooks/useDiffReviewTrigger.acceptance.test.tsx`, 5 criteria) shipped as `describe.skip(...)` at `abc04d66`, un-skipped at Phase E dispatch, all 5 pass post-implementation. Test enforces: event-shape contract, settings gate, cross-window filter, event-type filter, multi-event isolation. Implementer cannot modify the test; only orchestrator-permitted modifications applied (un-skip + `@vitest-environment jsdom` infrastructure docblock).
+
 ## [2.18.0] - 2026-05-16
 
 ### Added
